@@ -1,0 +1,290 @@
+
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Check } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+
+const Pricing = () => {
+  const plans = [
+    {
+      name: "Starter",
+      price: "$39",
+      description: "Perfect for small projects and developers just getting started with astrology.",
+      features: [
+        "Basic natal charts",
+        "Transit calculations",
+        "Moon phases",
+        "Up to 10,000 API calls/month",
+        "Community support",
+        "Basic documentation",
+      ],
+      cta: "Start Free Trial",
+      highlight: false,
+    },
+    {
+      name: "Professional",
+      price: "$79",
+      description: "For businesses and astrologers requiring more features and higher volume.",
+      features: [
+        "All Starter features",
+        "Advanced natal charts (Western & Vedic)",
+        "Synastry & relationship analysis",
+        "Secondary progressions",
+        "Planetary returns (Solar, Lunar, Saturn)",
+        "Up to 50,000 API calls/month",
+        "Email support",
+        "Advanced documentation & examples",
+      ],
+      cta: "Start Free Trial",
+      highlight: true,
+    },
+    {
+      name: "Enterprise",
+      price: "Custom",
+      description: "For high-volume applications and businesses with custom requirements.",
+      features: [
+        "All Professional features",
+        "Unlimited API calls",
+        "Custom endpoint development",
+        "Private server option",
+        "Custom ephemeris integration",
+        "Historical data access",
+        "Dedicated support",
+        "SLA guarantees",
+        "Onboarding assistance",
+      ],
+      cta: "Contact Sales",
+      highlight: false,
+    },
+  ];
+
+  const faqs = [
+    {
+      question: "How accurate is the Swiss Ephemeris data?",
+      answer: "Swiss Ephemeris is the industry standard for astronomical calculations, offering accuracy within 0.001 arc seconds for planetary positions, making it suitable for professional astrologers and applications requiring high precision."
+    },
+    {
+      question: "Can I switch plans later?",
+      answer: "Yes, you can upgrade or downgrade your plan at any time. If you upgrade mid-billing cycle, we'll prorate the difference. Downgrading will take effect at the start of your next billing cycle."
+    },
+    {
+      question: "What happens if I exceed my monthly API call limit?",
+      answer: "If you exceed your monthly limit, additional calls will be charged at our overage rate. You'll receive notifications as you approach your limit so you can upgrade if needed."
+    },
+    {
+      question: "Do you offer a free trial?",
+      answer: "Yes, we offer a 14-day free trial for all plans to help you evaluate our API and ensure it meets your needs before committing."
+    },
+    {
+      question: "How is an API call counted?",
+      answer: "Each request to our API endpoints counts as one API call. For example, requesting a natal chart counts as one call, regardless of how much data is returned."
+    }
+  ];
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      
+      <main className="flex-grow">
+        {/* Header Section */}
+        <section className="bg-accent py-20">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto text-center">
+              <h1 className="text-4xl font-bold mb-6">Simple, Transparent Pricing</h1>
+              <p className="text-xl text-gray-700 mb-8">
+                Choose the plan that best fits your needs. All plans include access to our 
+                Swiss Ephemeris-powered API and comprehensive documentation.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing Tables */}
+        <section className="py-20 -mt-10">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {plans.map((plan, index) => (
+                <div 
+                  key={index} 
+                  className={`bg-white rounded-xl shadow-lg overflow-hidden border ${
+                    plan.highlight ? 'border-primary' : 'border-gray-100'
+                  } flex flex-col`}
+                >
+                  {plan.highlight && (
+                    <div className="bg-primary text-white py-2 text-center text-sm font-medium">
+                      Most Popular
+                    </div>
+                  )}
+                  <div className="p-8 flex-grow">
+                    <h3 className="text-2xl font-bold mb-4">{plan.name}</h3>
+                    <div className="mb-4">
+                      <span className="text-4xl font-bold">{plan.price}</span>
+                      {plan.price !== "Custom" && <span className="text-gray-600">/month</span>}
+                    </div>
+                    <p className="text-gray-600 mb-6">{plan.description}</p>
+                    <ul className="space-y-3 mb-8">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start">
+                          <Check className="h-5 w-5 text-primary mr-2 shrink-0 mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="p-8 pt-0">
+                    <Link to={plan.cta === "Contact Sales" ? "/contact" : "/signup"}>
+                      <Button 
+                        className={`w-full py-6 ${
+                          plan.highlight ? '' : 'bg-gray-800 hover:bg-gray-700'
+                        }`}
+                      >
+                        {plan.cta}
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-16 max-w-3xl mx-auto text-center">
+              <p className="text-gray-600">
+                All plans include a 14-day free trial. No credit card required to get started.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Feature Comparison */}
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold mb-12 text-center">Feature Comparison</h2>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full bg-white shadow-sm rounded-lg overflow-hidden">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="text-left p-4 font-medium text-gray-600">Feature</th>
+                    <th className="p-4 font-medium text-gray-600">Starter</th>
+                    <th className="p-4 font-medium text-gray-600 bg-primary/5">Professional</th>
+                    <th className="p-4 font-medium text-gray-600">Enterprise</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">API Calls/month</td>
+                    <td className="p-4 text-center">10,000</td>
+                    <td className="p-4 text-center bg-primary/5">50,000</td>
+                    <td className="p-4 text-center">Unlimited</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Natal Charts</td>
+                    <td className="p-4 text-center">Basic</td>
+                    <td className="p-4 text-center bg-primary/5">Advanced</td>
+                    <td className="p-4 text-center">Advanced</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Transit Calculations</td>
+                    <td className="p-4 text-center">✓</td>
+                    <td className="p-4 text-center bg-primary/5">✓</td>
+                    <td className="p-4 text-center">✓</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Moon Phases</td>
+                    <td className="p-4 text-center">✓</td>
+                    <td className="p-4 text-center bg-primary/5">✓</td>
+                    <td className="p-4 text-center">✓</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Synastry/Relationship</td>
+                    <td className="p-4 text-center">—</td>
+                    <td className="p-4 text-center bg-primary/5">✓</td>
+                    <td className="p-4 text-center">✓</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Secondary Progressions</td>
+                    <td className="p-4 text-center">—</td>
+                    <td className="p-4 text-center bg-primary/5">✓</td>
+                    <td className="p-4 text-center">✓</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Planetary Returns</td>
+                    <td className="p-4 text-center">—</td>
+                    <td className="p-4 text-center bg-primary/5">✓</td>
+                    <td className="p-4 text-center">✓</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Support</td>
+                    <td className="p-4 text-center">Community</td>
+                    <td className="p-4 text-center bg-primary/5">Email</td>
+                    <td className="p-4 text-center">Dedicated</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Custom Development</td>
+                    <td className="p-4 text-center">—</td>
+                    <td className="p-4 text-center bg-primary/5">—</td>
+                    <td className="p-4 text-center">✓</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">SLA</td>
+                    <td className="p-4 text-center">—</td>
+                    <td className="p-4 text-center bg-primary/5">—</td>
+                    <td className="p-4 text-center">✓</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold mb-12 text-center">Frequently Asked Questions</h2>
+            
+            <div className="max-w-3xl mx-auto">
+              <div className="space-y-6">
+                {faqs.map((faq, index) => (
+                  <div key={index} className="border-b border-gray-200 pb-6">
+                    <h3 className="text-xl font-semibold mb-2">{faq.question}</h3>
+                    <p className="text-gray-600">{faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-12 text-center">
+                <p className="text-gray-600 mb-6">
+                  Have more questions about our API or pricing?
+                </p>
+                <Link to="/contact">
+                  <Button variant="outline">Contact Us</Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 bg-primary text-white">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-6">
+              Ready to build with Theraiapi?
+            </h2>
+            <p className="text-xl mb-8 max-w-2xl mx-auto">
+              Start your 14-day free trial today. No credit card required.
+            </p>
+            <Link to="/signup">
+              <Button className="bg-white text-primary hover:bg-gray-100 text-lg px-8 py-6">
+                Start Free Trial
+              </Button>
+            </Link>
+          </div>
+        </section>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default Pricing;
