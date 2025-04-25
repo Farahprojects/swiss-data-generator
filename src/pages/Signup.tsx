@@ -1,205 +1,100 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useToast } from "@/hooks/use-toast";
 
 const Signup = () => {
-  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signUp } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    agreeTerms: false,
-    startTrial: true,
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
+    setLoading(true);
+
+    try {
+      const { error } = await signUp(email, password);
+      if (error) throw error;
+
       toast({
-        title: "Passwords don't match",
-        description: "Please ensure both passwords are identical.",
+        title: "Success",
+        description: "Please check your email to confirm your account",
+      });
+      navigate("/login");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create account",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-    
-    setIsSubmitting(true);
-    
-    // Simulate signup process
-    setTimeout(() => {
-      console.log("Signup attempt:", formData);
-      
-      // Show success toast
-      toast({
-        title: "Account created successfully!",
-        description: formData.startTrial 
-          ? "Your 14-day free trial has been activated." 
-          : "Welcome to Theraiapi!",
-      });
-      
-      // Redirect to dashboard
-      navigate("/dashboard");
-      
-      setIsSubmitting(false);
-    }, 1500);
   };
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      
-      <main className="flex-grow flex items-center justify-center py-12 bg-gray-50">
-        <div className="w-full max-w-md px-4">
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="px-6 py-8">
-              <h2 className="text-2xl font-bold text-center mb-6">Create your account</h2>
-              
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    autoComplete="name"
-                    required
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email address
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Password must be at least 8 characters and include a number and special character.
-                  </p>
-                </div>
-
-                <div className="mb-6">
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                    Confirm Password
-                  </label>
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                  />
-                </div>
-
-                <div className="mb-6">
-                  <div className="flex items-center">
-                    <input
-                      id="startTrial"
-                      name="startTrial"
-                      type="checkbox"
-                      checked={formData.startTrial}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                    />
-                    <label htmlFor="startTrial" className="ml-2 block text-sm text-gray-700">
-                      Start 14-day free trial
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <div className="flex items-start">
-                    <input
-                      id="agreeTerms"
-                      name="agreeTerms"
-                      type="checkbox"
-                      required
-                      checked={formData.agreeTerms}
-                      onChange={handleChange}
-                      className="h-4 w-4 mt-1 text-primary focus:ring-primary border-gray-300 rounded"
-                    />
-                    <label htmlFor="agreeTerms" className="ml-2 block text-sm text-gray-700">
-                      I agree to the{" "}
-                      <a href="#" className="text-primary hover:text-primary-hover">
-                        Terms of Service
-                      </a>{" "}
-                      and{" "}
-                      <a href="#" className="text-primary hover:text-primary-hover">
-                        Privacy Policy
-                      </a>
-                    </label>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full py-6"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Creating account..." : "Create Account"}
-                </Button>
-
-                <div className="text-center mt-6">
-                  <p className="text-sm text-gray-600">
-                    Already have an account?{" "}
-                    <Link to="/login" className="font-medium text-primary hover:text-primary-hover">
-                      Log in
-                    </Link>
-                  </p>
-                </div>
-              </form>
-            </div>
+      <div className="flex-grow flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold">Create an account</h2>
+            <p className="mt-2 text-gray-600">Get started with Theraiapi</p>
           </div>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? "Creating account..." : "Create account"}
+            </Button>
+
+            <p className="text-center text-sm text-gray-600">
+              Already have an account?{" "}
+              <Link to="/login" className="text-primary hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </form>
         </div>
-      </main>
-      
+      </div>
       <Footer />
     </div>
   );

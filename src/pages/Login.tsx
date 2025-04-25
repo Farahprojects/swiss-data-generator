@@ -1,137 +1,98 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
-  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    rememberMe: false,
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const location = useLocation();
+  const { toast } = useToast();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate login process
-    setTimeout(() => {
-      console.log("Login attempt:", formData);
-      
-      // Show success toast
+    setLoading(true);
+
+    try {
+      const { error } = await signIn(email, password);
+      if (error) throw error;
+
+      const from = location.state?.from?.pathname || "/dashboard";
+      navigate(from, { replace: true });
+    } catch (error) {
       toast({
-        title: "Login successful",
-        description: "Welcome back to Theraiapi!",
+        title: "Error",
+        description: error.message || "Failed to sign in",
+        variant: "destructive",
       });
-      
-      // Redirect to dashboard
-      navigate("/dashboard");
-      
-      setIsSubmitting(false);
-    }, 1500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      
-      <main className="flex-grow flex items-center justify-center py-12 bg-gray-50">
-        <div className="w-full max-w-md px-4">
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="px-6 py-8">
-              <h2 className="text-2xl font-bold text-center mb-6">Log in to your account</h2>
-              
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email address
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                    <input
-                      id="rememberMe"
-                      name="rememberMe"
-                      type="checkbox"
-                      checked={formData.rememberMe}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                    />
-                    <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
-                      Remember me
-                    </label>
-                  </div>
-
-                  <div className="text-sm">
-                    <a href="#" className="font-medium text-primary hover:text-primary-hover">
-                      Forgot your password?
-                    </a>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full py-6"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Logging in..." : "Log in"}
-                </Button>
-
-                <div className="text-center mt-6">
-                  <p className="text-sm text-gray-600">
-                    Don't have an account?{" "}
-                    <Link to="/signup" className="font-medium text-primary hover:text-primary-hover">
-                      Sign up
-                    </Link>
-                  </p>
-                </div>
-              </form>
-            </div>
+      <div className="flex-grow flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold">Welcome back</h2>
+            <p className="mt-2 text-gray-600">Sign in to your account</p>
           </div>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign in"}
+            </Button>
+
+            <p className="text-center text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-primary hover:underline">
+                Sign up
+              </Link>
+            </p>
+          </form>
         </div>
-      </main>
-      
+      </div>
       <Footer />
     </div>
   );
