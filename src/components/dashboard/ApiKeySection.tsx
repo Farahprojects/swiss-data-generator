@@ -7,11 +7,14 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
-// Define interface for combined user data
+// Define interface for user_info view data
 interface UserInfo {
   id: string;
   email: string;
   plan_type: string;
+  addon_transits: boolean;
+  addon_relationship: boolean;
+  addon_yearly_cycle: boolean;
   calls_limit: number;
   calls_made: number;
   api_key: string;
@@ -22,44 +25,18 @@ export const ApiKeySection = () => {
   const [isKeyVisible, setIsKeyVisible] = useState(false);
   const { toast } = useToast();
 
-  // Fetch user data and API key
+  // Fetch user data from the user_info view
   const { data: userInfo, isLoading } = useQuery<UserInfo>({
     queryKey: ['userInfo'],
     queryFn: async () => {
-      // Fetch API key data
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email')
+      const { data, error } = await supabase
+        .from('user_info')
+        .select('*')
         .eq('id', user?.id)
         .single();
       
-      if (userError) throw userError;
-      
-      // Fetch API key
-      const { data: apiKeyData, error: apiKeyError } = await supabase
-        .from('api_keys')
-        .select('api_key')
-        .eq('user_id', user?.id)
-        .single();
-        
-      if (apiKeyError) throw apiKeyError;
-      
-      // Create default plan info
-      const planInfo = {
-        plan_type: 'starter',
-        calls_limit: 50000,
-        calls_made: 0
-      };
-      
-      // Use plan_id relationship in the future if needed
-      
-      // Return combined data
-      return {
-        id: userData.id,
-        email: userData.email,
-        ...planInfo,
-        api_key: apiKeyData.api_key
-      };
+      if (error) throw error;
+      return data as UserInfo;
     },
     enabled: !!user
   });

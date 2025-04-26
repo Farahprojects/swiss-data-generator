@@ -39,6 +39,13 @@ export type Database = {
             foreignKeyName: "api_keys_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "user_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_keys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -94,6 +101,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "billing_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_info"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "billing_history_user_id_fkey"
             columns: ["user_id"]
@@ -180,6 +194,13 @@ export type Database = {
             foreignKeyName: "usage_tracking_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "user_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -187,26 +208,44 @@ export type Database = {
       }
       users: {
         Row: {
+          addon_relationship: boolean
+          addon_transits: boolean
+          addon_yearly_cycle: boolean
+          calls_limit: number
+          calls_made: number
           created_at: string
           email: string
           id: string
           plan_id: string | null
+          plan_type: string
           status: string
           stripe_customer_id: string | null
         }
         Insert: {
+          addon_relationship?: boolean
+          addon_transits?: boolean
+          addon_yearly_cycle?: boolean
+          calls_limit?: number
+          calls_made?: number
           created_at?: string
           email: string
           id: string
           plan_id?: string | null
+          plan_type?: string
           status: string
           stripe_customer_id?: string | null
         }
         Update: {
+          addon_relationship?: boolean
+          addon_transits?: boolean
+          addon_yearly_cycle?: boolean
+          calls_limit?: number
+          calls_made?: number
           created_at?: string
           email?: string
           id?: string
           plan_id?: string | null
+          plan_type?: string
           status?: string
           stripe_customer_id?: string | null
         }
@@ -222,10 +261,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_info: {
+        Row: {
+          addon_relationship: boolean | null
+          addon_transits: boolean | null
+          addon_yearly_cycle: boolean | null
+          api_key: string | null
+          calls_limit: number | null
+          calls_made: number | null
+          email: string | null
+          id: string | null
+          plan_type: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      generate_api_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      toggle_addon: {
+        Args: { user_id_param: string; addon_name: string; enabled: boolean }
+        Returns: undefined
+      }
+      upgrade_plan: {
+        Args: { user_id_param: string; new_plan: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
