@@ -1,3 +1,5 @@
+
+import React from 'react';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check, Info } from "lucide-react";
@@ -30,8 +32,8 @@ const Pricing = () => {
       description: "For apps that need serious astrology features",
       features: [
         "Western + Vedic Natal Charts",
-        "Full Transit Calculations",
-        "Progressions",
+        "12 month Transit forecast",
+        "Yearly Cycle",
         "200,000 API calls/month",
         "2 API keys",
         "Sidereal toggle unlocked",
@@ -46,10 +48,10 @@ const Pricing = () => {
       description: "Ideal for commercial apps or multi-feature astrology platforms",
       features: [
         "Everything in Growth, plus:",
-        "Synastry Charts",
+        "Relationship Compatibility",
         "Return Charts (Solar, Lunar, Saturn, Jupiter)",
         "750,000 API calls/month",
-        "5 API keys",
+        "Full access API",
         "Slack/email support priority",
       ],
       cta: "Start Free Trial",
