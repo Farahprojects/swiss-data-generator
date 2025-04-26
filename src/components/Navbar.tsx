@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -16,8 +17,8 @@ const Navbar = () => {
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold">Therai</span>
-              <span className="text-2xl font-bold text-[#8B5CF6] ml-1">api</span>
+              <span className="text-2xl font-bold text-black font-therai">Therai</span>
+              <span className="text-2xl font-bold text-[#8B5CF6] ml-1 font-therai">api</span>
             </Link>
           </div>
           
