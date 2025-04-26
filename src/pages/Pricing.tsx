@@ -258,14 +258,8 @@ const Pricing = () => {
                     <td className="p-4 text-center">750,000</td>
                   </tr>
                   <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">Western Natal Charts</td>
+                    <td className="p-4 text-gray-700">Western and Vedic Natal Charts</td>
                     <td className="p-4 text-center">✓</td>
-                    <td className="p-4 text-center bg-primary/5">✓</td>
-                    <td className="p-4 text-center">✓</td>
-                  </tr>
-                  <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">Vedic Natal Charts</td>
-                    <td className="p-4 text-center">Choose One</td>
                     <td className="p-4 text-center bg-primary/5">✓</td>
                     <td className="p-4 text-center">✓</td>
                   </tr>
