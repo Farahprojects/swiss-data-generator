@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
@@ -9,53 +8,65 @@ const Pricing = () => {
   const plans = [
     {
       name: "Starter",
-      price: "$39",
-      description: "Perfect for small projects and developers just getting started with astrology.",
+      price: "$19",
+      description: "Simple, very clean, enough for solo devs or small apps",
       features: [
-        "Basic natal charts",
-        "Transit calculations",
-        "Moon phases",
-        "Up to 10,000 API calls/month",
-        "Community support",
-        "Basic documentation",
+        "Western Natal Charts only (no Vedic)",
+        "Transit Calculations (current day only)",
+        "50,000 API calls/month",
+        "1 API key",
       ],
       cta: "Start Free Trial",
       highlight: false,
+      icon: "⚡",
     },
     {
-      name: "Professional",
-      price: "$79",
-      description: "For businesses and astrologers requiring more features and higher volume.",
+      name: "Growth",
+      price: "$49",
+      description: "For apps that need serious astrology features",
       features: [
-        "All Starter features",
-        "Advanced natal charts (Western & Vedic)",
-        "Synastry & relationship analysis",
-        "Secondary progressions",
-        "Planetary returns (Solar, Lunar, Saturn)",
-        "Up to 50,000 API calls/month",
-        "Email support",
-        "Advanced documentation & examples",
+        "Western + Vedic Natal Charts",
+        "Full Transit Calculations",
+        "Progressions",
+        "200,000 API calls/month",
+        "2 API keys",
+        "Sidereal toggle unlocked",
       ],
       cta: "Start Free Trial",
       highlight: true,
+      icon: "🚀",
+    },
+    {
+      name: "Professional",
+      price: "$99",
+      description: "Ideal for commercial apps or multi-feature astrology platforms",
+      features: [
+        "Everything in Growth, plus:",
+        "Synastry Charts",
+        "Return Charts (Solar, Lunar, Saturn, Jupiter)",
+        "750,000 API calls/month",
+        "5 API keys",
+        "Slack/email support priority",
+      ],
+      cta: "Start Free Trial",
+      highlight: false,
+      icon: "🌟",
     },
     {
       name: "Enterprise",
-      price: "Custom",
-      description: "For high-volume applications and businesses with custom requirements.",
+      price: "$250+",
+      description: "For serious businesses and big apps",
       features: [
-        "All Professional features",
         "Unlimited API calls",
-        "Custom endpoint development",
-        "Private server option",
-        "Custom ephemeris integration",
-        "Historical data access",
-        "Dedicated support",
-        "SLA guarantees",
-        "Onboarding assistance",
+        "Private endpoint & custom SLAs",
+        "On-prem hosting option",
+        "Custom features (batch jobs, webhooks)",
+        "VPC / dedicated server",
+        "Custom development support",
       ],
       cta: "Contact Sales",
       highlight: false,
+      icon: "🛡️",
     },
   ];
 
@@ -103,7 +114,7 @@ const Pricing = () => {
         {/* Pricing Tables */}
         <section className="py-20 -mt-10">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {plans.map((plan, index) => (
                 <div 
                   key={index} 
@@ -117,10 +128,13 @@ const Pricing = () => {
                     </div>
                   )}
                   <div className="p-8 flex-grow">
-                    <h3 className="text-2xl font-bold mb-4">{plan.name}</h3>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-2xl">{plan.icon}</span>
+                      <h3 className="text-2xl font-bold">{plan.name}</h3>
+                    </div>
                     <div className="mb-4">
                       <span className="text-4xl font-bold">{plan.price}</span>
-                      {plan.price !== "Custom" && <span className="text-gray-600">/month</span>}
+                      {plan.name !== "Enterprise" && <span className="text-gray-600">/month</span>}
                     </div>
                     <p className="text-gray-600 mb-6">{plan.description}</p>
                     <ul className="space-y-3 mb-8">
