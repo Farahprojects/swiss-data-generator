@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -173,34 +172,44 @@ const Pricing = () => {
             </div>
 
             {/* Add-ons Section */}
-            <div className="mt-16">
-              <h2 className="text-3xl font-bold text-center mb-8">Add-on Modules</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {addOns.map((addon, index) => (
-                  <div 
-                    key={index}
-                    className="bg-white rounded-lg shadow-md p-6 border border-gray-100"
-                  >
-                    <h3 className="text-xl font-semibold mb-2">{addon.name}</h3>
-                    <div className="text-2xl font-bold mb-2">
-                      {addon.price}<span className="text-sm text-gray-600">/month</span>
+            <section className="mt-16 bg-gray-50 py-16">
+              <div className="container mx-auto px-4">
+                <div className="text-center max-w-3xl mx-auto mb-12">
+                  <h2 className="text-4xl font-bold mb-4 text-gray-800">
+                    Enhance Your API with Powerful Add-Ons
+                  </h2>
+                  <p className="text-lg text-gray-600">
+                    All add-ons include full support for both Western (Tropical) and Vedic (Sidereal) calculations. 
+                    Simply choose your preferred system in your API requests — no extra fees, no limitations.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {addOns.map((addon, index) => (
+                    <div 
+                      key={index}
+                      className="bg-white rounded-lg shadow-md p-6 border border-gray-100"
+                    >
+                      <h3 className="text-xl font-semibold mb-2">{addon.name}</h3>
+                      <div className="text-2xl font-bold mb-2">
+                        {addon.price}<span className="text-sm text-gray-600">/month</span>
+                      </div>
+                      <p className="text-gray-600 mb-4">{addon.description}</p>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="w-full">
+                            <Info className="mr-2 h-4 w-4" />
+                            More Info
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[300px] p-4">
+                          <p className="text-sm text-gray-700">{addon.details}</p>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <p className="text-gray-600 mb-4">{addon.description}</p>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full">
-                          <Info className="mr-2" />
-                          More Info
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[300px] p-4">
-                        <p className="text-sm text-gray-700">{addon.details}</p>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            </section>
 
             <div className="mt-16 max-w-3xl mx-auto text-center">
               <p className="text-gray-600">
