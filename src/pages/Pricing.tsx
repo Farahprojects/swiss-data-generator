@@ -1,9 +1,12 @@
 import React from 'react';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check, Info } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +14,48 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Pricing = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const handleSubscribe = async (planType: string) => {
+    if (!user) {
+      navigate('/login', { state: { from: '/pricing' } });
+      return;
+    }
+
+    try {
+      const priceId = getPriceId(planType);
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start subscription process. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getPriceId = (planType: string) => {
+    switch (planType.toLowerCase()) {
+      case 'starter':
+        return 'price_XXXXX';
+      case 'growth':
+        return 'price_XXXXX';
+      case 'professional':
+        return 'price_XXXXX';
+      default:
+        return 'price_XXXXX';
+    }
+  };
+
   const plans = [
     {
       name: "Starter",
@@ -157,15 +202,14 @@ const Pricing = () => {
                     </ul>
                   </div>
                   <div className="p-8 pt-0">
-                    <Link to="/signup">
-                      <Button 
-                        className={`w-full py-6 ${
-                          plan.highlight ? '' : 'bg-gray-800 hover:bg-gray-700'
-                        }`}
-                      >
-                        {plan.cta}
-                      </Button>
-                    </Link>
+                    <Button 
+                      className={`w-full py-6 ${
+                        plan.highlight ? '' : 'bg-gray-800 hover:bg-gray-700'
+                      }`}
+                      onClick={() => handleSubscribe(plan.name)}
+                    >
+                      {plan.cta}
+                    </Button>
                   </div>
                 </div>
               ))}
