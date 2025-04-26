@@ -246,49 +246,61 @@ const Pricing = () => {
                   <tr className="bg-gray-100">
                     <th className="text-left p-4 font-medium text-gray-600">Feature</th>
                     <th className="p-4 font-medium text-gray-600">Starter</th>
-                    <th className="p-4 font-medium text-gray-600 bg-primary/5">Professional</th>
-                    <th className="p-4 font-medium text-gray-600">Enterprise</th>
+                    <th className="p-4 font-medium text-gray-600 bg-primary/5">Growth</th>
+                    <th className="p-4 font-medium text-gray-600">Professional</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="border-t border-gray-200">
                     <td className="p-4 text-gray-700">API Calls/month</td>
-                    <td className="p-4 text-center">10,000</td>
-                    <td className="p-4 text-center bg-primary/5">50,000</td>
-                    <td className="p-4 text-center">Unlimited</td>
+                    <td className="p-4 text-center">50,000</td>
+                    <td className="p-4 text-center bg-primary/5">200,000</td>
+                    <td className="p-4 text-center">750,000</td>
                   </tr>
                   <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">Natal Charts</td>
-                    <td className="p-4 text-center">Basic</td>
-                    <td className="p-4 text-center bg-primary/5">Advanced</td>
-                    <td className="p-4 text-center">Advanced</td>
-                  </tr>
-                  <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">Transit Calculations</td>
+                    <td className="p-4 text-gray-700">Western Natal Charts</td>
                     <td className="p-4 text-center">✓</td>
                     <td className="p-4 text-center bg-primary/5">✓</td>
                     <td className="p-4 text-center">✓</td>
                   </tr>
                   <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">Moon Phases</td>
-                    <td className="p-4 text-center">✓</td>
+                    <td className="p-4 text-gray-700">Vedic Natal Charts</td>
+                    <td className="p-4 text-center">Choose One</td>
                     <td className="p-4 text-center bg-primary/5">✓</td>
                     <td className="p-4 text-center">✓</td>
                   </tr>
                   <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">Synastry/Relationship</td>
+                    <td className="p-4 text-gray-700">Transit Forecast (12 months)</td>
                     <td className="p-4 text-center">—</td>
                     <td className="p-4 text-center bg-primary/5">✓</td>
                     <td className="p-4 text-center">✓</td>
                   </tr>
                   <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">Secondary Progressions</td>
+                    <td className="p-4 text-gray-700">Yearly Cycle</td>
                     <td className="p-4 text-center">—</td>
                     <td className="p-4 text-center bg-primary/5">✓</td>
                     <td className="p-4 text-center">✓</td>
                   </tr>
                   <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">Planetary Returns</td>
+                    <td className="p-4 text-gray-700">API Keys</td>
+                    <td className="p-4 text-center">1</td>
+                    <td className="p-4 text-center bg-primary/5">2</td>
+                    <td className="p-4 text-center">5</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Relationship Compatibility</td>
+                    <td className="p-4 text-center">—</td>
+                    <td className="p-4 text-center bg-primary/5">—</td>
+                    <td className="p-4 text-center">✓</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Return Charts</td>
+                    <td className="p-4 text-center">—</td>
+                    <td className="p-4 text-center bg-primary/5">—</td>
+                    <td className="p-4 text-center">✓</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="p-4 text-gray-700">Sidereal Toggle</td>
                     <td className="p-4 text-center">—</td>
                     <td className="p-4 text-center bg-primary/5">✓</td>
                     <td className="p-4 text-center">✓</td>
@@ -297,19 +309,7 @@ const Pricing = () => {
                     <td className="p-4 text-gray-700">Support</td>
                     <td className="p-4 text-center">Community</td>
                     <td className="p-4 text-center bg-primary/5">Email</td>
-                    <td className="p-4 text-center">Dedicated</td>
-                  </tr>
-                  <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">Custom Development</td>
-                    <td className="p-4 text-center">—</td>
-                    <td className="p-4 text-center bg-primary/5">—</td>
-                    <td className="p-4 text-center">✓</td>
-                  </tr>
-                  <tr className="border-t border-gray-200">
-                    <td className="p-4 text-gray-700">SLA</td>
-                    <td className="p-4 text-center">—</td>
-                    <td className="p-4 text-center bg-primary/5">—</td>
-                    <td className="p-4 text-center">✓</td>
+                    <td className="p-4 text-center">Priority</td>
                   </tr>
                 </tbody>
               </table>
