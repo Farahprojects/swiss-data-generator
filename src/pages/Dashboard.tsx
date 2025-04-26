@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +11,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { ApiKeySection } from "@/components/dashboard/ApiKeySection";
 
 const Dashboard = () => {
   const [apiKey] = useState("thp_2156a4f9cb83e7d21f7c8b6e9d4");
@@ -102,33 +102,7 @@ const Dashboard = () => {
                   </CardFooter>
                 </Card>
                 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium">API Usage</CardTitle>
-                    <CardDescription>This month</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Used</span>
-                        <span className="font-medium">{apiUsage.used.toLocaleString()}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div 
-                          className="bg-primary h-2.5 rounded-full" 
-                          style={{ width: `${apiUsage.percentage}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-primary font-medium">{apiUsage.percentage}%</span>
-                        <span className="text-gray-500">Limit: {apiUsage.total.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full">View Details</Button>
-                  </CardFooter>
-                </Card>
+                <ApiKeySection />
                 
                 <Card>
                   <CardHeader className="pb-2">
@@ -191,70 +165,7 @@ const Dashboard = () => {
             </TabsContent>
             
             <TabsContent value="api-keys" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Your API Keys</CardTitle>
-                  <CardDescription>Manage your API authentication keys</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Live API Key
-                      </label>
-                      <div className="flex">
-                        <div className="relative flex-grow">
-                          <input
-                            type={isKeyVisible ? "text" : "password"}
-                            value={apiKey}
-                            readOnly
-                            className="w-full px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 font-mono"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={toggleKeyVisibility}
-                          className="px-4 py-2 bg-gray-100 border border-l-0 border-gray-300 text-sm font-medium hover:bg-gray-200"
-                        >
-                          {isKeyVisible ? "Hide" : "Show"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={copyApiKey}
-                          className="px-4 py-2 bg-gray-800 text-white rounded-r-md text-sm font-medium hover:bg-gray-700"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                      <p className="mt-2 text-sm text-gray-500">
-                        This key is used to authenticate your API requests. Keep it secure!
-                      </p>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Button variant="outline">Regenerate API Key</Button>
-                      <p className="mt-2 text-sm text-gray-500">
-                        Regenerating will invalidate your current key immediately.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Test Mode</CardTitle>
-                  <CardDescription>API keys for development and testing</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <p className="text-gray-600">
-                      Test mode allows you to test your integration without making real API calls or affecting your usage limits.
-                    </p>
-                    <Button>Generate Test API Key</Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <ApiKeySection />
             </TabsContent>
             
             <TabsContent value="usage" className="space-y-6">
