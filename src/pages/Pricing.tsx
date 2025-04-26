@@ -188,13 +188,10 @@ const Pricing = () => {
                     <div 
                       key={index}
                       className="bg-white rounded-xl shadow-lg border border-gray-100 
-                        hover:shadow-xl transition-all duration-300 
-                        group overflow-hidden 
-                        transform hover:-translate-y-2"
+                        overflow-hidden"
                     >
                       <div className="p-6 pb-0">
-                        <h3 className="text-xl font-bold mb-2 text-gray-800 
-                          group-hover:text-primary transition-colors">{addon.name}</h3>
+                        <h3 className="text-xl font-bold mb-2 text-gray-800">{addon.name}</h3>
                         <div className="text-2xl font-bold mb-2">
                           {addon.price}
                           <span className="text-sm text-gray-600 ml-1">/month</span>
@@ -207,10 +204,7 @@ const Pricing = () => {
                             <Button 
                               variant="outline" 
                               className="w-full bg-gray-50 hover:bg-gray-100 
-                                border-gray-200 text-gray-700 
-                                group-hover:border-primary 
-                                group-hover:text-primary 
-                                transition-all"
+                                border-gray-200 text-gray-700"
                             >
                               <Info className="mr-2 h-4 w-4" />
                               More Info
