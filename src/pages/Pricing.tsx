@@ -11,8 +11,7 @@ const Pricing = () => {
       price: "$19",
       description: "Simple, very clean, enough for solo devs or small apps",
       features: [
-        "Western Natal Charts only (no Vedic)",
-        "Transit Calculations (current day only)",
+        "Choose Western OR Vedic Natal Charts",
         "50,000 API calls/month",
         "1 API key",
       ],
@@ -52,21 +51,23 @@ const Pricing = () => {
       highlight: false,
       icon: "🌟",
     },
+  ];
+
+  const addOns = [
     {
-      name: "Enterprise",
-      price: "$250+",
-      description: "For serious businesses and big apps",
-      features: [
-        "Unlimited API calls",
-        "Private endpoint & custom SLAs",
-        "On-prem hosting option",
-        "Custom features (batch jobs, webhooks)",
-        "VPC / dedicated server",
-        "Custom development support",
-      ],
-      cta: "Contact Sales",
-      highlight: false,
-      icon: "🛡️",
+      name: "Synastry Charts",
+      price: "$15",
+      description: "Add relationship analysis capabilities to any plan",
+    },
+    {
+      name: "Return Charts",
+      price: "$15",
+      description: "Add Solar, Lunar, Saturn, and Jupiter return calculations",
+    },
+    {
+      name: "Progressions",
+      price: "$9",
+      description: "Add progression calculations to your plan",
     },
   ];
 
@@ -114,7 +115,7 @@ const Pricing = () => {
         {/* Pricing Tables */}
         <section className="py-20 -mt-10">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {plans.map((plan, index) => (
                 <div 
                   key={index} 
@@ -134,7 +135,7 @@ const Pricing = () => {
                     </div>
                     <div className="mb-4">
                       <span className="text-4xl font-bold">{plan.price}</span>
-                      {plan.name !== "Enterprise" && <span className="text-gray-600">/month</span>}
+                      <span className="text-gray-600">/month</span>
                     </div>
                     <p className="text-gray-600 mb-6">{plan.description}</p>
                     <ul className="space-y-3 mb-8">
@@ -147,7 +148,7 @@ const Pricing = () => {
                     </ul>
                   </div>
                   <div className="p-8 pt-0">
-                    <Link to={plan.cta === "Contact Sales" ? "/contact" : "/signup"}>
+                    <Link to="/signup">
                       <Button 
                         className={`w-full py-6 ${
                           plan.highlight ? '' : 'bg-gray-800 hover:bg-gray-700'
@@ -159,6 +160,30 @@ const Pricing = () => {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Add-ons Section */}
+            <div className="mt-16">
+              <h2 className="text-3xl font-bold text-center mb-8">Add-on Modules</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {addOns.map((addon, index) => (
+                  <div 
+                    key={index}
+                    className="bg-white rounded-lg shadow-md p-6 border border-gray-100"
+                  >
+                    <h3 className="text-xl font-semibold mb-2">{addon.name}</h3>
+                    <div className="text-2xl font-bold mb-2">
+                      {addon.price}<span className="text-sm text-gray-600">/month</span>
+                    </div>
+                    <p className="text-gray-600">{addon.description}</p>
+                    <Link to="/signup" className="block mt-4">
+                      <Button variant="outline" className="w-full">
+                        Add to Plan
+                      </Button>
+                    </Link>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="mt-16 max-w-3xl mx-auto text-center">
