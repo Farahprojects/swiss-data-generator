@@ -72,10 +72,10 @@ const Pricing = () => {
       details: "Calculate and analyze important astrological returns including Solar (yearly), Lunar (monthly), and planetary returns for Jupiter and Saturn. Essential for long-term planning and life cycle analysis."
     },
     {
-      name: "Progressions",
-      price: "$9",
-      description: "Add progression calculations to your plan",
-      details: "Access secondary progressions calculations to track the evolution of a natal chart over time. Understand long-term developmental patterns and life transitions."
+      name: "Transits (12 months ahead)",
+      price: "$19",
+      description: "Comprehensive transit predictions for future planning",
+      details: "Access detailed planetary transit predictions for the next 12 months. Understand upcoming astrological influences, potential challenges, and opportunities for personal growth and strategic decision-making."
     },
   ];
 
