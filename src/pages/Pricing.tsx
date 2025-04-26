@@ -187,24 +187,40 @@ const Pricing = () => {
                   {addOns.map((addon, index) => (
                     <div 
                       key={index}
-                      className="bg-white rounded-lg shadow-md p-6 border border-gray-100"
+                      className="bg-white rounded-xl shadow-lg border border-gray-100 
+                        hover:shadow-xl transition-all duration-300 
+                        group overflow-hidden 
+                        transform hover:-translate-y-2"
                     >
-                      <h3 className="text-xl font-semibold mb-2">{addon.name}</h3>
-                      <div className="text-2xl font-bold mb-2">
-                        {addon.price}<span className="text-sm text-gray-600">/month</span>
+                      <div className="p-6 pb-0">
+                        <h3 className="text-xl font-bold mb-2 text-gray-800 
+                          group-hover:text-primary transition-colors">{addon.name}</h3>
+                        <div className="text-2xl font-bold mb-2">
+                          {addon.price}
+                          <span className="text-sm text-gray-600 ml-1">/month</span>
+                        </div>
+                        <p className="text-gray-600 mb-4 h-12">{addon.description}</p>
                       </div>
-                      <p className="text-gray-600 mb-4">{addon.description}</p>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" className="w-full">
-                            <Info className="mr-2 h-4 w-4" />
-                            More Info
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[300px] p-4">
-                          <p className="text-sm text-gray-700">{addon.details}</p>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="p-6 pt-0">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              className="w-full bg-gray-50 hover:bg-gray-100 
+                                border-gray-200 text-gray-700 
+                                group-hover:border-primary 
+                                group-hover:text-primary 
+                                transition-all"
+                            >
+                              <Info className="mr-2 h-4 w-4" />
+                              More Info
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-[300px] p-4">
+                            <p className="text-sm text-gray-700">{addon.details}</p>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   ))}
                 </div>
