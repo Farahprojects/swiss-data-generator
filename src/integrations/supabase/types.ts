@@ -75,6 +75,63 @@ export type Database = {
         }
         Relationships: []
       }
+      api_request_logs: {
+        Row: {
+          api_key: string
+          birth_date: string
+          birth_time: string
+          city: string
+          country: string
+          created_at: string | null
+          endpoint_called: string
+          error_message: string | null
+          log_id: string
+          second_birth_date: string | null
+          second_birth_time: string | null
+          second_city: string | null
+          second_country: string | null
+          status: string
+          system: string
+          user_id: string | null
+        }
+        Insert: {
+          api_key: string
+          birth_date: string
+          birth_time: string
+          city: string
+          country: string
+          created_at?: string | null
+          endpoint_called: string
+          error_message?: string | null
+          log_id?: string
+          second_birth_date?: string | null
+          second_birth_time?: string | null
+          second_city?: string | null
+          second_country?: string | null
+          status?: string
+          system: string
+          user_id?: string | null
+        }
+        Update: {
+          api_key?: string
+          birth_date?: string
+          birth_time?: string
+          city?: string
+          country?: string
+          created_at?: string | null
+          endpoint_called?: string
+          error_message?: string | null
+          log_id?: string
+          second_birth_date?: string | null
+          second_birth_time?: string | null
+          second_city?: string | null
+          second_country?: string | null
+          status?: string
+          system?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       billing_history: {
         Row: {
           amount_paid: number
@@ -146,65 +203,6 @@ export type Database = {
           price_per_month?: number
         }
         Relationships: []
-      }
-      usage_tracking: {
-        Row: {
-          api_key_id: string
-          api_product_id: string
-          call_successful: boolean
-          endpoint_url: string
-          id: string
-          timestamp: string
-          user_id: string
-        }
-        Insert: {
-          api_key_id: string
-          api_product_id: string
-          call_successful: boolean
-          endpoint_url: string
-          id?: string
-          timestamp?: string
-          user_id: string
-        }
-        Update: {
-          api_key_id?: string
-          api_product_id?: string
-          call_successful?: boolean
-          endpoint_url?: string
-          id?: string
-          timestamp?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "usage_tracking_api_key_id_fkey"
-            columns: ["api_key_id"]
-            isOneToOne: false
-            referencedRelation: "api_keys"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "usage_tracking_api_product_id_fkey"
-            columns: ["api_product_id"]
-            isOneToOne: false
-            referencedRelation: "api_products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "usage_tracking_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_info"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "usage_tracking_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       users: {
         Row: {
