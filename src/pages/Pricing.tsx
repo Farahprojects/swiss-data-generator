@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,7 @@ const Pricing = () => {
             <section className="mt-16 bg-gray-50 py-16">
               <div className="container mx-auto px-4">
                 <div className="text-center max-w-3xl mx-auto mb-12">
-                  <h2 className="text-4xl font-bold mb-4 text-gray-800">
+                  <h2 className="text-4xl font-bold mb-4 text-primary">
                     Enhance Your API with Powerful Add-Ons
                   </h2>
                   <p className="text-lg text-gray-600">

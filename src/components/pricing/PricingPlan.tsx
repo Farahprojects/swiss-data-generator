@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,7 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
       <div className="p-8 flex-grow">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-2xl">{icon}</span>
-          <h3 className="text-2xl font-bold">{name}</h3>
+          <h3 className="text-2xl font-bold text-primary">{name}</h3>
         </div>
         <div className="mb-4">
           <span className="text-4xl font-bold">{price}</span>
