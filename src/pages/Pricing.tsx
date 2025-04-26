@@ -18,6 +18,25 @@ const Pricing = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  const getPriceId = (planType: string) => {
+    switch (planType.toLowerCase()) {
+      case 'starter':
+        return 'prod_SChONzn9OMLY8a';
+      case 'growth':
+        return 'prod_SChTnZYL9hJcVn';
+      case 'professional':
+        return 'prod_SChVAlp4rvsOwR';
+      case 'yearly-cycle':
+        return 'prod_SChZXHKNLsasbw';
+      case 'relationship':
+        return 'prod_SChY6pgEbdigNb';
+      case 'transits':
+        return 'prod_SChXs8TcQqDJuo';
+      default:
+        return 'prod_SChONzn9OMLY8a';
+    }
+  };
+
   const handleSubscribe = async (planType: string) => {
     if (!user) {
       navigate('/login', { state: { from: '/pricing' } });
@@ -40,19 +59,6 @@ const Pricing = () => {
         description: "Failed to start subscription process. Please try again.",
         variant: "destructive",
       });
-    }
-  };
-
-  const getPriceId = (planType: string) => {
-    switch (planType.toLowerCase()) {
-      case 'starter':
-        return 'price_XXXXX';
-      case 'growth':
-        return 'price_XXXXX';
-      case 'professional':
-        return 'price_XXXXX';
-      default:
-        return 'price_XXXXX';
     }
   };
 
@@ -236,34 +242,34 @@ const Pricing = () => {
                         group overflow-hidden 
                         transform hover:-translate-y-2"
                     >
-                      <div className="p-6 pb-0">
+                      <div className="p-6">
                         <h3 className="text-xl font-bold mb-2 text-gray-800 
                           group-hover:text-primary transition-colors">{addon.name}</h3>
                         <div className="text-2xl font-bold mb-2">
                           {addon.price}
                           <span className="text-sm text-gray-600 ml-1">/month</span>
                         </div>
-                        <p className="text-gray-600 mb-4 h-12">{addon.description}</p>
-                      </div>
-                      <div className="p-6 pt-0">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              className="w-full bg-gray-50 hover:bg-gray-100 
-                                border-gray-200 text-gray-700 
-                                group-hover:border-primary 
-                                group-hover:text-primary 
-                                transition-all"
-                            >
-                              <Info className="mr-2 h-4 w-4" />
-                              More Info
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-[300px] p-4">
-                            <p className="text-sm text-gray-700">{addon.details}</p>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <p className="text-gray-600 mb-4">{addon.description}</p>
+                        <div className="space-y-4">
+                          <Button 
+                            onClick={() => handleSubscribe(addon.name.toLowerCase().includes('yearly') ? 'yearly-cycle' : 
+                              addon.name.toLowerCase().includes('relationship') ? 'relationship' : 'transits')}
+                            className="w-full bg-primary hover:bg-primary/90"
+                          >
+                            Subscribe Now
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="w-full">
+                                <Info className="mr-2 h-4 w-4" />
+                                More Info
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-[300px] p-4">
+                              <p className="text-sm text-gray-700">{addon.details}</p>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
                   ))}
