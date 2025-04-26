@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
@@ -11,6 +10,11 @@ const Index = () => {
       title: "Natal Charts",
       description: "Calculate precise natal charts with both Western and Vedic systems.",
       icon: "✨",
+    },
+    {
+      title: "Vedic Charts",
+      description: "Comprehensive Vedic astrology including dashas, yogas, and traditional divisional charts (D-charts).",
+      icon: "🕉️",
     },
     {
       title: "Transits",
@@ -31,11 +35,6 @@ const Index = () => {
       title: "Moon Phases",
       description: "Precise lunar phase calculations with timing and zodiacal positions.",
       icon: "🌙",
-    },
-    {
-      title: "Return Charts",
-      description: "Planetary returns including Saturn, Jupiter, Venus, and more.",
-      icon: "♄",
     },
   ];
 
