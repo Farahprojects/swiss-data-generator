@@ -7,21 +7,51 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
+// Define interface for user_info view data
+interface UserInfo {
+  id: string;
+  email: string;
+  plan_type: string;
+  addon_transits: boolean;
+  addon_relationship: boolean;
+  addon_yearly_cycle: boolean;
+  calls_limit: number;
+  calls_made: number;
+  api_key: string;
+}
+
 export const ApiKeySection = () => {
   const { user } = useAuth();
   const [isKeyVisible, setIsKeyVisible] = useState(false);
   const { toast } = useToast();
 
-  const { data: userInfo, isLoading } = useQuery({
+  // Use the interface to properly type the data
+  const { data: userInfo, isLoading } = useQuery<UserInfo>({
     queryKey: ['userInfo'],
     queryFn: async () => {
+      // Use .from('users') instead of 'user_info' and join with api_keys
       const { data, error } = await supabase
-        .from('user_info')
-        .select('*')
+        .from('users')
+        .select('*, api_keys!inner(*)')
+        .eq('id', user?.id)
         .single();
       
       if (error) throw error;
-      return data;
+      
+      // Transform the data to match our UserInfo interface
+      const transformedData: UserInfo = {
+        id: data.id,
+        email: data.email,
+        plan_type: data.plan_type,
+        addon_transits: data.addon_transits,
+        addon_relationship: data.addon_relationship,
+        addon_yearly_cycle: data.addon_yearly_cycle,
+        calls_limit: data.calls_limit,
+        calls_made: data.calls_made,
+        api_key: data.api_keys[0].api_key
+      };
+      
+      return transformedData;
     },
     enabled: !!user
   });
