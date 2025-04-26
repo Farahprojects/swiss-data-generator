@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Star as StarIcon,
   Moon,
-  Planet,
+  Globe,
   HeartHandshake,
   Clock3,
   CalendarRange,
@@ -32,7 +32,7 @@ const features: Feature[] = [
     title: "Natal Charts",
     description:
       "Precise Western & Vedic natal calculations delivered in milliseconds.",
-    Icon: Planet,
+    Icon: Globe,
   },
   {
     title: "Vedic Charts",
