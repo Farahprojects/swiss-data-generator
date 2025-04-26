@@ -1,8 +1,13 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Pricing = () => {
   const plans = [
@@ -55,19 +60,22 @@ const Pricing = () => {
 
   const addOns = [
     {
-      name: "Synastry Charts",
+      name: "Relationship Compatibility",
       price: "$15",
       description: "Add relationship analysis capabilities to any plan",
+      details: "Deep dive into relationship dynamics with comprehensive synastry analysis. Compare two charts to understand relationship strengths, challenges, and potentials. Perfect for relationship-focused applications."
     },
     {
-      name: "Return Charts",
+      name: "Yearly Cycle",
       price: "$15",
       description: "Add Solar, Lunar, Saturn, and Jupiter return calculations",
+      details: "Calculate and analyze important astrological returns including Solar (yearly), Lunar (monthly), and planetary returns for Jupiter and Saturn. Essential for long-term planning and life cycle analysis."
     },
     {
       name: "Progressions",
       price: "$9",
       description: "Add progression calculations to your plan",
+      details: "Access secondary progressions calculations to track the evolution of a natal chart over time. Understand long-term developmental patterns and life transitions."
     },
   ];
 
@@ -175,12 +183,18 @@ const Pricing = () => {
                     <div className="text-2xl font-bold mb-2">
                       {addon.price}<span className="text-sm text-gray-600">/month</span>
                     </div>
-                    <p className="text-gray-600">{addon.description}</p>
-                    <Link to="/signup" className="block mt-4">
-                      <Button variant="outline" className="w-full">
-                        Add to Plan
-                      </Button>
-                    </Link>
+                    <p className="text-gray-600 mb-4">{addon.description}</p>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full">
+                          <Info className="mr-2" />
+                          More Info
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[300px] p-4">
+                        <p className="text-sm text-gray-700">{addon.details}</p>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
               </div>
