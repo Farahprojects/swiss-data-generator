@@ -11,7 +11,7 @@ export const getPriceId = (planType: string) => {
     case 'yearly-cycle':
       return 'price_1RIIAkJ1YhE4Ljp07H39uZnZ';
     case 'relationship compatibility':
-    case 'relationship':
+    case 'Relationship Compatibility':
       return 'price_1RII9kJ1YhE4Ljp0TYh0L9vN';
     case 'transits':
       return 'price_1RII87J1YhE4Ljp0TPLjRtut';

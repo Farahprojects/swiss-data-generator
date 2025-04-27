@@ -132,13 +132,13 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
                   Supercharge your experience with these powerful add-ons:
                 </p>
                 <div className="space-y-4">
-                  {visiblePlan === "Starter" && ["transits", "yearly-cycle", "relationship compatibility"].map(
+                  {visiblePlan === "Starter" && ["transits", "yearly-cycle", "Relationship Compatibility"].map(
                     (addOn) => (
                       <AddOnToggle key={addOn} label={addOn} />
                     )
                   )}
                   {visiblePlan === "Growth" && (
-                    <AddOnToggle label="relationship compatibility" />
+                    <AddOnToggle label="Relationship Compatibility" />
                   )}
                 </div>
               </>
@@ -168,7 +168,6 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
     </CheckoutContext.Provider>
   );
 
-  /*------------------------------------*/
   function AddOnToggle({ label }: { label: string }) {
     const { addOnLines, toggleAddOn } = useCheckoutWizard();
     const checked = !!addOnLines[label];
@@ -176,6 +175,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
     const displayName = {
       'transits': 'Transits',
       'yearly-cycle': 'Yearly Cycle',
+      'Relationship Compatibility': 'Relationship Compatibility',
       'relationship compatibility': 'Relationship Compatibility'
     }[label] || label;
 
@@ -294,3 +294,5 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
     </div>
   );
 };
+
+export default CheckoutProvider;
