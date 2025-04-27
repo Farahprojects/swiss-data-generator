@@ -16,7 +16,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Pr
     if (retries === 0) throw error;
     console.log(`Retrying operation after error: ${error.message}. Attempts left: ${retries}`);
     await new Promise(resolve => setTimeout(resolve, delay));
-    return withRetry(fn, retries - 1, delay * 2); // Exponential backoff
+    return withRetry(fn, retries - 1, delay * 2);
   }
 }
 
@@ -61,7 +61,7 @@ serve(async (req) => {
 
     const email = session.customer_details?.email;
     const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
-    const subscriptionId = session.subscription?.id; // Fixed: Get subscription ID properly
+    const subscriptionId = session.subscription?.id;
     const planName = session.metadata?.planType;
     
     if (!email || !customerId) {

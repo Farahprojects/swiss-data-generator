@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +11,6 @@ import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { paymentSession } from "@/services/payment-session";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -33,28 +33,28 @@ const Signup = () => {
       if (success === "true" && sessionId) {
         setLoadingEmail(true);
         try {
-          // Try to get email from stripe_users table first
-          const { data: stripeUser, error } = await supabase
-            .from('stripe_users')
-            .select('email, plan_name')
-            .eq('stripe_subscription_id', sessionId)
-            .maybeSingle();
+          // Call verify-payment to get session details and create stripe_user record
+          const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
+            body: { sessionId }
+          });
 
-          if (stripeUser?.email) {
-            setCustomerEmail(stripeUser.email);
-            updateEmail(stripeUser.email);
-            setPlanType(stripeUser.plan_name || "");
-          } else {
-            // Fallback to session storage if no data in stripe_users
-            const sessionData = paymentSession.get();
-            if (sessionData?.email) {
-              setCustomerEmail(sessionData.email);
-              updateEmail(sessionData.email);
-              setPlanType(sessionData.planType || "");
-            }
+          if (verifyError) {
+            console.error("Error verifying payment:", verifyError);
+            throw verifyError;
+          }
+
+          if (verifyData?.email) {
+            setCustomerEmail(verifyData.email);
+            updateEmail(verifyData.email);
+            setPlanType(verifyData.planType || "");
           }
         } catch (error) {
           console.error("Error retrieving customer email:", error);
+          toast({
+            title: "Error",
+            description: "Failed to retrieve customer information. Please try again or contact support.",
+            variant: "destructive",
+          });
         } finally {
           setLoadingEmail(false);
         }
@@ -62,7 +62,7 @@ const Signup = () => {
     };
 
     getCustomerEmail();
-  }, [searchParams, updateEmail]);
+  }, [searchParams, updateEmail, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,26 +80,25 @@ const Signup = () => {
         console.error("Detailed signup error:", error);
       } else if (user) {
         // Create user record with payment information
-        const success = await createUserRecord(user.id);
+        const { data: createUserData, error: createUserError } = await supabase.rpc('create_user_after_payment', {
+          user_id: user.id,
+          plan_type: planType || 'starter'
+        });
         
-        if (success) {
-          toast({
-            title: "Account Created",
-            description: "Your account has been created successfully!",
-          });
-          
-          // Clear payment session after successful user creation
-          paymentSession.clear();
-          
-          // Redirect to dashboard
-          navigate("/dashboard");
-        } else {
+        if (createUserError) {
+          console.error("Error creating user record:", createUserError);
           toast({
             title: "Account Created",
             description: "Your account was created, but we couldn't set up your subscription. Please contact support.",
           });
-          navigate("/dashboard");
+        } else {
+          toast({
+            title: "Account Created",
+            description: "Your account has been created successfully!",
+          });
         }
+        
+        navigate("/dashboard");
       } else {
         toast({
           title: "Success",
@@ -137,52 +136,6 @@ const Signup = () => {
         variant: "destructive",
       });
       console.error("Unexpected Google sign-in error:", error);
-    }
-  };
-
-  const createUserRecord = async (userId: string) => {
-    try {
-      const sessionData = paymentSession.get();
-      if (!sessionData) return false;
-
-      // Use the new create_user_after_payment RPC function
-      const { data, error } = await supabase.rpc('create_user_after_payment', {
-        user_id: userId,
-        plan_type: sessionData.planType || 'starter'
-      });
-
-      if (error) {
-        console.error("Error creating user record:", error);
-        return false;
-      }
-
-      // If there are add-ons, enable them
-      if (sessionData.addOns && sessionData.addOns.length > 0) {
-        for (const addon of sessionData.addOns) {
-          let addonKey = '';
-          
-          if (addon.toLowerCase().includes('transit')) {
-            addonKey = 'transits';
-          } else if (addon.toLowerCase().includes('relationship') || addon.toLowerCase().includes('compatibility')) {
-            addonKey = 'relationship';
-          } else if (addon.toLowerCase().includes('yearly') || addon.toLowerCase().includes('cycle')) {
-            addonKey = 'yearly_cycle';
-          }
-
-          if (addonKey) {
-            await supabase.rpc('toggle_addon', {
-              user_id_param: userId,
-              addon_name: addonKey,
-              enabled: true
-            });
-          }
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error in user provisioning:", error);
-      return false;
     }
   };
 
