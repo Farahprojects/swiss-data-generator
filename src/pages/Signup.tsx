@@ -13,9 +13,11 @@ import SocialLogin from "@/components/auth/SocialLogin";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { paymentSession } from "@/services/payment-session";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 const Signup = () => {
   const [loading, setLoading] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [customerEmail, setCustomerEmail] = useState<string>("");
   const [planType, setPlanType] = useState<string>("");
@@ -31,43 +33,64 @@ const Signup = () => {
       const sessionId = searchParams.get("session_id");
 
       if (success === "true" && sessionId) {
+        setVerifyingPayment(true);
+        
         try {
-          const { data: verifyData, error } = await supabase.functions.invoke("verify-payment", {
-            body: { sessionId }
-          });
-
-          if (error) throw error;
-
-          if (verifyData.success && verifyData.paymentStatus === "paid") {
-            setPaymentVerified(true);
-            
-            // Get plan type from session storage
-            const sessionData = paymentSession.get();
-            if (sessionData?.planType) {
-              setPlanType(sessionData.planType);
-            }
-            
-            if (verifyData.email) {
-              setCustomerEmail(verifyData.email);
-              updateEmail(verifyData.email);
-            }
-            
-            // Store the session ID for later use
-            paymentSession.store(
-              sessionId, 
-              sessionData?.planType || "starter", 
-              sessionData?.addOns
-            );
-            
-            toast({
-              title: "Payment Verified",
-              description: "Your payment has been verified. Please complete signup to access your account.",
+          // Retry verification a few times in case the payment data hasn't propagated yet
+          let retries = 3;
+          let verified = false;
+          
+          while (retries > 0 && !verified) {
+            console.log(`Verifying payment, attempt ${4-retries}/3`);
+            const { data: verifyData, error } = await supabase.functions.invoke("verify-payment", {
+              body: { sessionId }
             });
-          } else {
+
+            if (error) {
+              console.error("Verification error:", error);
+              if (retries === 1) throw error; // Only throw on last attempt
+            } else if (verifyData?.success && verifyData?.paymentStatus === "paid") {
+              verified = true;
+              setPaymentVerified(true);
+              
+              // Get plan type from session storage or from verification response
+              const sessionData = paymentSession.get();
+              setPlanType(verifyData.planType || sessionData?.planType || "");
+              
+              if (verifyData.email) {
+                setCustomerEmail(verifyData.email);
+                updateEmail(verifyData.email);
+              }
+              
+              // Store the session ID for later use
+              paymentSession.store(
+                sessionId, 
+                verifyData.planType || sessionData?.planType || "starter", 
+                sessionData?.addOns
+              );
+              
+              toast({
+                title: "Payment Verified",
+                description: "Your payment has been verified. Please complete signup to access your account.",
+              });
+              
+              break;
+            }
+            
+            // If not verified, wait and try again
+            if (!verified && retries > 1) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              retries--;
+            } else {
+              retries = 0;
+            }
+          }
+          
+          if (!verified) {
             toast({
-              title: "Payment Verification Failed",
-              description: "Unable to verify payment status. Please contact support.",
-              variant: "destructive",
+              title: "Payment Verification Pending",
+              description: "We're still processing your payment. You can continue with signup and check your status later.",
+              variant: "default",
             });
           }
         } catch (error) {
@@ -77,12 +100,14 @@ const Signup = () => {
             description: error instanceof Error ? error.message : "Failed to verify payment",
             variant: "destructive",
           });
+        } finally {
+          setVerifyingPayment(false);
         }
       }
     };
 
     verifyPayment();
-  }, [searchParams]);
+  }, [searchParams, toast, updateEmail]);
 
   // Function to create user record with payment information
   const createUserRecord = async (userId: string) => {
@@ -217,7 +242,12 @@ const Signup = () => {
             <p className="mt-2 text-gray-600">Get started with Theraiapi</p>
           </div>
 
-          {paymentVerified && (
+          {verifyingPayment ? (
+            <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg">
+              <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+              <p className="text-gray-700">Verifying your payment, please wait...</p>
+            </div>
+          ) : paymentVerified && (
             <Alert className="mb-6">
               <AlertDescription>
                 Payment verified successfully! {planType && `You've selected the ${planType} plan. `}
@@ -229,7 +259,7 @@ const Signup = () => {
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">
               <EmailInput 
-                email={formState.email}
+                email={customerEmail || formState.email}
                 isValid={formState.emailValid}
                 onChange={updateEmail}
               />
