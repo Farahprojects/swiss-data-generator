@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import Footer from "@/components/Footer";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { PricingPlan, AddOnCard } from "@/components/pricing/PaymentComponents";
+import { PricingPlan, AddOnCard, UpsellDialog } from "@/components/pricing/PaymentComponents";
 import { FAQSection } from "@/components/pricing/FAQSection";
 import { plans, addOns, faqs } from "@/utils/pricing";
 
@@ -68,7 +67,7 @@ const Pricing: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Add‑ons – always visible; status flag indicates included vs upsell */}
+                {/* Add‑ons – cleaned up presentation */}
                 <section className="mt-16 bg-gray-50 py-16">
                   <div className="container mx-auto px-4">
                     <div className="mx-auto mb-12 max-w-3xl text-center">
@@ -86,7 +85,6 @@ const Pricing: React.FC = () => {
                           price={a.price}
                           description={a.description}
                           details={a.details}
-                          status={a.status === "included" ? "included" : "upgrade"}
                         />
                       ))}
                     </div>
@@ -99,7 +97,7 @@ const Pricing: React.FC = () => {
                     <h2 className="mb-12 text-center text-3xl font-bold">Feature Comparison</h2>
                     <div className="overflow-x-auto">
                       <table className="w-full overflow-hidden rounded-lg bg-white shadow-sm">
-                        {/* … existing rows/columns … */}
+                        {/* ... existing rows/columns ... */}
                       </table>
                     </div>
                   </div>
@@ -125,6 +123,7 @@ const Pricing: React.FC = () => {
         </section>
       </main>
 
+      <UpsellDialog />
       <Footer />
     </div>
   );

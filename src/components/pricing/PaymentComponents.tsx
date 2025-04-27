@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Info } from "lucide-react";
+import { Check, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +12,16 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getPriceId } from "@/utils/pricing";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Shared checkout hook ------------------------------------------------------
@@ -24,27 +34,53 @@ const useStripeCheckout = () => {
   const [state, setState] = useState<{ loading: boolean; product?: string }>({
     loading: false,
   });
+  
+  const [showUpsellDialog, setShowUpsellDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
-  const handleCheckout = async (productName: string) => {
-    if (state.loading) return;
+  const startCheckoutFlow = (productName: string) => {
+    setSelectedPlan(productName);
+    setShowUpsellDialog(true);
+    // Reset selected addons when starting a new checkout flow
+    setSelectedAddons([]);
+  };
 
-    const priceId = getPriceId(productName);
-    if (!priceId) {
+  const toggleAddon = (addonName: string) => {
+    setSelectedAddons(prev => {
+      if (prev.includes(addonName)) {
+        return prev.filter(name => name !== addonName);
+      } else {
+        return [...prev, addonName];
+      }
+    });
+  };
+
+  const handleCheckout = async () => {
+    if (state.loading || !selectedPlan) return;
+
+    // Get price IDs for main plan and addons
+    const planPriceId = getPriceId(selectedPlan);
+    const addonPriceIds = selectedAddons.map(addon => getPriceId(addon)).filter(Boolean);
+    
+    const allPriceIds = [planPriceId, ...addonPriceIds].filter(Boolean);
+
+    if (allPriceIds.length === 0) {
       toast({
         title: "Pricing Error",
-        description: `Unknown product "${productName}". Contact support.`,
+        description: "Could not determine pricing for selection.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      setState({ loading: true, product: productName });
-      console.log("Starting checkout process for:", productName);
+      setState({ loading: true, product: selectedPlan });
+      console.log("Starting checkout process for:", selectedPlan, "with addons:", selectedAddons);
       console.log("User authenticated:", !!user);
       
       const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { priceId },
+        body: { priceIds: allPriceIds },
       });
       
       if (error) throw error;
@@ -75,7 +111,16 @@ const useStripeCheckout = () => {
     }
   };
 
-  return { isLoading: state.loading, handleCheckout };
+  return { 
+    isLoading: state.loading, 
+    startCheckoutFlow, 
+    handleCheckout, 
+    showUpsellDialog, 
+    setShowUpsellDialog,
+    selectedPlan,
+    selectedAddons,
+    toggleAddon
+  };
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -94,17 +139,12 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   price,
   description,
   details,
-  status = "upgrade",
 }) => {
-  const label = status === "included" ? "Included in plan" : "Available at checkout";
   return (
     <div className="flex flex-col gap-6 rounded-xl border border-gray-100 bg-white p-8 shadow-sm hover:shadow-md">
-      <div className="flex items-center gap-3">
-        <Info className="h-5 w-5 text-primary" />
-        <h3 className="text-xl font-bold">{name}</h3>
-      </div>
+      <h3 className="text-xl font-bold text-primary">{name}</h3>
       <p className="text-gray-600">{description}</p>
-      <p className="text-xl font-medium text-primary/80">{price}</p>
+      <p className="text-xl font-medium text-primary">{price}</p>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -120,14 +160,6 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <span
-        className={`rounded-md px-3 py-1 text-xs font-semibold ${
-          status === "included" ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-600"
-        }`}
-      >
-        {label}
-      </span>
     </div>
   );
 };
@@ -154,7 +186,7 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
   highlight = false,
   icon,
 }) => {
-  const { isLoading, handleCheckout } = useStripeCheckout();
+  const { isLoading, startCheckoutFlow } = useStripeCheckout();
 
   return (
     <div
@@ -183,12 +215,106 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
         <p className="mb-4 text-3xl font-semibold text-primary">{price}</p>
         <Button
           className="w-full py-6"
-          onClick={() => handleCheckout(name)}
+          onClick={() => startCheckoutFlow(name)}
           disabled={isLoading}
         >
           {isLoading ? "Redirecting…" : cta}
         </Button>
       </div>
     </div>
+  );
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// Upsell Dialog -------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────────────────
+export const UpsellDialog = () => {
+  const { 
+    showUpsellDialog, 
+    setShowUpsellDialog, 
+    selectedPlan,
+    selectedAddons, 
+    toggleAddon,
+    handleCheckout, 
+    isLoading 
+  } = useStripeCheckout();
+  
+  const { addOns } = require("@/utils/pricing");
+  
+  // Filter addons to show based on selected plan
+  const relevantAddons = addOns.filter(addon => {
+    if (selectedPlan === "Starter") {
+      return true; // Show all addons for Starter plan
+    } else if (selectedPlan === "Growth") {
+      return addon.name === "Relationship Compatibility"; // Only show Relationship for Growth
+    } else if (selectedPlan === "Professional") {
+      return false; // No upsells for Professional
+    }
+    return false;
+  });
+
+  if (relevantAddons.length === 0) {
+    // Skip the upsell dialog if there are no relevant addons
+    if (showUpsellDialog) {
+      handleCheckout();
+      setShowUpsellDialog(false);
+    }
+    return null;
+  }
+
+  return (
+    <Dialog open={showUpsellDialog} onOpenChange={setShowUpsellDialog}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">
+            Complete Your {selectedPlan} Plan
+          </DialogTitle>
+          <DialogDescription className="text-lg">
+            {selectedPlan === "Starter" 
+              ? "Enhance your experience with these powerful add-ons"
+              : "Add relationship compatibility analysis to your plan"}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid gap-4 py-4">
+          {relevantAddons.map((addon, index) => (
+            <Card key={index} className={`border ${selectedAddons.includes(addon.name) ? 'border-primary' : 'border-gray-200'}`}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle>{addon.name}</CardTitle>
+                    <CardDescription>{addon.description}</CardDescription>
+                  </div>
+                  <div className="text-xl font-semibold text-primary">{addon.price}</div>
+                </div>
+              </CardHeader>
+              <CardFooter>
+                <Button
+                  variant={selectedAddons.includes(addon.name) ? "default" : "outline"}
+                  className="mt-2"
+                  onClick={() => toggleAddon(addon.name)}
+                >
+                  {selectedAddons.includes(addon.name) ? "Added" : "Add to plan"}
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+        
+        <DialogFooter>
+          <div className="w-full flex flex-col sm:flex-row justify-between gap-3">
+            <Button variant="outline" onClick={() => setShowUpsellDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCheckout} disabled={isLoading} className="px-8">
+              {isLoading ? "Processing..." : selectedAddons.length > 0 
+                ? `Continue with ${selectedPlan} + ${selectedAddons.length} add-on${selectedAddons.length > 1 ? 's' : ''}`
+                : `Continue with ${selectedPlan} only`
+              }
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

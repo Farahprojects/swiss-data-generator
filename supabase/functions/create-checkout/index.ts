@@ -9,125 +9,99 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders,
+    });
   }
 
   try {
-    const { priceId } = await req.json();
-    console.log("Received priceId:", priceId);
-    
-    if (!priceId) {
-      throw new Error("Price ID is required");
-    }
-    
-    // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
 
-    // Modified to support guest checkout
-    let customerEmail = null;
-    let user = null;
-    
-    // Try to get authenticated user if token exists
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Get the authorization header from the request
     const authHeader = req.headers.get("Authorization");
+    let userId = null;
+    let userEmail = null;
+
+    // If we have an auth header, get the user
     if (authHeader && authHeader.startsWith("Bearer ")) {
-      // Create Supabase client
-      const supabaseClient = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-      );
-      
-      const token = authHeader.replace("Bearer ", "");
-      const { data, error } = await supabaseClient.auth.getUser(token);
-      
+      const token = authHeader.split(" ")[1];
+      const { data, error } = await supabase.auth.getUser(token);
       if (!error && data?.user) {
-        user = data.user;
-        customerEmail = user.email;
-        console.log("Authenticated user:", customerEmail);
+        userId = data.user.id;
+        userEmail = data.user.email;
       }
     }
 
-    // Guest checkout - no user information needed for creating the session
-    console.log(customerEmail ? "Creating checkout for authenticated user" : "Creating checkout for guest");
+    // Get the request body
+    const { priceIds } = await req.json();
+    console.log("Creating checkout for priceIds:", priceIds);
 
-    // Check if we have a customer for this email
+    // Ensure priceIds is always an array
+    const priceIdsArray = Array.isArray(priceIds) ? priceIds : [priceIds];
+
+    // Check if customer already exists
     let customerId;
-    if (customerEmail) {
-      const customers = await stripe.customers.list({ email: customerEmail, limit: 1 });
-      if (customers.data.length > 0) {
-        customerId = customers.data[0].id;
-        console.log("Found existing customer:", customerId);
-      }
-    }
-
-    console.log("Creating checkout session with price:", priceId);
-    
-    // For relationship compatibility or any product ID, handle the product ID case
-    let lineItems;
-    if (priceId.startsWith('prod_')) {
-      // This is a product ID, we need to find a price ID for this product
-      console.log("Product ID detected, looking up associated price");
-      const prices = await stripe.prices.list({
-        product: priceId,
-        active: true,
-        limit: 1
+    if (userEmail) {
+      const customers = await stripe.customers.list({
+        email: userEmail,
+        limit: 1,
       });
       
-      if (prices.data.length === 0) {
-        throw new Error("No active price found for the product");
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
       }
-      
-      console.log("Found price ID for product:", prices.data[0].id);
-      lineItems = [{
-        price: prices.data[0].id,
-        quantity: 1,
-      }];
-    } else {
-      // This is already a price ID
-      lineItems = [{
-        price: priceId,
-        quantity: 1,
-      }];
     }
-    
-    const origin = req.headers.get("origin") || "http://localhost:3000";
-    console.log("Origin URL:", origin);
-    
-    // After successful payment, redirect to signup if guest or dashboard if authenticated
-    const successUrl = `${origin}/${user ? 'dashboard' : 'signup'}?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${origin}/pricing`;
-    
-    console.log("Success URL:", successUrl);
-    console.log("Cancel URL:", cancelUrl);
-    
-    // Create checkout session with optional customer details
+
+    // Create line items from priceIds
+    const line_items = priceIdsArray.map(priceId => ({
+      price: priceId,
+      quantity: 1,
+    }));
+
+    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      customer_email: customerId ? undefined : customerEmail, // Only include email if not using customerId
+      customer_email: customerId ? undefined : userEmail,
+      line_items,
       mode: "subscription",
-      payment_method_types: ["card"],
-      line_items: lineItems,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      // Collect name and email if it's a guest checkout
-      billing_address_collection: !customerEmail ? "required" : undefined,
-      customer_creation: !customerId && !customerEmail ? "always" : undefined,
+      success_url: `${req.headers.get("origin")}/signup?success=true`,
+      cancel_url: `${req.headers.get("origin")}/pricing?canceled=true`,
+      allow_promotion_codes: true,
+      billing_address_collection: "required",
+      client_reference_id: userId,
     });
 
-    console.log("Checkout session created successfully:", session.id);
-    console.log("Checkout URL:", session.url);
-    
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    console.log(`Checkout session created: ${session.id}`);
+
+    return new Response(
+      JSON.stringify({
+        url: session.url,
+        sessionId: session.id,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   } catch (error) {
-    console.error("Checkout error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    console.error("Error creating checkout session:", error);
+    return new Response(
+      JSON.stringify({
+        error: error.message || "Failed to create checkout session",
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 });
