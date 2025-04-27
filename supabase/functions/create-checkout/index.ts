@@ -48,6 +48,8 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
+    console.log("Creating checkout session with price:", priceId);
+    
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -64,6 +66,8 @@ serve(async (req) => {
       cancel_url: `${req.headers.get("origin")}/pricing`,
     });
 
+    console.log("Checkout session created successfully:", session.id);
+    
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

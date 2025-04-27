@@ -2,19 +2,19 @@
 export const getPriceId = (planType: string) => {
   switch (planType.toLowerCase()) {
     case 'starter':
-      return 'prod_SChONzn9OMLY8a';
+      return 'price_1OdpLvKwmkJQr0GFZOYfbUp1';
     case 'growth':
-      return 'prod_SChTnZYL9hJcVn';
+      return 'price_1OdpM8KwmkJQr0GFRdAcFeZZ';
     case 'professional':
-      return 'prod_SChVAlp4rvsOwR';
+      return 'price_1OdpMQKwmkJQr0GFCHXdfKyi';
     case 'yearly-cycle':
-      return 'prod_SChZXHKNLsasbw';
+      return 'price_1OdpMfKwmkJQr0GFzMvF3ZRE';
     case 'relationship':
-      return 'prod_SChY6pgEbdigNb';
+      return 'price_1OdpMsKwmkJQr0GFAASi31v9';
     case 'transits':
-      return 'prod_SChXs8TcQqDJuo';
+      return 'price_1OdpNAKwmkJQr0GFMnJ944ma';
     default:
-      return 'prod_SChONzn9OMLY8a';
+      return 'price_1OdpLvKwmkJQr0GFZOYfbUp1';
   }
 };
 
