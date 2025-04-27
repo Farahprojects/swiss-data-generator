@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Info } from "lucide-react";
@@ -12,10 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getPriceId } from "@/utils/pricing";
 import { useAuth } from "@/contexts/AuthContext";
-
-// ────────────────────────────────────────────────────────────────────────────
-// Shared checkout hook ------------------------------------------------------
-// ────────────────────────────────────────────────────────────────────────────
 
 const useStripeCheckout = () => {
   const { toast } = useToast();
@@ -44,26 +39,21 @@ const useStripeCheckout = () => {
       console.log("User authenticated:", !!user);
       
       const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { priceId },
+        body: { 
+          priceId, 
+          userEmail: user?.email,
+          successUrl: `${window.location.origin}/dashboard`,
+          cancelUrl: `${window.location.origin}/pricing`
+        },
       });
       
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing in response");
       
       console.log("Redirecting to Stripe checkout");
-      // Use window.location.href for full page redirect to prevent iframe issues
-      + const dest = data.url;
-+ try {
-+   // If we’re nested, break out of the frame
-+   if (window.top && window.top !== window.self) {
-+     window.top.location.assign(dest);
-+   } else {
-+     window.location.assign(dest);
-+   }
-+ } catch {
-+   // Fallback for very tight CSP / sandboxed iframes
-+   window.open(dest, "_blank", "noopener,noreferrer");
-+ }
+      
+      // Force full page navigation to prevent iframe issues
+      window.location.href = data.url;
     } catch (err: any) {
       console.error("Stripe checkout error", err);
       toast({
@@ -78,9 +68,6 @@ const useStripeCheckout = () => {
   return { isLoading: state.loading, handleCheckout };
 };
 
-// ────────────────────────────────────────────────────────────────────────────
-// Add‑On Card ---------------------------------------------------------------
-// ────────────────────────────────────────────────────────────────────────────
 interface AddOnCardProps {
   name: string;
   price: string;
@@ -132,9 +119,6 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   );
 };
 
-// ────────────────────────────────────────────────────────────────────────────
-// Pricing Plan Card ---------------------------------------------------------
-// ────────────────────────────────────────────────────────────────────────────
 interface PricingPlanProps {
   name: string;
   price: string;
