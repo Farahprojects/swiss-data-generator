@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Info } from "lucide-react";
@@ -10,6 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getPriceId } from "@/utils/pricing";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Shared checkout hook ------------------------------------------------------
@@ -18,6 +20,7 @@ import { getPriceId } from "@/utils/pricing";
 const useStripeCheckout = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [state, setState] = useState<{ loading: boolean; product?: string }>({
     loading: false,
   });
@@ -29,7 +32,7 @@ const useStripeCheckout = () => {
     if (!priceId) {
       toast({
         title: "Pricing Error",
-        description: `Unknown product “${productName}”. Contact support.`,
+        description: `Unknown product "${productName}". Contact support.`,
         variant: "destructive",
       });
       return;
@@ -37,11 +40,17 @@ const useStripeCheckout = () => {
 
     try {
       setState({ loading: true, product: productName });
+      console.log("Starting checkout process for:", productName);
+      console.log("User authenticated:", !!user);
+      
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { priceId },
       });
+      
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing in response");
+      
+      console.log("Redirecting to Stripe checkout");
       window.location.assign(data.url);
     } catch (err: any) {
       console.error("Stripe checkout error", err);

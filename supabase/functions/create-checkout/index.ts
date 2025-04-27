@@ -21,39 +21,50 @@ serve(async (req) => {
       throw new Error("Price ID is required");
     }
     
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
-
-    // Get the user from the authorization header
-    const authHeader = req.headers.get("Authorization")!;
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
-    
-    if (userError || !user?.email) {
-      throw new Error("User not authenticated");
-    }
-
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
 
-    // Check if customer exists
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    // Modified to support guest checkout
+    let customerEmail = null;
+    let user = null;
+    
+    // Try to get authenticated user if token exists
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      // Create Supabase client
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      );
+      
+      const token = authHeader.replace("Bearer ", "");
+      const { data, error } = await supabaseClient.auth.getUser(token);
+      
+      if (!error && data?.user) {
+        user = data.user;
+        customerEmail = user.email;
+        console.log("Authenticated user:", customerEmail);
+      }
+    }
+
+    // Guest checkout - no user information needed for creating the session
+    console.log(customerEmail ? "Creating checkout for authenticated user" : "Creating checkout for guest");
+
+    // Check if we have a customer for this email
     let customerId;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-      console.log("Found existing customer:", customerId);
-    } else {
-      console.log("No existing customer found for email:", user.email);
+    if (customerEmail) {
+      const customers = await stripe.customers.list({ email: customerEmail, limit: 1 });
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+        console.log("Found existing customer:", customerId);
+      }
     }
 
     console.log("Creating checkout session with price:", priceId);
-
-    // For relationship compatibility or any product ID, we need to handle the product ID case
+    
+    // For relationship compatibility or any product ID, handle the product ID case
     let lineItems;
     if (priceId.startsWith('prod_')) {
       // This is a product ID, we need to find a price ID for this product
@@ -84,21 +95,25 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "http://localhost:3000";
     console.log("Origin URL:", origin);
     
-    const successUrl = `${origin}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
+    // After successful payment, redirect to signup if guest or dashboard if authenticated
+    const successUrl = `${origin}/${user ? 'dashboard' : 'signup'}?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/pricing`;
     
     console.log("Success URL:", successUrl);
     console.log("Cancel URL:", cancelUrl);
     
-    // Create checkout session
+    // Create checkout session with optional customer details
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
+      customer_email: customerId ? undefined : customerEmail, // Only include email if not using customerId
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: lineItems,
       success_url: successUrl,
       cancel_url: cancelUrl,
+      // Collect name and email if it's a guest checkout
+      billing_address_collection: !customerEmail ? "required" : undefined,
+      customer_creation: !customerId && !customerEmail ? "always" : undefined,
     });
 
     console.log("Checkout session created successfully:", session.id);
