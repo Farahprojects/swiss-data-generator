@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
@@ -9,6 +10,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { addOns } from "@/utils/pricing";
+
+// Define the missing PricingPlanProps interface
+export interface PricingPlanProps {
+  name: string;
+  price: string;
+  description: string;
+  features: string[];
+  cta: string;
+  highlight?: boolean;
+  icon: string;
+}
 
 const useStripeCheckout = () => {
   const { toast } = useToast();

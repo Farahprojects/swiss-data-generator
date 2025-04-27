@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { PricingPlan, AddOnCard, UpsellDialog } from "@/components/pricing/PaymentComponents";
+import { PricingPlan, UpsellDialog } from "@/components/pricing/PaymentComponents";
 import { FAQSection } from "@/components/pricing/FAQSection";
 import { plans, addOns, faqs } from "@/utils/pricing";
 
@@ -78,14 +78,20 @@ const Pricing: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                      {addOns.map((a, i) => (
-                        <AddOnCard 
-                          key={i} 
-                          name={a.name}
-                          price={a.price}
-                          description={a.description}
-                          details={a.details}
-                        />
+                      {addOns.map((addon, i) => (
+                        <div key={i} className="flex flex-col rounded-xl border bg-white p-6 shadow-sm">
+                          <h3 className="mb-2 text-xl font-bold text-primary">{addon.name}</h3>
+                          <p className="mb-4 text-gray-600">{addon.description}</p>
+                          <p className="mb-6 text-2xl font-semibold text-primary">{addon.price}</p>
+                          <ul className="mb-6 space-y-2">
+                            {addon.details.map((detail, j) => (
+                              <li key={j} className="flex items-start gap-2">
+                                <Check className="mt-1 h-4 w-4 text-primary" />
+                                <span className="text-sm text-gray-700">{detail}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
                     </div>
                   </div>
