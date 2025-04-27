@@ -29,6 +29,8 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubscribe = async () => {
+    if (isLoading) return; // Prevent multiple clicks
+    
     try {
       setIsLoading(true);
       // Determine the addon type based on name
@@ -48,18 +50,25 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
         body: { priceId }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
       
       if (data?.url) {
         console.log(`Redirecting to checkout: ${data.url}`);
-        window.location.href = data.url;
+        // Use a timeout to ensure state changes are processed before redirecting
+        setTimeout(() => {
+          window.location.href = data.url;
+        }, 100);
       } else {
+        console.error('No checkout URL returned:', data);
         throw new Error("No checkout URL returned");
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
       toast({
-        title: "Error",
+        title: "Checkout Error",
         description: "Could not start the checkout process. Please try again.",
         variant: "destructive",
       });
@@ -96,7 +105,7 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
             onClick={handleSubscribe}
             disabled={isLoading}
           >
-            {isLoading ? "Loading..." : "Subscribe Now"}
+            {isLoading ? "Redirecting to checkout..." : "Subscribe Now"}
           </Button>
         </div>
       </div>

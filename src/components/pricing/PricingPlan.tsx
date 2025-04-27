@@ -31,6 +31,8 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = async () => {
+    if (isLoading) return; // Prevent multiple clicks
+    
     try {
       setIsLoading(true);
       const priceId = getPriceId(name);
@@ -40,18 +42,25 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
         body: { priceId }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
       
       if (data?.url) {
         console.log(`Redirecting to checkout: ${data.url}`);
-        window.location.href = data.url;
+        // Use a timeout to ensure state changes are processed before redirecting
+        setTimeout(() => {
+          window.location.href = data.url;
+        }, 100);
       } else {
+        console.error('No checkout URL returned:', data);
         throw new Error("No checkout URL returned");
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
       toast({
-        title: "Error",
+        title: "Checkout Error",
         description: "Could not start the checkout process. Please try again.",
         variant: "destructive",
       });
@@ -97,7 +106,7 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
           onClick={handleClick}
           disabled={isLoading}
         >
-          {isLoading ? "Loading..." : cta}
+          {isLoading ? "Redirecting to checkout..." : cta}
         </Button>
       </div>
     </div>
