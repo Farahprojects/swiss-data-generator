@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,8 +6,7 @@ import Footer from "@/components/Footer";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { PricingPlan } from "@/components/pricing/PricingPlan";
-import { AddOnCard } from "@/components/pricing/AddOnCard";
+import { PricingPlan, AddOnCard } from "@/components/pricing/PaymentComponents";
 import { FAQSection } from "@/components/pricing/FAQSection";
 import { getPriceId, plans, addOns, faqs } from "@/utils/pricing";
 
