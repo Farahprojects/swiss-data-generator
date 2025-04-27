@@ -18,6 +18,7 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [customerEmail, setCustomerEmail] = useState<string>("");
+  const [planType, setPlanType] = useState<string>("");
   const [searchParams] = useSearchParams();
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
@@ -39,11 +40,29 @@ const Signup = () => {
 
           if (verifyData.success && verifyData.paymentStatus === "paid") {
             setPaymentVerified(true);
+            
+            // Get plan type from session storage
+            const sessionData = paymentSession.get();
+            if (sessionData?.planType) {
+              setPlanType(sessionData.planType);
+            }
+            
             if (verifyData.email) {
               setCustomerEmail(verifyData.email);
               updateEmail(verifyData.email);
             }
-            paymentSession.store(sessionId, verifyData.metadata?.planType, verifyData.metadata?.addOns);
+            
+            // Store the session ID for later use
+            paymentSession.store(
+              sessionId, 
+              sessionData?.planType || "starter", 
+              sessionData?.addOns
+            );
+            
+            toast({
+              title: "Payment Verified",
+              description: "Your payment has been verified. Please complete signup to access your account.",
+            });
           } else {
             toast({
               title: "Payment Verification Failed",
@@ -65,6 +84,52 @@ const Signup = () => {
     verifyPayment();
   }, [searchParams]);
 
+  // Function to create user record with payment information
+  const createUserRecord = async (userId: string) => {
+    try {
+      const sessionData = paymentSession.get();
+      if (!sessionData) return false;
+
+      const { data, error } = await supabase.rpc('create_user_after_payment', {
+        user_id: userId,
+        plan_type: sessionData.planType || 'starter'
+      });
+
+      if (error) {
+        console.error("Error creating user record:", error);
+        return false;
+      }
+
+      // If there are add-ons, enable them
+      if (sessionData.addOns && sessionData.addOns.length > 0) {
+        for (const addon of sessionData.addOns) {
+          let addonKey = '';
+          
+          if (addon.toLowerCase().includes('transit')) {
+            addonKey = 'transits';
+          } else if (addon.toLowerCase().includes('relationship') || addon.toLowerCase().includes('compatibility')) {
+            addonKey = 'relationship';
+          } else if (addon.toLowerCase().includes('yearly') || addon.toLowerCase().includes('cycle')) {
+            addonKey = 'yearly_cycle';
+          }
+
+          if (addonKey) {
+            await supabase.rpc('toggle_addon', {
+              user_id_param: userId,
+              addon_name: addonKey,
+              enabled: true
+            });
+          }
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in user provisioning:", error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -79,20 +144,33 @@ const Signup = () => {
           variant: "destructive",
         });
         console.error("Detailed signup error:", error);
-      } else {
-        if (user?.identities?.length === 0 || user?.email_confirmed_at === null) {
-          toast({
-            title: "Success",
-            description: "Please check your email to confirm your account",
-          });
-        } else {
+      } else if (user) {
+        // Create user record with payment information
+        const success = await createUserRecord(user.id);
+        
+        if (success) {
           toast({
             title: "Account Created",
             description: "Your account has been created successfully!",
           });
+          
+          // Clear payment session after successful user creation
           paymentSession.clear();
+          
+          // Redirect to dashboard
+          navigate("/dashboard");
+        } else {
+          toast({
+            title: "Account Created",
+            description: "Your account was created, but we couldn't set up your subscription. Please contact support.",
+          });
           navigate("/dashboard");
         }
+      } else {
+        toast({
+          title: "Success",
+          description: "Please check your email to confirm your account",
+        });
       }
     } catch (error) {
       toast({
@@ -141,7 +219,8 @@ const Signup = () => {
           {paymentVerified && (
             <Alert className="mb-6">
               <AlertDescription>
-                Payment verified successfully! Please create your account to start using our services.
+                Payment verified successfully! {planType && `You've selected the ${planType} plan. `}
+                Please create your account to start using our services.
               </AlertDescription>
             </Alert>
           )}
