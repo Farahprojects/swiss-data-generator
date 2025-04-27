@@ -90,6 +90,7 @@ const Signup = () => {
       const sessionData = paymentSession.get();
       if (!sessionData) return false;
 
+      // Use the new create_user_after_payment RPC function
       const { data, error } = await supabase.rpc('create_user_after_payment', {
         user_id: userId,
         plan_type: sessionData.planType || 'starter'
