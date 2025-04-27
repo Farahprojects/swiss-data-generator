@@ -50,7 +50,7 @@ serve(async (req) => {
       throw new Error("Session not found");
     }
     
-    console.log(`Session found. Payment status: ${session.payment_status}, Customer: ${session.customer}`);
+    console.log(`Session found. Payment status: ${session.payment_status}`);
 
     // Create Supabase client with service role key to bypass RLS
     const supabaseAdmin = createClient(
@@ -60,8 +60,8 @@ serve(async (req) => {
     );
 
     const email = session.customer_details?.email;
-    const customerId = session.customer;
-    const subscriptionId = session.subscription;
+    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+    const subscriptionId = session.subscription?.id; // Fixed: Get subscription ID properly
     const planName = session.metadata?.planType;
     
     if (!email || !customerId) {
@@ -69,19 +69,34 @@ serve(async (req) => {
       throw new Error("Missing customer information");
     }
 
-    // Get subscription details
-    console.log("Retrieving subscription details");
-    const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-    const paymentMethod = await stripe.paymentMethods.retrieve(
-      subscription.default_payment_method as string
-    );
+    // Get subscription details if available
+    let subscription;
+    if (subscriptionId) {
+      console.log("Retrieving subscription details");
+      subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    } else {
+      console.log("No subscription found in session");
+    }
+
+    // Get payment method if available
+    let paymentMethod;
+    if (subscription?.default_payment_method) {
+      try {
+        paymentMethod = await stripe.paymentMethods.retrieve(
+          typeof subscription.default_payment_method === 'string' 
+            ? subscription.default_payment_method 
+            : subscription.default_payment_method.id
+        );
+      } catch (error) {
+        console.warn("Error retrieving payment method:", error);
+      }
+    }
 
     // Parse add-ons from metadata
     let addOns: string[] = [];
     try {
       if (session.metadata?.addOns) {
         if (typeof session.metadata.addOns === 'string') {
-          // Try to parse if it's a JSON string
           addOns = JSON.parse(session.metadata.addOns);
         }
       }
@@ -93,15 +108,17 @@ serve(async (req) => {
     // Prepare and save the stripe user data
     const stripeUserData = {
       email: email,
-      stripe_customer_id: customerId as string,
-      stripe_subscription_id: subscriptionId as string,
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
       plan_name: planName as 'Starter' | 'Growth' | 'Professional',
       addon_relationship_compatibility: addOns?.includes('Relationship Compatibility') || false,
       addon_yearly_cycle: addOns?.includes('Yearly Cycle') || false,
       addon_transit_12_months: addOns?.includes('Transits') || false,
       payment_status: session.payment_status,
-      subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-      stripe_invoice_id: subscription.latest_invoice as string,
+      subscription_current_period_end: subscription 
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null,
+      stripe_invoice_id: subscription?.latest_invoice as string,
       full_name: session.customer_details?.name || null,
       billing_address_line1: session.customer_details?.address?.line1 || null,
       billing_address_line2: session.customer_details?.address?.line2 || null,
@@ -110,9 +127,9 @@ serve(async (req) => {
       postal_code: session.customer_details?.address?.postal_code || null,
       country: session.customer_details?.address?.country || null,
       phone: session.customer_details?.phone || null,
-      payment_method_type: paymentMethod.type,
-      card_last4: paymentMethod.card?.last4 || null,
-      card_brand: paymentMethod.card?.brand || null
+      payment_method_type: paymentMethod?.type || null,
+      card_last4: paymentMethod?.card?.last4 || null,
+      card_brand: paymentMethod?.card?.brand || null
     };
 
     console.log("Upserting stripe user data to database");
