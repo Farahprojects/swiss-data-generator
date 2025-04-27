@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,13 +18,13 @@ const Pricing = () => {
 
   useEffect(() => {
     const t0 = performance.now();
-    supabase.functions
-      .listFunctions()
-      .catch((e) => console.error("Supabase ping failed:", e))
-      .finally(() => {
-        setBusy(false);
-        console.log(`Pricing page ready in ${(performance.now() - t0).toFixed(0)} ms`);
-      });
+    
+    // Replace the non-existent listFunctions with a simple timeout
+    // This simulates checking the connection without an actual API call
+    setTimeout(() => {
+      setBusy(false);
+      console.log(`Pricing page ready in ${(performance.now() - t0).toFixed(0)} ms`);
+    }, 500);
   }, []);
 
   return (
