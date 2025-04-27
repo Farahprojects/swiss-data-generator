@@ -46,14 +46,18 @@ serve(async (req) => {
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
+      console.log("Found existing customer:", customerId);
+    } else {
+      console.log("No existing customer found for email:", user.email);
     }
 
     console.log("Creating checkout session with price:", priceId);
 
-    // For relationship compatibility, we need to handle the product ID case
+    // For relationship compatibility or any product ID, we need to handle the product ID case
     let lineItems;
     if (priceId.startsWith('prod_')) {
       // This is a product ID, we need to find a price ID for this product
+      console.log("Product ID detected, looking up associated price");
       const prices = await stripe.prices.list({
         product: priceId,
         active: true,
@@ -64,6 +68,7 @@ serve(async (req) => {
         throw new Error("No active price found for the product");
       }
       
+      console.log("Found price ID for product:", prices.data[0].id);
       lineItems = [{
         price: prices.data[0].id,
         quantity: 1,
@@ -76,6 +81,15 @@ serve(async (req) => {
       }];
     }
     
+    const origin = req.headers.get("origin") || "http://localhost:3000";
+    console.log("Origin URL:", origin);
+    
+    const successUrl = `${origin}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${origin}/pricing`;
+    
+    console.log("Success URL:", successUrl);
+    console.log("Cancel URL:", cancelUrl);
+    
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -83,11 +97,12 @@ serve(async (req) => {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: lineItems,
-      success_url: `${req.headers.get("origin")}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/pricing`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     });
 
     console.log("Checkout session created successfully:", session.id);
+    console.log("Checkout URL:", session.url);
     
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

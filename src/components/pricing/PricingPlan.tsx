@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -28,10 +28,14 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
   onSubscribe,
 }) => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = async () => {
     try {
+      setIsLoading(true);
       const priceId = getPriceId(name);
+      console.log(`Starting checkout with ${name} plan, price ID: ${priceId}`);
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { priceId }
       });
@@ -39,7 +43,10 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
       if (error) throw error;
       
       if (data?.url) {
+        console.log(`Redirecting to checkout: ${data.url}`);
         window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -48,6 +55,7 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
         description: "Could not start the checkout process. Please try again.",
         variant: "destructive",
       });
+      setIsLoading(false);
     }
   };
 
@@ -87,8 +95,9 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
             highlight ? '' : 'bg-gray-800 hover:bg-gray-700'
           }`}
           onClick={handleClick}
+          disabled={isLoading}
         >
-          {cta}
+          {isLoading ? "Loading..." : cta}
         </Button>
       </div>
     </div>

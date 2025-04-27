@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -26,9 +26,11 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   details,
 }) => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubscribe = async () => {
     try {
+      setIsLoading(true);
       // Determine the addon type based on name
       let addonType = '';
       if (name.toLowerCase().includes('yearly')) {
@@ -40,6 +42,7 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
       }
       
       const priceId = getPriceId(addonType);
+      console.log(`Starting checkout with ${addonType} add-on, price ID: ${priceId}`);
       
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { priceId }
@@ -48,7 +51,10 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
       if (error) throw error;
       
       if (data?.url) {
+        console.log(`Redirecting to checkout: ${data.url}`);
         window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -57,6 +63,7 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
         description: "Could not start the checkout process. Please try again.",
         variant: "destructive",
       });
+      setIsLoading(false);
     }
   };
 
@@ -87,8 +94,9 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
           <Button 
             className="w-full"
             onClick={handleSubscribe}
+            disabled={isLoading}
           >
-            Subscribe Now
+            {isLoading ? "Loading..." : "Subscribe Now"}
           </Button>
         </div>
       </div>
