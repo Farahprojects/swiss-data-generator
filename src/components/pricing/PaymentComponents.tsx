@@ -174,7 +174,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
     
     const displayName = {
       'Transits': 'Transits',
-      'Yearly-Cycle': 'Yearly Cycle',
+      'Yearly Cycle': 'Yearly Cycle',
       'Relationship Compatibility': 'Relationship Compatibility',
       'relationship compatibility': 'Relationship Compatibility'
     }[label] || label;
