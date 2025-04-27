@@ -44,17 +44,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    // Use redirectTo to ensure the auth happens in a full browser context, not in a popup
+    // Get the current URL's base
+    const baseUrl = window.location.origin;
+    
+    // Use redirectTo to ensure the auth happens in a full browser context
     const { error } = await supabase.auth.signInWithOAuth({ 
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + '/dashboard',
+        redirectTo: `${baseUrl}/dashboard`,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
         }
       }
     });
+    
+    console.log('Google sign-in initiated, redirecting...');
     return { error };
   };
 
