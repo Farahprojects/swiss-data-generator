@@ -1,13 +1,3 @@
-/*
- * PaymentComponents.tsx – unified pricing / add‑on cards (v2) – 2025‑04‑27
- * ---------------------------------------------------------------------------
- *  • Removes direct “Subscribe” buttons from Add‑On cards (upsell happens in
- *    a later funnel).
- *  • Adds optional status label ("Included" / "Upgrade") so UI can indicate
- *    which plan already covers an add‑on.
- *  • Keeps the robust Stripe checkout logic for plan buttons.
- */
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Info } from "lucide-react";
@@ -52,7 +42,7 @@ const useStripeCheckout = () => {
       });
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing in response");
-      window.open(data.url, "_self");
+      window.location.assign(data.url);
     } catch (err: any) {
       console.error("Stripe checkout error", err);
       toast({
