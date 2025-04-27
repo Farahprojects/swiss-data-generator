@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -11,12 +10,11 @@ const About = () => {
       <Navbar />
       
       <main className="flex-grow">
-        {/* Header Section with Gradient Background */}
-        <section className="relative overflow-hidden bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/5 py-32">
-          <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.5))]" />
+        {/* Header Section with Theme Color Gradient */}
+        <section className="relative overflow-hidden bg-white py-32">
           <div className="container relative z-10 mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <h1 className="text-4xl md:text-5xl font-bold mb-6 text-primary">
                 Revolutionizing Astrological Technology
               </h1>
               <p className="text-xl text-gray-700 mb-8">

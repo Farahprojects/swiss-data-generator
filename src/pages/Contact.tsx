@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,12 +51,11 @@ const Contact = () => {
       <Navbar />
       
       <main className="flex-grow">
-        {/* Header Section with Gradient Background */}
-        <section className="relative overflow-hidden bg-gradient-to-r from-primary/5 to-secondary/5 py-24">
-          <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.5))]" />
+        {/* Header Section with Theme Color */}
+        <section className="relative overflow-hidden bg-white py-24">
           <div className="container relative z-10 mx-auto px-4">
             <div className="mx-auto max-w-3xl text-center">
-              <h1 className="mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-4xl font-bold text-transparent md:text-5xl">
+              <h1 className="mb-6 text-4xl font-bold text-primary md:text-5xl">
                 Let's Build Something Amazing Together
               </h1>
               <p className="text-xl text-gray-600">
