@@ -14,8 +14,6 @@ export const getPriceId = (planType: string) => {
       return 'price_1RII91J1YhE4Ljp0xbZeyCIY';
     case 'Transits':
       return 'price_1RII87J1YhE4Ljp0TPLjRtut';
-    default:
-      return 'price_1RII04J1YhE4Ljp0daRu1V2J';
   }
 };
 
