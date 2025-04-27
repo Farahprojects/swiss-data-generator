@@ -7,17 +7,16 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
-// Define interface for user_info view data
-interface UserInfo {
+interface AppUser {
   id: string;
   email: string;
-  plan_type: string;
-  addon_transits: boolean;
-  addon_relationship: boolean;
-  addon_yearly_cycle: boolean;
-  calls_limit: number;
-  calls_made: number;
+  plan_name: string;
   api_key: string;
+  api_calls_count: number;
+  api_call_limit: number;
+  addon_relationship_compatibility: boolean;
+  addon_yearly_cycle: boolean;
+  addon_transit_12_months: boolean;
 }
 
 export const ApiKeySection = () => {
@@ -25,25 +24,25 @@ export const ApiKeySection = () => {
   const [isKeyVisible, setIsKeyVisible] = useState(false);
   const { toast } = useToast();
 
-  // Fetch user data from the user_info view
-  const { data: userInfo, isLoading } = useQuery<UserInfo>({
-    queryKey: ['userInfo'],
+  // Fetch user data from the app_users table
+  const { data: appUser, isLoading } = useQuery<AppUser>({
+    queryKey: ['appUser'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_info')
+        .from('app_users')
         .select('*')
         .eq('id', user?.id)
         .single();
       
       if (error) throw error;
-      return data as UserInfo;
+      return data as AppUser;
     },
     enabled: !!user
   });
 
   const copyApiKey = () => {
-    if (userInfo?.api_key) {
-      navigator.clipboard.writeText(userInfo.api_key);
+    if (appUser?.api_key) {
+      navigator.clipboard.writeText(appUser.api_key);
       toast({
         title: "API Key Copied",
         description: "Your API key has been copied to clipboard",
@@ -75,7 +74,7 @@ export const ApiKeySection = () => {
               <div className="relative flex-grow">
                 <input
                   type={isKeyVisible ? "text" : "password"}
-                  value={userInfo?.api_key || ''}
+                  value={appUser?.api_key || ''}
                   readOnly
                   className="w-full px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 font-mono"
                 />
@@ -100,13 +99,13 @@ export const ApiKeySection = () => {
 
           <div className="pt-4">
             <div className="text-sm text-gray-500 space-y-2">
-              <p>Current Plan: <span className="font-medium capitalize">{userInfo?.plan_type}</span></p>
-              <p>API Calls: <span className="font-medium">{userInfo?.calls_made.toLocaleString()}</span> / <span className="font-medium">{userInfo?.calls_limit.toLocaleString()}</span></p>
+              <p>Current Plan: <span className="font-medium capitalize">{appUser?.plan_name}</span></p>
+              <p>API Calls: <span className="font-medium">{appUser?.api_calls_count.toLocaleString()}</span> / <span className="font-medium">{appUser?.api_call_limit.toLocaleString()}</span></p>
               <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div 
                   className="bg-primary h-2.5 rounded-full" 
-                  style={{ width: `${(userInfo?.calls_made / userInfo?.calls_limit * 100) || 0}%` }}
-                ></div>
+                  style={{ width: `${(appUser?.api_calls_count / (appUser?.api_call_limit || 1) * 100) || 0}%` }}
+                />
               </div>
             </div>
           </div>

@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +35,7 @@ export const CurrentPlanCard = () => {
     },
     enabled: !!user
   });
-  
+
   // Map plan type to display price
   const getPlanPrice = (planType: string) => {
     switch (planType?.toLowerCase()) {

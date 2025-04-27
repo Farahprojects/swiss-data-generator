@@ -138,8 +138,6 @@ export type Database = {
           id: string
           plan_name: string | null
           stripe_customer_id: string
-          trial_end_date: string | null
-          trial_start_date: string | null
           updated_at: string | null
         }
         Insert: {
@@ -154,8 +152,6 @@ export type Database = {
           id: string
           plan_name?: string | null
           stripe_customer_id: string
-          trial_end_date?: string | null
-          trial_start_date?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -170,11 +166,17 @@ export type Database = {
           id?: string
           plan_name?: string | null
           stripe_customer_id?: string
-          trial_end_date?: string | null
-          trial_start_date?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "app_users_stripe_customer_id_fkey"
+            columns: ["stripe_customer_id"]
+            isOneToOne: false
+            referencedRelation: "stripe_users"
+            referencedColumns: ["stripe_customer_id"]
+          },
+        ]
       }
       legal_documents: {
         Row: {
