@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useEffect } from "react";
+import React, { useState, createContext, useContext } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,21 +80,10 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing");
 
-      // Store session data with email if available
-      const user = await supabase.auth.getUser();
-      const email = user.data?.user?.email || null;
-      paymentSession.store(data.sessionId, visiblePlan, Object.keys(addOnLines), email);
+      paymentSession.store(data.sessionId, visiblePlan, Object.keys(addOnLines));
       
-      // Open Stripe checkout in a new tab
-      window.open(data.url, '_blank', 'noopener,noreferrer');
-      
-      close();
-      
-      toast({ 
-        title: "Opening Checkout", 
-        description: "Complete your payment in the new tab.",
-      });
-      
+      // Open Stripe checkout in a new window/tab
+      window.open(data.url, '_blank');
     } catch (err: any) {
       toast({ 
         title: "Checkout failed", 
