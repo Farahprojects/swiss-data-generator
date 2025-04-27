@@ -1,5 +1,14 @@
+/*
+ * PaymentComponents.tsx – unified pricing / add‑on cards (v2) – 2025‑04‑27
+ * ---------------------------------------------------------------------------
+ *  • Removes direct “Subscribe” buttons from Add‑On cards (upsell happens in
+ *    a later funnel).
+ *  • Adds optional status label ("Included" / "Upgrade") so UI can indicate
+ *    which plan already covers an add‑on.
+ *  • Keeps the robust Stripe checkout logic for plan buttons.
+ */
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +21,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getPriceId } from "@/utils/pricing";
 
-// Shared checkout hook
+// ────────────────────────────────────────────────────────────────────────────
+// Shared checkout hook ------------------------------------------------------
+// ────────────────────────────────────────────────────────────────────────────
+
 const useStripeCheckout = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -20,25 +32,14 @@ const useStripeCheckout = () => {
     loading: false,
   });
 
-  // Add performance logging
-  useEffect(() => {
-    console.log("useStripeCheckout hook initialized");
-    return () => {
-      console.log("useStripeCheckout hook cleanup");
-    };
-  }, []);
-
   const handleCheckout = async (productName: string) => {
-    if (state.loading) return; // guard dbl‑clicks
-
-    console.log(`Starting checkout for product: ${productName}`);
-    const startTime = performance.now();
+    if (state.loading) return;
 
     const priceId = getPriceId(productName);
     if (!priceId) {
       toast({
         title: "Pricing Error",
-        description: `Unknown product "${productName}". Contact support.`,
+        description: `Unknown product “${productName}”. Contact support.`,
         variant: "destructive",
       });
       return;
@@ -46,20 +47,11 @@ const useStripeCheckout = () => {
 
     try {
       setState({ loading: true, product: productName });
-      console.log(`Invoking create-checkout function for ${productName}`);
-
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { priceId },
       });
-
-      const endTime = performance.now();
-      console.log(`Checkout API call completed in ${(endTime - startTime).toFixed(2)}ms`);
-
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing in response");
-
-      console.log("Redirecting to Stripe checkout URL");
-      // React router fallback: open in new tab to preserve SPA state
       window.open(data.url, "_self");
     } catch (err: any) {
       console.error("Stripe checkout error", err);
@@ -75,23 +67,25 @@ const useStripeCheckout = () => {
   return { isLoading: state.loading, handleCheckout };
 };
 
-// AddOnCard Component
+// ────────────────────────────────────────────────────────────────────────────
+// Add‑On Card ---------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────────────────
 interface AddOnCardProps {
   name: string;
   price: string;
   description: string;
-  details?: string;
-  dropdownItems: string[];
+  details: string[];
+  status?: "included" | "upgrade"; // determines the label shown on card
 }
 
 export const AddOnCard: React.FC<AddOnCardProps> = ({
   name,
   price,
   description,
-  dropdownItems,
+  details,
+  status = "upgrade",
 }) => {
-  const { isLoading, handleCheckout } = useStripeCheckout();
-
+  const label = status === "included" ? "Included in plan" : "Available at checkout";
   return (
     <div className="flex flex-col gap-6 rounded-xl border border-gray-100 bg-white p-8 shadow-sm hover:shadow-md">
       <div className="flex items-center gap-3">
@@ -99,7 +93,7 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
         <h3 className="text-xl font-bold">{name}</h3>
       </div>
       <p className="text-gray-600">{description}</p>
-      <p className="text-3xl font-semibold text-primary">{price}</p>
+      <p className="text-xl font-medium text-primary/80">{price}</p>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -108,7 +102,7 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-60 space-y-1 p-4 text-sm text-gray-600">
-          {dropdownItems.map((d, i) => (
+          {details.map((d, i) => (
             <p key={i} className="leading-relaxed">
               {d}
             </p>
@@ -116,18 +110,20 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Button
-        className="w-full"
-        onClick={() => handleCheckout(name)}
-        disabled={isLoading}
+      <span
+        className={`rounded-md px-3 py-1 text-xs font-semibold ${
+          status === "included" ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-600"
+        }`}
       >
-        {isLoading ? "Redirecting…" : "Subscribe Now"}
-      </Button>
+        {label}
+      </span>
     </div>
   );
 };
 
-// PricingPlan Component
+// ────────────────────────────────────────────────────────────────────────────
+// Pricing Plan Card ---------------------------------------------------------
+// ────────────────────────────────────────────────────────────────────────────
 interface PricingPlanProps {
   name: string;
   price: string;
