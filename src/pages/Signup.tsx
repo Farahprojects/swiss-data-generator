@@ -23,20 +23,37 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const { error } = await signUp(formState.email, formState.password);
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Please check your email to confirm your account",
-      });
-      navigate("/login");
+      const { error, user } = await signUp(formState.email, formState.password);
+      
+      if (error) {
+        toast({
+          title: "Signup Error",
+          description: error.message || "Failed to create account",
+          variant: "destructive",
+        });
+        console.error("Detailed signup error:", error);
+      } else {
+        // Check if email confirmation is required
+        if (user?.identities?.length === 0 || user?.email_confirmed_at === null) {
+          toast({
+            title: "Success",
+            description: "Please check your email to confirm your account",
+          });
+        } else {
+          toast({
+            title: "Account Created",
+            description: "Your account has been created successfully!",
+          });
+          navigate("/dashboard");
+        }
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create account",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
+      console.error("Unexpected signup error:", error);
     } finally {
       setLoading(false);
     }
@@ -45,13 +62,21 @@ const Signup = () => {
   const handleGoogleSignIn = async () => {
     try {
       const { error } = await signInWithGoogle();
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: "Google Sign-in Error",
+          description: error.message || "Failed to sign in with Google",
+          variant: "destructive",
+        });
+        console.error("Google sign-in error:", error);
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to sign in with Google",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive",
       });
+      console.error("Unexpected Google sign-in error:", error);
     }
   };
 

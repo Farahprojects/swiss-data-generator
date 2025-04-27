@@ -7,7 +7,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null; user?: User | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 };
@@ -39,8 +39,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error };
+    try {
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+      
+      if (error) {
+        console.error("Signup error:", error.message);
+        return { error, user: null };
+      }
+      
+      return { error: null, user: data.user };
+    } catch (err) {
+      console.error("Unexpected signup error:", err);
+      return { error: err instanceof Error ? err : new Error('An unexpected error occurred during signup') };
+    }
   };
 
   const signInWithGoogle = async () => {

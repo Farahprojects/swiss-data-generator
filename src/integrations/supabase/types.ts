@@ -275,6 +275,10 @@ export type Database = {
       }
     }
     Functions: {
+      gen_random_bytes: {
+        Args: { "": number }
+        Returns: string
+      }
       generate_api_key: {
         Args: Record<PropertyKey, never>
         Returns: string
