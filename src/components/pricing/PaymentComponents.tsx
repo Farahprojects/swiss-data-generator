@@ -45,6 +45,8 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   const [visiblePlan, setVisiblePlan] = useState<string>();
   const [addOnLines, setAddOnLines] = useState<Record<string, LineItem>>({});
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [showEmailInput, setShowEmailInput] = useState(false);
 
   const toggleAddOn = (name: string) => {
     const priceId = getPriceId(name);
@@ -58,12 +60,26 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   const begin = (planName: string) => {
     setVisiblePlan(planName);
     setAddOnLines({});
+    setShowEmailInput(true);
   };
 
-  const close = () => setVisiblePlan(undefined);
+  const close = () => {
+    setVisiblePlan(undefined);
+    setShowEmailInput(false);
+    setEmail('');
+  };
 
   const continueToStripe = async () => {
     if (!visiblePlan) return;
+    if (!email) {
+      toast({ 
+        title: "Email Required", 
+        description: "Please enter your email to continue", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     const planPriceId = getPriceId(visiblePlan);
     if (!planPriceId) {
       toast({ title: "Price mapping missing", description: visiblePlan, variant: "destructive" });
@@ -74,13 +90,17 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       setLoading(true);
       const { data, error } = await supabase.functions.invoke("create-checkout", { 
-        body: { priceIds: line_items.map(item => item.price) }
+        body: { 
+          priceIds: line_items.map(item => item.price),
+          planType: visiblePlan,
+          addOns: Object.keys(addOnLines),
+          email
+        }
       });
       
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing");
       
-      // Open checkout in new window in development
       if (data.isDevelopment) {
         const checkoutWindow = window.open(data.url, '_blank');
         if (!checkoutWindow) {
@@ -90,9 +110,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
             variant: "destructive"
           });
         }
-        // Keep the current window open in development
       } else {
-        // In production, redirect the main window
         window.location.href = data.url;
       }
     } catch (err: any) {
@@ -121,6 +139,21 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
               </SheetTitle>
             </SheetHeader>
             
+            {showEmailInput && (
+              <div className="mt-4 mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="Enter your email"
+                />
+              </div>
+            )}
+
             {/* Add-on toggles */}
             {visiblePlan === "Professional" ? (
               <p className="mb-8 text-gray-600 text-lg">

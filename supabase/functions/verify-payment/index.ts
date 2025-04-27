@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,29 +24,81 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
-    // Retrieve the checkout session
+    // Retrieve the checkout session with expanded data
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['customer', 'line_items']
+      expand: ['customer', 'subscription', 'payment_intent']
     });
 
     if (!session) {
       throw new Error("Session not found");
     }
 
-    // Extract relevant information
-    const paymentStatus = session.payment_status;
-    const customer = session.customer;
-    const lineItems = session.line_items;
+    // Create Supabase client with service role key to bypass RLS
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    const email = session.customer_details?.email;
+    const customerId = session.customer;
+    const subscriptionId = session.subscription;
+    const planName = session.metadata?.planType;
     
+    if (!email || !customerId) {
+      throw new Error("Missing customer information");
+    }
+
+    // Get subscription details
+    const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+    const paymentMethod = await stripe.paymentMethods.retrieve(
+      subscription.default_payment_method as string
+    );
+
+    // Prepare the stripe user data
+    const stripeUserData = {
+      email: email,
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
+      plan_name: planName,
+      addon_relationship_compatibility: session.metadata?.addOns?.includes('Relationship Compatibility') || false,
+      addon_yearly_cycle: session.metadata?.addOns?.includes('Yearly Cycle') || false,
+      addon_transit_12_months: session.metadata?.addOns?.includes('Transits') || false,
+      payment_status: session.payment_status,
+      subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+      stripe_invoice_id: subscription.latest_invoice as string,
+      full_name: session.customer_details?.name || null,
+      billing_address_line1: session.customer_details?.address?.line1 || null,
+      billing_address_line2: session.customer_details?.address?.line2 || null,
+      city: session.customer_details?.address?.city || null,
+      state: session.customer_details?.address?.state || null,
+      postal_code: session.customer_details?.address?.postal_code || null,
+      country: session.customer_details?.address?.country || null,
+      phone: session.customer_details?.phone || null,
+      payment_method_type: paymentMethod.type,
+      card_last4: paymentMethod.card?.last4 || null,
+      card_brand: paymentMethod.card?.brand || null
+    };
+
+    // Upsert the stripe user data
+    const { error: upsertError } = await supabaseAdmin
+      .from('stripe_users')
+      .upsert([stripeUserData], {
+        onConflict: 'stripe_customer_id'
+      });
+
+    if (upsertError) {
+      console.error("Error upserting stripe user:", upsertError);
+      throw upsertError;
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        paymentStatus,
-        customer,
-        lineItems,
-        email: session.customer_details?.email,
-        name: session.customer_details?.name,
-        address: session.customer_details?.address,
+        paymentStatus: session.payment_status,
+        email: email,
+        customerId: customerId,
+        planType: planName
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
