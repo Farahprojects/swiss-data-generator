@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,6 @@ const Navbar = () => {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-gray-700 hover:text-primary text-sm font-medium">Home</Link>
             <Link to="/api-products" className="text-gray-700 hover:text-primary text-sm font-medium">API Products</Link>
             <Link to="/pricing" className="text-gray-700 hover:text-primary text-sm font-medium">Pricing</Link>
             <Link to="/documentation" className="text-gray-700 hover:text-primary text-sm font-medium">Documentation</Link>
@@ -62,7 +60,6 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white border-t py-4">
           <div className="container mx-auto px-4 space-y-2">
-            <Link to="/" className="block text-gray-700 hover:text-primary py-2">Home</Link>
             <Link to="/api-products" className="block text-gray-700 hover:text-primary py-2">API Products</Link>
             <Link to="/pricing" className="block text-gray-700 hover:text-primary py-2">Pricing</Link>
             <Link to="/documentation" className="block text-gray-700 hover:text-primary py-2">Documentation</Link>
