@@ -85,14 +85,14 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
       const email = user.data?.user?.email || null;
       paymentSession.store(data.sessionId, visiblePlan, Object.keys(addOnLines), email);
       
-      // Redirect to Stripe checkout
-      window.location.href = data.url;
+      // Open Stripe checkout in a new tab
+      window.open(data.url, '_blank', 'noopener,noreferrer');
       
       close();
       
       toast({ 
-        title: "Redirecting to Checkout", 
-        description: "You will be redirected to complete your payment.",
+        title: "Opening Checkout", 
+        description: "Complete your payment in the new tab.",
       });
       
     } catch (err: any) {
