@@ -5,16 +5,14 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  PricingPlan,
-  AddOnCard,
-  CheckoutProvider,
-} from "@/components/pricing/PaymentComponents";
 import { FAQSection } from "@/components/pricing/FAQSection";
 import { plans, addOns, faqs } from "@/utils/pricing";
+import { CheckoutProvider } from "@/features/checkout";
+import { PricingPlan, AddOnCard } from "@/components/pricing/PricingComponents";
 
 const Pricing = () => {
   const [busy, setBusy] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<string | undefined>();
 
   useEffect(() => {
     const t0 = performance.now();
@@ -33,8 +31,16 @@ const Pricing = () => {
     checkSupabaseConnection();
   }, []);
 
+  const handlePlanSelect = (planName: string) => {
+    setSelectedPlan(planName);
+  };
+
+  const handleCloseSheet = () => {
+    setSelectedPlan(undefined);
+  };
+
   return (
-    <CheckoutProvider>
+    <CheckoutProvider planName={selectedPlan} onClose={handleCloseSheet}>
       <div className="flex min-h-screen flex-col">
         <Navbar />
 
@@ -58,7 +64,11 @@ const Pricing = () => {
               <>
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
                   {plans.map((p) => (
-                    <PricingPlan key={p.name.toString()} {...p} />
+                    <PricingPlan 
+                      key={p.name.toString()} 
+                      {...p} 
+                      onSelect={handlePlanSelect} 
+                    />
                   ))}
                 </div>
 
