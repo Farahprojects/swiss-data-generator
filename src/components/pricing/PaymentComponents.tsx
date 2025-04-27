@@ -80,8 +80,10 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing");
 
-      // Store session data
-      paymentSession.store(data.sessionId, visiblePlan, Object.keys(addOnLines));
+      // Store session data with email if available
+      const user = await supabase.auth.getUser();
+      const email = user.data?.user?.email || null;
+      paymentSession.store(data.sessionId, visiblePlan, Object.keys(addOnLines), email);
       
       // Redirect to Stripe checkout
       window.location.href = data.url;

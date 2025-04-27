@@ -4,17 +4,19 @@ interface PaymentSessionData {
   planType: string;
   addOns?: string[];
   timestamp: number;
+  email?: string;
 }
 
 const STORAGE_KEY = 'payment_session';
 
 export const paymentSession = {
-  store: (sessionId: string, planType: string, addOns?: string[]) => {
+  store: (sessionId: string, planType: string, addOns?: string[], email?: string) => {
     const data: PaymentSessionData = {
       sessionId,
       planType,
       addOns,
       timestamp: Date.now(),
+      email,
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   },
