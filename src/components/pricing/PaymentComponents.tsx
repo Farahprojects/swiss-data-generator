@@ -46,10 +46,14 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   const [addOnLines, setAddOnLines] = useState<Record<string, LineItem>>({});
   const [loading, setLoading] = useState(false);
 
-  const toggleAddOn = (name: string) =>
+  const toggleAddOn = (name: string) => {
+    const priceId = getPriceId(name);
+    console.log(`Toggling add-on: ${name}, Price ID: ${priceId}`);
+    
     setAddOnLines((prev) =>
-      prev[name] ? (() => { const p = { ...prev }; delete p[name]; return p; })() : { ...prev, [name]: { price: getPriceId(name), quantity: 1 } },
+      prev[name] ? (() => { const p = { ...prev }; delete p[name]; return p; })() : { ...prev, [name]: { price: priceId, quantity: 1 } },
     );
+  };
 
   const begin = (planName: string) => {
     setVisiblePlan(planName);
@@ -128,13 +132,13 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
                   Supercharge your experience with these powerful add-ons:
                 </p>
                 <div className="space-y-4">
-                  {visiblePlan === "Starter" && ["Daily Transits", "Yearly Cycle", "Relationship Compatibility"].map(
+                  {visiblePlan === "Starter" && ["transits", "yearly-cycle", "relationship compatibility"].map(
                     (addOn) => (
                       <AddOnToggle key={addOn} label={addOn} />
                     )
                   )}
                   {visiblePlan === "Growth" && (
-                    <AddOnToggle label="Relationship Compatibility" />
+                    <AddOnToggle label="relationship compatibility" />
                   )}
                 </div>
               </>
@@ -168,10 +172,17 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   function AddOnToggle({ label }: { label: string }) {
     const { addOnLines, toggleAddOn } = useCheckoutWizard();
     const checked = !!addOnLines[label];
+    
+    const displayName = {
+      'transits': 'Transits',
+      'yearly-cycle': 'Yearly Cycle',
+      'relationship compatibility': 'Relationship Compatibility'
+    }[label] || label;
+
     return (
       <label className="flex cursor-pointer items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-6 transition-all duration-200 hover:border-primary/50 hover:shadow-sm">
         <div className="space-y-2">
-          <span className="text-lg font-semibold text-primary">{label}</span>
+          <span className="text-lg font-semibold text-primary">{displayName}</span>
           <p className="text-sm text-gray-600">Enhance your analytics with advanced insights and predictive features.</p>
         </div>
         <input
