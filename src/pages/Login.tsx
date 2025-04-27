@@ -3,27 +3,28 @@ import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useAuthForm } from "@/hooks/useAuthForm";
+import EmailInput from "@/components/auth/EmailInput";
+import PasswordInput from "@/components/auth/PasswordInput";
+import SocialLogin from "@/components/auth/SocialLogin";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { formState, updateEmail, updatePassword } = useAuthForm(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(formState.email, formState.password);
       if (error) throw error;
 
       const from = location.state?.from?.pathname || "/dashboard";
@@ -39,6 +40,19 @@ const Login = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) throw error;
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to sign in with Google",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -51,38 +65,29 @@ const Login = () => {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="mt-1"
-                />
-              </div>
+              <EmailInput 
+                email={formState.email}
+                isValid={formState.emailValid}
+                onChange={updateEmail}
+              />
 
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="mt-1"
-                />
-              </div>
+              <PasswordInput
+                password={formState.password}
+                isValid={formState.passwordValid}
+                showRequirements={false}
+                onChange={updatePassword}
+              />
             </div>
 
             <Button
               type="submit"
               className="w-full"
-              disabled={loading}
+              disabled={loading || !formState.formValid}
             >
               {loading ? "Signing in..." : "Sign in"}
             </Button>
+
+            <SocialLogin onGoogleSignIn={handleGoogleSignIn} />
 
             <p className="text-center text-sm text-gray-600">
               Don't have an account?{" "}
