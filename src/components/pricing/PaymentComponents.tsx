@@ -1,6 +1,16 @@
+
 import React, { useState, createContext, useContext } from "react";
 import { Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetClose,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,13 +89,14 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{ begin, addOnLines, toggleAddOn, close, visiblePlan }}
     >
       {children}
-      {/* ── Upsell Drawer ───────────────────────────────────── */}
+      {/* ── Using Sheet for side panel ───────────────────────────────── */}
       {visiblePlan && (
-        <div className="fixed inset-0 z-40 flex">
-          <div className="flex-grow bg-black/40" onClick={close} />
-          <aside className="h-full w-[420px] overflow-y-auto bg-white p-8 shadow-xl">
-            <h2 className="mb-6 text-2xl font-bold">Confirm Your {visiblePlan} Plan</h2>
-
+        <Sheet open={!!visiblePlan} onOpenChange={(open) => !open && close()}>
+          <SheetContent className="w-[420px] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="text-2xl font-bold">Confirm Your {visiblePlan} Plan</SheetTitle>
+            </SheetHeader>
+            
             {/* Add-on toggles */}
             {visiblePlan === "Professional" ? (
               <p className="mb-8 text-gray-600">
@@ -93,7 +104,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
               </p>
             ) : (
               <>
-                <p className="mb-4 text-gray-600">Enhance your plan:</p>
+                <p className="mt-6 mb-4 text-gray-600">Enhance your plan:</p>
                 <div className="space-y-4">
                   {visiblePlan === "Starter" && ["Daily Transits", "Yearly Cycle", "Relationship Compatibility"].map(
                     (addOn) => (
@@ -107,23 +118,26 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
               </>
             )}
 
-            <Button
-              disabled={loading}
-              className="mt-10 w-full py-6"
-              onClick={continueToStripe}
-            >
-              {loading ? "Redirecting…" : "Proceed to Checkout"}
-            </Button>
-            <Button
-              variant="ghost"
-              className="mt-2 w-full"
-              onClick={close}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-          </aside>
-        </div>
+            <SheetFooter className="mt-10 flex-col">
+              <Button
+                disabled={loading}
+                className="w-full py-6"
+                onClick={continueToStripe}
+              >
+                {loading ? "Redirecting…" : "Proceed to Checkout"}
+              </Button>
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  className="mt-2 w-full"
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              </SheetClose>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
       )}
     </CheckoutContext.Provider>
   );
@@ -132,7 +146,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   function AddOnToggle({ label }: { label: string }) {
     const checked = !!addOnLines[label];
     return (
-      <label className="flex cursor-pointer items-center justify-between rounded-lg border p-4">
+      <label className="flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-all duration-200 hover:border-primary/50 hover:shadow-sm">
         <span>{label}</span>
         <input
           type="checkbox"
