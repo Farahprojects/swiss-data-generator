@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export const getPriceId = (planType: string) => {
@@ -11,8 +10,9 @@ export const getPriceId = (planType: string) => {
       return 'price_1RII6CJ1YhE4Ljp0BTCF0IYX';
     case 'yearly-cycle':
       return 'price_1RIIAkJ1YhE4Ljp07H39uZnZ';
+    case 'relationship compatibility':
     case 'relationship':
-      return 'prod_SChY6pgEbdigNb';
+      return 'price_1RII9kJ1YhE4Ljp0TYh0L9vN';
     case 'transits':
       return 'price_1RII87J1YhE4Ljp0TPLjRtut';
     default:
