@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,7 @@ const Pricing = () => {
               <>
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
                   {plans.map((p) => (
-                    <PricingPlan key={p.name} {...p} />
+                    <PricingPlan key={p.name.toString()} {...p} />
                   ))}
                 </div>
 

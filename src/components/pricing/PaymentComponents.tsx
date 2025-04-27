@@ -209,7 +209,7 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
 };
 
 interface PricingPlanProps {
-  name: string;
+  name: React.ReactNode;
   price: string;
   description: string;
   features: string[];
@@ -228,6 +228,10 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
   icon,
 }) => {
   const wizard = useCheckoutWizard();
+  const planNameString = typeof name === 'string' ? name : 
+                         React.isValidElement(name) && name.props.children ? name.props.children : 
+                         'Plan';
+  
   return (
     <div
       className={`flex flex-col rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
@@ -235,7 +239,7 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
       }`}
     >
       <div className="flex items-center gap-3 p-6">
-        <span className="text-2xl">{icon}</span>
+        {icon && <span className="text-2xl">{icon}</span>}
         <div>
           <h3 className="text-xl font-bold">{name}</h3>
           <p className="text-gray-600">{description}</p>
@@ -253,7 +257,7 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
 
       <div className="mt-auto p-6 pt-0">
         <p className="mb-4 text-3xl font-semibold text-primary">{price}</p>
-        <Button className="w-full py-6" onClick={() => wizard.begin(name)}>
+        <Button className="w-full py-6" onClick={() => wizard.begin(planNameString)}>
           {cta}
         </Button>
       </div>

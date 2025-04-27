@@ -1,3 +1,6 @@
+
+import React from 'react';
+
 export const getPriceId = (planType: string) => {
   switch (planType.toLowerCase()) {
     case 'starter':
