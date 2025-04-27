@@ -1,12 +1,11 @@
 import React, { useState, createContext, useContext } from "react";
-import { Check, Info } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
@@ -18,11 +17,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getPriceId } from "@/utils/pricing";
-import { useAuth } from "@/contexts/AuthContext";
+import { paymentSession } from "@/services/payment-session";
 
-/*───────────────────────────────────────────────────────────────────
-  Checkout context  →  lets Pricing page open an upsell drawer first
-───────────────────────────────────────────────────────────────────*/
 type LineItem = { price: string; quantity: number };
 interface CheckoutContextType {
   begin: (planName: string) => void;
@@ -31,22 +27,17 @@ interface CheckoutContextType {
   close: () => void;
   visiblePlan?: string;
 }
+
 const CheckoutContext = createContext<CheckoutContextType | null>(null);
 export const useCheckoutWizard = () => useContext(CheckoutContext)!;
 
-/*───────────────────────────────────────────────────────────────────
-  Provider wraps Pricing page
-───────────────────────────────────────────────────────────────────*/
 export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [visiblePlan, setVisiblePlan] = useState<string>();
   const [addOnLines, setAddOnLines] = useState<Record<string, LineItem>>({});
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [showEmailInput, setShowEmailInput] = useState(false);
 
   const toggleAddOn = (name: string) => {
     const priceId = getPriceId(name);
@@ -60,25 +51,14 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   const begin = (planName: string) => {
     setVisiblePlan(planName);
     setAddOnLines({});
-    setShowEmailInput(true);
   };
 
   const close = () => {
     setVisiblePlan(undefined);
-    setShowEmailInput(false);
-    setEmail('');
   };
 
   const continueToStripe = async () => {
     if (!visiblePlan) return;
-    if (!email) {
-      toast({ 
-        title: "Email Required", 
-        description: "Please enter your email to continue", 
-        variant: "destructive" 
-      });
-      return;
-    }
     
     const planPriceId = getPriceId(visiblePlan);
     if (!planPriceId) {
@@ -93,26 +73,16 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
         body: { 
           priceIds: line_items.map(item => item.price),
           planType: visiblePlan,
-          addOns: Object.keys(addOnLines),
-          email
+          addOns: Object.keys(addOnLines)
         }
       });
       
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing");
+
+      paymentSession.store(data.sessionId, visiblePlan, Object.keys(addOnLines));
       
-      if (data.isDevelopment) {
-        const checkoutWindow = window.open(data.url, '_blank');
-        if (!checkoutWindow) {
-          toast({
-            title: "Popup Blocked",
-            description: "Please allow popups for this site to proceed with checkout",
-            variant: "destructive"
-          });
-        }
-      } else {
-        window.location.href = data.url;
-      }
+      window.location.href = data.url;
     } catch (err: any) {
       toast({ 
         title: "Checkout failed", 
@@ -125,11 +95,8 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <CheckoutContext.Provider
-      value={{ begin, addOnLines, toggleAddOn, close, visiblePlan }}
-    >
+    <CheckoutContext.Provider value={{ begin, addOnLines, toggleAddOn, close, visiblePlan }}>
       {children}
-      {/* ── Using Sheet for side panel ───────────────────────────────── */}
       {visiblePlan && (
         <Sheet open={!!visiblePlan} onOpenChange={(open) => !open && close()}>
           <SheetContent className="w-[420px] overflow-y-auto bg-white">
@@ -138,23 +105,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
                 Customize Your {visiblePlan} Plan
               </SheetTitle>
             </SheetHeader>
-            
-            {showEmailInput && (
-              <div className="mt-4 mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                  placeholder="Enter your email"
-                />
-              </div>
-            )}
 
-            {/* Add-on toggles */}
             {visiblePlan === "Professional" ? (
               <p className="mb-8 text-gray-600 text-lg">
                 You've selected our most comprehensive plan with all premium features included.
@@ -229,9 +180,6 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 };
 
-/*───────────────────────────────────────────────────────────────────
-  Presentational components
-──────────────────────���────────────────────────────────────────────*/
 interface AddOnCardProps {
   name: string;
   price: string;
