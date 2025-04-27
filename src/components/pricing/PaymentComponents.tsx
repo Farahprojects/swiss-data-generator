@@ -1,4 +1,3 @@
-
 import React, { useState, createContext, useContext, useEffect } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,53 +38,6 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   const [visiblePlan, setVisiblePlan] = useState<string>();
   const [addOnLines, setAddOnLines] = useState<Record<string, LineItem>>({});
   const [loading, setLoading] = useState(false);
-  const [stripeWindow, setStripeWindow] = useState<Window | null>(null);
-  const [pollInterval, setPollInterval] = useState<number | null>(null);
-
-  // Function to check payment verification status
-  const checkPaymentStatus = async (sessionId: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke("verify-payment", {
-        body: { sessionId }
-      });
-      
-      if (error) {
-        console.error("Error checking payment status:", error);
-        return false;
-      }
-      
-      if (data?.success && data?.paymentStatus === "paid") {
-        // Payment verified - stop polling and show success message
-        if (pollInterval) {
-          clearInterval(pollInterval);
-          setPollInterval(null);
-        }
-        
-        toast({
-          title: "Payment Successful",
-          description: "Your payment has been verified. Redirecting to signup...",
-        });
-        
-        // Redirect to signup page with session_id param
-        window.location.href = `/signup?success=true&session_id=${sessionId}`;
-        return true;
-      }
-      
-      return false;
-    } catch (err) {
-      console.error("Payment verification check failed:", err);
-      return false;
-    }
-  };
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-    };
-  }, [pollInterval]);
 
   const toggleAddOn = (name: string) => {
     const priceId = getPriceId(name);
@@ -128,40 +80,17 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing");
 
-      // Store session data with more details
+      // Store session data
       paymentSession.store(data.sessionId, visiblePlan, Object.keys(addOnLines));
       
-      // Open Stripe checkout in a new window/tab and store reference
-      const newWindow = window.open(data.url, '_blank');
-      setStripeWindow(newWindow);
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
       
-      // Set up polling to check payment status
-      const intervalId = window.setInterval(() => {
-        // Check if stripe window is closed
-        if (newWindow?.closed) {
-          clearInterval(intervalId);
-          setPollInterval(null);
-          checkPaymentStatus(data.sessionId);
-        }
-      }, 1000);
-      
-      // Store interval ID for cleanup
-      setPollInterval(intervalId);
-      
-      // Also start polling for payment verification
-      const paymentIntervalId = window.setInterval(async () => {
-        const verified = await checkPaymentStatus(data.sessionId);
-        if (verified) {
-          clearInterval(paymentIntervalId);
-        }
-      }, 3000);
-      
-      // Close the checkout modal after opening Stripe in new window
       close();
       
       toast({ 
-        title: "Checkout Opened", 
-        description: "Complete your payment in the new tab. This page will automatically update when payment is complete.",
+        title: "Redirecting to Checkout", 
+        description: "You will be redirected to complete your payment.",
       });
       
     } catch (err: any) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,8 +16,7 @@ import { Loader2 } from "lucide-react";
 
 const Signup = () => {
   const [loading, setLoading] = useState(false);
-  const [verifyingPayment, setVerifyingPayment] = useState(false);
-  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(false);
   const [customerEmail, setCustomerEmail] = useState<string>("");
   const [planType, setPlanType] = useState<string>("");
   const [searchParams] = useSearchParams();
@@ -28,133 +26,43 @@ const Signup = () => {
   const { formState, updateEmail, updatePassword, updateConfirmPassword } = useAuthForm(true);
 
   useEffect(() => {
-    const verifyPayment = async () => {
+    const getCustomerEmail = async () => {
       const success = searchParams.get("success");
       const sessionId = searchParams.get("session_id");
 
       if (success === "true" && sessionId) {
-        setVerifyingPayment(true);
-        
+        setLoadingEmail(true);
         try {
-          // Retry verification a few times in case the payment data hasn't propagated yet
-          let retries = 3;
-          let verified = false;
-          
-          while (retries > 0 && !verified) {
-            console.log(`Verifying payment, attempt ${4-retries}/3`);
-            const { data: verifyData, error } = await supabase.functions.invoke("verify-payment", {
-              body: { sessionId }
-            });
+          // Try to get email from stripe_users table first
+          const { data: stripeUser, error } = await supabase
+            .from('stripe_users')
+            .select('email, plan_name')
+            .eq('stripe_subscription_id', sessionId)
+            .maybeSingle();
 
-            if (error) {
-              console.error("Verification error:", error);
-              if (retries === 1) throw error; // Only throw on last attempt
-            } else if (verifyData?.success && verifyData?.paymentStatus === "paid") {
-              verified = true;
-              setPaymentVerified(true);
-              
-              // Get plan type from session storage or from verification response
-              const sessionData = paymentSession.get();
-              setPlanType(verifyData.planType || sessionData?.planType || "");
-              
-              if (verifyData.email) {
-                setCustomerEmail(verifyData.email);
-                updateEmail(verifyData.email);
-              }
-              
-              // Store the session ID for later use
-              paymentSession.store(
-                sessionId, 
-                verifyData.planType || sessionData?.planType || "starter", 
-                sessionData?.addOns
-              );
-              
-              toast({
-                title: "Payment Verified",
-                description: "Your payment has been verified. Please complete signup to access your account.",
-              });
-              
-              break;
+          if (stripeUser?.email) {
+            setCustomerEmail(stripeUser.email);
+            updateEmail(stripeUser.email);
+            setPlanType(stripeUser.plan_name || "");
+          } else {
+            // Fallback to session storage if no data in stripe_users
+            const sessionData = paymentSession.get();
+            if (sessionData?.email) {
+              setCustomerEmail(sessionData.email);
+              updateEmail(sessionData.email);
+              setPlanType(sessionData.planType || "");
             }
-            
-            // If not verified, wait and try again
-            if (!verified && retries > 1) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              retries--;
-            } else {
-              retries = 0;
-            }
-          }
-          
-          if (!verified) {
-            toast({
-              title: "Payment Verification Pending",
-              description: "We're still processing your payment. You can continue with signup and check your status later.",
-              variant: "default",
-            });
           }
         } catch (error) {
-          console.error("Payment verification error:", error);
-          toast({
-            title: "Verification Error",
-            description: error instanceof Error ? error.message : "Failed to verify payment",
-            variant: "destructive",
-          });
+          console.error("Error retrieving customer email:", error);
         } finally {
-          setVerifyingPayment(false);
+          setLoadingEmail(false);
         }
       }
     };
 
-    verifyPayment();
-  }, [searchParams, toast, updateEmail]);
-
-  // Function to create user record with payment information
-  const createUserRecord = async (userId: string) => {
-    try {
-      const sessionData = paymentSession.get();
-      if (!sessionData) return false;
-
-      // Use the new create_user_after_payment RPC function
-      const { data, error } = await supabase.rpc('create_user_after_payment', {
-        user_id: userId,
-        plan_type: sessionData.planType || 'starter'
-      });
-
-      if (error) {
-        console.error("Error creating user record:", error);
-        return false;
-      }
-
-      // If there are add-ons, enable them
-      if (sessionData.addOns && sessionData.addOns.length > 0) {
-        for (const addon of sessionData.addOns) {
-          let addonKey = '';
-          
-          if (addon.toLowerCase().includes('transit')) {
-            addonKey = 'transits';
-          } else if (addon.toLowerCase().includes('relationship') || addon.toLowerCase().includes('compatibility')) {
-            addonKey = 'relationship';
-          } else if (addon.toLowerCase().includes('yearly') || addon.toLowerCase().includes('cycle')) {
-            addonKey = 'yearly_cycle';
-          }
-
-          if (addonKey) {
-            await supabase.rpc('toggle_addon', {
-              user_id_param: userId,
-              addon_name: addonKey,
-              enabled: true
-            });
-          }
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error in user provisioning:", error);
-      return false;
-    }
-  };
+    getCustomerEmail();
+  }, [searchParams, updateEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,6 +140,52 @@ const Signup = () => {
     }
   };
 
+  const createUserRecord = async (userId: string) => {
+    try {
+      const sessionData = paymentSession.get();
+      if (!sessionData) return false;
+
+      // Use the new create_user_after_payment RPC function
+      const { data, error } = await supabase.rpc('create_user_after_payment', {
+        user_id: userId,
+        plan_type: sessionData.planType || 'starter'
+      });
+
+      if (error) {
+        console.error("Error creating user record:", error);
+        return false;
+      }
+
+      // If there are add-ons, enable them
+      if (sessionData.addOns && sessionData.addOns.length > 0) {
+        for (const addon of sessionData.addOns) {
+          let addonKey = '';
+          
+          if (addon.toLowerCase().includes('transit')) {
+            addonKey = 'transits';
+          } else if (addon.toLowerCase().includes('relationship') || addon.toLowerCase().includes('compatibility')) {
+            addonKey = 'relationship';
+          } else if (addon.toLowerCase().includes('yearly') || addon.toLowerCase().includes('cycle')) {
+            addonKey = 'yearly_cycle';
+          }
+
+          if (addonKey) {
+            await supabase.rpc('toggle_addon', {
+              user_id_param: userId,
+              addon_name: addonKey,
+              enabled: true
+            });
+          }
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in user provisioning:", error);
+      return false;
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -242,16 +196,15 @@ const Signup = () => {
             <p className="mt-2 text-gray-600">Get started with Theraiapi</p>
           </div>
 
-          {verifyingPayment ? (
+          {loadingEmail ? (
             <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg">
               <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
-              <p className="text-gray-700">Verifying your payment, please wait...</p>
+              <p className="text-gray-700">Retrieving your information...</p>
             </div>
-          ) : paymentVerified && (
+          ) : planType && (
             <Alert className="mb-6">
               <AlertDescription>
-                Payment verified successfully! {planType && `You've selected the ${planType} plan. `}
-                Please create your account to start using our services.
+                Great! You've selected the {planType} plan. Please create your account to start using our services.
               </AlertDescription>
             </Alert>
           )}
@@ -262,6 +215,7 @@ const Signup = () => {
                 email={customerEmail || formState.email}
                 isValid={formState.emailValid}
                 onChange={updateEmail}
+                disabled={!!customerEmail}
               />
 
               <PasswordInput
