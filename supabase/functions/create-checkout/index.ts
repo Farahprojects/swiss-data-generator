@@ -49,6 +49,32 @@ serve(async (req) => {
     }
 
     console.log("Creating checkout session with price:", priceId);
+
+    // For relationship compatibility, we need to handle the product ID case
+    let lineItems;
+    if (priceId.startsWith('prod_')) {
+      // This is a product ID, we need to find a price ID for this product
+      const prices = await stripe.prices.list({
+        product: priceId,
+        active: true,
+        limit: 1
+      });
+      
+      if (prices.data.length === 0) {
+        throw new Error("No active price found for the product");
+      }
+      
+      lineItems = [{
+        price: prices.data[0].id,
+        quantity: 1,
+      }];
+    } else {
+      // This is already a price ID
+      lineItems = [{
+        price: priceId,
+        quantity: 1,
+      }];
+    }
     
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
@@ -56,12 +82,7 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       mode: "subscription",
       payment_method_types: ["card"],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       success_url: `${req.headers.get("origin")}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/pricing`,
     });

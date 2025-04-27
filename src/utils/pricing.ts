@@ -2,19 +2,21 @@
 export const getPriceId = (planType: string) => {
   switch (planType.toLowerCase()) {
     case 'starter':
-      return 'price_1OdpLvKwmkJQr0GFZOYfbUp1';
+      return 'price_1RII04J1YhE4Ljp0daRu1V2J';
     case 'growth':
-      return 'price_1OdpM8KwmkJQr0GFRdAcFeZZ';
+      return 'price_1RII4eJ1YhE4Ljp0vNfZnwov';
     case 'professional':
-      return 'price_1OdpMQKwmkJQr0GFCHXdfKyi';
+      return 'price_1RII6CJ1YhE4Ljp0BTCF0IYX';
     case 'yearly-cycle':
-      return 'price_1OdpMfKwmkJQr0GFzMvF3ZRE';
+      return 'price_1RIIAkJ1YhE4Ljp07H39uZnZ';
     case 'relationship':
-      return 'price_1OdpMsKwmkJQr0GFAASi31v9';
+      // Note: The relationship compatibility has a product ID instead of price ID
+      // Using the product ID as provided, but this may need to be updated to a price ID
+      return 'prod_SChY6pgEbdigNb';
     case 'transits':
-      return 'price_1OdpNAKwmkJQr0GFMnJ944ma';
+      return 'price_1RII87J1YhE4Ljp0TPLjRtut';
     default:
-      return 'price_1OdpLvKwmkJQr0GFZOYfbUp1';
+      return 'price_1RII04J1YhE4Ljp0daRu1V2J';
   }
 };
 
