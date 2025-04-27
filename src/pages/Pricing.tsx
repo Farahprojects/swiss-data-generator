@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -86,7 +85,6 @@ const Pricing: React.FC = () => {
                           price={a.price}
                           description={a.description}
                           details={a.details}
-                          status={a.status === "included" ? "included" : "upgrade"}
                         />
                       ))}
                     </div>

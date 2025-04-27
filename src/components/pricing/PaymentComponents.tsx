@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
@@ -73,6 +74,7 @@ interface AddOnCardProps {
   price: string;
   description: string;
   details: string[];
+  status?: string;  // Added status as an optional prop
 }
 
 export const AddOnCard: React.FC<AddOnCardProps> = ({
