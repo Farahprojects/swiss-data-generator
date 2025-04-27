@@ -2,6 +2,8 @@
 import React from 'react';
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +24,31 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   description,
   details,
 }) => {
+  const { toast } = useToast();
+
+  const handleSubscribe = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { 
+          priceId: name.toLowerCase().replace(/\s+/g, '-')
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast({
+        title: "Error",
+        description: "Could not start the checkout process. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-100 
       hover:shadow-xl transition-all duration-300 
@@ -46,6 +73,12 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
               <p className="text-sm text-gray-700">{details}</p>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button 
+            className="w-full"
+            onClick={handleSubscribe}
+          >
+            Subscribe Now
+          </Button>
         </div>
       </div>
     </div>

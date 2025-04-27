@@ -1,6 +1,9 @@
+
 import React from 'react';
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PricingPlanProps {
   name: string;
@@ -23,6 +26,29 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
   icon,
   onSubscribe,
 }) => {
+  const { toast } = useToast();
+
+  const handleClick = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId: name.toLowerCase() }
+      });
+
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast({
+        title: "Error",
+        description: "Could not start the checkout process. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div 
       className={`bg-white rounded-xl shadow-lg overflow-hidden border ${
@@ -58,7 +84,7 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
           className={`w-full py-6 ${
             highlight ? '' : 'bg-gray-800 hover:bg-gray-700'
           }`}
-          onClick={onSubscribe}
+          onClick={handleClick}
         >
           {cta}
         </Button>
