@@ -39,13 +39,6 @@ export type Database = {
             foreignKeyName: "api_keys_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "user_info"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "api_keys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -132,47 +125,56 @@ export type Database = {
         }
         Relationships: []
       }
-      billing_history: {
+      app_users: {
         Row: {
-          amount_paid: number
+          addon_relationship_compatibility: boolean | null
+          addon_transit_12_months: boolean | null
+          addon_yearly_cycle: boolean | null
+          api_call_limit: number | null
+          api_calls_count: number | null
+          api_key: string
+          created_at: string | null
+          email: string
           id: string
-          invoice_url: string | null
-          payment_date: string
-          payment_method: string
-          user_id: string
+          plan_name: string | null
+          stripe_customer_id: string
+          trial_end_date: string | null
+          trial_start_date: string | null
+          updated_at: string | null
         }
         Insert: {
-          amount_paid: number
-          id?: string
-          invoice_url?: string | null
-          payment_date?: string
-          payment_method: string
-          user_id: string
+          addon_relationship_compatibility?: boolean | null
+          addon_transit_12_months?: boolean | null
+          addon_yearly_cycle?: boolean | null
+          api_call_limit?: number | null
+          api_calls_count?: number | null
+          api_key: string
+          created_at?: string | null
+          email: string
+          id: string
+          plan_name?: string | null
+          stripe_customer_id: string
+          trial_end_date?: string | null
+          trial_start_date?: string | null
+          updated_at?: string | null
         }
         Update: {
-          amount_paid?: number
+          addon_relationship_compatibility?: boolean | null
+          addon_transit_12_months?: boolean | null
+          addon_yearly_cycle?: boolean | null
+          api_call_limit?: number | null
+          api_calls_count?: number | null
+          api_key?: string
+          created_at?: string | null
+          email?: string
           id?: string
-          invoice_url?: string | null
-          payment_date?: string
-          payment_method?: string
-          user_id?: string
+          plan_name?: string | null
+          stripe_customer_id?: string
+          trial_end_date?: string | null
+          trial_start_date?: string | null
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "billing_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_info"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "billing_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       legal_documents: {
         Row: {
@@ -370,20 +372,7 @@ export type Database = {
       }
     }
     Views: {
-      user_info: {
-        Row: {
-          addon_relationship: boolean | null
-          addon_transits: boolean | null
-          addon_yearly_cycle: boolean | null
-          api_key: string | null
-          calls_limit: number | null
-          calls_made: number | null
-          email: string | null
-          id: string | null
-          plan_type: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       create_user_after_payment: {
