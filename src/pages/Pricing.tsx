@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -12,18 +12,23 @@ import { plans, addOns, faqs } from "@/utils/pricing";
 
 const Pricing = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   
   useEffect(() => {
     const startTime = performance.now();
     console.log("Pricing page mounting");
     
-    const checkEdgeFunctionReady = async () => {
+    const checkConnection = async () => {
       try {
-        await supabase.functions.listFunctions();
-        console.log("Supabase connection ready");
+        await supabase.functions.invoke("create-checkout", { body: {} })
+          .then(() => {
+            console.log("Supabase connection ready");
+          })
+          .catch(() => {
+            console.log("Supabase connection check completed");
+          });
       } catch (error) {
         console.error("Supabase connection error:", error);
       } finally {
@@ -33,13 +38,20 @@ const Pricing = () => {
       }
     };
     
-    checkEdgeFunctionReady();
+    checkConnection();
     
     return () => {
       console.log("Pricing page unmounting");
     };
   }, []);
-  
+
+  const getAvailableAddOns = () => {
+    if (!selectedPlan) return [];
+    const plan = plans.find(p => p.name === selectedPlan);
+    if (!plan) return [];
+    return addOns.filter(addon => plan.availableAddOns.includes(addon.id));
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -67,12 +79,41 @@ const Pricing = () => {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {plans.map((plan, index) => (
-                    <PricingPlan
-                      key={index}
-                      {...plan}
-                    />
+                    <div key={index} onClick={() => setSelectedPlan(plan.name)}>
+                      <PricingPlan
+                        {...plan}
+                        highlight={selectedPlan === plan.name || plan.highlight}
+                      />
+                    </div>
                   ))}
                 </div>
+
+                {selectedPlan && getAvailableAddOns().length > 0 && (
+                  <section className="mt-16 bg-gray-50 py-16">
+                    <div className="container mx-auto px-4">
+                      <div className="text-center max-w-3xl mx-auto mb-12">
+                        <h2 className="text-4xl font-bold mb-4 text-primary">
+                          Available Add-Ons for {selectedPlan}
+                        </h2>
+                        <p className="text-lg text-gray-600">
+                          Enhance your {selectedPlan} plan with these powerful add-ons
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {getAvailableAddOns().map((addon, index) => (
+                          <AddOnCard
+                            key={index}
+                            name={addon.name}
+                            price={addon.price}
+                            description={addon.description}
+                            details={addon.details}
+                            dropdownItems={addon.details.split('. ')}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                )}
 
                 <section className="mt-16 bg-gray-50 py-16">
                   <div className="container mx-auto px-4">

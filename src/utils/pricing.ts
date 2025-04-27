@@ -33,6 +33,7 @@ export const plans = [
     cta: "Start Free Trial",
     highlight: false,
     icon: "⚡",
+    availableAddOns: ["yearly-cycle", "transits", "relationship"] // All add-ons available
   },
   {
     name: "Growth",
@@ -49,6 +50,7 @@ export const plans = [
     cta: "Start Free Trial",
     highlight: true,
     icon: "🚀",
+    availableAddOns: ["relationship"] // Only relationship compatibility as add-on
   },
   {
     name: "Professional",
@@ -65,23 +67,27 @@ export const plans = [
     cta: "Start Free Trial",
     highlight: false,
     icon: "🌟",
+    availableAddOns: [] // No add-ons needed as everything is included
   },
 ];
 
 export const addOns = [
   {
+    id: "relationship",
     name: "Relationship Compatibility",
     price: "$15",
     description: "Add relationship analysis capabilities to any plan",
     details: "Deep dive into relationship dynamics with comprehensive synastry analysis. Compare two charts to understand relationship strengths, challenges, and potentials. Perfect for relationship-focused applications."
   },
   {
+    id: "yearly-cycle",
     name: "Yearly Cycle",
     price: "$15",
     description: "Add Solar, Lunar, Saturn, and Jupiter return calculations",
     details: "Calculate and analyze important astrological returns including Solar (yearly), Lunar (monthly), and planetary returns for Jupiter and Saturn. Essential for long-term planning and life cycle analysis."
   },
   {
+    id: "transits",
     name: "Transits (12 months ahead)",
     price: "$19",
     description: "Comprehensive transit predictions for future planning",
