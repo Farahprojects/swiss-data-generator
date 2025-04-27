@@ -132,7 +132,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
                   Supercharge your experience with these powerful add-ons:
                 </p>
                 <div className="space-y-4">
-                  {visiblePlan === "Starter" && ["transits", "yearly-cycle", "Relationship Compatibility"].map(
+                  {visiblePlan === "Starter" && ["Transits", "Yearly-Cycle", "Relationship Compatibility"].map(
                     (addOn) => (
                       <AddOnToggle key={addOn} label={addOn} />
                     )
