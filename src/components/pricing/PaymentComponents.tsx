@@ -52,7 +52,18 @@ const useStripeCheckout = () => {
       
       console.log("Redirecting to Stripe checkout");
       // Use window.location.href for full page redirect to prevent iframe issues
-      window.location.href = data.url;
+      + const dest = data.url;
++ try {
++   // If we’re nested, break out of the frame
++   if (window.top && window.top !== window.self) {
++     window.top.location.assign(dest);
++   } else {
++     window.location.assign(dest);
++   }
++ } catch {
++   // Fallback for very tight CSP / sandboxed iframes
++   window.open(dest, "_blank", "noopener,noreferrer");
++ }
     } catch (err: any) {
       console.error("Stripe checkout error", err);
       toast({
