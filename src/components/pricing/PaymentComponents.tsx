@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,19 @@ const useStripeCheckout = () => {
     loading: false,
   });
 
+  // Add performance logging
+  useEffect(() => {
+    console.log("useStripeCheckout hook initialized");
+    return () => {
+      console.log("useStripeCheckout hook cleanup");
+    };
+  }, []);
+
   const handleCheckout = async (productName: string) => {
     if (state.loading) return; // guard dbl‑clicks
+
+    console.log(`Starting checkout for product: ${productName}`);
+    const startTime = performance.now();
 
     const priceId = getPriceId(productName);
     if (!priceId) {
@@ -35,14 +46,19 @@ const useStripeCheckout = () => {
 
     try {
       setState({ loading: true, product: productName });
+      console.log(`Invoking create-checkout function for ${productName}`);
 
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { priceId },
       });
 
+      const endTime = performance.now();
+      console.log(`Checkout API call completed in ${(endTime - startTime).toFixed(2)}ms`);
+
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing in response");
 
+      console.log("Redirecting to Stripe checkout URL");
       // React router fallback: open in new tab to preserve SPA state
       window.open(data.url, "_self");
     } catch (err: any) {
