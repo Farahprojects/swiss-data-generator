@@ -51,7 +51,8 @@ const useStripeCheckout = () => {
       if (!data?.url) throw new Error("Stripe URL missing in response");
       
       console.log("Redirecting to Stripe checkout");
-      window.location.assign(data.url);
+      // Use window.location.href for full page redirect to prevent iframe issues
+      window.location.href = data.url;
     } catch (err: any) {
       console.error("Stripe checkout error", err);
       toast({
