@@ -15,31 +15,6 @@ const Pricing = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const handleSubscribe = async (planType: string) => {
-    if (!user) {
-      navigate('/login', { state: { from: '/pricing' } });
-      return;
-    }
-
-    try {
-      const priceId = getPriceId(planType);
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { priceId },
-      });
-
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start subscription process. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -66,7 +41,6 @@ const Pricing = () => {
                 <PricingPlan
                   key={index}
                   {...plan}
-                  onSubscribe={() => handleSubscribe(plan.name)}
                 />
               ))}
             </div>
@@ -87,11 +61,11 @@ const Pricing = () => {
                   {addOns.map((addon, index) => (
                     <AddOnCard
                       key={index}
-                      {...addon}
-                      onSubscribe={() => handleSubscribe(
-                        addon.name.toLowerCase().includes('yearly') ? 'yearly-cycle' : 
-                        addon.name.toLowerCase().includes('relationship') ? 'relationship' : 'transits'
-                      )}
+                      name={addon.name}
+                      price={addon.price}
+                      description={addon.description}
+                      details={addon.details}
+                      dropdownItems={addon.details.split('. ')}
                     />
                   ))}
                 </div>

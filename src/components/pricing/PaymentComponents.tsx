@@ -64,7 +64,7 @@ interface AddOnCardProps {
   name: string;
   price: string;
   description: string;
-  details: string;
+  details?: string;
   dropdownItems: string[];
 }
 
@@ -72,7 +72,6 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   name,
   price,
   description,
-  details,
   dropdownItems,
 }) => {
   const { isLoading, handleCheckout } = useStripeCheckout();
@@ -170,4 +169,3 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
     </div>
   );
 };
-
