@@ -42,9 +42,10 @@ const Signup = () => {
         } else {
           toast({
             title: "Account Created",
-            description: "Your account has been created successfully!",
+            description: "Your account has been created successfully! Please select a subscription plan to continue.",
           });
-          navigate("/dashboard");
+          // Redirect to pricing page instead of dashboard
+          navigate("/pricing");
         }
       }
     } catch (error) {
@@ -70,6 +71,7 @@ const Signup = () => {
         });
         console.error("Google sign-in error:", error);
       }
+      // We don't redirect here as Google OAuth will handle the redirect
     } catch (error) {
       toast({
         title: "Error",
