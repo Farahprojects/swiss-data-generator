@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,11 @@ const Pricing = () => {
 
   useEffect(() => {
     const t0 = performance.now();
-    supabase.functions
-      .listFunctions()
+    // Replace listFunctions with a simple Supabase ping using a harmless query
+    supabase
+      .from('_dummy_query')
+      .select('*')
+      .limit(1)
       .catch((e) => console.error("Supabase ping failed:", e))
       .finally(() => {
         setBusy(false);
