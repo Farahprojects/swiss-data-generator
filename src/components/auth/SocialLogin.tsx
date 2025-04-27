@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Mail } from "lucide-react"; // Changed from Google to Mail which is available in lucide-react
+import { Mail } from "lucide-react"; // Using Mail icon as Google isn't available in lucide-react
 
 interface SocialLoginProps {
   onGoogleSignIn: () => void;
@@ -25,7 +25,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn }) => {
         className="w-full" 
         onClick={onGoogleSignIn}
       >
-        <Mail className="mr-2 h-4 w-4" /> {/* Changed from Google to Mail */}
+        <Mail className="mr-2 h-4 w-4" /> {/* Using Mail icon instead of Google */}
         Sign in with Google
       </Button>
       
