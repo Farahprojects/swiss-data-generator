@@ -275,6 +275,10 @@ export type Database = {
       }
     }
     Functions: {
+      create_user_after_payment: {
+        Args: { user_id: string; plan_type?: string }
+        Returns: undefined
+      }
       gen_random_bytes: {
         Args: { "": number }
         Returns: string
