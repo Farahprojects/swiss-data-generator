@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,10 +12,11 @@ import SocialLogin from "@/components/auth/SocialLogin";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { paymentSession } from "@/services/payment-session";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 const Signup = () => {
   const [loading, setLoading] = useState(false);
-  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState(false);
   const [customerEmail, setCustomerEmail] = useState<string>("");
   const [planType, setPlanType] = useState<string>("");
   const [searchParams] = useSearchParams();
@@ -26,110 +26,43 @@ const Signup = () => {
   const { formState, updateEmail, updatePassword, updateConfirmPassword } = useAuthForm(true);
 
   useEffect(() => {
-    const verifyPayment = async () => {
+    const getCustomerEmail = async () => {
       const success = searchParams.get("success");
       const sessionId = searchParams.get("session_id");
 
       if (success === "true" && sessionId) {
+        setLoadingEmail(true);
         try {
-          const { data: verifyData, error } = await supabase.functions.invoke("verify-payment", {
-            body: { sessionId }
-          });
+          // Try to get email from stripe_users table first
+          const { data: stripeUser, error } = await supabase
+            .from('stripe_users')
+            .select('email, plan_name')
+            .eq('stripe_subscription_id', sessionId)
+            .maybeSingle();
 
-          if (error) throw error;
-
-          if (verifyData.success && verifyData.paymentStatus === "paid") {
-            setPaymentVerified(true);
-            
-            // Get plan type from session storage
-            const sessionData = paymentSession.get();
-            if (sessionData?.planType) {
-              setPlanType(sessionData.planType);
-            }
-            
-            if (verifyData.email) {
-              setCustomerEmail(verifyData.email);
-              updateEmail(verifyData.email);
-            }
-            
-            // Store the session ID for later use
-            paymentSession.store(
-              sessionId, 
-              sessionData?.planType || "starter", 
-              sessionData?.addOns
-            );
-            
-            toast({
-              title: "Payment Verified",
-              description: "Your payment has been verified. Please complete signup to access your account.",
-            });
+          if (stripeUser?.email) {
+            setCustomerEmail(stripeUser.email);
+            updateEmail(stripeUser.email);
+            setPlanType(stripeUser.plan_name || "");
           } else {
-            toast({
-              title: "Payment Verification Failed",
-              description: "Unable to verify payment status. Please contact support.",
-              variant: "destructive",
-            });
+            // Fallback to session storage if no data in stripe_users
+            const sessionData = paymentSession.get();
+            if (sessionData?.email) {
+              setCustomerEmail(sessionData.email);
+              updateEmail(sessionData.email);
+              setPlanType(sessionData.planType || "");
+            }
           }
         } catch (error) {
-          console.error("Payment verification error:", error);
-          toast({
-            title: "Verification Error",
-            description: error instanceof Error ? error.message : "Failed to verify payment",
-            variant: "destructive",
-          });
+          console.error("Error retrieving customer email:", error);
+        } finally {
+          setLoadingEmail(false);
         }
       }
     };
 
-    verifyPayment();
-  }, [searchParams]);
-
-  // Function to create user record with payment information
-  const createUserRecord = async (userId: string) => {
-    try {
-      const sessionData = paymentSession.get();
-      if (!sessionData) return false;
-
-      // Use the new create_user_after_payment RPC function
-      const { data, error } = await supabase.rpc('create_user_after_payment', {
-        user_id: userId,
-        plan_type: sessionData.planType || 'starter'
-      });
-
-      if (error) {
-        console.error("Error creating user record:", error);
-        return false;
-      }
-
-      // If there are add-ons, enable them
-      if (sessionData.addOns && sessionData.addOns.length > 0) {
-        for (const addon of sessionData.addOns) {
-          let addonKey = '';
-          
-          if (addon.toLowerCase().includes('transit')) {
-            addonKey = 'transits';
-          } else if (addon.toLowerCase().includes('relationship') || addon.toLowerCase().includes('compatibility')) {
-            addonKey = 'relationship';
-          } else if (addon.toLowerCase().includes('yearly') || addon.toLowerCase().includes('cycle')) {
-            addonKey = 'yearly_cycle';
-          }
-
-          if (addonKey) {
-            await supabase.rpc('toggle_addon', {
-              user_id_param: userId,
-              addon_name: addonKey,
-              enabled: true
-            });
-          }
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error in user provisioning:", error);
-      return false;
-    }
-  };
+    getCustomerEmail();
+  }, [searchParams, updateEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,6 +140,52 @@ const Signup = () => {
     }
   };
 
+  const createUserRecord = async (userId: string) => {
+    try {
+      const sessionData = paymentSession.get();
+      if (!sessionData) return false;
+
+      // Use the new create_user_after_payment RPC function
+      const { data, error } = await supabase.rpc('create_user_after_payment', {
+        user_id: userId,
+        plan_type: sessionData.planType || 'starter'
+      });
+
+      if (error) {
+        console.error("Error creating user record:", error);
+        return false;
+      }
+
+      // If there are add-ons, enable them
+      if (sessionData.addOns && sessionData.addOns.length > 0) {
+        for (const addon of sessionData.addOns) {
+          let addonKey = '';
+          
+          if (addon.toLowerCase().includes('transit')) {
+            addonKey = 'transits';
+          } else if (addon.toLowerCase().includes('relationship') || addon.toLowerCase().includes('compatibility')) {
+            addonKey = 'relationship';
+          } else if (addon.toLowerCase().includes('yearly') || addon.toLowerCase().includes('cycle')) {
+            addonKey = 'yearly_cycle';
+          }
+
+          if (addonKey) {
+            await supabase.rpc('toggle_addon', {
+              user_id_param: userId,
+              addon_name: addonKey,
+              enabled: true
+            });
+          }
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in user provisioning:", error);
+      return false;
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -217,11 +196,15 @@ const Signup = () => {
             <p className="mt-2 text-gray-600">Get started with Theraiapi</p>
           </div>
 
-          {paymentVerified && (
+          {loadingEmail ? (
+            <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg">
+              <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+              <p className="text-gray-700">Retrieving your information...</p>
+            </div>
+          ) : planType && (
             <Alert className="mb-6">
               <AlertDescription>
-                Payment verified successfully! {planType && `You've selected the ${planType} plan. `}
-                Please create your account to start using our services.
+                Great! You've selected the {planType} plan. Please create your account to start using our services.
               </AlertDescription>
             </Alert>
           )}
@@ -229,9 +212,10 @@ const Signup = () => {
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">
               <EmailInput 
-                email={formState.email}
+                email={customerEmail || formState.email}
                 isValid={formState.emailValid}
                 onChange={updateEmail}
+                disabled={!!customerEmail}
               />
 
               <PasswordInput
