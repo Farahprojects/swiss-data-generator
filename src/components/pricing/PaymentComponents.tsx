@@ -173,8 +173,8 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
     const checked = !!addOnLines[label];
     
     const displayName = {
-      'transits': 'Transits',
-      'yearly-cycle': 'Yearly Cycle',
+      'Transits': 'Transits',
+      'Yearly-Cycle': 'Yearly Cycle',
       'Relationship Compatibility': 'Relationship Compatibility',
       'relationship compatibility': 'Relationship Compatibility'
     }[label] || label;
