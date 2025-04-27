@@ -174,6 +174,36 @@ export type Database = {
           },
         ]
       }
+      legal_documents: {
+        Row: {
+          content: string
+          document_type: string
+          id: string
+          is_current: boolean
+          published_date: string
+          title: string
+          version: string
+        }
+        Insert: {
+          content: string
+          document_type: string
+          id?: string
+          is_current?: boolean
+          published_date?: string
+          title: string
+          version: string
+        }
+        Update: {
+          content?: string
+          document_type?: string
+          id?: string
+          is_current?: boolean
+          published_date?: string
+          title?: string
+          version?: string
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           active: boolean
