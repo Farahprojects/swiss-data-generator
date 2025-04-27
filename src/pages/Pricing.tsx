@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,8 @@ const Pricing: React.FC = () => {
     const start = performance.now();
     (async () => {
       try {
-        await supabase.functions.listFunctions();
+        // Replaced listFunctions with a simple health check
+        await supabase.from('user_info').select('count').limit(1);
         console.log("Supabase connection ready");
       } catch (err) {
         console.error("Supabase connection error", err);
@@ -72,13 +74,20 @@ const Pricing: React.FC = () => {
                     <div className="mx-auto mb-12 max-w-3xl text-center">
                       <h2 className="mb-4 text-4xl font-bold text-primary">Enhance Your Build</h2>
                       <p className="text-lg text-gray-600">
-                        Western or Vedic—your choice in every endpoint. Scale with optional extras when you’re ready.
+                        Western or Vedic—your choice in every endpoint. Scale with optional extras when you're ready.
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                       {addOns.map((a, i) => (
-                        <AddOnCard key={i} {...a} />
+                        <AddOnCard 
+                          key={i} 
+                          name={a.name}
+                          price={a.price}
+                          description={a.description}
+                          details={a.details}
+                          status={a.status === "included" ? "included" : "upgrade"}
+                        />
                       ))}
                     </div>
                   </div>
