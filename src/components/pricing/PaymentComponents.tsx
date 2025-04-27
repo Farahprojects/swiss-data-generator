@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { addOns } from "@/utils/pricing";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Shared checkout hook ------------------------------------------------------
@@ -238,8 +239,6 @@ export const UpsellDialog = () => {
     handleCheckout, 
     isLoading 
   } = useStripeCheckout();
-  
-  const { addOns } = require("@/utils/pricing");
   
   // Filter addons to show based on selected plan
   const relevantAddons = addOns.filter(addon => {
