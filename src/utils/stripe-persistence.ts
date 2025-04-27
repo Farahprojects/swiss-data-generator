@@ -1,4 +1,6 @@
 
+import { supabase } from "@/integrations/supabase/client";
+
 interface StripeUserData {
   email: string;
   stripe_customer_id: string;
