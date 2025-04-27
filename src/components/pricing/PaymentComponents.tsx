@@ -82,7 +82,8 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
 
       paymentSession.store(data.sessionId, visiblePlan, Object.keys(addOnLines));
       
-      window.location.href = data.url;
+      // Open Stripe checkout in a new window/tab
+      window.open(data.url, '_blank');
     } catch (err: any) {
       toast({ 
         title: "Checkout failed", 
