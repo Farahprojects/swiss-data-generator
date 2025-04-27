@@ -1,79 +1,58 @@
 
 import React from "react";
-import { Check } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-  SheetClose,
-} from "@/components/ui/sheet";
 import { useCheckout } from "../hooks/useCheckout";
 import { AddOnToggle } from "./AddOnToggle";
+import { addOns } from "@/utils/pricing";
 
 interface CheckoutSheetProps {
-  visiblePlan?: string;
+  open: boolean;
   onClose: () => void;
+  title?: string;
+  planName?: string;
 }
 
 export const CheckoutSheet: React.FC<CheckoutSheetProps> = ({
-  visiblePlan,
+  open,
   onClose,
+  title = "Complete Your Purchase",
+  planName,
 }) => {
-  const { addOnLines, toggleAddOn, continueToStripe, loading } = useCheckout();
+  const { continueToStripe, loading } = useCheckout();
 
   return (
-    <Sheet open={!!visiblePlan} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-[420px] overflow-y-auto bg-white">
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent className="overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Customize Your {visiblePlan} Plan
-          </SheetTitle>
+          <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
         
-        {/* Add-on toggles */}
-        {visiblePlan === "Professional" ? (
-          <p className="mb-8 text-gray-600 text-lg">
-            You've selected our most comprehensive plan with all premium features included.
-          </p>
-        ) : (
-          <>
-            <p className="mt-8 mb-6 text-xl font-medium text-primary/90">
-              Supercharge your experience with these powerful add-ons:
-            </p>
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold">Selected Plan: {planName}</h3>
+          
+          <div className="mt-8">
+            <h3 className="mb-4 text-lg font-medium">Add-ons (Optional)</h3>
             <div className="space-y-4">
-              {visiblePlan === "Starter" && ["Transits", "Yearly Cycle", "Relationship Compatibility"].map(
-                (addOn) => (
-                  <AddOnToggle key={addOn} label={addOn} />
-                )
-              )}
-              {visiblePlan === "Growth" && (
-                <AddOnToggle label="Relationship Compatibility" />
-              )}
+              {addOns.map((addon) => (
+                <AddOnToggle key={addon.name} label={addon.name} />
+              ))}
             </div>
-          </>
-        )}
+          </div>
 
-        <SheetFooter className="mt-10 flex-col">
-          <Button
-            disabled={loading}
-            className="w-full py-6 text-lg bg-primary hover:bg-primary/90 transition-colors"
-            onClick={continueToStripe}
-          >
-            {loading ? "Redirecting…" : "Proceed to Checkout"}
-          </Button>
-          <SheetClose asChild>
+          <div className="mt-10 flex flex-col space-y-4">
             <Button
-              variant="ghost"
-              className="mt-2 w-full hover:bg-gray-100"
+              onClick={() => continueToStripe()}
               disabled={loading}
+              className="w-full"
             >
+              {loading ? "Processing..." : "Continue to Checkout"}
+            </Button>
+            <Button variant="outline" onClick={onClose} className="w-full">
               Cancel
             </Button>
-          </SheetClose>
-        </SheetFooter>
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );

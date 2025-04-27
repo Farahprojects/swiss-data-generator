@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,7 @@ interface CheckoutProviderProps {
   planName?: string;
   successUrl?: string;
   cancelUrl?: string;
+  onClose?: () => void; // Added onClose prop
 }
 
 export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
@@ -30,6 +32,7 @@ export const CheckoutProvider: React.FC<CheckoutProviderProps> = ({
   planName,
   successUrl = "/signup?success=true",
   cancelUrl = "/pricing?canceled=true",
+  onClose,
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
