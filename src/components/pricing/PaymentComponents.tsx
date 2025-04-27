@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Info } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -73,7 +73,6 @@ interface AddOnCardProps {
   price: string;
   description: string;
   details: string[];
-  status?: "included" | "upgrade";
 }
 
 export const AddOnCard: React.FC<AddOnCardProps> = ({
@@ -81,15 +80,10 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   price,
   description,
   details,
-  status = "upgrade",
 }) => {
-  const label = status === "included" ? "Included in plan" : "Available at checkout";
   return (
     <div className="flex flex-col gap-6 rounded-xl border border-gray-100 bg-white p-8 shadow-sm hover:shadow-md">
-      <div className="flex items-center gap-3">
-        <Info className="h-5 w-5 text-primary" />
-        <h3 className="text-xl font-bold">{name}</h3>
-      </div>
+      <h3 className="text-xl font-bold text-primary">{name}</h3>
       <p className="text-gray-600">{description}</p>
       <p className="text-xl font-medium text-primary/80">{price}</p>
 
@@ -107,14 +101,6 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <span
-        className={`rounded-md px-3 py-1 text-xs font-semibold ${
-          status === "included" ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-600"
-        }`}
-      >
-        {label}
-      </span>
     </div>
   );
 };
@@ -138,7 +124,15 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
   highlight = false,
   icon,
 }) => {
-  const { isLoading, handleCheckout } = useStripeCheckout();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handlePlanSelection = () => {
+    setIsLoading(true);
+    navigate("/pricing-funnel", { 
+      state: { selectedPlan: name }
+    });
+  };
 
   return (
     <div
@@ -167,10 +161,10 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
         <p className="mb-4 text-3xl font-semibold text-primary">{price}</p>
         <Button
           className="w-full py-6"
-          onClick={() => handleCheckout(name)}
+          onClick={handlePlanSelection}
           disabled={isLoading}
         >
-          {isLoading ? "Redirecting…" : cta}
+          {isLoading ? "Loading..." : cta}
         </Button>
       </div>
     </div>
