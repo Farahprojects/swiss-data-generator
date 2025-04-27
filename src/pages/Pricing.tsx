@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,10 +18,8 @@ const Pricing = () => {
   useEffect(() => {
     const t0 = performance.now();
     
-    // Use Promise syntax with then/catch instead of chaining .catch directly
     const checkSupabaseConnection = async () => {
       try {
-        // Query one of the existing tables instead of a non-existent _dummy_query
         await supabase.from('users').select('*').limit(1);
       } catch (e) {
         console.error("Supabase ping failed:", e);
@@ -40,9 +37,8 @@ const Pricing = () => {
       <div className="flex min-h-screen flex-col">
         <Navbar />
 
-        {/* ── Hero ────────────────────────────────────────────── */}
-        <header className="bg-accent py-20 text-center">
-          <h1 className="mb-6 text-4xl font-bold">One API Key — All The Cosmos</h1>
+        <header className="py-20 text-center">
+          <h1 className="mb-6 text-4xl font-bold text-primary">All The Cosmos in one API key</h1>
           <p className="mx-auto max-w-3xl text-xl text-gray-700">
             Predict. Match. Innovate. Our Swiss-Ephemeris engine delivers every
             astrological calculation through a single, developer-friendly
@@ -51,7 +47,6 @@ const Pricing = () => {
           </p>
         </header>
 
-        {/* ── Pricing grid ────────────────────────────────────── */}
         <main className="flex-grow">
           <section className="container mx-auto -mt-10 py-20 px-4">
             {busy ? (
@@ -66,7 +61,6 @@ const Pricing = () => {
                   ))}
                 </div>
 
-                {/* ── Add-Ons ───────────────────────────────── */}
                 <section className="mt-20 rounded-xl bg-gray-50 py-16">
                   <div className="container mx-auto px-4">
                     <h2 className="mb-4 text-center text-4xl font-bold text-primary">
@@ -85,14 +79,12 @@ const Pricing = () => {
                   </div>
                 </section>
 
-                {/* ── FAQ ───────────────────────────────────── */}
                 <FAQSection items={faqs} />
               </>
             )}
           </section>
         </main>
 
-        {/* ── CTA footer ─────────────────────────────────────── */}
         <section className="bg-primary py-16 text-center text-white">
           <h2 className="mb-6 text-3xl font-bold">
             Ready to launch cosmic features?

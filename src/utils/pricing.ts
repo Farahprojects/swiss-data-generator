@@ -1,4 +1,3 @@
-
 export const getPriceId = (planType: string) => {
   switch (planType.toLowerCase()) {
     case 'starter':
@@ -10,8 +9,6 @@ export const getPriceId = (planType: string) => {
     case 'yearly-cycle':
       return 'price_1RIIAkJ1YhE4Ljp07H39uZnZ';
     case 'relationship':
-      // Note: The relationship compatibility has a product ID instead of price ID
-      // Using the product ID as provided, but this may need to be updated to a price ID
       return 'prod_SChY6pgEbdigNb';
     case 'transits':
       return 'price_1RII87J1YhE4Ljp0TPLjRtut';
@@ -22,7 +19,7 @@ export const getPriceId = (planType: string) => {
 
 export const plans = [
   {
-    name: "Starter",
+    name: <span className="text-primary">Starter</span>,
     price: "$19",
     description: "Simple, very clean, enough for solo devs or small apps",
     features: [
@@ -31,11 +28,10 @@ export const plans = [
       "1 API key",
     ],
     cta: "Start Free Trial",
-    highlight: false,
-    icon: "⚡",
+    highlight: false
   },
   {
-    name: "Growth",
+    name: <span className="text-primary">Growth</span>,
     price: "$49",
     description: "For apps that need serious astrology features",
     features: [
@@ -47,11 +43,10 @@ export const plans = [
       "Sidereal toggle unlocked",
     ],
     cta: "Start Free Trial",
-    highlight: true,
-    icon: "🚀",
+    highlight: true
   },
   {
-    name: "Professional",
+    name: <span className="text-primary">Professional</span>,
     price: "$99",
     description: "Ideal for commercial apps or multi-feature astrology platforms",
     features: [
@@ -63,8 +58,7 @@ export const plans = [
       "Slack/email support priority",
     ],
     cta: "Start Free Trial",
-    highlight: false,
-    icon: "🌟",
+    highlight: false
   },
 ];
 
