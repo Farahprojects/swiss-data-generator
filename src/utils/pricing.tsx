@@ -1,20 +1,18 @@
-
 import React from 'react';
 
 export const getPriceId = (planType: string) => {
-  switch (planType.toLowerCase()) {
-    case 'starter':
+  switch (planType) {
+    case 'Starter':
       return 'price_1RII04J1YhE4Ljp0daRu1V2J';
-    case 'growth':
+    case 'Growth':
       return 'price_1RII4eJ1YhE4Ljp0vNfZnwov';
-    case 'professional':
+    case 'Professional':
       return 'price_1RII6CJ1YhE4Ljp0BTCF0IYX';
-    case 'yearly-cycle':
+    case 'Yearly Cycle':
       return 'price_1RIIAkJ1YhE4Ljp07H39uZnZ';
-    case 'relationship compatibility':
     case 'Relationship Compatibility':
       return 'price_1RII91J1YhE4Ljp0xbZeyCIY';
-    case 'transits':
+    case 'Transits':
       return 'price_1RII87J1YhE4Ljp0TPLjRtut';
     default:
       return 'price_1RII04J1YhE4Ljp0daRu1V2J';
