@@ -8,6 +8,12 @@ interface SocialLoginProps {
 }
 
 const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn }) => {
+  const handleGoogleSignIn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Inform user they might be redirected
+    onGoogleSignIn();
+  };
+
   return (
     <div className="space-y-4">
       <div className="relative flex items-center justify-center">
@@ -23,7 +29,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn }) => {
         type="button" 
         variant="outline" 
         className="w-full" 
-        onClick={onGoogleSignIn}
+        onClick={handleGoogleSignIn}
       >
         <Mail className="mr-2 h-4 w-4" /> {/* Using Mail icon instead of Google */}
         Sign in with Google
