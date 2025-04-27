@@ -9,9 +9,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -19,24 +17,26 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
-    const { priceIds } = await req.json();
-    console.log("Creating checkout for priceIds:", priceIds);
+    const { priceIds, planType, addOns } = await req.json();
+    console.log("Creating checkout for:", { priceIds, planType, addOns });
 
     const priceIdsArray = Array.isArray(priceIds) ? priceIds : [priceIds];
-
     const line_items = priceIdsArray.map(priceId => ({
       price: priceId,
       quantity: 1,
     }));
 
-    // Create Stripe checkout session without customer information
     const session = await stripe.checkout.sessions.create({
       line_items,
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/signup?success=true`,
+      success_url: `${req.headers.get("origin")}/signup?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/pricing?canceled=true`,
       allow_promotion_codes: true,
       billing_address_collection: "required",
+      metadata: {
+        planType,
+        addOns: addOns ? JSON.stringify(addOns) : '',
+      }
     });
 
     console.log(`Checkout session created: ${session.id}`);
@@ -45,6 +45,8 @@ serve(async (req) => {
       JSON.stringify({
         url: session.url,
         sessionId: session.id,
+        planType,
+        addOns,
         isDevelopment: true
       }),
       {

@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -10,13 +10,60 @@ import { useAuthForm } from "@/hooks/useAuthForm";
 import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { paymentSession } from "@/services/payment-session";
+import { supabase } from "@/integrations/supabase/client";
 
 const Signup = () => {
   const [loading, setLoading] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [customerEmail, setCustomerEmail] = useState<string>("");
+  const [searchParams] = useSearchParams();
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { formState, updateEmail, updatePassword, updateConfirmPassword } = useAuthForm(true);
+
+  useEffect(() => {
+    const verifyPayment = async () => {
+      const success = searchParams.get("success");
+      const sessionId = searchParams.get("session_id");
+
+      if (success === "true" && sessionId) {
+        try {
+          const { data: verifyData, error } = await supabase.functions.invoke("verify-payment", {
+            body: { sessionId }
+          });
+
+          if (error) throw error;
+
+          if (verifyData.success && verifyData.paymentStatus === "paid") {
+            setPaymentVerified(true);
+            if (verifyData.email) {
+              setCustomerEmail(verifyData.email);
+              updateEmail(verifyData.email);
+            }
+            paymentSession.store(sessionId, verifyData.metadata?.planType, verifyData.metadata?.addOns);
+          } else {
+            toast({
+              title: "Payment Verification Failed",
+              description: "Unable to verify payment status. Please contact support.",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error("Payment verification error:", error);
+          toast({
+            title: "Verification Error",
+            description: error instanceof Error ? error.message : "Failed to verify payment",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    verifyPayment();
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +80,6 @@ const Signup = () => {
         });
         console.error("Detailed signup error:", error);
       } else {
-        // Check if email confirmation is required
         if (user?.identities?.length === 0 || user?.email_confirmed_at === null) {
           toast({
             title: "Success",
@@ -42,10 +88,10 @@ const Signup = () => {
         } else {
           toast({
             title: "Account Created",
-            description: "Your account has been created successfully! Please select a subscription plan to continue.",
+            description: "Your account has been created successfully!",
           });
-          // Redirect to pricing page instead of dashboard
-          navigate("/pricing");
+          paymentSession.clear();
+          navigate("/dashboard");
         }
       }
     } catch (error) {
@@ -91,6 +137,14 @@ const Signup = () => {
             <h2 className="text-3xl font-bold">Create an account</h2>
             <p className="mt-2 text-gray-600">Get started with Theraiapi</p>
           </div>
+
+          {paymentVerified && (
+            <Alert className="mb-6">
+              <AlertDescription>
+                Payment verified successfully! Please create your account to start using our services.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">
