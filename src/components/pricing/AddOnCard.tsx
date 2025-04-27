@@ -1,10 +1,7 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { getPriceId } from "@/utils/pricing";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,55 +22,20 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   description,
   details,
 }) => {
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, handleCheckout } = useStripeCheckout();
 
-  const handleSubscribe = async () => {
-    if (isLoading) return; // Prevent multiple clicks
-    
-    try {
-      setIsLoading(true);
-      // Determine the addon type based on name
-      let addonType = '';
-      if (name.toLowerCase().includes('yearly')) {
-        addonType = 'yearly-cycle';
-      } else if (name.toLowerCase().includes('relationship')) {
-        addonType = 'relationship';
-      } else {
-        addonType = 'transits';
-      }
-      
-      const priceId = getPriceId(addonType);
-      console.log(`Starting checkout with ${addonType} add-on, price ID: ${priceId}`);
-      
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { priceId }
-      });
-
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
-      }
-      
-      if (data?.url) {
-        console.log(`Redirecting to checkout: ${data.url}`);
-        // Use a timeout to ensure state changes are processed before redirecting
-        setTimeout(() => {
-          window.location.href = data.url;
-        }, 100);
-      } else {
-        console.error('No checkout URL returned:', data);
-        throw new Error("No checkout URL returned");
-      }
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      toast({
-        title: "Checkout Error",
-        description: "Could not start the checkout process. Please try again.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
+  const handleSubscribe = () => {
+    // Determine the addon type based on name
+    let addonType = '';
+    if (name.toLowerCase().includes('yearly')) {
+      addonType = 'yearly-cycle';
+    } else if (name.toLowerCase().includes('relationship')) {
+      addonType = 'relationship';
+    } else {
+      addonType = 'transits';
     }
+    
+    handleCheckout(addonType);
   };
 
   return (
