@@ -1,4 +1,3 @@
-
 import React, { useState, createContext, useContext } from "react";
 import { Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -92,19 +91,23 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
       {/* ── Using Sheet for side panel ───────────────────────────────── */}
       {visiblePlan && (
         <Sheet open={!!visiblePlan} onOpenChange={(open) => !open && close()}>
-          <SheetContent className="w-[420px] overflow-y-auto">
+          <SheetContent className="w-[420px] overflow-y-auto bg-gray-50/80 backdrop-blur-sm">
             <SheetHeader>
-              <SheetTitle className="text-2xl font-bold">Confirm Your {visiblePlan} Plan</SheetTitle>
+              <SheetTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                Customize Your {visiblePlan} Plan
+              </SheetTitle>
             </SheetHeader>
             
             {/* Add-on toggles */}
             {visiblePlan === "Professional" ? (
-              <p className="mb-8 text-gray-600">
-                Professional already includes every feature and add-on.
+              <p className="mb-8 text-gray-600 text-lg">
+                You've selected our most comprehensive plan with all premium features included.
               </p>
             ) : (
               <>
-                <p className="mt-6 mb-4 text-gray-600">Enhance your plan:</p>
+                <p className="mt-8 mb-6 text-xl font-medium text-primary/90">
+                  Supercharge your experience with these powerful add-ons:
+                </p>
                 <div className="space-y-4">
                   {visiblePlan === "Starter" && ["Daily Transits", "Yearly Cycle", "Relationship Compatibility"].map(
                     (addOn) => (
@@ -121,7 +124,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
             <SheetFooter className="mt-10 flex-col">
               <Button
                 disabled={loading}
-                className="w-full py-6"
+                className="w-full py-6 text-lg bg-primary hover:bg-primary/90 transition-colors"
                 onClick={continueToStripe}
               >
                 {loading ? "Redirecting…" : "Proceed to Checkout"}
@@ -129,7 +132,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
               <SheetClose asChild>
                 <Button
                   variant="ghost"
-                  className="mt-2 w-full"
+                  className="mt-2 w-full hover:bg-gray-100"
                   disabled={loading}
                 >
                   Cancel
@@ -144,13 +147,17 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
 
   /*------------------------------------*/
   function AddOnToggle({ label }: { label: string }) {
+    const { addOnLines, toggleAddOn } = useCheckoutWizard();
     const checked = !!addOnLines[label];
     return (
-      <label className="flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-all duration-200 hover:border-primary/50 hover:shadow-sm">
-        <span>{label}</span>
+      <label className="flex cursor-pointer items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-6 transition-all duration-200 hover:border-primary/50 hover:shadow-sm">
+        <div className="space-y-2">
+          <span className="text-lg font-semibold text-primary">{label}</span>
+          <p className="text-sm text-gray-600">Enhance your analytics with advanced insights and predictive features.</p>
+        </div>
         <input
           type="checkbox"
-          className="h-5 w-5 accent-primary"
+          className="h-6 w-6 rounded-md accent-primary"
           checked={checked}
           onChange={() => toggleAddOn(label)}
         />
@@ -174,17 +181,14 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   price,
   description,
   details,
-  status = "upgrade",
 }) => {
-  const label = status === "included" ? "Included in plan" : "Available at checkout";
   return (
     <div className="flex flex-col gap-6 rounded-xl border border-gray-100 bg-white p-8 shadow-sm hover:shadow-md">
-      <div className="flex items-center gap-3">
-        <Info className="h-5 w-5 text-primary" />
-        <h3 className="text-xl font-bold">{name}</h3>
+      <div>
+        <h3 className="text-2xl font-bold text-primary mb-2">{name}</h3>
+        <p className="text-gray-600">{description}</p>
       </div>
-      <p className="text-gray-600">{description}</p>
-      <p className="text-xl font-medium text-primary/80">{price}</p>
+      <p className="text-3xl font-medium text-primary">{price}</p>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -200,14 +204,6 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <span
-        className={`rounded-md px-3 py-1 text-xs font-semibold ${
-          status === "included" ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-600"
-        }`}
-      >
-        {label}
-      </span>
     </div>
   );
 };
