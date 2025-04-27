@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { getPriceId } from "@/utils/pricing";
 
 interface PricingPlanProps {
   name: string;
@@ -30,8 +31,9 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
 
   const handleClick = async () => {
     try {
+      const priceId = getPriceId(name);
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { priceId: name.toLowerCase() }
+        body: { priceId }
       });
 
       if (error) throw error;

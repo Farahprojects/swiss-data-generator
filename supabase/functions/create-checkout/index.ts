@@ -15,6 +15,11 @@ serve(async (req) => {
 
   try {
     const { priceId } = await req.json();
+    console.log("Received priceId:", priceId);
+    
+    if (!priceId) {
+      throw new Error("Price ID is required");
+    }
     
     // Create Supabase client
     const supabaseClient = createClient(
@@ -64,6 +69,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
+    console.error("Checkout error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

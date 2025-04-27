@@ -4,6 +4,7 @@ import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { getPriceId } from "@/utils/pricing";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,10 +29,20 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
 
   const handleSubscribe = async () => {
     try {
+      // Determine the addon type based on name
+      let addonType = '';
+      if (name.toLowerCase().includes('yearly')) {
+        addonType = 'yearly-cycle';
+      } else if (name.toLowerCase().includes('relationship')) {
+        addonType = 'relationship';
+      } else {
+        addonType = 'transits';
+      }
+      
+      const priceId = getPriceId(addonType);
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { 
-          priceId: name.toLowerCase().replace(/\s+/g, '-')
-        }
+        body: { priceId }
       });
 
       if (error) throw error;
