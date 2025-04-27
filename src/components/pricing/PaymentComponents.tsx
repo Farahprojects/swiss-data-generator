@@ -65,20 +65,39 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
       toast({ title: "Price mapping missing", description: visiblePlan, variant: "destructive" });
       return;
     }
-    const line_items: LineItem[] = [{ price: planPriceId, quantity: 1 }, ...Object.values(addOnLines)];
+    const line_items = [{ price: planPriceId, quantity: 1 }, ...Object.values(addOnLines)];
+    
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke("create-checkout", { body: { line_items } });
+      const { data, error } = await supabase.functions.invoke("create-checkout", { 
+        body: { priceIds: line_items.map(item => item.price) }
+      });
+      
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing");
-      /* make sure we exit any iframe */
-      if (window.top && window.top !== window.self) {
-        window.top.location.assign(data.url);
+      
+      // Open checkout in new window in development
+      if (data.isDevelopment) {
+        const checkoutWindow = window.open(data.url, '_blank');
+        if (!checkoutWindow) {
+          toast({
+            title: "Popup Blocked",
+            description: "Please allow popups for this site to proceed with checkout",
+            variant: "destructive"
+          });
+        }
+        // Keep the current window open in development
       } else {
-        window.location.assign(data.url);
+        // In production, redirect the main window
+        window.location.href = data.url;
       }
     } catch (err: any) {
-      toast({ title: "Checkout failed", description: err.message, variant: "destructive" });
+      toast({ 
+        title: "Checkout failed", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    } finally {
       setLoading(false);
     }
   };
@@ -168,7 +187,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
 
 /*───────────────────────────────────────────────────────────────────
   Presentational components
-───────────────────────────────────────────────────────────────────*/
+──────────────────────���────────────────────────────────────────────*/
 interface AddOnCardProps {
   name: string;
   price: string;

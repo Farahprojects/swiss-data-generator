@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: corsHeaders,
@@ -31,7 +30,6 @@ serve(async (req) => {
     let userId = null;
     let userEmail = null;
 
-    // If we have an auth header, get the user
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
       const { data, error } = await supabase.auth.getUser(token);
@@ -41,14 +39,11 @@ serve(async (req) => {
       }
     }
 
-    // Get the request body
     const { priceIds } = await req.json();
     console.log("Creating checkout for priceIds:", priceIds);
 
-    // Ensure priceIds is always an array
     const priceIdsArray = Array.isArray(priceIds) ? priceIds : [priceIds];
 
-    // Check if customer already exists
     let customerId;
     if (userEmail) {
       const customers = await stripe.customers.list({
@@ -61,7 +56,6 @@ serve(async (req) => {
       }
     }
 
-    // Create line items from priceIds
     const line_items = priceIdsArray.map(priceId => ({
       price: priceId,
       quantity: 1,
@@ -82,10 +76,12 @@ serve(async (req) => {
 
     console.log(`Checkout session created: ${session.id}`);
 
+    // Return both the URL and the session ID
     return new Response(
       JSON.stringify({
         url: session.url,
         sessionId: session.id,
+        isDevelopment: true // This helps the frontend know we're in development
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
