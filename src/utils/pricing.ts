@@ -1,4 +1,3 @@
-
 export const getPriceId = (planType: string) => {
   switch (planType.toLowerCase()) {
     case 'starter':
@@ -73,19 +72,37 @@ export const addOns = [
     name: "Relationship Compatibility",
     price: "$15",
     description: "Add relationship analysis capabilities to any plan",
-    details: "Deep dive into relationship dynamics with comprehensive synastry analysis. Compare two charts to understand relationship strengths, challenges, and potentials. Perfect for relationship-focused applications."
+    details: [
+      "Deep dive into relationship dynamics",
+      "Comprehensive synastry analysis",
+      "Compare two charts for compatibility",
+      "Perfect for relationship-focused applications"
+    ],
+    status: "upgrade"
   },
   {
     name: "Yearly Cycle",
     price: "$15",
     description: "Add Solar, Lunar, Saturn, and Jupiter return calculations",
-    details: "Calculate and analyze important astrological returns including Solar (yearly), Lunar (monthly), and planetary returns for Jupiter and Saturn. Essential for long-term planning and life cycle analysis."
+    details: [
+      "Calculate important astrological returns",
+      "Solar (yearly) predictions",
+      "Lunar (monthly) forecasts",
+      "Jupiter and Saturn cycles analysis"
+    ],
+    status: "included"
   },
   {
     name: "Transits (12 months ahead)",
     price: "$19",
     description: "Comprehensive transit predictions for future planning",
-    details: "Access detailed planetary transit predictions for the next 12 months. Understand upcoming astrological influences, potential challenges, and opportunities for personal growth and strategic decision-making."
+    details: [
+      "12-month detailed transit forecast",
+      "Planetary influence predictions",
+      "Upcoming opportunities analysis",
+      "Strategic planning insights"
+    ],
+    status: "included"
   },
 ];
 

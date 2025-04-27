@@ -75,7 +75,7 @@ interface AddOnCardProps {
   price: string;
   description: string;
   details: string[];
-  status?: "included" | "upgrade"; // determines the label shown on card
+  status?: "included" | "upgrade";
 }
 
 export const AddOnCard: React.FC<AddOnCardProps> = ({
@@ -152,7 +152,7 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
       }`}
     >
       <div className="flex items-center gap-3 p-6">
-        {icon}
+        <span className="text-2xl">{icon}</span>
         <div>
           <h3 className="text-xl font-bold">{name}</h3>
           <p className="text-gray-600">{description}</p>
