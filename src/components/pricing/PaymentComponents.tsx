@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getPriceId } from "@/utils/pricing";
 import { useAuth } from "@/contexts/AuthContext";
+
+// ────────────────────────────────────────────────────────────────────────────
+// Shared checkout hook ------------------------------------------------------
+// ────────────────────────────────────────────────────────────────────────────
 
 const useStripeCheckout = () => {
   const { toast } = useToast();
@@ -40,21 +44,26 @@ const useStripeCheckout = () => {
       console.log("User authenticated:", !!user);
       
       const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { 
-          priceId, 
-          userEmail: user?.email,
-          successUrl: `${window.location.origin}/dashboard`,
-          cancelUrl: `${window.location.origin}/pricing`
-        },
+        body: { priceId },
       });
       
       if (error) throw error;
       if (!data?.url) throw new Error("Stripe URL missing in response");
       
       console.log("Redirecting to Stripe checkout");
-      
-      // Force full page navigation to prevent iframe issues
-      window.location.href = data.url;
+      // Use window.location.href for full page redirect to prevent iframe issues
+      + const dest = data.url;
++ try {
++   // If we’re nested, break out of the frame
++   if (window.top && window.top !== window.self) {
++     window.top.location.assign(dest);
++   } else {
++     window.location.assign(dest);
++   }
++ } catch {
++   // Fallback for very tight CSP / sandboxed iframes
++   window.open(dest, "_blank", "noopener,noreferrer");
++ }
     } catch (err: any) {
       console.error("Stripe checkout error", err);
       toast({
@@ -69,12 +78,15 @@ const useStripeCheckout = () => {
   return { isLoading: state.loading, handleCheckout };
 };
 
+// ────────────────────────────────────────────────────────────────────────────
+// Add‑On Card ---------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────────────────
 interface AddOnCardProps {
   name: string;
   price: string;
   description: string;
   details: string[];
-  status?: string;  // Added status as an optional prop
+  status?: "included" | "upgrade";
 }
 
 export const AddOnCard: React.FC<AddOnCardProps> = ({
@@ -82,10 +94,15 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
   price,
   description,
   details,
+  status = "upgrade",
 }) => {
+  const label = status === "included" ? "Included in plan" : "Available at checkout";
   return (
     <div className="flex flex-col gap-6 rounded-xl border border-gray-100 bg-white p-8 shadow-sm hover:shadow-md">
-      <h3 className="text-xl font-bold text-primary">{name}</h3>
+      <div className="flex items-center gap-3">
+        <Info className="h-5 w-5 text-primary" />
+        <h3 className="text-xl font-bold">{name}</h3>
+      </div>
       <p className="text-gray-600">{description}</p>
       <p className="text-xl font-medium text-primary/80">{price}</p>
 
@@ -103,10 +120,21 @@ export const AddOnCard: React.FC<AddOnCardProps> = ({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <span
+        className={`rounded-md px-3 py-1 text-xs font-semibold ${
+          status === "included" ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-600"
+        }`}
+      >
+        {label}
+      </span>
     </div>
   );
 };
 
+// ────────────────────────────────────────────────────────────────────────────
+// Pricing Plan Card ---------------------------------------------------------
+// ────────────────────────────────────────────────────────────────────────────
 interface PricingPlanProps {
   name: string;
   price: string;
@@ -126,15 +154,7 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
   highlight = false,
   icon,
 }) => {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handlePlanSelection = () => {
-    setIsLoading(true);
-    navigate("/pricing-funnel", { 
-      state: { selectedPlan: name }
-    });
-  };
+  const { isLoading, handleCheckout } = useStripeCheckout();
 
   return (
     <div
@@ -163,10 +183,10 @@ export const PricingPlan: React.FC<PricingPlanProps> = ({
         <p className="mb-4 text-3xl font-semibold text-primary">{price}</p>
         <Button
           className="w-full py-6"
-          onClick={handlePlanSelection}
+          onClick={() => handleCheckout(name)}
           disabled={isLoading}
         >
-          {isLoading ? "Loading..." : cta}
+          {isLoading ? "Redirecting…" : cta}
         </Button>
       </div>
     </div>
