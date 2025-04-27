@@ -55,12 +55,12 @@ serve(async (req) => {
       subscription.default_payment_method as string
     );
 
-    // Prepare the stripe user data
+    // Prepare and save the stripe user data
     const stripeUserData = {
       email: email,
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscriptionId,
-      plan_name: planName,
+      stripe_customer_id: customerId as string,
+      stripe_subscription_id: subscriptionId as string,
+      plan_name: planName as 'Starter' | 'Growth' | 'Professional',
       addon_relationship_compatibility: session.metadata?.addOns?.includes('Relationship Compatibility') || false,
       addon_yearly_cycle: session.metadata?.addOns?.includes('Yearly Cycle') || false,
       addon_transit_12_months: session.metadata?.addOns?.includes('Transits') || false,
@@ -80,10 +80,9 @@ serve(async (req) => {
       card_brand: paymentMethod.card?.brand || null
     };
 
-    // Upsert the stripe user data
     const { error: upsertError } = await supabaseAdmin
       .from('stripe_users')
-      .upsert([stripeUserData], {
+      .upsert(stripeUserData, {
         onConflict: 'stripe_customer_id'
       });
 
