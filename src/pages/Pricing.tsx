@@ -66,7 +66,14 @@ const Pricing = () => {
                       </div>
                       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                         {addOns.map((a) => (
-                          <AddOnCard key={a.name} {...a} />
+                          <AddOnCard 
+                            key={a.name} 
+                            name={a.name}
+                            price={a.price}
+                            description={a.description}
+                            details={a.details}
+                            status={a.status as "included" | "upgrade"}
+                          />
                         ))}
                       </div>
                     </div>

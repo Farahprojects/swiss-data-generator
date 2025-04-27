@@ -1,3 +1,4 @@
+
 export const getPriceId = (planType: string) => {
   switch (planType.toLowerCase()) {
     case 'starter':
@@ -78,7 +79,7 @@ export const addOns = [
       "Compare two charts for compatibility",
       "Perfect for relationship-focused applications"
     ],
-    status: "upgrade"
+    status: "upgrade" as "included" | "upgrade"
   },
   {
     name: "Yearly Cycle",
@@ -90,7 +91,7 @@ export const addOns = [
       "Lunar (monthly) forecasts",
       "Jupiter and Saturn cycles analysis"
     ],
-    status: "included"
+    status: "included" as "included" | "upgrade"
   },
   {
     name: "Transits (12 months ahead)",
@@ -102,7 +103,7 @@ export const addOns = [
       "Upcoming opportunities analysis",
       "Strategic planning insights"
     ],
-    status: "included"
+    status: "included" as "included" | "upgrade"
   },
 ];
 
