@@ -21,7 +21,6 @@ serve(async (req) => {
     console.log("Creating checkout for:", { priceIds, planType, addOns });
 
     const session = await stripe.checkout.sessions.create({
-      customer_creation: "always",
       line_items: Array.isArray(priceIds) ? priceIds.map(priceId => ({
         price: priceId,
         quantity: 1,
