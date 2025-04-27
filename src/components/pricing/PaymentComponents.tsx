@@ -91,7 +91,7 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
       {/* ── Using Sheet for side panel ───────────────────────────────── */}
       {visiblePlan && (
         <Sheet open={!!visiblePlan} onOpenChange={(open) => !open && close()}>
-          <SheetContent className="w-[420px] overflow-y-auto bg-gray-50/80 backdrop-blur-sm">
+          <SheetContent className="w-[420px] overflow-y-auto bg-white">
             <SheetHeader>
               <SheetTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 Customize Your {visiblePlan} Plan
