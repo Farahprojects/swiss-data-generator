@@ -8,18 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Helper function for retry logic
-async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (retries === 0) throw error;
-    console.log(`Retrying operation after error: ${error.message}. Attempts left: ${retries}`);
-    await new Promise(resolve => setTimeout(resolve, delay));
-    return withRetry(fn, retries - 1, delay * 2);
-  }
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -61,35 +49,11 @@ serve(async (req) => {
 
     const email = session.customer_details?.email;
     const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
-    const subscriptionId = session.subscription?.id;
     const planName = session.metadata?.planType;
     
     if (!email || !customerId) {
       console.error("Missing customer information", { email, customerId });
       throw new Error("Missing customer information");
-    }
-
-    // Get subscription details if available
-    let subscription;
-    if (subscriptionId) {
-      console.log("Retrieving subscription details");
-      subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    } else {
-      console.log("No subscription found in session");
-    }
-
-    // Get payment method if available
-    let paymentMethod;
-    if (subscription?.default_payment_method) {
-      try {
-        paymentMethod = await stripe.paymentMethods.retrieve(
-          typeof subscription.default_payment_method === 'string' 
-            ? subscription.default_payment_method 
-            : subscription.default_payment_method.id
-        );
-      } catch (error) {
-        console.warn("Error retrieving payment method:", error);
-      }
     }
 
     // Parse add-ons from metadata
@@ -105,20 +69,17 @@ serve(async (req) => {
     }
 
     console.log("Preparing stripe user data", { email, planName, addOns });
-    // Prepare and save the stripe user data
+    
+    // Save the stripe user data
     const stripeUserData = {
       email: email,
       stripe_customer_id: customerId,
-      stripe_subscription_id: subscriptionId,
+      stripe_subscription_id: session.subscription?.id,
       plan_name: planName as 'Starter' | 'Growth' | 'Professional',
       addon_relationship_compatibility: addOns?.includes('Relationship Compatibility') || false,
       addon_yearly_cycle: addOns?.includes('Yearly Cycle') || false,
       addon_transit_12_months: addOns?.includes('Transits') || false,
       payment_status: session.payment_status,
-      subscription_current_period_end: subscription 
-        ? new Date(subscription.current_period_end * 1000).toISOString()
-        : null,
-      stripe_invoice_id: subscription?.latest_invoice as string,
       full_name: session.customer_details?.name || null,
       billing_address_line1: session.customer_details?.address?.line1 || null,
       billing_address_line2: session.customer_details?.address?.line2 || null,
@@ -127,29 +88,22 @@ serve(async (req) => {
       postal_code: session.customer_details?.address?.postal_code || null,
       country: session.customer_details?.address?.country || null,
       phone: session.customer_details?.phone || null,
-      payment_method_type: paymentMethod?.type || null,
-      card_last4: paymentMethod?.card?.last4 || null,
-      card_brand: paymentMethod?.card?.brand || null
     };
 
     console.log("Upserting stripe user data to database");
-    // Use retry logic for the database operation
-    await withRetry(async () => {
-      const { error: upsertError } = await supabaseAdmin
-        .from('stripe_users')
-        .upsert(stripeUserData, {
-          onConflict: 'stripe_customer_id'
-        });
+    const { error: upsertError } = await supabaseAdmin
+      .from('stripe_users')
+      .upsert(stripeUserData, {
+        onConflict: 'stripe_customer_id'
+      });
 
-      if (upsertError) {
-        console.error("Error upserting stripe user:", upsertError);
-        throw upsertError;
-      }
+    if (upsertError) {
+      console.error("Error upserting stripe user:", upsertError);
+      throw upsertError;
+    }
       
-      console.log("Successfully saved stripe user data");
-    });
-
-    console.log("Sending successful response");
+    console.log("Successfully saved stripe user data");
+    
     return new Response(
       JSON.stringify({
         success: true,

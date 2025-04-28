@@ -1,5 +1,4 @@
-import React, { useState, createContext, useContext, useEffect } from "react";
-import { Check } from "lucide-react";
+import React, { useState, createContext, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -16,8 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { getPriceId } from "@/utils/pricing";
-import { paymentSession } from "@/services/payment-session";
 
 type LineItem = { price: string; quantity: number };
 interface CheckoutContextType {
@@ -44,7 +41,9 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log(`Toggling add-on: ${name}, Price ID: ${priceId}`);
     
     setAddOnLines((prev) =>
-      prev[name] ? (() => { const p = { ...prev }; delete p[name]; return p; })() : { ...prev, [name]: { price: priceId, quantity: 1 } },
+      prev[name] 
+        ? (() => { const p = { ...prev }; delete p[name]; return p; })() 
+        : { ...prev, [name]: { price: priceId, quantity: 1 } }
     );
   };
 
@@ -60,39 +59,29 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
   const continueToStripe = async () => {
     if (!visiblePlan) return;
     
-    const planPriceId = getPriceId(visiblePlan);
-    if (!planPriceId) {
-      toast({ title: "Price mapping missing", description: visiblePlan, variant: "destructive" });
-      return;
-    }
-    const line_items = [{ price: planPriceId, quantity: 1 }, ...Object.values(addOnLines)];
-    
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke("create-checkout", { 
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: { 
-          priceIds: line_items.map(item => item.price),
+          priceIds: [
+            getPriceId(visiblePlan), 
+            ...Object.values(addOnLines).map(item => item.price)
+          ],
           planType: visiblePlan,
           addOns: Object.keys(addOnLines)
         }
       });
       
       if (error) throw error;
-      if (!data?.url) throw new Error("Stripe URL missing");
-
-      // Store session data with email if available
-      const user = await supabase.auth.getUser();
-      const email = user.data?.user?.email || null;
-      paymentSession.store(data.sessionId, visiblePlan, Object.keys(addOnLines), email);
+      if (!data?.url) throw new Error("No checkout URL returned");
       
-      // Open Stripe checkout in a new tab
+      // Open Stripe checkout in a new window
       window.open(data.url, '_blank', 'noopener,noreferrer');
       
       close();
-      
       toast({ 
         title: "Opening Checkout", 
-        description: "Complete your payment in the new tab.",
+        description: "Complete your payment in the new window.",
       });
       
     } catch (err: any) {
