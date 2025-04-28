@@ -50,7 +50,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         console.log("User data:", userData);
         console.log("App user data:", appUserData);
 
-        const hasValidAccess = userData?.status === 'active' && appUserData?.api_key;
+        // Explicitly cast the result to boolean
+        const hasValidAccess = Boolean(userData?.status === 'active' && appUserData?.api_key);
         
         if (!hasValidAccess && location.pathname !== '/pricing') {
           toast({
