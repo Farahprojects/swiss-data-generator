@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,19 +23,22 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { formState, updateEmail, updatePassword, updateConfirmPassword } = useAuthForm(true);
+  const [verificationAttempted, setVerificationAttempted] = useState(false);
 
   useEffect(() => {
     const verifyPayment = async () => {
       const success = searchParams.get("success");
       const sessionId = searchParams.get("session_id");
       
-      if (success === "true" && sessionId) {
+      if (!verificationAttempted && success === "true" && sessionId) {
         if (sessionId === "{CHECKOUT_SESSION_ID}") {
           toast({
             title: "Error",
             description: "Invalid checkout session",
             variant: "destructive",
           });
+          setVerificationAttempted(true);
+          setLoadingEmail(false);
           return;
         }
 
@@ -55,16 +57,15 @@ const Signup = () => {
               description: error.message || "Could not verify payment",
               variant: "destructive",
             });
+            setLoadingEmail(false);
+            setVerificationAttempted(true);
             return;
           }
 
           if (data?.email) {
             console.log("Setting customer email from Stripe:", data.email);
             setCustomerEmail(data.email);
-            // Only update form state if we don't have a customer email yet
-            if (!customerEmail) {
-              updateEmail(data.email);
-            }
+            updateEmail(data.email);
             setPlanType(searchParams.get("plan") || "");
           }
         } catch (err) {
@@ -76,19 +77,19 @@ const Signup = () => {
           });
         } finally {
           setLoadingEmail(false);
+          setVerificationAttempted(true);
         }
       }
     };
 
     verifyPayment();
-  }, [searchParams, toast, customerEmail]);
+  }, [searchParams, toast, verificationAttempted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Always use customerEmail if available, otherwise use form state email
       const emailToUse = customerEmail || formState.email;
       console.log("Using email for signup:", emailToUse);
       
@@ -102,7 +103,6 @@ const Signup = () => {
         });
         console.error("Detailed signup error:", error);
       } else if (user) {
-        // Create user record with payment information
         if (planType) {
           const { data: createUserData, error: createUserError } = await supabase.rpc('create_user_after_payment', {
             user_id: user.id,
@@ -198,7 +198,6 @@ const Signup = () => {
                 email={customerEmail || formState.email}
                 isValid={formState.emailValid}
                 onChange={(email) => {
-                  // Only allow email changes if we don't have a customer email from Stripe
                   if (!customerEmail) {
                     updateEmail(email);
                   }
@@ -248,4 +247,3 @@ const Signup = () => {
 };
 
 export default Signup;
-
