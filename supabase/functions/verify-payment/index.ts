@@ -8,26 +8,55 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Enhanced logging with better categorization
 const logStep = (step: string, details?: any) => {
-  console.log(`[VERIFY-PAYMENT] ${step}${details ? ` - ${JSON.stringify(details)}` : ''}`);
+  const detailsStr = details ? ` - ${JSON.stringify(details, null, 2)}` : '';
+  console.log(`[VERIFY-PAYMENT] ${step}${detailsStr}`);
 };
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Cache successful verifications to reduce redundant calls
+const verificationCache = new Map<string, {
+  timestamp: number;
+  result: any;
+}>();
 
+// For rate limiting management
+const RATE_LIMIT_COOLDOWN = 5000; // 5 seconds
+const MAX_RETRIES = 3;
+const lastRateLimitHit = { timestamp: 0 };
+
+// Sleep function with more meaningful name
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Improved retry operation with better rate limit detection
 async function retryOperation<T>(
   operation: () => Promise<T>,
-  maxRetries: number = 3,
+  maxRetries: number = MAX_RETRIES,
   shouldRetry: (error: any) => boolean
 ): Promise<T> {
   for (let i = 0; i < maxRetries; i++) {
     try {
+      // If we recently hit a rate limit, add a delay before trying again
+      if (lastRateLimitHit.timestamp > 0 && Date.now() - lastRateLimitHit.timestamp < RATE_LIMIT_COOLDOWN) {
+        const waitTime = RATE_LIMIT_COOLDOWN * Math.pow(2, i);
+        logStep(`Rate limit cooldown in effect. Waiting ${waitTime}ms before attempt`);
+        await delay(waitTime);
+      }
+      
       return await operation();
     } catch (error) {
-      // Don't retry if it's a constraint violation or if shouldRetry returns false
+      // Check if it's a rate limit error
+      const isRateLimit = error.message?.includes('rate limit') || error.message?.includes('too many requests');
+      if (isRateLimit) {
+        lastRateLimitHit.timestamp = Date.now();
+      }
+      
+      // Don't retry if it's not retryable or we're on the last attempt
       if (!shouldRetry(error) || i === maxRetries - 1) throw error;
-      const delay = Math.pow(2, i) * 1000; // Exponential backoff
-      logStep(`Retry ${i + 1}/${maxRetries} after ${delay}ms`, { error: error.message });
-      await sleep(delay);
+      
+      const delayTime = Math.pow(2, i) * 1000; // Exponential backoff
+      logStep(`Retry ${i + 1}/${maxRetries} after ${delayTime}ms`, { error: error.message, isRateLimit });
+      await delay(delayTime);
     }
   }
   throw new Error("Max retries reached");
@@ -46,6 +75,19 @@ serve(async (req) => {
       logStep("Error: Missing sessionId");
       throw new Error("Session ID is required");
     }
+    
+    // Check if we have a cached successful verification
+    const cached = verificationCache.get(sessionId);
+    if (cached && Date.now() - cached.timestamp < 300000) { // Cache valid for 5 minutes
+      logStep("Using cached verification result", { sessionId });
+      return new Response(
+        JSON.stringify(cached.result),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
 
     logStep("Retrieving session", { sessionId });
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -53,7 +95,7 @@ serve(async (req) => {
     });
 
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['customer', 'subscription', 'payment_intent']
+      expand: ['customer', 'subscription', 'payment_intent', 'line_items']
     });
 
     if (!session) {
@@ -66,8 +108,36 @@ serve(async (req) => {
       customer_email: session.customer_details?.email
     });
 
+    // Strict payment status checking
     if (session.payment_status !== 'paid') {
+      // Special handling for processing payments
+      if (session.payment_status === 'processing') {
+        logStep("Payment is still processing", { status: session.payment_status });
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            status: "processing",
+            message: "Your payment is still processing. Please wait a moment and try again."
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 202, // Accepted but not completed
+          }
+        );
+      }
+      
       logStep("Warning: Payment not completed", { status: session.payment_status });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          status: session.payment_status,
+          message: `Payment is not complete (status: ${session.payment_status}). Please complete your payment before proceeding.`
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, // Payment Required
+        }
+      );
     }
 
     // Create Supabase client with service role key to bypass RLS
@@ -86,7 +156,16 @@ serve(async (req) => {
       throw new Error("Missing customer information");
     }
 
-    // Parse add-ons from metadata
+    // Validate price and plan information
+    if (session.line_items?.data && session.line_items.data.length > 0) {
+      logStep("Validating pricing information", { 
+        planName,
+        lineItemsCount: session.line_items.data.length
+      });
+      // Additional validation could be added here
+    }
+
+    // Parse add-ons from metadata with better error handling
     let addOns: string[] = [];
     try {
       if (session.metadata?.addOns) {
@@ -94,6 +173,7 @@ serve(async (req) => {
       }
     } catch (error) {
       logStep("Warning: Error parsing addOns", { error: error.message });
+      // Continue with empty addOns rather than failing
     }
 
     logStep("Preparing stripe user data", { email, planName, addOns });
@@ -119,7 +199,7 @@ serve(async (req) => {
 
     logStep("Upserting stripe user data", stripeUserData);
 
-    // Only retry network/timeout errors, not constraint violations
+    // Enhanced retry logic - only retry network/timeout errors, not constraint violations
     const shouldRetry = (error: any) => {
       const isConstraintViolation = error.message?.includes('violates unique constraint') || 
                                   error.message?.includes('duplicate key value');
@@ -141,32 +221,57 @@ serve(async (req) => {
       
     logStep("Successfully saved stripe user data");
     
+    const responseData = {
+      success: true,
+      paymentStatus: session.payment_status,
+      email: email,
+      customerId: customerId,
+      planType: planName
+    };
+    
+    // Cache the successful verification
+    verificationCache.set(sessionId, {
+      timestamp: Date.now(),
+      result: responseData
+    });
+    
     return new Response(
-      JSON.stringify({
-        success: true,
-        paymentStatus: session.payment_status,
-        email: email,
-        customerId: customerId,
-        planType: planName
-      }),
+      JSON.stringify(responseData),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       }
     );
   } catch (error) {
-    logStep("Error verifying payment", { error: error.message });
+    // Enhanced error handling with more specific information
+    let statusCode = 500;
+    let errorMessage = error.message || "An unexpected error occurred";
+    let errorDetails = "If you continue to experience issues, please contact support.";
+    
+    // Check for specific error types and customize the message
+    if (error.message?.includes('rate limit')) {
+      statusCode = 429; // Too Many Requests
+      errorMessage = "Rate limit exceeded. Please try again in a few moments.";
+      errorDetails = "We've detected high traffic. Please wait a moment before trying again.";
+      lastRateLimitHit.timestamp = Date.now();
+    } else if (error.message?.includes('Session not found')) {
+      statusCode = 404; // Not Found
+      errorMessage = "Payment session not found";
+      errorDetails = "The payment session may have expired or been canceled.";
+    }
+    
+    logStep("Error verifying payment", { error: errorMessage, status: statusCode });
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
-        details: "If you continue to experience issues, please contact support."
+        error: errorMessage,
+        details: errorDetails
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: statusCode,
       }
     );
   }
 });
-

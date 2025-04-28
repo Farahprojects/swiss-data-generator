@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuthForm } from "@/hooks/useAuthForm";
@@ -17,6 +17,7 @@ import { Loader2 } from "lucide-react";
 const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
+  const [verificationAttempts, setVerificationAttempts] = useState(0);
   const [customerEmail, setCustomerEmail] = useState<string>("");
   const [planType, setPlanType] = useState<string>("");
   const [sessionVerified, setSessionVerified] = useState<boolean>(false);
@@ -25,13 +26,14 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { formState, updateEmail, updatePassword, updateConfirmPassword } = useAuthForm(true);
+  const MAX_VERIFICATION_ATTEMPTS = 3;
 
   useEffect(() => {
     const getCustomerEmail = async () => {
       const success = searchParams.get("success");
       const sessionId = searchParams.get("session_id");
 
-      if (success === "true" && sessionId) {
+      if (success === "true" && sessionId && verificationAttempts < MAX_VERIFICATION_ATTEMPTS) {
         if (sessionId === "{CHECKOUT_SESSION_ID}") {
           // This means the URL wasn't properly populated by Stripe
           toast({
@@ -45,13 +47,48 @@ const Signup = () => {
         setLoadingEmail(true);
         try {
           console.log("Verifying payment session:", sessionId);
+          setVerificationAttempts(prev => prev + 1);
+          
           // Call verify-payment to get session details and create stripe_user record
-          const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
+          const { data: verifyData, error: verifyError, status } = await supabase.functions.invoke('verify-payment', {
             body: { sessionId }
           });
 
           if (verifyError) {
             console.error("Error verifying payment:", verifyError);
+            
+            // Special handling for rate limiting
+            if (verifyError.message?.includes('rate limit') || status === 429) {
+              const retryDelay = Math.min(5000 * verificationAttempts, 15000);
+              toast({
+                title: "Service Busy",
+                description: `We're experiencing high traffic. Will retry in ${retryDelay/1000} seconds...`,
+                variant: "default",
+              });
+              
+              // Try again after a delay with exponential backoff
+              setTimeout(() => {
+                getCustomerEmail();
+              }, retryDelay);
+              return;
+            }
+            
+            // Handle processing payments
+            if (status === 202) {
+              toast({
+                title: "Payment Processing",
+                description: "Your payment is still processing. We'll keep checking...",
+                variant: "default",
+              });
+              
+              // Try again after a longer delay for processing payments
+              setTimeout(() => {
+                getCustomerEmail();
+              }, 5000);
+              return;
+            }
+            
+            // General error
             toast({
               title: "Payment Verification Error",
               description: verifyError.message || "Failed to verify payment. Please contact support.",
@@ -80,11 +117,26 @@ const Signup = () => {
           }
         } catch (error) {
           console.error("Error retrieving customer email:", error);
-          toast({
-            title: "Error",
-            description: "Failed to retrieve customer information. Please try again or contact support.",
-            variant: "destructive",
-          });
+          
+          if (verificationAttempts < MAX_VERIFICATION_ATTEMPTS) {
+            const retryDelay = 3000;
+            toast({
+              title: "Verification Failed",
+              description: `Retrying in ${retryDelay/1000} seconds... (Attempt ${verificationAttempts}/${MAX_VERIFICATION_ATTEMPTS})`,
+              variant: "default",
+            });
+            
+            // Try again after a delay
+            setTimeout(() => {
+              getCustomerEmail();
+            }, retryDelay);
+          } else {
+            toast({
+              title: "Error",
+              description: "Failed to retrieve customer information. You can still create your account and contact support later.",
+              variant: "destructive",
+            });
+          }
         } finally {
           setLoadingEmail(false);
         }
@@ -92,7 +144,7 @@ const Signup = () => {
     };
 
     getCustomerEmail();
-  }, [searchParams, updateEmail, toast]);
+  }, [searchParams, updateEmail, toast, verificationAttempts]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,6 +242,11 @@ const Signup = () => {
             <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg">
               <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
               <p className="text-gray-700">Retrieving your information...</p>
+              {verificationAttempts > 1 && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Attempt {verificationAttempts}/{MAX_VERIFICATION_ATTEMPTS}
+                </p>
+              )}
             </div>
           ) : planType && (
             <Alert className="mb-6">
