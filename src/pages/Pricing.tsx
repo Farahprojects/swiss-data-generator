@@ -74,7 +74,7 @@ const Pricing = () => {
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                       {addOns.map((a) => (
-                        <AddOnCard key={a.name} {...a} />
+                        <AddOnCard key={a.name} label={a.name} />
                       ))}
                     </div>
                   </div>

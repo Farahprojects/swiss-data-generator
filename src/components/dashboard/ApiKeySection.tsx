@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,7 @@ export const ApiKeySection = () => {
               </Button>
               <Button
                 type="button"
-                onClick={() => userData?.api_key && copyApiKey(userData.api_key)}
+                onClick={copyApiKey}
                 className="rounded-l-none"
               >
                 Copy

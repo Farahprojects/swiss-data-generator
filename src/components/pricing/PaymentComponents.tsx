@@ -8,6 +8,9 @@ export { PricingPlanCard };
 export { AddOnToggle };
 export { PaymentProvider };
 
+// Export the PricingPlanCard as PricingPlan for backward compatibility
+export const PricingPlan = PricingPlanCard;
+
 // Re-export the context hook for convenience
 export { useCheckoutWizard } from "./PaymentProvider";
 
