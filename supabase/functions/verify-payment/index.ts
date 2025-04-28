@@ -74,30 +74,31 @@ serve(async (req) => {
       throw upsertError;
     }
 
-    // Get user id from auth.users table
-    const { data: userData, error: userError } = await supabase
-      .from('auth.users')
-      .select('id')
-      .eq('email', session.customer_details.email)
-      .single();
-
-    if (userError) {
-      logStep("Error fetching user id", userError);
-      throw userError;
+    // Get user id using auth admin API
+    logStep("Looking up user by email", { email: session.customer_details.email });
+    
+    const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
+    if (usersError) {
+      logStep("Error fetching users list", usersError);
+      throw usersError;
     }
 
-    if (!userData?.id) {
-      throw new Error("No user id found for email");
+    const user = usersData.users.find(u => u.email === session.customer_details.email);
+    if (!user) {
+      logStep("No user found with email", { email: session.customer_details.email });
+      throw new Error("No user found with email");
     }
+
+    logStep("Found user", { user_id: user.id });
 
     logStep("Calling create_user_after_payment RPC", { 
-      user_id: userData.id, 
+      user_id: user.id, 
       plan_type: session.metadata?.planType 
     });
 
     // Call the RPC function to create user records
     const { error: rpcError } = await supabase.rpc('create_user_after_payment', {
-      user_id: userData.id,
+      user_id: user.id,
       plan_type: session.metadata?.planType || 'starter'
     });
 
@@ -130,4 +131,3 @@ serve(async (req) => {
     );
   }
 });
-
