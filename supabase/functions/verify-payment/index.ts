@@ -74,7 +74,39 @@ serve(async (req) => {
       throw upsertError;
     }
 
-    logStep("Successfully saved stripe user");
+    // Get user id from auth.users table
+    const { data: userData, error: userError } = await supabase
+      .from('auth.users')
+      .select('id')
+      .eq('email', session.customer_details.email)
+      .single();
+
+    if (userError) {
+      logStep("Error fetching user id", userError);
+      throw userError;
+    }
+
+    if (!userData?.id) {
+      throw new Error("No user id found for email");
+    }
+
+    logStep("Calling create_user_after_payment RPC", { 
+      user_id: userData.id, 
+      plan_type: session.metadata?.planType 
+    });
+
+    // Call the RPC function to create user records
+    const { error: rpcError } = await supabase.rpc('create_user_after_payment', {
+      user_id: userData.id,
+      plan_type: session.metadata?.planType || 'starter'
+    });
+
+    if (rpcError) {
+      logStep("Error calling create_user_after_payment", rpcError);
+      throw rpcError;
+    }
+
+    logStep("Successfully created user records");
 
     return new Response(
       JSON.stringify({
@@ -98,3 +130,4 @@ serve(async (req) => {
     );
   }
 });
+
