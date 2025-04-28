@@ -1,6 +1,5 @@
 
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 
 interface PricingPlanProps {
@@ -8,7 +7,6 @@ interface PricingPlanProps {
   price: string;
   description: string;
   features: string[];
-  cta: string;
   highlight?: boolean;
   icon?: React.ReactNode;
 }
@@ -18,7 +16,6 @@ export const PricingPlanCard: React.FC<PricingPlanProps> = ({
   price,
   description,
   features,
-  cta,
   highlight = false,
   icon,
 }) => {
@@ -28,11 +25,11 @@ export const PricingPlanCard: React.FC<PricingPlanProps> = ({
         highlight ? "border-primary ring-1 ring-primary/20" : "border-gray-100"
       }`}
     >
-      <div className="flex items-center gap-3 p-6">
-        {icon && <span className="text-2xl">{icon}</span>}
+      <div className="flex items-center gap-3 p-6 bg-primary">
+        {icon && <span className="text-2xl text-white">{icon}</span>}
         <div>
-          <h3 className="text-xl font-bold">{name}</h3>
-          <p className="text-gray-600">{description}</p>
+          <h3 className="text-xl font-bold text-white">{name}</h3>
+          <p className="text-white/90">{description}</p>
         </div>
       </div>
 
@@ -47,12 +44,6 @@ export const PricingPlanCard: React.FC<PricingPlanProps> = ({
 
       <div className="mt-auto p-6 pt-0">
         <p className="mb-4 text-3xl font-semibold text-primary">{price}</p>
-        <Button 
-          className="w-full py-6" 
-          onClick={() => alert('Coming soon!')}
-        >
-          {cta}
-        </Button>
       </div>
     </div>
   );
