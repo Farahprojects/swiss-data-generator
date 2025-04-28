@@ -1,11 +1,9 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import {
-  PricingPlanCard,
-  AddOnToggle,
-} from "@/components/pricing/PaymentComponents";
+import { PricingPlanCard } from "@/components/pricing/PaymentComponents";
 import { FAQSection } from "@/components/pricing/FAQSection";
 import { plans, addOns, faqs } from "@/utils/pricing";
 
@@ -45,12 +43,12 @@ const Pricing = () => {
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 {addOns.map((addon) => (
-                  <AddOnToggle 
-                    key={addon.name} 
-                    label={addon.name}
+                  <PricingPlanCard 
+                    key={addon.name}
+                    name={addon.name}
                     price={addon.price}
                     description={addon.description}
-                    details={addon.details}
+                    features={addon.details}
                   />
                 ))}
               </div>
