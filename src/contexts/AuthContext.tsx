@@ -30,32 +30,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       
-      // If this is a new signup event and we have user data
+      // If this is a new login event and we have user data
       if (_event === 'SIGNED_IN' && currentUser) {
         try {
-          // Check if the user came from Stripe checkout by checking if they have a stripe_users record
-          const { data: stripeUserData } = await supabase
-            .from('stripe_users')
-            .select('email, plan_name')
-            .eq('email', currentUser.email)
-            .single();
+          console.log('User signed in, checking subscription status');
           
-          if (stripeUserData) {
-            console.log('User signed in after payment, creating app_user record');
-            // Call the RPC function to create user record
-            const { error: rpcError } = await supabase.rpc('create_user_after_payment', {
-              user_id: currentUser.id,
-              plan_type: stripeUserData.plan_name || 'starter'
-            });
-            
-            if (rpcError) {
-              console.error('Failed to create user record:', rpcError);
-            } else {
-              console.log('Successfully created user records in app_users and users tables');
+          // Call the subscription linker function to check for pending subscriptions
+          const { data, error } = await supabase.functions.invoke('subscription-linker', {
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`
             }
+          });
+          
+          if (error) {
+            console.error('Subscription linking error:', error);
+          } else if (data?.linked) {
+            console.log('Successfully linked user to subscription:', data);
+          } else {
+            console.log('Subscription status check complete:', data);
           }
         } catch (err) {
-          console.error('Error checking for stripe user or creating app_user:', err);
+          console.error('Error checking subscription status:', err);
         }
       }
     });

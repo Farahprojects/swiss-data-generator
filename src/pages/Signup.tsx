@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,7 +36,7 @@ const Signup = () => {
         try {
           console.log("Verifying payment session:", sessionId);
           
-          const { data, error } = await supabase.functions.invoke('verify-payment', {
+          const { data, error } = await supabase.functions.invoke('stripe-payment-verifier', {
             body: { sessionId }
           });
 
@@ -50,7 +51,7 @@ const Signup = () => {
             console.log("Setting customer email from Stripe:", data.email);
             setCustomerEmail(data.email);
             updateEmail(data.email);
-            setPlanType(searchParams.get("plan") || "");
+            setPlanType(data.planType || searchParams.get("plan") || "");
           }
         } catch (err) {
           console.error("Error during verification:", err);
@@ -87,22 +88,30 @@ const Signup = () => {
         });
         console.error("Detailed signup error:", error);
       } else if (user) {
+        // If the user was created successfully and we have a planType, link the account
         if (planType) {
-          const { data: createUserData, error: createUserError } = await supabase.rpc('create_user_after_payment', {
-            user_id: user.id,
-            plan_type: planType || 'starter'
-          });
-          
-          if (createUserError) {
-            console.error("Error creating user record:", createUserError);
-            toast({
-              title: "Account Created",
-              description: "Your account was created, but we couldn't set up your subscription. Please contact support.",
+          try {
+            const { data, error: accountError } = await supabase.functions.invoke('account-creator', {
+              body: { userId: user.id, email: emailToUse }
             });
-          } else {
+            
+            if (accountError) {
+              console.error("Error creating account:", accountError);
+              toast({
+                title: "Account Created",
+                description: "Your account was created, but we couldn't set up your subscription. Please contact support.",
+              });
+            } else {
+              toast({
+                title: "Account Created",
+                description: `Your account has been created successfully with your ${planType} subscription!`,
+              });
+            }
+          } catch (err) {
+            console.error("Error calling account-creator function:", err);
             toast({
               title: "Account Created",
-              description: "Your account has been created successfully with your " + planType + " subscription!",
+              description: "Your account was created, but we couldn't set up your subscription. Please try logging in again.",
             });
           }
         } else {
