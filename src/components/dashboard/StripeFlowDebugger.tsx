@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -8,8 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -35,10 +34,8 @@ export const StripeFlowDebugger = () => {
     queryFn: async () => {
       if (!user?.email) throw new Error('User not authenticated');
       
-      // Use a raw SQL query to avoid the TypeScript error with the table name
       const { data, error } = await supabase
-        .rpc('get_flow_status', { user_email: user.email })
-        .limit(5);
+        .rpc('get_flow_status', { user_email: user.email });
       
       if (error) {
         console.error("Flow tracking query error:", error);
