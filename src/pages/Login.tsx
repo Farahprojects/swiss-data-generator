@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
+import { validateEmail } from "@/utils/authValidation";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -23,18 +24,25 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!emailValid || !passwordValid) return;
+    
     setLoading(true);
 
     try {
       const { error } = await signIn(email, password);
       if (error) throw error;
 
+      toast({
+        title: "Success",
+        description: "Successfully signed in!",
+      });
+
       const from = location.state?.from?.pathname || "/dashboard";
       navigate(from, { replace: true });
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to sign in",
+        description: error instanceof Error ? error.message : "Failed to sign in",
         variant: "destructive",
       });
     } finally {
@@ -46,10 +54,12 @@ const Login = () => {
     try {
       const { error } = await signInWithGoogle();
       if (error) throw error;
+
+      // Toast will be shown after redirection
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to sign in with Google",
+        description: error instanceof Error ? error.message : "Failed to sign in with Google",
         variant: "destructive",
       });
     }
@@ -72,7 +82,7 @@ const Login = () => {
                 isValid={emailValid}
                 onChange={(value) => {
                   setEmail(value);
-                  setEmailValid(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value));
+                  setEmailValid(validateEmail(value));
                 }}
               />
 

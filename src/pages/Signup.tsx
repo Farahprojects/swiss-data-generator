@@ -3,12 +3,13 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
+import { validateEmail, validatePassword, validatePasswordMatch } from "@/utils/authValidation";
 
 const Signup = () => {
   const [loading, setLoading] = useState(false);
@@ -36,17 +37,18 @@ const Signup = () => {
           description: error.message || "Failed to create account",
           variant: "destructive",
         });
-      } else if (user) {
-        toast({
-          title: "Account Created",
-          description: "Your account has been created successfully!",
-        });
+        return;
+      }
+      
+      toast({
+        title: "Account Created",
+        description: "Please check your email to confirm your account",
+      });
+      
+      // Some Supabase projects may require email confirmation
+      // If email confirmation is disabled, we can redirect to dashboard
+      if (user) {
         navigate("/dashboard");
-      } else {
-        toast({
-          title: "Success",
-          description: "Please check your email to confirm your account",
-        });
       }
     } catch (error) {
       toast({
@@ -95,7 +97,7 @@ const Signup = () => {
                 isValid={emailValid}
                 onChange={(value) => {
                   setEmail(value);
-                  setEmailValid(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value));
+                  setEmailValid(validateEmail(value));
                 }}
               />
 
