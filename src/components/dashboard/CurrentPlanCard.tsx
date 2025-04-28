@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,28 +11,37 @@ import {
 } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-
-interface UserPlan {
-  plan_name: string;
-  api_calls_count: number;
-  api_call_limit: number;
-}
+import type { UserData, UserSubscriptionData } from "@/types/subscription";
 
 export const CurrentPlanCard = () => {
   const { user } = useAuth();
   
-  // Fetch user plan data from app_users table
-  const { data: userPlan } = useQuery<UserPlan>({
-    queryKey: ['userPlan'],
+  const { data: userData } = useQuery<UserData>({
+    queryKey: ['userData'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('app_users')
-        .select('plan_name, api_calls_count, api_call_limit')
+        .from('users')
+        .select('*')
         .eq('id', user?.id)
         .single();
       
       if (error) throw error;
-      return data as UserPlan;
+      return data;
+    },
+    enabled: !!user
+  });
+
+  const { data: subscriptionData } = useQuery<UserSubscriptionData>({
+    queryKey: ['userSubscription'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
     enabled: !!user
   });
@@ -61,20 +71,24 @@ export const CurrentPlanCard = () => {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-medium">Current Plan</CardTitle>
-        <CardDescription className="capitalize">{userPlan?.plan_name || 'Starter'}</CardDescription>
+        <CardDescription className="capitalize">{userData?.plan_type || 'Starter'}</CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold">{getPlanPrice(userPlan?.plan_name || 'starter')}/month</p>
-        <p className="text-sm text-gray-500 mt-1">Next billing: {getNextBillingDate()}</p>
+        <p className="text-3xl font-bold">{getPlanPrice(userData?.plan_type || 'starter')}/month</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Next billing: {subscriptionData?.current_period_end ? new Date(subscriptionData.current_period_end).toLocaleDateString() : getNextBillingDate()}
+        </p>
         <div className="mt-4">
-          <p className="text-sm text-gray-500">API Calls: {userPlan?.api_calls_count?.toLocaleString() || '0'} / {userPlan?.api_call_limit?.toLocaleString() || '50,000'}</p>
+          <p className="text-sm text-gray-500">
+            API Calls: {userData?.api_calls_count?.toLocaleString() || '0'} / {userData?.calls_limit?.toLocaleString() || '50,000'}
+          </p>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
             <div 
               className="bg-primary h-2 rounded-full" 
               style={{ 
-                width: `${((userPlan?.api_calls_count || 0) / (userPlan?.api_call_limit || 50000) * 100)}%` 
+                width: `${((userData?.api_calls_count || 0) / (userData?.calls_limit || 50000) * 100)}%` 
               }}
-            ></div>
+            />
           </div>
         </div>
       </CardContent>
