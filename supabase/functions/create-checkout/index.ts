@@ -26,14 +26,22 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
+    const successUrl = new URL(`${req.headers.get("origin")}/signup`);
+    successUrl.searchParams.append('success', 'true');
+    successUrl.searchParams.append('session_id', '{CHECKOUT_SESSION_ID}');
+    successUrl.searchParams.append('plan', planType);
+
+    const cancelUrl = new URL(`${req.headers.get("origin")}/pricing`);
+    cancelUrl.searchParams.append('canceled', 'true');
+
     const session = await stripe.checkout.sessions.create({
       line_items: Array.isArray(priceIds) ? priceIds.map(priceId => ({
         price: priceId,
         quantity: 1,
       })) : [{ price: priceIds, quantity: 1 }],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/signup?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/pricing?canceled=true`,
+      success_url: successUrl.toString(),
+      cancel_url: cancelUrl.toString(),
       allow_promotion_codes: true,
       billing_address_collection: "required",
       metadata: {
@@ -42,7 +50,11 @@ serve(async (req) => {
       }
     });
 
-    logStep("Checkout session created", { sessionId: session.id });
+    logStep("Checkout session created", { 
+      sessionId: session.id,
+      successUrl: successUrl.toString(),
+      cancelUrl: cancelUrl.toString()
+    });
 
     return new Response(
       JSON.stringify({
@@ -61,6 +73,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: error.message || "Failed to create checkout session",
+        details: "Please try again or contact support if the issue persists."
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -69,3 +82,4 @@ serve(async (req) => {
     );
   }
 });
+

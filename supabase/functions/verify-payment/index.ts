@@ -16,13 +16,15 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function retryOperation<T>(
   operation: () => Promise<T>,
-  maxRetries: number = 3
+  maxRetries: number = 3,
+  shouldRetry: (error: any) => boolean
 ): Promise<T> {
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await operation();
     } catch (error) {
-      if (i === maxRetries - 1) throw error;
+      // Don't retry if it's a constraint violation or if shouldRetry returns false
+      if (!shouldRetry(error) || i === maxRetries - 1) throw error;
       const delay = Math.pow(2, i) * 1000; // Exponential backoff
       logStep(`Retry ${i + 1}/${maxRetries} after ${delay}ms`, { error: error.message });
       await sleep(delay);
@@ -116,20 +118,26 @@ serve(async (req) => {
     };
 
     logStep("Upserting stripe user data", stripeUserData);
+
+    // Only retry network/timeout errors, not constraint violations
+    const shouldRetry = (error: any) => {
+      const isConstraintViolation = error.message?.includes('violates unique constraint') || 
+                                  error.message?.includes('duplicate key value');
+      return !isConstraintViolation;
+    };
     
-    // Use retry mechanism for database operation
     await retryOperation(async () => {
       const { error: upsertError } = await supabaseAdmin
         .from('stripe_users')
         .upsert(stripeUserData, {
-          onConflict: 'email'
+          onConflict: 'stripe_customer_id'
         });
 
       if (upsertError) {
         logStep("Error upserting stripe user", { error: upsertError });
         throw upsertError;
       }
-    });
+    }, 3, shouldRetry);
       
     logStep("Successfully saved stripe user data");
     
@@ -149,7 +157,11 @@ serve(async (req) => {
   } catch (error) {
     logStep("Error verifying payment", { error: error.message });
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message,
+        details: "If you continue to experience issues, please contact support."
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
@@ -157,3 +169,4 @@ serve(async (req) => {
     );
   }
 });
+
