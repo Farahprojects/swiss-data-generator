@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,15 +18,20 @@ serve(async (req) => {
   }
 
   try {
-    logStep("Starting checkout process");
-    const { priceIds, planType, addOns } = await req.json();
-    logStep("Request data", { priceIds, planType, addOns });
+    const { planType, addOns } = await req.json();
+    logStep("Starting checkout process", { planType, addOns });
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
 
-    // Simplified URL handling
+    // Create Supabase client with service role key for flow tracking
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
     const origin = req.headers.get("origin") || "";
     const successUrl = `${origin}/signup?success=true&session_id={CHECKOUT_SESSION_ID}&plan=${planType}`;
     const cancelUrl = `${origin}/pricing?canceled=true`;
@@ -33,10 +39,6 @@ serve(async (req) => {
     logStep("Creating session with URLs", { successUrl, cancelUrl });
 
     const session = await stripe.checkout.sessions.create({
-      line_items: Array.isArray(priceIds) ? priceIds.map(priceId => ({
-        price: priceId,
-        quantity: 1,
-      })) : [{ price: priceIds, quantity: 1 }],
       mode: "subscription",
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -50,11 +52,30 @@ serve(async (req) => {
 
     logStep("Checkout session created", { sessionId: session.id });
 
+    // Create flow tracking record
+    const { error: trackingError } = await supabase
+      .from('stripe_flow_tracking')
+      .insert({
+        session_id: session.id,
+        flow_state: 'checkout_initiated',
+        plan_type: planType,
+        add_ons: addOns,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+        metadata: {
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          created_at: new Date().toISOString()
+        }
+      });
+
+    if (trackingError) {
+      logStep("Warning: Flow tracking insert failed", { error: trackingError.message });
+    } else {
+      logStep("Flow tracking record created");
+    }
+
     return new Response(
-      JSON.stringify({
-        url: session.url,
-        sessionId: session.id,
-      }),
+      JSON.stringify({ url: session.url, sessionId: session.id }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
