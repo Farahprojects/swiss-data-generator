@@ -1,4 +1,5 @@
 import React, { useState, createContext, useContext } from "react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { getPriceId } from "@/utils/pricing";
 
 type LineItem = { price: string; quantity: number };
 interface CheckoutContextType {
