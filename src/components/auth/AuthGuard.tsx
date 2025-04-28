@@ -3,50 +3,87 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
-  const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const { toast } = useToast();
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [checkingAccess, setCheckingAccess] = useState(true);
 
   useEffect(() => {
-    const checkUserData = async () => {
+    const checkUserAccess = async () => {
       if (!user) {
-        setCheckingSubscription(false);
+        setHasAccess(false);
+        setCheckingAccess(false);
         return;
       }
 
       try {
-        // Check if user has an API key (indicating they've completed payment)
-        const { data, error } = await supabase
-          .from('api_keys')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
+        console.log("Checking user access for:", user.id);
+        
+        // Check if user has records in both users and app_users tables
+        const [{ data: userData, error: userError }, { data: appUserData, error: appUserError }] = await Promise.all([
+          supabase
+            .from('users')
+            .select('id, status, plan_type')
+            .eq('id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('app_users')
+            .select('id, api_key')
+            .eq('id', user.id)
+            .maybeSingle()
+        ]);
 
-        if (error) {
-          console.error("Error checking user subscription:", error);
-          setHasSubscription(false);
-        } else {
-          setHasSubscription(!!data);
+        if (userError) {
+          console.error("Error checking user status:", userError);
+          throw userError;
         }
+        if (appUserError) {
+          console.error("Error checking app user status:", appUserError);
+          throw appUserError;
+        }
+
+        console.log("User data:", userData);
+        console.log("App user data:", appUserData);
+
+        const hasValidAccess = userData?.status === 'active' && appUserData?.api_key;
+        
+        if (!hasValidAccess && location.pathname !== '/pricing') {
+          toast({
+            title: "Subscription Required",
+            description: "Please subscribe to access this feature",
+            variant: "destructive",
+          });
+        }
+
+        setHasAccess(hasValidAccess);
       } catch (err) {
-        console.error("Unexpected error checking subscription:", err);
-        setHasSubscription(false);
+        console.error("Unexpected error checking access:", err);
+        toast({
+          title: "Error",
+          description: "There was a problem verifying your access. Please try again.",
+          variant: "destructive",
+        });
+        setHasAccess(false);
       } finally {
-        setCheckingSubscription(false);
+        setCheckingAccess(false);
       }
     };
 
-    checkUserData();
-  }, [user]);
+    checkUserAccess();
+  }, [user, location.pathname, toast]);
 
-  if (loading || checkingSubscription) {
+  if (loading || checkingAccess) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-gray-500">Verifying access...</p>
+        </div>
       </div>
     );
   }
@@ -55,7 +92,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (user && hasSubscription === false && location.pathname !== '/pricing') {
+  if (!hasAccess && location.pathname !== '/pricing') {
     return <Navigate to="/pricing" state={{ from: location }} replace />;
   }
 
