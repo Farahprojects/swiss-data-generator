@@ -9,42 +9,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
-import type { UserData, UserSubscriptionData } from "@/types/subscription";
+import { useState } from "react";
 
 export const CurrentPlanCard = () => {
   const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   
-  const { data: userData } = useQuery<UserData>({
-    queryKey: ['userData'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user?.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user
-  });
+  // Mock user data instead of querying from database
+  const userData = {
+    id: user?.id || "",
+    email: user?.email || "",
+    plan_type: "starter",
+    api_key: null,
+    api_calls_count: 5000,
+    calls_limit: 50000,
+    status: "active"
+  };
 
-  const { data: subscriptionData } = useQuery<UserSubscriptionData>({
-    queryKey: ['userSubscription'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_subscriptions')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user
-  });
+  // Mock subscription data
+  const subscriptionData = {
+    current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  };
 
   // Map plan type to display price
   const getPlanPrice = (planType: string) => {

@@ -6,25 +6,27 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useAuthForm } from "@/hooks/useAuthForm";
 import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailValid, setEmailValid] = useState(false);
+  const [passwordValid, setPasswordValid] = useState(false);
   const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { formState, updateEmail, updatePassword } = useAuthForm(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error } = await signIn(formState.email, formState.password);
+      const { error } = await signIn(email, password);
       if (error) throw error;
 
       const from = location.state?.from?.pathname || "/dashboard";
@@ -66,23 +68,29 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">
               <EmailInput 
-                email={formState.email}
-                isValid={formState.emailValid}
-                onChange={updateEmail}
+                email={email}
+                isValid={emailValid}
+                onChange={(value) => {
+                  setEmail(value);
+                  setEmailValid(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value));
+                }}
               />
 
               <PasswordInput
-                password={formState.password}
-                isValid={formState.passwordValid}
+                password={password}
+                isValid={passwordValid}
                 showRequirements={false}
-                onChange={updatePassword}
+                onChange={(value) => {
+                  setPassword(value);
+                  setPasswordValid(value.length >= 6);
+                }}
               />
             </div>
 
             <Button
               type="submit"
               className="w-full"
-              disabled={loading || !formState.formValid}
+              disabled={loading || !emailValid || !passwordValid}
             >
               {loading ? "Signing in..." : "Sign in"}
             </Button>

@@ -213,65 +213,6 @@ export type Database = {
         }
         Relationships: []
       }
-      users: {
-        Row: {
-          addon_relationship: boolean
-          addon_transits: boolean
-          addon_yearly_cycle: boolean
-          api_calls_count: number | null
-          api_key: string | null
-          calls_limit: number
-          calls_made: number
-          created_at: string
-          email: string
-          id: string
-          plan_id: string | null
-          plan_type: string
-          status: string
-          stripe_customer_id: string | null
-        }
-        Insert: {
-          addon_relationship?: boolean
-          addon_transits?: boolean
-          addon_yearly_cycle?: boolean
-          api_calls_count?: number | null
-          api_key?: string | null
-          calls_limit?: number
-          calls_made?: number
-          created_at?: string
-          email: string
-          id: string
-          plan_id?: string | null
-          plan_type?: string
-          status: string
-          stripe_customer_id?: string | null
-        }
-        Update: {
-          addon_relationship?: boolean
-          addon_transits?: boolean
-          addon_yearly_cycle?: boolean
-          api_calls_count?: number | null
-          api_key?: string | null
-          calls_limit?: number
-          calls_made?: number
-          created_at?: string
-          email?: string
-          id?: string
-          plan_id?: string | null
-          plan_type?: string
-          status?: string
-          stripe_customer_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_users_plan_id"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
