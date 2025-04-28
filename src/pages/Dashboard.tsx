@@ -7,8 +7,12 @@ import { CurrentPlanCard } from "@/components/dashboard/CurrentPlanCard";
 import { SupportCard } from "@/components/dashboard/SupportCard";
 import { RecentApiCalls } from "@/components/dashboard/RecentApiCalls";
 import { BillingSection } from "@/components/dashboard/BillingSection";
+import { StripeFlowDebugger } from "@/components/dashboard/StripeFlowDebugger";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -23,6 +27,9 @@ const Dashboard = () => {
               <TabsTrigger value="api-keys">API Keys</TabsTrigger>
               <TabsTrigger value="usage">Usage</TabsTrigger>
               <TabsTrigger value="billing">Billing</TabsTrigger>
+              {user?.email?.includes('admin') && (
+                <TabsTrigger value="debug">Debug</TabsTrigger>
+              )}
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">
@@ -45,6 +52,12 @@ const Dashboard = () => {
             <TabsContent value="billing" className="space-y-6">
               <BillingSection />
             </TabsContent>
+
+            {user?.email?.includes('admin') && (
+              <TabsContent value="debug" className="space-y-6">
+                <StripeFlowDebugger />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </main>

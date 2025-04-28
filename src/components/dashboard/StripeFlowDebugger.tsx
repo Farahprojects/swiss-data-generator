@@ -13,14 +13,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
+// Define the FlowRecord interface based on our stripe_flow_tracking table structure
 interface FlowRecord {
+  id?: string;
   session_id: string;
   flow_state: string;
-  plan_type: string;
-  email: string;
+  plan_type?: string | null;
+  email?: string | null;
   created_at: string;
   updated_at: string;
-  user_id: string | null;
+  user_id?: string | null;
+  add_ons?: Record<string, any> | null;
 }
 
 export const StripeFlowDebugger = () => {
@@ -32,14 +35,16 @@ export const StripeFlowDebugger = () => {
     queryFn: async () => {
       if (!user?.email) throw new Error('User not authenticated');
       
+      // Use a raw SQL query to avoid the TypeScript error with the table name
       const { data, error } = await supabase
-        .from('stripe_flow_tracking')
-        .select('*')
-        .eq('email', user.email)
-        .order('created_at', { ascending: false })
+        .rpc('get_flow_status', { user_email: user.email })
         .limit(5);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Flow tracking query error:", error);
+        throw error;
+      }
+      
       return data as FlowRecord[];
     },
     enabled: !!user?.email,
