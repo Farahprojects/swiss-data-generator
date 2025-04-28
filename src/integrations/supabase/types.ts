@@ -125,59 +125,6 @@ export type Database = {
         }
         Relationships: []
       }
-      app_users: {
-        Row: {
-          addon_relationship_compatibility: boolean | null
-          addon_transit_12_months: boolean | null
-          addon_yearly_cycle: boolean | null
-          api_call_limit: number | null
-          api_calls_count: number | null
-          api_key: string
-          created_at: string | null
-          email: string
-          id: string
-          plan_name: string | null
-          stripe_customer_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          addon_relationship_compatibility?: boolean | null
-          addon_transit_12_months?: boolean | null
-          addon_yearly_cycle?: boolean | null
-          api_call_limit?: number | null
-          api_calls_count?: number | null
-          api_key: string
-          created_at?: string | null
-          email: string
-          id: string
-          plan_name?: string | null
-          stripe_customer_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          addon_relationship_compatibility?: boolean | null
-          addon_transit_12_months?: boolean | null
-          addon_yearly_cycle?: boolean | null
-          api_call_limit?: number | null
-          api_calls_count?: number | null
-          api_key?: string
-          created_at?: string | null
-          email?: string
-          id?: string
-          plan_name?: string | null
-          stripe_customer_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "app_users_stripe_customer_id_fkey"
-            columns: ["stripe_customer_id"]
-            isOneToOne: false
-            referencedRelation: "stripe_users"
-            referencedColumns: ["stripe_customer_id"]
-          },
-        ]
-      }
       legal_documents: {
         Row: {
           content: string
@@ -235,6 +182,45 @@ export type Database = {
           id?: string
           name?: string
           price_per_month?: number
+        }
+        Relationships: []
+      }
+      stripe_products: {
+        Row: {
+          active: boolean
+          created_at: string | null
+          currency: string
+          id: string
+          interval: string
+          price_amount: number
+          product_name: string
+          stripe_price_id: string
+          stripe_product_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string | null
+          currency?: string
+          id?: string
+          interval?: string
+          price_amount: number
+          product_name: string
+          stripe_price_id: string
+          stripe_product_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string | null
+          currency?: string
+          id?: string
+          interval?: string
+          price_amount?: number
+          product_name?: string
+          stripe_price_id?: string
+          stripe_product_id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -319,11 +305,97 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_webhook_logs: {
+        Row: {
+          created_at: string | null
+          id: string
+          payload: Json
+          processed: boolean
+          processing_error: string | null
+          stripe_customer_id: string | null
+          stripe_event_id: string | null
+          stripe_event_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          payload: Json
+          processed?: boolean
+          processing_error?: string | null
+          stripe_customer_id?: string | null
+          stripe_event_id?: string | null
+          stripe_event_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processing_error?: string | null
+          stripe_customer_id?: string | null
+          stripe_event_id?: string | null
+          stripe_event_type?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string | null
+          current_period_end: string
+          current_period_start: string
+          has_growth_plan: boolean
+          has_professional_plan: boolean
+          has_relationship_compatibility: boolean
+          has_starter_plan: boolean
+          has_yearly_cycle: boolean
+          id: string
+          status: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_period_end: string
+          current_period_start: string
+          has_growth_plan?: boolean
+          has_professional_plan?: boolean
+          has_relationship_compatibility?: boolean
+          has_starter_plan?: boolean
+          has_yearly_cycle?: boolean
+          id?: string
+          status: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_period_end?: string
+          current_period_start?: string
+          has_growth_plan?: boolean
+          has_professional_plan?: boolean
+          has_relationship_compatibility?: boolean
+          has_starter_plan?: boolean
+          has_yearly_cycle?: boolean
+          id?: string
+          status?: string
+          stripe_customer_id?: string
+          stripe_subscription_id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           addon_relationship: boolean
           addon_transits: boolean
           addon_yearly_cycle: boolean
+          api_calls_count: number | null
+          api_key: string | null
           calls_limit: number
           calls_made: number
           created_at: string
@@ -338,6 +410,8 @@ export type Database = {
           addon_relationship?: boolean
           addon_transits?: boolean
           addon_yearly_cycle?: boolean
+          api_calls_count?: number | null
+          api_key?: string | null
           calls_limit?: number
           calls_made?: number
           created_at?: string
@@ -352,6 +426,8 @@ export type Database = {
           addon_relationship?: boolean
           addon_transits?: boolean
           addon_yearly_cycle?: boolean
+          api_calls_count?: number | null
+          api_key?: string | null
           calls_limit?: number
           calls_made?: number
           created_at?: string

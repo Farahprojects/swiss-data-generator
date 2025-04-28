@@ -7,7 +7,7 @@ import { CurrentPlanCard } from "@/components/dashboard/CurrentPlanCard";
 import { SupportCard } from "@/components/dashboard/SupportCard";
 import { RecentApiCalls } from "@/components/dashboard/RecentApiCalls";
 import { BillingSection } from "@/components/dashboard/BillingSection";
-import { StripeFlowDebugger } from "@/components/dashboard/StripeFlowDebugger";
+import { WebhookLogsViewer } from "@/components/dashboard/WebhookLogsViewer";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard = () => {
@@ -28,7 +28,7 @@ const Dashboard = () => {
               <TabsTrigger value="usage">Usage</TabsTrigger>
               <TabsTrigger value="billing">Billing</TabsTrigger>
               {user?.email?.includes('admin') && (
-                <TabsTrigger value="debug">Debug</TabsTrigger>
+                <TabsTrigger value="webhook-logs">Webhook Logs</TabsTrigger>
               )}
             </TabsList>
             
@@ -54,8 +54,8 @@ const Dashboard = () => {
             </TabsContent>
 
             {user?.email?.includes('admin') && (
-              <TabsContent value="debug" className="space-y-6">
-                <StripeFlowDebugger />
+              <TabsContent value="webhook-logs" className="space-y-6">
+                <WebhookLogsViewer />
               </TabsContent>
             )}
           </Tabs>

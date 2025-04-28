@@ -2,14 +2,12 @@
 project_id = "wrvqqvqvwqmfdqvqmaar"
 
 [api]
-# Enabled (port = 54321) or disabled (port = 0)
 port = 54321
 schemas = ["public", "storage", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-# Port for the local database. Defaults to API port + 1.
 port = 54322
 shadow_port = 54320
 major_version = 15
@@ -21,15 +19,12 @@ default_pool_size = 20
 max_client_conn = 100
 
 [studio]
-# Studio (port = 54323) or disabled (port = 0)
 port = 54323
 
 [inbucket]
-# Enabled (port = 54324) or disabled (port = 0)
 port = 54324
 
 [auth]
-# Site URL used in Supabase Auth
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 enabled = true
@@ -47,10 +42,16 @@ enabled = true
 [edge_functions]
 enabled = true
 
-[functions.stripe-checkout-handler]
+[functions.stripe-webhook-handler]
 verify_jwt = false
 
 [functions.stripe-payment-verifier]
+verify_jwt = false
+
+[functions.verify-payment]
+verify_jwt = false
+
+[functions.stripe-checkout-handler]
 verify_jwt = false
 
 [functions.account-creator]
@@ -58,9 +59,3 @@ verify_jwt = false
 
 [functions.subscription-linker]
 verify_jwt = true
-
-[functions.verify-payment]
-verify_jwt = false
-
-[functions.create-checkout]
-verify_jwt = false
