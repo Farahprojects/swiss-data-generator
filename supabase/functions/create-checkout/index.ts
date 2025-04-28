@@ -26,13 +26,21 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
-    const successUrl = new URL(`${req.headers.get("origin")}/signup`);
+    // Important: Let Stripe populate the session ID after creation
+    // This ensures {CHECKOUT_SESSION_ID} will be replaced with the actual session ID
+    const origin = req.headers.get("origin") || "";
+    const successUrl = new URL(`${origin}/signup`);
     successUrl.searchParams.append('success', 'true');
     successUrl.searchParams.append('session_id', '{CHECKOUT_SESSION_ID}');
     successUrl.searchParams.append('plan', planType);
 
-    const cancelUrl = new URL(`${req.headers.get("origin")}/pricing`);
+    const cancelUrl = new URL(`${origin}/pricing`);
     cancelUrl.searchParams.append('canceled', 'true');
+
+    logStep("Creating checkout session with URLs", { 
+      success: successUrl.toString(),
+      cancel: cancelUrl.toString()
+    });
 
     const session = await stripe.checkout.sessions.create({
       line_items: Array.isArray(priceIds) ? priceIds.map(priceId => ({
@@ -82,4 +90,3 @@ serve(async (req) => {
     );
   }
 });
-

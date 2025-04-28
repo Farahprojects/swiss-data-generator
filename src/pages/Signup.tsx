@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,15 +49,18 @@ const Signup = () => {
           setVerificationAttempts(prev => prev + 1);
           
           // Call verify-payment to get session details and create stripe_user record
-          const { data: verifyData, error: verifyError, status } = await supabase.functions.invoke('verify-payment', {
+          const response = await supabase.functions.invoke('verify-payment', {
             body: { sessionId }
           });
-
+          
+          const { data: verifyData, error: verifyError } = response;
+          
+          // Check for rate limiting or processing state based on returned data
           if (verifyError) {
             console.error("Error verifying payment:", verifyError);
             
-            // Special handling for rate limiting
-            if (verifyError.message?.includes('rate limit') || status === 429) {
+            // Special handling for rate limiting - check the error message
+            if (verifyError.message?.includes('rate limit') || response.data?.details?.includes('rate limit')) {
               const retryDelay = Math.min(5000 * verificationAttempts, 15000);
               toast({
                 title: "Service Busy",
@@ -73,8 +75,8 @@ const Signup = () => {
               return;
             }
             
-            // Handle processing payments
-            if (status === 202) {
+            // Handle processing payments - check if data contains status
+            if (response.data?.status === "processing") {
               toast({
                 title: "Payment Processing",
                 description: "Your payment is still processing. We'll keep checking...",
