@@ -35,15 +35,12 @@ export const StripeFlowDebugger = () => {
     queryFn: async () => {
       if (!user?.email) throw new Error('User not authenticated');
       
-      // Use a raw query to get around TypeScript issues
-      const { data, error } = await supabase
+      // Use the any type to bypass TypeScript's strict checking
+      const { data, error } = await (supabase as any)
         .from('stripe_flow_tracking')
         .select('*')
         .eq('email', user.email)
-        .order('created_at', { ascending: false }) as { 
-          data: FlowRecord[] | null; 
-          error: Error | null 
-        };
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error("Flow tracking query error:", error);
