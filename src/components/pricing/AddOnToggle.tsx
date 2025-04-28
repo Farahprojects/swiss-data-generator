@@ -1,32 +1,43 @@
 
 import React from "react";
+import { Button } from "@/components/ui/button";
+import { Check } from "lucide-react";
 
 interface AddOnToggleProps {
   label: string;
+  price: string;
+  description: string;
+  details: string[];
 }
 
-export const AddOnToggle: React.FC<AddOnToggleProps> = ({ label }) => {
-  const [checked, setChecked] = React.useState(false);
-  
-  const displayName = {
-    'Transits': 'Transits',
-    'Yearly Cycle': 'Yearly Cycle',
-    'Relationship Compatibility': 'Relationship Compatibility',
-    'relationship compatibility': 'Relationship Compatibility'
-  }[label] || label;
-
+export const AddOnToggle: React.FC<AddOnToggleProps> = ({ label, price, description, details }) => {
   return (
-    <label className="flex cursor-pointer items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-6 transition-all duration-200 hover:border-primary/50 hover:shadow-sm">
-      <div className="space-y-2">
-        <span className="text-lg font-semibold text-primary">{displayName}</span>
-        <p className="text-sm text-gray-600">Enhance your analytics with advanced insights and predictive features.</p>
+    <div className="flex flex-col rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-center gap-3 p-6">
+        <div>
+          <h3 className="text-xl font-bold">{label}</h3>
+          <p className="text-gray-600">{description}</p>
+        </div>
       </div>
-      <input
-        type="checkbox"
-        className="h-6 w-6 rounded-md accent-primary"
-        checked={checked}
-        onChange={() => setChecked(!checked)}
-      />
-    </label>
+
+      <div className="px-6">
+        {details.map((detail, i) => (
+          <div key={i} className="flex items-start gap-2 py-1 text-sm text-gray-700">
+            <Check className="h-4 w-4 text-primary" />
+            <span>{detail}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-auto p-6 pt-0">
+        <p className="mb-4 text-3xl font-semibold text-primary">{price}/month</p>
+        <Button 
+          className="w-full py-6" 
+          onClick={() => alert('Coming soon!')}
+        >
+          Add to Plan
+        </Button>
+      </div>
+    </div>
   );
 };

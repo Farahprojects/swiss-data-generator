@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -45,8 +44,14 @@ const Pricing = () => {
               </p>
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {addOns.map((a) => (
-                  <AddOnToggle key={a.name} label={a.name} />
+                {addOns.map((addon) => (
+                  <AddOnToggle 
+                    key={addon.name} 
+                    label={addon.name}
+                    price={addon.price}
+                    description={addon.description}
+                    details={addon.details}
+                  />
                 ))}
               </div>
             </div>
