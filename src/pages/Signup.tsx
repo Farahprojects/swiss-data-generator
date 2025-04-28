@@ -31,17 +31,6 @@ const Signup = () => {
 
     if (!verificationAttempted && success === "true" && sessionId) {
       const verifyPayment = async () => {
-        if (sessionId === "{CHECKOUT_SESSION_ID}") {
-          toast({
-            title: "Error",
-            description: "Invalid checkout session",
-            variant: "destructive",
-          });
-          setLoadingEmail(false);
-          setVerificationAttempted(true);
-          return;
-        }
-
         setLoadingEmail(true);
         try {
           console.log("Verifying payment session:", sessionId);
@@ -78,7 +67,7 @@ const Signup = () => {
 
       verifyPayment();
     }
-  }, [searchParams, toast, verificationAttempted]);
+  }, [searchParams, toast, verificationAttempted, updateEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
