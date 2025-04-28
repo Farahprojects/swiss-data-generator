@@ -9,41 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      api_keys: {
-        Row: {
-          api_key: string
-          created_at: string
-          expires_at: string | null
-          id: string
-          status: string
-          user_id: string
-        }
-        Insert: {
-          api_key: string
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          status: string
-          user_id: string
-        }
-        Update: {
-          api_key?: string
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          status?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "api_keys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       api_products: {
         Row: {
           active: boolean
@@ -245,57 +210,6 @@ export type Database = {
           stripe_subscription_id?: string | null
           subscription_current_period_end?: string | null
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      user_subscriptions: {
-        Row: {
-          created_at: string | null
-          current_period_end: string
-          current_period_start: string
-          has_growth_plan: boolean
-          has_professional_plan: boolean
-          has_relationship_compatibility: boolean
-          has_starter_plan: boolean
-          has_yearly_cycle: boolean
-          id: string
-          status: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          current_period_end: string
-          current_period_start: string
-          has_growth_plan?: boolean
-          has_professional_plan?: boolean
-          has_relationship_compatibility?: boolean
-          has_starter_plan?: boolean
-          has_yearly_cycle?: boolean
-          id?: string
-          status: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          current_period_end?: string
-          current_period_start?: string
-          has_growth_plan?: boolean
-          has_professional_plan?: boolean
-          has_relationship_compatibility?: boolean
-          has_starter_plan?: boolean
-          has_yearly_cycle?: boolean
-          id?: string
-          status?: string
-          stripe_customer_id?: string
-          stripe_subscription_id?: string
-          updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
