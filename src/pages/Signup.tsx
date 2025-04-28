@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,9 +59,12 @@ const Signup = () => {
           }
 
           if (data?.email) {
-            console.log("Payment verified for email:", data.email);
+            console.log("Setting customer email from Stripe:", data.email);
             setCustomerEmail(data.email);
-            updateEmail(data.email);
+            // Only update form state if we don't have a customer email yet
+            if (!customerEmail) {
+              updateEmail(data.email);
+            }
             setPlanType(searchParams.get("plan") || "");
           }
         } catch (err) {
@@ -77,14 +81,18 @@ const Signup = () => {
     };
 
     verifyPayment();
-  }, [searchParams, toast, updateEmail]);
+  }, [searchParams, toast, customerEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error, user } = await signUp(formState.email, formState.password);
+      // Always use customerEmail if available, otherwise use form state email
+      const emailToUse = customerEmail || formState.email;
+      console.log("Using email for signup:", emailToUse);
+      
+      const { error, user } = await signUp(emailToUse, formState.password);
       
       if (error) {
         toast({
@@ -189,7 +197,12 @@ const Signup = () => {
               <EmailInput 
                 email={customerEmail || formState.email}
                 isValid={formState.emailValid}
-                onChange={updateEmail}
+                onChange={(email) => {
+                  // Only allow email changes if we don't have a customer email from Stripe
+                  if (!customerEmail) {
+                    updateEmail(email);
+                  }
+                }}
                 disabled={!!customerEmail}
               />
 
@@ -235,3 +248,4 @@ const Signup = () => {
 };
 
 export default Signup;
+

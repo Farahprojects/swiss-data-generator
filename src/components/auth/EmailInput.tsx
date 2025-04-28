@@ -26,9 +26,10 @@ const EmailInput: React.FC<EmailInputProps> = ({
         type="email"
         value={email}
         onChange={(e) => onChange(e.target.value)}
-        className={`mt-1 ${!isValid && email ? 'border-red-500' : ''}`}
+        className={`mt-1 ${!isValid && email ? 'border-red-500' : ''} ${disabled ? 'bg-gray-100' : ''}`}
         required
         disabled={disabled}
+        placeholder={disabled ? "Email verified from payment" : "Enter your email"}
       />
       {!isValid && email && (
         <p className="text-sm text-red-500 mt-1">Please enter a valid email address</p>
@@ -38,3 +39,4 @@ const EmailInput: React.FC<EmailInputProps> = ({
 };
 
 export default EmailInput;
+
