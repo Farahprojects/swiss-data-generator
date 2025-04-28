@@ -26,8 +26,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      // If this is a new signup event and we have user data
+      if (_event === 'SIGNED_IN' && currentUser) {
+        try {
+          // Check if the user came from Stripe checkout by checking if they have a stripe_users record
+          const { data: stripeUserData } = await supabase
+            .from('stripe_users')
+            .select('email, plan_name')
+            .eq('email', currentUser.email)
+            .single();
+          
+          if (stripeUserData) {
+            console.log('User signed in after payment, creating app_user record');
+            // Call the RPC function to create user record
+            const { error: rpcError } = await supabase.rpc('create_user_after_payment', {
+              user_id: currentUser.id,
+              plan_type: stripeUserData.plan_name || 'starter'
+            });
+            
+            if (rpcError) {
+              console.error('Failed to create user record:', rpcError);
+            } else {
+              console.log('Successfully created user records in app_users and users tables');
+            }
+          }
+        } catch (err) {
+          console.error('Error checking for stripe user or creating app_user:', err);
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
