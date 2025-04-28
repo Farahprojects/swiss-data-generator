@@ -68,63 +68,6 @@ export type Database = {
         }
         Relationships: []
       }
-      api_request_logs: {
-        Row: {
-          api_key: string
-          birth_date: string
-          birth_time: string
-          city: string
-          country: string
-          created_at: string | null
-          endpoint_called: string
-          error_message: string | null
-          log_id: string
-          second_birth_date: string | null
-          second_birth_time: string | null
-          second_city: string | null
-          second_country: string | null
-          status: string
-          system: string
-          user_id: string | null
-        }
-        Insert: {
-          api_key: string
-          birth_date: string
-          birth_time: string
-          city: string
-          country: string
-          created_at?: string | null
-          endpoint_called: string
-          error_message?: string | null
-          log_id?: string
-          second_birth_date?: string | null
-          second_birth_time?: string | null
-          second_city?: string | null
-          second_country?: string | null
-          status?: string
-          system: string
-          user_id?: string | null
-        }
-        Update: {
-          api_key?: string
-          birth_date?: string
-          birth_time?: string
-          city?: string
-          country?: string
-          created_at?: string | null
-          endpoint_called?: string
-          error_message?: string | null
-          log_id?: string
-          second_birth_date?: string | null
-          second_birth_time?: string | null
-          second_city?: string | null
-          second_country?: string | null
-          status?: string
-          system?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       legal_documents: {
         Row: {
           content: string
@@ -302,39 +245,6 @@ export type Database = {
           stripe_subscription_id?: string | null
           subscription_current_period_end?: string | null
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      stripe_webhook_logs: {
-        Row: {
-          created_at: string | null
-          id: string
-          payload: Json
-          processed: boolean
-          processing_error: string | null
-          stripe_customer_id: string | null
-          stripe_event_id: string | null
-          stripe_event_type: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          payload: Json
-          processed?: boolean
-          processing_error?: string | null
-          stripe_customer_id?: string | null
-          stripe_event_id?: string | null
-          stripe_event_type: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          payload?: Json
-          processed?: boolean
-          processing_error?: string | null
-          stripe_customer_id?: string | null
-          stripe_event_id?: string | null
-          stripe_event_type?: string
         }
         Relationships: []
       }
