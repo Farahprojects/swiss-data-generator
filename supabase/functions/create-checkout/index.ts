@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,21 +25,12 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
-    // Important: Let Stripe populate the session ID after creation
-    // This ensures {CHECKOUT_SESSION_ID} will be replaced with the actual session ID
+    // Simplified URL handling
     const origin = req.headers.get("origin") || "";
-    const successUrl = new URL(`${origin}/signup`);
-    successUrl.searchParams.append('success', 'true');
-    successUrl.searchParams.append('session_id', '{CHECKOUT_SESSION_ID}');
-    successUrl.searchParams.append('plan', planType);
+    const successUrl = `${origin}/signup?success=true&session_id={CHECKOUT_SESSION_ID}&plan=${planType}`;
+    const cancelUrl = `${origin}/pricing?canceled=true`;
 
-    const cancelUrl = new URL(`${origin}/pricing`);
-    cancelUrl.searchParams.append('canceled', 'true');
-
-    logStep("Creating checkout session with URLs", { 
-      success: successUrl.toString(),
-      cancel: cancelUrl.toString()
-    });
+    logStep("Creating session with URLs", { successUrl, cancelUrl });
 
     const session = await stripe.checkout.sessions.create({
       line_items: Array.isArray(priceIds) ? priceIds.map(priceId => ({
@@ -48,8 +38,8 @@ serve(async (req) => {
         quantity: 1,
       })) : [{ price: priceIds, quantity: 1 }],
       mode: "subscription",
-      success_url: successUrl.toString(),
-      cancel_url: cancelUrl.toString(),
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       allow_promotion_codes: true,
       billing_address_collection: "required",
       metadata: {
@@ -58,18 +48,12 @@ serve(async (req) => {
       }
     });
 
-    logStep("Checkout session created", { 
-      sessionId: session.id,
-      successUrl: successUrl.toString(),
-      cancelUrl: cancelUrl.toString()
-    });
+    logStep("Checkout session created", { sessionId: session.id });
 
     return new Response(
       JSON.stringify({
         url: session.url,
         sessionId: session.id,
-        planType,
-        addOns
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -79,10 +63,7 @@ serve(async (req) => {
   } catch (error) {
     logStep("Error creating checkout session", { error: error.message });
     return new Response(
-      JSON.stringify({
-        error: error.message || "Failed to create checkout session",
-        details: "Please try again or contact support if the issue persists."
-      }),
+      JSON.stringify({ error: error.message }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,

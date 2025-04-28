@@ -16,28 +16,24 @@ import { Loader2 } from "lucide-react";
 const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(false);
-  const [verificationAttempts, setVerificationAttempts] = useState(0);
   const [customerEmail, setCustomerEmail] = useState<string>("");
   const [planType, setPlanType] = useState<string>("");
-  const [sessionVerified, setSessionVerified] = useState<boolean>(false);
   const [searchParams] = useSearchParams();
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { formState, updateEmail, updatePassword, updateConfirmPassword } = useAuthForm(true);
-  const MAX_VERIFICATION_ATTEMPTS = 3;
 
   useEffect(() => {
-    const getCustomerEmail = async () => {
+    const verifyPayment = async () => {
       const success = searchParams.get("success");
       const sessionId = searchParams.get("session_id");
-
-      if (success === "true" && sessionId && verificationAttempts < MAX_VERIFICATION_ATTEMPTS) {
+      
+      if (success === "true" && sessionId) {
         if (sessionId === "{CHECKOUT_SESSION_ID}") {
-          // This means the URL wasn't properly populated by Stripe
           toast({
             title: "Error",
-            description: "Invalid checkout session. Please try again or contact support.",
+            description: "Invalid checkout session",
             variant: "destructive",
           });
           return;
@@ -46,107 +42,42 @@ const Signup = () => {
         setLoadingEmail(true);
         try {
           console.log("Verifying payment session:", sessionId);
-          setVerificationAttempts(prev => prev + 1);
           
-          // Call verify-payment to get session details and create stripe_user record
-          const response = await supabase.functions.invoke('verify-payment', {
+          const { data, error } = await supabase.functions.invoke('verify-payment', {
             body: { sessionId }
           });
-          
-          const { data: verifyData, error: verifyError } = response;
-          
-          // Check for rate limiting or processing state based on returned data
-          if (verifyError) {
-            console.error("Error verifying payment:", verifyError);
-            
-            // Special handling for rate limiting - check the error message
-            if (verifyError.message?.includes('rate limit') || response.data?.details?.includes('rate limit')) {
-              const retryDelay = Math.min(5000 * verificationAttempts, 15000);
-              toast({
-                title: "Service Busy",
-                description: `We're experiencing high traffic. Will retry in ${retryDelay/1000} seconds...`,
-                variant: "default",
-              });
-              
-              // Try again after a delay with exponential backoff
-              setTimeout(() => {
-                getCustomerEmail();
-              }, retryDelay);
-              return;
-            }
-            
-            // Handle processing payments - check if data contains status
-            if (response.data?.status === "processing") {
-              toast({
-                title: "Payment Processing",
-                description: "Your payment is still processing. We'll keep checking...",
-                variant: "default",
-              });
-              
-              // Try again after a longer delay for processing payments
-              setTimeout(() => {
-                getCustomerEmail();
-              }, 5000);
-              return;
-            }
-            
-            // General error
-            toast({
-              title: "Payment Verification Error",
-              description: verifyError.message || "Failed to verify payment. Please contact support.",
-              variant: "destructive",
-            });
-            throw verifyError;
-          }
 
-          if (!verifyData) {
-            console.error("No data returned from verify-payment");
+          if (error) {
+            console.error("Payment verification error:", error);
             toast({
-              title: "Error",
-              description: "Failed to retrieve payment information. Please contact support.",
+              title: "Verification Error",
+              description: error.message || "Could not verify payment",
               variant: "destructive",
             });
             return;
           }
 
-          console.log("Payment verification successful:", verifyData);
-          setSessionVerified(true);
-
-          if (verifyData?.email) {
-            setCustomerEmail(verifyData.email);
-            updateEmail(verifyData.email);
-            setPlanType(verifyData.planType || "");
+          if (data?.email) {
+            console.log("Payment verified for email:", data.email);
+            setCustomerEmail(data.email);
+            updateEmail(data.email);
+            setPlanType(searchParams.get("plan") || "");
           }
-        } catch (error) {
-          console.error("Error retrieving customer email:", error);
-          
-          if (verificationAttempts < MAX_VERIFICATION_ATTEMPTS) {
-            const retryDelay = 3000;
-            toast({
-              title: "Verification Failed",
-              description: `Retrying in ${retryDelay/1000} seconds... (Attempt ${verificationAttempts}/${MAX_VERIFICATION_ATTEMPTS})`,
-              variant: "default",
-            });
-            
-            // Try again after a delay
-            setTimeout(() => {
-              getCustomerEmail();
-            }, retryDelay);
-          } else {
-            toast({
-              title: "Error",
-              description: "Failed to retrieve customer information. You can still create your account and contact support later.",
-              variant: "destructive",
-            });
-          }
+        } catch (err) {
+          console.error("Error during verification:", err);
+          toast({
+            title: "Error",
+            description: "Failed to verify payment. Please contact support.",
+            variant: "destructive",
+          });
         } finally {
           setLoadingEmail(false);
         }
       }
     };
 
-    getCustomerEmail();
-  }, [searchParams, updateEmail, toast, verificationAttempts]);
+    verifyPayment();
+  }, [searchParams, toast, updateEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,7 +95,7 @@ const Signup = () => {
         console.error("Detailed signup error:", error);
       } else if (user) {
         // Create user record with payment information
-        if (sessionVerified && planType) {
+        if (planType) {
           const { data: createUserData, error: createUserError } = await supabase.rpc('create_user_after_payment', {
             user_id: user.id,
             plan_type: planType || 'starter'
@@ -244,11 +175,6 @@ const Signup = () => {
             <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg">
               <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
               <p className="text-gray-700">Retrieving your information...</p>
-              {verificationAttempts > 1 && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Attempt {verificationAttempts}/{MAX_VERIFICATION_ATTEMPTS}
-                </p>
-              )}
             </div>
           ) : planType && (
             <Alert className="mb-6">
