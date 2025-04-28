@@ -67,7 +67,10 @@ serve(async (req) => {
 
     const { error: upsertError } = await supabase
       .from('stripe_users')
-      .upsert(stripeUserData);
+      .upsert(stripeUserData, { 
+        onConflict: 'email',
+        ignoreDuplicates: false 
+      });
 
     if (upsertError) {
       logStep("Error upserting user", upsertError);
@@ -96,18 +99,36 @@ serve(async (req) => {
       plan_type: session.metadata?.planType 
     });
 
-    // Call the RPC function to create user records
-    const { error: rpcError } = await supabase.rpc('create_user_after_payment', {
-      user_id: user.id,
-      plan_type: session.metadata?.planType || 'starter'
-    });
+    // Call the RPC function to create user records with retry logic
+    let retryCount = 0;
+    const maxRetries = 3;
+    let rpcError = null;
 
-    if (rpcError) {
-      logStep("Error calling create_user_after_payment", rpcError);
-      throw rpcError;
+    while (retryCount < maxRetries) {
+      const { error } = await supabase.rpc('create_user_after_payment', {
+        user_id: user.id,
+        plan_type: session.metadata?.planType || 'starter'
+      });
+
+      if (!error) {
+        logStep("Successfully created user records");
+        break;
+      }
+
+      rpcError = error;
+      retryCount++;
+      logStep(`RPC attempt ${retryCount} failed`, error);
+      
+      if (retryCount < maxRetries) {
+        // Wait for a short time before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+      }
     }
 
-    logStep("Successfully created user records");
+    if (retryCount === maxRetries) {
+      logStep("All RPC attempts failed", rpcError);
+      throw rpcError;
+    }
 
     return new Response(
       JSON.stringify({
