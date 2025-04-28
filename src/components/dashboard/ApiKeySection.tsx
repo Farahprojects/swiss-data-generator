@@ -70,7 +70,7 @@ export const ApiKeySection = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsKeyVisible(!isKeyVisible)}
+                onClick={toggleKeyVisibility}
                 className="px-4 py-2 border-y border-gray-300"
               >
                 {isKeyVisible ? "Hide" : "Show"}

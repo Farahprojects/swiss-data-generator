@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
-import { useCheckout } from "@/hooks/use-checkout";
+import { useCheckoutWizard } from "./PaymentProvider";
 
 interface PricingPlanProps {
   name: React.ReactNode;
@@ -23,7 +23,7 @@ export const PricingPlanCard: React.FC<PricingPlanProps> = ({
   highlight = false,
   icon,
 }) => {
-  const { begin } = useCheckout();
+  const { begin } = useCheckoutWizard();
   const planNameString = typeof name === 'string' ? name : 
                        React.isValidElement(name) && name.props.children ? name.props.children : 
                        'Plan';
@@ -53,7 +53,10 @@ export const PricingPlanCard: React.FC<PricingPlanProps> = ({
 
       <div className="mt-auto p-6 pt-0">
         <p className="mb-4 text-3xl font-semibold text-primary">{price}</p>
-        <Button className="w-full py-6" onClick={() => begin(planNameString)}>
+        <Button 
+          className="w-full py-6" 
+          onClick={() => begin(planNameString)}
+        >
           {cta}
         </Button>
       </div>

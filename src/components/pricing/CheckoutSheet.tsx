@@ -10,11 +10,11 @@ import {
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
-import { useCheckout } from "@/hooks/use-checkout";
+import { useCheckoutWizard } from "./PaymentProvider";
 import { AddOnToggle } from "./AddOnToggle";
 
 export const CheckoutSheet: React.FC = () => {
-  const { visiblePlan, close, loading, continueToStripe } = useCheckout();
+  const { visiblePlan, close, loading, continueToStripe } = useCheckoutWizard();
 
   if (!visiblePlan) return null;
 

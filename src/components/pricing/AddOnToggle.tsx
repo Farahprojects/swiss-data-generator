@@ -1,13 +1,13 @@
 
 import React from "react";
-import { useCheckout } from "@/hooks/use-checkout";
+import { useCheckoutWizard } from "./PaymentProvider";
 
 interface AddOnToggleProps {
   label: string;
 }
 
 export const AddOnToggle: React.FC<AddOnToggleProps> = ({ label }) => {
-  const { addOnLines, toggleAddOn } = useCheckout();
+  const { addOnLines, toggleAddOn } = useCheckoutWizard();
   const checked = !!addOnLines[label];
   
   const displayName = {
