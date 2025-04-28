@@ -26,19 +26,19 @@ const Signup = () => {
   const [verificationAttempted, setVerificationAttempted] = useState(false);
 
   useEffect(() => {
-    const verifyPayment = async () => {
-      const success = searchParams.get("success");
-      const sessionId = searchParams.get("session_id");
-      
-      if (!verificationAttempted && success === "true" && sessionId) {
+    const success = searchParams.get("success");
+    const sessionId = searchParams.get("session_id");
+
+    if (!verificationAttempted && success === "true" && sessionId) {
+      const verifyPayment = async () => {
         if (sessionId === "{CHECKOUT_SESSION_ID}") {
           toast({
             title: "Error",
             description: "Invalid checkout session",
             variant: "destructive",
           });
-          setVerificationAttempted(true);
           setLoadingEmail(false);
+          setVerificationAttempted(true);
           return;
         }
 
@@ -57,12 +57,7 @@ const Signup = () => {
               description: error.message || "Could not verify payment",
               variant: "destructive",
             });
-            setLoadingEmail(false);
-            setVerificationAttempted(true);
-            return;
-          }
-
-          if (data?.email) {
+          } else if (data?.email) {
             console.log("Setting customer email from Stripe:", data.email);
             setCustomerEmail(data.email);
             updateEmail(data.email);
@@ -79,10 +74,10 @@ const Signup = () => {
           setLoadingEmail(false);
           setVerificationAttempted(true);
         }
-      }
-    };
+      };
 
-    verifyPayment();
+      verifyPayment();
+    }
   }, [searchParams, toast, verificationAttempted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
