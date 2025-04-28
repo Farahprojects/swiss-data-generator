@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -34,8 +35,12 @@ export const StripeFlowDebugger = () => {
     queryFn: async () => {
       if (!user?.email) throw new Error('User not authenticated');
       
+      // Use a direct SQL query instead of RPC to avoid TypeScript errors
       const { data, error } = await supabase
-        .rpc('get_flow_status', { user_email: user.email });
+        .from('stripe_flow_tracking')
+        .select('*')
+        .eq('email', user.email)
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error("Flow tracking query error:", error);
