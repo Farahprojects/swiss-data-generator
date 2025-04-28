@@ -8,37 +8,65 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const logStep = (step: string, details?: any) => {
+  console.log(`[VERIFY-PAYMENT] ${step}${details ? ` - ${JSON.stringify(details)}` : ''}`);
+};
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      const delay = Math.pow(2, i) * 1000; // Exponential backoff
+      logStep(`Retry ${i + 1}/${maxRetries} after ${delay}ms`, { error: error.message });
+      await sleep(delay);
+    }
+  }
+  throw new Error("Max retries reached");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log("Starting verify-payment function");
+    logStep("Starting payment verification");
     const { sessionId } = await req.json();
     
     if (!sessionId) {
-      console.error("Missing sessionId in request body");
+      logStep("Error: Missing sessionId");
       throw new Error("Session ID is required");
     }
 
-    console.log(`Processing payment verification for session: ${sessionId}`);
+    logStep("Retrieving session", { sessionId });
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
 
-    // Retrieve the checkout session with expanded data
-    console.log("Retrieving checkout session from Stripe");
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['customer', 'subscription', 'payment_intent']
     });
 
     if (!session) {
-      console.error("No session found in Stripe");
+      logStep("Error: No session found");
       throw new Error("Session not found");
     }
     
-    console.log(`Session found. Payment status: ${session.payment_status}`);
+    logStep("Session retrieved", { 
+      payment_status: session.payment_status,
+      customer_email: session.customer_details?.email
+    });
+
+    if (session.payment_status !== 'paid') {
+      logStep("Warning: Payment not completed", { status: session.payment_status });
+    }
 
     // Create Supabase client with service role key to bypass RLS
     const supabaseAdmin = createClient(
@@ -52,7 +80,7 @@ serve(async (req) => {
     const planName = session.metadata?.planType;
     
     if (!email || !customerId) {
-      console.error("Missing customer information", { email, customerId });
+      logStep("Error: Missing customer information", { email, customerId });
       throw new Error("Missing customer information");
     }
 
@@ -60,17 +88,14 @@ serve(async (req) => {
     let addOns: string[] = [];
     try {
       if (session.metadata?.addOns) {
-        if (typeof session.metadata.addOns === 'string') {
-          addOns = JSON.parse(session.metadata.addOns);
-        }
+        addOns = JSON.parse(session.metadata.addOns);
       }
     } catch (error) {
-      console.warn("Error parsing addOns from metadata:", error);
+      logStep("Warning: Error parsing addOns", { error: error.message });
     }
 
-    console.log("Preparing stripe user data", { email, planName, addOns });
+    logStep("Preparing stripe user data", { email, planName, addOns });
     
-    // Save the stripe user data
     const stripeUserData = {
       email: email,
       stripe_customer_id: customerId,
@@ -90,19 +115,23 @@ serve(async (req) => {
       phone: session.customer_details?.phone || null,
     };
 
-    console.log("Upserting stripe user data to database");
-    const { error: upsertError } = await supabaseAdmin
-      .from('stripe_users')
-      .upsert(stripeUserData, {
-        onConflict: 'stripe_customer_id'
-      });
+    logStep("Upserting stripe user data", stripeUserData);
+    
+    // Use retry mechanism for database operation
+    await retryOperation(async () => {
+      const { error: upsertError } = await supabaseAdmin
+        .from('stripe_users')
+        .upsert(stripeUserData, {
+          onConflict: 'email'
+        });
 
-    if (upsertError) {
-      console.error("Error upserting stripe user:", upsertError);
-      throw upsertError;
-    }
+      if (upsertError) {
+        logStep("Error upserting stripe user", { error: upsertError });
+        throw upsertError;
+      }
+    });
       
-    console.log("Successfully saved stripe user data");
+    logStep("Successfully saved stripe user data");
     
     return new Response(
       JSON.stringify({
@@ -118,7 +147,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error verifying payment:", error);
+    logStep("Error verifying payment", { error: error.message });
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {

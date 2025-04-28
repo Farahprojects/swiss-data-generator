@@ -1,10 +1,15 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const logStep = (step: string, details?: any) => {
+  console.log(`[CREATE-CHECKOUT] ${step}${details ? ` - ${JSON.stringify(details)}` : ''}`);
 };
 
 serve(async (req) => {
@@ -13,12 +18,13 @@ serve(async (req) => {
   }
 
   try {
+    logStep("Starting checkout process");
+    const { priceIds, planType, addOns } = await req.json();
+    logStep("Request data", { priceIds, planType, addOns });
+
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
-
-    const { priceIds, planType, addOns } = await req.json();
-    console.log("Creating checkout for:", { priceIds, planType, addOns });
 
     const session = await stripe.checkout.sessions.create({
       line_items: Array.isArray(priceIds) ? priceIds.map(priceId => ({
@@ -26,7 +32,7 @@ serve(async (req) => {
         quantity: 1,
       })) : [{ price: priceIds, quantity: 1 }],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/signup?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${req.headers.get("origin")}/signup?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/pricing?canceled=true`,
       allow_promotion_codes: true,
       billing_address_collection: "required",
@@ -36,7 +42,7 @@ serve(async (req) => {
       }
     });
 
-    console.log(`Checkout session created: ${session.id}`);
+    logStep("Checkout session created", { sessionId: session.id });
 
     return new Response(
       JSON.stringify({
@@ -51,7 +57,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error creating checkout session:", error);
+    logStep("Error creating checkout session", { error: error.message });
     return new Response(
       JSON.stringify({
         error: error.message || "Failed to create checkout session",
