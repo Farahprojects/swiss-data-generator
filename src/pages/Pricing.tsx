@@ -1,7 +1,5 @@
 
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import React from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import {
@@ -10,11 +8,8 @@ import {
 } from "@/components/pricing/PaymentComponents";
 import { FAQSection } from "@/components/pricing/FAQSection";
 import { plans, addOns, faqs } from "@/utils/pricing";
-import { PricingSidebar } from "@/components/pricing/PricingSidebar";
 
 const Pricing = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -67,15 +62,14 @@ const Pricing = () => {
         <p className="mx-auto mb-8 max-w-2xl text-xl">
           Start your free 14-day trial now — no credit card required.
         </p>
-        <Button
-          onClick={() => setSidebarOpen(true)}
-          className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100"
-        >
-          Start Free Trial
-        </Button>
+        <a href="/signup" className="inline-block">
+          <Button 
+            className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100"
+          >
+            Start Free Trial
+          </Button>
+        </a>
       </section>
-
-      <PricingSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
 
       <Footer />
     </div>
