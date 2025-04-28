@@ -19,6 +19,7 @@ const Signup = () => {
   const [loadingEmail, setLoadingEmail] = useState(false);
   const [customerEmail, setCustomerEmail] = useState<string>("");
   const [planType, setPlanType] = useState<string>("");
+  const [sessionVerified, setSessionVerified] = useState<boolean>(false);
   const [searchParams] = useSearchParams();
   const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
@@ -31,8 +32,19 @@ const Signup = () => {
       const sessionId = searchParams.get("session_id");
 
       if (success === "true" && sessionId) {
+        if (sessionId === "{CHECKOUT_SESSION_ID}") {
+          // This means the URL wasn't properly populated by Stripe
+          toast({
+            title: "Error",
+            description: "Invalid checkout session. Please try again or contact support.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         setLoadingEmail(true);
         try {
+          console.log("Verifying payment session:", sessionId);
           // Call verify-payment to get session details and create stripe_user record
           const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
             body: { sessionId }
@@ -40,8 +52,26 @@ const Signup = () => {
 
           if (verifyError) {
             console.error("Error verifying payment:", verifyError);
+            toast({
+              title: "Payment Verification Error",
+              description: verifyError.message || "Failed to verify payment. Please contact support.",
+              variant: "destructive",
+            });
             throw verifyError;
           }
+
+          if (!verifyData) {
+            console.error("No data returned from verify-payment");
+            toast({
+              title: "Error",
+              description: "Failed to retrieve payment information. Please contact support.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          console.log("Payment verification successful:", verifyData);
+          setSessionVerified(true);
 
           if (verifyData?.email) {
             setCustomerEmail(verifyData.email);
@@ -80,17 +110,24 @@ const Signup = () => {
         console.error("Detailed signup error:", error);
       } else if (user) {
         // Create user record with payment information
-        const { data: createUserData, error: createUserError } = await supabase.rpc('create_user_after_payment', {
-          user_id: user.id,
-          plan_type: planType || 'starter'
-        });
-        
-        if (createUserError) {
-          console.error("Error creating user record:", createUserError);
-          toast({
-            title: "Account Created",
-            description: "Your account was created, but we couldn't set up your subscription. Please contact support.",
+        if (sessionVerified && planType) {
+          const { data: createUserData, error: createUserError } = await supabase.rpc('create_user_after_payment', {
+            user_id: user.id,
+            plan_type: planType || 'starter'
           });
+          
+          if (createUserError) {
+            console.error("Error creating user record:", createUserError);
+            toast({
+              title: "Account Created",
+              description: "Your account was created, but we couldn't set up your subscription. Please contact support.",
+            });
+          } else {
+            toast({
+              title: "Account Created",
+              description: "Your account has been created successfully with your " + planType + " subscription!",
+            });
+          }
         } else {
           toast({
             title: "Account Created",

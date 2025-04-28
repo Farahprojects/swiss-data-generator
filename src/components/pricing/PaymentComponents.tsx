@@ -1,3 +1,4 @@
+
 import React, { useState, createContext, useContext } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -74,22 +75,45 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       });
       
-      if (error) throw error;
-      if (!data?.url) throw new Error("No checkout URL returned");
+      if (error) {
+        console.error("Checkout error:", error);
+        throw new Error(error.message || "Failed to create checkout session");
+      }
+      
+      if (!data?.url) {
+        console.error("No checkout URL returned:", data);
+        throw new Error("No checkout URL returned. Please try again.");
+      }
       
       // Open Stripe checkout in a new window
-      window.open(data.url, '_blank', 'noopener,noreferrer');
+      const checkoutWindow = window.open(data.url, '_blank', 'noopener,noreferrer');
       
-      close();
-      toast({ 
-        title: "Opening Checkout", 
-        description: "Complete your payment in the new window.",
-      });
+      if (!checkoutWindow) {
+        // If popup blocked
+        toast({ 
+          title: "Popup Blocked", 
+          description: "Please allow popups and try again, or click the link we've added to continue.",
+          variant: "destructive"
+        });
+        // Create a temporary link for users to click
+        const tempLink = document.createElement('a');
+        tempLink.href = data.url;
+        tempLink.target = '_blank';
+        tempLink.rel = 'noopener noreferrer';
+        tempLink.click();
+      } else {
+        close();
+        toast({ 
+          title: "Opening Checkout", 
+          description: "Complete your payment in the new window.",
+        });
+      }
       
     } catch (err: any) {
+      console.error("Checkout process error:", err);
       toast({ 
         title: "Checkout failed", 
-        description: err.message, 
+        description: err.message || "An unexpected error occurred. Please try again.", 
         variant: "destructive" 
       });
     } finally {
