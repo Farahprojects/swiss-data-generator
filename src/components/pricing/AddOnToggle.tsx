@@ -1,14 +1,12 @@
 
 import React from "react";
-import { useCheckoutWizard } from "./PaymentProvider";
 
 interface AddOnToggleProps {
   label: string;
 }
 
 export const AddOnToggle: React.FC<AddOnToggleProps> = ({ label }) => {
-  const { addOnLines, toggleAddOn } = useCheckoutWizard();
-  const checked = !!addOnLines[label];
+  const [checked, setChecked] = React.useState(false);
   
   const displayName = {
     'Transits': 'Transits',
@@ -27,7 +25,7 @@ export const AddOnToggle: React.FC<AddOnToggleProps> = ({ label }) => {
         type="checkbox"
         className="h-6 w-6 rounded-md accent-primary"
         checked={checked}
-        onChange={() => toggleAddOn(label)}
+        onChange={() => setChecked(!checked)}
       />
     </label>
   );

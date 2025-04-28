@@ -2,7 +2,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
-import { useCheckoutWizard } from "./PaymentProvider";
 
 interface PricingPlanProps {
   name: React.ReactNode;
@@ -23,11 +22,6 @@ export const PricingPlanCard: React.FC<PricingPlanProps> = ({
   highlight = false,
   icon,
 }) => {
-  const { begin } = useCheckoutWizard();
-  const planNameString = typeof name === 'string' ? name : 
-                       React.isValidElement(name) && name.props.children ? name.props.children : 
-                       'Plan';
-  
   return (
     <div
       className={`flex flex-col rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md ${
@@ -55,7 +49,7 @@ export const PricingPlanCard: React.FC<PricingPlanProps> = ({
         <p className="mb-4 text-3xl font-semibold text-primary">{price}</p>
         <Button 
           className="w-full py-6" 
-          onClick={() => begin(planNameString)}
+          onClick={() => alert('Coming soon!')}
         >
           {cta}
         </Button>
