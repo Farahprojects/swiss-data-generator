@@ -9,30 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      api_products: {
-        Row: {
-          active: boolean
-          description: string
-          endpoint_url: string
-          id: string
-          name: string
-        }
-        Insert: {
-          active?: boolean
-          description: string
-          endpoint_url: string
-          id?: string
-          name: string
-        }
-        Update: {
-          active?: boolean
-          description?: string
-          endpoint_url?: string
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
       legal_documents: {
         Row: {
           content: string
@@ -100,10 +76,10 @@ export type Database = {
           currency: string
           id: string
           interval: string
+          limits: number | null
           price_amount: number
           product_name: string
           stripe_price_id: string
-          stripe_product_id: string
           updated_at: string | null
         }
         Insert: {
@@ -112,10 +88,10 @@ export type Database = {
           currency?: string
           id?: string
           interval?: string
+          limits?: number | null
           price_amount: number
           product_name: string
           stripe_price_id: string
-          stripe_product_id: string
           updated_at?: string | null
         }
         Update: {
@@ -124,10 +100,10 @@ export type Database = {
           currency?: string
           id?: string
           interval?: string
+          limits?: number | null
           price_amount?: number
           product_name?: string
           stripe_price_id?: string
-          stripe_product_id?: string
           updated_at?: string | null
         }
         Relationships: []

@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Check } from "lucide-react";
 import { plans, addOns, faqs } from "@/utils/pricing";
+import { Link } from "react-router-dom";
 
 const PricingPlanCard = ({
   name,
@@ -76,7 +77,9 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
             <p className="text-gray-600 mb-6">
               Have more questions about our API or pricing?
             </p>
-            <Button variant="outline">Contact Us</Button>
+            <Link to="/contact">
+              <Button variant="outline">Contact Us</Button>
+            </Link>
           </div>
         </div>
       </div>
