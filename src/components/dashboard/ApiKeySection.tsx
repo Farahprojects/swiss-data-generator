@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function ApiKeySection() {
   const [isCopying, setIsCopying] = useState(false);
@@ -91,7 +92,7 @@ export function ApiKeySection() {
   const renderRegenerateButton = () => {
     switch (regenerationState) {
       case 'loading':
-        return <Progress value={100} className="h-10 animate-pulse bg-gray-200" />;
+        return <Progress value={100} className="h-10 animate-pulse" indicatorColor="bg-gray-200" />;
       case 'success':
         return (
           <div className="bg-green-500 h-10 w-full flex items-center justify-center text-white rounded-md">
@@ -117,6 +118,10 @@ export function ApiKeySection() {
     return <Card><CardContent className="pt-6">Loading API key details...</CardContent></Card>;
   }
 
+  // Base URL for API calls
+  const apiBaseUrl = "https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/api";
+  const apiEndpoint = apiBaseUrl;
+
   return (
     <>
       <Card className="flex flex-col h-full">
@@ -137,36 +142,64 @@ export function ApiKeySection() {
             <Progress value={usagePercentage} className="h-2 bg-gray-200" indicatorColor="bg-[#9b87f5]" />
           </div>
 
-          <div className="relative">
-            <div className="bg-muted p-3 rounded-md font-mono text-sm overflow-x-auto whitespace-nowrap flex justify-between items-center">
-              <span className="truncate mr-2">{maskApiKey(apiKey)}</span>
-              <div className="flex space-x-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={handleToggleVisibility}
-                >
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={handleCopyApiKey}
-                  disabled={isCopying || !apiKey}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+          <Tabs defaultValue="key" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="key" className="flex-1">API Key</TabsTrigger>
+              <TabsTrigger value="usage" className="flex-1">Usage Example</TabsTrigger>
+            </TabsList>
             
-            {createdAt && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Created: {new Date(createdAt).toLocaleDateString()}
-              </p>
-            )}
-          </div>
+            <TabsContent value="key">
+              <div className="relative">
+                <div className="bg-muted p-3 rounded-md font-mono text-sm overflow-x-auto whitespace-nowrap flex justify-between items-center">
+                  <span className="truncate mr-2">{maskApiKey(apiKey)}</span>
+                  <div className="flex space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={handleToggleVisibility}
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={handleCopyApiKey}
+                      disabled={isCopying || !apiKey}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {createdAt && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Created: {new Date(createdAt).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="usage">
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">API Endpoint</h4>
+                <div className="bg-muted p-3 rounded-md font-mono text-sm overflow-x-auto">
+                  <code>{apiEndpoint}</code>
+                </div>
+                
+                <h4 className="text-sm font-medium">Authorization Header</h4>
+                <div className="bg-muted p-3 rounded-md font-mono text-sm overflow-x-auto">
+                  <code>Authorization: Bearer {apiKey ? (showApiKey ? apiKey : maskApiKey(apiKey)) : "YOUR_API_KEY"}</code>
+                </div>
+                
+                <h4 className="text-sm font-medium">cURL Example</h4>
+                <div className="bg-muted p-3 rounded-md font-mono text-xs overflow-x-auto">
+                  <pre>curl -X GET "{apiEndpoint}" \<br />  -H "Authorization: Bearer {apiKey ? (showApiKey ? apiKey : "YOUR_API_KEY") : "YOUR_API_KEY"}" \<br />  -H "Content-Type: application/json"</pre>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
         <CardFooter className="flex justify-end mt-auto">
           <div className="w-full">

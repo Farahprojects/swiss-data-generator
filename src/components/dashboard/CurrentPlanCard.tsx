@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Progress } from "@/components/ui/progress";
 
 export const CurrentPlanCard = () => {
   const { user } = useAuth();
@@ -68,14 +69,11 @@ export const CurrentPlanCard = () => {
           <p className="text-sm text-gray-500">
             API Calls: {userData?.api_calls_count?.toLocaleString() || '0'} / {userData?.calls_limit?.toLocaleString() || '50,000'}
           </p>
-          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-            <div 
-              className="bg-[#9b87f5] h-2 rounded-full" 
-              style={{ 
-                width: `${((userData?.api_calls_count || 0) / (userData?.calls_limit || 50000) * 100)}%` 
-              }}
-            />
-          </div>
+          <Progress 
+            value={((userData?.api_calls_count || 0) / (userData?.calls_limit || 50000) * 100)} 
+            className="h-2 mt-2 bg-gray-200"
+            indicatorColor="bg-[#9b87f5]"
+          />
         </div>
       </CardContent>
       <CardFooter className="mt-auto">
