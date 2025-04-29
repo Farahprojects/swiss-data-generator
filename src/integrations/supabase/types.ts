@@ -9,6 +9,98 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      api_endpoints: {
+        Row: {
+          created_at: string | null
+          endpoint_name: string
+          endpoint_path: string
+          id: string
+          pricing_type: string
+          requires_ai: boolean
+          system: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint_name: string
+          endpoint_path: string
+          id?: string
+          pricing_type: string
+          requires_ai?: boolean
+          system: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint_name?: string
+          endpoint_path?: string
+          id?: string
+          pricing_type?: string
+          requires_ai?: boolean
+          system?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      api_keys: {
+        Row: {
+          api_key: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      api_usage: {
+        Row: {
+          ai_used: boolean | null
+          created_at: string | null
+          endpoint_id: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          ai_used?: boolean | null
+          created_at?: string | null
+          endpoint_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          ai_used?: boolean | null
+          created_at?: string | null
+          endpoint_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "api_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_documents: {
         Row: {
           content: string
@@ -36,36 +128,6 @@ export type Database = {
           published_date?: string
           title?: string
           version?: string
-        }
-        Relationships: []
-      }
-      plans: {
-        Row: {
-          active: boolean
-          api_call_limit: number
-          created_at: string
-          features: Json
-          id: string
-          name: string
-          price_per_month: number
-        }
-        Insert: {
-          active?: boolean
-          api_call_limit: number
-          created_at?: string
-          features: Json
-          id?: string
-          name: string
-          price_per_month: number
-        }
-        Update: {
-          active?: boolean
-          api_call_limit?: number
-          created_at?: string
-          features?: Json
-          id?: string
-          name?: string
-          price_per_month?: number
         }
         Relationships: []
       }
@@ -186,6 +248,63 @@ export type Database = {
           stripe_subscription_id?: string | null
           subscription_current_period_end?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          add_on_relationship_price_id: string | null
+          add_on_relationship_status: string | null
+          add_on_transits_price_id: string | null
+          add_on_transits_status: string | null
+          add_on_yearly_cycle_price_id: string | null
+          add_on_yearly_cycle_status: string | null
+          ai_credit_balance: number | null
+          created_at: string | null
+          current_period_end: string | null
+          id: string
+          main_plan_name: string | null
+          main_plan_price_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          add_on_relationship_price_id?: string | null
+          add_on_relationship_status?: string | null
+          add_on_transits_price_id?: string | null
+          add_on_transits_status?: string | null
+          add_on_yearly_cycle_price_id?: string | null
+          add_on_yearly_cycle_status?: string | null
+          ai_credit_balance?: number | null
+          created_at?: string | null
+          current_period_end?: string | null
+          id?: string
+          main_plan_name?: string | null
+          main_plan_price_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          add_on_relationship_price_id?: string | null
+          add_on_relationship_status?: string | null
+          add_on_transits_price_id?: string | null
+          add_on_transits_status?: string | null
+          add_on_yearly_cycle_price_id?: string | null
+          add_on_yearly_cycle_status?: string | null
+          ai_credit_balance?: number | null
+          created_at?: string | null
+          current_period_end?: string | null
+          id?: string
+          main_plan_name?: string | null
+          main_plan_price_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

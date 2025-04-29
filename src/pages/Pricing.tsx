@@ -1,11 +1,14 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Check } from "lucide-react";
-import { plans, addOns, faqs } from "@/utils/pricing";
+import { Check, Loader2 } from "lucide-react";
+import { plans, addOns, faqs, getPriceId } from "@/utils/pricing";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 const PricingPlanCard = ({
   name,
@@ -14,6 +17,8 @@ const PricingPlanCard = ({
   features,
   highlight = false,
   icon,
+  onSubscribe,
+  isLoading = false,
 }: {
   name: React.ReactNode;
   price: string;
@@ -21,6 +26,8 @@ const PricingPlanCard = ({
   features: string[];
   highlight?: boolean;
   icon?: React.ReactNode;
+  onSubscribe: () => void;
+  isLoading?: boolean;
 }) => {
   return (
     <div
@@ -49,8 +56,17 @@ const PricingPlanCard = ({
       <div className="mt-8">
         <Button 
           className="w-full bg-primary py-6 text-lg font-medium hover:bg-primary/90"
+          onClick={onSubscribe}
+          disabled={isLoading}
         >
-          Start Free Trial
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            "Start Free Trial"
+          )}
         </Button>
       </div>
     </div>
@@ -88,6 +104,126 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
 };
 
 const Pricing = () => {
+  const { user } = useAuth();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [loadingAddOn, setLoadingAddOn] = useState<string | null>(null);
+
+  const handleSubscribe = async (planType: string) => {
+    try {
+      setLoadingPlan(planType);
+      
+      if (!user) {
+        // If user is not logged in, redirect to login
+        window.location.href = `/login?redirect=${encodeURIComponent('/pricing')}&plan=${planType}`;
+        return;
+      }
+      
+      // Get price ID for this plan
+      const priceId = getPriceId(planType);
+      if (!priceId) {
+        toast({
+          title: "Error",
+          description: "Could not find price for selected plan",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Call the Stripe checkout function
+      const { data, error } = await supabase.functions.invoke('stripe-checkout-handler', {
+        body: { 
+          priceIds: priceId,
+          planType,
+          addOns: []
+        }
+      });
+      
+      if (error) {
+        console.error('Error creating checkout session:', error);
+        toast({
+          title: "Checkout Failed",
+          description: error.message || "Could not initiate checkout process",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (data?.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Failed to start subscription:", err);
+      toast({
+        title: "Subscription Error",
+        description: "There was a problem starting your subscription. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+  
+  const handleAddOn = async (addonName: string) => {
+    try {
+      setLoadingAddOn(addonName);
+      
+      if (!user) {
+        // If user is not logged in, redirect to login
+        window.location.href = `/login?redirect=${encodeURIComponent('/pricing')}&addon=${addonName}`;
+        return;
+      }
+      
+      // Get price ID for this addon
+      const priceId = getPriceId(addonName);
+      if (!priceId) {
+        toast({
+          title: "Error",
+          description: "Could not find price for selected add-on",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Call the Stripe checkout function
+      const { data, error } = await supabase.functions.invoke('stripe-checkout-handler', {
+        body: { 
+          priceIds: priceId,
+          planType: null,
+          addOns: [addonName]
+        }
+      });
+      
+      if (error) {
+        console.error('Error creating checkout session:', error);
+        toast({
+          title: "Checkout Failed",
+          description: error.message || "Could not initiate checkout process",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (data?.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Failed to add subscription add-on:", err);
+      toast({
+        title: "Add-on Error",
+        description: "There was a problem adding this feature. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingAddOn(null);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -107,7 +243,12 @@ const Pricing = () => {
         <section className="container mx-auto -mt-10 py-20 px-4">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {plans.map((p) => (
-              <PricingPlanCard key={p.name.toString()} {...p} />
+              <PricingPlanCard 
+                key={p.name.toString()} 
+                {...p} 
+                onSubscribe={() => handleSubscribe(typeof p.name === 'string' ? p.name : 'Starter')}
+                isLoading={loadingPlan === (typeof p.name === 'string' ? p.name : 'Starter')}
+              />
             ))}
           </div>
 
@@ -129,6 +270,8 @@ const Pricing = () => {
                     price={addon.price}
                     description={addon.description}
                     features={addon.details}
+                    onSubscribe={() => handleAddOn(addon.name)}
+                    isLoading={loadingAddOn === addon.name}
                   />
                 ))}
               </div>
@@ -148,8 +291,17 @@ const Pricing = () => {
         </p>
         <Button 
           className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100"
+          onClick={() => handleSubscribe('Starter')}
+          disabled={loadingPlan === 'Starter'}
         >
-          Start Free Trial
+          {loadingPlan === 'Starter' ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            "Start Free Trial"
+          )}
         </Button>
       </section>
 
