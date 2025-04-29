@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import UserSettings from './pages/UserSettings';
+import UpgradePlan from './pages/UpgradePlan';
 import ApiProducts from './pages/ApiProducts';
 import Pricing from './pages/Pricing';
 import Documentation from './pages/Documentation';
@@ -41,6 +42,14 @@ function App() {
             element={
               <AuthGuard>
                 <UserSettings />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/dashboard/upgrade"
+            element={
+              <AuthGuard>
+                <UpgradePlan />
               </AuthGuard>
             }
           />

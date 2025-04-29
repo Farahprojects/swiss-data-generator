@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export const CurrentPlanCard = () => {
   const { user } = useAuth();
@@ -78,7 +79,9 @@ export const CurrentPlanCard = () => {
         </div>
       </CardContent>
       <CardFooter>
-        <Button variant="outline" className="w-full">Upgrade Plan</Button>
+        <Link to="/dashboard/upgrade" className="w-full">
+          <Button variant="outline" className="w-full">Upgrade Plan</Button>
+        </Link>
       </CardFooter>
     </Card>
   );

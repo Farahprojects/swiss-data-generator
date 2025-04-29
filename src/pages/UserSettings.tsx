@@ -23,10 +23,10 @@ const UserSettings = () => {
           <div className="flex justify-between items-center py-4">
             <h1 className="text-2xl font-semibold">Settings</h1>
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="icon" 
               onClick={handleClose} 
-              className="rounded-full hover:bg-gray-200"
+              className="rounded-full hover:bg-gray-200 border-gray-300 shadow-sm hover:shadow-md transition-all"
             >
               <X size={20} />
             </Button>
