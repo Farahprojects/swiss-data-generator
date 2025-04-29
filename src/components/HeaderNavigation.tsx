@@ -29,12 +29,8 @@ const HeaderNavigation = () => {
     navigate('/login');
   };
 
-  const handleViewSettings = () => {
-    navigate('/dashboard/settings');
-  };
-
-  const handleViewDashboard = () => {
-    navigate('/dashboard');
+  const handleViewSettings = (section: string) => {
+    navigate(`/dashboard/settings?panel=${section}`);
   };
 
   return (
@@ -71,11 +67,14 @@ const HeaderNavigation = () => {
                     <p className="font-medium">{user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleViewDashboard}>
-                    Dashboard
+                  <DropdownMenuItem onClick={() => handleViewSettings('account')}>
+                    Account Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleViewSettings}>
-                    Settings
+                  <DropdownMenuItem onClick={() => handleViewSettings('billing')}>
+                    Billing & Subscription
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleViewSettings('apikeys')}>
+                    API Keys
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
@@ -127,11 +126,14 @@ const HeaderNavigation = () => {
                   <UserAvatar size="sm" />
                   <span className="ml-2 font-medium">{user.email}</span>
                 </div>
-                <Button variant="ghost" className="w-full justify-start" onClick={handleViewDashboard}>
-                  Dashboard
+                <Button variant="ghost" className="w-full justify-start" onClick={() => handleViewSettings('account')}>
+                  Account Settings
                 </Button>
-                <Button variant="ghost" className="w-full justify-start" onClick={handleViewSettings}>
-                  Settings
+                <Button variant="ghost" className="w-full justify-start" onClick={() => handleViewSettings('billing')}>
+                  Billing & Subscription
+                </Button>
+                <Button variant="ghost" className="w-full justify-start" onClick={() => handleViewSettings('apikeys')}>
+                  API Keys
                 </Button>
                 <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
                   Logout

@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { SettingsSidebar } from "./SettingsSidebar";
 import { AccountSettingsPanel } from "./panels/AccountSettingsPanel";
 import { BillingPanel } from "./panels/BillingPanel";
@@ -8,6 +9,17 @@ import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 
 export const UserSettingsLayout = () => {
   const [activePanel, setActivePanel] = useState("account");
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Get panel from URL query parameter
+    const searchParams = new URLSearchParams(location.search);
+    const panel = searchParams.get("panel");
+    
+    if (panel && ["account", "billing", "apikeys", "delete"].includes(panel)) {
+      setActivePanel(panel);
+    }
+  }, [location]);
   
   const renderPanel = () => {
     switch (activePanel) {

@@ -57,12 +57,8 @@ export const DeleteAccountPanel = () => {
     <div className="p-6 bg-white rounded-lg shadow">
       <h2 className="text-2xl font-semibold mb-6">Delete Account</h2>
       
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-medium text-red-700 mb-2">
-          Danger Zone
-        </h3>
-        
-        <p className="text-red-600 mb-4">
+      <div className="mb-8">
+        <p className="text-gray-600 mb-6">
           Deleting your account is permanent and cannot be undone. All your data, 
           API keys, and subscription information will be permanently removed.
         </p>
@@ -70,6 +66,7 @@ export const DeleteAccountPanel = () => {
         <Button 
           variant="destructive" 
           onClick={handleDeleteClick}
+          className="bg-red-600 hover:bg-red-700"
         >
           Delete Account
         </Button>
@@ -107,6 +104,7 @@ export const DeleteAccountPanel = () => {
               variant="destructive" 
               onClick={confirmDelete}
               disabled={isDeleting || confirmation.toLowerCase() !== "delete my account"}
+              className="bg-red-600 hover:bg-red-700"
             >
               {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
             </Button>
