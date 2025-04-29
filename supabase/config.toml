@@ -42,9 +42,6 @@ enabled = true
 [edge_functions]
 enabled = true
 
-[functions.api]
-verify_jwt = false
-
 [functions.stripe-webhook-handler]
 verify_jwt = false
 
