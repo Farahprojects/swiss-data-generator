@@ -1,6 +1,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Navbar from "@/components/Navbar";
+import HeaderNavigation from "@/components/HeaderNavigation";
 import Footer from "@/components/Footer";
 import { ApiKeySection } from "@/components/dashboard/ApiKeySection";
 import { CurrentPlanCard } from "@/components/dashboard/CurrentPlanCard";
@@ -15,7 +15,7 @@ const Dashboard = () => {
   
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar />
+      <HeaderNavigation />
       
       <main className="flex-grow bg-gray-50">
         <div className="container mx-auto px-4 py-12">

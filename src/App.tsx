@@ -17,6 +17,7 @@ import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+import UserSettings from "./pages/UserSettings";
 import NotFound from "./pages/NotFound";
 import Legal from "./pages/Legal";
 
@@ -46,6 +47,14 @@ const App = () => {
                   element={
                     <AuthGuard>
                       <Dashboard />
+                    </AuthGuard>
+                  }
+                />
+                <Route
+                  path="/dashboard/settings"
+                  element={
+                    <AuthGuard>
+                      <UserSettings />
                     </AuthGuard>
                   }
                 />
