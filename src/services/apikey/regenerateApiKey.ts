@@ -9,11 +9,19 @@ export async function regenerateApiKey() {
       throw new Error('User not authenticated');
     }
     
-    // Update API key directly using update query instead of RPC call
+    // Generate a more secure API key
+    // Format: thp_[24 chars of hex]
+    const secureBytes = new Uint8Array(12); // 12 bytes = 24 hex chars
+    window.crypto.getRandomValues(secureBytes);
+    const secureKey = 'thp_' + Array.from(secureBytes)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    // Update API key directly using update query
     const { data, error } = await supabase
       .from('api_keys')
       .update({ 
-        api_key: 'thp_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+        api_key: secureKey,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', user.user.id)

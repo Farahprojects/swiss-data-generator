@@ -6,11 +6,23 @@ import { Copy, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useApiKey } from "@/hooks/useApiKey";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function ApiKeySection() {
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  
   const { 
     apiKey, 
     isLoading, 
@@ -48,7 +60,12 @@ export function ApiKeySection() {
       });
   };
 
-  const handleRegenerateApiKey = async () => {
+  const handleRegenerateClick = () => {
+    setIsConfirmDialogOpen(true);
+  };
+
+  const handleConfirmRegeneration = async () => {
+    setIsConfirmDialogOpen(false);
     await regenerateApiKey();
   };
 
@@ -69,66 +86,86 @@ export function ApiKeySection() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>API Key</CardTitle>
-        <CardDescription>
-          Your API key for integrating with our service.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium">API Usage</span>
-            <span className="text-sm text-muted-foreground">
-              {usageData.apiCallsCount.toLocaleString()} / {usageData.apiCallLimit.toLocaleString()}
-            </span>
-          </div>
-          <Progress value={usagePercentage} className="h-2 bg-gray-200" />
-        </div>
-
-        <div className="relative">
-          <div className="bg-muted p-3 rounded-md font-mono text-sm overflow-x-auto whitespace-nowrap flex justify-between items-center">
-            <span className="truncate mr-2">{maskApiKey(apiKey)}</span>
-            <div className="flex space-x-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={handleToggleVisibility}
-              >
-                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={handleCopyApiKey}
-                disabled={isCopying || !apiKey}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>API Key</CardTitle>
+          <CardDescription>
+            Your API key for integrating with our service.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-medium">API Usage</span>
+              <span className="text-sm text-muted-foreground">
+                {usageData.apiCallsCount.toLocaleString()} / {usageData.apiCallLimit.toLocaleString()}
+              </span>
             </div>
+            <Progress value={usagePercentage} className="h-2 bg-gray-200" />
           </div>
-          
-          {createdAt && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Created: {new Date(createdAt).toLocaleDateString()}
-            </p>
-          )}
-        </div>
-      </CardContent>
-      <CardFooter className="flex flex-col space-y-2">
-        <Button 
-          variant="outline" 
-          onClick={handleRegenerateApiKey}
-          disabled={isLoading}
-          className="w-full mb-2 bg-white text-black border-black hover:bg-gray-100"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-          {isLoading ? "Processing..." : "Regenerate API Key"}
-        </Button>
-      </CardFooter>
-    </Card>
+
+          <div className="relative">
+            <div className="bg-muted p-3 rounded-md font-mono text-sm overflow-x-auto whitespace-nowrap flex justify-between items-center">
+              <span className="truncate mr-2">{maskApiKey(apiKey)}</span>
+              <div className="flex space-x-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={handleToggleVisibility}
+                >
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={handleCopyApiKey}
+                  disabled={isCopying || !apiKey}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            {createdAt && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Created: {new Date(createdAt).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRegenerateClick}
+            disabled={isLoading}
+            className="w-full mb-2 bg-white text-black border-black hover:bg-gray-100"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            {isLoading ? "Processing..." : "Regenerate API Key"}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate API Key?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will invalidate your current API key immediately. Any applications 
+              using this key will stop working until updated with the new key.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRegeneration}>
+              Regenerate Key
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
