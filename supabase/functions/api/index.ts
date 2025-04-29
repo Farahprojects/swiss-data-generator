@@ -1,3 +1,4 @@
+
 // deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -27,8 +28,10 @@ const jsonResponse = (
 
 // Grabs API key from header → query → JSON body (in that order)
 const getApiKey = async (req: Request): Promise<string | null> => {
+  console.log("Starting API key extraction from request headers");
   // A. Authorization: Bearer …………………………
   const authHeader = req.headers.get("authorization");
+  console.log(`Authorization header: ${authHeader ? "Found" : "Missing"}`);
   if (authHeader) {
     const m = authHeader.match(/^Bearer\s+(.+)$/i);
     if (m) return m[1];
@@ -38,7 +41,10 @@ const getApiKey = async (req: Request): Promise<string | null> => {
   // B. ?api_key=…………………………
   const url = new URL(req.url);
   const keyInQuery = url.searchParams.get("api_key");
-  if (keyInQuery) return keyInQuery;
+  if (keyInQuery) {
+    console.log("API key found in query parameters");
+    return keyInQuery;
+  }
 
   // C. { "api_key": "…………………………" } in JSON body
   if (
@@ -63,11 +69,15 @@ const getApiKey = async (req: Request): Promise<string | null> => {
     );
     try {
       const parsed = JSON.parse(text);
-      if (typeof parsed?.api_key === "string") return parsed.api_key;
+      if (typeof parsed?.api_key === "string") {
+        console.log("API key found in request body");
+        return parsed.api_key;
+      }
     } catch (_) {
       /* fallthrough – will be handled later */
     }
   }
+  console.log("No API key provided in request");
   return null;
 };
 
@@ -96,17 +106,25 @@ const createSupabase = () => {
 // Validation & usage
 // ──────────────────────────────────────────────────────────────────────────
 const validateApiKey = async (key: string) => {
+  console.log(`Validating API key: ${key.substring(0, 5)}...`);
   const supabase = createSupabase();
   const { data, error } = await supabase
     .from("api_keys")
     .select("user_id, is_active")
     .eq("api_key", key)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  
+  if (error) {
+    console.error(`[error] API key validation failed: ${error.message}`);
+    throw new Error(error.message);
+  }
+  
+  console.log(`API key validation result: ${data ? (data.is_active ? "active" : "inactive") : "not found"}`);
   return data && data.is_active ? data.user_id as string : null;
 };
 
 const recordUsage = async (userId: string) => {
+  console.log(`Recording API usage for user: ${userId}`);
   const supabase = createSupabase();
   const { error } = await supabase
     .from("api_usage")
@@ -120,6 +138,9 @@ const recordUsage = async (userId: string) => {
 serve(async (req: Request): Promise<Response> => {
   const { method, url } = req;
   const debug = `[${new Date().toISOString()}]`;
+  console.log(`API function invoked: ${new Date().toISOString()}`);
+  console.log(`Request URL: ${url}`);
+  console.log(`Request method: ${method}`);
 
   // OPTIONS pre-flight
   if (method === "OPTIONS") return jsonResponse({}, 204);
