@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Home from './pages/Home';
+import Home from './pages/Index';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
@@ -11,7 +12,7 @@ import Documentation from './pages/Documentation';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import { AuthProvider } from './contexts/AuthContext';
-import PrivateRoute from './components/PrivateRoute';
+import PrivateRoute from './components/auth/AuthGuard';
 import { Toaster } from "@/components/ui/toaster";
 
 function App() {
