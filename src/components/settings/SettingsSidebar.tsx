@@ -8,7 +8,8 @@ import {
   Key, 
   LogOut, 
   Settings, 
-  Trash2 
+  Trash2,
+  MessageSquare
 } from "lucide-react";
 
 type MenuItem = {
@@ -29,6 +30,7 @@ export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarPro
     { id: 'account', label: 'Account Settings', icon: <Settings size={18} /> },
     { id: 'billing', label: 'Billing & Subscription', icon: <CreditCard size={18} /> },
     { id: 'apikeys', label: 'API Keys', icon: <Key size={18} /> },
+    { id: 'support', label: 'Contact Support', icon: <MessageSquare size={18} /> },
     { id: 'delete', label: 'Delete Account', icon: <Trash2 size={18} /> },
   ];
 
