@@ -70,7 +70,7 @@ export const CurrentPlanCard = () => {
           </p>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
             <div 
-              className="bg-gray-700 h-2 rounded-full" 
+              className="bg-primary h-2 rounded-full" 
               style={{ 
                 width: `${((userData?.api_calls_count || 0) / (userData?.calls_limit || 50000) * 100)}%` 
               }}
@@ -78,7 +78,7 @@ export const CurrentPlanCard = () => {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="pt-4">
+      <CardFooter>
         <Link to="/dashboard/upgrade" className="w-full">
           <Button variant="outline" className="w-full">Upgrade Plan</Button>
         </Link>

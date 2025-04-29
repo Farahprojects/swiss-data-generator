@@ -25,12 +25,8 @@ export const AiCreditsCard = () => {
           AI reports are $2 per analysis
         </p>
       </CardContent>
-      <CardFooter className="pt-4">
-        <Button 
-          className="w-full bg-white text-black border border-black hover:bg-gray-100 hover:text-black"
-        >
-          Top Up Credits
-        </Button>
+      <CardFooter>
+        <Button className="w-full">Top Up Credits</Button>
       </CardFooter>
     </Card>
   );
