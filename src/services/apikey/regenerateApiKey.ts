@@ -24,17 +24,16 @@ export async function regenerateApiKey() {
       .eq('user_id', user.user.id)
       .maybeSingle();
     
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "No rows returned"
+    if (fetchError) {
       console.error('Error checking existing API key:', fetchError);
       throw fetchError;
     }
 
-    let data;
-    let error;
+    let result;
     
     if (existingKey) {
       // Update existing API key
-      const result = await supabase
+      result = await supabase
         .from('api_keys')
         .update({ 
           api_key: secureKey,
@@ -42,13 +41,10 @@ export async function regenerateApiKey() {
         })
         .eq('user_id', user.user.id)
         .select('api_key')
-        .single();
-      
-      data = result.data;
-      error = result.error;
+        .maybeSingle();
     } else {
       // Insert new API key
-      const result = await supabase
+      result = await supabase
         .from('api_keys')
         .insert({ 
           user_id: user.user.id,
@@ -56,18 +52,15 @@ export async function regenerateApiKey() {
           updated_at: new Date().toISOString()
         })
         .select('api_key')
-        .single();
-      
-      data = result.data;
-      error = result.error;
+        .maybeSingle();
     }
     
-    if (error) {
-      console.error('Error regenerating API key:', error);
-      throw error;
+    if (result.error) {
+      console.error('Error regenerating API key:', result.error);
+      throw result.error;
     }
     
-    return { apiKey: data.api_key };
+    return { apiKey: result.data?.api_key };
   } catch (error) {
     console.error('Error regenerating API key:', error);
     throw error;
