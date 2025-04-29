@@ -13,11 +13,9 @@ export function ApiKeySection() {
   const [showApiKey, setShowApiKey] = useState(false);
   const { 
     apiKey, 
-    isActive,
     isLoading, 
     createdAt,
-    regenerateApiKey, 
-    toggleApiKey 
+    regenerateApiKey
   } = useApiKey();
 
   // Mock usage data - this would come from a proper API endpoint in production
@@ -76,15 +74,6 @@ export function ApiKeySection() {
         <CardTitle>API Key</CardTitle>
         <CardDescription>
           Your API key for integrating with our service.
-          {isActive ? (
-            <span className="ml-2 inline-block px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-              Active
-            </span>
-          ) : (
-            <span className="ml-2 inline-block px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-              Revoked
-            </span>
-          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -95,7 +84,7 @@ export function ApiKeySection() {
               {usageData.apiCallsCount.toLocaleString()} / {usageData.apiCallLimit.toLocaleString()}
             </span>
           </div>
-          <Progress value={usagePercentage} className="h-2" />
+          <Progress value={usagePercentage} className="h-2 bg-gray-200" />
         </div>
 
         <div className="relative">
@@ -115,7 +104,7 @@ export function ApiKeySection() {
                 size="sm"
                 className="h-8 w-8 p-0"
                 onClick={handleCopyApiKey}
-                disabled={isCopying || !apiKey || !isActive}
+                disabled={isCopying || !apiKey}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -134,19 +123,10 @@ export function ApiKeySection() {
           variant="outline" 
           onClick={handleRegenerateApiKey}
           disabled={isLoading}
-          className="w-full mb-2"
+          className="w-full mb-2 bg-white text-black border-black hover:bg-gray-100"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
           {isLoading ? "Processing..." : "Regenerate API Key"}
-        </Button>
-        
-        <Button
-          variant={isActive ? "outline" : "outline"} 
-          onClick={toggleApiKey}
-          disabled={isLoading}
-          className={`w-full border ${isActive ? "border-red-300 text-red-600 hover:bg-red-50" : "border-green-300 text-green-600 hover:bg-green-50"}`}
-        >
-          {isActive ? "Revoke API Key" : "Activate API Key"}
         </Button>
       </CardFooter>
     </Card>
