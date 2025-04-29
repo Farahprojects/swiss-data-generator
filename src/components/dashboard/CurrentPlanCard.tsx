@@ -78,7 +78,7 @@ export const CurrentPlanCard = () => {
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="pb-6">
         <Link to="/dashboard/upgrade" className="w-full">
           <Button variant="outline" className="w-full">Upgrade Plan</Button>
         </Link>

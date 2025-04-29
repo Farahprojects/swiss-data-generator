@@ -2,36 +2,35 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, RefreshCw } from "lucide-react";
+import { Copy, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock user data for demonstration
-const mockUserData = {
-  email: "user@example.com",
-  plan_type: "Growth",
-  api_key: "sk_test_CosmosAPI_2023XYZ",
-  api_calls_count: 27850,
-  calls_limit: 100000,
-  calls_made: 27850,
-  created_at: new Date().toISOString(),
-};
+import { useApiKey } from "@/hooks/useApiKey";
 
 export function ApiKeySection() {
   const { toast } = useToast();
-  const [isRegenerating, setIsRegenerating] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const { 
+    apiKey, 
+    isActive,
+    isLoading, 
+    createdAt,
+    regenerateApiKey, 
+    toggleApiKey 
+  } = useApiKey();
 
-  // Mock data instead of using useQuery
-  const userData = mockUserData;
-  const isLoading = false;
-  const error = null;
+  // Mock usage data - this would come from a proper API endpoint in production
+  const usageData = {
+    apiCallsCount: 27850,
+    apiCallLimit: 100000
+  };
 
   const handleCopyApiKey = () => {
-    if (!userData.api_key) return;
+    if (!apiKey) return;
     
     setIsCopying(true);
-    navigator.clipboard.writeText(userData.api_key)
+    navigator.clipboard.writeText(apiKey)
       .then(() => {
         toast({
           title: "API Key copied",
@@ -51,35 +50,41 @@ export function ApiKeySection() {
       });
   };
 
-  const handleRegenerateApiKey = () => {
-    setIsRegenerating(true);
-    
-    // Mock API key regeneration - in a real app this would call an API
-    setTimeout(() => {
-      toast({
-        title: "API Key regenerated",
-        description: "Your new API key has been generated successfully."
-      });
-      setIsRegenerating(false);
-    }, 1000);
+  const handleRegenerateApiKey = async () => {
+    await regenerateApiKey();
   };
 
-  if (isLoading) {
+  const handleToggleVisibility = () => {
+    setShowApiKey(prev => !prev);
+  };
+
+  const maskApiKey = (key: string | null) => {
+    if (!key) return "••••••••••••••••••••••";
+    if (showApiKey) return key;
+    return key.substring(0, 4) + "••••••••••••••••••" + key.substring(key.length - 4);
+  };
+
+  const usagePercentage = (usageData.apiCallsCount / usageData.apiCallLimit) * 100;
+
+  if (isLoading && !apiKey) {
     return <Card><CardContent className="pt-6">Loading API key details...</CardContent></Card>;
   }
-
-  if (error) {
-    return <Card><CardContent className="pt-6">Error loading API key details. Please try again.</CardContent></Card>;
-  }
-
-  const usagePercentage = (userData.api_calls_count / userData.calls_limit) * 100;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>API Key</CardTitle>
         <CardDescription>
-          You are on the <strong>{userData.plan_type}</strong> plan with <strong>{userData.api_calls_count.toLocaleString()}</strong> API calls used out of <strong>{userData.calls_limit.toLocaleString()}</strong>
+          Your API key for integrating with our service.
+          {isActive ? (
+            <span className="ml-2 inline-block px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+              Active
+            </span>
+          ) : (
+            <span className="ml-2 inline-block px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+              Revoked
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -87,37 +92,61 @@ export function ApiKeySection() {
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-medium">API Usage</span>
             <span className="text-sm text-muted-foreground">
-              {userData.api_calls_count.toLocaleString()} / {userData.calls_limit.toLocaleString()}
+              {usageData.apiCallsCount.toLocaleString()} / {usageData.apiCallLimit.toLocaleString()}
             </span>
           </div>
           <Progress value={usagePercentage} className="h-2" />
         </div>
 
         <div className="relative">
-          <div className="bg-muted p-3 rounded-md font-mono text-sm overflow-x-auto whitespace-nowrap">
-            {userData.api_key}
+          <div className="bg-muted p-3 rounded-md font-mono text-sm overflow-x-auto whitespace-nowrap flex justify-between items-center">
+            <span className="truncate mr-2">{maskApiKey(apiKey)}</span>
+            <div className="flex space-x-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={handleToggleVisibility}
+              >
+                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={handleCopyApiKey}
+                disabled={isCopying || !apiKey || !isActive}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="absolute right-2 top-1/2 -translate-y-1/2"
-            onClick={handleCopyApiKey}
-            disabled={isCopying}
-          >
-            <Copy className="h-4 w-4 mr-1" />
-            {isCopying ? "Copied" : "Copy"}
-          </Button>
+          
+          {createdAt && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Created: {new Date(createdAt).toLocaleDateString()}
+            </p>
+          )}
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col space-y-2">
         <Button 
           variant="outline" 
-          onClick={handleRegenerateApiKey} 
-          disabled={isRegenerating}
-          className="w-full"
+          onClick={handleRegenerateApiKey}
+          disabled={isLoading}
+          className="w-full mb-2"
         >
-          <RefreshCw className={`h-4 w-4 mr-1 ${isRegenerating ? "animate-spin" : ""}`} />
-          {isRegenerating ? "Regenerating..." : "Regenerate API Key"}
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+          {isLoading ? "Processing..." : "Regenerate API Key"}
+        </Button>
+        
+        <Button
+          variant={isActive ? "outline" : "outline"} 
+          onClick={toggleApiKey}
+          disabled={isLoading}
+          className={`w-full border ${isActive ? "border-red-300 text-red-600 hover:bg-red-50" : "border-green-300 text-green-600 hover:bg-green-50"}`}
+        >
+          {isActive ? "Revoke API Key" : "Activate API Key"}
         </Button>
       </CardFooter>
     </Card>
