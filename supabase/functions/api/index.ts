@@ -19,22 +19,34 @@ const handleCors = (req: Request) => {
 
 // Extract API key from Authorization header
 const extractApiKey = (req: Request): string | null => {
+  console.log("Starting API key extraction from request headers");
   const authHeader = req.headers.get("authorization");
+  console.log("Authorization header:", authHeader ? "Present" : "Missing");
+  
   if (!authHeader) return null;
 
   // Check if it's a Bearer token
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
-  if (match) return match[1];
+  if (match) {
+    console.log("Bearer token format detected");
+    return match[1];
+  }
   
+  console.log("Using raw header as API key");
   return authHeader; // If not in Bearer format, use the raw header
 };
 
 // Create a Supabase client
 const createSupabaseClient = () => {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
+  console.log("Creating Supabase client");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  
+  console.log("SUPABASE_URL available:", !!supabaseUrl);
+  console.log("SUPABASE_SERVICE_ROLE_KEY available:", !!supabaseServiceKey);
   
   if (!supabaseUrl || !supabaseServiceKey) {
+    console.error("Missing environment variables for Supabase client");
     throw new Error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables are not set");
   }
   
@@ -43,10 +55,13 @@ const createSupabaseClient = () => {
 
 // Validate API key against database
 const validateApiKey = async (apiKey: string) => {
+  console.log("Starting API key validation");
   try {
     const supabase = createSupabaseClient();
     
     // Query the api_keys table to find the key and check if it's active
+    console.log("Querying api_keys table for key:", apiKey.substring(0, 4) + "****");
+    
     const { data, error } = await supabase
       .from("api_keys")
       .select("user_id, is_active")
@@ -54,24 +69,32 @@ const validateApiKey = async (apiKey: string) => {
       .maybeSingle();
     
     if (error) {
-      console.error("Error validating API key:", error);
+      console.error("Database error during API key validation:", error);
       return { valid: false, userId: null };
     }
     
+    console.log("API key lookup result:", data ? "Found" : "Not found");
+    
     // Check if the key exists and is active
-    if (data && data.is_active) {
-      return { valid: true, userId: data.user_id };
+    if (data) {
+      console.log("API key active status:", data.is_active);
+      if (data.is_active) {
+        console.log("Valid API key for user:", data.user_id);
+        return { valid: true, userId: data.user_id };
+      }
     }
     
+    console.log("Invalid or inactive API key");
     return { valid: false, userId: null };
   } catch (err) {
-    console.error("Error in validateApiKey:", err);
+    console.error("Exception in validateApiKey:", err);
     return { valid: false, userId: null };
   }
 };
 
 // Record API usage in the database
 const recordApiUsage = async (userId: string) => {
+  console.log("Recording API usage for user:", userId);
   try {
     const supabase = createSupabaseClient();
     
@@ -82,23 +105,33 @@ const recordApiUsage = async (userId: string) => {
     
     if (error) {
       console.error("Error recording API usage:", error);
+    } else {
+      console.log("Successfully recorded API usage");
     }
   } catch (err) {
-    console.error("Error in recordApiUsage:", err);
+    console.error("Exception in recordApiUsage:", err);
   }
 };
 
 // Main handler function
 serve(async (req) => {
+  console.log("API function invoked:", new Date().toISOString());
+  console.log("Request URL:", req.url);
+  console.log("Request method:", req.method);
+  
   // Handle CORS preflight request
   const corsResponse = handleCors(req);
-  if (corsResponse) return corsResponse;
+  if (corsResponse) {
+    console.log("Handling CORS preflight request");
+    return corsResponse;
+  }
 
   try {
     // Extract API key from request
     const apiKey = extractApiKey(req);
     
     if (!apiKey) {
+      console.log("No API key provided in request");
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -112,6 +145,7 @@ serve(async (req) => {
     const { valid, userId } = await validateApiKey(apiKey);
     
     if (!valid) {
+      console.log("API key validation failed");
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -126,6 +160,7 @@ serve(async (req) => {
       await recordApiUsage(userId);
     }
     
+    console.log("API request successful");
     // Return successful response
     return new Response(
       JSON.stringify({ 
@@ -140,11 +175,12 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error processing request:", error);
     
-    // Return error response
+    // Return error response with more details for debugging
     return new Response(
       JSON.stringify({ 
         success: false, 
-        message: "An error occurred while processing your request." 
+        message: "An error occurred while processing your request.",
+        error: error instanceof Error ? error.message : "Unknown error" 
       }),
       { status: 500, headers: corsHeaders }
     );
