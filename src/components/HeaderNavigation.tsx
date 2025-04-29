@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { Menu, X, MessageSquare } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { UserAvatar } from "@/components/settings/UserAvatar";
 import { 
   DropdownMenu,
@@ -77,8 +77,7 @@ const HeaderNavigation = () => {
                     API Keys
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleViewSettings('support')}>
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Contact Support
+                    Support
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
@@ -140,8 +139,7 @@ const HeaderNavigation = () => {
                   API Keys
                 </Button>
                 <Button variant="ghost" className="w-full justify-start" onClick={() => handleViewSettings('support')}>
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Contact Support
+                  Support
                 </Button>
                 <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
                   Logout

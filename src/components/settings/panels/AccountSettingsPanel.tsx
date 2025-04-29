@@ -13,6 +13,7 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 type PasswordFormValues = {
   currentPassword: string;
@@ -20,12 +21,18 @@ type PasswordFormValues = {
   confirmPassword: string;
 };
 
+type EmailFormValues = {
+  newEmail: string;
+  password: string;
+};
+
 export const AccountSettingsPanel = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   
-  const form = useForm<PasswordFormValues>({
+  const passwordForm = useForm<PasswordFormValues>({
     defaultValues: {
       currentPassword: "",
       newPassword: "",
@@ -33,26 +40,59 @@ export const AccountSettingsPanel = () => {
     }
   });
 
-  const onSubmit = async (data: PasswordFormValues) => {
+  const emailForm = useForm<EmailFormValues>({
+    defaultValues: {
+      newEmail: "",
+      password: "",
+    }
+  });
+
+  const onPasswordSubmit = async (data: PasswordFormValues) => {
     if (data.newPassword !== data.confirmPassword) {
-      form.setError("confirmPassword", { 
+      passwordForm.setError("confirmPassword", { 
         message: "The passwords do not match" 
       });
       return;
     }
     
-    setIsUpdating(true);
+    setIsUpdatingPassword(true);
     
     try {
-      // In a real implementation, this would call the appropriate Supabase auth methods
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Verify current password first by attempting to sign in
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: data.currentPassword
+      });
+
+      if (verifyError) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Current password is incorrect."
+        });
+        return;
+      }
+
+      // Update the password
+      const { error } = await supabase.auth.updateUser({ 
+        password: data.newPassword 
+      });
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "There was an error updating your password."
+        });
+        return;
+      }
       
       toast({
         title: "Password updated",
         description: "Your password has been updated successfully."
       });
       
-      form.reset();
+      passwordForm.reset();
     } catch (error) {
       toast({
         variant: "destructive",
@@ -60,7 +100,64 @@ export const AccountSettingsPanel = () => {
         description: "There was an error updating your password."
       });
     } finally {
-      setIsUpdating(false);
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const onEmailSubmit = async (data: EmailFormValues) => {
+    if (!data.newEmail) {
+      emailForm.setError("newEmail", { 
+        message: "Email is required" 
+      });
+      return;
+    }
+    
+    setIsUpdatingEmail(true);
+    
+    try {
+      // Verify password first
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: data.password
+      });
+
+      if (verifyError) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Password is incorrect."
+        });
+        return;
+      }
+
+      // Update the email
+      const { error } = await supabase.auth.updateUser({ 
+        email: data.newEmail 
+      });
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "There was an error updating your email address."
+        });
+        return;
+      }
+      
+      toast({
+        title: "Email update initiated",
+        description: "Please check your new email address for a confirmation link."
+      });
+      
+      emailForm.reset();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was an error updating your email address."
+      });
+    } finally {
+      setIsUpdatingEmail(false);
     }
   };
 
@@ -73,20 +170,61 @@ export const AccountSettingsPanel = () => {
         <Input 
           value={user?.email || ''} 
           disabled 
-          className="max-w-md bg-gray-50"
+          className="max-w-md bg-gray-50 mb-4"
         />
+        
+        <Form {...emailForm}>
+          <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4 max-w-md">
+            <FormField
+              control={emailForm.control}
+              name="newEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>New Email Address</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="Enter your new email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={emailForm.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Current Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Enter your current password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <Button 
+              type="submit" 
+              disabled={isUpdatingEmail}
+              className="mt-2"
+            >
+              {isUpdatingEmail ? "Updating..." : "Update Email"}
+            </Button>
+          </form>
+        </Form>
+
         <p className="text-sm text-gray-500 mt-2">
-          Your email address cannot be changed at this time.
+          Note: You'll need to verify your new email address before the change takes effect.
         </p>
       </div>
       
       <div>
         <h3 className="text-lg font-medium mb-4">Change Password</h3>
         
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-md">
+        <Form {...passwordForm}>
+          <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4 max-w-md">
             <FormField
-              control={form.control}
+              control={passwordForm.control}
               name="currentPassword"
               render={({ field }) => (
                 <FormItem>
@@ -100,7 +238,7 @@ export const AccountSettingsPanel = () => {
             />
             
             <FormField
-              control={form.control}
+              control={passwordForm.control}
               name="newPassword"
               render={({ field }) => (
                 <FormItem>
@@ -114,7 +252,7 @@ export const AccountSettingsPanel = () => {
             />
             
             <FormField
-              control={form.control}
+              control={passwordForm.control}
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
@@ -129,10 +267,10 @@ export const AccountSettingsPanel = () => {
             
             <Button 
               type="submit" 
-              disabled={isUpdating}
+              disabled={isUpdatingPassword}
               className="mt-2"
             >
-              {isUpdating ? "Updating..." : "Update Password"}
+              {isUpdatingPassword ? "Updating..." : "Update Password"}
             </Button>
           </form>
         </Form>
