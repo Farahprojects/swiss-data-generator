@@ -12,7 +12,7 @@ import Documentation from './pages/Documentation';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import { AuthProvider } from './contexts/AuthContext';
-import PrivateRoute from './components/auth/AuthGuard';
+import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "@/components/ui/toaster";
 
 function App() {
@@ -31,17 +31,17 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <PrivateRoute>
+              <AuthGuard>
                 <Dashboard />
-              </PrivateRoute>
+              </AuthGuard>
             }
           />
           <Route
             path="/dashboard/settings"
             element={
-              <PrivateRoute>
+              <AuthGuard>
                 <UserSettings />
-              </PrivateRoute>
+              </AuthGuard>
             }
           />
         </Routes>
