@@ -17,16 +17,50 @@ export async function regenerateApiKey() {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
     
-    // Update API key directly using update query
-    const { data, error } = await supabase
+    // First, check if the user already has an API key
+    const { data: existingKey, error: fetchError } = await supabase
       .from('api_keys')
-      .update({ 
-        api_key: secureKey,
-        updated_at: new Date().toISOString()
-      })
+      .select('id')
       .eq('user_id', user.user.id)
-      .select('api_key')
-      .single();
+      .maybeSingle();
+    
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "No rows returned"
+      console.error('Error checking existing API key:', fetchError);
+      throw fetchError;
+    }
+
+    let data;
+    let error;
+    
+    if (existingKey) {
+      // Update existing API key
+      const result = await supabase
+        .from('api_keys')
+        .update({ 
+          api_key: secureKey,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.user.id)
+        .select('api_key')
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // Insert new API key
+      const result = await supabase
+        .from('api_keys')
+        .insert({ 
+          user_id: user.user.id,
+          api_key: secureKey,
+          updated_at: new Date().toISOString()
+        })
+        .select('api_key')
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    }
     
     if (error) {
       console.error('Error regenerating API key:', error);
