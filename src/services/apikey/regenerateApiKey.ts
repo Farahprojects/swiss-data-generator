@@ -9,9 +9,9 @@ export async function regenerateApiKey() {
       throw new Error('User not authenticated');
     }
     
-    // Generate a more secure API key
-    // Format: thp_[24 chars of hex]
-    const secureBytes = new Uint8Array(12); // 12 bytes = 24 hex chars
+    // Generate a more secure API key with increased entropy
+    // Format: thp_[32 chars of hex] instead of previous 24
+    const secureBytes = new Uint8Array(16); // 16 bytes = 32 hex chars
     window.crypto.getRandomValues(secureBytes);
     const secureKey = 'thp_' + Array.from(secureBytes)
       .map(b => b.toString(16).padStart(2, '0'))
