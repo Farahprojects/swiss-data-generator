@@ -90,7 +90,9 @@ export function ApiKeySection() {
               {userData.api_calls_count.toLocaleString()} / {userData.calls_limit.toLocaleString()}
             </span>
           </div>
-          <Progress value={usagePercentage} className="h-2" />
+          <Progress value={usagePercentage} className="h-2 bg-gray-200">
+            <div className="h-full bg-primary" style={{ width: `${usagePercentage}%` }} />
+          </Progress>
         </div>
 
         <div className="relative">
@@ -109,7 +111,7 @@ export function ApiKeySection() {
           </Button>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="pt-4">
         <Button 
           variant="outline" 
           onClick={handleRegenerateApiKey} 
