@@ -1,10 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { Copy, RefreshCw, Eye, EyeOff, Check } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
 import { useApiKey } from "@/hooks/useApiKey";
 import {
   AlertDialog,
@@ -18,10 +17,10 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function ApiKeySection() {
-  const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [regenerationState, setRegenerationState] = useState<'idle' | 'loading' | 'success'>('idle');
   
   const { 
     apiKey, 
@@ -36,24 +35,24 @@ export function ApiKeySection() {
     apiCallLimit: 100000
   };
 
+  // Reset success state after timeout
+  useEffect(() => {
+    if (regenerationState === 'success') {
+      const timer = setTimeout(() => {
+        setRegenerationState('idle');
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [regenerationState]);
+
   const handleCopyApiKey = () => {
     if (!apiKey) return;
     
     setIsCopying(true);
     navigator.clipboard.writeText(apiKey)
-      .then(() => {
-        toast({
-          title: "API Key copied",
-          description: "Your API key has been copied to clipboard."
-        });
-      })
       .catch((err) => {
         console.error("Failed to copy API key:", err);
-        toast({
-          title: "Failed to copy",
-          description: "Please try again or copy manually.",
-          variant: "destructive"
-        });
       })
       .finally(() => {
         setTimeout(() => setIsCopying(false), 1000);
@@ -66,7 +65,15 @@ export function ApiKeySection() {
 
   const handleConfirmRegeneration = async () => {
     setIsConfirmDialogOpen(false);
-    await regenerateApiKey();
+    setRegenerationState('loading');
+    
+    try {
+      await regenerateApiKey();
+      setRegenerationState('success');
+    } catch (error) {
+      console.error('Error regenerating API key:', error);
+      setRegenerationState('idle');
+    }
   };
 
   const handleToggleVisibility = () => {
@@ -81,20 +88,45 @@ export function ApiKeySection() {
 
   const usagePercentage = (usageData.apiCallsCount / usageData.apiCallLimit) * 100;
 
+  const renderRegenerateButton = () => {
+    switch (regenerationState) {
+      case 'loading':
+        return <Progress value={100} className="h-10 animate-pulse bg-gray-200" />;
+      case 'success':
+        return (
+          <div className="bg-green-500 h-10 w-full flex items-center justify-center text-white rounded-md">
+            <Check className="h-5 w-5" />
+          </div>
+        );
+      default:
+        return (
+          <Button 
+            variant="outline" 
+            onClick={handleRegenerateClick}
+            disabled={isLoading}
+            className="w-full mb-2 bg-white text-black border-black hover:bg-gray-100"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            {isLoading ? "Processing..." : "Regenerate API Key"}
+          </Button>
+        );
+    }
+  };
+
   if (isLoading && !apiKey) {
     return <Card><CardContent className="pt-6">Loading API key details...</CardContent></Card>;
   }
 
   return (
     <>
-      <Card>
+      <Card className="flex flex-col h-full">
         <CardHeader>
           <CardTitle>API Key</CardTitle>
           <CardDescription>
             Your API key for integrating with our service.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 flex-grow">
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium">API Usage</span>
@@ -102,7 +134,7 @@ export function ApiKeySection() {
                 {usageData.apiCallsCount.toLocaleString()} / {usageData.apiCallLimit.toLocaleString()}
               </span>
             </div>
-            <Progress value={usagePercentage} className="h-2 bg-gray-200" />
+            <Progress value={usagePercentage} className="h-2 bg-gray-200" indicatorColor="bg-[#9b87f5]" />
           </div>
 
           <div className="relative">
@@ -136,16 +168,10 @@ export function ApiKeySection() {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
-          <Button 
-            variant="outline" 
-            onClick={handleRegenerateClick}
-            disabled={isLoading}
-            className="w-full mb-2 bg-white text-black border-black hover:bg-gray-100"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-            {isLoading ? "Processing..." : "Regenerate API Key"}
-          </Button>
+        <CardFooter className="flex justify-end mt-auto">
+          <div className="w-full">
+            {renderRegenerateButton()}
+          </div>
         </CardFooter>
       </Card>
 

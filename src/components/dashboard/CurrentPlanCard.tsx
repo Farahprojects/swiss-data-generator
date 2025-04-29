@@ -54,12 +54,12 @@ export const CurrentPlanCard = () => {
   };
 
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-medium">Current Plan</CardTitle>
         <CardDescription className="capitalize">{userData?.plan_type || 'Starter'}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-grow">
         <p className="text-3xl font-bold">{getPlanPrice(userData?.plan_type || 'starter')}/month</p>
         <p className="text-sm text-gray-500 mt-1">
           Next billing: {subscriptionData?.current_period_end ? new Date(subscriptionData.current_period_end).toLocaleDateString() : getNextBillingDate()}
@@ -70,7 +70,7 @@ export const CurrentPlanCard = () => {
           </p>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
             <div 
-              className="bg-primary h-2 rounded-full" 
+              className="bg-[#9b87f5] h-2 rounded-full" 
               style={{ 
                 width: `${((userData?.api_calls_count || 0) / (userData?.calls_limit || 50000) * 100)}%` 
               }}
@@ -78,9 +78,9 @@ export const CurrentPlanCard = () => {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="pb-6">
+      <CardFooter className="mt-auto">
         <Link to="/dashboard/upgrade" className="w-full">
-          <Button variant="outline" className="w-full">Upgrade Plan</Button>
+          <Button variant="outline" className="w-full border-black">Upgrade Plan</Button>
         </Link>
       </CardFooter>
     </Card>
