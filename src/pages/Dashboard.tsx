@@ -1,5 +1,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import HeaderNavigation from "@/components/HeaderNavigation";
 import Footer from "@/components/Footer";
 import { ApiKeySection } from "@/components/dashboard/ApiKeySection";
