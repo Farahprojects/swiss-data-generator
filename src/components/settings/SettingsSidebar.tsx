@@ -61,8 +61,8 @@ export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarPro
                 }`}
                 onClick={() => onSelectItem(item.id)}
               >
-                {item.icon && item.icon}
-                <span className={`${item.icon ? "ml-3" : ""}`}>{item.label}</span>
+                {item.icon}
+                <span className="ml-3">{item.label}</span>
               </Button>
             </li>
           ))}

@@ -38,7 +38,7 @@ const HeaderNavigation = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center">
+            <Link to={isLoggedIn ? "/dashboard" : "/"} className="flex items-center">
               <span className="text-2xl font-bold text-black font-therai">Therai</span>
               <span className="text-2xl font-bold text-[#8B5CF6] ml-1 font-therai">api</span>
             </Link>
@@ -46,11 +46,21 @@ const HeaderNavigation = () => {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/api-products" className="text-gray-700 hover:text-primary text-sm font-medium">API Products</Link>
-            <Link to="/pricing" className="text-gray-700 hover:text-primary text-sm font-medium">Pricing</Link>
-            <Link to="/documentation" className="text-gray-700 hover:text-primary text-sm font-medium">Documentation</Link>
-            <Link to="/about" className="text-gray-700 hover:text-primary text-sm font-medium">About</Link>
-            <Link to="/contact" className="text-gray-700 hover:text-primary text-sm font-medium">Contact</Link>
+            {!isLoggedIn && (
+              <>
+                <Link to="/api-products" className="text-gray-700 hover:text-primary text-sm font-medium">API Products</Link>
+                <Link to="/pricing" className="text-gray-700 hover:text-primary text-sm font-medium">Pricing</Link>
+                <Link to="/documentation" className="text-gray-700 hover:text-primary text-sm font-medium">Documentation</Link>
+                <Link to="/about" className="text-gray-700 hover:text-primary text-sm font-medium">About</Link>
+                <Link to="/contact" className="text-gray-700 hover:text-primary text-sm font-medium">Contact</Link>
+              </>
+            )}
+            {isLoggedIn && (
+              <>
+                <Link to="/dashboard" className="text-gray-700 hover:text-primary text-sm font-medium">Dashboard</Link>
+                <Link to="/dashboard/upgrade" className="text-gray-700 hover:text-primary text-sm font-medium">Upgrade</Link>
+              </>
+            )}
           </div>
 
           {/* Call to Action Buttons or User Menu */}
@@ -117,11 +127,20 @@ const HeaderNavigation = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white border-t py-4">
           <div className="container mx-auto px-4 space-y-2">
-            <Link to="/api-products" className="block text-gray-700 hover:text-primary py-2">API Products</Link>
-            <Link to="/pricing" className="block text-gray-700 hover:text-primary py-2">Pricing</Link>
-            <Link to="/documentation" className="block text-gray-700 hover:text-primary py-2">Documentation</Link>
-            <Link to="/about" className="block text-gray-700 hover:text-primary py-2">About</Link>
-            <Link to="/contact" className="block text-gray-700 hover:text-primary py-2">Contact</Link>
+            {!isLoggedIn ? (
+              <>
+                <Link to="/api-products" className="block text-gray-700 hover:text-primary py-2">API Products</Link>
+                <Link to="/pricing" className="block text-gray-700 hover:text-primary py-2">Pricing</Link>
+                <Link to="/documentation" className="block text-gray-700 hover:text-primary py-2">Documentation</Link>
+                <Link to="/about" className="block text-gray-700 hover:text-primary py-2">About</Link>
+                <Link to="/contact" className="block text-gray-700 hover:text-primary py-2">Contact</Link>
+              </>
+            ) : (
+              <>
+                <Link to="/dashboard" className="block text-gray-700 hover:text-primary py-2">Dashboard</Link>
+                <Link to="/dashboard/upgrade" className="block text-gray-700 hover:text-primary py-2">Upgrade</Link>
+              </>
+            )}
             
             {isLoggedIn ? (
               <div className="space-y-2 pt-4">
