@@ -1,7 +1,29 @@
 
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Footer = () => {
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
+
+  // Simplified footer for signed-in users
+  if (isLoggedIn) {
+    return (
+      <footer className="bg-gray-50 text-gray-600 py-6 border-t border-gray-200">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-center justify-center">
+            <Link to="/dashboard" className="flex items-center mb-4">
+              <span className="text-2xl font-bold text-primary">Therai<span className="text-black">api</span></span>
+            </Link>
+            <div className="border-t border-gray-200 w-full my-4"></div>
+            <p className="text-sm text-center">&copy; {new Date().getFullYear()} Theraiapi. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
+  // Full footer for public/non-logged in pages
   return (
     <footer className="bg-gray-50 text-gray-600 py-12">
       <div className="container mx-auto px-4">

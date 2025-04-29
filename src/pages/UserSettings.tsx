@@ -26,9 +26,9 @@ const UserSettings = () => {
               variant="outline" 
               size="icon" 
               onClick={handleClose} 
-              className="rounded-full hover:bg-gray-200 hover:border-gray-400 border-gray-300 shadow-sm hover:shadow-md transition-all"
+              className="rounded-full hover:bg-gray-300 shadow-md hover:shadow-lg border-2 border-gray-400 transition-all duration-300"
             >
-              <X size={20} className="text-gray-700 hover:text-gray-900" />
+              <X size={20} className="text-gray-800 hover:text-gray-900" />
             </Button>
           </div>
         </div>

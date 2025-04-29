@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import HeaderNavigation from "@/components/HeaderNavigation";
@@ -13,7 +12,6 @@ import { toast } from "@/hooks/use-toast";
 import { plans, addOns, getPriceId } from "@/utils/pricing";
 import { supabase } from "@/integrations/supabase/client";
 
-// Define plan types and add-ons
 type Plan = "Starter" | "Growth" | "Professional";
 type AddOn = "Relationship Compatibility" | "Yearly Cycle" | "Transits";
 
@@ -30,19 +28,15 @@ const UpgradePlan = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [currentUserPlan, setCurrentUserPlan] = useState<Plan | null>(null);
 
-  // Mock function to get current user plan - replace with actual API call
   useEffect(() => {
-    // Simulate getting user's current plan (in a real app, fetch from API/database)
     const mockUserPlan: Plan = "Starter";
     setCurrentUserPlan(mockUserPlan);
     setSelectedPlan(mockUserPlan);
   }, [user]);
 
-  // Calculate total price whenever plan or add-ons change
   useEffect(() => {
     let price = 0;
 
-    // Add base plan price
     switch (selectedPlan) {
       case "Starter":
         price += 19;
@@ -57,7 +51,6 @@ const UpgradePlan = () => {
         price += 19;
     }
 
-    // Add selected add-ons
     if (selectedPlan !== "Professional") {
       if (selectedAddOns["Relationship Compatibility"] && selectedPlan === "Starter") {
         price += 15;
@@ -68,7 +61,6 @@ const UpgradePlan = () => {
       if (selectedAddOns["Transits"] && selectedPlan === "Starter") {
         price += 19;
       }
-      // For Growth plan, only Relationship Compatibility can be added
       if (selectedAddOns["Relationship Compatibility"] && selectedPlan === "Growth") {
         price += 15;
       }
@@ -77,21 +69,16 @@ const UpgradePlan = () => {
     setTotalPrice(price);
   }, [selectedPlan, selectedAddOns]);
 
-  // Handle plan selection
   const handleSelectPlan = (plan: Plan) => {
     setSelectedPlan(plan);
     
-    // Reset add-ons when changing plans
     if (plan === "Professional") {
-      // Professional includes all add-ons
       setSelectedAddOns({});
     } else if (plan === "Growth") {
-      // Growth includes Yearly Cycle and Transits, but can add Relationship Compatibility
       setSelectedAddOns({
         "Relationship Compatibility": false,
       });
     } else {
-      // Starter doesn't include any add-ons by default
       setSelectedAddOns({
         "Relationship Compatibility": false,
         "Yearly Cycle": false,
@@ -100,7 +87,6 @@ const UpgradePlan = () => {
     }
   };
 
-  // Handle add-on selection
   const handleAddOnChange = (addOn: AddOn) => {
     setSelectedAddOns(prev => ({
       ...prev,
@@ -108,7 +94,6 @@ const UpgradePlan = () => {
     }));
   };
 
-  // Handle upgrade button click
   const handleUpgrade = async () => {
     try {
       setIsLoading(true);
@@ -122,18 +107,14 @@ const UpgradePlan = () => {
         return;
       }
       
-      // Collect selected add-ons for checkout
       const selectedAddOnsList = Object.entries(selectedAddOns)
         .filter(([_, isSelected]) => isSelected)
         .map(([name]) => name);
       
-      // Get price ID for the selected plan
       const planPriceId = getPriceId(selectedPlan);
       
-      // Get price IDs for selected add-ons
       const addOnPriceIds = selectedAddOnsList.map(addOn => getPriceId(addOn));
       
-      // Combine all price IDs
       const allPriceIds = [planPriceId, ...addOnPriceIds].filter(Boolean);
       
       if (!allPriceIds.length) {
@@ -145,7 +126,6 @@ const UpgradePlan = () => {
         return;
       }
       
-      // Call the Stripe checkout function
       const { data, error } = await supabase.functions.invoke('stripe-checkout-handler', {
         body: { 
           priceIds: allPriceIds,
@@ -165,11 +145,7 @@ const UpgradePlan = () => {
       }
       
       if (data?.url) {
-        // Show success dialog for demo purposes (in real app, redirect to Stripe)
         setShowSuccessDialog(true);
-        
-        // In a real app, redirect to Stripe checkout:
-        // window.location.href = data.url;
       } else {
         throw new Error("No checkout URL returned");
       }
@@ -185,7 +161,6 @@ const UpgradePlan = () => {
     }
   };
 
-  // Get plan icon based on plan name
   const getPlanIcon = (plan: Plan) => {
     switch (plan) {
       case "Starter":
@@ -199,7 +174,6 @@ const UpgradePlan = () => {
     }
   };
 
-  // Get plan features based on plan name
   const getPlanFeatures = (plan: Plan) => {
     switch (plan) {
       case "Starter":
@@ -240,10 +214,8 @@ const UpgradePlan = () => {
           <h1 className="text-3xl font-bold mb-8">Upgrade Your Plan</h1>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Plan Selection Area */}
             <div className="lg:col-span-2 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Starter Plan */}
                 <Card className={`transition-all hover:shadow-md ${selectedPlan === "Starter" ? "ring-2 ring-primary" : "border border-gray-200"}`}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
@@ -281,7 +253,6 @@ const UpgradePlan = () => {
                   </CardFooter>
                 </Card>
 
-                {/* Growth Plan */}
                 <Card className={`transition-all hover:shadow-md ${selectedPlan === "Growth" ? "ring-2 ring-primary" : "border border-gray-200"}`}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
@@ -319,7 +290,6 @@ const UpgradePlan = () => {
                   </CardFooter>
                 </Card>
 
-                {/* Professional Plan */}
                 <Card className={`transition-all hover:shadow-md ${selectedPlan === "Professional" ? "ring-2 ring-primary" : "border border-gray-200"}`}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
@@ -358,7 +328,6 @@ const UpgradePlan = () => {
                 </Card>
               </div>
 
-              {/* Add-ons Section */}
               {selectedPlan !== "Professional" && (
                 <Card className="border border-gray-200 transition-all hover:shadow-sm">
                   <CardHeader>
@@ -371,7 +340,6 @@ const UpgradePlan = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {/* Relationship Compatibility Add-on */}
                       <div className="flex items-start space-x-3 p-3 rounded-md hover:bg-gray-50 transition-colors">
                         <Checkbox 
                           id="relationship"
@@ -389,7 +357,6 @@ const UpgradePlan = () => {
                         </div>
                       </div>
                       
-                      {/* Show Yearly Cycle only for Starter plan */}
                       {selectedPlan === "Starter" && (
                         <div className="flex items-start space-x-3 p-3 rounded-md hover:bg-gray-50 transition-colors">
                           <Checkbox 
@@ -409,7 +376,6 @@ const UpgradePlan = () => {
                         </div>
                       )}
                       
-                      {/* Show Transits only for Starter plan */}
                       {selectedPlan === "Starter" && (
                         <div className="flex items-start space-x-3 p-3 rounded-md hover:bg-gray-50 transition-colors">
                           <Checkbox 
@@ -428,13 +394,31 @@ const UpgradePlan = () => {
                           </div>
                         </div>
                       )}
+                      
+                      <div className="mt-8 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                        <div className="flex items-start gap-3">
+                          <div>
+                            <h4 className="text-base font-semibold text-gray-800">AI-powered Reports</h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Get detailed astrological interpretations with AI-powered reports for just $2 per report.
+                            </p>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="mt-3 border-primary/30 hover:bg-primary/10"
+                              onClick={() => window.location.href = "/dashboard/settings?panel=billing"}
+                            >
+                              Top Up AI Balance
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
             </div>
 
-            {/* Sticky Summary Section */}
             <div className="lg:col-span-1">
               <div className="sticky top-20">
                 <Card className="border border-gray-200 shadow-md">
@@ -482,22 +466,6 @@ const UpgradePlan = () => {
                     >
                       {isLoading ? "Processing..." : "Upgrade Now"}
                     </Button>
-                    
-                    {/* AI Report Information */}
-                    <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
-                      <h4 className="text-sm font-medium">Need AI-powered reports?</h4>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Top up your AI balance separately and pay just $2 per AI report.
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2 w-full text-xs"
-                        onClick={() => window.location.href = "/dashboard/settings?panel=billing"}
-                      >
-                        Top Up AI Balance
-                      </Button>
-                    </div>
                   </CardFooter>
                 </Card>
               </div>
@@ -508,7 +476,6 @@ const UpgradePlan = () => {
       
       <Footer />
       
-      {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <DialogContent>
           <DialogHeader>
