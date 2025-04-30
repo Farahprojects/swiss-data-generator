@@ -1,206 +1,96 @@
 
-// deno-lint-ignore-file no-explicit-any
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ──────────────────────────────────────────────────────────────────────────
-// Config
-// ──────────────────────────────────────────────────────────────────────────
+/*─────────────────────────── ENV */
+const SWISS_TRANSLATOR_URL = Deno.env.get("ASTRO_GATEWAY_URL")!; // e.g. https://<ref>.functions.supabase.co/astro_gateway
+if (!SWISS_TRANSLATOR_URL) throw new Error("ASTRO_GATEWAY_URL env var missing");
+
+const SB_URL  = Deno.env.get("SUPABASE_URL")!;
+const SB_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+if (!SB_URL || !SB_KEY) throw new Error("Supabase env vars missing");
+const sb = createClient(SB_URL, SB_KEY);
+
+/*─────────────────────────── CONFIG */
+const MAX_BODY = 1_048_576; // 1 MB
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Content-Type": "application/json",
 };
+const json = (b: unknown, s=200)=>new Response(JSON.stringify(b),{status:s,headers:corsHeaders});
 
-// 1 MB payload guard (tweak if you expect larger bodies)
-const MAX_BODY = 1_048_576;
+/*─────────────────────────── Helpers */
+async function readBody(req: Request): Promise<Uint8Array> {
+  const ab = await req.arrayBuffer();
+  if (ab.byteLength > MAX_BODY) throw new Error("Body too large");
+  return new Uint8Array(ab);
+}
 
-// ──────────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────────
-const jsonResponse = (
-  body: Record<string, unknown>,
-  status = 200,
-): Response =>
-  new Response(JSON.stringify(body), { status, headers: corsHeaders });
-
-// Grabs API key from header → query → JSON body (in that order)
-const getApiKey = async (req: Request): Promise<string | null> => {
-  console.log("Starting API key extraction from request headers");
-  // A. Authorization: Bearer …………………………
-  const authHeader = req.headers.get("authorization");
-  console.log(`Authorization header: ${authHeader ? "Found" : "Missing"}`);
-  if (authHeader) {
-    const m = authHeader.match(/^Bearer\s+(.+)$/i);
-    if (m) return m[1];
-    return authHeader; // raw key
+function extractApiKey({headers, url, bodyBytes}:{headers:Headers; url:URL; bodyBytes?:Uint8Array}): string|null {
+  // A) Authorization header
+  const auth = headers.get("authorization");
+  if (auth){
+    const m = auth.match(/^Bearer\s+(.+)$/i);
+    return m ? m[1] : auth;
   }
-
-  // B. ?api_key=…………………………
-  const url = new URL(req.url);
-  const keyInQuery = url.searchParams.get("api_key");
-  if (keyInQuery) {
-    console.log("API key found in query parameters");
-    return keyInQuery;
+  // B) query param
+  const qp = url.searchParams.get("api_key");
+  if (qp) return qp;
+  // C) body JSON { api_key }
+  if(bodyBytes){
+    try{
+      const txt = new TextDecoder().decode(bodyBytes);
+      const j = JSON.parse(txt);
+      if(typeof j?.api_key === "string") return j.api_key;
+    }catch{ /* swallow */ }
   }
-
-  // C. { "api_key": "…………………………" } in JSON body
-  if (
-    req.method === "POST" &&
-    req.headers.get("content-type")?.includes("application/json")
-  ) {
-    // Guard big bodies
-    const reader = req.body?.getReader();
-    if (!reader) return null;
-
-    let bytesRead = 0;
-    const chunks: Uint8Array[] = [];
-    for (; ;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      bytesRead += value.length;
-      if (bytesRead > MAX_BODY) throw new Error("Body too large");
-      chunks.push(value);
-    }
-    const text = new TextDecoder().decode(
-      chunks.length === 1 ? chunks[0] : concat(...chunks),
-    );
-    try {
-      const parsed = JSON.parse(text);
-      if (typeof parsed?.api_key === "string") {
-        console.log("API key found in request body");
-        return parsed.api_key;
-      }
-    } catch (_) {
-      /* fallthrough – will be handled later */
-    }
-  }
-  console.log("No API key provided in request");
   return null;
-};
+}
 
-const concat = (...chunks: Uint8Array[]): Uint8Array => {
-  const len = chunks.reduce((sum, c) => sum + c.length, 0);
-  const out = new Uint8Array(len);
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.length;
-  }
-  return out;
-};
+async function validateKey(k:string){
+  const {data,error}=await sb.from("api_keys").select("user_id,is_active").eq("api_key",k).maybeSingle();
+  if(error) throw new Error(error.message);
+  return data&&data.is_active? data.user_id as string : null;
+}
 
-const createSupabase = () => {
-  const url = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !serviceKey) {
-    console.error("[fatal] missing Supabase env vars");
-    throw new Error("Missing Supabase credentials");
-  }
-  return createClient(url, serviceKey);
-};
+async function recordUsage(uid:string){
+  await sb.from("api_usage").insert({user_id:uid});
+}
 
-// ──────────────────────────────────────────────────────────────────────────
-// Validation & usage
-// ──────────────────────────────────────────────────────────────────────────
-const validateApiKey = async (key: string) => {
-  console.log(`Validating API key: ${key.substring(0, 5)}...`);
-  const supabase = createSupabase();
-  const { data, error } = await supabase
-    .from("api_keys")
-    .select("user_id, is_active")
-    .eq("api_key", key)
-    .maybeSingle();
-  
-  if (error) {
-    console.error(`[error] API key validation failed: ${error.message}`);
-    throw new Error(error.message);
-  }
-  
-  console.log(`API key validation result: ${data ? (data.is_active ? "active" : "inactive") : "not found"}`);
-  return data && data.is_active ? data.user_id as string : null;
-};
+/*─────────────────────────── Handler */
+serve(async (req)=>{
+  if(req.method==="OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
+  if(!["GET","POST"].includes(req.method)) return json({success:false,message:"Method not allowed"},405);
 
-const recordUsage = async (userId: string) => {
-  console.log(`Recording API usage for user: ${userId}`);
-  const supabase = createSupabase();
-  const { error } = await supabase
-    .from("api_usage")
-    .insert({ user_id: userId });
-  if (error) console.warn("[warn] usage insert failed:", error.message);
-};
+  // clone the request body (needed for forwarding later)
+  const bodyBytes = req.method==="POST"? await readBody(req) : undefined;
+  const urlObj = new URL(req.url);
+  const apiKey  = extractApiKey({headers:req.headers,url:urlObj,bodyBytes});
+  if(!apiKey) return json({success:false,message:"API key required"},401);
 
-// ──────────────────────────────────────────────────────────────────────────
-// Main entry
-// ──────────────────────────────────────────────────────────────────────────
-serve(async (req: Request): Promise<Response> => {
-  const { method, url } = req;
-  const debug = `[${new Date().toISOString()}]`;
-  console.log(`API function invoked: ${new Date().toISOString()}`);
-  console.log(`Request URL: ${url}`);
-  console.log(`Request method: ${method}`);
+  const userId = await validateKey(apiKey);
+  if(!userId)  return json({success:false,message:"Invalid or inactive API key"},401);
+  recordUsage(userId).catch(()=>{}); // fire‑and‑forget
 
-  // OPTIONS pre-flight
-  if (method === "OPTIONS") return jsonResponse({}, 204);
+  /*────────────────── forward to translator */
+  // remove api_key from query to avoid confusing downstream
+  urlObj.searchParams.delete("api_key");
 
-  // Only allow GET/POST
-  if (method !== "GET" && method !== "POST") {
-    console.info(`${debug} 405 ${method} ${url}`);
-    return jsonResponse(
-      { success: false, message: "Method not allowed" },
-      405,
-    );
-  }
+  const fwdHeaders = new Headers(req.headers);
+  fwdHeaders.delete("authorization");        // internal call needs no bearer
+  // ensure proper CT for POST
+  if(req.method==="POST" && !fwdHeaders.get("content-type"))
+    fwdHeaders.set("Content-Type","application/json");
 
-  try {
-    const apiKey = await getApiKey(req);
+  const resp = await fetch(SWISS_TRANSLATOR_URL + urlObj.search, {
+    method: req.method,
+    headers: fwdHeaders,
+    body: bodyBytes,
+  });
 
-    if (!apiKey) {
-      console.info(`${debug} 401 missing-key ${url}`);
-      return jsonResponse(
-        {
-          success: false,
-          message:
-            "API key required. Supply it in the Authorization header, ?api_key query, or JSON body.",
-        },
-        401,
-      );
-    }
-
-    const userId = await validateApiKey(apiKey);
-    if (!userId) {
-      console.info(`${debug} 401 bad-key ${url}`);
-      return jsonResponse(
-        { success: false, message: "Invalid or inactive API key." },
-        401,
-      );
-    }
-
-    // TODO: rate-limit / quota check here
-
-    await recordUsage(userId);
-
-    // TODO: route to real business logic if you have multiple endpoints
-    console.info(`${debug} 200 ok user=${userId} ${url}`);
-    return jsonResponse({
-      success: true,
-      message: "API authentication succeeded.",
-      timestamp: new Date().toISOString(),
-      user_id: userId,
-      endpoint: new URL(url).pathname,
-      method,
-    });
-  } catch (err: any) {
-    console.error(`${debug} 500`, err);
-    return jsonResponse(
-      {
-        success: false,
-        message: "Internal error while processing request.",
-        error: err?.message ?? "unknown",
-      },
-      500,
-    );
-  }
+  // pipe result + CORS
+  const txt = await resp.text();
+  return new Response(txt,{status:resp.status,headers:{...corsHeaders}});
 });
