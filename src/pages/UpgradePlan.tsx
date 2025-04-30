@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import HeaderNavigation from "@/components/HeaderNavigation";
+import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -207,7 +208,7 @@ const UpgradePlan = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <HeaderNavigation />
+      <UnifiedNavigation />
       
       <main className="flex-grow bg-gray-50 py-8">
         <div className="container mx-auto px-4">
