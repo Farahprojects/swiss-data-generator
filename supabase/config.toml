@@ -60,6 +60,9 @@ verify_jwt = false
 [functions.synastry]
 verify_jwt = false
 
+[functions.body_matrix]
+verify_jwt = false
+
 [functions.stripe-webhook-handler]
 verify_jwt = false
 
