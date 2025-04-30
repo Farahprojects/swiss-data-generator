@@ -1,8 +1,56 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Copy, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const ApiDocumentation: React.FC = () => {
+  const [copiedSection, setCopiedSection] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, section: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSection(section);
+    setTimeout(() => setCopiedSection(null), 2000);
+  };
+
+  const CodeBlock = ({ 
+    code, 
+    id, 
+    title, 
+    language = "json" 
+  }: { 
+    code: string; 
+    id: string; 
+    title?: string; 
+    language?: string;
+  }) => (
+    <div className="relative mt-2 mb-4">
+      {title && <h5 className="text-sm font-medium text-gray-700 mb-1">{title}</h5>}
+      <div className="bg-gray-900 rounded-t-md py-2 px-4 text-xs text-gray-300 flex justify-between items-center">
+        <span>{language.toUpperCase()}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => copyToClipboard(code, id)}
+          className="h-6 px-2 text-gray-400 hover:text-white"
+        >
+          {copiedSection === id ? (
+            <span className="flex items-center">
+              <Check className="h-3 w-3 mr-1" /> Copied!
+            </span>
+          ) : (
+            <span className="flex items-center">
+              <Copy className="h-3 w-3 mr-1" /> Copy
+            </span>
+          )}
+        </Button>
+      </div>
+      <pre className="bg-gray-900 text-gray-100 p-4 rounded-b-md overflow-x-auto text-sm">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+
   return (
     <Card className="p-6">
       <div className="prose max-w-none">
@@ -17,17 +65,18 @@ export const ApiDocumentation: React.FC = () => {
         
         <h3 className="text-xl font-semibold mb-4">General Information</h3>
         
-        <p className="mb-2"><strong>Base URL</strong>: Your API base URL</p>
+        <p className="mb-2"><strong>Base URL</strong>: https://api.theriaapi.com/api</p>
         <p className="mb-2"><strong>Request Format</strong>: JSON</p>
         <p className="mb-2"><strong>Response Format</strong>: JSON</p>
         
         <p className="mb-4">Include these headers in each request:</p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`Content-Type: application/json
-Accept: application/json`}
-          </code>
-        </pre>
+        <CodeBlock 
+          id="headers" 
+          code={`Content-Type: application/json
+Accept: application/json
+Authorization: Bearer yourtheriaapikeyhere`}
+          language="bash"
+        />
         
         <hr className="my-6" />
         
@@ -38,21 +87,30 @@ Accept: application/json`}
         
         <p className="mb-4">Get birth chart details including planets, houses, aspects, and angles.</p>
         
-        <p className="mb-2"><strong>Request Example:</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4">
-          <code>
-{`{
+        <CodeBlock
+          id="natal-request"
+          title="Request Headers"
+          code={`{
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "Authorization": "Bearer yourtheriaapikeyhere"
+}`}
+        />
+        
+        <CodeBlock
+          id="natal-body"
+          title="Request Body"
+          code={`{
   "birth_date": "1977-07-25",
   "birth_time": "11:30",
   "location": "Perth, Australia"
 }`}
-          </code>
-        </pre>
+        />
         
-        <p className="mb-2"><strong>Advanced (coordinates & sidereal):</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4">
-          <code>
-{`{
+        <CodeBlock
+          id="natal-advanced"
+          title="Advanced (coordinates & sidereal)"
+          code={`{
   "birth_date": "1977-07-25",
   "birth_time": "11:30",
   "lat": -31.95,
@@ -63,22 +121,30 @@ Accept: application/json`}
     "orb_degrees": { "planets": 5 }
   }
 }`}
-          </code>
-        </pre>
+        />
         
         <p className="mb-2"><strong>Vedic Natal Chart</strong> ({`POST /natal/vedic`})</p>
         
         <p className="mb-2">You can also use the explicitly sidereal (Vedic Astrology) endpoint:</p>
         
-        <p className="mb-2"><strong>Request Example:</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`{
+        <CodeBlock
+          id="vedic-request"
+          title="Request Headers"
+          code={`{
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "Authorization": "Bearer yourtheriaapikeyhere"
+}`}
+        />
+        
+        <CodeBlock
+          id="vedic-body"
+          title="Request Body"
+          code={`{
   "birth_date": "1977-07-25",
   "location": "Perth, Australia"
 }`}
-          </code>
-        </pre>
+        />
         
         <hr className="my-6" />
         
@@ -87,20 +153,29 @@ Accept: application/json`}
         
         <p className="mb-4">Returns current planetary transits and their aspects to the natal chart.</p>
         
-        <p className="mb-2"><strong>Request Example:</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4">
-          <code>
-{`{
+        <CodeBlock
+          id="transits-request"
+          title="Request Headers"
+          code={`{
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "Authorization": "Bearer yourtheriaapikeyhere"
+}`}
+        />
+        
+        <CodeBlock
+          id="transits-body"
+          title="Request Body"
+          code={`{
   "birth_date": "1977-07-25",
   "location": "Perth, Australia"
 }`}
-          </code>
-        </pre>
+        />
         
-        <p className="mb-2"><strong>Advanced (custom datetime & sidereal):</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`{
+        <CodeBlock
+          id="transits-advanced"
+          title="Advanced (custom datetime & sidereal)"
+          code={`{
   "birth_date": "1977-07-25",
   "lat": -31.95,
   "lon": 115.86,
@@ -108,8 +183,7 @@ Accept: application/json`}
   "transit_date": "2025-04-30",
   "transit_time": "10:00"
 }`}
-          </code>
-        </pre>
+        />
         
         <hr className="my-6" />
         
@@ -118,28 +192,36 @@ Accept: application/json`}
         
         <p className="mb-4">Calculate progressed chart positions and their aspects.</p>
         
-        <p className="mb-2"><strong>Request Example:</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4">
-          <code>
-{`{
+        <CodeBlock
+          id="progressions-request"
+          title="Request Headers"
+          code={`{
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "Authorization": "Bearer yourtheriaapikeyhere"
+}`}
+        />
+        
+        <CodeBlock
+          id="progressions-body"
+          title="Request Body"
+          code={`{
   "birth_date": "1977-07-25",
   "location": "Perth, Australia"
 }`}
-          </code>
-        </pre>
+        />
         
-        <p className="mb-2"><strong>Advanced (chosen date & sidereal):</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`{
+        <CodeBlock
+          id="progressions-advanced"
+          title="Advanced (chosen date & sidereal)"
+          code={`{
   "birth_date": "1977-07-25",
   "lat": -31.95,
   "lon": 115.86,
   "sidereal": true,
   "progressed_date": "2025-04-30"
 }`}
-          </code>
-        </pre>
+        />
         
         <hr className="my-6" />
         
@@ -148,10 +230,20 @@ Accept: application/json`}
         
         <p className="mb-4">Analyze relationship compatibility through synastry aspects and composite charts.</p>
         
-        <p className="mb-2"><strong>Request Example:</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4">
-          <code>
-{`{
+        <CodeBlock
+          id="synastry-request"
+          title="Request Headers"
+          code={`{
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "Authorization": "Bearer yourtheriaapikeyhere"
+}`}
+        />
+        
+        <CodeBlock
+          id="synastry-body"
+          title="Request Body"
+          code={`{
   "person_a": {
     "birth_date": "1977-07-25",
     "location": "Perth, Australia"
@@ -161,13 +253,12 @@ Accept: application/json`}
     "location": "London, UK"
   }
 }`}
-          </code>
-        </pre>
+        />
         
-        <p className="mb-2"><strong>Advanced (coordinates & sidereal):</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`{
+        <CodeBlock
+          id="synastry-advanced"
+          title="Advanced (coordinates & sidereal)"
+          code={`{
   "person_a": {
     "birth_date": "1977-07-25",
     "lat": -31.95,
@@ -181,8 +272,7 @@ Accept: application/json`}
     "sidereal": true
   }
 }`}
-          </code>
-        </pre>
+        />
         
         <hr className="my-6" />
         
@@ -192,12 +282,17 @@ Accept: application/json`}
         <p className="mb-4">Get precise planetary positions at a given UTC time.</p>
         
         <p className="mb-2"><strong>Request Examples:</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`/positions?utc=2025-04-30T00:00:00Z
-/positions?utc=2025-04-30T00:00:00Z&sidereal=true`}
-          </code>
-        </pre>
+        <CodeBlock
+          id="positions-example"
+          code={`// Example 1
+GET https://api.theriaapi.com/api/positions?utc=2025-04-30T00:00:00Z
+Authorization: Bearer yourtheriaapikeyhere
+
+// Example 2
+GET https://api.theriaapi.com/api/positions?utc=2025-04-30T00:00:00Z&sidereal=true
+Authorization: Bearer yourtheriaapikeyhere`}
+          language="bash"
+        />
         
         <hr className="my-6" />
         
@@ -207,11 +302,12 @@ Accept: application/json`}
         <p className="mb-4">Retrieve all moon phases (new, quarter, full) for the selected year.</p>
         
         <p className="mb-2"><strong>Request Example:</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`/moonphases?year=2025`}
-          </code>
-        </pre>
+        <CodeBlock
+          id="moonphases-example"
+          code={`GET https://api.theriaapi.com/api/moonphases?year=2025
+Authorization: Bearer yourtheriaapikeyhere`}
+          language="bash"
+        />
         
         <hr className="my-6" />
         
@@ -220,21 +316,30 @@ Accept: application/json`}
         
         <p className="mb-4">Calculate exact return time for Solar, Lunar, Saturn, or Jupiter returns.</p>
         
-        <p className="mb-2"><strong>Request Example:</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4">
-          <code>
-{`{
+        <CodeBlock
+          id="return-request"
+          title="Request Headers"
+          code={`{
+  "Content-Type": "application/json",
+  "Accept": "application/json",
+  "Authorization": "Bearer yourtheriaapikeyhere"
+}`}
+        />
+        
+        <CodeBlock
+          id="return-body"
+          title="Request Body"
+          code={`{
   "birth_date": "1977-07-25",
   "location": "Perth, Australia",
   "type": "solar"
 }`}
-          </code>
-        </pre>
+        />
         
-        <p className="mb-2"><strong>Advanced (coordinates, year, sidereal):</strong></p>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`{
+        <CodeBlock
+          id="return-advanced"
+          title="Advanced (coordinates, year, sidereal)"
+          code={`{
   "birth_date": "1977-07-25",
   "lat": -31.95,
   "lon": 115.86,
@@ -242,8 +347,7 @@ Accept: application/json`}
   "type": "lunar",
   "year": 2026
 }`}
-          </code>
-        </pre>
+        />
         
         <hr className="my-6" />
         

@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
@@ -8,7 +9,7 @@ import { RecentApiCalls } from "@/components/dashboard/RecentApiCalls";
 import { BillingSection } from "@/components/dashboard/BillingSection";
 import { WebhookLogsViewer } from "@/components/dashboard/WebhookLogsViewer";
 import { useAuth } from "@/contexts/AuthContext";
-import { ApiDocumentation } from "@/components/dashboard/ApiDocumentation";
+import ApiDocumentationContent from "@/components/dashboard/ApiDocumentationContent";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -51,7 +52,7 @@ const Dashboard = () => {
             </TabsContent>
             
             <TabsContent value="docs" className="space-y-6">
-              <ApiDocumentation />
+              <ApiDocumentationContent />
             </TabsContent>
             
             <TabsContent value="billing" className="space-y-6">
