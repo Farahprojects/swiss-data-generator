@@ -1,8 +1,7 @@
 
 import { UserSettingsLayout } from "@/components/settings/UserSettingsLayout";
-import Navbar from "@/components/Navbar";
+import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
-import HeaderNavigation from "@/components/HeaderNavigation";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +15,7 @@ const UserSettings = () => {
   
   return (
     <div className="flex flex-col min-h-screen">
-      <HeaderNavigation />
+      <UnifiedNavigation />
       
       <main className="flex-grow bg-gray-50">
         <div className="container mx-auto px-4">
