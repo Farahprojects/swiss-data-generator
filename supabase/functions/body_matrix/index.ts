@@ -13,9 +13,8 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { NatalArgs, toSwissNatal } from "../_shared/translator.ts";
-import { TimeZoneFinder } from "https://esm.sh/timezonefinder-ts@1.1.1";
 
-const SWISS = Deno.env.get("SWISS_EPHEMERIS_URL")!;  // Using the correct secret key
+const SWISS = Deno.env.get("SWISS_EPH_API_URL")!;  // Using the correct secret key
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -152,7 +151,7 @@ serve(async (req) => {
     /* --- step 5 : planetary hour & circadian -------------------- */
     console.log("Step 5: Calculating planetary hour and circadian window");
     const tzName = natal.meta.tz;
-    const tf = new TimeZoneFinder();
+    // We're directly using the timezone from natal chart data
     const locISO = `${targetDate}T${args.birth_time}:00`;
     const localDate = new Date(
       new Date(locISO).toLocaleString("en-US", { timeZone: tzName })
