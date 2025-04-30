@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +10,7 @@ import {
   CalendarRange,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import Navbar from "@/components/Navbar";
+import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 
 /**
@@ -77,7 +78,7 @@ const fadeUp = {
 const Index = () => {
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <Navbar />
+      <UnifiedNavigation />
 
       <main className="flex-grow overflow-hidden">
         {/* Hero */}
