@@ -51,6 +51,9 @@ verify_jwt = false
 [functions.transits]
 verify_jwt = false
 
+[functions.progressions]
+verify_jwt = false
+
 [functions.stripe-webhook-handler]
 verify_jwt = false
 
