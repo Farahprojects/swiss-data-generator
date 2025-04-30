@@ -1,5 +1,4 @@
-
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Star as StarIcon,
@@ -12,6 +11,7 @@ import {
 import { motion } from "framer-motion";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Landing / Index page – 2025‑04‑26 refresh
@@ -76,6 +76,13 @@ const fadeUp = {
 };
 
 const Index = () => {
+  const { user, loading } = useAuth();
+
+  // Redirect authenticated users to dashboard
+  if (!loading && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <UnifiedNavigation />
