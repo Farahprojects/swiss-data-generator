@@ -6,10 +6,10 @@ export const ApiDocumentation: React.FC = () => {
   return (
     <Card className="p-6">
       <div className="prose max-w-none">
-        <h1 className="text-3xl font-bold mb-6">Theria API Documentation</h1>
+        <h1 className="text-3xl font-bold mb-6">Theria Astrology API Documentation</h1>
         
         <p className="mb-6">
-          Welcome to the <strong>Theria API</strong>, designed to provide accurate astrological data effortlessly. 
+          Welcome to the <strong>Theria Astrology API</strong>, designed to provide accurate astrological data effortlessly. 
           This documentation clearly explains each endpoint with straightforward examples to help you get started quickly.
         </p>
         
@@ -17,7 +17,7 @@ export const ApiDocumentation: React.FC = () => {
         
         <h3 className="text-xl font-semibold mb-4">General Information</h3>
         
-        <p className="mb-2"><strong>Base URL</strong>: https://api.theriaapi.com/swiss</p>
+        <p className="mb-2"><strong>Base URL</strong>: Your API base URL</p>
         <p className="mb-2"><strong>Request Format</strong>: JSON</p>
         <p className="mb-2"><strong>Response Format</strong>: JSON</p>
         
@@ -25,8 +25,7 @@ export const ApiDocumentation: React.FC = () => {
         <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
           <code>
 {`Content-Type: application/json
-Accept: application/json
-X-API-Key: YOUR_API_KEY`}
+Accept: application/json`}
           </code>
         </pre>
         
@@ -243,184 +242,6 @@ X-API-Key: YOUR_API_KEY`}
   "type": "lunar",
   "year": 2026
 }`}
-          </code>
-        </pre>
-        
-        <hr className="my-6" />
-        
-        <h3 className="text-xl font-semibold mb-4">Code Examples</h3>
-        
-        <h4 className="text-lg font-semibold mb-3">JavaScript (fetch)</h4>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`// Example: Fetching a natal chart
-const fetchNatalChart = async () => {
-  const response = await fetch('https://api.theriaapi.com/swiss/natal', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'X-API-Key': 'YOUR_API_KEY'
-    },
-    body: JSON.stringify({
-      birth_date: '1990-01-15',
-      birth_time: '14:30',
-      location: 'New York, USA'
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error('API request failed');
-  }
-  
-  const data = await response.json();
-  return data;
-};
-
-// Usage
-fetchNatalChart()
-  .then(result => console.log(result))
-  .catch(error => console.error('Error:', error));`}
-          </code>
-        </pre>
-        
-        <h4 className="text-lg font-semibold mb-3">Python (requests)</h4>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`import requests
-import json
-
-# Example: Fetching transit information
-def get_transits():
-    url = "https://api.theriaapi.com/swiss/transits"
-    
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-API-Key": "YOUR_API_KEY"
-    }
-    
-    payload = {
-        "birth_date": "1985-06-08",
-        "birth_time": "09:15",
-        "lat": 40.7128,
-        "lon": -74.0060,
-        "transit_date": "2025-04-30"
-    }
-    
-    response = requests.post(url, headers=headers, data=json.dumps(payload))
-    
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"Error: {response.status_code}")
-        print(response.text)
-        return None
-
-# Usage
-transits_data = get_transits()
-if transits_data:
-    print(json.dumps(transits_data, indent=2))`}
-          </code>
-        </pre>
-        
-        <h4 className="text-lg font-semibold mb-3">Node.js (axios)</h4>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`const axios = require('axios');
-
-// Example: Fetching synastry data
-async function getSynastryData() {
-  try {
-    const response = await axios({
-      method: 'post',
-      url: 'https://api.theriaapi.com/swiss/synastry',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-API-Key': 'YOUR_API_KEY'
-      },
-      data: {
-        person_a: {
-          birth_date: '1982-04-15',
-          birth_time: '18:30',
-          location: 'London, UK'
-        },
-        person_b: {
-          birth_date: '1985-09-23',
-          birth_time: '07:45',
-          location: 'Paris, France'
-        }
-      }
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching synastry data:', error.response ? error.response.data : error.message);
-    throw error;
-  }
-}
-
-// Usage
-getSynastryData()
-  .then(data => console.log(data))
-  .catch(error => console.error('Failed to get synastry data:', error));`}
-          </code>
-        </pre>
-        
-        <h4 className="text-lg font-semibold mb-3">React Hook Example</h4>
-        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-6">
-          <code>
-{`import { useState, useEffect } from 'react';
-
-export const useNatalChart = (birthData) => {
-  const [chartData, setChartData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchChart = async () => {
-      if (!birthData) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const response = await fetch('https://api.theriaapi.com/swiss/natal', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-API-Key': 'YOUR_API_KEY'
-          },
-          body: JSON.stringify(birthData)
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch natal chart');
-        }
-        
-        const data = await response.json();
-        setChartData(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchChart();
-  }, [birthData]);
-
-  return { chartData, isLoading, error };
-};
-
-// Usage in a component
-// const { chartData, isLoading, error } = useNatalChart({
-//   birth_date: '1990-05-12',
-//   birth_time: '14:30',
-//   location: 'Sydney, Australia'
-// });`}
           </code>
         </pre>
         
