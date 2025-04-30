@@ -12,7 +12,7 @@ if (!SB_URL || !SB_KEY) throw new Error("Supabase env vars missing");
 const sb = createClient(SB_URL, SB_KEY);
 
 /*─────────────────────────── CONFIG */
-const MAX_BODY = 1_048_576; // 1 MB
+const MAX_BODY = 1_048_576; // 1 MB
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -42,9 +42,12 @@ function extractApiKey({headers, url, bodyBytes}:{headers:Headers; url:URL; body
   if(bodyBytes){
     try{
       const txt = new TextDecoder().decode(bodyBytes);
+      console.log("Decoded body:", txt); // Debug log
       const j = JSON.parse(txt);
       if(typeof j?.api_key === "string") return j.api_key;
-    }catch{ /* swallow */ }
+    }catch(e){ 
+      console.error("Error parsing JSON body:", e);
+    }
   }
   return null;
 }
@@ -61,22 +64,33 @@ async function recordUsage(uid:string){
 
 /*─────────────────────────── Handler */
 serve(async (req)=>{
+  console.log("Request received:", req.method, req.url);
+  
   if(req.method==="OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
   if(!["GET","POST"].includes(req.method)) return json({success:false,message:"Method not allowed"},405);
 
-  // clone the request body (needed for forwarding later)
-  const bodyBytes = req.method==="POST"? await readBody(req) : undefined;
+  // Clone the request before reading the body
+  const bodyBytes = req.method==="POST" ? new Uint8Array(await req.clone().arrayBuffer()) : undefined;
+  
   const urlObj = new URL(req.url);
-  const apiKey  = extractApiKey({headers:req.headers,url:urlObj,bodyBytes});
+  const apiKey = extractApiKey({headers:req.headers,url:urlObj,bodyBytes});
+  console.log("API Key extracted:", apiKey ? "present" : "missing");
+  
   if(!apiKey) return json({success:false,message:"API key required"},401);
 
   const userId = await validateKey(apiKey);
-  if(!userId)  return json({success:false,message:"Invalid or inactive API key"},401);
-  recordUsage(userId).catch(()=>{}); // fire‑and‑forget
+  console.log("User ID from key validation:", userId);
+  
+  if(!userId) return json({success:false,message:"Invalid or inactive API key"},401);
+  recordUsage(userId).catch((e)=>{
+    console.error("Error recording usage:", e);
+  }); // fire‑and‑forget
 
   /*────────────────── forward to translator */
   // remove api_key from query to avoid confusing downstream
   urlObj.searchParams.delete("api_key");
+  
+  console.log("Forwarding request to:", SWISS_TRANSLATOR_URL + urlObj.search);
 
   const fwdHeaders = new Headers(req.headers);
   fwdHeaders.delete("authorization");        // internal call needs no bearer
@@ -84,13 +98,20 @@ serve(async (req)=>{
   if(req.method==="POST" && !fwdHeaders.get("content-type"))
     fwdHeaders.set("Content-Type","application/json");
 
-  const resp = await fetch(SWISS_TRANSLATOR_URL + urlObj.search, {
-    method: req.method,
-    headers: fwdHeaders,
-    body: bodyBytes,
-  });
+  try {
+    const resp = await fetch(SWISS_TRANSLATOR_URL + urlObj.search, {
+      method: req.method,
+      headers: fwdHeaders,
+      body: bodyBytes,
+    });
 
-  // pipe result + CORS
-  const txt = await resp.text();
-  return new Response(txt,{status:resp.status,headers:{...corsHeaders}});
+    console.log("Response status from translator:", resp.status);
+    
+    // pipe result + CORS
+    const txt = await resp.text();
+    return new Response(txt,{status:resp.status,headers:{...corsHeaders}});
+  } catch(error) {
+    console.error("Error forwarding request:", error);
+    return json({success:false,message:"Error forwarding request: " + error.message},500);
+  }
 });

@@ -101,6 +101,27 @@ export type Database = {
           },
         ]
       }
+      geo_cache: {
+        Row: {
+          lat: number
+          lon: number
+          place: string
+          updated_at: string | null
+        }
+        Insert: {
+          lat: number
+          lon: number
+          place: string
+          updated_at?: string | null
+        }
+        Update: {
+          lat?: number
+          lon?: number
+          place?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       legal_documents: {
         Row: {
           content: string
