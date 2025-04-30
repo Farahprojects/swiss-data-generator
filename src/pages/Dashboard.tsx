@@ -10,6 +10,7 @@ import { RecentApiCalls } from "@/components/dashboard/RecentApiCalls";
 import { BillingSection } from "@/components/dashboard/BillingSection";
 import { WebhookLogsViewer } from "@/components/dashboard/WebhookLogsViewer";
 import { useAuth } from "@/contexts/AuthContext";
+import { ApiDocumentation } from "@/components/dashboard/ApiDocumentation";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -52,22 +53,7 @@ const Dashboard = () => {
             </TabsContent>
             
             <TabsContent value="docs" className="space-y-6">
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-2xl font-semibold mb-4">Documentation</h2>
-                <p className="mb-6">Access comprehensive API documentation and implementation guides.</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-medium mb-2">API Reference</h3>
-                    <p className="text-sm text-gray-500 mb-4">Explore endpoints, parameters, and response formats.</p>
-                    <Button variant="outline">View API Reference</Button>
-                  </div>
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-medium mb-2">Integration Guides</h3>
-                    <p className="text-sm text-gray-500 mb-4">Step-by-step guides for implementing our API.</p>
-                    <Button variant="outline">View Guides</Button>
-                  </div>
-                </div>
-              </div>
+              <ApiDocumentation />
             </TabsContent>
             
             <TabsContent value="billing" className="space-y-6">
