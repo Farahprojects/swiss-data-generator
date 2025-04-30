@@ -2,21 +2,21 @@
 export const codeSnippets = {
   authentication: {
     curl: `curl -X GET \\
-  'https://api.therairai.com/v1/horoscope' \\
-  -H 'Authorization: Bearer YOUR_API_KEY'`,
-    javascript: `fetch('https://api.therairai.com/v1/horoscope', {
+  'https://api.theriaapi.com/api/horoscope' \\
+  -H 'Authorization: Bearer yourtheriaapikeyhere'`,
+    javascript: `fetch('https://api.theriaapi.com/api/horoscope', {
   method: 'GET',
   headers: {
-    'Authorization': 'Bearer YOUR_API_KEY'
+    'Authorization': 'Bearer yourtheriaapikeyhere'
   }
 })
 .then(response => response.json())
 .then(data => console.log(data));`,
     python: `import requests
 
-url = "https://api.therairai.com/v1/horoscope"
+url = "https://api.theriaapi.com/api/horoscope"
 headers = {
-    "Authorization": "Bearer YOUR_API_KEY"
+    "Authorization": "Bearer yourtheriaapikeyhere"
 }
 
 response = requests.get(url, headers=headers)
@@ -24,8 +24,8 @@ print(response.json())`
   },
   natalChart: {
     curl: `curl -X POST \\
-  'https://api.therairai.com/v1/natal-chart' \\
-  -H 'Authorization: Bearer YOUR_API_KEY' \\
+  'https://api.theriaapi.com/api/natal-chart' \\
+  -H 'Authorization: Bearer yourtheriaapikeyhere' \\
   -H 'Content-Type: application/json' \\
   -d '{
   "date": "1990-01-15",
@@ -34,10 +34,10 @@ print(response.json())`
   "longitude": -74.0060,
   "houseSystem": "placidus"
 }'`,
-    javascript: `fetch('https://api.therairai.com/v1/natal-chart', {
+    javascript: `fetch('https://api.theriaapi.com/api/natal-chart', {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer YOUR_API_KEY',
+    'Authorization': 'Bearer yourtheriaapikeyhere',
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
@@ -53,9 +53,9 @@ print(response.json())`
     python: `import requests
 import json
 
-url = "https://api.therairai.com/v1/natal-chart"
+url = "https://api.theriaapi.com/api/natal-chart"
 headers = {
-    "Authorization": "Bearer YOUR_API_KEY",
+    "Authorization": "Bearer yourtheriaapikeyhere",
     "Content-Type": "application/json"
 }
 payload = {
