@@ -73,7 +73,5 @@ redirect_uri = ""
 url = ""
 
 [functions]
-[functions.astro_gateway]
-verify_jwt = true
 [functions.swiss]
 verify_jwt = false
