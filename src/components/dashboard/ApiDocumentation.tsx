@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const ApiDocumentation: React.FC = () => {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
@@ -83,7 +84,7 @@ Authorization: Bearer yourtheriaapikeyhere`}
         <h3 className="text-2xl font-semibold mb-4">API Endpoints</h3>
         
         <h4 className="text-xl font-semibold mb-3">1. Natal Chart</h4>
-        <p className="mb-3 font-mono bg-gray-100 p-1 inline-block">{`POST /natal`}</p>
+        <p className="mb-3 font-mono bg-gray-100 p-1 inline-block">{`POST https://api.theriaapi.com/swiss/natal`}</p>
         
         <p className="mb-4">Get birth chart details including planets, houses, aspects, and angles.</p>
         
@@ -103,7 +104,8 @@ Authorization: Bearer yourtheriaapikeyhere`}
           code={`{
   "birth_date": "1977-07-25",
   "birth_time": "11:30",
-  "location": "Perth, Australia"
+  "location": "Perth, Australia",
+  "bearer": "yourtheriaapikeyhere"
 }`}
         />
         
@@ -116,12 +118,147 @@ Authorization: Bearer yourtheriaapikeyhere`}
   "lat": -31.95,
   "lon": 115.86,
   "sidereal": true,
+  "bearer": "yourtheriaapikeyhere",
   "settings": {
     "house_system": "W",
     "orb_degrees": { "planets": 5 }
   }
 }`}
         />
+        
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md mt-4 mb-6">
+          <h5 className="font-bold text-blue-800 mb-2">House System Codes Reference</h5>
+          <p className="mb-2 text-sm">Use a single uppercase letter code in the <code className="bg-blue-100 px-1 rounded">house_system</code> field. Default is <code className="bg-blue-100 px-1 rounded">P</code> (Placidus) if omitted.</p>
+          
+          <div className="overflow-x-auto mt-2">
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16">Code</TableHead>
+                  <TableHead>House System</TableHead>
+                  <TableHead className="hidden sm:table-cell">Notes / Synonyms</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-mono">P</TableCell>
+                  <TableCell>Placidus</TableCell>
+                  <TableCell className="hidden sm:table-cell">default in most Western software</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">K</TableCell>
+                  <TableCell>Koch</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">O</TableCell>
+                  <TableCell>Porphyry</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">R</TableCell>
+                  <TableCell>Regiomontanus</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">C</TableCell>
+                  <TableCell>Campanus</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">A/E</TableCell>
+                  <TableCell>Equal (cusp 1 = Ascendant)</TableCell>
+                  <TableCell className="hidden sm:table-cell">interchangeable letters</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">W</TableCell>
+                  <TableCell>Whole-sign</TableCell>
+                  <TableCell className="hidden sm:table-cell">30° signs; cusp 1 = Asc sign</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">B</TableCell>
+                  <TableCell>Alcabitius</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">V</TableCell>
+                  <TableCell>Vehlow (equal)</TableCell>
+                  <TableCell className="hidden sm:table-cell">Asc on cusp 1</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">T</TableCell>
+                  <TableCell>Polich/Page ("Topocentric")</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">M</TableCell>
+                  <TableCell>Morinus</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">S</TableCell>
+                  <TableCell>Sripati</TableCell>
+                  <TableCell className="hidden sm:table-cell">Topocentric variant</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">G</TableCell>
+                  <TableCell>Gauquelin sectors</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">U</TableCell>
+                  <TableCell>Krusinski-Pisa-Goelzer</TableCell>
+                  <TableCell className="hidden sm:table-cell">Meridian-based</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">X</TableCell>
+                  <TableCell>Axial rotation / Meridian / Zariel</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">H</TableCell>
+                  <TableCell>Horizontal / Azimuthal</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">F</TableCell>
+                  <TableCell>Carter "Poli-Equatorial"</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">D</TableCell>
+                  <TableCell>Equal-MC (cusp 10 = MC)</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">N</TableCell>
+                  <TableCell>Equal, house 1 = 0° Aries</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">L</TableCell>
+                  <TableCell>Pullen SD (Sinusoidal Δ)</TableCell>
+                  <TableCell className="hidden sm:table-cell">ex Neo-Porphyry</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">Q</TableCell>
+                  <TableCell>Pullen SR (Sinusoidal Ratio)</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">Y</TableCell>
+                  <TableCell>APC ("Ram" school)</TableCell>
+                  <TableCell className="hidden sm:table-cell"></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-mono">I/i</TableCell>
+                  <TableCell>Sunshine (Makransky)</TableCell>
+                  <TableCell className="hidden sm:table-cell">two numerical variants</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </div>
         
         <p className="mb-2"><strong>Vedic Natal Chart</strong> ({`POST /natal/vedic`})</p>
         
@@ -142,7 +279,8 @@ Authorization: Bearer yourtheriaapikeyhere`}
           title="Request Body"
           code={`{
   "birth_date": "1977-07-25",
-  "location": "Perth, Australia"
+  "location": "Perth, Australia",
+  "bearer": "yourtheriaapikeyhere"
 }`}
         />
         
@@ -168,7 +306,8 @@ Authorization: Bearer yourtheriaapikeyhere`}
           title="Request Body"
           code={`{
   "birth_date": "1977-07-25",
-  "location": "Perth, Australia"
+  "location": "Perth, Australia",
+  "bearer": "yourtheriaapikeyhere"
 }`}
         />
         
@@ -180,6 +319,7 @@ Authorization: Bearer yourtheriaapikeyhere`}
   "lat": -31.95,
   "lon": 115.86,
   "sidereal": true,
+  "bearer": "yourtheriaapikeyhere",
   "transit_date": "2025-04-30",
   "transit_time": "10:00"
 }`}

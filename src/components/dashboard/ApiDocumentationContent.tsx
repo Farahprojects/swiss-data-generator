@@ -40,7 +40,7 @@ const ApiDocumentationContent: React.FC = () => {
             
             <div className="flex flex-col md:flex-row items-center gap-4 mb-4">
               <div className="bg-gray-50 border rounded-md p-3 flex-grow w-full md:w-auto">
-                <code className="text-sm">https://api.theriaapi.com/api/horoscope</code>
+                <code className="text-sm">https://api.theriaapi.com/swiss/natal</code>
               </div>
               <div className="flex items-center">
                 <ArrowRight className="hidden md:block mx-2 text-blue-500" />
@@ -73,18 +73,22 @@ const ApiDocumentationContent: React.FC = () => {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => copyToClipboard(`curl -X GET \\
-  'https://api.theriaapi.com/api/horoscope' \\
-  -H 'Authorization: Bearer yourtheriaapikeyhere'`, "example")}
+                  onClick={() => copyToClipboard(`curl -X POST \\
+  'https://api.theriaapi.com/swiss/natal' \\
+  -H 'Authorization: Bearer yourtheriaapikeyhere' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"birth_date": "1990-01-15", "birth_time": "14:30", "location": "New York, USA", "bearer": "yourtheriaapikeyhere"}'`, "example")}
                   className="h-6 px-2 text-gray-500 hover:text-gray-700"
                 >
                   {copied === "example" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
               <pre className="mt-2 text-xs overflow-x-auto">
-                <code>{`curl -X GET \\
-  'https://api.theriaapi.com/api/horoscope' \\
-  -H 'Authorization: Bearer yourtheriaapikeyhere'`}</code>
+                <code>{`curl -X POST \\
+  'https://api.theriaapi.com/swiss/natal' \\
+  -H 'Authorization: Bearer yourtheriaapikeyhere' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"birth_date": "1990-01-15", "birth_time": "14:30", "location": "New York, USA", "bearer": "yourtheriaapikeyhere"}'`}</code>
               </pre>
             </div>
           </div>
@@ -92,7 +96,7 @@ const ApiDocumentationContent: React.FC = () => {
           <div className="bg-white rounded-lg p-4 border border-blue-200">
             <h3 className="font-semibold mb-2 text-blue-700">JSON Request Structure:</h3>
             <p className="text-sm mb-2">
-              When sending JSON in your request body, always include your API key as a bearer token in the header:
+              When sending JSON in your request body, always include your API key as a bearer token in the header and in the request body:
             </p>
 
             <div className="bg-gray-50 p-3 rounded-md border">
@@ -128,7 +132,8 @@ const ApiDocumentationContent: React.FC = () => {
   "date": "1990-01-15",
   "time": "14:30:00",
   "latitude": 40.7128,
-  "longitude": -74.0060
+  "longitude": -74.0060,
+  "bearer": "yourtheriaapikeyhere"
 }`, "json-body")}
                   className="h-6 px-2 text-gray-500 hover:text-gray-700"
                 >
@@ -140,7 +145,8 @@ const ApiDocumentationContent: React.FC = () => {
   "date": "1990-01-15",
   "time": "14:30:00",
   "latitude": 40.7128,
-  "longitude": -74.0060
+  "longitude": -74.0060,
+  "bearer": "yourtheriaapikeyhere"
 }`}</code>
               </pre>
             </div>
