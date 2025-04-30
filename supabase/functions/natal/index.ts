@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 import { NatalArgs, toSwissNatal } from "../_shared/translator.ts";
 
-const SWISS = Deno.env.get("SWISS_EPH_API_URL")!;  // set in Function env
+const SWISS = Deno.env.get("SWISS_EPHEMERIS_URL")!;  // Using the correct secret key
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
