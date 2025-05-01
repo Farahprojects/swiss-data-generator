@@ -1,3 +1,4 @@
+
 // supabase/functions/_shared/translator.ts
 // Pure helper module – NO Edge Function wrapper
 // Exported `translate()` returns { status, text } so other functions can await it.
@@ -29,6 +30,28 @@ const HOUSE_ALIASES: Record<string,string> = { "placidus":"P","koch":"K","whole-
 
 /*──────────────────── schema */
 const Base = z.object({ request: z.string().nonempty() }).passthrough();
+
+/*──────────────────── logger */
+async function logToSupabase(requestType: string, requestPayload: any, responseStatus: number, responsePayload: any, processingTime: number, errorMessage?: string) {
+  try {
+    const { error } = await sb.from('translator_logs').insert({
+      request_type: requestType,
+      request_payload: requestPayload,
+      response_status: responseStatus,
+      response_payload: responsePayload,
+      processing_time_ms: processingTime,
+      error_message: errorMessage
+    });
+
+    if (error) {
+      console.error("Failed to log to Supabase:", error.message);
+    } else {
+      console.info(`Successfully logged ${requestType} request to Supabase`);
+    }
+  } catch (e) {
+    console.error("Error logging to Supabase:", e.message);
+  }
+}
 
 /*──────────────────── helpers */
 async function ensureLatLon(obj:any){
@@ -64,37 +87,161 @@ function normalise(p:any){
 
 /*──────────────────── translate */
 export async function translate(raw:any):Promise<{status:number;text:string}>{
-  const body = Base.parse(raw);
-  const canon = CANON[body.request.toLowerCase()];
-  if(!canon) return { status:400, text: JSON.stringify({error:`Unknown request ${body.request}`}) };
+  const startTime = Date.now();
+  let requestType: string;
+  let responseStatus: number;
+  let responseText: string;
+  let errorMessage: string | undefined;
+  
+  try {
+    const body = Base.parse(raw);
+    requestType = body.request.toLowerCase();
+    const canon = CANON[requestType];
+    
+    if(!canon) {
+      responseStatus = 400;
+      responseText = JSON.stringify({error:`Unknown request ${body.request}`});
+      errorMessage = `Unknown request type: ${body.request}`;
+      await logToSupabase(body.request, raw, responseStatus, {error: errorMessage}, Date.now() - startTime, errorMessage);
+      return { status: responseStatus, text: responseText };
+    }
 
-  /*─ relationship ─*/
-  if(canon==="synastry"){
-    if(!body.person_a||!body.person_b) return {status:400,text:JSON.stringify({error:"person_a & person_b required"})};
-    const a = normalise(await ensureLatLon(body.person_a));
-    const b = normalise(await ensureLatLon(body.person_b));
-    const r = await fetch(`${SWISS_API}/synastry`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({person_a:a,person_b:b}) });
-    return { status:r.status, text: await r.text() };
-  }
+    requestType = canon; // Use canonical request type for logging
 
-  /*─ simple GETs ─*/
-  if(canon==="moonphases"){
-    const year = body.year ?? new Date().getFullYear();
-    const r = await fetch(`${SWISS_API}/moonphases?year=${year}`);
-    return { status:r.status, text: await r.text() };
-  }
-  if(canon==="positions"){
-    const qs = new URLSearchParams({ utc: body.utc ?? new Date().toISOString(), sidereal: String(body.sidereal ?? false) });
-    const r = await fetch(`${SWISS_API}/positions?${qs}`);
-    return { status:r.status, text: await r.text() };
-  }
+    /*─ relationship ─*/
+    if(canon==="synastry"){
+      if(!body.person_a||!body.person_b) {
+        responseStatus = 400;
+        responseText = JSON.stringify({error:"person_a & person_b required"});
+        errorMessage = "Missing person_a or person_b in synastry request";
+        await logToSupabase(requestType, raw, responseStatus, {error: errorMessage}, Date.now() - startTime, errorMessage);
+        return { status: responseStatus, text: responseText };
+      }
+      const a = normalise(await ensureLatLon(body.person_a));
+      const b = normalise(await ensureLatLon(body.person_b));
+      console.info(`Calling Swiss API for ${requestType} with persons A and B`);
+      const r = await fetch(`${SWISS_API}/synastry`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({person_a:a,person_b:b}) });
+      responseStatus = r.status;
+      responseText = await r.text();
+      
+      if (!r.ok) {
+        errorMessage = `Swiss API returned ${r.status}`;
+        console.error(`Error in ${requestType} request:`, errorMessage);
+      } else {
+        console.info(`Successfully processed ${requestType} request`);
+      }
+      
+      try {
+        const responsePayload = JSON.parse(responseText);
+        await logToSupabase(requestType, {person_a: a, person_b: b}, responseStatus, responsePayload, Date.now() - startTime, errorMessage);
+      } catch (e) {
+        await logToSupabase(requestType, {person_a: a, person_b: b}, responseStatus, {raw_response: responseText}, Date.now() - startTime, errorMessage);
+      }
+      
+      return { status: responseStatus, text: responseText };
+    }
 
-  /*─ POST chart routes ─*/
-  const enriched = normalise(await ensureLatLon(body));
-  delete enriched.request;
-  const ROUTE:Record<string,string>={natal:"natal",transits:"transits",progressions:"progressions",return:"return",body_matrix:"body_matrix"};
-  const path = ROUTE[canon as keyof typeof ROUTE];
-  if(!path) return { status:400, text: JSON.stringify({error:`Routing not implemented for ${canon}`}) };
-  const r = await fetch(`${SWISS_API}/${path}`,{ method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(enriched) });
-  return { status:r.status, text: await r.text() };
+    /*─ simple GETs ─*/
+    if(canon==="moonphases"){
+      const year = body.year ?? new Date().getFullYear();
+      console.info(`Calling Swiss API for ${requestType} with year ${year}`);
+      const r = await fetch(`${SWISS_API}/moonphases?year=${year}`);
+      responseStatus = r.status;
+      responseText = await r.text();
+      
+      if (!r.ok) {
+        errorMessage = `Swiss API returned ${r.status}`;
+        console.error(`Error in ${requestType} request:`, errorMessage);
+      } else {
+        console.info(`Successfully processed ${requestType} request`);
+      }
+      
+      try {
+        const responsePayload = JSON.parse(responseText);
+        await logToSupabase(requestType, {year}, responseStatus, responsePayload, Date.now() - startTime, errorMessage);
+      } catch (e) {
+        await logToSupabase(requestType, {year}, responseStatus, {raw_response: responseText}, Date.now() - startTime, errorMessage);
+      }
+      
+      return { status: responseStatus, text: responseText };
+    }
+    
+    if(canon==="positions"){
+      const qs = new URLSearchParams({ utc: body.utc ?? new Date().toISOString(), sidereal: String(body.sidereal ?? false) });
+      console.info(`Calling Swiss API for ${requestType} with params ${qs}`);
+      const r = await fetch(`${SWISS_API}/positions?${qs}`);
+      responseStatus = r.status;
+      responseText = await r.text();
+      
+      if (!r.ok) {
+        errorMessage = `Swiss API returned ${r.status}`;
+        console.error(`Error in ${requestType} request:`, errorMessage);
+      } else {
+        console.info(`Successfully processed ${requestType} request`);
+      }
+      
+      try {
+        const responsePayload = JSON.parse(responseText);
+        await logToSupabase(requestType, {utc: body.utc, sidereal: body.sidereal}, responseStatus, responsePayload, Date.now() - startTime, errorMessage);
+      } catch (e) {
+        await logToSupabase(requestType, {utc: body.utc, sidereal: body.sidereal}, responseStatus, {raw_response: responseText}, Date.now() - startTime, errorMessage);
+      }
+      
+      return { status: responseStatus, text: responseText };
+    }
+
+    /*─ POST chart routes ─*/
+    const enriched = normalise(await ensureLatLon(body));
+    delete enriched.request;
+    const ROUTE:Record<string,string>={natal:"natal",transits:"transits",progressions:"progressions",return:"return",body_matrix:"body_matrix"};
+    const path = ROUTE[canon as keyof typeof ROUTE];
+    
+    if(!path) {
+      responseStatus = 400;
+      responseText = JSON.stringify({error:`Routing not implemented for ${canon}`});
+      errorMessage = `Routing not implemented for ${canon}`;
+      await logToSupabase(requestType, enriched, responseStatus, {error: errorMessage}, Date.now() - startTime, errorMessage);
+      return { status: responseStatus, text: responseText };
+    }
+    
+    console.info(`Calling Swiss API for ${requestType} at path /${path}`);
+    const r = await fetch(`${SWISS_API}/${path}`,{ method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(enriched) });
+    responseStatus = r.status;
+    responseText = await r.text();
+    
+    if (!r.ok) {
+      errorMessage = `Swiss API returned ${r.status}`;
+      console.error(`Error in ${requestType} request:`, errorMessage);
+    } else {
+      console.info(`Successfully processed ${requestType} request`);
+    }
+    
+    try {
+      const responsePayload = JSON.parse(responseText);
+      await logToSupabase(requestType, enriched, responseStatus, responsePayload, Date.now() - startTime, errorMessage);
+    } catch (e) {
+      await logToSupabase(requestType, enriched, responseStatus, {raw_response: responseText}, Date.now() - startTime, errorMessage);
+    }
+    
+    return { status: responseStatus, text: responseText };
+  } catch (err) {
+    const endTime = Date.now();
+    const processingTime = endTime - startTime;
+    responseStatus = 500;
+    errorMessage = (err as Error).message;
+    responseText = JSON.stringify({error: errorMessage});
+    
+    // Log the error, using a default requestType if we couldn't determine it
+    await logToSupabase(
+      requestType || "unknown", 
+      raw, 
+      responseStatus, 
+      {error: errorMessage}, 
+      processingTime,
+      errorMessage
+    );
+    
+    console.error("Translation error:", errorMessage);
+    return { status: responseStatus, text: responseText };
+  }
 }

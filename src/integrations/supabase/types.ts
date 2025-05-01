@@ -152,6 +152,30 @@ export type Database = {
         }
         Relationships: []
       }
+      product_codes: {
+        Row: {
+          code: string
+          features: string[]
+          is_active: boolean | null
+          label: string
+          price_id: string | null
+        }
+        Insert: {
+          code: string
+          features: string[]
+          is_active?: boolean | null
+          label: string
+          price_id?: string | null
+        }
+        Update: {
+          code?: string
+          features?: string[]
+          is_active?: boolean | null
+          label?: string
+          price_id?: string | null
+        }
+        Relationships: []
+      }
       stripe_products: {
         Row: {
           active: boolean
@@ -326,6 +350,39 @@ export type Database = {
           subscription_status?: string | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      translator_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          processing_time_ms: number | null
+          request_payload: Json | null
+          request_type: string | null
+          response_payload: Json | null
+          response_status: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          processing_time_ms?: number | null
+          request_payload?: Json | null
+          request_type?: string | null
+          response_payload?: Json | null
+          response_status?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          processing_time_ms?: number | null
+          request_payload?: Json | null
+          request_type?: string | null
+          response_payload?: Json | null
+          response_status?: number | null
         }
         Relationships: []
       }
