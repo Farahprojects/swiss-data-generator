@@ -1,9 +1,11 @@
 
 import React from 'react';
+import UnifiedNavigation from './UnifiedNavigation';
 
-// This is now an empty component for backward compatibility
+// This is a wrapper component that uses UnifiedNavigation
+// This exists for backward compatibility with pages that import Navbar directly
 const Navbar = () => {
-  return null;
+  return <UnifiedNavigation />;
 };
 
 export default Navbar;
