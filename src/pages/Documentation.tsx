@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
 import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Documentation = () => {
   const { user, loading } = useAuth();
@@ -32,6 +33,115 @@ const Documentation = () => {
         "location":     "Melbourne, Australia",
         "system":       "western"
       }'`;
+
+  const pythonCode = `import requests
+import json
+
+# --- Configuration ---
+api_url = "https://api.theraiapi.com/swiss"
+# IMPORTANT: Replace with your actual API key
+api_key = "<YOUR-API-KEY>"
+# -------------------
+
+headers = {
+    "Authorization": f"Bearer {api_key}",
+    "Content-Type": "application/json"
+}
+
+payload = {
+    "request":      "body_matrix",
+    "birth_date":   "1981-01-15",
+    "birth_time":   "06:38",
+    "location":     "Melbourne, Australia",
+    "system":       "western"
+}
+
+try:
+    # Make the POST request
+    response = requests.post(api_url, headers=headers, json=payload)
+
+    # Raise an exception for bad status codes (4xx or 5xx)
+    response.raise_for_status()
+
+    # Parse the JSON response
+    data = response.json()
+
+    # Pretty print the JSON output
+    print(json.dumps(data, indent=2))
+
+except requests.exceptions.RequestException as e:
+    print(f"An error occurred: {e}")
+    if hasattr(e, 'response') and e.response is not None:
+        print(f"Status Code: {e.response.status_code}")
+        print(f"Response Body: {e.response.text}")`;
+
+  const javaCode = `import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+
+public class TheRaiApiQuickStart {
+
+    // --- Configuration ---
+    private static final String API_URL = "https://api.theraiapi.com/swiss";
+    // IMPORTANT: Replace with your actual API key
+    private static final String API_KEY = "<YOUR-API-KEY>";
+    // -------------------
+
+    public static void main(String[] args) throws Exception { // Added 'throws' for brevity, use try-catch in production
+
+        // 1. Define the JSON payload
+        String jsonPayload = """
+                {
+                    "request":      "body_matrix",
+                    "birth_date":   "1981-01-15",
+                    "birth_time":   "06:38",
+                    "location":     "Melbourne, Australia",
+                    "system":       "western"
+                }
+                """;
+
+        // 2. Create an HttpClient instance
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10)) // Optional: Set connection timeout
+                .build();
+
+        // 3. Build the HttpRequest
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL))
+                .timeout(Duration.ofSeconds(30)) // Optional: Set request timeout
+                .header("Authorization", "Bearer " + API_KEY)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .build();
+
+        System.out.println("Sending request to: " + API_URL);
+        // System.out.println("Payload: " + jsonPayload); // Uncomment to debug payload
+
+        try {
+            // 4. Send the request and get the response
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // 5. Process the response
+            System.out.println("Status Code: " + response.statusCode());
+            System.out.println("Response Body:");
+            // Basic pretty printing attempt for JSON - consider using a library like Jackson or Gson for robust parsing
+            String responseBody = response.body();
+            if (responseBody != null && responseBody.startsWith("{")) {
+                 // Simple indent for readability, not full JSON parsing
+                 System.out.println(responseBody.replace(",", ",\\n ")
+                                                .replace("{", "{\\n ")
+                                                .replace("}", "\\n}"));
+            } else {
+                 System.out.println(responseBody);
+            }
+        } catch (Exception e) {
+            System.err.println("An error occurred: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`;
 
   const jsonResponse = `{
   "circadian_window": "Dip (PM)",
@@ -110,32 +220,100 @@ const Documentation = () => {
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">1. The Request: Get a Body Matrix</h2>
                 <p className="mb-4">
-                  Copy the curl command below, replace <code className="bg-gray-100 px-2 py-1 rounded">&lt;YOUR-API-KEY&gt;</code> with your actual key, and run it in your terminal.
+                  Below are examples of how to make the exact same API request using different languages. Choose the tab that matches your preferred tool or language.
                 </p>
-                <div className="relative bg-gray-900 rounded-lg overflow-hidden">
-                  <div className="flex justify-between items-center px-4 py-2 bg-gray-800 border-b border-gray-700">
-                    <span className="text-gray-200 text-sm font-medium">Bash</span>
-                    <button 
-                      onClick={() => copyToClipboard(curlCommand, "curl")} 
-                      className="text-gray-300 hover:text-white text-sm flex items-center gap-1"
-                    >
-                      {copied === "curl" ? (
-                        <>
-                          <Check className="h-4 w-4" /> 
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4" /> 
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <pre className="p-4 overflow-x-auto text-gray-100 text-sm">
-                    <code>{curlCommand}</code>
-                  </pre>
-                </div>
+                
+                <Tabs defaultValue="curl" className="w-full">
+                  <TabsList className="w-full mb-2 grid grid-cols-3">
+                    <TabsTrigger value="curl">curl (Command Line)</TabsTrigger>
+                    <TabsTrigger value="python">Python</TabsTrigger>
+                    <TabsTrigger value="java">Java</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="curl">
+                    <p className="mb-2">This is the most direct way to test from your terminal.</p>
+                    <div className="relative bg-gray-900 rounded-lg overflow-hidden">
+                      <div className="flex justify-between items-center px-4 py-2 bg-gray-800 border-b border-gray-700">
+                        <span className="text-gray-200 text-sm font-medium">Bash</span>
+                        <button 
+                          onClick={() => copyToClipboard(curlCommand, "curl")} 
+                          className="text-gray-300 hover:text-white text-sm flex items-center gap-1"
+                        >
+                          {copied === "curl" ? (
+                            <>
+                              <Check className="h-4 w-4" /> 
+                              <span>Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4" /> 
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <pre className="p-4 overflow-x-auto text-gray-100 text-sm">
+                        <code>{curlCommand}</code>
+                      </pre>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="python">
+                    <p className="mb-2">This example uses the popular requests library. If you don't have it, install it using pip: <code className="bg-gray-100 px-1 rounded">pip install requests</code></p>
+                    <div className="relative bg-gray-900 rounded-lg overflow-hidden">
+                      <div className="flex justify-between items-center px-4 py-2 bg-gray-800 border-b border-gray-700">
+                        <span className="text-gray-200 text-sm font-medium">Python</span>
+                        <button 
+                          onClick={() => copyToClipboard(pythonCode, "python")} 
+                          className="text-gray-300 hover:text-white text-sm flex items-center gap-1"
+                        >
+                          {copied === "python" ? (
+                            <>
+                              <Check className="h-4 w-4" /> 
+                              <span>Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4" /> 
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <pre className="p-4 overflow-x-auto text-gray-100 text-sm">
+                        <code>{pythonCode}</code>
+                      </pre>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="java">
+                    <p className="mb-2">This example uses Java's modern, built-in HTTP client, available since Java 11.</p>
+                    <div className="relative bg-gray-900 rounded-lg overflow-hidden">
+                      <div className="flex justify-between items-center px-4 py-2 bg-gray-800 border-b border-gray-700">
+                        <span className="text-gray-200 text-sm font-medium">Java</span>
+                        <button 
+                          onClick={() => copyToClipboard(javaCode, "java")} 
+                          className="text-gray-300 hover:text-white text-sm flex items-center gap-1"
+                        >
+                          {copied === "java" ? (
+                            <>
+                              <Check className="h-4 w-4" /> 
+                              <span>Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4" /> 
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <pre className="p-4 overflow-x-auto text-gray-100 text-sm">
+                        <code>{javaCode}</code>
+                      </pre>
+                    </div>
+                  </TabsContent>
+                </Tabs>
 
                 <div className="mt-6">
                   <h3 className="font-semibold text-lg mb-2">What this command does:</h3>
@@ -268,19 +446,6 @@ const Documentation = () => {
                 <p className="mt-4 font-medium text-lg text-primary">Now you're ready to explore!</p>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="bg-primary py-12 text-center text-white mt-12">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-6">Ready to harness the power of the cosmos?</h2>
-            <p className="mx-auto mb-8 max-w-2xl text-xl">
-              Start your free 14-day trial now — no credit card required.
-            </p>
-            <Button className="bg-white text-primary hover:bg-gray-100 px-8 py-6 text-lg">
-              Get Your API Key
-            </Button>
           </div>
         </section>
       </main>
