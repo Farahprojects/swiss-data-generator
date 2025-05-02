@@ -193,7 +193,7 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
     /*─ POST chart routes ─*/
     const enriched = normalise(await ensureLatLon(body));
     delete enriched.request;
-    const ROUTE:Record<string,string>={natal:"natal",transits:"transits",progressions:"progressions",return:"return",body_matrix:"body_matrix"};
+    const ROUTE:Record<string,string>={natal:"natal",transits:"transits",progressions:"progressions",return:"return",body-matrix:"body-matrix"};
     const path = ROUTE[canon as keyof typeof ROUTE];
     
     if(!path) {
