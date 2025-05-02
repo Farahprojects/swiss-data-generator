@@ -24,7 +24,7 @@ const CANON: Record<string,string> = {
   return:"return", solar_return:"return", lunar_return:"return", yearly_cycle:"return",
   relationship:"synastry", synastry:"synastry", compatibility:"synastry", composite:"synastry",
   positions:"positions", moonphases:"moonphases", phases:"moonphases",
-  body_matrix:"body_matrix", body:"body_matrix", biorhythm:"body_matrix",
+  body-matrix:"body-matrix", body:"body-matrix", biorhythm:"body-matrix",
 };
 const HOUSE_ALIASES: Record<string,string> = { "placidus":"P","koch":"K","whole-sign":"W","equal":"A" };
 
