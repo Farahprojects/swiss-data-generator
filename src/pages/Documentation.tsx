@@ -144,7 +144,7 @@ const Documentation = () => {
                     <li><code className="bg-gray-100 px-1">https://api.theraiapi.com/swiss</code>: The endpoint URL for Swiss Ephemeris based calculations.</li>
                     <li><code className="bg-gray-100 px-1">-H "Authorization: Bearer &lt;YOUR-API-KEY&gt;"</code>: Authenticates your request. Remember to replace the placeholder!</li>
                     <li><code className="bg-gray-100 px-1">-H "Content-Type: application/json"</code>: Tells the API you're sending JSON data.</li>
-                    <li><code className="bg-gray-100 px-1">-d '{...}'</code>: Contains the JSON payload with your request details.</li>
+                    <li><code className="bg-gray-100 px-1">-d &apos;{"{...}"}&apos;</code>: Contains the JSON payload with your request details.</li>
                   </ul>
                 </div>
               </div>
@@ -255,7 +255,7 @@ const Documentation = () => {
                   This fundamental pattern works for nearly all API calls:
                 </p>
                 <ul className="list-disc ml-6 space-y-2">
-                  <li>Use the correct Endpoint URL (e.g., <code className="bg-gray-100 px-1">https://api.theraiapi.com/swiss</code>).</li>
+                  <li>Use the correct Endpoint URL (e.g., <code className="bg-gray-100 px-1">https://api.theriaapi.com/swiss</code>).</li>
                   <li>Include your API Key in the Authorization header.</li>
                   <li>Send a JSON payload (<code className="bg-gray-100 px-1">-d</code>) containing:
                     <ul className="list-disc ml-6 mt-2">
