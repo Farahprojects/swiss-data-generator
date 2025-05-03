@@ -22,8 +22,8 @@ const CANON: Record<string,string> = {
   progressions:"progressions", progressed:"progressions",
   return:"return", solar_return:"return", lunar_return:"return", yearly_cycle:"return",
   relationship:"synastry", synastry:"synastry", compatibility:"synastry", composite:"synastry",
-  positions:"positions", moonphases:"moonphases", phases:"moonphases",
-  body-matrix:"body-matrix", body:"body-matrix", biorhythm:"body-matrix", sync:"sync",
+  positions:"positions", moonphases:"moonphases", phases:"moonphases", body:"body_matrix",
+  body_matrix:"body_matrix", sync:"sync",
 };
 const HOUSE_ALIASES: Record<string,string> = { "placidus":"P","koch":"K","whole-sign":"W","equal":"A" };
 
@@ -192,7 +192,7 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
     /*─ POST chart routes ─*/
     const enriched = normalise(await ensureLatLon(body));
     delete enriched.request;
-    const ROUTE:Record<string,string>={natal:"natal",transits:"transits",sync:"sync",progressions:"progressions",return:"return",body-matrix:"body-matrix"};
+    const ROUTE:Record<string,string>={natal:"natal",transits:"transits",sync:"sync",progressions:"progressions",return:"return",body_matrix:"body_matrix"};
     const path = ROUTE[canon as keyof typeof ROUTE];
     
     if(!path) {
