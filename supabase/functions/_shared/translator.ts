@@ -93,19 +93,31 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
   let errorMessage: string | undefined;
   
   try {
-    const body = Base.parse(raw);
-    requestType = body.request.toLowerCase();
-    const canon = CANON[requestType];
-    
-    if(!canon) {
-      responseStatus = 400;
-      responseText = JSON.stringify({error:Unknown request ${body.request}});
-      errorMessage = Unknown request type: ${body.request};
-      await logToSupabase(body.request, raw, responseStatus, {error: errorMessage}, Date.now() - startTime, errorMessage);
-      return { status: responseStatus, text: responseText };
-    }
+  const body = Base.parse(raw);
+  requestType = body.request.trim().toLowerCase();
+  const canon = CANON[requestType];
 
-    requestType = canon; // Use canonical request type for logging
+  // ── DEBUG ----------------------------------------------------------
+  console.info("translate(): CANON keys ->", Object.keys(CANON));
+  console.info(`translate(): '${body.request}' -> '${requestType}', canon='${canon}'`);
+  // ------------------------------------------------------------------
+
+  if (!canon) {
+    responseStatus = 400;
+    responseText = JSON.stringify({ error: `Unknown request ${body.request}` });
+    errorMessage = `Unknown request type: ${body.request}`;
+    await logToSupabase(
+      body.request,
+      raw,
+      responseStatus,
+      { error: errorMessage },
+      Date.now() - startTime,
+      errorMessage
+    );
+    return { status: responseStatus, text: responseText };
+  }
+
+  requestType = canon; // Use canonical request type for logging
 
     /*─ relationship ─*/
     if(canon==="synastry"){
