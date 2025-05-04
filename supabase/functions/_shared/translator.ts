@@ -1,4 +1,3 @@
-
 // supabase/functions/_shared/translator.ts
 // Pure helper module – NO Edge Function wrapper
 // Exported translate() returns { status, text } so other functions can await it.
@@ -46,7 +45,7 @@ async function logToSupabase(requestType: string, requestPayload: any, responseS
     if (error) {
       console.error("Failed to log to Supabase:", error.message);
     } else {
-      console.info(`Successfully logged ${requestType} request to Supabase`);
+      console.info(Successfully logged ${requestType} request to Supabase);
     }
   } catch (e) {
     console.error("Error logging to Supabase:", e.message);
@@ -62,9 +61,9 @@ async function ensureLatLon(obj:any){
     const age=(Date.now()-Date.parse(data.updated_at))/60000;
     if(age < GEO_TTL) return {...obj, latitude:data.lat, longitude:data.lon};
   }
-  const url=`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(place)}&key=${GEO_KEY}`;
+  const url=https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(place)}&key=${GEO_KEY};
   const g=await fetch(url).then(r=>r.json());
-  if(g.status!=="OK") throw new Error(`Geocode failed: ${g.status}`);
+  if(g.status!=="OK") throw new Error(Geocode failed: ${g.status});
   const {lat,lng}=g.results[0].geometry.location;
   await sb.from(GEO_TAB).upsert({place,lat,lon:lng}).select();
   return {...obj, latitude:lat, longitude:lng};
@@ -131,16 +130,16 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
       }
       const a = normalise(await ensureLatLon(body.person_a));
       const b = normalise(await ensureLatLon(body.person_b));
-      console.info(`Calling Swiss API for ${requestType} with persons A and B`);
-      const r = await fetch(`${SWISS_API}/synastry`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({person_a:a,person_b:b}) });
+      console.info(Calling Swiss API for ${requestType} with persons A and B);
+      const r = await fetch(${SWISS_API}/synastry, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({person_a:a,person_b:b}) });
       responseStatus = r.status;
       responseText = await r.text();
       
       if (!r.ok) {
-        errorMessage = `Swiss API returned ${r.status}`;
-        console.error(`Error in ${requestType} request:`, errorMessage);
+        errorMessage = Swiss API returned ${r.status};
+        console.error(Error in ${requestType} request:, errorMessage);
       } else {
-        console.info(`Successfully processed ${requestType} request`);
+        console.info(Successfully processed ${requestType} request);
       }
       
       try {
@@ -153,71 +152,19 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
       return { status: responseStatus, text: responseText };
     }
 
-    /*─ sync ─*/
-    if(canon==="sync"){
-      if(!body.person_a||!body.person_b) {
-        responseStatus = 400;
-        responseText = JSON.stringify({error:"person_a & person_b required"});
-        errorMessage = "Missing person_a or person_b in sync request";
-        await logToSupabase(requestType, raw, responseStatus, {error: errorMessage}, Date.now() - startTime, errorMessage);
-        return { status: responseStatus, text: responseText };
-      }
-      
-      // Normalise each person (lat/lon, house system, sidereal flag)
-      const a = normalise(await ensureLatLon(body.person_a));
-      const b = normalise(await ensureLatLon(body.person_b));
-      
-      // Build payload for Swiss API
-      const payload: Record<string, any> = {
-        person_a: a,
-        person_b: b,
-        include_progressions: !!body.include_progressions,
-      };
-      
-      // Add optional parameters if provided
-      if (body.date) payload.date = body.date;
-      if (body.time) payload.time = body.time;
-      
-      console.info(`Calling Swiss API for ${requestType} with rich payload`);
-      const r = await fetch(`${SWISS_API}/sync`, { 
-        method: "POST", 
-        headers: {"Content-Type":"application/json"}, 
-        body: JSON.stringify(payload) 
-      });
-      
-      responseStatus = r.status;
-      responseText = await r.text();
-      
-      if (!r.ok) {
-        errorMessage = `Swiss API returned ${r.status}`;
-        console.error(`Error in ${requestType} request:`, errorMessage);
-      } else {
-        console.info(`Successfully processed ${requestType} request`);
-      }
-      
-      try {
-        const responsePayload = JSON.parse(responseText);
-        await logToSupabase(requestType, payload, responseStatus, responsePayload, Date.now() - startTime, errorMessage);
-      } catch (e) {
-        await logToSupabase(requestType, payload, responseStatus, {raw_response: responseText}, Date.now() - startTime, errorMessage);
-      }
-      
-      return { status: responseStatus, text: responseText };
-    }
-
     /*─ simple GETs ─*/
     if(canon==="moonphases"){
       const year = body.year ?? new Date().getFullYear();
-      console.info(`Calling Swiss API for ${requestType} with year ${year}`);
-      const r = await fetch(`${SWISS_API}/moonphases?year=${year}`);
+      console.info(Calling Swiss API for ${requestType} with year ${year});
+      const r = await fetch(${SWISS_API}/moonphases?year=${year});
       responseStatus = r.status;
       responseText = await r.text();
       
       if (!r.ok) {
-        errorMessage = `Swiss API returned ${r.status}`;
-        console.error(`Error in ${requestType} request:`, errorMessage);
+        errorMessage = Swiss API returned ${r.status};
+        console.error(Error in ${requestType} request:, errorMessage);
       } else {
-        console.info(`Successfully processed ${requestType} request`);
+        console.info(Successfully processed ${requestType} request);
       }
       
       try {
@@ -232,16 +179,16 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
     
     if(canon==="positions"){
       const qs = new URLSearchParams({ utc: body.utc ?? new Date().toISOString(), sidereal: String(body.sidereal ?? false) });
-      console.info(`Calling Swiss API for ${requestType} with params ${qs}`);
-      const r = await fetch(`${SWISS_API}/positions?${qs}`);
+      console.info(Calling Swiss API for ${requestType} with params ${qs});
+      const r = await fetch(${SWISS_API}/positions?${qs});
       responseStatus = r.status;
       responseText = await r.text();
       
       if (!r.ok) {
-        errorMessage = `Swiss API returned ${r.status}`;
-        console.error(`Error in ${requestType} request:`, errorMessage);
+        errorMessage = Swiss API returned ${r.status};
+        console.error(Error in ${requestType} request:, errorMessage);
       } else {
-        console.info(`Successfully processed ${requestType} request`);
+        console.info(Successfully processed ${requestType} request);
       }
       
       try {
@@ -262,22 +209,22 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
     
     if(!path) {
       responseStatus = 400;
-      responseText = JSON.stringify({error:`Routing not implemented for ${canon}`});
-      errorMessage = `Routing not implemented for ${canon}`;
+      responseText = JSON.stringify({error:Routing not implemented for ${canon}});
+      errorMessage = Routing not implemented for ${canon};
       await logToSupabase(requestType, enriched, responseStatus, {error: errorMessage}, Date.now() - startTime, errorMessage);
       return { status: responseStatus, text: responseText };
     }
     
-    console.info(`Calling Swiss API for ${requestType} at path /${path}`);
-    const r = await fetch(`${SWISS_API}/${path}`,{ method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(enriched) });
+    console.info(Calling Swiss API for ${requestType} at path /${path});
+    const r = await fetch(${SWISS_API}/${path},{ method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(enriched) });
     responseStatus = r.status;
     responseText = await r.text();
     
     if (!r.ok) {
-      errorMessage = `Swiss API returned ${r.status}`;
-      console.error(`Error in ${requestType} request:`, errorMessage);
+      errorMessage = Swiss API returned ${r.status};
+      console.error(Error in ${requestType} request:, errorMessage);
     } else {
-      console.info(`Successfully processed ${requestType} request`);
+      console.info(Successfully processed ${requestType} request);
     }
     
     try {
