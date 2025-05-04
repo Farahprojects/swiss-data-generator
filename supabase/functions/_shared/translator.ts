@@ -46,7 +46,7 @@ async function logToSupabase(requestType: string, requestPayload: any, responseS
     if (error) {
       console.error("Failed to log to Supabase:", error.message);
     } else {
-      console.info(Successfully logged ${requestType} request to Supabase);
+      console.info(`Successfully logged ${requestType} request to Supabase`);
     }
   } catch (e) {
     console.error("Error logging to Supabase:", e.message);
@@ -62,9 +62,9 @@ async function ensureLatLon(obj:any){
     const age=(Date.now()-Date.parse(data.updated_at))/60000;
     if(age < GEO_TTL) return {...obj, latitude:data.lat, longitude:data.lon};
   }
-  const url=https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(place)}&key=${GEO_KEY};
+  const url=`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(place)}&key=${GEO_KEY}`;
   const g=await fetch(url).then(r=>r.json());
-  if(g.status!=="OK") throw new Error(Geocode failed: ${g.status});
+  if(g.status!=="OK") throw new Error(`Geocode failed: ${g.status}`);
   const {lat,lng}=g.results[0].geometry.location;
   await sb.from(GEO_TAB).upsert({place,lat,lon:lng}).select();
   return {...obj, latitude:lat, longitude:lng};
@@ -208,16 +208,16 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
     /*─ simple GETs ─*/
     if(canon==="moonphases"){
       const year = body.year ?? new Date().getFullYear();
-      console.info(Calling Swiss API for ${requestType} with year ${year});
-      const r = await fetch(${SWISS_API}/moonphases?year=${year});
+      console.info(`Calling Swiss API for ${requestType} with year ${year}`);
+      const r = await fetch(`${SWISS_API}/moonphases?year=${year}`);
       responseStatus = r.status;
       responseText = await r.text();
       
       if (!r.ok) {
-        errorMessage = Swiss API returned ${r.status};
-        console.error(Error in ${requestType} request:, errorMessage);
+        errorMessage = `Swiss API returned ${r.status}`;
+        console.error(`Error in ${requestType} request:`, errorMessage);
       } else {
-        console.info(Successfully processed ${requestType} request);
+        console.info(`Successfully processed ${requestType} request`);
       }
       
       try {
@@ -232,16 +232,16 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
     
     if(canon==="positions"){
       const qs = new URLSearchParams({ utc: body.utc ?? new Date().toISOString(), sidereal: String(body.sidereal ?? false) });
-      console.info(Calling Swiss API for ${requestType} with params ${qs});
-      const r = await fetch(${SWISS_API}/positions?${qs});
+      console.info(`Calling Swiss API for ${requestType} with params ${qs}`);
+      const r = await fetch(`${SWISS_API}/positions?${qs}`);
       responseStatus = r.status;
       responseText = await r.text();
       
       if (!r.ok) {
-        errorMessage = Swiss API returned ${r.status};
-        console.error(Error in ${requestType} request:, errorMessage);
+        errorMessage = `Swiss API returned ${r.status}`;
+        console.error(`Error in ${requestType} request:`, errorMessage);
       } else {
-        console.info(Successfully processed ${requestType} request);
+        console.info(`Successfully processed ${requestType} request`);
       }
       
       try {
@@ -309,4 +309,3 @@ export async function translate(raw:any):Promise<{status:number;text:string}>{
     return { status: responseStatus, text: responseText };
   }
 }
-
