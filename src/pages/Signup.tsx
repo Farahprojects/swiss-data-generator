@@ -54,7 +54,7 @@ const Signup = () => {
       console.log("Signup successful, user created:", user?.id);
       sonnerToast.dismiss();
       sonnerToast.success("Account Created", {
-        description: "Your account has been created successfully" 
+        description: "Your account has been created successfully. API key has been generated." 
       });
       
       // If email confirmation is disabled, we can redirect to dashboard
