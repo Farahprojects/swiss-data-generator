@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,21 +36,6 @@ const Signup = () => {
     try {
       console.log("Manually generating API key for user:", userId);
       
-      // Generate a branded API key with "THE" prefix and 16 random chars
-      const alphanumeric = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let randomPart = '';
-      
-      // Generate 16 random alphanumeric characters
-      const randomValues = new Uint8Array(16);
-      window.crypto.getRandomValues(randomValues);
-      
-      for (let i = 0; i < 16; i++) {
-        randomPart += alphanumeric[randomValues[i] % alphanumeric.length];
-      }
-      
-      // Combine to create the branded key
-      const brandedKey = `THE_${randomPart}`;
-        
       // First check if the user already has an API key
       const { data: existingKey, error: keyCheckError } = await supabase
         .from('api_keys')
@@ -69,13 +53,27 @@ const Signup = () => {
         return true;
       }
       
+      // Generate a branded API key with "THE" prefix and 16 random chars
+      const alphanumeric = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let randomPart = '';
+      
+      // Generate 16 random alphanumeric characters
+      const randomValues = new Uint8Array(16);
+      window.crypto.getRandomValues(randomValues);
+      
+      for (let i = 0; i < 16; i++) {
+        randomPart += alphanumeric[randomValues[i] % alphanumeric.length];
+      }
+      
+      // Combine to create the branded key
+      const brandedKey = `THE_${randomPart}`;
+        
       // Insert the new API key directly
       const { error: insertError } = await supabase
         .from('api_keys')
         .insert({ 
           user_id: userId,
           api_key: brandedKey,
-          balance_usd: 0,
           is_active: true
         });
         

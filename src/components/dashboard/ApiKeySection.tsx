@@ -27,8 +27,10 @@ export function ApiKeySection() {
   const { 
     apiKey, 
     isLoading, 
+    error,
     createdAt,
-    regenerateApiKey
+    regenerateApiKey,
+    refreshApiKey
   } = useApiKey();
 
   // Mock usage data - this would come from a proper API endpoint in production
@@ -47,6 +49,18 @@ export function ApiKeySection() {
       return () => clearTimeout(timer);
     }
   }, [regenerationState]);
+
+  // Retry loading API key if there was an error or none was found
+  useEffect(() => {
+    if ((!apiKey && !isLoading) || error) {
+      const timer = setTimeout(() => {
+        console.log("No API key found or error occurred, retrying...");
+        refreshApiKey();
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [apiKey, isLoading, error, refreshApiKey]);
 
   const handleCopyApiKey = () => {
     if (!apiKey) return;
@@ -128,7 +142,53 @@ export function ApiKeySection() {
   };
 
   if (isLoading && !apiKey) {
-    return <Card><CardContent className="pt-6">Loading API key details...</CardContent></Card>;
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center py-8">
+            <RefreshCw className="h-8 w-8 animate-spin mb-4 text-gray-500" />
+            <p>Loading API key details...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="bg-red-50 p-4 rounded-md border border-red-200 mb-4">
+            <p className="text-red-600 font-medium">Error loading API key:</p>
+            <p className="text-red-500 text-sm">{error.message}</p>
+          </div>
+          <Button onClick={refreshApiKey} variant="outline" className="w-full">
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!apiKey) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 mb-4">
+            <p className="text-amber-700 font-medium">No API key found</p>
+            <p className="text-amber-600 text-sm">
+              We couldn't find your API key. This might happen if your account was just created.
+            </p>
+          </div>
+          <Button 
+            onClick={regenerateApiKey} 
+            className="w-full bg-amber-500 hover:bg-amber-600"
+          >
+            Generate API Key
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

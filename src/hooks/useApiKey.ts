@@ -16,11 +16,15 @@ export function useApiKey() {
     setError(null);
     
     try {
+      console.log("Fetching API key from Supabase...");
       const result = await fetchApiKey();
+      console.log("API key fetch result:", result);
+      
       setApiKey(result.apiKey);
       setIsActive(result.isActive);
       setCreatedAt(result.createdAt);
     } catch (err) {
+      console.error("Error in useApiKey.loadApiKey:", err);
       setError(err instanceof Error ? err : new Error('Failed to fetch API key'));
       toast({
         title: 'Error',
@@ -37,7 +41,10 @@ export function useApiKey() {
     setError(null);
     
     try {
+      console.log("Regenerating API key...");
       const result = await regenerateApiKey();
+      console.log("API key regenerated:", result);
+      
       setApiKey(result.apiKey);
       setIsActive(true);
       toast({
@@ -45,6 +52,7 @@ export function useApiKey() {
         description: 'Your API key has been regenerated.',
       });
     } catch (err) {
+      console.error("Error in useApiKey.handleRegenerateApiKey:", err);
       setError(err instanceof Error ? err : new Error('Failed to regenerate API key'));
       toast({
         title: 'Error',
@@ -61,7 +69,10 @@ export function useApiKey() {
     setError(null);
     
     try {
+      console.log("Toggling API key active state to:", !isActive);
       const result = await disableApiKey(!isActive);
+      console.log("API key toggle result:", result);
+      
       setIsActive(result.isActive);
       toast({
         title: 'Success',
@@ -70,6 +81,7 @@ export function useApiKey() {
           : 'Your API key has been revoked.',
       });
     } catch (err) {
+      console.error("Error in useApiKey.handleToggleApiKey:", err);
       setError(err instanceof Error ? err : new Error('Failed to update API key status'));
       toast({
         title: 'Error',
