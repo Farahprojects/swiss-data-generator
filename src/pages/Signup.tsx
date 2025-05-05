@@ -33,6 +33,58 @@ const Signup = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const generateApiKey = async (userId: string) => {
+    try {
+      console.log("Manually generating API key for user:", userId);
+      
+      // Generate a secure API key
+      const secureBytes = new Uint8Array(16);
+      window.crypto.getRandomValues(secureBytes);
+      const secureKey = 'thp_' + Array.from(secureBytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+        
+      // First check if the user already has an API key
+      const { data: existingKey, error: keyCheckError } = await supabase
+        .from('api_keys')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (keyCheckError) {
+        console.error("Error checking for existing API key:", keyCheckError);
+        throw keyCheckError;
+      }
+      
+      if (existingKey) {
+        console.log("User already has an API key, no need to create one");
+        return true;
+      }
+      
+      // Using service role API for insert to bypass RLS issues
+      // We'll use direct insert with client for now
+      const { error: insertError } = await supabase
+        .from('api_keys')
+        .insert({ 
+          user_id: userId,
+          api_key: secureKey,  // Note: We're storing the raw key here, should be hashed in production
+          balance_usd: 0,
+          is_active: true
+        });
+        
+      if (insertError) {
+        console.error("Error inserting API key:", insertError);
+        throw insertError;
+      }
+      
+      console.log("API key successfully generated manually");
+      return true;
+    } catch (apiKeyError) {
+      console.error("Error in manual API key generation:", apiKeyError);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailValid || !passwordValid || !passwordsMatch) return;
@@ -79,45 +131,8 @@ const Signup = () => {
       // If user was created successfully, try to manually generate an API key
       if (user?.id) {
         try {
-          console.log("Attempting to manually generate API key for user:", user.id);
-          
-          // Get the current API key or create one if it doesn't exist
-          const { data: existingKey, error: keyCheckError } = await supabase
-            .from('api_keys')
-            .select('id, api_key')
-            .eq('user_id', user.id)
-            .maybeSingle();
-            
-          if (keyCheckError) {
-            console.error("Error checking for existing API key:", keyCheckError);
-          } else if (!existingKey) {
-            console.log("No API key found, generating a new one");
-            
-            // Generate a secure API key
-            const secureBytes = new Uint8Array(16);
-            window.crypto.getRandomValues(secureBytes);
-            const secureKey = 'thp_' + Array.from(secureBytes)
-              .map(b => b.toString(16).padStart(2, '0'))
-              .join('');
-              
-            // Insert the new API key
-            const { error: insertError } = await supabase
-              .from('api_keys')
-              .insert({ 
-                user_id: user.id,
-                api_key: secureKey,
-                balance_usd: 0,
-                is_active: true
-              });
-              
-            if (insertError) {
-              console.error("Error inserting API key:", insertError);
-            } else {
-              console.log("API key successfully generated manually");
-              setApiKeyGenerated(true);
-            }
-          } else {
-            console.log("Existing API key found, no need to generate a new one");
+          const success = await generateApiKey(user.id);
+          if (success) {
             setApiKeyGenerated(true);
           }
         } catch (apiKeyError) {
