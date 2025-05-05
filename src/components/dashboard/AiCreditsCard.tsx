@@ -71,10 +71,6 @@ export const AiCreditsCard = () => {
             <span>Last Top-Up:</span>
             <span>{formattedLastTopUp}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Trigger:</span>
-            <span>Auto top-up at $5</span>
-          </div>
         </div>
       </CardContent>
       <CardFooter className="mt-auto">
