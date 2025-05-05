@@ -64,12 +64,12 @@ export const AiCreditsCard = () => {
         </div>
         <div className="space-y-2 text-sm text-gray-500">
           <div className="flex justify-between">
-            <span>Status:</span>
-            <span className="font-medium text-green-600">✅ Active</span>
-          </div>
-          <div className="flex justify-between">
             <span>Last Top-Up:</span>
             <span>{formattedLastTopUp}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Trigger:</span>
+            <span>Auto top-up at $5</span>
           </div>
         </div>
       </CardContent>

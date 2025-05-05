@@ -15,12 +15,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export function ApiKeySection() {
   const [isCopying, setIsCopying] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [regenerationState, setRegenerationState] = useState<'idle' | 'loading' | 'success'>('idle');
+  const { toast } = useToast();
   
   const { 
     apiKey, 
@@ -56,6 +58,10 @@ export function ApiKeySection() {
       })
       .finally(() => {
         setTimeout(() => setIsCopying(false), 1000);
+        toast({
+          title: "API Key copied",
+          description: "Your API key has been copied to clipboard."
+        });
       });
   };
 
@@ -70,9 +76,18 @@ export function ApiKeySection() {
     try {
       await regenerateApiKey();
       setRegenerationState('success');
+      toast({
+        title: "Success",
+        description: "Your API key has been regenerated."
+      });
     } catch (error) {
       console.error('Error regenerating API key:', error);
       setRegenerationState('idle');
+      toast({
+        title: "Error",
+        description: "Failed to regenerate API key.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -82,8 +97,7 @@ export function ApiKeySection() {
 
   const maskApiKey = (key: string | null) => {
     if (!key) return "••••••••••••••••••••••";
-    if (showApiKey) return key;
-    return key.substring(0, 4) + "••••••••••••••••••" + key.substring(key.length - 4);
+    return showApiKey ? key : key.substring(0, 4) + "••••••••••••••••••" + key.substring(key.length - 4);
   };
 
   const usagePercentage = (usageData.apiCallsCount / usageData.apiCallLimit) * 100;
@@ -146,6 +160,7 @@ export function ApiKeySection() {
                   size="sm"
                   className="h-8 w-8 p-0"
                   onClick={handleToggleVisibility}
+                  title={showApiKey ? "Hide API key" : "Show API key"}
                 >
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
@@ -155,8 +170,9 @@ export function ApiKeySection() {
                   className="h-8 w-8 p-0"
                   onClick={handleCopyApiKey}
                   disabled={isCopying || !apiKey}
+                  title="Copy API key"
                 >
-                  <Copy className="h-4 w-4" />
+                  {isCopying ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
