@@ -14,7 +14,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "sonner";
 
 function App() {
   return (

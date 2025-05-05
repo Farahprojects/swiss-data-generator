@@ -10,6 +10,7 @@ import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail, validatePassword, validatePasswordMatch } from "@/utils/authValidation";
+import { toast as sonnerToast } from "sonner";
 
 const Signup = () => {
   const [loading, setLoading] = useState(false);
@@ -35,22 +36,25 @@ const Signup = () => {
     setLoading(true);
     try {
       console.log("Starting signup process for:", email);
+      
+      // Use direct sonner toast for immediate feedback
+      sonnerToast.loading("Creating your account...");
+      
       const { error, user } = await signUp(email, password);
       
       if (error) {
         console.error("Signup error:", error.message);
-        toast({
-          title: "Signup Error",
-          description: error.message || "Failed to create account",
-          variant: "destructive",
+        sonnerToast.dismiss();
+        sonnerToast.error("Signup Error", {
+          description: error.message || "Failed to create account"
         });
         return;
       }
       
       console.log("Signup successful, user created:", user?.id);
-      toast({
-        title: "Account Created",
-        description: "Your account has been created successfully",
+      sonnerToast.dismiss();
+      sonnerToast.success("Account Created", {
+        description: "Your account has been created successfully" 
       });
       
       // If email confirmation is disabled, we can redirect to dashboard
@@ -60,10 +64,9 @@ const Signup = () => {
       }
     } catch (error: any) {
       console.error("Unexpected error during signup:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
+      sonnerToast.dismiss();
+      sonnerToast.error("Error", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred during signup"
       });
     } finally {
       setLoading(false);
@@ -72,21 +75,20 @@ const Signup = () => {
 
   const handleGoogleSignIn = async () => {
     try {
+      sonnerToast.loading("Connecting to Google...");
       const { error } = await signInWithGoogle();
       if (error) {
         console.error("Google sign-in error:", error.message);
-        toast({
-          title: "Google Sign-in Error",
-          description: error.message || "Failed to sign in with Google",
-          variant: "destructive",
+        sonnerToast.dismiss();
+        sonnerToast.error("Google Sign-in Error", {
+          description: error.message || "Failed to sign in with Google"
         });
       }
     } catch (error: any) {
       console.error("Unexpected error during Google sign-in:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
+      sonnerToast.dismiss();
+      sonnerToast.error("Error", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred"
       });
     }
   };

@@ -1,6 +1,18 @@
-// This is a placeholder component that doesn't render any toasts
-// You can implement your custom UI message system later
+
+import { Toaster as SonnerToaster } from "sonner";
 
 export function Toaster() {
-  return null;
+  return (
+    <SonnerToaster 
+      position="top-right"
+      toastOptions={{
+        style: {
+          background: 'hsl(var(--background))',
+          color: 'hsl(var(--foreground))',
+          border: '1px solid hsl(var(--border))',
+        },
+        className: 'border-border',
+      }}
+    />
+  );
 }
