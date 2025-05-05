@@ -9,42 +9,9 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      api_endpoints: {
-        Row: {
-          created_at: string | null
-          endpoint_name: string
-          endpoint_path: string
-          id: string
-          pricing_type: string
-          requires_ai: boolean
-          system: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          endpoint_name: string
-          endpoint_path: string
-          id?: string
-          pricing_type: string
-          requires_ai?: boolean
-          system: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          endpoint_name?: string
-          endpoint_path?: string
-          id?: string
-          pricing_type?: string
-          requires_ai?: boolean
-          system?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       api_keys: {
         Row: {
-          api_key: string | null
+          api_key: string
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -52,7 +19,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          api_key?: string | null
+          api_key: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -60,7 +27,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          api_key?: string | null
+          api_key?: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -71,35 +38,72 @@ export type Database = {
       }
       api_usage: {
         Row: {
-          ai_used: boolean | null
-          created_at: string | null
-          endpoint_id: string | null
+          cost_usd: number | null
+          endpoint: string
           id: string
+          processing_time_ms: number | null
+          request_params: Json | null
+          response_status: number | null
+          timestamp: string | null
           user_id: string | null
         }
         Insert: {
-          ai_used?: boolean | null
-          created_at?: string | null
-          endpoint_id?: string | null
+          cost_usd?: number | null
+          endpoint: string
           id?: string
+          processing_time_ms?: number | null
+          request_params?: Json | null
+          response_status?: number | null
+          timestamp?: string | null
           user_id?: string | null
         }
         Update: {
-          ai_used?: boolean | null
-          created_at?: string | null
-          endpoint_id?: string | null
+          cost_usd?: number | null
+          endpoint?: string
           id?: string
+          processing_time_ms?: number | null
+          request_params?: Json | null
+          response_status?: number | null
+          timestamp?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "api_usage_endpoint_id_fkey"
-            columns: ["endpoint_id"]
-            isOneToOne: false
-            referencedRelation: "api_endpoints"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount_usd: number | null
+          api_call_type: string | null
+          description: string | null
+          id: number
+          reference_id: string | null
+          stripe_pid: string | null
+          ts: string | null
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount_usd?: number | null
+          api_call_type?: string | null
+          description?: string | null
+          id?: number
+          reference_id?: string | null
+          stripe_pid?: string | null
+          ts?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount_usd?: number | null
+          api_call_type?: string | null
+          description?: string | null
+          id?: number
+          reference_id?: string | null
+          stripe_pid?: string | null
+          ts?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       geo_cache: {
         Row: {
@@ -152,65 +156,101 @@ export type Database = {
         }
         Relationships: []
       }
-      product_codes: {
+      pricelist: {
         Row: {
-          code: string
-          features: string[]
-          is_active: boolean | null
-          label: string
-          price_id: string | null
+          description: string | null
+          endpoint: string | null
+          id: string
+          name: string | null
+          unit_price_usd: number | null
         }
         Insert: {
-          code: string
-          features: string[]
-          is_active?: boolean | null
-          label: string
-          price_id?: string | null
+          description?: string | null
+          endpoint?: string | null
+          id: string
+          name?: string | null
+          unit_price_usd?: number | null
         }
         Update: {
-          code?: string
-          features?: string[]
+          description?: string | null
+          endpoint?: string | null
+          id?: string
+          name?: string | null
+          unit_price_usd?: number | null
+        }
+        Relationships: []
+      }
+      stripe_links: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          environment: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          environment?: string | null
+          id?: string
           is_active?: boolean | null
-          label?: string
-          price_id?: string | null
+          name: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          environment?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          url?: string
         }
         Relationships: []
       }
       stripe_products: {
         Row: {
-          active: boolean
+          active: boolean | null
+          amount_usd: number
           created_at: string | null
-          currency: string
+          currency: string | null
+          description: string | null
           id: string
-          interval: string
-          limits: number | null
-          price_amount: number
-          product_name: string
-          stripe_price_id: string
+          name: string
+          price_id: string
+          product_id: string
+          type: string | null
           updated_at: string | null
         }
         Insert: {
-          active?: boolean
+          active?: boolean | null
+          amount_usd: number
           created_at?: string | null
-          currency?: string
+          currency?: string | null
+          description?: string | null
           id?: string
-          interval?: string
-          limits?: number | null
-          price_amount: number
-          product_name: string
-          stripe_price_id: string
+          name: string
+          price_id: string
+          product_id: string
+          type?: string | null
           updated_at?: string | null
         }
         Update: {
-          active?: boolean
+          active?: boolean | null
+          amount_usd?: number
           created_at?: string | null
-          currency?: string
+          currency?: string | null
+          description?: string | null
           id?: string
-          interval?: string
-          limits?: number | null
-          price_amount?: number
-          product_name?: string
-          stripe_price_id?: string
+          name?: string
+          price_id?: string
+          product_id?: string
+          type?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -296,6 +336,45 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_webhook_events: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          processed: boolean
+          processed_at: string | null
+          processing_error: string | null
+          stripe_customer_id: string | null
+          stripe_event_id: string
+          stripe_event_type: string
+          stripe_kind: Database["public"]["Enums"]["stripe_event_kind"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payload: Json
+          processed?: boolean
+          processed_at?: string | null
+          processing_error?: string | null
+          stripe_customer_id?: string | null
+          stripe_event_id: string
+          stripe_event_type: string
+          stripe_kind?: Database["public"]["Enums"]["stripe_event_kind"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+          processing_error?: string | null
+          stripe_customer_id?: string | null
+          stripe_event_id?: string
+          stripe_event_type?: string
+          stripe_kind?: Database["public"]["Enums"]["stripe_event_kind"]
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           add_on_relationship_price_id: string | null
@@ -353,6 +432,36 @@ export type Database = {
         }
         Relationships: []
       }
+      topup_queue: {
+        Row: {
+          amount_usd: number
+          error_message: string | null
+          id: string
+          processed_at: string | null
+          requested_at: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount_usd: number
+          error_message?: string | null
+          id?: string
+          processed_at?: string | null
+          requested_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount_usd?: number
+          error_message?: string | null
+          id?: string
+          processed_at?: string | null
+          requested_at?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       translator_logs: {
         Row: {
           created_at: string | null
@@ -386,11 +495,71 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          balance_usd: number
+          last_updated: string | null
+          user_id: string
+        }
+        Insert: {
+          balance_usd?: number
+          last_updated?: string | null
+          user_id: string
+        }
+        Update: {
+          balance_usd?: number
+          last_updated?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      stripe_webhook_logs: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          processed: boolean | null
+          processed_at: string | null
+          processing_error: string | null
+          stripe_customer_id: string | null
+          stripe_event_id: string | null
+          stripe_event_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          processed?: boolean | null
+          processed_at?: string | null
+          processing_error?: string | null
+          stripe_customer_id?: string | null
+          stripe_event_id?: string | null
+          stripe_event_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          processed?: boolean | null
+          processed_at?: string | null
+          processing_error?: string | null
+          stripe_customer_id?: string | null
+          stripe_event_id?: string | null
+          stripe_event_type?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      add_user_credits: {
+        Args: {
+          _user_id: string
+          _amount_usd: number
+          _type?: string
+          _description?: string
+          _stripe_pid?: string
+        }
+        Returns: undefined
+      }
       create_user_after_payment: {
         Args: { user_id: string; plan_type?: string }
         Returns: undefined
@@ -403,6 +572,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      record_api_usage: {
+        Args: {
+          _user_id: string
+          _endpoint: string
+          _cost_usd: number
+          _request_params?: Json
+          _response_status?: number
+          _processing_time_ms?: number
+        }
+        Returns: string
+      }
+      regenerate_api_key: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       toggle_addon: {
         Args: { user_id_param: string; addon_name: string; enabled: boolean }
         Returns: undefined
@@ -411,9 +595,20 @@ export type Database = {
         Args: { user_id_param: string; new_plan: string }
         Returns: undefined
       }
+      validate_api_key: {
+        Args: { _api_key: string }
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      stripe_event_kind:
+        | "payment_intent"
+        | "charge"
+        | "customer"
+        | "invoice"
+        | "checkout"
+        | "subscription"
+        | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -528,6 +723,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      stripe_event_kind: [
+        "payment_intent",
+        "charge",
+        "customer",
+        "invoice",
+        "checkout",
+        "subscription",
+        "unknown",
+      ],
+    },
   },
 } as const
