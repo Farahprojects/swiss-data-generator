@@ -1,6 +1,5 @@
 
-// This is a placeholder implementation that doesn't show any toasts
-// You can implement your custom UI message system later
+import { toast as sonnerToast } from "sonner";
 
 export type ToastProps = {
   title?: string;
@@ -8,9 +7,23 @@ export type ToastProps = {
   variant?: "default" | "destructive" | "success";
 };
 
-export function toast(_props: ToastProps) {
-  // No-op implementation
-  return "";
+export function toast(props: ToastProps) {
+  const { title, description, variant = "default" } = props;
+
+  switch (variant) {
+    case "destructive":
+      return sonnerToast.error(title, {
+        description,
+      });
+    case "success":
+      return sonnerToast.success(title, {
+        description,
+      });
+    default:
+      return sonnerToast(title, {
+        description,
+      });
+  }
 }
 
 export function useToast() {

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,9 +34,11 @@ const Signup = () => {
     
     setLoading(true);
     try {
+      console.log("Starting signup process for:", email);
       const { error, user } = await signUp(email, password);
       
       if (error) {
+        console.error("Signup error:", error.message);
         toast({
           title: "Signup Error",
           description: error.message || "Failed to create account",
@@ -44,17 +47,19 @@ const Signup = () => {
         return;
       }
       
+      console.log("Signup successful, user created:", user?.id);
       toast({
         title: "Account Created",
-        description: "Please check your email to confirm your account",
+        description: "Your account has been created successfully",
       });
       
-      // Some Supabase projects may require email confirmation
       // If email confirmation is disabled, we can redirect to dashboard
       if (user) {
+        console.log("Redirecting to dashboard");
         navigate("/dashboard");
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Unexpected error during signup:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "An unknown error occurred",
@@ -69,13 +74,15 @@ const Signup = () => {
     try {
       const { error } = await signInWithGoogle();
       if (error) {
+        console.error("Google sign-in error:", error.message);
         toast({
           title: "Google Sign-in Error",
           description: error.message || "Failed to sign in with Google",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Unexpected error during Google sign-in:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "An unexpected error occurred",
