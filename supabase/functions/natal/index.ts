@@ -1,8 +1,7 @@
 
 import { serve } from "https://deno.land/std/http/server.ts";
-import { NatalArgs, toSwissNatal } from "../_shared/translator.ts";
+import { translate } from "../_shared/translator.ts";
 
-const SWISS = Deno.env.get("SWISS_EPHEMERIS_URL")!;  // Using the correct secret key
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -15,30 +14,18 @@ serve(async (req) => {
   }
 
   try {
-    const aiBody = NatalArgs.parse(await req.json());   // validate
-    const swissBody = toSwissNatal(aiBody);             // translate
+    const body = await req.json();
+    body.request = "natal"; // Ensure the correct request type
 
-    console.log("Forwarding request to Swiss API:", JSON.stringify(swissBody));
+    // Use the shared translator module
+    const { status, text } = await translate(body);
     
-    const r = await fetch(`${SWISS}/natal`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(swissBody),
-    });
-    
-    if (!r.ok) {
-      console.error("Error from Swiss API:", await r.text());
-      throw new Error(`Swiss API returned ${r.status}: ${await r.text()}`);
-    }
-
-    const responseText = await r.text();
-    console.log("Successful response received from Swiss API");
-    
-    return new Response(responseText, {
+    return new Response(text, {
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("Error processing request:", err.message);
+    console.error("Error processing natal request:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

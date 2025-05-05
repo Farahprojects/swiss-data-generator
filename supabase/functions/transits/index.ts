@@ -1,20 +1,11 @@
 
 import { serve } from "https://deno.land/std/http/server.ts";
-import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
-import { NatalArgs, toSwissNatal } from "../_shared/translator.ts";
+import { translate } from "../_shared/translator.ts";
 
-const SWISS = Deno.env.get("SWISS_EPHEMERIS_URL")!;  // Using the correct secret key
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-/* --- Natal schema + extra transit fields --- */
-const TransArgs = NatalArgs.extend({
-  transit_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  transit_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-});
-type TransPayload = z.infer<typeof TransArgs>;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -23,35 +14,18 @@ serve(async (req) => {
   }
 
   try {
-    const aiBody: TransPayload = TransArgs.parse(await req.json());
-    
-    const swissBody = {
-      ...toSwissNatal(aiBody),
-      transit_date: aiBody.transit_date,
-      transit_time: aiBody.transit_time,
-    };
+    const body = await req.json();
+    body.request = "transits"; // Set the request type
 
-    console.log("Forwarding request to Swiss API:", JSON.stringify(swissBody));
+    // Use the shared translator module
+    const { status, text } = await translate(body);
     
-    const r = await fetch(`${SWISS}/transits`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(swissBody),
-    });
-    
-    if (!r.ok) {
-      console.error("Error from Swiss API:", await r.text());
-      throw new Error(`Swiss API returned ${r.status}: ${await r.text()}`);
-    }
-
-    const responseText = await r.text();
-    console.log("Successful response received from Swiss API");
-    
-    return new Response(responseText, {
+    return new Response(text, {
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("Error processing request:", err.message);
+    console.error("Error processing transits request:", err.message);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
