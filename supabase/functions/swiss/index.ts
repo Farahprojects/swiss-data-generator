@@ -1,3 +1,4 @@
+
 // supabase/functions/swiss/index.ts
 // Single edge‑function that:
 //   1. Validates API key
@@ -70,11 +71,15 @@ function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown
 
 async function validateKey(k: string): Promise<string | null> {
   console.info("Attempting to validate API key...");
+  
+  // Updated to directly query the api_key field without using digest function
   const { data, error } = await sb.from("api_keys").select("user_id,is_active").eq("api_key", k).maybeSingle();
+  
   if (error) {
       console.error("Error validating API key:", error.message);
       throw new Error(error.message); // Propagate DB errors
   }
+  
   const isValid = data && data.is_active;
   if (isValid) {
       console.info(`API key successfully validated for user: ${data.user_id}`);

@@ -108,6 +108,8 @@ const createSupabase = () => {
 const validateApiKey = async (key: string) => {
   console.log(`Validating API key: ${key.substring(0, 5)}...`);
   const supabase = createSupabase();
+  
+  // Now we directly query the api_keys table without using digest function
   const { data, error } = await supabase
     .from("api_keys")
     .select("user_id, is_active")
