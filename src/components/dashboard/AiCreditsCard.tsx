@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,22 +9,73 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export const AiCreditsCard = () => {
+  const { user } = useAuth();
+  const [balance, setBalance] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserBalance = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from("user_credits")
+          .select("balance_usd, last_updated")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching user balance:", error);
+          return;
+        }
+
+        // Set balance to data.balance_usd if available, otherwise 0
+        setBalance(data?.balance_usd || 0);
+      } catch (err) {
+        console.error("Failed to fetch user balance:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserBalance();
+  }, [user]);
+
+  // Format date to show in the UI - using May 4, 2025 as example
+  const formattedLastTopUp = "May 4, 2025";
+
   return (
     <Card className="flex flex-col h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">AI Credits</CardTitle>
-        <CardDescription>Available for AI-powered reports</CardDescription>
+        <CardTitle className="text-lg font-medium">API Wallet Balance</CardTitle>
+        <CardDescription>Available for API requests</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-gray-600">Current balance:</span>
-          <span className="text-2xl font-bold">$0</span>
+          <span className="text-gray-600">Balance:</span>
+          <span className="text-2xl font-bold">
+            ${isLoading ? "..." : balance.toFixed(2)} USD
+          </span>
         </div>
-        <p className="text-sm text-gray-500">
-          AI reports are $2 per analysis
-        </p>
+        <div className="space-y-2 text-sm text-gray-500">
+          <div className="flex justify-between">
+            <span>Status:</span>
+            <span className="font-medium text-green-600">✅ Active</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Last Top-Up:</span>
+            <span>{formattedLastTopUp}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Trigger:</span>
+            <span>Auto top-up at $5</span>
+          </div>
+        </div>
       </CardContent>
       <CardFooter className="mt-auto">
         <Button className="w-full bg-white text-black border-black border hover:bg-gray-100">
