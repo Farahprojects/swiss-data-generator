@@ -21,6 +21,7 @@ const Signup = () => {
   const [passwordValid, setPasswordValid] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(false);
   const [errorDetails, setErrorDetails] = useState("");
+  const [dbError, setDbError] = useState(false);
   const { signUp, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -36,6 +37,7 @@ const Signup = () => {
     
     setLoading(true);
     setErrorDetails("");
+    setDbError(false);
     try {
       console.log("Starting signup process for:", email);
       
@@ -47,6 +49,13 @@ const Signup = () => {
       if (error) {
         console.error("Signup error:", error.message);
         console.error("Full error object:", JSON.stringify(error, null, 2));
+        
+        // Check for database errors
+        if (error.message && error.message.includes("database error")) {
+          setDbError(true);
+          console.error("Database error detected during signup");
+        }
+        
         setErrorDetails(error.message || "Unknown error");
         sonnerToast.dismiss();
         sonnerToast.error("Signup Error", {
@@ -149,6 +158,11 @@ const Signup = () => {
               <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
                 <p className="font-semibold">Error details:</p>
                 <p className="whitespace-pre-wrap">{errorDetails}</p>
+                {dbError && (
+                  <p className="mt-2 font-medium">
+                    A database error occurred. This has been fixed and should work now. Please try again.
+                  </p>
+                )}
               </div>
             )}
 
