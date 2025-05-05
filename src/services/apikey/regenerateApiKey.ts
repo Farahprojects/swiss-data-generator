@@ -9,13 +9,20 @@ export async function regenerateApiKey() {
       throw new Error('User not authenticated');
     }
     
-    // Generate a more secure API key with increased entropy
-    // Format: thp_[32 chars of hex] instead of previous 24
-    const secureBytes = new Uint8Array(16); // 16 bytes = 32 hex chars
-    window.crypto.getRandomValues(secureBytes);
-    const secureKey = 'thp_' + Array.from(secureBytes)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+    // Generate a branded API key with "THE" prefix and 16 random chars
+    const alphanumeric = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let randomPart = '';
+    
+    // Generate 16 random alphanumeric characters
+    const randomValues = new Uint8Array(16);
+    window.crypto.getRandomValues(randomValues);
+    
+    for (let i = 0; i < 16; i++) {
+      randomPart += alphanumeric[randomValues[i] % alphanumeric.length];
+    }
+    
+    // Combine to create the branded key
+    const brandedKey = `THE_${randomPart}`;
     
     // First, check if the user already has an API key
     const { data: existingKey, error: fetchError } = await supabase
@@ -36,7 +43,7 @@ export async function regenerateApiKey() {
       result = await supabase
         .from('api_keys')
         .update({ 
-          api_key: secureKey,
+          api_key: brandedKey,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.user.id)
@@ -48,7 +55,7 @@ export async function regenerateApiKey() {
         .from('api_keys')
         .insert({ 
           user_id: user.user.id,
-          api_key: secureKey,
+          api_key: brandedKey,
           updated_at: new Date().toISOString()
         })
         .select('api_key')

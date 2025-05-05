@@ -37,12 +37,20 @@ const Signup = () => {
     try {
       console.log("Manually generating API key for user:", userId);
       
-      // Generate a secure API key
-      const secureBytes = new Uint8Array(16);
-      window.crypto.getRandomValues(secureBytes);
-      const secureKey = 'thp_' + Array.from(secureBytes)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      // Generate a branded API key with "THE" prefix and 16 random chars
+      const alphanumeric = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let randomPart = '';
+      
+      // Generate 16 random alphanumeric characters
+      const randomValues = new Uint8Array(16);
+      window.crypto.getRandomValues(randomValues);
+      
+      for (let i = 0; i < 16; i++) {
+        randomPart += alphanumeric[randomValues[i] % alphanumeric.length];
+      }
+      
+      // Combine to create the branded key
+      const brandedKey = `THE_${randomPart}`;
         
       // First check if the user already has an API key
       const { data: existingKey, error: keyCheckError } = await supabase
@@ -61,13 +69,12 @@ const Signup = () => {
         return true;
       }
       
-      // Using service role API for insert to bypass RLS issues
-      // We'll use direct insert with client for now
+      // Insert the new API key directly
       const { error: insertError } = await supabase
         .from('api_keys')
         .insert({ 
           user_id: userId,
-          api_key: secureKey,  // Note: We're storing the raw key here, should be hashed in production
+          api_key: brandedKey,
           balance_usd: 0,
           is_active: true
         });
@@ -77,7 +84,7 @@ const Signup = () => {
         throw insertError;
       }
       
-      console.log("API key successfully generated manually");
+      console.log("API key successfully generated with branded format");
       return true;
     } catch (apiKeyError) {
       console.error("Error in manual API key generation:", apiKeyError);
