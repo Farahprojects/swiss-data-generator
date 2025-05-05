@@ -143,7 +143,7 @@ export function ApiKeySection() {
 
   if (isLoading && !apiKey) {
     return (
-      <Card>
+      <Card className="w-full">
         <CardContent className="pt-6">
           <div className="flex flex-col items-center justify-center py-8">
             <RefreshCw className="h-8 w-8 animate-spin mb-4 text-gray-500" />
@@ -156,7 +156,7 @@ export function ApiKeySection() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="w-full">
         <CardContent className="pt-6">
           <div className="bg-red-50 p-4 rounded-md border border-red-200 mb-4">
             <p className="text-red-600 font-medium">Error loading API key:</p>
@@ -172,7 +172,7 @@ export function ApiKeySection() {
 
   if (!apiKey) {
     return (
-      <Card>
+      <Card className="w-full">
         <CardContent className="pt-6">
           <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 mb-4">
             <p className="text-amber-700 font-medium">No API key found</p>
@@ -193,14 +193,14 @@ export function ApiKeySection() {
 
   return (
     <>
-      <Card className="flex flex-col h-full">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>API Key</CardTitle>
           <CardDescription>
             Your API key for integrating with our service.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 flex-grow">
+        <CardContent className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium">API Usage</span>
@@ -212,9 +212,9 @@ export function ApiKeySection() {
           </div>
 
           <div className="relative">
-            <div className="bg-muted p-3 rounded-md font-mono text-sm overflow-x-auto whitespace-nowrap flex justify-between items-center">
-              <span className="truncate mr-2">{maskApiKey(apiKey)}</span>
-              <div className="flex space-x-1">
+            <div className="bg-muted p-3 rounded-md font-mono text-sm break-all flex justify-between items-start">
+              <div className="w-[85%] mr-2">{maskApiKey(apiKey)}</div>
+              <div className="flex space-x-1 shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -244,7 +244,7 @@ export function ApiKeySection() {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end mt-auto">
+        <CardFooter className="flex justify-end">
           <div className="w-full">
             {renderRegenerateButton()}
           </div>

@@ -3,7 +3,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import { ApiKeySection } from "@/components/dashboard/ApiKeySection";
-import { CurrentPlanCard } from "@/components/dashboard/CurrentPlanCard";
 import { AiCreditsCard } from "@/components/dashboard/AiCreditsCard";
 import { RecentApiCalls } from "@/components/dashboard/RecentApiCalls";
 import { BillingSection } from "@/components/dashboard/BillingSection";
@@ -35,8 +34,7 @@ const Dashboard = () => {
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <CurrentPlanCard />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <ApiKeySection />
                 <AiCreditsCard />
               </div>
