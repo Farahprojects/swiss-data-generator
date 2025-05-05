@@ -20,6 +20,7 @@ const Signup = () => {
   const [emailValid, setEmailValid] = useState(false);
   const [passwordValid, setPasswordValid] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(false);
+  const [errorDetails, setErrorDetails] = useState("");
   const { signUp, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -34,6 +35,7 @@ const Signup = () => {
     if (!emailValid || !passwordValid || !passwordsMatch) return;
     
     setLoading(true);
+    setErrorDetails("");
     try {
       console.log("Starting signup process for:", email);
       
@@ -44,14 +46,17 @@ const Signup = () => {
       
       if (error) {
         console.error("Signup error:", error.message);
+        console.error("Full error object:", JSON.stringify(error, null, 2));
+        setErrorDetails(error.message || "Unknown error");
         sonnerToast.dismiss();
         sonnerToast.error("Signup Error", {
-          description: error.message || "Failed to create account"
+          description: `Error: ${error.message || "Failed to create account"}. Check the console for more details.`
         });
         return;
       }
       
       console.log("Signup successful, user created:", user?.id);
+      console.log("User object details:", JSON.stringify(user, null, 2));
       sonnerToast.dismiss();
       sonnerToast.success("Account Created", {
         description: "Your account has been created successfully. API key has been generated." 
@@ -64,6 +69,8 @@ const Signup = () => {
       }
     } catch (error: any) {
       console.error("Unexpected error during signup:", error);
+      console.error("Error stack:", error.stack);
+      setErrorDetails(error instanceof Error ? error.message : "An unexpected error occurred");
       sonnerToast.dismiss();
       sonnerToast.error("Error", {
         description: error instanceof Error ? error.message : "An unexpected error occurred during signup"
@@ -79,6 +86,7 @@ const Signup = () => {
       const { error } = await signInWithGoogle();
       if (error) {
         console.error("Google sign-in error:", error.message);
+        console.error("Full error object:", JSON.stringify(error, null, 2));
         sonnerToast.dismiss();
         sonnerToast.error("Google Sign-in Error", {
           description: error.message || "Failed to sign in with Google"
@@ -86,6 +94,7 @@ const Signup = () => {
       }
     } catch (error: any) {
       console.error("Unexpected error during Google sign-in:", error);
+      console.error("Error stack:", error.stack);
       sonnerToast.dismiss();
       sonnerToast.error("Error", {
         description: error instanceof Error ? error.message : "An unexpected error occurred"
@@ -135,6 +144,13 @@ const Signup = () => {
                 label="Confirm Password"
               />
             </div>
+            
+            {errorDetails && (
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+                <p className="font-semibold">Error details:</p>
+                <p className="whitespace-pre-wrap">{errorDetails}</p>
+              </div>
+            )}
 
             <Button
               type="submit"
