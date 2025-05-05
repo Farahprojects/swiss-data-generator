@@ -72,14 +72,8 @@ verify_jwt = false
 [functions.verify-payment]
 verify_jwt = false
 
-[functions.stripe-checkout-handler]
-verify_jwt = false
-
 [functions.account-creator]
 verify_jwt = false
-
-[functions.subscription-linker]
-verify_jwt = true
 
 [functions.api]
 verify_jwt = false
