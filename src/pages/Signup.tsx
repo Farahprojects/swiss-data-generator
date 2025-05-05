@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { Link, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import EmailInput from "@/components/auth/EmailInput";
@@ -22,7 +23,6 @@ const Signup = () => {
   const [passwordsMatch, setPasswordsMatch] = useState(false);
   const [errorDetails, setErrorDetails] = useState("");
   const [dbError, setDbError] = useState(false);
-  const [apiKeyGenerated, setApiKeyGenerated] = useState(false);
   const { signUp, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -32,64 +32,6 @@ const Signup = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const generateApiKey = async (userId: string) => {
-    try {
-      console.log("Manually generating API key for user:", userId);
-      
-      // First check if the user already has an API key
-      const { data: existingKey, error: keyCheckError } = await supabase
-        .from('api_keys')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (keyCheckError) {
-        console.error("Error checking for existing API key:", keyCheckError);
-        throw keyCheckError;
-      }
-      
-      if (existingKey) {
-        console.log("User already has an API key, no need to create one");
-        return true;
-      }
-      
-      // Generate a branded API key with "THE" prefix and 16 random chars
-      const alphanumeric = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let randomPart = '';
-      
-      // Generate 16 random alphanumeric characters
-      const randomValues = new Uint8Array(16);
-      window.crypto.getRandomValues(randomValues);
-      
-      for (let i = 0; i < 16; i++) {
-        randomPart += alphanumeric[randomValues[i] % alphanumeric.length];
-      }
-      
-      // Combine to create the branded key
-      const brandedKey = `THE_${randomPart}`;
-        
-      // Insert the new API key directly
-      const { error: insertError } = await supabase
-        .from('api_keys')
-        .insert({ 
-          user_id: userId,
-          api_key: brandedKey,
-          is_active: true
-        });
-        
-      if (insertError) {
-        console.error("Error inserting API key:", insertError);
-        throw insertError;
-      }
-      
-      console.log("API key successfully generated with branded format");
-      return true;
-    } catch (apiKeyError) {
-      console.error("Error in manual API key generation:", apiKeyError);
-      return false;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailValid || !passwordValid || !passwordsMatch) return;
@@ -97,7 +39,6 @@ const Signup = () => {
     setLoading(true);
     setErrorDetails("");
     setDbError(false);
-    setApiKeyGenerated(false);
     
     try {
       console.log("Starting signup process for:", email);
@@ -131,23 +72,10 @@ const Signup = () => {
       }
       
       console.log("Signup successful, user created:", user?.id);
-      console.log("User object details:", JSON.stringify(user, null, 2));
-      
-      // If user was created successfully, try to manually generate an API key
-      if (user?.id) {
-        try {
-          const success = await generateApiKey(user.id);
-          if (success) {
-            setApiKeyGenerated(true);
-          }
-        } catch (apiKeyError) {
-          console.error("Error in manual API key generation:", apiKeyError);
-        }
-      }
       
       sonnerToast.dismiss();
       sonnerToast.success("Account Created", {
-        description: "Your account has been created successfully. API key has been generated." 
+        description: "Your account has been created successfully. API key has been automatically generated."
       });
       
       // If email confirmation is disabled, we can redirect to dashboard
@@ -240,11 +168,6 @@ const Signup = () => {
                 {dbError && (
                   <p className="mt-2 font-medium">
                     A database error occurred. This has been fixed and should work now. Please try again.
-                  </p>
-                )}
-                {apiKeyGenerated && (
-                  <p className="mt-2 font-medium text-green-600">
-                    Your API key was successfully generated. You can continue to dashboard.
                   </p>
                 )}
               </div>
