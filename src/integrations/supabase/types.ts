@@ -12,6 +12,7 @@ export type Database = {
       api_keys: {
         Row: {
           api_key: string
+          balance_usd: number
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -20,6 +21,7 @@ export type Database = {
         }
         Insert: {
           api_key: string
+          balance_usd?: number
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -28,6 +30,7 @@ export type Database = {
         }
         Update: {
           api_key?: string
+          balance_usd?: number
           created_at?: string | null
           id?: string
           is_active?: boolean | null

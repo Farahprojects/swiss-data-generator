@@ -11,6 +11,7 @@ import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail, validatePassword, validatePasswordMatch } from "@/utils/authValidation";
 import { toast as sonnerToast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Signup = () => {
   const [loading, setLoading] = useState(false);
@@ -22,6 +23,7 @@ const Signup = () => {
   const [passwordsMatch, setPasswordsMatch] = useState(false);
   const [errorDetails, setErrorDetails] = useState("");
   const [dbError, setDbError] = useState(false);
+  const [apiKeyGenerated, setApiKeyGenerated] = useState(false);
   const { signUp, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -38,6 +40,8 @@ const Signup = () => {
     setLoading(true);
     setErrorDetails("");
     setDbError(false);
+    setApiKeyGenerated(false);
+    
     try {
       console.log("Starting signup process for:", email);
       
@@ -51,7 +55,12 @@ const Signup = () => {
         console.error("Full error object:", JSON.stringify(error, null, 2));
         
         // Check for database errors
-        if (error.message && error.message.includes("database error")) {
+        if (error.message && (
+          error.message.includes("database error") || 
+          error.message.includes("relation") || 
+          error.message.includes("violates unique constraint") ||
+          error.message.includes("duplicate key")
+        )) {
           setDbError(true);
           console.error("Database error detected during signup");
         }
@@ -66,6 +75,56 @@ const Signup = () => {
       
       console.log("Signup successful, user created:", user?.id);
       console.log("User object details:", JSON.stringify(user, null, 2));
+      
+      // If user was created successfully, try to manually generate an API key
+      if (user?.id) {
+        try {
+          console.log("Attempting to manually generate API key for user:", user.id);
+          
+          // Get the current API key or create one if it doesn't exist
+          const { data: existingKey, error: keyCheckError } = await supabase
+            .from('api_keys')
+            .select('id, api_key')
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          if (keyCheckError) {
+            console.error("Error checking for existing API key:", keyCheckError);
+          } else if (!existingKey) {
+            console.log("No API key found, generating a new one");
+            
+            // Generate a secure API key
+            const secureBytes = new Uint8Array(16);
+            window.crypto.getRandomValues(secureBytes);
+            const secureKey = 'thp_' + Array.from(secureBytes)
+              .map(b => b.toString(16).padStart(2, '0'))
+              .join('');
+              
+            // Insert the new API key
+            const { error: insertError } = await supabase
+              .from('api_keys')
+              .insert({ 
+                user_id: user.id,
+                api_key: secureKey,
+                balance_usd: 0,
+                is_active: true
+              });
+              
+            if (insertError) {
+              console.error("Error inserting API key:", insertError);
+            } else {
+              console.log("API key successfully generated manually");
+              setApiKeyGenerated(true);
+            }
+          } else {
+            console.log("Existing API key found, no need to generate a new one");
+            setApiKeyGenerated(true);
+          }
+        } catch (apiKeyError) {
+          console.error("Error in manual API key generation:", apiKeyError);
+        }
+      }
+      
       sonnerToast.dismiss();
       sonnerToast.success("Account Created", {
         description: "Your account has been created successfully. API key has been generated." 
@@ -161,6 +220,11 @@ const Signup = () => {
                 {dbError && (
                   <p className="mt-2 font-medium">
                     A database error occurred. This has been fixed and should work now. Please try again.
+                  </p>
+                )}
+                {apiKeyGenerated && (
+                  <p className="mt-2 font-medium text-green-600">
+                    Your API key was successfully generated. You can continue to dashboard.
                   </p>
                 )}
               </div>
