@@ -33,8 +33,12 @@ export const BillingPanel = () => {
     
     if (setup === 'success') {
       toast.success("Payment method updated successfully!");
+      // Clean up URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
     } else if (setup === 'cancelled') {
       toast.info("Payment method update cancelled.");
+      // Clean up URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [location]);
   
@@ -63,11 +67,16 @@ export const BillingPanel = () => {
     
     setIsUpdatingPayment(true);
     try {
+      // Get the current URL path to return to the same page after checkout
+      const returnPath = window.location.pathname;
+      const queryParams = location.search ? location.search.split('?')[1] : '';
+      const currentPath = queryParams ? `${returnPath}?${queryParams}` : returnPath;
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           mode: "setup",
-          successUrl: window.location.origin + "/dashboard/settings?panel=billing&setup=success",
-          cancelUrl: window.location.origin + "/dashboard/settings?panel=billing&setup=cancelled"
+          successUrl: `${window.location.origin}${returnPath}?panel=billing&payment=setup-success`,
+          cancelUrl: `${window.location.origin}${returnPath}?panel=billing&payment=setup-cancelled`
         }
       });
 

@@ -81,7 +81,7 @@ serve(async (req) => {
           },
           quantity: 1,
         }],
-        success_url: successUrl || `${req.headers.get("origin")}/dashboard?payment=success`,
+        success_url: successUrl || `${req.headers.get("origin")}/dashboard?payment=success&amount=${amount}`,
         cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard?payment=cancelled`,
         metadata: {
           user_id: user.id,
@@ -93,8 +93,8 @@ serve(async (req) => {
         payment_method_types: ["card"],
         mode: "setup",
         customer: customerId,
-        success_url: successUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&setup=success`,
-        cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&setup=cancelled`,
+        success_url: successUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-success`,
+        cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-cancelled`,
       });
     } else {
       return new Response(
@@ -102,6 +102,11 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log for debugging
+    console.log(`Checkout session created for ${mode} mode with ID: ${session.id}`);
+    console.log(`Success URL: ${session.success_url}`);
+    console.log(`Cancel URL: ${session.cancel_url}`);
 
     return new Response(
       JSON.stringify({ sessionId: session.id, url: session.url }),

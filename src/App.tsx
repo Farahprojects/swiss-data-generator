@@ -12,6 +12,7 @@ import Pricing from './pages/Pricing';
 import Documentation from './pages/Documentation';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import NotFound from './pages/NotFound';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "sonner";
@@ -32,6 +33,12 @@ const PaymentStatusHandler = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (payment === 'cancelled') {
       toast.info("Payment was cancelled.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (payment === 'setup-success') {
+      toast.success("Payment method updated successfully!");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (payment === 'setup-cancelled') {
+      toast.info("Payment method update was cancelled.");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [location]);
@@ -77,6 +84,7 @@ function App() {
               </AuthGuard>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
       <Toaster />

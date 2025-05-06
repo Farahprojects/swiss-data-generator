@@ -58,13 +58,16 @@ export const AiCreditsCard = () => {
     try {
       // Default amount is $50, but this could be customizable in the future
       const amount = 50; 
+      
+      // Get the current URL path to return to the same page after checkout
+      const returnPath = window.location.pathname;
 
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           mode: "payment", 
           amount,
-          successUrl: window.location.origin + "/dashboard?payment=success&amount=" + amount,
-          cancelUrl: window.location.origin + "/dashboard?payment=cancelled"
+          successUrl: `${window.location.origin}${returnPath}?payment=success&amount=${amount}`,
+          cancelUrl: `${window.location.origin}${returnPath}?payment=cancelled`
         }
       });
 
@@ -123,4 +126,4 @@ export const AiCreditsCard = () => {
       </CardFooter>
     </Card>
   );
-};
+}
