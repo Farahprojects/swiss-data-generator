@@ -1,10 +1,10 @@
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
+import Logo from '@/components/Logo';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -38,10 +38,7 @@ const UnifiedNavigation = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
-            <Link to={isLoggedIn ? "/dashboard" : "/"} className="flex items-center">
-              <span className="text-2xl font-bold text-black font-gt-sectra">Therai</span>
-              <span className="text-2xl font-bold text-[#8B5CF6] ml-1 font-gt-sectra">api</span>
-            </Link>
+            <Logo />
           </div>
           
           {/* Desktop Navigation */}
