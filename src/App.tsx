@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -15,11 +15,35 @@ import Contact from './pages/Contact';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "sonner";
+import { toast } from "sonner";
+
+// Payment status handler component
+const PaymentStatusHandler = () => {
+  const location = useLocation();
+  
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const payment = params.get('payment');
+    const amount = params.get('amount');
+    
+    if (payment === 'success' && amount) {
+      toast.success(`Successfully topped up $${amount} in credits!`);
+      // Remove the query params to avoid showing the toast again on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (payment === 'cancelled') {
+      toast.info("Payment was cancelled.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location]);
+  
+  return null;
+};
 
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <PaymentStatusHandler />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />

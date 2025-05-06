@@ -2,8 +2,9 @@
 project_id = "wrvqqvqvwqmfdqvqmaar"
 
 [api]
+enabled = true
 port = 54321
-schemas = ["public", "storage", "graphql_public"]
+schemas = ["public", "storage", "extensions"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
@@ -12,65 +13,34 @@ port = 54322
 shadow_port = 54320
 major_version = 15
 
-[db.pooler]
-port = 54329
-pool_mode = "transaction"
-default_pool_size = 20
-max_client_conn = 100
+[realtime]
+enabled = true
 
 [studio]
+enabled = true
 port = 54323
+api_url = "http://localhost"
 
 [inbucket]
-port = 54324
-
-[auth]
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://localhost:3000"]
 enabled = true
-enable_signup = true
-
-[realtime]
-enabled = false
+port = 54324
 
 [storage]
 enabled = true
 
-[vector]
+[auth]
 enabled = true
+site_url = "http://localhost:3000"
 
-[edge_functions]
-enabled = true
+[analytics]
+enabled = false
+port = 54327
+vector_port = 54328
+gpt_port = 54329
 
-[functions._shared]
-verify_jwt = false
-
-[functions.natal]
-verify_jwt = false
-
-[functions.transits]
-verify_jwt = false
-
-[functions.progressions]
-verify_jwt = false
-
-[functions.synastry]
-verify_jwt = false
-
-[functions.body_matrix]
-verify_jwt = false
-
+# Add new function without JWT verification for webhooks
 [functions.stripe-webhook-handler]
 verify_jwt = false
 
-[functions.verify-payment]
-verify_jwt = false
-
-[functions.api]
-verify_jwt = false
-
-[functions.swiss]
-verify_jwt = false
-
-[functions.swissephapi]
-verify_jwt = false
+[functions.create-checkout]
+verify_jwt = true

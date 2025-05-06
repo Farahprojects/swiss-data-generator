@@ -11,11 +11,13 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const AiCreditsCard = () => {
   const { user } = useAuth();
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const fetchUserBalance = async () => {
@@ -46,6 +48,43 @@ export const AiCreditsCard = () => {
     fetchUserBalance();
   }, [user]);
 
+  const handleTopUp = async () => {
+    if (!user) {
+      toast.error("You must be logged in to top up credits");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      // Default amount is $50, but this could be customizable in the future
+      const amount = 50; 
+
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { 
+          mode: "payment", 
+          amount,
+          successUrl: window.location.origin + "/dashboard?payment=success&amount=" + amount,
+          cancelUrl: window.location.origin + "/dashboard?payment=cancelled"
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Failed to initiate top-up:", err);
+      toast.error("Failed to create checkout session. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Format date to show in the UI - using May 4, 2025 as example
   const formattedLastTopUp = "May 4, 2025";
 
@@ -74,8 +113,12 @@ export const AiCreditsCard = () => {
         </div>
       </CardContent>
       <CardFooter className="mt-auto">
-        <Button className="w-full bg-white text-black border-black border hover:bg-gray-100">
-          Top Up Credits
+        <Button 
+          className="w-full bg-white text-black border-black border hover:bg-gray-100"
+          onClick={handleTopUp}
+          disabled={isProcessing}
+        >
+          {isProcessing ? "Processing..." : "Top Up Credits"}
         </Button>
       </CardFooter>
     </Card>

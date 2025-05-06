@@ -2,7 +2,10 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ExternalLink } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useLocation } from "react-router-dom";
 
 // Mock data - this would come from database in a real app
 const mockSubscriptionData = {
@@ -19,10 +22,24 @@ const mockSubscriptionData = {
 
 export const BillingPanel = () => {
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Check if we're returning from a payment setup session
+    const params = new URLSearchParams(location.search);
+    const setup = params.get('setup');
+    
+    if (setup === 'success') {
+      toast.success("Payment method updated successfully!");
+    } else if (setup === 'cancelled') {
+      toast.info("Payment method update cancelled.");
+    }
+  }, [location]);
   
   const handleManageSubscription = async () => {
-    setIsLoading(true);
+    setIsLoadingSubscription(true);
     
     try {
       // In a real implementation, this would call the Stripe customer portal
@@ -34,7 +51,40 @@ export const BillingPanel = () => {
     } catch (error) {
       console.error("Failed to redirect to customer portal:", error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingSubscription(false);
+    }
+  };
+  
+  const handleUpdatePayment = async () => {
+    if (!user) {
+      toast.error("You must be logged in to update your payment method");
+      return;
+    }
+    
+    setIsUpdatingPayment(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { 
+          mode: "setup",
+          successUrl: window.location.origin + "/dashboard/settings?panel=billing&setup=success",
+          cancelUrl: window.location.origin + "/dashboard/settings?panel=billing&setup=cancelled"
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Failed to initiate payment update:", err);
+      toast.error("Failed to create payment update session. Please try again.");
+    } finally {
+      setIsUpdatingPayment(false);
     }
   };
 
@@ -68,11 +118,36 @@ export const BillingPanel = () => {
         
         <Button 
           onClick={handleManageSubscription} 
-          disabled={isLoading}
+          disabled={isLoadingSubscription}
         >
           <ExternalLink size={16} className="mr-2" />
-          {isLoading ? "Loading..." : "Manage Subscription"}
+          {isLoadingSubscription ? "Loading..." : "Manage Subscription"}
         </Button>
+      </div>
+      
+      <div className="mb-8 p-6 border rounded-lg">
+        <h3 className="text-lg font-medium mb-4">Payment Method</h3>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-12 h-8 bg-gray-800 rounded mr-4"></div>
+              <span>•••• •••• •••• 4242</span>
+            </div>
+            <div>
+              <span className="text-sm text-gray-500">Expires 09/25</span>
+            </div>
+          </div>
+          <div className="pt-2">
+            <Button 
+              variant="outline" 
+              onClick={handleUpdatePayment}
+              disabled={isUpdatingPayment}
+            >
+              {isUpdatingPayment ? "Processing..." : "Update Payment Method"}
+            </Button>
+          </div>
+        </div>
       </div>
       
       <div>
