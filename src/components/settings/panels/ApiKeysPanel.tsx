@@ -1,46 +1,49 @@
 
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Copy, RefreshCw } from "lucide-react";
+import { Copy, RefreshCw, Eye, EyeOff, Check } from "lucide-react";
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock data - this would come from database in a real app
-const mockApiData = {
-  apiKey: "thp_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t",
-  apiCallsUsed: 5000,
-  apiCallsLimit: 50000
-};
+import { useApiKey } from "@/hooks/useApiKey";
 
 export const ApiKeysPanel = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   
-  const usagePercentage = (mockApiData.apiCallsUsed / mockApiData.apiCallsLimit) * 100;
-  
-  const copyApiKey = () => {
-    navigator.clipboard.writeText(mockApiData.apiKey);
-    setIsCopied(true);
+  const { 
+    apiKey, 
+    isLoading, 
+    error,
+    createdAt,
+    regenerateApiKey
+  } = useApiKey();
+
+  const handleCopyApiKey = () => {
+    if (!apiKey) return;
     
-    toast({
-      title: "API Key copied",
-      description: "Your API key has been copied to clipboard."
-    });
-    
-    setTimeout(() => setIsCopied(false), 2000);
+    setIsCopying(true);
+    navigator.clipboard.writeText(apiKey)
+      .catch(err => {
+        console.error("Failed to copy API key:", err);
+      })
+      .finally(() => {
+        setTimeout(() => setIsCopying(false), 1000);
+        toast({
+          title: "API Key copied",
+          description: "Your API key has been copied to clipboard."
+        });
+      });
   };
   
   const handleRegenerateClick = () => {
@@ -49,11 +52,9 @@ export const ApiKeysPanel = () => {
   
   const confirmRegenerate = async () => {
     setIsConfirmDialogOpen(false);
-    setIsRegenerating(true);
     
     try {
-      // In a real implementation, this would call a Supabase function
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await regenerateApiKey();
       
       toast({
         title: "API Key regenerated",
@@ -65,9 +66,16 @@ export const ApiKeysPanel = () => {
         title: "Error",
         description: "Failed to regenerate API key."
       });
-    } finally {
-      setIsRegenerating(false);
     }
+  };
+
+  const handleToggleVisibility = () => {
+    setShowApiKey(prev => !prev);
+  };
+
+  const maskApiKey = (key: string | null) => {
+    if (!key) return "••••••••••••••••••••••";
+    return showApiKey ? key : key.substring(0, 4) + "••••••••••••••••••" + key.substring(key.length - 4);
   };
 
   return (
@@ -80,74 +88,65 @@ export const ApiKeysPanel = () => {
           <Button
             variant="outline" 
             size="sm"
-            onClick={copyApiKey}
-            disabled={isCopied}
+            onClick={handleCopyApiKey}
+            disabled={isCopying || !apiKey}
           >
-            <Copy className="h-4 w-4 mr-2" />
-            {isCopied ? "Copied" : "Copy"}
+            {isCopying ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+            {isCopying ? "Copied" : "Copy"}
           </Button>
         </div>
         
         <div className="relative">
-          <Input 
-            value={mockApiData.apiKey} 
-            readOnly 
-            className="font-mono bg-gray-50 pr-24"
-          />
+          <div className="bg-gray-50 p-3 rounded-md font-mono text-sm break-all">
+            {maskApiKey(apiKey)}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute right-2 top-2"
+            onClick={handleToggleVisibility}
+          >
+            {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
         </div>
         
         <Button
           variant="outline"
           className="mt-4"
           onClick={handleRegenerateClick}
-          disabled={isRegenerating}
+          disabled={isLoading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRegenerating ? "animate-spin" : ""}`} />
-          {isRegenerating ? "Regenerating..." : "Regenerate API Key"}
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+          {isLoading ? "Regenerating..." : "Regenerate API Key"}
         </Button>
         
         <p className="text-sm text-gray-500 mt-2">
           Regenerating your API key will invalidate your old key immediately.
         </p>
+        
+        {createdAt && (
+          <p className="text-xs text-gray-500 mt-1">
+            Created: {new Date(createdAt).toLocaleDateString()}
+          </p>
+        )}
       </div>
       
-      <div>
-        <h3 className="font-medium mb-2">API Usage This Month</h3>
-        
-        <div className="mb-2 flex justify-between text-sm">
-          <span>
-            {mockApiData.apiCallsUsed.toLocaleString()} calls used
-          </span>
-          <span>
-            {mockApiData.apiCallsLimit.toLocaleString()} calls limit
-          </span>
-        </div>
-        
-        <Progress value={usagePercentage} className="h-2" />
-        
-        <p className="text-sm text-gray-500 mt-3">
-          Your API usage resets at the beginning of each billing cycle.
-        </p>
-      </div>
-      
-      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Regenerate API Key?</DialogTitle>
-            <DialogDescription>
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate API Key?</AlertDialogTitle>
+            <AlertDialogDescription>
               This will invalidate your current API key immediately. Any applications using this key will stop working until updated with the new key.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConfirmDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmRegenerate}>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRegenerate}>
               Yes, Regenerate Key
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

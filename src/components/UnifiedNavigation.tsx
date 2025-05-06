@@ -39,8 +39,8 @@ const UnifiedNavigation = () => {
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
             <Link to={isLoggedIn ? "/dashboard" : "/"} className="flex items-center">
-              <span className="text-2xl font-bold text-black font-therai">Therai</span>
-              <span className="text-2xl font-bold text-[#8B5CF6] ml-1 font-therai">api</span>
+              <span className="text-2xl font-bold text-black font-gt-sectra">Therai</span>
+              <span className="text-2xl font-bold text-[#8B5CF6] ml-1 font-gt-sectra">api</span>
             </Link>
           </div>
           

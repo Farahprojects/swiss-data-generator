@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Copy, RefreshCw, Eye, EyeOff, Check } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { useApiKey } from "@/hooks/useApiKey";
 import {
   AlertDialog,
@@ -32,12 +31,6 @@ export function ApiKeySection() {
     regenerateApiKey,
     refreshApiKey
   } = useApiKey();
-
-  // Mock usage data - this would come from a proper API endpoint in production
-  const usageData = {
-    apiCallsCount: 27850,
-    apiCallLimit: 100000
-  };
 
   // Reset success state after timeout
   useEffect(() => {
@@ -114,12 +107,12 @@ export function ApiKeySection() {
     return showApiKey ? key : key.substring(0, 4) + "••••••••••••••••••" + key.substring(key.length - 4);
   };
 
-  const usagePercentage = (usageData.apiCallsCount / usageData.apiCallLimit) * 100;
-
   const renderRegenerateButton = () => {
     switch (regenerationState) {
       case 'loading':
-        return <Progress value={100} className="h-10 animate-pulse bg-gray-200" />;
+        return <div className="bg-gray-200 h-10 w-full flex items-center justify-center rounded-md animate-pulse">
+          <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />
+        </div>;
       case 'success':
         return (
           <div className="bg-green-500 h-10 w-full flex items-center justify-center text-white rounded-md">
@@ -201,20 +194,10 @@ export function ApiKeySection() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium">API Usage</span>
-              <span className="text-sm text-muted-foreground">
-                {usageData.apiCallsCount.toLocaleString()} / {usageData.apiCallLimit.toLocaleString()}
-              </span>
-            </div>
-            <Progress value={usagePercentage} className="h-2 bg-gray-200" indicatorColor="bg-[#9b87f5]" />
-          </div>
-
           <div className="relative">
-            <div className="bg-muted p-3 rounded-md font-mono text-sm break-all flex justify-between items-start">
-              <div className="w-[85%] mr-2">{maskApiKey(apiKey)}</div>
-              <div className="flex space-x-1 shrink-0">
+            <div className="bg-muted p-3 rounded-md font-mono text-sm flex justify-between items-start">
+              <div className="w-full pr-16 break-all">{maskApiKey(apiKey)}</div>
+              <div className="flex space-x-1 shrink-0 absolute right-3 top-3">
                 <Button
                   variant="ghost"
                   size="sm"
