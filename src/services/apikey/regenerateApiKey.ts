@@ -9,20 +9,17 @@ export async function regenerateApiKey() {
       throw new Error('User not authenticated');
     }
     
-    // Generate a branded API key with "THE" prefix and 16 random chars
-    const alphanumeric = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let randomPart = '';
+    // Generate a branded API key with "THE" prefix and 15 random hex chars
+    // This matches the format in the handle_new_user() database function
+    const randomBytes = new Uint8Array(12);
+    window.crypto.getRandomValues(randomBytes);
+    const randomHex = Array.from(randomBytes)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+      .substring(0, 15);
     
-    // Generate 16 random alphanumeric characters
-    const randomValues = new Uint8Array(16);
-    window.crypto.getRandomValues(randomValues);
-    
-    for (let i = 0; i < 16; i++) {
-      randomPart += alphanumeric[randomValues[i] % alphanumeric.length];
-    }
-    
-    // Combine to create the branded key
-    const brandedKey = `THE_${randomPart}`;
+    // Combine to create the branded key (format: THE + 15 hex chars)
+    const brandedKey = `THE${randomHex}`;
     
     // First, check if the user already has an API key
     const { data: existingKey, error: fetchError } = await supabase
