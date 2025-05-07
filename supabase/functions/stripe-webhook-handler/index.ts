@@ -1,3 +1,4 @@
+
 /* ========================================================================== *
    Supabase Edge Function – Stripe Webhook Handler
    Author:  YOU
@@ -135,13 +136,49 @@ async function markEvent(
     .eq("stripe_event_id", eventId);
 }
 
+/* ───────────── Extract payment details helper  ───────────── */
+
+function extractPaymentDetails(paymentIntent: any): Record<string, any> {
+  // Get the payment method data - contains card details and billing
+  const paymentMethod = paymentIntent.charges?.data?.[0]?.payment_method_details;
+  const billingDetails = paymentIntent.charges?.data?.[0]?.billing_details;
+  
+  // Extract invoice ID if available
+  const stripeInvoiceId = paymentIntent.invoice || null;
+  
+  // Prepare payment details object
+  const details = {
+    stripe_pid: paymentIntent.id,
+    amount_usd: paymentIntent.amount_received / 100, // Convert from cents to dollars
+    stripe_customer_id: paymentIntent.customer,
+    email: billingDetails?.email || null,
+    full_name: billingDetails?.name || null,
+    billing_address_line1: billingDetails?.address?.line1 || null,
+    billing_address_line2: billingDetails?.address?.line2 || null,
+    city: billingDetails?.address?.city || null,
+    state: billingDetails?.address?.state || null,
+    postal_code: billingDetails?.address?.postal_code || null,
+    country: billingDetails?.address?.country || null,
+    payment_method_type: paymentMethod?.type || null,
+    card_brand: paymentMethod?.card?.brand || null,
+    card_last4: paymentMethod?.card?.last4 || null,
+    payment_status: paymentIntent.status,
+    stripe_invoice_id: stripeInvoiceId,
+  };
+
+  console.log("Extracted checkout payment details:", details);
+  return details;
+}
+
 /* ──────────────────────  BUSINESS LOGIC HELPERS  ───────────────────────── */
 
 async function creditUser(
   userId: string,
   usd: number,
   stripePid: string,
+  paymentDetails: Record<string, any> = {},
 ): Promise<void> {
+  // First add the user credits through the database function
   const { error } = await supabase.rpc("add_user_credits", {
     _user_id:    userId,
     _amount_usd: usd,
@@ -149,7 +186,34 @@ async function creditUser(
     _description:"Stripe auto-top-up",
     _stripe_pid: stripePid,
   });
+  
   if (error) throw error;
+  
+  // Now update the credit_transactions table with additional payment details
+  // We find the transaction that was just created by the add_user_credits function
+  const { error: updateError } = await supabase
+    .from("credit_transactions")
+    .update({
+      email: paymentDetails.email,
+      full_name: paymentDetails.full_name,
+      billing_address_line1: paymentDetails.billing_address_line1,
+      billing_address_line2: paymentDetails.billing_address_line2,
+      city: paymentDetails.city,
+      state: paymentDetails.state,
+      postal_code: paymentDetails.postal_code,
+      country: paymentDetails.country,
+      payment_method_type: paymentDetails.payment_method_type,
+      card_brand: paymentDetails.card_brand,
+      card_last4: paymentDetails.card_last4,
+      payment_status: paymentDetails.payment_status,
+      stripe_customer_id: paymentDetails.stripe_customer_id,
+      stripe_invoice_id: paymentDetails.stripe_invoice_id,
+    })
+    .eq("stripe_pid", stripePid);
+  
+  if (updateError) {
+    console.error("Failed to update credit transaction with payment details:", updateError);
+  }
 }
 
 /* ───────────────────────── MAIN HANDLER ────────────────────────────────── */
@@ -203,7 +267,12 @@ serve(async (req) => {
         const pi = event.data.object;
         const userId = pi.metadata?.user_id;
         if (!userId) throw new Error("metadata.user_id missing");
-        await creditUser(userId, pi.amount_received / 100, pi.id);
+        
+        // Extract payment details
+        const paymentDetails = extractPaymentDetails(pi);
+        
+        // Credit the user and update transaction with payment details
+        await creditUser(userId, pi.amount_received / 100, pi.id, paymentDetails);
         await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
         break;
       }
@@ -219,7 +288,11 @@ serve(async (req) => {
           throw new Error(`PaymentIntent ${pi.id} not succeeded (${pi.status})`);
         }
 
-        await creditUser(userId, pi.amount_received / 100, pi.id);
+        // Extract payment details
+        const paymentDetails = extractPaymentDetails(pi);
+        
+        // Credit the user and update transaction with payment details
+        await creditUser(userId, pi.amount_received / 100, pi.id, paymentDetails);
         await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
         break;
       }
