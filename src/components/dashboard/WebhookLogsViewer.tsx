@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 
 interface WebhookLog {
@@ -24,14 +24,14 @@ interface WebhookLog {
 }
 
 export const WebhookLogsViewer = () => {
-  const { user, supabaseClient } = useAuth();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<WebhookLog[]>([]);
 
   const fetchWebhookLogs = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from("stripe_webhook_events")
         .select("id, stripe_event_id, stripe_event_type, stripe_customer_id, processed, processing_error, created_at")
         .order("created_at", { ascending: false })
