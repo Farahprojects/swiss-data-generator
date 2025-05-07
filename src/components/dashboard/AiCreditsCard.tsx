@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getStripeLinkByName, STRIPE_LINK_TYPES } from "@/utils/stripe-links";
+import { getProductByType } from "@/utils/stripe-products";
 
 export const AiCreditsCard = () => {
   const { user } = useAuth();
@@ -20,6 +20,7 @@ export const AiCreditsCard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [creditProduct, setCreditProduct] = useState<{ price_id: string; amount_usd: number } | null>(null);
 
   useEffect(() => {
     const fetchUserBalance = async () => {
@@ -51,26 +52,80 @@ export const AiCreditsCard = () => {
     fetchUserBalance();
   }, [user]);
 
+  // Load the API credits product
+  useEffect(() => {
+    const fetchCreditProduct = async () => {
+      try {
+        // Fetch products of type 'credit' from the stripe_products table
+        const { data, error } = await supabase
+          .from("stripe_products")
+          .select("price_id, amount_usd")
+          .eq("active", true)
+          .eq("type", "credit")
+          .order("amount_usd", { ascending: true })
+          .limit(1);
+
+        if (error) {
+          console.error("Error fetching credit product:", error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          setCreditProduct(data[0]);
+          console.log("Found credit product:", data[0]);
+        } else {
+          console.warn("No active credit products found in the database");
+        }
+      } catch (err) {
+        console.error("Failed to fetch credit product:", err);
+      }
+    };
+
+    fetchCreditProduct();
+  }, []);
+
   const handleTopUp = async () => {
     if (!user) {
       toast.error("You must be logged in to top up credits");
       return;
     }
 
+    if (!creditProduct?.price_id) {
+      toast.error("No credit product available. Please contact support.");
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      // Get the credits top-up link from the database
-      const topUpLink = await getStripeLinkByName(STRIPE_LINK_TYPES.API_CREDITS_TOPUP);
+      console.log("Creating checkout session with price ID:", creditProduct.price_id);
       
-      if (!topUpLink || !topUpLink.url) {
-        toast.error("Could not find top-up link in database. Please contact support.");
-        throw new Error("Could not find top-up link in database");
+      // Use the create-checkout edge function to create a dynamic checkout session
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          mode: "payment",
+          priceId: creditProduct.price_id,
+          amount: creditProduct.amount_usd,
+          successUrl: `${window.location.origin}/dashboard?payment=success&amount=${creditProduct.amount_usd}`,
+          cancelUrl: `${window.location.origin}/dashboard?payment=cancelled`,
+          customAppearance: {
+            primaryColor: "#6941C6",
+            buttonColor: "#6941C6",
+            brandName: "AstroGPT API",
+            logo: `${window.location.origin}/logo.png`
+          }
+        }
+      });
+
+      if (error || !data?.url) {
+        console.error("Error creating checkout session:", error);
+        toast.error("Failed to create checkout session. Please try again.");
+        return;
       }
       
-      console.log("Found top-up link:", topUpLink);
+      console.log("Checkout session created, redirecting to:", data.url);
       
-      // Redirect to the Stripe Checkout link
-      window.location.href = topUpLink.url;
+      // Redirect to the Stripe Checkout session
+      window.location.href = data.url;
     } catch (err) {
       console.error("Failed to initiate top-up:", err);
       toast.error("Failed to create checkout session. Please try again.");
@@ -116,9 +171,11 @@ export const AiCreditsCard = () => {
         <Button 
           className="w-full bg-white text-black border-black border hover:bg-gray-100"
           onClick={handleTopUp}
-          disabled={isProcessing}
+          disabled={isProcessing || !creditProduct}
         >
-          {isProcessing ? "Processing..." : "Top Up Credits"}
+          {isProcessing ? "Processing..." : creditProduct 
+            ? `Top Up Credits ($${creditProduct.amount_usd})` 
+            : "Top Up Credits"}
         </Button>
       </CardFooter>
     </Card>

@@ -92,3 +92,28 @@ export const getProductByType = async (type: string): Promise<StripeProduct[]> =
     return [];
   }
 };
+
+// Function to ensure we have a credit product in the database
+export const ensureCreditProduct = async () => {
+  try {
+    // Check if we already have a credit product
+    const { data, error } = await supabase
+      .from('stripe_products')
+      .select('*')
+      .eq('active', true)
+      .eq('type', 'credit')
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking for credit product:', error);
+      return;
+    }
+    
+    // If no credit product exists, create one
+    if (!data) {
+      console.log('No credit product found, please add one in the Supabase dashboard');
+    }
+  } catch (err) {
+    console.error('Failed to ensure credit product:', err);
+  }
+};
