@@ -452,8 +452,10 @@ export type Database = {
       }
       translator_logs: {
         Row: {
+          ai_report: Json | null
           created_at: string | null
           error_message: string | null
+          google_geo: Json | null
           id: string
           processing_time_ms: number | null
           request_payload: Json | null
@@ -462,8 +464,10 @@ export type Database = {
           response_status: number | null
         }
         Insert: {
+          ai_report?: Json | null
           created_at?: string | null
           error_message?: string | null
+          google_geo?: Json | null
           id?: string
           processing_time_ms?: number | null
           request_payload?: Json | null
@@ -472,8 +476,10 @@ export type Database = {
           response_status?: number | null
         }
         Update: {
+          ai_report?: Json | null
           created_at?: string | null
           error_message?: string | null
+          google_geo?: Json | null
           id?: string
           processing_time_ms?: number | null
           request_payload?: Json | null

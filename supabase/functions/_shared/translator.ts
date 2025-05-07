@@ -66,6 +66,7 @@ async function logToSupabase(
   responsePayload: any,
   processingTime: number,
   errorMessage?: string,
+  googleGeoUsed?: { used: boolean, details?: any }
 ) {
   const { error } = await sb.from("translator_logs").insert({
     request_type:      requestType,
@@ -74,6 +75,7 @@ async function logToSupabase(
     response_payload:  responsePayload,
     processing_time_ms:processingTime,
     error_message:     errorMessage,
+    google_geo:        googleGeoUsed || null,
   });
   if (error) console.error("Failed to log to Supabase:", error.message);
   else       console.info(`Successfully logged ${requestType} request to Supabase`);
@@ -83,6 +85,8 @@ async function logToSupabase(
 async function ensureLatLon(obj: any) {
   if ((obj.latitude !== undefined && obj.longitude !== undefined) || !obj.location) return obj;
 
+  let googleGeoUsed = { used: false };
+  
   const place = String(obj.location).trim();
   const { data } = await sb
     .from(GEO_TAB)
@@ -92,7 +96,7 @@ async function ensureLatLon(obj: any) {
 
   if (data) {
     const age = (Date.now() - Date.parse(data.updated_at)) / 60000;
-    if (age < GEO_TTL) return { ...obj, latitude: data.lat, longitude: data.lon };
+    if (age < GEO_TTL) return { ...obj, latitude: data.lat, longitude: data.lon, googleGeoUsed };
   }
 
   const url =
@@ -104,7 +108,18 @@ async function ensureLatLon(obj: any) {
 
   const { lat, lng } = g.results[0].geometry.location;
   await sb.from(GEO_TAB).upsert({ place, lat, lon: lng }).select();
-  return { ...obj, latitude: lat, longitude: lng };
+  
+  // Update the googleGeoUsed flag
+  googleGeoUsed = { 
+    used: true, 
+    details: {
+      place,
+      formatted_address: g.results[0].formatted_address,
+      timestamp: new Date().toISOString()
+    } 
+  };
+  
+  return { ...obj, latitude: lat, longitude: lng, googleGeoUsed };
 }
 
 function normalise(p: any) {
@@ -133,6 +148,7 @@ export async function translate(
 ): Promise<{ status: number; text: string }> {
   const startTime = Date.now();
   let requestType = "unknown";
+  let googleGeoUsed: { used: boolean, details?: any } | undefined;
 
   try {
     const body = Base.parse(raw);
@@ -155,6 +171,7 @@ export async function translate(
         { error: err },
         Date.now() - startTime,
         err,
+        googleGeoUsed
       );
       return { status: 400, text: JSON.stringify({ error: err }) };
     }
@@ -172,12 +189,26 @@ export async function translate(
           { error: err },
           Date.now() - startTime,
           err,
+          googleGeoUsed
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
 
       const a = normalise(await ensureLatLon(body.person_a));
       const b = normalise(await ensureLatLon(body.person_b));
+      
+      // Collect geocoding information
+      googleGeoUsed = {
+        used: !!(a.googleGeoUsed?.used || b.googleGeoUsed?.used),
+        details: {
+          person_a: a.googleGeoUsed?.details,
+          person_b: b.googleGeoUsed?.details
+        }
+      };
+      
+      // Remove the googleGeoUsed property before passing to API
+      if (a.googleGeoUsed) delete a.googleGeoUsed;
+      if (b.googleGeoUsed) delete b.googleGeoUsed;
 
       const payload: Record<string, any> = {
         person_a: a,
@@ -212,6 +243,7 @@ export async function translate(
         logPayload(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${status}` : undefined,
+        googleGeoUsed
       );
 
       return { status, text: txt };
@@ -228,12 +260,26 @@ export async function translate(
           { error: err },
           Date.now() - startTime,
           err,
+          googleGeoUsed
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
 
       const a = normalise(await ensureLatLon(body.person_a));
       const b = normalise(await ensureLatLon(body.person_b));
+      
+      // Collect geocoding information
+      googleGeoUsed = {
+        used: !!(a.googleGeoUsed?.used || b.googleGeoUsed?.used),
+        details: {
+          person_a: a.googleGeoUsed?.details,
+          person_b: b.googleGeoUsed?.details
+        }
+      };
+      
+      // Remove the googleGeoUsed property before passing to API
+      if (a.googleGeoUsed) delete a.googleGeoUsed;
+      if (b.googleGeoUsed) delete b.googleGeoUsed;
 
       console.info(`Calling Swiss API for ${requestType} at /synastry`);
       const r = await fetch(`${SWISS_API}/synastry`, {
@@ -260,6 +306,7 @@ export async function translate(
         logPayload(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${status}` : undefined,
+        googleGeoUsed
       );
 
       return { status, text: txt };
@@ -285,6 +332,7 @@ export async function translate(
         })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${status}` : undefined,
+        googleGeoUsed
       );
 
       return { status, text: txt };
@@ -312,6 +360,7 @@ export async function translate(
         })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${status}` : undefined,
+        googleGeoUsed
       );
 
       return { status, text: txt };
@@ -319,6 +368,10 @@ export async function translate(
 
     /*──────────────── POST chart routes ───────────────────*/
     const enriched = normalise(await ensureLatLon(body));
+    // Store geocoding information
+    googleGeoUsed = enriched.googleGeoUsed;
+    if (enriched.googleGeoUsed) delete enriched.googleGeoUsed;
+    
     delete enriched.request;
 
     const ROUTE: Record<string, string> = {
@@ -339,6 +392,7 @@ export async function translate(
         { error: err },
         Date.now() - startTime,
         err,
+        googleGeoUsed
       );
       return { status: 400, text: JSON.stringify({ error: err }) };
     }
@@ -366,6 +420,7 @@ export async function translate(
       })(),
       Date.now() - startTime,
       !r.ok ? `Swiss API returned ${status}` : undefined,
+      googleGeoUsed
     );
 
     return { status, text: txt };
@@ -378,6 +433,7 @@ export async function translate(
       { error: errorMessage },
       Date.now() - startTime,
       errorMessage,
+      googleGeoUsed
     );
     console.error("Translation error:", errorMessage);
     return { status: 500, text: JSON.stringify({ error: errorMessage }) };
