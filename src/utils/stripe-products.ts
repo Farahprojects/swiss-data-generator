@@ -38,12 +38,27 @@ export const fetchStripeProducts = async (): Promise<StripeProduct[]> => {
 export const getProductByName = async (name: string): Promise<StripeProduct | null> => {
   try {
     console.log(`Searching for product with name: ${name}`);
-    const { data, error } = await supabase
+    // First try exact match
+    let { data, error } = await supabase
       .from('stripe_products')
       .select('*')
       .eq('active', true)
-      .ilike('name', `%${name}%`)
+      .eq('name', name)
       .maybeSingle();
+    
+    // If no exact match, try case-insensitive partial match
+    if (!data && !error) {
+      console.log('No exact match found, trying case-insensitive search');
+      const response = await supabase
+        .from('stripe_products')
+        .select('*')
+        .eq('active', true)
+        .ilike('name', `%${name}%`)
+        .maybeSingle();
+      
+      data = response.data;
+      error = response.error;
+    }
     
     if (error) {
       console.error(`Error fetching product with name ${name}:`, error);

@@ -31,7 +31,12 @@ serve(async (req) => {
       customAppearance 
     } = await req.json();
     
-    console.log(`Request data: mode=${mode}, amount=${amount}, priceId=${priceId}, productId=${productId}`);
+    console.log(`Request data: mode=${mode}, priceId=${priceId}, productId=${productId}`);
+    
+    if (!priceId && !amount) {
+      console.error("Missing required parameter: either priceId or amount must be provided");
+      throw new Error("Either priceId or amount must be provided");
+    }
     
     // Get user from Authorization header
     const supabaseClient = createClient(
@@ -152,8 +157,10 @@ serve(async (req) => {
               currency: "usd",
               product_data: {
                 name: "API Credits Top-up",
+                description: "Top up your API credits",
+                images: customAppearance?.logo ? [customAppearance.logo] : undefined,
               },
-              unit_amount: amount * 100, // Convert dollars to cents
+              unit_amount: Math.round(amount * 100), // Convert dollars to cents, ensure integer
             },
             quantity: 1,
           }],
