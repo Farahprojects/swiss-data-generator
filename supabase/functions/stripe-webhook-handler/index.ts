@@ -1,4 +1,3 @@
-
 /* ========================================================================== *
    Supabase Edge Function – Stripe Webhook Handler
    Author:  YOU
