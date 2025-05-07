@@ -44,3 +44,7 @@ verify_jwt = false
 
 [functions.create-checkout]
 verify_jwt = true
+
+# Disable JWT verification for the swiss function
+[functions.swiss]
+verify_jwt = false
