@@ -56,15 +56,23 @@ export const AiCreditsCard = () => {
   useEffect(() => {
     const fetchCreditProduct = async () => {
       try {
-        const products = await getProductByType('credit');
-        
-        if (products && products.length > 0) {
-          const product = products[0]; // Take the first credit product
-          setCreditProduct({
-            price_id: product.price_id,
-            amount_usd: product.amount_usd
-          });
-          console.log("Found credit product:", product);
+        // Fetch products of type 'credit' from the stripe_products table
+        const { data, error } = await supabase
+          .from("stripe_products")
+          .select("price_id, amount_usd")
+          .eq("active", true)
+          .eq("type", "credit")
+          .order("amount_usd", { ascending: true })
+          .limit(1);
+
+        if (error) {
+          console.error("Error fetching credit product:", error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          setCreditProduct(data[0]);
+          console.log("Found credit product:", data[0]);
         } else {
           console.warn("No active credit products found in the database");
         }
@@ -163,7 +171,7 @@ export const AiCreditsCard = () => {
         <Button 
           className="w-full bg-white text-black border-black border hover:bg-gray-100"
           onClick={handleTopUp}
-          disabled={isProcessing}
+          disabled={isProcessing || !creditProduct}
         >
           {isProcessing ? "Processing..." : creditProduct 
             ? `Top Up Credits ($${creditProduct.amount_usd})` 
