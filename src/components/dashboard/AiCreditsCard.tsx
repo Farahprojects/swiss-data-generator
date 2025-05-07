@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getStripeLinkByName } from "@/utils/stripe-links";
+import { getStripeLinkByName, STRIPE_LINK_TYPES } from "@/utils/stripe-links";
 
 export const AiCreditsCard = () => {
   const { user } = useAuth();
@@ -60,10 +60,11 @@ export const AiCreditsCard = () => {
     setIsProcessing(true);
     try {
       // Get the credits top-up link from the database
-      const topUpLink = await getStripeLinkByName("API Credits Top-up");
+      const topUpLink = await getStripeLinkByName(STRIPE_LINK_TYPES.API_CREDITS_TOPUP);
       
       if (!topUpLink || !topUpLink.url) {
-        toast.error("Could not find top-up link in database");
+        console.error("Available links:", await supabase.from('stripe_links').select('name').eq('is_active', true));
+        toast.error("Could not find top-up link in database. Please contact support.");
         throw new Error("Could not find top-up link in database");
       }
       

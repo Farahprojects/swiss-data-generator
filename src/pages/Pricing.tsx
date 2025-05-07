@@ -7,7 +7,7 @@ import { plans, addOns, faqs } from "@/utils/pricing";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { getStripeLinkByName } from "@/utils/stripe-links";
+import { getStripeLinkByName, getStandardLinkName, STRIPE_LINK_TYPES } from "@/utils/stripe-links";
 
 const PricingPlanCard = ({
   name,
@@ -118,7 +118,8 @@ const Pricing = () => {
       }
       
       // Get link for the selected plan from the database
-      const planLink = await getStripeLinkByName(`Plan ${planType}`);
+      const linkName = getStandardLinkName(STRIPE_LINK_TYPES.PLAN_PREFIX, planType);
+      const planLink = await getStripeLinkByName(linkName);
       
       if (!planLink || !planLink.url) {
         toast.error(`Could not find checkout link for ${planType} plan`);
@@ -148,7 +149,8 @@ const Pricing = () => {
       }
       
       // Get link for the selected add-on from the database
-      const addonLink = await getStripeLinkByName(`Addon ${addonName}`);
+      const linkName = getStandardLinkName(STRIPE_LINK_TYPES.ADDON_PREFIX, addonName);
+      const addonLink = await getStripeLinkByName(linkName);
       
       if (!addonLink || !addonLink.url) {
         toast.error(`Could not find checkout link for ${addonName} add-on`);

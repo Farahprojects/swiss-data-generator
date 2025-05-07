@@ -21,7 +21,9 @@ export const getStripeLinkByName = async (name: string): Promise<StripeLink | nu
   try {
     console.log(`Fetching Stripe link with name: ${name}`);
     
-    // First try exact match
+    // Try with multiple search approaches to find the link
+    
+    // 1. First try exact match
     let { data, error } = await supabase
       .from('stripe_links')
       .select('*')
@@ -29,23 +31,51 @@ export const getStripeLinkByName = async (name: string): Promise<StripeLink | nu
       .eq('name', name)
       .maybeSingle();
     
-    // If no exact match found, try case-insensitive partial match
+    // 2. If no exact match found, try case-insensitive exact match
     if (!data && !error) {
-      console.log(`No exact match found for "${name}", trying case-insensitive search`);
+      console.log(`No exact match found for "${name}", trying case-insensitive exact match`);
       const response = await supabase
         .from('stripe_links')
         .select('*')
         .eq('is_active', true)
-        .ilike('name', `%${name}%`)
-        .order('name')
-        .limit(1);
+        .ilike('name', name)
+        .maybeSingle();
       
-      if (response.data && response.data.length > 0) {
-        data = response.data[0];
-        console.log(`Found link by partial match: ${data.name}`);
+      if (response.data) {
+        data = response.data;
+        console.log(`Found link by case-insensitive match: ${data.name}`);
       }
       
       error = response.error;
+    }
+    
+    // 3. If still no match, try partial match with keywords
+    if (!data && !error) {
+      console.log(`No exact case-insensitive match found, trying keywords for: "${name}"`);
+      
+      // Break the name into keywords
+      const keywords = name.toLowerCase().split(' ');
+      
+      // Try to find a match that contains critical keywords
+      for (const keyword of keywords) {
+        // Skip common words that might not be distinctive
+        if (['the', 'and', 'or', 'for', 'a', 'an'].includes(keyword)) continue;
+        if (keyword.length < 3) continue; // Skip very short words
+        
+        const response = await supabase
+          .from('stripe_links')
+          .select('*')
+          .eq('is_active', true)
+          .ilike('name', `%${keyword}%`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        if (response.data && response.data.length > 0) {
+          data = response.data[0];
+          console.log(`Found link by keyword "${keyword}": ${data.name}`);
+          break;
+        }
+      }
     }
     
     if (error) {
@@ -55,6 +85,13 @@ export const getStripeLinkByName = async (name: string): Promise<StripeLink | nu
     
     if (!data) {
       console.log(`No stripe link found for name: ${name}`);
+      // Log all available stripe links to help with debugging
+      const { data: allLinks } = await supabase
+        .from('stripe_links')
+        .select('name, is_active')
+        .eq('is_active', true);
+      
+      console.log('Available active stripe links:', allLinks);
       return null;
     }
     
@@ -101,4 +138,16 @@ export const getStandardLinkName = (type: string, identifier?: string): string =
     return `${type} ${identifier}`;
   }
   return type;
+};
+
+/**
+ * Common link types used in the application
+ * This helps standardize link name references across the app
+ */
+export const STRIPE_LINK_TYPES = {
+  API_CREDITS_TOPUP: 'API Credits Top-up',
+  MANAGE_SUBSCRIPTION: 'Manage Subscription',
+  UPDATE_PAYMENT_METHOD: 'Update Payment Method',
+  PLAN_PREFIX: 'Plan',
+  ADDON_PREFIX: 'Addon'
 };

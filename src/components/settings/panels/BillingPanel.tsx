@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
-import { getStripeLinkByName } from "@/utils/stripe-links";
+import { getStripeLinkByName, STRIPE_LINK_TYPES } from "@/utils/stripe-links";
 
 // Mock data - this would come from database in a real app
 const mockSubscriptionData = {
@@ -46,7 +46,7 @@ export const BillingPanel = () => {
     
     try {
       // Get the subscription management link from the database
-      const subscriptionLink = await getStripeLinkByName("Manage Subscription");
+      const subscriptionLink = await getStripeLinkByName(STRIPE_LINK_TYPES.MANAGE_SUBSCRIPTION);
       
       if (!subscriptionLink || !subscriptionLink.url) {
         toast.error("Could not find subscription management link");
@@ -72,7 +72,7 @@ export const BillingPanel = () => {
     setIsUpdatingPayment(true);
     try {
       // Get the payment update link from the database
-      const paymentLink = await getStripeLinkByName("Update Payment Method");
+      const paymentLink = await getStripeLinkByName(STRIPE_LINK_TYPES.UPDATE_PAYMENT_METHOD);
       
       if (!paymentLink || !paymentLink.url) {
         toast.error("Could not find payment method update link");
