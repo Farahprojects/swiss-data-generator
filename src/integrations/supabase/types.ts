@@ -455,7 +455,7 @@ export type Database = {
           ai_report: Json | null
           created_at: string | null
           error_message: string | null
-          google_geo: Json | null
+          google_geo: boolean | null
           id: string
           processing_time_ms: number | null
           request_payload: Json | null
@@ -467,7 +467,7 @@ export type Database = {
           ai_report?: Json | null
           created_at?: string | null
           error_message?: string | null
-          google_geo?: Json | null
+          google_geo?: boolean | null
           id?: string
           processing_time_ms?: number | null
           request_payload?: Json | null
@@ -479,7 +479,7 @@ export type Database = {
           ai_report?: Json | null
           created_at?: string | null
           error_message?: string | null
-          google_geo?: Json | null
+          google_geo?: boolean | null
           id?: string
           processing_time_ms?: number | null
           request_payload?: Json | null
