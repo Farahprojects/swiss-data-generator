@@ -46,8 +46,12 @@ const CANON: Record<string, string> = {
   body_matrix:   "body_matrix",
 
   sync:          "sync",
+
+  /* NEW -------------------------------------------------- */
+  reports:       "reports",
 };
 
+/*──────────────────── misc maps */
 const HOUSE_ALIASES: Record<string, string> = {
   placidus:    "P",
   koch:        "K",
@@ -93,7 +97,7 @@ async function ensureLatLon(
 
   const place = String(obj.location).trim();
 
-  /* ---------- cache ---------- */
+  /* ---------- cache first ---------- */
   const { data } = await sb
     .from(GEO_TAB)
     .select("lat,lon,updated_at")
@@ -110,7 +114,7 @@ async function ensureLatLon(
     }
   }
 
-  /* ---------- Google ---------- */
+  /* ---------- Google fallback ---------- */
   const url =
     `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
       place,
@@ -152,17 +156,17 @@ function normalise(p: any) {
 export async function translate(
   raw: any,
 ): Promise<{ status: number; text: string }> {
-  const startTime = Date.now();
-  let requestType = "unknown";
-  let googleGeoUsed = false;   // aggregated flag
-  let reportTier: "standard" | "premium" | null = null;
+  const startTime     = Date.now();
+  let   requestType   = "unknown";
+  let   googleGeoUsed = false;
+  let   reportTier: "standard" | "premium" | null = null;
 
   try {
     const body = Base.parse(raw);
     requestType = body.request.trim().toLowerCase();
-    const canon  = CANON[requestType];
+    const canon = CANON[requestType];
 
-    /* ----- report tier detection ----- */
+    /* ---------- detect report tier ---------- */
     const validReports = ["standard", "premium"] as const;
     reportTier = validReports.includes(body.report) ? body.report : null;
 
@@ -183,7 +187,24 @@ export async function translate(
 
     requestType = canon;
 
-    /*──────────────── SYNC ────────────────────────────────*/
+    /*──────────────── REPORTS  (tracking-only) ───────────*/
+    if (canon === "reports") {
+      // No external API call – just log & acknowledge
+      const msg = "Reports request logged";
+      await logToSupabase(
+        requestType,
+        raw,
+        200,
+        { message: msg },
+        Date.now() - startTime,
+        undefined,
+        googleGeoUsed,
+        reportTier,
+      );
+      return { status: 200, text: JSON.stringify({ message: msg }) };
+    }
+
+    /*──────────────── SYNC ───────────────────────────────*/
     if (canon === "sync") {
       if (!body.person_a || !body.person_b) {
         const err = "person_a & person_b required";
@@ -236,7 +257,7 @@ export async function translate(
       return { status: r.status, text: txt };
     }
 
-    /*──────────────── SYNASTRY ────────────────────────────*/
+    /*──────────────── SYNASTRY ───────────────────────────*/
     if (canon === "synastry") {
       if (!body.person_a || !body.person_b) {
         const err = "person_a & person_b required";
@@ -281,7 +302,7 @@ export async function translate(
       return { status: r.status, text: txt };
     }
 
-    /*──────────────── GETs ───────────────────────────────*/
+    /*──────────────── simple GETs ─────────────────────────*/
     if (canon === "moonphases") {
       const year = body.year ?? new Date().getFullYear();
       const r    = await fetch(`${SWISS_API}/moonphases?year=${year}`);
@@ -318,7 +339,6 @@ export async function translate(
         googleGeoUsed,
         reportTier,
       );
-
       return { status: r.status, text: txt };
     }
 
