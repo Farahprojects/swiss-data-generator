@@ -49,19 +49,21 @@ serve(async (req) => {
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
-  // Defensive: get customer if available
-  const customerId = event.data.object && "customer" in event.data.object
-    ? (event.data.object as any).customer
-    : null;
+  const customerId =
+    event.data.object && "customer" in event.data.object
+      ? (event.data.object as any).customer
+      : null;
 
   const isNew = await upsertEvent(event, customerId);
   if (!isNew) return new Response("already processed", { status: 200 });
 
+  // --- payment_intent.succeeded: original logic ---
   if (event.type === "payment_intent.succeeded") {
     try {
       const pi = event.data.object as Stripe.PaymentIntent;
       const userId = pi.metadata?.user_id;
-      if (!userId) throw new Error("payment_intent missing metadata.user_id");
+      if (!userId)
+        throw new Error("payment_intent missing metadata.user_id");
       const amountUsd = pi.amount_received / 100;
       const { error } = await supabase.rpc("add_user_credits", {
         _user_id: userId,
@@ -83,9 +85,50 @@ serve(async (req) => {
         .eq("stripe_event_id", event.id);
       return new Response("processing error", { status: 500 });
     }
-  } else {
-    // Extra: log unhandled event types!
-    console.log("Unhandled event type:", event.type, event.data.object);
+  }
+
+  // --- checkout.session.completed: NEW HANDLER ---
+  if (event.type === "checkout.session.completed") {
+    try {
+      const session = event.data.object as any; // Stripe.Checkout.Session
+      // You set user_id in session metadata when creating the session:
+      const userId = session.metadata?.user_id;
+      if (!userId) throw new Error("checkout.session missing metadata.user_id");
+      if (!session.payment_intent)
+        throw new Error("checkout.session missing payment_intent id");
+
+      // Retrieve PaymentIntent to get amount (THIS WORKS even in Stripe test mode):
+      const pi = await stripe.paymentIntents.retrieve(session.payment_intent);
+
+      if (pi.status !== "succeeded" && pi.status !== "requires_capture") {
+        throw new Error(
+          `PaymentIntent ${pi.id} is not succeeded. Status: ${pi.status}`
+        );
+      }
+
+      const amountUsd = pi.amount_received / 100;
+      const { error } = await supabase.rpc("add_user_credits", {
+        _user_id: userId,
+        _amount_usd: amountUsd,
+        _type: "topup",
+        _description: "Stripe auto‑top‑up",
+        _stripe_pid: pi.id,
+      });
+      if (error) throw error;
+
+      await supabase
+        .from("stripe_webhook_events")
+        .update({ processed: true, processed_at: new Date().toISOString() })
+        .eq("stripe_event_id", event.id);
+
+    } catch (err) {
+      console.error("Checkout top-up processing error:", err.message);
+      await supabase
+        .from("stripe_webhook_events")
+        .update({ processing_error: err.message })
+        .eq("stripe_event_id", event.id);
+      return new Response("processing error", { status: 500 });
+    }
   }
 
   return new Response("ok", { status: 200 });
