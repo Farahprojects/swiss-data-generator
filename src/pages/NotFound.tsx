@@ -1,13 +1,16 @@
 
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home, Settings, LayoutDashboard } from "lucide-react";
+import { useNavigationState } from "@/contexts/NavigationStateContext";
 
 const NotFound = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const { getSafeRedirectPath } = useNavigationState();
 
   useEffect(() => {
     console.error(
@@ -15,6 +18,17 @@ const NotFound = () => {
       location.pathname
     );
   }, [location.pathname]);
+
+  const handleGoBack = () => {
+    // Try to go back in history, but if it's not possible (e.g., opened directly),
+    // navigate to the last known safe route
+    const lastSafePath = getSafeRedirectPath();
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      navigate(lastSafePath);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -26,16 +40,16 @@ const NotFound = () => {
           <Button 
             variant="outline" 
             className="w-full" 
-            onClick={() => window.history.back()}
+            onClick={handleGoBack}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Go Back
           </Button>
           
-          <Link to="/" className="block">
+          <Link to={user ? getSafeRedirectPath() : "/"} className="block">
             <Button className="w-full">
               <Home className="mr-2 h-4 w-4" />
-              Return to Home
+              {user ? "Return to Dashboard" : "Return to Home"}
             </Button>
           </Link>
           

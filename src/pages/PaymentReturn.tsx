@@ -3,20 +3,22 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useNavigationState } from "@/contexts/NavigationStateContext";
 
 const PaymentReturn = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [redirecting, setRedirecting] = useState(true);
-
+  const { getSafeRedirectPath } = useNavigationState();
+  
   useEffect(() => {
     // Parse URL parameters
     const params = new URLSearchParams(location.search);
     const status = params.get('status');
     const amount = params.get('amount');
     
-    // Get the return path from localStorage
-    const returnPath = localStorage.getItem('stripe_return_path') || '/dashboard';
+    // Get the return path from localStorage with fallback
+    const returnPath = localStorage.getItem('stripe_return_path') || getSafeRedirectPath();
     const returnTab = localStorage.getItem('stripe_return_tab') || '';
     
     // Build the return URL with the appropriate tab if available
@@ -49,7 +51,7 @@ const PaymentReturn = () => {
       navigate(redirectUrl, { replace: true });
       setRedirecting(false);
     }, 500); // Small delay to ensure transition feels smooth
-  }, [location, navigate]);
+  }, [location, navigate, getSafeRedirectPath]);
 
   return (
     <div className="h-screen w-screen flex flex-col items-center justify-center">

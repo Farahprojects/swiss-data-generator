@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -17,48 +17,81 @@ import PaymentReturn from './pages/PaymentReturn';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "sonner";
+import NavigationStateProvider from './contexts/NavigationStateContext';
+
+// RouteHistoryTracker component to track and save route history
+const RouteHistoryTracker = () => {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Don't track login, signup, or payment-return pages in history
+    const nonTrackableRoutes = ['/login', '/signup', '/payment-return'];
+    if (!nonTrackableRoutes.includes(location.pathname)) {
+      // Store the current path and search parameters
+      localStorage.setItem('last_route', location.pathname);
+      if (location.search) {
+        localStorage.setItem('last_route_params', location.search);
+      } else {
+        localStorage.removeItem('last_route_params');
+      }
+    }
+  }, [location]);
+  
+  return null;
+};
+
+function AppContent() {
+  return (
+    <>
+      <RouteHistoryTracker />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/api-products" element={<ApiProducts />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/documentation" element={<Documentation />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/payment-return" element={<PaymentReturn />} />
+        <Route
+          path="/dashboard"
+          element={
+            <AuthGuard>
+              <Dashboard />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/dashboard/settings"
+          element={
+            <AuthGuard>
+              <UserSettings />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/dashboard/upgrade"
+          element={
+            <AuthGuard>
+              <UpgradePlan />
+            </AuthGuard>
+          }
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+  );
+}
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/api-products" element={<ApiProducts />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/documentation" element={<Documentation />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/payment-return" element={<PaymentReturn />} />
-          <Route
-            path="/dashboard"
-            element={
-              <AuthGuard>
-                <Dashboard />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/dashboard/settings"
-            element={
-              <AuthGuard>
-                <UserSettings />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/dashboard/upgrade"
-            element={
-              <AuthGuard>
-                <UpgradePlan />
-              </AuthGuard>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
+      <NavigationStateProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </NavigationStateProvider>
       <Toaster />
     </AuthProvider>
   );

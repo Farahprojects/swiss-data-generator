@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail } from "@/utils/authValidation";
+import { useNavigationState } from "@/contexts/NavigationStateContext";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -20,10 +22,16 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { getSafeRedirectPath } = useNavigationState();
 
   // Redirect authenticated users
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    // Get the path from location state, fallback to the last saved route, or default to dashboard
+    const from = 
+      (location.state?.from?.pathname) || 
+      getSafeRedirectPath();
+    
+    return <Navigate to={from} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,7 +49,11 @@ const Login = () => {
         description: "Successfully signed in!",
       });
 
-      const from = location.state?.from?.pathname || "/dashboard";
+      // Use the location state, navigation context, or fallback to dashboard
+      const from = 
+        (location.state?.from?.pathname) || 
+        getSafeRedirectPath();
+        
       navigate(from, { replace: true });
     } catch (error) {
       toast({

@@ -4,11 +4,13 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
+import { useNavigationState } from '@/contexts/NavigationStateContext';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
   const { toast } = useToast();
+  const { setLastRoute, setLastRouteParams } = useNavigationState();
 
   useEffect(() => {
     // If not loading and no user, show toast notification
@@ -20,6 +22,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       });
     }
   }, [loading, user, toast]);
+
+  // Save the current route for future redirects if user is authenticated
+  useEffect(() => {
+    if (user) {
+      setLastRoute(location.pathname);
+      if (location.search) {
+        setLastRouteParams(location.search);
+      } else {
+        setLastRouteParams('');
+      }
+    }
+  }, [location, user, setLastRoute, setLastRouteParams]);
 
   if (loading) {
     return (
