@@ -63,7 +63,6 @@ export const AiCreditsCard = () => {
       const topUpLink = await getStripeLinkByName(STRIPE_LINK_TYPES.API_CREDITS_TOPUP);
       
       if (!topUpLink || !topUpLink.url) {
-        console.error("Available links:", await supabase.from('stripe_links').select('name').eq('is_active', true));
         toast.error("Could not find top-up link in database. Please contact support.");
         throw new Error("Could not find top-up link in database");
       }
