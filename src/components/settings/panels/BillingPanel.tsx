@@ -77,7 +77,13 @@ export const BillingPanel = () => {
         body: { 
           mode: "setup",
           successUrl: `${window.location.origin}${returnPath}?panel=billing&payment=setup-success`,
-          cancelUrl: `${window.location.origin}${returnPath}?panel=billing&payment=setup-cancelled`
+          cancelUrl: `${window.location.origin}${returnPath}?panel=billing&payment=setup-cancelled`,
+          customAppearance: {
+            logo: "https://raw.githubusercontent.com/astrogpt/assets/main/logos/ai-logo-color.png",
+            brandName: "AstroGPT",
+            primaryColor: "#6941C6",
+            buttonColor: "#6941C6"
+          }
         }
       });
 

@@ -63,8 +63,11 @@ export const AiCreditsCard = () => {
       const topUpProduct = await getProductByName("API Credits Top-up");
       
       if (!topUpProduct) {
+        toast.error("Could not find top-up product in database");
         throw new Error("Could not find top-up product in database");
       }
+      
+      console.log("Found top-up product:", topUpProduct);
       
       // Get the current URL path to return to the same page after checkout
       const returnPath = window.location.pathname;
@@ -72,23 +75,32 @@ export const AiCreditsCard = () => {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           mode: "payment", 
-          amount: topUpProduct.amount_usd,
           priceId: topUpProduct.price_id,
           productId: topUpProduct.product_id,
+          amount: topUpProduct.amount_usd, // Include amount for fallback
           successUrl: `${window.location.origin}${returnPath}?payment=success&amount=${topUpProduct.amount_usd}`,
-          cancelUrl: `${window.location.origin}${returnPath}?payment=cancelled`
+          cancelUrl: `${window.location.origin}${returnPath}?payment=cancelled`,
+          customAppearance: {
+            logo: "https://raw.githubusercontent.com/astrogpt/assets/main/logos/ai-logo-color.png",
+            brandName: "AstroGPT",
+            primaryColor: "#6941C6",
+            buttonColor: "#6941C6"
+          }
         }
       });
 
       if (error) {
+        console.error("Supabase function error:", error);
         throw new Error(error.message);
       }
 
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
+      if (!data?.url) {
+        console.error("No checkout URL returned:", data);
         throw new Error("No checkout URL returned");
       }
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
     } catch (err) {
       console.error("Failed to initiate top-up:", err);
       toast.error("Failed to create checkout session. Please try again.");
