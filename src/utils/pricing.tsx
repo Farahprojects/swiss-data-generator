@@ -1,19 +1,13 @@
 import React from 'react';
+import { fetchStripeProducts, getProductByName } from './stripe-products';
 
-export const getPriceId = (planType: string) => {
-  switch (planType) {
-    case 'Starter':
-      return 'price_1RII04J1YhE4Ljp0daRu1V2J';
-    case 'Growth':
-      return 'price_1RII4eJ1YhE4Ljp0vNfZnwov';
-    case 'Professional':
-      return 'price_1RII6CJ1YhE4Ljp0BTCF0IYX';
-    case 'Yearly Cycle':
-      return 'price_1RIIAkJ1YhE4Ljp07H39uZnZ';
-    case 'Relationship Compatibility':
-      return 'price_1RII91J1YhE4Ljp0xbZeyCIY';
-    case 'Transits':
-      return 'price_1RII87J1YhE4Ljp0TPLjRtut';
+export const getPriceId = async (planType: string) => {
+  try {
+    const product = await getProductByName(planType);
+    return product?.price_id || null;
+  } catch (error) {
+    console.error(`Error getting price ID for ${planType}:`, error);
+    return null;
   }
 };
 
@@ -27,7 +21,6 @@ export const plans = [
       "50,000 API calls/month",
       "1 API key",
     ],
-    cta: "Start Free Trial",
     highlight: false
   },
   {

@@ -12,12 +12,14 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getProductByName } from "@/utils/stripe-products";
 
 export const AiCreditsCard = () => {
   const { user } = useAuth();
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserBalance = async () => {
@@ -38,6 +40,7 @@ export const AiCreditsCard = () => {
 
         // Set balance to data.balance_usd if available, otherwise 0
         setBalance(data?.balance_usd || 0);
+        setLastUpdate(data?.last_updated || null);
       } catch (err) {
         console.error("Failed to fetch user balance:", err);
       } finally {
@@ -56,8 +59,12 @@ export const AiCreditsCard = () => {
 
     setIsProcessing(true);
     try {
-      // Default amount is $50, but this could be customizable in the future
-      const amount = 50; 
+      // Get the credits top-up product from the database
+      const topUpProduct = await getProductByName("API Credits Top-up");
+      
+      if (!topUpProduct) {
+        throw new Error("Could not find top-up product in database");
+      }
       
       // Get the current URL path to return to the same page after checkout
       const returnPath = window.location.pathname;
@@ -65,8 +72,10 @@ export const AiCreditsCard = () => {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           mode: "payment", 
-          amount,
-          successUrl: `${window.location.origin}${returnPath}?payment=success&amount=${amount}`,
+          amount: topUpProduct.amount_usd,
+          priceId: topUpProduct.price_id,
+          productId: topUpProduct.product_id,
+          successUrl: `${window.location.origin}${returnPath}?payment=success&amount=${topUpProduct.amount_usd}`,
           cancelUrl: `${window.location.origin}${returnPath}?payment=cancelled`
         }
       });
@@ -88,8 +97,14 @@ export const AiCreditsCard = () => {
     }
   };
 
-  // Format date to show in the UI - using May 4, 2025 as example
-  const formattedLastTopUp = "May 4, 2025";
+  // Format date to show in the UI
+  const formattedLastTopUp = lastUpdate 
+    ? new Date(lastUpdate).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })
+    : "No top-ups yet";
 
   return (
     <Card className="flex flex-col h-full">

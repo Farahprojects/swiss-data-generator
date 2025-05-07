@@ -20,7 +20,9 @@ serve(async (req) => {
   });
 
   try {
-    const { mode, amount, successUrl, cancelUrl } = await req.json();
+    console.log("Starting create-checkout function");
+    const { mode, amount, priceId, productId, successUrl, cancelUrl } = await req.json();
+    console.log(`Request data: mode=${mode}, amount=${amount}, priceId=${priceId}, productId=${productId}`);
     
     // Get user from Authorization header
     const supabaseClient = createClient(
@@ -30,6 +32,7 @@ serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.log("No authorization header");
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -40,12 +43,14 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !userData.user) {
+      console.log("Invalid token:", userError);
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
+    console.log("User authenticated:", userData.user.id);
     const user = userData.user;
     
     // Find existing Stripe customer or create new one
@@ -54,40 +59,65 @@ serve(async (req) => {
     
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
+      console.log("Found existing customer:", customerId);
     } else {
       const newCustomer = await stripe.customers.create({
         email: user.email,
         metadata: { user_id: user.id }
       });
       customerId = newCustomer.id;
+      console.log("Created new customer:", customerId);
     }
     
     // Create session based on mode
     let session;
     
     if (mode === "payment") {
+      console.log("Creating payment session");
       // For top-up credits payment
-      session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        mode: "payment",
-        customer: customerId,
-        line_items: [{
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: "API Credits Top-up",
+      if (priceId) {
+        // Use the price ID directly if provided
+        console.log("Using provided price ID:", priceId);
+        session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          mode: "payment",
+          customer: customerId,
+          line_items: [{
+            price: priceId,
+            quantity: 1,
+          }],
+          success_url: successUrl || `${req.headers.get("origin")}/dashboard?payment=success&amount=${amount}`,
+          cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard?payment=cancelled`,
+          metadata: {
+            user_id: user.id,
+          }
+        });
+      } else {
+        // Fall back to creating a price on the fly
+        console.log("Creating ad-hoc price");
+        session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          mode: "payment",
+          customer: customerId,
+          line_items: [{
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: "API Credits Top-up",
+              },
+              unit_amount: amount * 100, // Convert dollars to cents
             },
-            unit_amount: amount * 100, // Convert dollars to cents
-          },
-          quantity: 1,
-        }],
-        success_url: successUrl || `${req.headers.get("origin")}/dashboard?payment=success&amount=${amount}`,
-        cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard?payment=cancelled`,
-        metadata: {
-          user_id: user.id,
-        }
-      });
+            quantity: 1,
+          }],
+          success_url: successUrl || `${req.headers.get("origin")}/dashboard?payment=success&amount=${amount}`,
+          cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard?payment=cancelled`,
+          metadata: {
+            user_id: user.id,
+          }
+        });
+      }
     } else if (mode === "setup") {
+      console.log("Creating payment method setup session");
       // For setting up or updating payment method
       session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
@@ -97,6 +127,7 @@ serve(async (req) => {
         cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-cancelled`,
       });
     } else {
+      console.log("Invalid mode:", mode);
       return new Response(
         JSON.stringify({ error: "Invalid mode. Must be 'payment' or 'setup'" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

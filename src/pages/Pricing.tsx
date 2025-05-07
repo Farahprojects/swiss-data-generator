@@ -1,14 +1,14 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Check, Loader2 } from "lucide-react";
-import { plans, addOns, faqs, getPriceId } from "@/utils/pricing";
+import { plans, addOns, faqs } from "@/utils/pricing";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { getProductByName } from "@/utils/stripe-products";
 
 const PricingPlanCard = ({
   name,
@@ -118,21 +118,19 @@ const Pricing = () => {
         return;
       }
       
-      // Get price ID for this plan
-      const priceId = getPriceId(planType);
-      if (!priceId) {
-        toast({
-          title: "Error",
-          description: "Could not find price for selected plan",
-          variant: "destructive"
-        });
+      // Get product from database based on plan name
+      const product = await getProductByName(planType);
+      if (!product) {
+        toast.error(`Could not find price for ${planType} plan`);
         return;
       }
       
       // Call the Stripe checkout function
-      const { data, error } = await supabase.functions.invoke('stripe-checkout-handler', {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
-          priceIds: priceId,
+          mode: "payment",
+          priceId: product.price_id,
+          productId: product.product_id,
           planType,
           addOns: []
         }
@@ -140,11 +138,7 @@ const Pricing = () => {
       
       if (error) {
         console.error('Error creating checkout session:', error);
-        toast({
-          title: "Checkout Failed",
-          description: error.message || "Could not initiate checkout process",
-          variant: "destructive"
-        });
+        toast.error(error.message || "Could not initiate checkout process");
         return;
       }
       
@@ -156,11 +150,7 @@ const Pricing = () => {
       }
     } catch (err) {
       console.error("Failed to start subscription:", err);
-      toast({
-        title: "Subscription Error",
-        description: "There was a problem starting your subscription. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("There was a problem starting your subscription. Please try again.");
     } finally {
       setLoadingPlan(null);
     }
@@ -176,21 +166,19 @@ const Pricing = () => {
         return;
       }
       
-      // Get price ID for this addon
-      const priceId = getPriceId(addonName);
-      if (!priceId) {
-        toast({
-          title: "Error",
-          description: "Could not find price for selected add-on",
-          variant: "destructive"
-        });
+      // Get product from database based on addon name
+      const product = await getProductByName(addonName);
+      if (!product) {
+        toast.error(`Could not find price for ${addonName} add-on`);
         return;
       }
       
       // Call the Stripe checkout function
-      const { data, error } = await supabase.functions.invoke('stripe-checkout-handler', {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
-          priceIds: priceId,
+          mode: "payment",
+          priceId: product.price_id,
+          productId: product.product_id,
           planType: null,
           addOns: [addonName]
         }
@@ -198,11 +186,7 @@ const Pricing = () => {
       
       if (error) {
         console.error('Error creating checkout session:', error);
-        toast({
-          title: "Checkout Failed",
-          description: error.message || "Could not initiate checkout process",
-          variant: "destructive"
-        });
+        toast.error(error.message || "Could not initiate checkout process");
         return;
       }
       
@@ -214,11 +198,7 @@ const Pricing = () => {
       }
     } catch (err) {
       console.error("Failed to add subscription add-on:", err);
-      toast({
-        title: "Add-on Error",
-        description: "There was a problem adding this feature. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("There was a problem adding this feature. Please try again.");
     } finally {
       setLoadingAddOn(null);
     }
