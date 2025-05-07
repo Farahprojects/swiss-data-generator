@@ -26,6 +26,7 @@ const Login = () => {
 
   // Redirect authenticated users
   if (user) {
+    console.log("User already authenticated, redirecting");
     // Get the path from location state, fallback to the last saved route, or default to dashboard
     const from = 
       (location.state?.from?.pathname) || 
@@ -39,6 +40,7 @@ const Login = () => {
     if (!emailValid || !passwordValid) return;
     
     setLoading(true);
+    console.log("Login form submitted for:", email);
 
     try {
       const { error } = await signIn(email, password);
@@ -50,29 +52,33 @@ const Login = () => {
       });
 
       // Use the location state, navigation context, or fallback to dashboard
-      const from = 
+      const redirectPath = 
         (location.state?.from?.pathname) || 
         getSafeRedirectPath();
-        
-      navigate(from, { replace: true });
+      
+      console.log("Login successful, redirecting to:", redirectPath);
+      
+      // Force a full page reload after successful login to ensure clean state
+      window.location.href = redirectPath;
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to sign in",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
+      console.log("Google sign in initiated");
       const { error } = await signInWithGoogle();
       if (error) throw error;
-
       // Toast will be shown after redirection
     } catch (error) {
+      console.error("Google sign in error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to sign in with Google",
