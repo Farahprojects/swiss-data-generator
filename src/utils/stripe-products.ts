@@ -75,6 +75,7 @@ export const getProductByName = async (name: string): Promise<StripeProduct | nu
 
 export const getProductByType = async (type: string): Promise<StripeProduct[]> => {
   try {
+    console.log(`Fetching products with type: ${type}`);
     const { data, error } = await supabase
       .from('stripe_products')
       .select('*')
@@ -86,6 +87,7 @@ export const getProductByType = async (type: string): Promise<StripeProduct[]> =
       return [];
     }
     
+    console.log(`Found ${data?.length || 0} products with type ${type}:`, data);
     return data || [];
   } catch (err) {
     console.error(`Failed to fetch products with type ${type}:`, err);
