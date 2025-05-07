@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.14.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -83,6 +84,75 @@ async function upsertEvent(evt: any, customerId?: string): Promise<boolean> {
   return data.length > 0;
 }
 
+// ── Helper: Extract Payment Details ---------------------------------------
+async function extractPaymentDetails(pi: any): Promise<Record<string, any>> {
+  try {
+    // Extract basic payment details
+    const details: Record<string, any> = {
+      stripe_pid: pi.id,
+      amount_usd: pi.amount_received / 100,
+    };
+
+    // If we have a customer ID, try to get more details
+    if (pi.customer) {
+      try {
+        const customer = await stripe.customers.retrieve(pi.customer);
+        if (customer && !customer.deleted) {
+          details.stripe_customer_id = customer.id;
+          details.email = customer.email || null;
+          details.full_name = customer.name || null;
+          
+          // Extract address details if available
+          if (customer.address) {
+            details.billing_address_line1 = customer.address.line1 || null;
+            details.billing_address_line2 = customer.address.line2 || null;
+            details.city = customer.address.city || null;
+            details.state = customer.address.state || null;
+            details.postal_code = customer.address.postal_code || null;
+            details.country = customer.address.country || null;
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching customer details:", err.message);
+      }
+    }
+
+    // Try to get payment method details
+    if (pi.payment_method) {
+      try {
+        const paymentMethod = await stripe.paymentMethods.retrieve(pi.payment_method);
+        if (paymentMethod) {
+          details.payment_method_type = paymentMethod.type || null;
+          
+          // For card payments, get the card details
+          if (paymentMethod.type === 'card' && paymentMethod.card) {
+            details.card_brand = paymentMethod.card.brand || null;
+            details.card_last4 = paymentMethod.card.last4 || null;
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching payment method details:", err.message);
+      }
+    }
+
+    // Add payment status
+    details.payment_status = pi.status || null;
+    
+    // Get invoice ID if it exists
+    if (pi.invoice) {
+      details.stripe_invoice_id = pi.invoice;
+    }
+
+    return details;
+  } catch (err) {
+    console.error("Error extracting payment details:", err.message);
+    return {
+      stripe_pid: pi.id,
+      amount_usd: pi.amount_received / 100,
+    };
+  }
+}
+
 // ── Handler --------------------------------------------------------------
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -139,21 +209,42 @@ serve(async (req) => {
         .eq("stripe_event_id", event.id);
       return new Response("payment_intent missing metadata.user_id", { status: 400, headers: corsHeaders });
     }
+    
     const amountUsd = pi.amount_received / 100;
-    const { error } = await supabase.rpc("add_user_credits", {
+    
+    // Extract extended payment and customer details
+    const paymentDetails = await extractPaymentDetails(pi);
+    console.log("Extracted payment details:", JSON.stringify(paymentDetails));
+
+    // Add credits with enhanced transaction details
+    const { error: creditsError } = await supabase.rpc("add_user_credits", {
       _user_id: userId,
       _amount_usd: amountUsd,
       _type: "topup",
       _description: "Stripe auto‑top‑up",
       _stripe_pid: pi.id,
     });
-    if (error) {
+
+    if (creditsError) {
       await supabase
         .from("stripe_webhook_events")
-        .update({ processing_error: error.message })
+        .update({ processing_error: creditsError.message })
         .eq("stripe_event_id", event.id);
       return new Response("processing error", { status: 500, headers: corsHeaders });
     }
+
+    // Store enhanced transaction details
+    const { error: transactionError } = await supabase
+      .from("credit_transactions")
+      .update(paymentDetails)
+      .eq("stripe_pid", pi.id)
+      .eq("type", "topup");
+
+    if (transactionError) {
+      console.error("Error updating transaction with details:", transactionError.message);
+      // We don't fail the webhook for this error since the credits were already added
+    }
+    
     await supabase
       .from("stripe_webhook_events")
       .update({ processed: true, processed_at: new Date().toISOString() })
@@ -171,6 +262,7 @@ serve(async (req) => {
         .eq("stripe_event_id", event.id);
       return new Response("checkout.session missing metadata.user_id", { status: 400, headers: corsHeaders });
     }
+    
     if (!session.payment_intent) {
       await supabase
         .from("stripe_webhook_events")
@@ -178,7 +270,10 @@ serve(async (req) => {
         .eq("stripe_event_id", event.id);
       return new Response("checkout.session missing payment_intent id", { status: 400, headers: corsHeaders });
     }
+    
+    // Retrieve full PaymentIntent object to get details
     const pi = await stripe.paymentIntents.retrieve(session.payment_intent);
+    
     if (pi.status !== "succeeded" && pi.status !== "requires_capture") {
       await supabase
         .from("stripe_webhook_events")
@@ -186,21 +281,42 @@ serve(async (req) => {
         .eq("stripe_event_id", event.id);
       return new Response("PaymentIntent not succeeded", { status: 400, headers: corsHeaders });
     }
+    
     const amountUsd = pi.amount_received / 100;
-    const { error } = await supabase.rpc("add_user_credits", {
+    
+    // Extract extended payment and customer details
+    const paymentDetails = await extractPaymentDetails(pi);
+    console.log("Extracted checkout payment details:", JSON.stringify(paymentDetails));
+    
+    // Add credits with enhanced transaction details
+    const { error: creditsError } = await supabase.rpc("add_user_credits", {
       _user_id: userId,
       _amount_usd: amountUsd,
       _type: "topup",
       _description: "Stripe auto‑top‑up",
       _stripe_pid: pi.id,
     });
-    if (error) {
+    
+    if (creditsError) {
       await supabase
         .from("stripe_webhook_events")
-        .update({ processing_error: error.message })
+        .update({ processing_error: creditsError.message })
         .eq("stripe_event_id", event.id);
       return new Response("processing error", { status: 500, headers: corsHeaders });
     }
+
+    // Store enhanced transaction details
+    const { error: transactionError } = await supabase
+      .from("credit_transactions")
+      .update(paymentDetails)
+      .eq("stripe_pid", pi.id)
+      .eq("type", "topup");
+
+    if (transactionError) {
+      console.error("Error updating transaction with checkout details:", transactionError.message);
+      // We don't fail the webhook for this error since the credits were already added
+    }
+    
     await supabase
       .from("stripe_webhook_events")
       .update({ processed: true, processed_at: new Date().toISOString() })

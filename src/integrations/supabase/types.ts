@@ -76,9 +76,23 @@ export type Database = {
         Row: {
           amount_usd: number | null
           api_call_type: string | null
+          billing_address_line1: string | null
+          billing_address_line2: string | null
+          card_brand: string | null
+          card_last4: string | null
+          city: string | null
+          country: string | null
           description: string | null
+          email: string | null
+          full_name: string | null
           id: number
+          payment_method_type: string | null
+          payment_status: string | null
+          postal_code: string | null
           reference_id: string | null
+          state: string | null
+          stripe_customer_id: string | null
+          stripe_invoice_id: string | null
           stripe_pid: string | null
           ts: string | null
           type: string | null
@@ -87,9 +101,23 @@ export type Database = {
         Insert: {
           amount_usd?: number | null
           api_call_type?: string | null
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          card_brand?: string | null
+          card_last4?: string | null
+          city?: string | null
+          country?: string | null
           description?: string | null
+          email?: string | null
+          full_name?: string | null
           id?: number
+          payment_method_type?: string | null
+          payment_status?: string | null
+          postal_code?: string | null
           reference_id?: string | null
+          state?: string | null
+          stripe_customer_id?: string | null
+          stripe_invoice_id?: string | null
           stripe_pid?: string | null
           ts?: string | null
           type?: string | null
@@ -98,9 +126,23 @@ export type Database = {
         Update: {
           amount_usd?: number | null
           api_call_type?: string | null
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          card_brand?: string | null
+          card_last4?: string | null
+          city?: string | null
+          country?: string | null
           description?: string | null
+          email?: string | null
+          full_name?: string | null
           id?: number
+          payment_method_type?: string | null
+          payment_status?: string | null
+          postal_code?: string | null
           reference_id?: string | null
+          state?: string | null
+          stripe_customer_id?: string | null
+          stripe_invoice_id?: string | null
           stripe_pid?: string | null
           ts?: string | null
           type?: string | null
@@ -375,63 +417,6 @@ export type Database = {
           stripe_event_id?: string
           stripe_event_type?: string
           stripe_kind?: Database["public"]["Enums"]["stripe_event_kind"]
-        }
-        Relationships: []
-      }
-      subscriptions: {
-        Row: {
-          add_on_relationship_price_id: string | null
-          add_on_relationship_status: string | null
-          add_on_transits_price_id: string | null
-          add_on_transits_status: string | null
-          add_on_yearly_cycle_price_id: string | null
-          add_on_yearly_cycle_status: string | null
-          ai_credit_balance: number | null
-          created_at: string | null
-          current_period_end: string | null
-          id: string
-          main_plan_name: string | null
-          main_plan_price_id: string | null
-          stripe_subscription_id: string | null
-          subscription_status: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          add_on_relationship_price_id?: string | null
-          add_on_relationship_status?: string | null
-          add_on_transits_price_id?: string | null
-          add_on_transits_status?: string | null
-          add_on_yearly_cycle_price_id?: string | null
-          add_on_yearly_cycle_status?: string | null
-          ai_credit_balance?: number | null
-          created_at?: string | null
-          current_period_end?: string | null
-          id?: string
-          main_plan_name?: string | null
-          main_plan_price_id?: string | null
-          stripe_subscription_id?: string | null
-          subscription_status?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          add_on_relationship_price_id?: string | null
-          add_on_relationship_status?: string | null
-          add_on_transits_price_id?: string | null
-          add_on_transits_status?: string | null
-          add_on_yearly_cycle_price_id?: string | null
-          add_on_yearly_cycle_status?: string | null
-          ai_credit_balance?: number | null
-          created_at?: string | null
-          current_period_end?: string | null
-          id?: string
-          main_plan_name?: string | null
-          main_plan_price_id?: string | null
-          stripe_subscription_id?: string | null
-          subscription_status?: string | null
-          updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
