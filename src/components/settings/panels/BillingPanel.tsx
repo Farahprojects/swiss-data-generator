@@ -1,12 +1,10 @@
-
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useLocation } from "react-router-dom";
-import { getProductByName } from "@/utils/stripe-products";
+import { toast } from "sonner";
+import { getStripeLinkByName } from "@/utils/stripe-links";
 
 // Mock data - this would come from database in a real app
 const mockSubscriptionData = {
@@ -47,14 +45,19 @@ export const BillingPanel = () => {
     setIsLoadingSubscription(true);
     
     try {
-      // In a real implementation, this would call the Stripe customer portal
-      // via a Supabase edge function
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Get the subscription management link from the database
+      const subscriptionLink = await getStripeLinkByName("Manage Subscription");
       
-      // Redirect to Stripe Customer Portal (mocked)
-      console.log("Redirecting to Stripe portal...");
+      if (!subscriptionLink || !subscriptionLink.url) {
+        toast.error("Could not find subscription management link");
+        throw new Error("Could not find subscription management link");
+      }
+      
+      // Redirect to the subscription management URL
+      window.location.href = subscriptionLink.url;
     } catch (error) {
-      console.error("Failed to redirect to customer portal:", error);
+      console.error("Failed to redirect to subscription portal:", error);
+      toast.error("Could not access subscription management. Please try again later.");
     } finally {
       setIsLoadingSubscription(false);
     }
@@ -68,37 +71,19 @@ export const BillingPanel = () => {
     
     setIsUpdatingPayment(true);
     try {
-      // Get the current URL path to return to the same page after checkout
-      const returnPath = window.location.pathname;
-      const queryParams = location.search ? location.search.split('?')[1] : '';
-      const currentPath = queryParams ? `${returnPath}?${queryParams}` : returnPath;
+      // Get the payment update link from the database
+      const paymentLink = await getStripeLinkByName("Update Payment Method");
       
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { 
-          mode: "setup",
-          successUrl: `${window.location.origin}${returnPath}?panel=billing&payment=setup-success`,
-          cancelUrl: `${window.location.origin}${returnPath}?panel=billing&payment=setup-cancelled`,
-          customAppearance: {
-            logo: "https://raw.githubusercontent.com/astrogpt/assets/main/logos/ai-logo-color.png",
-            brandName: "AstroGPT",
-            primaryColor: "#6941C6",
-            buttonColor: "#6941C6"
-          }
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message);
+      if (!paymentLink || !paymentLink.url) {
+        toast.error("Could not find payment method update link");
+        throw new Error("Could not find payment method update link");
       }
-
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
+      
+      // Redirect to the payment update URL
+      window.location.href = paymentLink.url;
     } catch (err) {
       console.error("Failed to initiate payment update:", err);
-      toast.error("Failed to create payment update session. Please try again.");
+      toast.error("Failed to update payment method. Please try again.");
     } finally {
       setIsUpdatingPayment(false);
     }

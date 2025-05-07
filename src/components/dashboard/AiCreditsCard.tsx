@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getProductByName } from "@/utils/stripe-products";
+import { getStripeLinkByName } from "@/utils/stripe-links";
 
 export const AiCreditsCard = () => {
   const { user } = useAuth();
@@ -59,48 +59,18 @@ export const AiCreditsCard = () => {
 
     setIsProcessing(true);
     try {
-      // Get the credits top-up product from the database
-      const topUpProduct = await getProductByName("API Credits Top-up");
+      // Get the credits top-up link from the database
+      const topUpLink = await getStripeLinkByName("API Credits Top-up");
       
-      if (!topUpProduct) {
-        toast.error("Could not find top-up product in database");
-        throw new Error("Could not find top-up product in database");
+      if (!topUpLink || !topUpLink.url) {
+        toast.error("Could not find top-up link in database");
+        throw new Error("Could not find top-up link in database");
       }
       
-      console.log("Found top-up product:", topUpProduct);
+      console.log("Found top-up link:", topUpLink);
       
-      // Get the current URL path to return to the same page after checkout
-      const returnPath = window.location.pathname;
-
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { 
-          mode: "payment", 
-          priceId: topUpProduct.price_id,
-          productId: topUpProduct.product_id,
-          amount: topUpProduct.amount_usd, // Include amount for fallback
-          successUrl: `${window.location.origin}${returnPath}?payment=success&amount=${topUpProduct.amount_usd}`,
-          cancelUrl: `${window.location.origin}${returnPath}?payment=cancelled`,
-          customAppearance: {
-            logo: "https://raw.githubusercontent.com/astrogpt/assets/main/logos/ai-logo-color.png",
-            brandName: "AstroGPT",
-            primaryColor: "#6941C6",
-            buttonColor: "#6941C6"
-          }
-        }
-      });
-
-      if (error) {
-        console.error("Supabase function error:", error);
-        throw new Error(error.message);
-      }
-
-      if (!data?.url) {
-        console.error("No checkout URL returned:", data);
-        throw new Error("No checkout URL returned");
-      }
-
-      // Redirect to Stripe Checkout
-      window.location.href = data.url;
+      // Redirect to the Stripe Checkout link
+      window.location.href = topUpLink.url;
     } catch (err) {
       console.error("Failed to initiate top-up:", err);
       toast.error("Failed to create checkout session. Please try again.");

@@ -5,10 +5,9 @@ import Footer from "@/components/Footer";
 import { Check, Loader2 } from "lucide-react";
 import { plans, addOns, faqs } from "@/utils/pricing";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { getProductByName } from "@/utils/stripe-products";
+import { getStripeLinkByName } from "@/utils/stripe-links";
 
 const PricingPlanCard = ({
   name,
@@ -118,45 +117,18 @@ const Pricing = () => {
         return;
       }
       
-      // Get product from database based on plan name
-      const product = await getProductByName(planType);
-      if (!product) {
-        toast.error(`Could not find price for ${planType} plan`);
+      // Get link for the selected plan from the database
+      const planLink = await getStripeLinkByName(`Plan ${planType}`);
+      
+      if (!planLink || !planLink.url) {
+        toast.error(`Could not find checkout link for ${planType} plan`);
         return;
       }
       
-      console.log(`Found product for ${planType}:`, product);
+      console.log(`Found link for ${planType} plan:`, planLink);
       
-      // Call the Stripe checkout function
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { 
-          mode: "payment",
-          priceId: product.price_id,
-          productId: product.product_id,
-          amount: product.amount_usd,
-          planType,
-          addOns: [],
-          customAppearance: {
-            logo: "https://raw.githubusercontent.com/astrogpt/assets/main/logos/ai-logo-color.png",
-            brandName: "AstroGPT",
-            primaryColor: "#6941C6",
-            buttonColor: "#6941C6"
-          }
-        }
-      });
-      
-      if (error) {
-        console.error('Error creating checkout session:', error);
-        toast.error(error.message || "Could not initiate checkout process");
-        return;
-      }
-      
-      if (data?.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
+      // Redirect to the Stripe Checkout link
+      window.location.href = planLink.url;
     } catch (err) {
       console.error("Failed to start subscription:", err);
       toast.error("There was a problem starting your subscription. Please try again.");
@@ -175,45 +147,18 @@ const Pricing = () => {
         return;
       }
       
-      // Get product from database based on addon name
-      const product = await getProductByName(addonName);
-      if (!product) {
-        toast.error(`Could not find price for ${addonName} add-on`);
+      // Get link for the selected add-on from the database
+      const addonLink = await getStripeLinkByName(`Addon ${addonName}`);
+      
+      if (!addonLink || !addonLink.url) {
+        toast.error(`Could not find checkout link for ${addonName} add-on`);
         return;
       }
       
-      console.log(`Found product for ${addonName}:`, product);
+      console.log(`Found link for ${addonName} add-on:`, addonLink);
       
-      // Call the Stripe checkout function
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { 
-          mode: "payment",
-          priceId: product.price_id,
-          productId: product.product_id,
-          amount: product.amount_usd,
-          planType: null,
-          addOns: [addonName],
-          customAppearance: {
-            logo: "https://raw.githubusercontent.com/astrogpt/assets/main/logos/ai-logo-color.png",
-            brandName: "AstroGPT",
-            primaryColor: "#6941C6",
-            buttonColor: "#6941C6"
-          }
-        }
-      });
-      
-      if (error) {
-        console.error('Error creating checkout session:', error);
-        toast.error(error.message || "Could not initiate checkout process");
-        return;
-      }
-      
-      if (data?.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
+      // Redirect to the Stripe Checkout link
+      window.location.href = addonLink.url;
     } catch (err) {
       console.error("Failed to add subscription add-on:", err);
       toast.error("There was a problem adding this feature. Please try again.");
