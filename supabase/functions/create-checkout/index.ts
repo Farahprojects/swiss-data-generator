@@ -140,10 +140,7 @@ serve(async (req) => {
               message: 'Your payment is securely processed by Stripe.',
             },
           },
-          custom_branding: customAppearance ? {
-            logo: customAppearance.logo,
-            brand_name: customAppearance.brandName || 'AstroGPT',
-          } : undefined,
+          appearance,
         });
       } else {
         // Fall back to creating a price on the fly
@@ -184,10 +181,7 @@ serve(async (req) => {
               message: 'Your payment is securely processed by Stripe.',
             },
           },
-          custom_branding: customAppearance ? {
-            logo: customAppearance.logo,
-            brand_name: customAppearance.brandName || 'AstroGPT',
-          } : undefined,
+          appearance,
         });
       }
     } else if (mode === "setup") {
@@ -199,13 +193,10 @@ serve(async (req) => {
         customer: customerId,
         success_url: successUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-success`,
         cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-cancelled`,
-        custom_branding: customAppearance ? {
-          logo: customAppearance.logo,
-          brand_name: customAppearance.brandName || 'AstroGPT',
-        } : undefined,
         customer_update: {
           address: 'auto',
         },
+        appearance,
       });
     } else {
       console.log("Invalid mode:", mode);

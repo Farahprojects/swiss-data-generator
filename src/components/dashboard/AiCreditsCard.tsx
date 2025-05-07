@@ -110,7 +110,6 @@ export const AiCreditsCard = () => {
           customAppearance: {
             primaryColor: "#6941C6",
             buttonColor: "#6941C6",
-            brandName: "AstroGPT API",
             logo: `${window.location.origin}/logo.png`
           }
         }
