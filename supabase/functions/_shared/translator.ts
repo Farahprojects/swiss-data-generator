@@ -67,7 +67,7 @@ async function logToSupabase(
   responsePayload: any,
   processingTime: number,
   errorMessage?: string,
-  googleGeoUsed?: boolean
+  googleGeoUsed: boolean = false
 ) {
   const { error } = await sb.from("translator_logs").insert({
     request_type:      requestType,
@@ -76,7 +76,7 @@ async function logToSupabase(
     response_payload:  responsePayload,
     processing_time_ms:processingTime,
     error_message:     errorMessage,
-    google_geo:        googleGeoUsed,
+    google_geo:        googleGeoUsed, // Now storing a simple boolean
   });
   if (error) console.error("Failed to log to Supabase:", error.message);
   else       console.info(`Successfully logged ${requestType} request to Supabase`);
@@ -97,7 +97,7 @@ async function ensureLatLon(obj: any) {
 
   if (data) {
     const age = (Date.now() - Date.parse(data.updated_at)) / 60000;
-    if (age < GEO_TTL) return { ...obj, latitude: data.lat, longitude: data.lon, googleGeoDetails: { used: false } };
+    if (age < GEO_TTL) return { ...obj, latitude: data.lat, longitude: data.lon };
   }
 
   const url =
@@ -113,7 +113,10 @@ async function ensureLatLon(obj: any) {
   // Set googleGeoUsed to true when Google Geocoding API is used
   googleGeoUsed = true;
   
-  return { ...obj, latitude: lat, longitude: lng, googleGeoDetails: { used: true } };
+  // Store the flag but don't pass it to downstream API
+  const result = { ...obj, latitude: lat, longitude: lng };
+  result._googleGeoUsed = googleGeoUsed; // temporary property just for our tracking
+  return result;
 }
 
 function normalise(p: any) {
@@ -192,11 +195,11 @@ export async function translate(
       const b = normalise(await ensureLatLon(body.person_b));
       
       // Check if Google geocoding was used for either person
-      googleGeoUsed = !!(a.googleGeoDetails?.used || b.googleGeoDetails?.used);
+      googleGeoUsed = !!(a._googleGeoUsed || b._googleGeoUsed);
       
-      // Remove the googleGeoDetails property before passing to API
-      if (a.googleGeoDetails) delete a.googleGeoDetails;
-      if (b.googleGeoDetails) delete b.googleGeoDetails;
+      // Remove the tracking property before passing to API
+      if (a._googleGeoUsed !== undefined) delete a._googleGeoUsed;
+      if (b._googleGeoUsed !== undefined) delete b._googleGeoUsed;
 
       const payload: Record<string, any> = {
         person_a: a,
@@ -257,11 +260,11 @@ export async function translate(
       const b = normalise(await ensureLatLon(body.person_b));
       
       // Check if Google geocoding was used for either person
-      googleGeoUsed = !!(a.googleGeoDetails?.used || b.googleGeoDetails?.used);
+      googleGeoUsed = !!(a._googleGeoUsed || b._googleGeoUsed);
       
-      // Remove the googleGeoDetails property before passing to API
-      if (a.googleGeoDetails) delete a.googleGeoDetails;
-      if (b.googleGeoDetails) delete b.googleGeoDetails;
+      // Remove the tracking property before passing to API
+      if (a._googleGeoUsed !== undefined) delete a._googleGeoUsed;
+      if (b._googleGeoUsed !== undefined) delete b._googleGeoUsed;
 
       console.info(`Calling Swiss API for ${requestType} at /synastry`);
       const r = await fetch(`${SWISS_API}/synastry`, {
@@ -350,9 +353,10 @@ export async function translate(
 
     /*──────────────── POST chart routes ───────────────────*/
     const enriched = normalise(await ensureLatLon(body));
-    // Store geocoding information
-    googleGeoUsed = !!enriched.googleGeoDetails?.used;
-    if (enriched.googleGeoDetails) delete enriched.googleGeoDetails;
+    
+    // Extract tracking property
+    googleGeoUsed = !!enriched._googleGeoUsed;
+    if (enriched._googleGeoUsed !== undefined) delete enriched._googleGeoUsed;
     
     delete enriched.request;
 
