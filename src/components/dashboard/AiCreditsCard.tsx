@@ -13,9 +13,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getProductByType } from "@/utils/stripe-products";
+import { useLocation } from "react-router-dom";
 
 export const AiCreditsCard = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -99,14 +101,20 @@ export const AiCreditsCard = () => {
     try {
       console.log("Creating checkout session with price ID:", creditProduct.price_id);
       
+      // Store the current path and tab in localStorage
+      localStorage.setItem("stripe_return_path", location.pathname);
+      if (location.search) {
+        localStorage.setItem("stripe_return_tab", location.search.substring(1));
+      }
+      
       // Use the create-checkout edge function to create a dynamic checkout session
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           mode: "payment",
           priceId: creditProduct.price_id,
           amount: creditProduct.amount_usd,
-          successUrl: `${window.location.origin}/dashboard?payment=success&amount=${creditProduct.amount_usd}`,
-          cancelUrl: `${window.location.origin}/dashboard?payment=cancelled`
+          returnPath: location.pathname,
+          returnTab: location.search ? location.search.substring(1) : ""
         }
       });
 

@@ -27,10 +27,12 @@ serve(async (req) => {
       priceId, 
       productId, 
       successUrl, 
-      cancelUrl
+      cancelUrl,
+      returnPath,
+      returnTab 
     } = await req.json();
     
-    console.log(`Request data: mode=${mode}, priceId=${priceId}, productId=${productId}`);
+    console.log(`Request data: mode=${mode}, priceId=${priceId}, productId=${productId}, returnPath=${returnPath}`);
     
     if (!priceId && !amount) {
       console.error("Missing required parameter: either priceId or amount must be provided");
@@ -82,6 +84,29 @@ serve(async (req) => {
       console.log("Created new customer:", customerId);
     }
     
+    // Prepare standardized success and cancel URLs that redirect through our payment return handler
+    const baseUrl = req.headers.get("origin") || "";
+    
+    // Use provided URLs or construct defaults that go through our payment-return handler
+    let finalSuccessUrl;
+    let finalCancelUrl;
+    
+    if (successUrl) {
+      finalSuccessUrl = successUrl;
+    } else {
+      const paymentStatus = mode === "payment" ? "success" : "setup-success";
+      let url = `${baseUrl}/payment-return?status=${paymentStatus}`;
+      if (amount && mode === "payment") url += `&amount=${amount}`;
+      finalSuccessUrl = url;
+    }
+    
+    if (cancelUrl) {
+      finalCancelUrl = cancelUrl; 
+    } else {
+      const paymentStatus = mode === "payment" ? "cancelled" : "setup-cancelled";
+      finalCancelUrl = `${baseUrl}/payment-return?status=${paymentStatus}`;
+    }
+    
     // Create session based on mode
     let session;
     
@@ -99,10 +124,12 @@ serve(async (req) => {
             price: priceId,
             quantity: 1,
           }],
-          success_url: successUrl || `${req.headers.get("origin")}/dashboard?payment=success&amount=${amount}`,
-          cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard?payment=cancelled`,
+          success_url: finalSuccessUrl,
+          cancel_url: finalCancelUrl,
           metadata: {
             user_id: user.id,
+            return_path: returnPath || "/dashboard",
+            return_tab: returnTab || ""
           },
           payment_intent_data: {
             metadata: {
@@ -138,10 +165,12 @@ serve(async (req) => {
             },
             quantity: 1,
           }],
-          success_url: successUrl || `${req.headers.get("origin")}/dashboard?payment=success&amount=${amount}`,
-          cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard?payment=cancelled`,
+          success_url: finalSuccessUrl,
+          cancel_url: finalCancelUrl,
           metadata: {
             user_id: user.id,
+            return_path: returnPath || "/dashboard",
+            return_tab: returnTab || ""
           },
           payment_intent_data: {
             metadata: {
@@ -167,8 +196,13 @@ serve(async (req) => {
         payment_method_types: ["card"],
         mode: "setup",
         customer: customerId,
-        success_url: successUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-success`,
-        cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-cancelled`,
+        success_url: finalSuccessUrl,
+        cancel_url: finalCancelUrl,
+        metadata: {
+          user_id: user.id,
+          return_path: returnPath || "/dashboard/settings",
+          return_tab: returnTab || "panel=billing"
+        },
         customer_update: {
           address: 'auto',
         }

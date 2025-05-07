@@ -72,12 +72,17 @@ export const BillingPanel = () => {
     
     setIsUpdatingPayment(true);
     try {
+      // Store the current path and tab in localStorage
+      localStorage.setItem("stripe_return_path", location.pathname);
+      const currentTab = "panel=billing"; // Since we're already on the billing panel
+      localStorage.setItem("stripe_return_tab", currentTab);
+      
       // Call the create-checkout edge function with setup mode
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           mode: "setup",
-          successUrl: `${window.location.origin}/dashboard/settings?panel=billing&payment=setup-success`,
-          cancelUrl: `${window.location.origin}/dashboard/settings?panel=billing&payment=setup-cancelled`
+          returnPath: location.pathname,
+          returnTab: currentTab
         }
       });
       
