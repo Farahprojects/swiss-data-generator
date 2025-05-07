@@ -27,8 +27,7 @@ serve(async (req) => {
       priceId, 
       productId, 
       successUrl, 
-      cancelUrl,
-      customAppearance 
+      cancelUrl
     } = await req.json();
     
     console.log(`Request data: mode=${mode}, priceId=${priceId}, productId=${productId}`);
@@ -86,26 +85,6 @@ serve(async (req) => {
     // Create session based on mode
     let session;
     
-    // Configure checkout appearance if provided
-    const appearance = customAppearance ? {
-      theme: 'stripe',
-      variables: {
-        colorPrimary: customAppearance.primaryColor || '#6941C6',
-        colorBackground: '#ffffff',
-        colorText: '#1A1A1A',
-        colorDanger: '#df1b41',
-        fontFamily: 'Inter, system-ui, sans-serif',
-        spacingUnit: '4px',
-        borderRadius: '4px',
-      },
-      components: {
-        button: {
-          backgroundColor: customAppearance.buttonColor || '#6941C6',
-          fontWeight: 'bold',
-        },
-      },
-    } : undefined;
-    
     if (mode === "payment") {
       console.log("Creating payment session");
       // For top-up credits payment
@@ -139,8 +118,7 @@ serve(async (req) => {
             submit: {
               message: 'Your payment is securely processed by Stripe.',
             },
-          },
-          appearance,
+          }
         });
       } else {
         // Fall back to creating a price on the fly
@@ -154,8 +132,7 @@ serve(async (req) => {
               currency: "usd",
               product_data: {
                 name: "API Credits Top-up",
-                description: "Top up your API credits",
-                images: customAppearance?.logo ? [customAppearance.logo] : undefined,
+                description: "Top up your API credits"
               },
               unit_amount: Math.round(amount * 100), // Convert dollars to cents, ensure integer
             },
@@ -180,8 +157,7 @@ serve(async (req) => {
             submit: {
               message: 'Your payment is securely processed by Stripe.',
             },
-          },
-          appearance,
+          }
         });
       }
     } else if (mode === "setup") {
@@ -195,8 +171,7 @@ serve(async (req) => {
         cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-cancelled`,
         customer_update: {
           address: 'auto',
-        },
-        appearance,
+        }
       });
     } else {
       console.log("Invalid mode:", mode);

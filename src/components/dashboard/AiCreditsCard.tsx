@@ -106,12 +106,7 @@ export const AiCreditsCard = () => {
           priceId: creditProduct.price_id,
           amount: creditProduct.amount_usd,
           successUrl: `${window.location.origin}/dashboard?payment=success&amount=${creditProduct.amount_usd}`,
-          cancelUrl: `${window.location.origin}/dashboard?payment=cancelled`,
-          customAppearance: {
-            primaryColor: "#6941C6",
-            buttonColor: "#6941C6",
-            logo: `${window.location.origin}/logo.png`
-          }
+          cancelUrl: `${window.location.origin}/dashboard?payment=cancelled`
         }
       });
 

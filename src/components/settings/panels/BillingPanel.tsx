@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { getStripeLinkByName, STRIPE_LINK_TYPES } from "@/utils/stripe-links";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock data - this would come from database in a real app
 const mockSubscriptionData = {
@@ -71,16 +72,22 @@ export const BillingPanel = () => {
     
     setIsUpdatingPayment(true);
     try {
-      // Get the payment update link from the database
-      const paymentLink = await getStripeLinkByName(STRIPE_LINK_TYPES.UPDATE_PAYMENT_METHOD);
+      // Call the create-checkout edge function with setup mode
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          mode: "setup",
+          successUrl: `${window.location.origin}/dashboard/settings?panel=billing&payment=setup-success`,
+          cancelUrl: `${window.location.origin}/dashboard/settings?panel=billing&payment=setup-cancelled`
+        }
+      });
       
-      if (!paymentLink || !paymentLink.url) {
-        toast.error("Could not find payment method update link");
-        throw new Error("Could not find payment method update link");
+      if (error || !data?.url) {
+        toast.error("Could not create payment setup session");
+        throw new Error("Could not create payment setup session");
       }
       
       // Redirect to the payment update URL
-      window.location.href = paymentLink.url;
+      window.location.href = data.url;
     } catch (err) {
       console.error("Failed to initiate payment update:", err);
       toast.error("Failed to update payment method. Please try again.");
