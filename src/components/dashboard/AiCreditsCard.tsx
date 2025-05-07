@@ -72,11 +72,16 @@ export const AiCreditsCard = () => {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           mode: "payment", 
-          amount: topUpProduct.amount_usd,
           priceId: topUpProduct.price_id,
           productId: topUpProduct.product_id,
           successUrl: `${window.location.origin}${returnPath}?payment=success&amount=${topUpProduct.amount_usd}`,
-          cancelUrl: `${window.location.origin}${returnPath}?payment=cancelled`
+          cancelUrl: `${window.location.origin}${returnPath}?payment=cancelled`,
+          customAppearance: {
+            logo: "https://raw.githubusercontent.com/astrogpt/assets/main/logos/ai-logo-color.png",
+            brandName: "AstroGPT",
+            primaryColor: "#6941C6",
+            buttonColor: "#6941C6"
+          }
         }
       });
 

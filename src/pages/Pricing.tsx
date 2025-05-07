@@ -125,14 +125,23 @@ const Pricing = () => {
         return;
       }
       
+      console.log(`Found product for ${planType}:`, product);
+      
       // Call the Stripe checkout function
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           mode: "payment",
           priceId: product.price_id,
           productId: product.product_id,
+          amount: product.amount_usd,
           planType,
-          addOns: []
+          addOns: [],
+          customAppearance: {
+            logo: "https://raw.githubusercontent.com/astrogpt/assets/main/logos/ai-logo-color.png",
+            brandName: "AstroGPT",
+            primaryColor: "#6941C6",
+            buttonColor: "#6941C6"
+          }
         }
       });
       
@@ -173,14 +182,23 @@ const Pricing = () => {
         return;
       }
       
+      console.log(`Found product for ${addonName}:`, product);
+      
       // Call the Stripe checkout function
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           mode: "payment",
           priceId: product.price_id,
           productId: product.product_id,
+          amount: product.amount_usd,
           planType: null,
-          addOns: [addonName]
+          addOns: [addonName],
+          customAppearance: {
+            logo: "https://raw.githubusercontent.com/astrogpt/assets/main/logos/ai-logo-color.png",
+            brandName: "AstroGPT",
+            primaryColor: "#6941C6",
+            buttonColor: "#6941C6"
+          }
         }
       });
       

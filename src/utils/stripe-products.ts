@@ -37,6 +37,7 @@ export const fetchStripeProducts = async (): Promise<StripeProduct[]> => {
 
 export const getProductByName = async (name: string): Promise<StripeProduct | null> => {
   try {
+    console.log(`Searching for product with name: ${name}`);
     const { data, error } = await supabase
       .from('stripe_products')
       .select('*')
@@ -49,6 +50,7 @@ export const getProductByName = async (name: string): Promise<StripeProduct | nu
       return null;
     }
     
+    console.log(`Found product:`, data);
     return data;
   } catch (err) {
     console.error(`Failed to fetch product with name ${name}:`, err);

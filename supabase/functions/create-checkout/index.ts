@@ -21,7 +21,16 @@ serve(async (req) => {
 
   try {
     console.log("Starting create-checkout function");
-    const { mode, amount, priceId, productId, successUrl, cancelUrl } = await req.json();
+    const { 
+      mode, 
+      amount, 
+      priceId, 
+      productId, 
+      successUrl, 
+      cancelUrl,
+      customAppearance 
+    } = await req.json();
+    
     console.log(`Request data: mode=${mode}, amount=${amount}, priceId=${priceId}, productId=${productId}`);
     
     // Get user from Authorization header
@@ -72,6 +81,26 @@ serve(async (req) => {
     // Create session based on mode
     let session;
     
+    // Configure checkout appearance if provided
+    const appearance = customAppearance ? {
+      theme: 'stripe',
+      variables: {
+        colorPrimary: customAppearance.primaryColor || '#6941C6',
+        colorBackground: '#ffffff',
+        colorText: '#1A1A1A',
+        colorDanger: '#df1b41',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        spacingUnit: '4px',
+        borderRadius: '4px',
+      },
+      components: {
+        button: {
+          backgroundColor: customAppearance.buttonColor || '#6941C6',
+          fontWeight: 'bold',
+        },
+      },
+    } : undefined;
+    
     if (mode === "payment") {
       console.log("Creating payment session");
       // For top-up credits payment
@@ -90,7 +119,26 @@ serve(async (req) => {
           cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard?payment=cancelled`,
           metadata: {
             user_id: user.id,
-          }
+          },
+          payment_intent_data: {
+            metadata: {
+              user_id: user.id,
+            },
+          },
+          billing_address_collection: 'auto',
+          allow_promotion_codes: true,
+          customer_update: {
+            address: 'auto',
+          },
+          custom_text: {
+            submit: {
+              message: 'Your payment is securely processed by Stripe.',
+            },
+          },
+          custom_branding: customAppearance ? {
+            logo: customAppearance.logo,
+            brand_name: customAppearance.brandName || 'AstroGPT',
+          } : undefined,
         });
       } else {
         // Fall back to creating a price on the fly
@@ -113,7 +161,26 @@ serve(async (req) => {
           cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard?payment=cancelled`,
           metadata: {
             user_id: user.id,
-          }
+          },
+          payment_intent_data: {
+            metadata: {
+              user_id: user.id,
+            },
+          },
+          billing_address_collection: 'auto',
+          allow_promotion_codes: true,
+          customer_update: {
+            address: 'auto',
+          },
+          custom_text: {
+            submit: {
+              message: 'Your payment is securely processed by Stripe.',
+            },
+          },
+          custom_branding: customAppearance ? {
+            logo: customAppearance.logo,
+            brand_name: customAppearance.brandName || 'AstroGPT',
+          } : undefined,
         });
       }
     } else if (mode === "setup") {
@@ -125,6 +192,13 @@ serve(async (req) => {
         customer: customerId,
         success_url: successUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-success`,
         cancel_url: cancelUrl || `${req.headers.get("origin")}/dashboard/settings?panel=billing&payment=setup-cancelled`,
+        custom_branding: customAppearance ? {
+          logo: customAppearance.logo,
+          brand_name: customAppearance.brandName || 'AstroGPT',
+        } : undefined,
+        customer_update: {
+          address: 'auto',
+        },
       });
     } else {
       console.log("Invalid mode:", mode);
