@@ -225,6 +225,27 @@ export type Database = {
         }
         Relationships: []
       }
+      report_prompts: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          system_prompt: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          system_prompt: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          system_prompt?: string
+        }
+        Relationships: []
+      }
       stripe_links: {
         Row: {
           created_at: string | null
@@ -452,36 +473,36 @@ export type Database = {
       }
       translator_logs: {
         Row: {
-          ai_report: Json | null
           created_at: string | null
           error_message: string | null
           google_geo: boolean | null
           id: string
           processing_time_ms: number | null
+          report_tier: Database["public"]["Enums"]["report_tier_enum"] | null
           request_payload: Json | null
           request_type: string | null
           response_payload: Json | null
           response_status: number | null
         }
         Insert: {
-          ai_report?: Json | null
           created_at?: string | null
           error_message?: string | null
           google_geo?: boolean | null
           id?: string
           processing_time_ms?: number | null
+          report_tier?: Database["public"]["Enums"]["report_tier_enum"] | null
           request_payload?: Json | null
           request_type?: string | null
           response_payload?: Json | null
           response_status?: number | null
         }
         Update: {
-          ai_report?: Json | null
           created_at?: string | null
           error_message?: string | null
           google_geo?: boolean | null
           id?: string
           processing_time_ms?: number | null
+          report_tier?: Database["public"]["Enums"]["report_tier_enum"] | null
           request_payload?: Json | null
           request_type?: string | null
           response_payload?: Json | null
@@ -595,6 +616,7 @@ export type Database = {
       }
     }
     Enums: {
+      report_tier_enum: "standard" | "premium"
       stripe_event_kind:
         | "payment_intent"
         | "charge"
@@ -718,6 +740,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      report_tier_enum: ["standard", "premium"],
       stripe_event_kind: [
         "payment_intent",
         "charge",

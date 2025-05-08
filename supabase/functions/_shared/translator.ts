@@ -1,3 +1,4 @@
+
 // supabase/functions/_shared/translator.ts
 // Pure helper module – NO Edge Function wrapper
 // Exported translate() returns { status, text } so other functions can await it.
@@ -174,7 +175,7 @@ export async function translate(
       const err = `Unknown request ${body.request}`;
       await logToSupabase(
         requestType,
-        raw,
+        raw, // Pass the entire raw request for logging
         400,
         { error: err },
         Date.now() - startTime,
@@ -191,7 +192,7 @@ export async function translate(
       const msg = "Reports request logged";
       await logToSupabase(
         requestType,
-        raw,
+        raw, // Pass the entire raw request for logging
         200,
         { message: msg },
         Date.now() - startTime,
@@ -207,7 +208,7 @@ export async function translate(
         const err = "person_a & person_b required";
         await logToSupabase(
           requestType,
-          raw,
+          raw, // Pass the entire raw request for logging
           400,
           { error: err },
           Date.now() - startTime,
@@ -241,7 +242,7 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        raw,
+        raw, // Pass the entire raw request for logging
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
@@ -258,7 +259,7 @@ export async function translate(
         const err = "person_a & person_b required";
         await logToSupabase(
           requestType,
-          raw,
+          raw, // Pass the entire raw request for logging
           400,
           { error: err },
           Date.now() - startTime,
@@ -284,7 +285,7 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        raw,
+        raw, // Pass the entire raw request for logging
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
@@ -303,7 +304,7 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        raw,
+        raw, // Pass the entire raw request for logging
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
@@ -323,7 +324,7 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        raw,
+        raw, // Pass the entire raw request for logging
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
@@ -333,7 +334,7 @@ export async function translate(
       return { status: r.status, text: txt };
     }
 
-    /*──────────────── POST chart routes ──────────────────*/
+    /*──────────────── POST chart routes ──────────────*/
     const { data: enrichedRaw, googleGeoUsed: gUsed } = await ensureLatLon(body);
     googleGeoUsed = gUsed;
 
@@ -353,7 +354,7 @@ export async function translate(
       const err = `Routing not implemented for ${canon}`;
       await logToSupabase(
         requestType,
-        raw,
+        raw, // Pass the entire raw request for logging
         400,
         { error: err },
         Date.now() - startTime,
@@ -372,7 +373,7 @@ export async function translate(
 
     await logToSupabase(
       requestType,
-      raw,
+      raw, // Pass the entire raw request for logging
       r.status,
       (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
       Date.now() - startTime,
@@ -385,7 +386,7 @@ export async function translate(
     const msg = (err as Error).message;
     await logToSupabase(
       requestType,
-      raw,
+      raw, // Pass the entire raw request for logging
       500,
       { error: msg },
       Date.now() - startTime,
