@@ -90,14 +90,17 @@ async function validateKey(k: string): Promise<string | null> {
   }
 }
 
-async function recordUsage(uid: string) {
-    console.info(`Attempting to record usage for user: ${uid}`);
-    const { error } = await sb.from("api_usage").insert({ user_id: uid });
+async function recordUsage(uid: string, endpoint: string) {
+    console.info(`Attempting to record usage for user: ${uid}, endpoint: ${endpoint}`);
+    const { error } = await sb.from("api_usage").insert({ 
+      user_id: uid,
+      endpoint: endpoint
+    });
     if (error) {
         // Log error but don't fail the request for usage recording issues
         console.error(`Failed to record usage for user ${uid}:`, error.message);
     } else {
-        console.info(`Usage successfully recorded for user: ${uid}`);
+        console.info(`Usage successfully recorded for user: ${uid}, endpoint: ${endpoint}`);
     }
 }
 
@@ -162,15 +165,19 @@ serve(async (req) => {
   }
   // API Key is valid, proceed.
 
-  // Record Usage (async, don't block response)
-  recordUsage(userId); // Fire and forget, logging handled inside
-
   // Prepare payload for translator
   console.info("Preparing payload for translator...");
   urlObj.searchParams.delete("api_key"); // Ensure key isn't passed downstream
   const queryObj = Object.fromEntries(urlObj.searchParams.entries());
   const mergedPayload = { ...(bodyJson ?? {}), ...queryObj };
   console.info("Translator payload prepared.");
+
+  // Extract endpoint from the path for usage recording
+  const pathParts = urlObj.pathname.split('/');
+  const endpoint = pathParts[pathParts.length - 1] || 'swiss'; // Use the last path segment or 'swiss' if empty
+  
+  // Record Usage (async, don't block response)
+  recordUsage(userId, endpoint); // Fire and forget, logging handled inside
 
   // Call the translator
   try {
