@@ -18,29 +18,18 @@ const sb = createClient(SB_URL, SB_KEY);
 /*──────────────────── canonical maps */
 const CANON: Record<string, string> = {
   natal:         "natal",
-  birth:         "natal",
-  natal_chart:   "natal",
 
   transits:      "transits",
-  transition:    "transits",
-  daily_transits:"transits",
 
   progressions:  "progressions",
-  progressed:    "progressions",
 
   return:        "return",
-  solar_return:  "return",
-  lunar_return:  "return",
-  yearly_cycle:  "return",
 
-  relationship:  "synastry",
   synastry:      "synastry",
   compatibility: "synastry",
-  composite:     "synastry",
 
   positions:     "positions",
   moonphases:    "moonphases",
-  phases:        "moonphases",
 
   body:          "body_matrix",
   body_matrix:   "body_matrix",
@@ -49,8 +38,19 @@ const CANON: Record<string, string> = {
 
   /* tracking-only       */
   reports:       "reports",
-};
 
+  /* ========= NEW ENDPOINTS (user-friendly aliases) ================ */
+  essence:           "essence",   // natal + current transits bundle
+
+  flow:              "flow",
+
+  mindset:           "mindset",
+
+  monthly:           "monthly",
+
+  focus:             "focus",
+  
+};
 /*──────────────────── misc maps */
 const HOUSE_ALIASES: Record<string, string> = {
   placidus:    "P",
@@ -71,8 +71,13 @@ async function logToSupabase(
   processingTime: number,
   errorMessage?: string,
   googleGeoUsed = false,
-  reportTier?: string | null,
 ) {
+  /* extract report tier, if present */
+  const reportTier =
+    ["standard", "premium"].includes(requestPayload?.report)
+      ? requestPayload.report
+      : null;
+
   const { error } = await sb.from("translator_logs").insert({
     request_type:       requestType,
     request_payload:    requestPayload,
@@ -159,29 +164,22 @@ export async function translate(
   const startTime     = Date.now();
   let   requestType   = "unknown";
   let   googleGeoUsed = false;
-  let   reportTier: string | null = null;
 
   try {
     const body = Base.parse(raw);
     requestType = body.request.trim().toLowerCase();
     const canon = CANON[requestType];
 
-    // Extract report_tier at the same time as request_type
-    if (["standard", "premium"].includes(raw?.report)) {
-      reportTier = raw.report;
-    }
-
     if (!canon) {
       const err = `Unknown request ${body.request}`;
       await logToSupabase(
         requestType,
-        raw, // Pass the entire raw request for logging
+        raw,
         400,
         { error: err },
         Date.now() - startTime,
         err,
         googleGeoUsed,
-        reportTier,
       );
       return { status: 400, text: JSON.stringify({ error: err }) };
     }
@@ -193,13 +191,12 @@ export async function translate(
       const msg = "Reports request logged";
       await logToSupabase(
         requestType,
-        raw, // Pass the entire raw request for logging
+        raw,
         200,
         { message: msg },
         Date.now() - startTime,
         undefined,
         googleGeoUsed,
-        reportTier,
       );
       return { status: 200, text: JSON.stringify({ message: msg }) };
     }
@@ -210,13 +207,12 @@ export async function translate(
         const err = "person_a & person_b required";
         await logToSupabase(
           requestType,
-          raw, // Pass the entire raw request for logging
+          raw,
           400,
           { error: err },
           Date.now() - startTime,
           err,
           googleGeoUsed,
-          reportTier,
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
@@ -245,13 +241,12 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        raw, // Pass the entire raw request for logging
+        raw,
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
-        reportTier,
       );
 
       return { status: r.status, text: txt };
@@ -263,13 +258,12 @@ export async function translate(
         const err = "person_a & person_b required";
         await logToSupabase(
           requestType,
-          raw, // Pass the entire raw request for logging
+          raw,
           400,
           { error: err },
           Date.now() - startTime,
           err,
           googleGeoUsed,
-          reportTier,
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
@@ -290,13 +284,12 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        raw, // Pass the entire raw request for logging
+        raw,
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
-        reportTier,
       );
 
       return { status: r.status, text: txt };
@@ -310,13 +303,12 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        raw, // Pass the entire raw request for logging
+        raw,
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
-        reportTier,
       );
       return { status: r.status, text: txt };
     }
@@ -331,18 +323,17 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        raw, // Pass the entire raw request for logging
+        raw,
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
-        reportTier,
       );
       return { status: r.status, text: txt };
     }
 
-    /*──────────────── POST chart routes ──────────────*/
+    /*──────────────── POST chart routes ──────────────────*/
     const { data: enrichedRaw, googleGeoUsed: gUsed } = await ensureLatLon(body);
     googleGeoUsed = gUsed;
 
@@ -350,11 +341,18 @@ export async function translate(
     delete enriched.request;
 
     const ROUTE: Record<string, string> = {
-      natal:        "natal",
-      transits:     "transits",
-      progressions: "progressions",
-      return:       "return",
-      body_matrix:  "body_matrix",
+      natal:            "natal",
+      transits:         "transits",
+      progressions:     "progressions",
+      return:           "return",
+      body_matrix:      "body_matrix",
+
+      /* ===== New Swiss-API routes ===== */
+      essence:   "essence",  // *** NEW ***
+      flow:    "flow",   // *** NEW ***
+      mindset:          "mindset",         // *** NEW ***
+      monthly: "monthly",// *** NEW ***
+      focus:     "focus",    // *** NEW ***
     };
 
     const path = ROUTE[canon as keyof typeof ROUTE];
@@ -362,13 +360,12 @@ export async function translate(
       const err = `Routing not implemented for ${canon}`;
       await logToSupabase(
         requestType,
-        raw, // Pass the entire raw request for logging
+        raw,
         400,
         { error: err },
         Date.now() - startTime,
         err,
         googleGeoUsed,
-        reportTier,
       );
       return { status: 400, text: JSON.stringify({ error: err }) };
     }
@@ -382,13 +379,12 @@ export async function translate(
 
     await logToSupabase(
       requestType,
-      raw, // Pass the entire raw request for logging
+      raw,
       r.status,
       (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
       Date.now() - startTime,
       !r.ok ? `Swiss API returned ${r.status}` : undefined,
       googleGeoUsed,
-      reportTier,
     );
 
     return { status: r.status, text: txt };
@@ -396,13 +392,12 @@ export async function translate(
     const msg = (err as Error).message;
     await logToSupabase(
       requestType,
-      raw, // Pass the entire raw request for logging
+      raw,
       500,
       { error: msg },
       Date.now() - startTime,
       msg,
       googleGeoUsed,
-      reportTier,
     );
     return { status: 500, text: JSON.stringify({ error: msg }) };
   }
