@@ -333,42 +333,18 @@ export async function translate(
       return { status: r.status, text: txt };
     }
 
-    /*──────────────── POST chart routes ──────────────────*/
+    *──────────────── POST chart routes ──────────────────*/
     const { data: enrichedRaw, googleGeoUsed: gUsed } = await ensureLatLon(body);
     googleGeoUsed = gUsed;
 
     const enriched = normalise(enrichedRaw);
     delete enriched.request;
 
-    const ROUTE: Record<string, string> = {
-      natal:            "natal",
-      transits:         "transits",
-      progressions:     "progressions",
-      return:           "return",
-      body_matrix:      "body_matrix",
-
-      /* ===== New Swiss-API routes ===== */
-      essence:   "essence",  // *** NEW ***
-      flow:    "flow",   // *** NEW ***
-      mindset:          "mindset",         // *** NEW ***
-      monthly: "monthly",// *** NEW ***
-      focus:     "focus",    // *** NEW ***
-    };
-
-    const path = ROUTE[canon as keyof typeof ROUTE];
-    if (!path) {
-      const err = `Routing not implemented for ${canon}`;
-      await logToSupabase(
-        requestType,
-        raw,
-        400,
-        { error: err },
-        Date.now() - startTime,
-        err,
-        googleGeoUsed,
-      );
-      return { status: 400, text: JSON.stringify({ error: err }) };
-    }
+    /*------------------------------------------------------
+      We no longer need a separate ROUTE map.  The canonical
+      value itself *is* the Swiss-API path.
+    ------------------------------------------------------*/
+    const path = canon;                   // e.g. “mindset”, “monthly”, …
 
     const r   = await fetch(`${SWISS_API}/${path}`, {
       method:  "POST",
