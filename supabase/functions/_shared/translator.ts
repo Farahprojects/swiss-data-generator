@@ -71,13 +71,8 @@ async function logToSupabase(
   processingTime: number,
   errorMessage?: string,
   googleGeoUsed = false,
+  reportTier?: string | null,
 ) {
-  /* extract report tier, if present */
-  const reportTier =
-    ["standard", "premium"].includes(requestPayload?.report)
-      ? requestPayload.report
-      : null;
-
   const { error } = await sb.from("translator_logs").insert({
     request_type:       requestType,
     request_payload:    requestPayload,
@@ -164,11 +159,17 @@ export async function translate(
   const startTime     = Date.now();
   let   requestType   = "unknown";
   let   googleGeoUsed = false;
+  let   reportTier: string | null = null;
 
   try {
     const body = Base.parse(raw);
     requestType = body.request.trim().toLowerCase();
     const canon = CANON[requestType];
+
+    // Extract report_tier at the same time as request_type
+    if (["standard", "premium"].includes(raw?.report)) {
+      reportTier = raw.report;
+    }
 
     if (!canon) {
       const err = `Unknown request ${body.request}`;
@@ -180,6 +181,7 @@ export async function translate(
         Date.now() - startTime,
         err,
         googleGeoUsed,
+        reportTier,
       );
       return { status: 400, text: JSON.stringify({ error: err }) };
     }
@@ -197,6 +199,7 @@ export async function translate(
         Date.now() - startTime,
         undefined,
         googleGeoUsed,
+        reportTier,
       );
       return { status: 200, text: JSON.stringify({ message: msg }) };
     }
@@ -213,6 +216,7 @@ export async function translate(
           Date.now() - startTime,
           err,
           googleGeoUsed,
+          reportTier,
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
@@ -247,6 +251,7 @@ export async function translate(
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
+        reportTier,
       );
 
       return { status: r.status, text: txt };
@@ -264,6 +269,7 @@ export async function translate(
           Date.now() - startTime,
           err,
           googleGeoUsed,
+          reportTier,
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
@@ -290,6 +296,7 @@ export async function translate(
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
+        reportTier,
       );
 
       return { status: r.status, text: txt };
@@ -309,6 +316,7 @@ export async function translate(
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
+        reportTier,
       );
       return { status: r.status, text: txt };
     }
@@ -329,6 +337,7 @@ export async function translate(
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
+        reportTier,
       );
       return { status: r.status, text: txt };
     }
@@ -359,6 +368,7 @@ export async function translate(
         Date.now() - startTime,
         err,
         googleGeoUsed,
+        reportTier,
       );
       return { status: 400, text: JSON.stringify({ error: err }) };
     }
@@ -378,6 +388,7 @@ export async function translate(
       Date.now() - startTime,
       !r.ok ? `Swiss API returned ${r.status}` : undefined,
       googleGeoUsed,
+      reportTier,
     );
 
     return { status: r.status, text: txt };
@@ -391,6 +402,7 @@ export async function translate(
       Date.now() - startTime,
       msg,
       googleGeoUsed,
+      reportTier,
     );
     return { status: 500, text: JSON.stringify({ error: msg }) };
   }
