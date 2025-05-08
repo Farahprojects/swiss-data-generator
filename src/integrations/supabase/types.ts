@@ -478,7 +478,7 @@ export type Database = {
           google_geo: boolean | null
           id: string
           processing_time_ms: number | null
-          report_tier: Database["public"]["Enums"]["report_tier_enum"] | null
+          report_tier: string | null
           request_payload: Json | null
           request_type: string | null
           response_payload: Json | null
@@ -490,7 +490,7 @@ export type Database = {
           google_geo?: boolean | null
           id?: string
           processing_time_ms?: number | null
-          report_tier?: Database["public"]["Enums"]["report_tier_enum"] | null
+          report_tier?: string | null
           request_payload?: Json | null
           request_type?: string | null
           response_payload?: Json | null
@@ -502,7 +502,7 @@ export type Database = {
           google_geo?: boolean | null
           id?: string
           processing_time_ms?: number | null
-          report_tier?: Database["public"]["Enums"]["report_tier_enum"] | null
+          report_tier?: string | null
           request_payload?: Json | null
           request_type?: string | null
           response_payload?: Json | null
@@ -616,7 +616,6 @@ export type Database = {
       }
     }
     Enums: {
-      report_tier_enum: "standard" | "premium"
       stripe_event_kind:
         | "payment_intent"
         | "charge"
@@ -740,7 +739,6 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      report_tier_enum: ["standard", "premium"],
       stripe_event_kind: [
         "payment_intent",
         "charge",
