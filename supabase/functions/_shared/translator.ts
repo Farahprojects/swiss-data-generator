@@ -338,7 +338,6 @@ export async function translate(
     googleGeoUsed = gUsed;
 
     const enriched = normalise(enrichedRaw);
-    delete enriched.request;
 
     /*------------------------------------------------------
       We no longer need a separate ROUTE map.  The canonical
