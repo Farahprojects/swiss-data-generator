@@ -1,4 +1,3 @@
-
 // supabase/functions/_shared/translator.ts
 // Pure helper module – NO Edge Function wrapper
 // Exported translate() returns { status, text } so other functions can await it.
