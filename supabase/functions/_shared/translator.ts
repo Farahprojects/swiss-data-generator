@@ -47,7 +47,7 @@ const CANON: Record<string, string> = {
 
   sync:          "sync",
 
-  /* NEW -------------------------------------------------- */
+  /* tracking-only       */
   reports:       "reports",
 };
 
@@ -71,8 +71,13 @@ async function logToSupabase(
   processingTime: number,
   errorMessage?: string,
   googleGeoUsed = false,
-  reportTier: "standard" | "premium" | null = null,
 ) {
+  /* extract report tier, if present */
+  const reportTier =
+    ["standard", "premium"].includes(requestPayload?.report)
+      ? requestPayload.report
+      : null;
+
   const { error } = await sb.from("translator_logs").insert({
     request_type:       requestType,
     request_payload:    requestPayload,
@@ -159,16 +164,11 @@ export async function translate(
   const startTime     = Date.now();
   let   requestType   = "unknown";
   let   googleGeoUsed = false;
-  let   reportTier: "standard" | "premium" | null = null;
 
   try {
     const body = Base.parse(raw);
     requestType = body.request.trim().toLowerCase();
     const canon = CANON[requestType];
-
-    /* ---------- detect report tier ---------- */
-    const validReports = ["standard", "premium"] as const;
-    reportTier = validReports.includes(body.report) ? body.report : null;
 
     if (!canon) {
       const err = `Unknown request ${body.request}`;
@@ -180,16 +180,14 @@ export async function translate(
         Date.now() - startTime,
         err,
         googleGeoUsed,
-        reportTier,
       );
       return { status: 400, text: JSON.stringify({ error: err }) };
     }
 
     requestType = canon;
 
-    /*──────────────── REPORTS  (tracking-only) ───────────*/
+    /*──────────────── REPORTS (tracking-only) ─────────────*/
     if (canon === "reports") {
-      // No external API call – just log & acknowledge
       const msg = "Reports request logged";
       await logToSupabase(
         requestType,
@@ -199,7 +197,6 @@ export async function translate(
         Date.now() - startTime,
         undefined,
         googleGeoUsed,
-        reportTier,
       );
       return { status: 200, text: JSON.stringify({ message: msg }) };
     }
@@ -216,7 +213,6 @@ export async function translate(
           Date.now() - startTime,
           err,
           googleGeoUsed,
-          reportTier,
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
@@ -245,13 +241,12 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        payload,
+        raw,
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
-        reportTier,
       );
 
       return { status: r.status, text: txt };
@@ -269,7 +264,6 @@ export async function translate(
           Date.now() - startTime,
           err,
           googleGeoUsed,
-          reportTier,
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
@@ -290,13 +284,12 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        { person_a: a, person_b: b },
+        raw,
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
-        reportTier,
       );
 
       return { status: r.status, text: txt };
@@ -310,13 +303,12 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        { year },
+        raw,
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
-        reportTier,
       );
       return { status: r.status, text: txt };
     }
@@ -331,13 +323,12 @@ export async function translate(
 
       await logToSupabase(
         requestType,
-        { utc: body.utc, sidereal: body.sidereal },
+        raw,
         r.status,
         (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
-        reportTier,
       );
       return { status: r.status, text: txt };
     }
@@ -362,13 +353,12 @@ export async function translate(
       const err = `Routing not implemented for ${canon}`;
       await logToSupabase(
         requestType,
-        enriched,
+        raw,
         400,
         { error: err },
         Date.now() - startTime,
         err,
         googleGeoUsed,
-        reportTier,
       );
       return { status: 400, text: JSON.stringify({ error: err }) };
     }
@@ -382,13 +372,12 @@ export async function translate(
 
     await logToSupabase(
       requestType,
-      enriched,
+      raw,
       r.status,
       (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
       Date.now() - startTime,
       !r.ok ? `Swiss API returned ${r.status}` : undefined,
       googleGeoUsed,
-      reportTier,
     );
 
     return { status: r.status, text: txt };
@@ -402,7 +391,6 @@ export async function translate(
       Date.now() - startTime,
       msg,
       googleGeoUsed,
-      reportTier,
     );
     return { status: 500, text: JSON.stringify({ error: msg }) };
   }
