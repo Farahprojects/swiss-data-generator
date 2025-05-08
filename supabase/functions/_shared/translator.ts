@@ -333,7 +333,7 @@ export async function translate(
       return { status: r.status, text: txt };
     }
 
-    *──────────────── POST chart routes ──────────────────*/
+    /*──────────────── POST chart routes ──────────────────*/
     const { data: enrichedRaw, googleGeoUsed: gUsed } = await ensureLatLon(body);
     googleGeoUsed = gUsed;
 
