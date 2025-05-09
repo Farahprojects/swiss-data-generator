@@ -165,7 +165,7 @@ export const AiCreditsCard = () => {
           </div>
           <div className="flex justify-between">
             <span>Trigger:</span>
-            <span>Auto top-up at $5</span>
+            <span>Auto top-up at $45</span>
           </div>
         </div>
       </CardContent>
