@@ -106,7 +106,6 @@ serve(async (req) => {
     if (usageErr) return json({ error: "Error recording usage" }, 500);
 
     /* ── debit user credits via RPC ────────────────────────────────────── */
-    // Here's the fixed function call with correct parameter names
     const { error: creditErr } = await sb.rpc("record_api_usage", {
       _user_id: user_id,
       _endpoint: request_type,

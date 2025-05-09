@@ -1,4 +1,5 @@
 
+
 -- This SQL will need to be run to create the flow tracking table
 
 CREATE TABLE IF NOT EXISTS public.stripe_flow_tracking (
@@ -53,7 +54,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Fix the record_api_usage function to use the correct column names
+-- Fixed version of the record_api_usage function with the correct column names
 CREATE OR REPLACE FUNCTION public.record_api_usage(_user_id uuid, _endpoint text, _cost_usd numeric, _request_params jsonb DEFAULT NULL::jsonb, _response_status integer DEFAULT NULL::integer, _processing_time_ms integer DEFAULT NULL::integer)
 RETURNS uuid
 LANGUAGE plpgsql
