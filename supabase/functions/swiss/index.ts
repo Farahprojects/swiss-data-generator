@@ -1,3 +1,4 @@
+
 // supabase/functions/swiss/index.ts
 // Single edge‑function that:
 //   1. Validates API key
@@ -25,14 +26,18 @@ if (!SB_KEY.startsWith("eyJ")) {
     console.error("[swiss] 🚨 JWT ERROR 🚨: SUPABASE_SERVICE_ROLE_KEY does not appear to be in correct JWT format");
 }
 
+console.log("[swiss] Service key format check: " + (SB_KEY.startsWith("eyJ") ? "Correct format (starts with eyJ)" : "INCORRECT format"));
+console.log("[swiss] URL format check: " + (SB_URL.startsWith("http") ? "Correct format (starts with http)" : "INCORRECT format"));
+
 let sb;
 try {
     console.log("[swiss] Initializing Supabase client...");
     sb = createClient(SB_URL, SB_KEY);
     console.info("[swiss] Supabase client created successfully");
 } catch (err) {
-    console.error(`[swiss] 🚨 JWT ERROR 🚨: Failed to initialize Supabase client: ${err instanceof Error ? err.message : String(err)}`);
-    throw err;
+    const errorMsg = `[swiss] 🚨 JWT ERROR 🚨: Failed to initialize Supabase client: ${err instanceof Error ? err.message : String(err)}`;
+    console.error(errorMsg);
+    throw new Error(errorMsg); // This will be visible in terminal response
 }
 
 /*─────────────────────────── CONFIG */
@@ -82,11 +87,6 @@ function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown
   return null;
 }
 
-// This function is no longer needed as we're using the balanceChecker instead
-// async function validateKey(k: string): Promise<string | null> {
-//   // ... keep existing code (old validation function)
-// }
-
 /*─────────────────────────── Handler */
 serve(async (req) => {
   const urlObj = new URL(req.url);
@@ -101,7 +101,14 @@ serve(async (req) => {
   // Check allowed methods
   if (!["GET", "POST"].includes(req.method)) {
     console.warn(`[swiss] Method not allowed: ${req.method}`);
-    return json({ success: false, message: "Method not allowed" }, 405);
+    return json({ 
+      success: false, 
+      message: "Method not allowed",
+      debug_info: {
+        location: "swiss/index.ts - method check",
+        timestamp: new Date().toISOString()
+      }
+    }, 405);
   }
 
   let bodyJson: Record<string, unknown> | undefined;
@@ -119,10 +126,26 @@ serve(async (req) => {
       } catch (err) {
           if (err instanceof SyntaxError) {
               console.warn("Invalid JSON body received.");
-              return json({ success: false, message: "Invalid JSON body" }, 400);
+              return json({ 
+                success: false, 
+                message: "Invalid JSON body",
+                debug_info: {
+                  location: "swiss/index.ts - JSON parsing",
+                  error: err instanceof Error ? err.message : String(err),
+                  timestamp: new Date().toISOString()
+                }
+              }, 400);
           }
           console.error("Error reading request body:", (err as Error).message);
-          return json({ success: false, message: (err as Error).message }, 400); // e.g., Body too large
+          return json({ 
+            success: false, 
+            message: (err as Error).message,
+            debug_info: {
+              location: "swiss/index.ts - body reading",
+              error: err instanceof Error ? err.message : String(err),
+              timestamp: new Date().toISOString()
+            }
+          }, 400);
       }
   }
 
@@ -132,7 +155,11 @@ serve(async (req) => {
     // Warning already logged in extractApiKey
     return json({ 
       success: false, 
-      message: "Hmm, we couldn't verify your API key. Please log in at theraiapi.com to check your credentials or generate a new key." 
+      message: "Hmm, we couldn't verify your API key. Please log in at theraiapi.com to check your credentials or generate a new key.",
+      debug_info: {
+        location: "swiss/index.ts - API key extraction",
+        timestamp: new Date().toISOString()
+      }
     }, 401);
   }
 
@@ -143,12 +170,28 @@ serve(async (req) => {
     
     if (!validationResult.isValid) {
       console.warn("[swiss] API key validation failed");
-      return json({ success: false, message: validationResult.errorMessage }, 401);
+      return json({ 
+        success: false, 
+        message: validationResult.errorMessage,
+        debug_info: {
+          location: "swiss/index.ts - API key validation",
+          timestamp: new Date().toISOString(),
+          details: "API key validation failed in balanceChecker.ts"
+        }
+      }, 401);
     }
     
     if (!validationResult.hasBalance) {
       console.warn(`[swiss] User ${validationResult.userId} has insufficient balance`);
-      return json({ success: false, message: validationResult.errorMessage }, 402); // 402 Payment Required
+      return json({ 
+        success: false, 
+        message: validationResult.errorMessage,
+        debug_info: {
+          location: "swiss/index.ts - balance check",
+          timestamp: new Date().toISOString(),
+          details: "Insufficient balance detected in balanceChecker.ts"
+        }
+      }, 402);
     }
     
     // API key and balance check passed, proceed with API call
@@ -185,21 +228,58 @@ serve(async (req) => {
       }
       return new Response(text, { status, headers: responseHeaders });
     } catch (err) {
-      if (String(err).includes("JWT") || String(err).includes("401")) {
-        console.error(`[swiss] 🚨 JWT ERROR 🚨 calling translator helper: ${err instanceof Error ? err.message : String(err)}`);
+      const errorMsg = String(err);
+      if (errorMsg.includes("JWT") || errorMsg.includes("401")) {
+        console.error(`[swiss] 🚨 JWT ERROR 🚨 calling translator helper: ${err instanceof Error ? err.message : errorMsg}`);
+        return json({ 
+          success: false, 
+          message: `JWT Authentication Error in translator: ${err instanceof Error ? err.message : errorMsg}`,
+          debug_info: {
+            location: "swiss/index.ts -> translator.ts",
+            error: errorMsg,
+            timestamp: new Date().toISOString(),
+            details: "JWT error occurred in translator.ts"
+          }
+        }, 500);
       } else {
         console.error("[swiss] Error calling translator helper:", (err as Error).message, err);
+        return json({ 
+          success: false, 
+          message: `Translation failed: ${(err as Error).message}`,
+          debug_info: {
+            location: "swiss/index.ts -> translator.ts",
+            error: err instanceof Error ? err.message : String(err),
+            timestamp: new Date().toISOString()
+          }
+        }, 500);
       }
-      return json({ success: false, message: `Translation failed: ${(err as Error).message}` }, 500);
     }
   } catch (balanceError) {
     // Special handling for JWT errors in the balance checker
-    if (String(balanceError).includes("JWT") || String(balanceError).includes("401")) {
-      console.error(`[swiss] 🚨 JWT ERROR 🚨 in balance checker: ${balanceError instanceof Error ? balanceError.message : String(balanceError)}`);
-      return json({ success: false, message: "Authentication error during API key validation. Please try again." }, 500);
+    const errorMsg = String(balanceError);
+    if (errorMsg.includes("JWT") || errorMsg.includes("401")) {
+      console.error(`[swiss] 🚨 JWT ERROR 🚨 in balance checker: ${balanceError instanceof Error ? balanceError.message : errorMsg}`);
+      return json({ 
+        success: false, 
+        message: "Authentication error during API key validation. Please try again.", 
+        debug_info: {
+          location: "swiss/index.ts -> balanceChecker.ts",
+          error: errorMsg,
+          timestamp: new Date().toISOString(),
+          details: "JWT error occurred in balanceChecker.ts"
+        }
+      }, 500);
     } else {
       console.error("[swiss] Balance checker error:", balanceError);
-      return json({ success: false, message: "Error validating API key. Please try again." }, 500);
+      return json({ 
+        success: false, 
+        message: "Error validating API key. Please try again.",
+        debug_info: {
+          location: "swiss/index.ts -> balanceChecker.ts",
+          error: balanceError instanceof Error ? balanceError.message : String(balanceError),
+          timestamp: new Date().toISOString()
+        }
+      }, 500);
     }
   }
 });
