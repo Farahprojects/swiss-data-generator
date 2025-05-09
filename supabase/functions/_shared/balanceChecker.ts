@@ -2,7 +2,7 @@
 // Balance checker utility
 // Verifies if a user has sufficient credits for API calls
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://deno.land/x/supabase@1.35.6/mod.ts";
 
 // Initialize Supabase client with better error handling
 const initSupabase = () => {
