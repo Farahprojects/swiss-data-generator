@@ -118,12 +118,6 @@ serve(async (req) => {
     // Use the unit price if found
     let unitPrice = priceData?.unit_price_usd;
     
-    // If still no price found, use a fallback price
-    if (unitPrice === undefined || unitPrice === null) {
-      console.warn(`No price found for endpoint ${request_type}, using default price of 0.01`);
-      unitPrice = 0.01;
-    }
-    
     // Calculate total cost (add geo lookup cost if used) - use parseFloat for explicit conversion
     let totalCost = parseFloat(String(unitPrice));
     if (google_geo) {
