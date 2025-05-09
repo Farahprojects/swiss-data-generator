@@ -1,4 +1,3 @@
-
 // Report orchestrator utility
 // Handles report processing workflow including balance checks and report generation
 
@@ -206,20 +205,9 @@ async function generateReport(payload: ReportPayload) {
       // Call the standard-report edge function
       console.log("[reportOrchestrator] Calling standard-report edge function");
       
-      // IMPORTANT: Add request/response debugging
+      // IMPORTANT CHANGE: Remove the Authorization header that was causing the JWT error
+      // Since verify_jwt = false is now set in config.toml, we don't need to pass any JWT
       try {
-        // Log environment variables
-        console.log("[reportOrchestrator] Environment check before calling standard-report:");
-        const openaiKey = Deno.env.get("OPENAI_API_KEY");
-        console.log(`[reportOrchestrator] OPENAI_API_KEY exists in orchestrator: ${!!openaiKey}`);
-        console.log(`[reportOrchestrator] OPENAI_API_KEY format check: ${openaiKey?.startsWith('sk-') ? 'Correct format' : 'Incorrect format'}`);
-        
-        console.log("[reportOrchestrator] Preparing to call standard-report with payload:", JSON.stringify({
-          endpoint: payload.endpoint,
-          report_type: payload.report_type,
-          // Omit sensitive data
-        }));
-        
         const response = await fetch(`${supabaseUrl}/functions/v1/standard-report`, {
           method: "POST",
           headers: {
@@ -229,14 +217,10 @@ async function generateReport(payload: ReportPayload) {
           body: JSON.stringify(payload)
         });
         
-        console.log(`[reportOrchestrator] standard-report response status: ${response.status}`);
-        
         // Improved error handling for HTTP errors
         if (!response.ok) {
           const errorText = await response.text();
           const status = response.status;
-          
-          console.log(`[reportOrchestrator] standard-report error response: ${errorText}`);
           
           if (status === 401 || errorText.includes("JWT")) {
             console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 from standard-report function: ${status} - ${errorText}`);
