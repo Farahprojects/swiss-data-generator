@@ -156,35 +156,56 @@ async function generateReport(payload: ReportPayload) {
     } else {
       // Call the standard-report edge function
       console.log("[reportOrchestrator] Calling standard-report edge function");
-      const response = await fetch(`${supabaseUrl}/functions/v1/standard-report`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify(payload)
-      });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[reportOrchestrator] Error from standard-report function: ${response.status} - ${errorText}`);
+      // IMPORTANT CHANGE: Remove the Authorization header that was causing the JWT error
+      // Since verify_jwt = false is now set in config.toml, we don't need to pass any JWT
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/standard-report`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // Removed: "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        // Improved error handling for HTTP errors
+        if (!response.ok) {
+          const errorText = await response.text();
+          const status = response.status;
+          console.error(`[reportOrchestrator] Error from standard-report function: ${status} - ${errorText}`);
+          
+          if (status === 401) {
+            return {
+              success: false,
+              errorMessage: `JWT authentication error (401): ${errorText}`
+            };
+          } else {
+            return {
+              success: false,
+              errorMessage: `Report generation failed with status ${status}: ${errorText}`
+            };
+          }
+        }
+        
+        const reportResult = await response.json();
+        console.log("[reportOrchestrator] Successfully received report from standard-report function");
+        
+        return {
+          success: true,
+          data: {
+            title: `Standard ${payload.endpoint} Report`,
+            content: reportResult.report,
+            generated_at: new Date().toISOString()
+          }
+        };
+      } catch (fetchErr) {
+        console.error(`[reportOrchestrator] Fetch error calling standard-report:`, fetchErr);
         return {
           success: false,
-          errorMessage: `Report generation failed with status ${response.status}`
+          errorMessage: `Network error calling report service: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`
         };
       }
-      
-      const reportResult = await response.json();
-      console.log("[reportOrchestrator] Successfully received report from standard-report function");
-      
-      return {
-        success: true,
-        data: {
-          title: `Standard ${payload.endpoint} Report`,
-          content: reportResult.report,
-          generated_at: new Date().toISOString()
-        }
-      };
     }
   } catch (err) {
     console.error(`[reportOrchestrator] Error generating report:`, err);
@@ -205,3 +226,4 @@ async function mockPremiumReport(payload: ReportPayload) {
     generated_at: new Date().toISOString()
   };
 }
+
