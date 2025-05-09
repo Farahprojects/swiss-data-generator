@@ -1,5 +1,5 @@
 // _shared/balanceChecker.ts
-// Validates API key and verifies the user has positive credits via view
+// Validates API key and verifies the user has positive credits via view, with Supabase logging
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -14,6 +14,19 @@ export interface BalanceCheckResult {
   userId:     string | null;
   hasBalance: boolean;
   errorMessage?: string;
+}
+
+// Helper: log to Supabase debug_logs
+async function logDebug(source: string, message: string, data: any = null) {
+  try {
+    await sb.from("debug_logs").insert([{
+      source,
+      message,
+      data
+    }]);
+  } catch (err) {
+    console.error("[debug_logs] Failed to write log:", err);
+  }
 }
 
 export async function checkApiKeyAndBalance(
@@ -33,24 +46,23 @@ export async function checkApiKeyAndBalance(
 
   if (error) {
     res.errorMessage = `Lookup failed: ${error.message}`;
+    await logDebug("balanceChecker", "Error fetching v_api_key_balance", { apiKey, error });
     return res;
   }
 
   if (!row) {
-    res.errorMessage =
-      "Hmm, we couldn't verify your API key. Please log in at theraiapi.com to check your credentials or generate a new key.";
+    res.errorMessage = "Hmm, we couldn't verify your API key. Please log in at theraiapi.com to check your credentials or generate a new key.";
+    await logDebug("balanceChecker", "No match found in v_api_key_balance", { apiKey });
     return res;
   }
 
   res.isValid = true;
   res.userId  = row.user_id;
 
-  console.log("[balanceChecker] Row from view:", row);
-  console.log("[balanceChecker] Raw balance value:", row.balance_usd);
-
   const balance = parseFloat(String(row.balance_usd));
 
-  console.log("[balanceChecker] Parsed balance:", balance);
+  await logDebug("balanceChecker", "Row from view", row);
+  await logDebug("balanceChecker", "Parsed balance", { balance });
 
   if (!isFinite(balance) || balance <= 0) {
     res.errorMessage = `Your account is active, but available balance is ${balance}.`;
