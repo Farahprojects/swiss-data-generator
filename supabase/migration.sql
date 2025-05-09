@@ -1,7 +1,3 @@
-
-
-
-
 -- This SQL will need to be run to create the flow tracking table
 
 CREATE TABLE IF NOT EXISTS public.stripe_flow_tracking (
@@ -157,3 +153,23 @@ EXECUTE FUNCTION notify_new_log();
 ALTER SYSTEM SET app.supabase_url = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
 ALTER SYSTEM SET app.supabase_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
 
+-- Update the check_balance_for_topup function to use a $100 top-up amount
+CREATE OR REPLACE FUNCTION public.check_balance_for_topup()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  -- If balance falls below $45, create a topup request
+  IF NEW.balance_usd < 45 AND NEW.balance_usd >= 0 THEN
+    -- Check if there's already a pending topup request for this user
+    IF NOT EXISTS (
+      SELECT 1 FROM public.topup_queue 
+      WHERE user_id = NEW.user_id AND status = 'pending'
+    ) THEN
+      INSERT INTO public.topup_queue (user_id, amount_usd)
+      VALUES (NEW.user_id, 100.00); -- Updated to $100 topup
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$function$;

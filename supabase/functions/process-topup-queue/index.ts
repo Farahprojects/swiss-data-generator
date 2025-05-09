@@ -114,7 +114,7 @@ serve(async (req) => {
             metadata: {
               user_id: request.user_id,
               topup_request_id: request.id,
-              amount_usd: request.amount_usd.toString(),
+              amount_usd: "100.00",  // Updated to $100
               auto_topup: "true"
             },
           });

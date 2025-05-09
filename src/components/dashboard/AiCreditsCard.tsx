@@ -176,7 +176,7 @@ export const AiCreditsCard = () => {
           disabled={isProcessing || !creditProduct}
         >
           {isProcessing ? "Processing..." : creditProduct 
-            ? `Top Up Credits ($${creditProduct.amount_usd})` 
+            ? `Top Up Credits ($100)` 
             : "Top Up Credits"}
         </Button>
       </CardFooter>
