@@ -26,4 +26,5 @@ port = 54325
 
 [functions]
 [functions.standard-report]
-verify_jwt = true
+verify_jwt = false
+
