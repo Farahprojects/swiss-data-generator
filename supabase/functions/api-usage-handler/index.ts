@@ -32,6 +32,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/* ────────────────────────── HELPERS ──────────────────────────────────── */
+
+function jsonResponse(data: any, status = 200) {
+  return new Response(
+    JSON.stringify(data),
+    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
 /* ────────────────────────────── HANDLER ────────────────────────────────── */
 
 serve(async (req) => {
@@ -42,20 +51,14 @@ serve(async (req) => {
 
   // Only accept POST requests
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
   try {
     const { log_id } = await req.json();
     
     if (!log_id) {
-      return new Response(
-        JSON.stringify({ error: "Missing log_id parameter" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Missing log_id parameter" }, 400);
     }
     
     console.log(`Processing log ID: ${log_id}`);
@@ -69,10 +72,7 @@ serve(async (req) => {
     
     if (logError || !logData) {
       console.error("Error fetching log data:", logError?.message || "No log found");
-      return new Response(
-        JSON.stringify({ error: "Log not found or error retrieving log" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Log not found or error retrieving log" }, 404);
     }
     
     // Extract relevant data from the log
@@ -87,58 +87,45 @@ serve(async (req) => {
     // Skip processing if response status is not 200 (successful request)
     if (response_status !== 200) {
       console.log(`Skipping usage calculation for failed request (status ${response_status})`);
-      return new Response(
-        JSON.stringify({ message: "Skipped failed request" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ message: "Skipped failed request" }, 200);
     }
     
     if (!user_id) {
       console.log("Skipping usage calculation for request without user_id");
-      return new Response(
-        JSON.stringify({ message: "Skipped anonymous request" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ message: "Skipped anonymous request" }, 200);
     }
     
     // Get pricing for this endpoint from price_list
-    const { data: priceData, error: priceError } = await supabase
+    // IMPROVED LOGIC: Only filter by report_tier if it exists
+    let priceQuery = supabase
       .from("price_list")
       .select("unit_price_usd")
-      .eq("endpoint", request_type)
-      .eq("report_tier", report_tier || 'standard')  // Default to standard tier if not specified
-      .maybeSingle();
+      .eq("endpoint", request_type);
+      
+    if (report_tier) {
+      priceQuery = priceQuery.eq("report_tier", report_tier);
+    } else {
+      priceQuery = priceQuery.is("report_tier", null);
+    }
+    
+    const { data: priceData, error: priceError } = await priceQuery.maybeSingle();
     
     if (priceError) {
       console.error("Error fetching price data:", priceError.message);
-      return new Response(
-        JSON.stringify({ error: "Error retrieving price data" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Error retrieving price data" }, 500);
     }
     
-    // If no specific price found, try getting the default price for the endpoint
+    // Use the unit price if found
     let unitPrice = priceData?.unit_price_usd;
     
-    if (!unitPrice) {
-      const { data: defaultPriceData } = await supabase
-        .from("price_list")
-        .select("unit_price_usd")
-        .eq("endpoint", request_type)
-        .is("report_tier", null)
-        .maybeSingle();
-      
-      unitPrice = defaultPriceData?.unit_price_usd;
-    }
-    
     // If still no price found, use a fallback price
-    if (!unitPrice) {
+    if (unitPrice === undefined || unitPrice === null) {
       console.warn(`No price found for endpoint ${request_type}, using default price of 0.01`);
       unitPrice = 0.01;
     }
     
-    // Calculate total cost (add geo lookup cost if used)
-    let totalCost = unitPrice;
+    // Calculate total cost (add geo lookup cost if used) - use parseFloat for explicit conversion
+    let totalCost = parseFloat(String(unitPrice));
     if (google_geo) {
       // Add $0.005 for Google geocoding API usage
       totalCost += 0.005;
@@ -159,10 +146,7 @@ serve(async (req) => {
     
     if (usageError) {
       console.error("Error recording API usage:", usageError.message);
-      return new Response(
-        JSON.stringify({ error: "Error recording API usage" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Error recording API usage" }, 500);
     }
     
     // Update user credits
@@ -177,34 +161,25 @@ serve(async (req) => {
     
     if (creditsError) {
       console.error("Error updating user credits:", creditsError.message);
-      return new Response(
-        JSON.stringify({ error: "Error updating user credits" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ error: "Error updating user credits" }, 500);
     }
     
     console.log(`Successfully processed usage for log ${log_id}`);
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "API usage calculated and recorded",
-        details: {
-          user_id,
-          endpoint: request_type,
-          unit_price: unitPrice,
-          total_cost: totalCost,
-          geo_lookup_used: google_geo
-        }
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ 
+      success: true, 
+      message: "API usage calculated and recorded",
+      details: {
+        user_id,
+        endpoint: request_type,
+        unit_price: unitPrice,
+        total_cost: totalCost,
+        geo_lookup_used: google_geo
+      }
+    });
     
   } catch (error) {
     console.error("Unexpected error in api-usage-handler:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error", details: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ error: "Internal server error", details: error.message }, 500);
   }
 });
 
