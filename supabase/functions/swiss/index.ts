@@ -148,7 +148,8 @@ serve(async (req) => {
   const mergedPayload = { 
     ...(bodyJson ?? {}), 
     ...queryObj,
-    user_id: userId // Add the user ID to the payload
+    user_id: userId, // Add the user ID to the payload
+    api_key: apiKey  // Pass the API key for the report orchestrator
   };
   console.info("Translator payload prepared.");
 
