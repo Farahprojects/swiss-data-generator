@@ -6,7 +6,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 const supabaseUrl        = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Single admin client – bypasses RLS
+// Admin client – bypasses RLS
 const sb: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
 export interface BalanceCheckResult {
@@ -19,8 +19,6 @@ export interface BalanceCheckResult {
 export async function checkApiKeyAndBalance(
   apiKey: string,
 ): Promise<BalanceCheckResult> {
-  console.log(`[balanceChecker] 🔑 ${apiKey.slice(0, 5)}…`);
-
   const res: BalanceCheckResult = {
     isValid: false,
     userId: null,
@@ -35,7 +33,6 @@ export async function checkApiKeyAndBalance(
     .maybeSingle();
 
   if (keyErr || !keyRow?.is_active) {
-    console.warn("[balanceChecker] API key not found / inactive");
     res.errorMessage =
       "Hmm, we couldn't verify your API key. Please log in at theraiapi.com to check your credentials or generate a new key.";
     return res;
@@ -44,8 +41,8 @@ export async function checkApiKeyAndBalance(
   res.isValid = true;
   res.userId  = keyRow.user_id;
 
-  /*───────── 2. latest balance row ───────*/
-  const { data: balanceRow, error: balErr } = await sb
+  /*───────── 2. fetch latest balance ─────*/
+  const { data: balRow, error: balErr } = await sb
     .from("user_credits")
     .select("balance_usd")
     .eq("user_id", keyRow.user_id)
@@ -54,29 +51,24 @@ export async function checkApiKeyAndBalance(
     .maybeSingle();
 
   if (balErr) {
-    console.error("[balanceChecker] Balance lookup failed:", balErr.message);
-    res.errorMessage = "Error checking account balance. Please try again.";
+    res.errorMessage = `Balance lookup failed: ${balErr.message}`;
     return res;
   }
 
-  if (!balanceRow) {
-    console.warn("[balanceChecker] No balance row for user", keyRow.user_id);
+  if (!balRow) {
     res.errorMessage =
-      "Your account is active, but there's no balance record. Please contact support.";
+      "Your account is active, but there's no balance record. (DEBUG – balance: none)";
     return res;
   }
 
-  const balance = Number(balanceRow.balance_usd);
-  console.log(
-    `[balanceChecker] Balance for ${keyRow.user_id}: ${balance.toFixed(2)} USD`,
-  );
-
+  const balance = Number(balRow.balance_usd);
   if (isNaN(balance) || balance <= 0) {
     res.errorMessage =
-      "Your account is active, but there's an issue with your payment method. Please log in at theraiapi.com to update your billing details.";
+      `Your account is active, but available balance is ${balance}. (DEBUG – balance)`;
     return res;
   }
 
+  // balance positive → success
   res.hasBalance = true;
   return res;
 }
