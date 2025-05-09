@@ -157,7 +157,7 @@ serve(async (req) => {
       _user_id: user_id,
       _endpoint: request_type,
       _cost_usd: total,
-      _request_params: null,
+      _request_params: null,  // We're not using this parameter in the function anymore
       _response_status: response_status,
       _processing_time_ms: processing_time_ms,
     });

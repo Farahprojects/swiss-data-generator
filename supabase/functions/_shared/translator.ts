@@ -1,3 +1,4 @@
+
 // supabase/functions/_shared/translator.ts
 // Pure helper module – NO Edge Function wrapper
 // Exported translate() returns { status, text } so other functions can await it.
@@ -5,7 +6,7 @@
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-/*──────────────────── ENV ------------------------------------*/
+/*──────────────── ENV ------------------------------------*/
 const SWISS_API = Deno.env.get("SWISS_EPHEMERIS_URL")!;
 const SB_URL    = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY    = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -15,7 +16,7 @@ const GEO_TTL   = +(Deno.env.get("GEOCODE_TTL_MIN") ?? "1440");
 
 const sb = createClient(SB_URL, SB_KEY);
 
-/*──────────────────── canonical maps ------------------------ */
+/*──────────────── canonical maps ------------------------ */
 const CANON: Record<string, string> = {
   natal:         "natal",
 
@@ -51,7 +52,7 @@ const CANON: Record<string, string> = {
   focus:             "focus",
   
 };
-/*──────────────────── misc maps */
+/*──────────────── misc maps */
 const HOUSE_ALIASES: Record<string, string> = {
   placidus:    "P",
   koch:        "K",
@@ -59,10 +60,10 @@ const HOUSE_ALIASES: Record<string, string> = {
   equal:       "A",
 };
 
-/*──────────────────── schema */
+/*──────────────── schema */
 const Base = z.object({ request: z.string().nonempty() }).passthrough();
 
-/*──────────────────── logger */
+/*──────────────── logger */
 async function logToSupabase(
   requestType: string,
   requestPayload: any,
@@ -93,16 +94,18 @@ async function logToSupabase(
   if (error) console.error("Failed to log to Supabase:", error.message);
 }
 
-/*──────────────────── helpers */
+/*──────────────── helpers */
 async function ensureLatLon(
   obj: any,
 ): Promise<{ data: any; googleGeoUsed: boolean }> {
+  // If lat/lon are provided or no location, return as is
   if (
     (obj.latitude !== undefined && obj.longitude !== undefined) ||
     !obj.location
   ) return { data: obj, googleGeoUsed: false };
 
   const place = String(obj.location).trim();
+  let googleGeoUsed = true; // Mark as used for geo lookup regardless of source
 
   /* ---------- cache first ---------- */
   const { data } = await sb
@@ -114,9 +117,11 @@ async function ensureLatLon(
   if (data) {
     const age = (Date.now() - Date.parse(data.updated_at)) / 60000;
     if (age < GEO_TTL) {
+      // Even though we're using cache, we still mark googleGeoUsed as true
+      // This is the key change - we charge for the geo lookup service regardless of source
       return {
         data: { ...obj, latitude: data.lat, longitude: data.lon },
-        googleGeoUsed: false,
+        googleGeoUsed: true, // Changed from false to true
       };
     }
   }
@@ -159,7 +164,7 @@ function normalise(p: any) {
   return out;
 }
 
-/*──────────────────── translate */
+/*──────────────── translate */
 export async function translate(
   raw: any,
 ): Promise<{ status: number; text: string }> {

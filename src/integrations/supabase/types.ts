@@ -43,7 +43,9 @@ export type Database = {
         Row: {
           created_at: string | null
           endpoint: string
+          geo_price_usd: number | null
           id: string
+          report_price_usd: number | null
           report_tier: string | null
           total_cost_usd: number
           translator_log_id: string
@@ -54,7 +56,9 @@ export type Database = {
         Insert: {
           created_at?: string | null
           endpoint: string
+          geo_price_usd?: number | null
           id?: string
+          report_price_usd?: number | null
           report_tier?: string | null
           total_cost_usd: number
           translator_log_id: string
@@ -65,7 +69,9 @@ export type Database = {
         Update: {
           created_at?: string | null
           endpoint?: string
+          geo_price_usd?: number | null
           id?: string
+          report_price_usd?: number | null
           report_tier?: string | null
           total_cost_usd?: number
           translator_log_id?: string

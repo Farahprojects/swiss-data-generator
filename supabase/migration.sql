@@ -1,6 +1,7 @@
 
 
 
+
 -- This SQL will need to be run to create the flow tracking table
 
 CREATE TABLE IF NOT EXISTS public.stripe_flow_tracking (
@@ -55,7 +56,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Fixed version of the record_api_usage function with the correct column names
+-- Update the record_api_usage function to handle schema changes and correct parameters
 CREATE OR REPLACE FUNCTION public.record_api_usage(_user_id uuid, _endpoint text, _cost_usd numeric, _request_params jsonb DEFAULT NULL::jsonb, _response_status integer DEFAULT NULL::integer, _processing_time_ms integer DEFAULT NULL::integer)
 RETURNS uuid
 LANGUAGE plpgsql
@@ -87,13 +88,12 @@ BEGIN
   -- Calculate new balance
   _new_balance := _current_balance - _cost_usd;
   
-  -- Record usage - using the correct column names (unit_price_usd and total_cost_usd)
+  -- Record usage
   INSERT INTO public.api_usage (
     user_id, 
     endpoint, 
     unit_price_usd, 
     total_cost_usd, 
-    request_params, 
     response_status, 
     processing_time_ms
   )
@@ -102,7 +102,6 @@ BEGIN
     _endpoint, 
     _cost_usd, 
     _cost_usd, 
-    _request_params, 
     _response_status, 
     _processing_time_ms
   )
@@ -157,3 +156,4 @@ EXECUTE FUNCTION notify_new_log();
 -- Set the necessary configuration for the trigger function
 ALTER SYSTEM SET app.supabase_url = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
 ALTER SYSTEM SET app.supabase_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
+
