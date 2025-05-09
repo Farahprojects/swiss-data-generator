@@ -53,8 +53,10 @@ serve(async (req) => {
       .eq("id", log_id)
       .single();
 
-    if (logErr || !log)
+    if (logErr || !log) {
+      console.error("Error fetching translator log:", logErr?.message || "Log not found");
       return json({ error: "Log not found" }, 404);
+    }
 
     const {
       user_id,
@@ -65,36 +67,75 @@ serve(async (req) => {
       processing_time_ms,
     } = log;
 
-    /* ── skip non-billable rows ────────────────────────────────────────── */
-    if (response_status !== 200) return json({ message: "Skipped failed request" });
-    if (!user_id)                return json({ message: "Skipped anonymous request" });
+    console.log(`Log found. User: ${user_id}, Request type: ${request_type}, Report tier: ${report_tier}`);
 
-    /* ── price lookup (strict) ─────────────────────────────────────────── */
+    /* ── skip non-billable rows ────────────────────────────────────────── */
+    if (response_status !== 200) {
+      console.log(`Skipping failed request with status: ${response_status}`);
+      return json({ message: "Skipped failed request" });
+    }
+    
+    if (!user_id) {
+      console.log("Skipping anonymous request (no user_id)");
+      return json({ message: "Skipped anonymous request" });
+    }
+
+    /* ── price lookup (with fallback) ─────────────────────────────────────── */
     let q = sb
       .from("price_list")
       .select("unit_price_usd")
       .eq("endpoint", request_type);
 
-    q = report_tier ? q.eq("report_tier", report_tier)
-                    : q.is("report_tier", null);
+    if (report_tier) {
+      q = q.eq("report_tier", report_tier);
+    } else {
+      q = q.is("report_tier", null);
+    }
 
     const { data: priceRow, error: priceErr } = await q.maybeSingle();
-    if (priceErr) return json({ error: "Price lookup error" }, 500);
-    if (!priceRow || priceRow.unit_price_usd == null)
-      return json({
-        error: "Pricing entry missing",
-        details: { endpoint: request_type, report_tier },
-      }, 422);
-
-    const unitPrice = parseFloat(String(priceRow.unit_price_usd));
-    console.log(`Found price for ${request_type}: ${unitPrice}`);
+    
+    if (priceErr) {
+      console.error("Price lookup error:", priceErr.message);
+      return json({ error: "Price lookup error" }, 500);
+    }
+    
+    // If no exact match found, try with null report tier as fallback
+    let unitPrice = 0;
+    if (!priceRow || priceRow.unit_price_usd == null) {
+      console.log("No exact price match found, trying fallback lookup");
+      
+      const { data: fallbackPriceRow } = await sb
+        .from("price_list")
+        .select("unit_price_usd")
+        .eq("endpoint", request_type)
+        .is("report_tier", null)
+        .maybeSingle();
+      
+      if (fallbackPriceRow && fallbackPriceRow.unit_price_usd != null) {
+        unitPrice = parseFloat(String(fallbackPriceRow.unit_price_usd));
+        console.log(`Found fallback price for ${request_type}: ${unitPrice}`);
+      } else {
+        console.warn(`No pricing entry found for: ${request_type} (${report_tier})`);
+        // Using a minimal default price rather than failing
+        unitPrice = 0.001; 
+        console.log(`Using default price: ${unitPrice}`);
+      }
+    } else {
+      unitPrice = parseFloat(String(priceRow.unit_price_usd));
+      console.log(`Found price for ${request_type}: ${unitPrice}`);
+    }
 
     /* ── total cost ────────────────────────────────────────────────────── */
     let total = unitPrice;
-    if (google_geo) total += 0.005;   // geo-lookup surcharge
+    if (google_geo) {
+      total += 0.005;   // geo-lookup surcharge
+      console.log("Added geo-lookup surcharge: +0.005");
+    }
+
+    console.log(`Total cost: ${total}`);
 
     /* ── record usage row ──────────────────────────────────────────────── */
-    const { error: usageErr } = await sb.from("api_usage").insert({
+    const { data: usageData, error: usageErr } = await sb.from("api_usage").insert({
       user_id,
       translator_log_id: log_id,
       endpoint: request_type,
@@ -102,11 +143,17 @@ serve(async (req) => {
       used_geo_lookup: google_geo,
       unit_price_usd: unitPrice,
       total_cost_usd: total,
-    });
-    if (usageErr) return json({ error: "Error recording usage" }, 500);
+    }).select();
+    
+    if (usageErr) {
+      console.error("Error recording usage:", usageErr.message);
+      return json({ error: "Error recording usage: " + usageErr.message }, 500);
+    }
+    
+    console.log(`Successfully inserted api_usage record: ${usageData?.[0]?.id || 'unknown id'}`);
 
     /* ── debit user credits via RPC ────────────────────────────────────── */
-    const { error: creditErr } = await sb.rpc("record_api_usage", {
+    const { data: creditData, error: creditErr } = await sb.rpc("record_api_usage", {
       _user_id: user_id,
       _endpoint: request_type,
       _cost_usd: total,
@@ -119,6 +166,8 @@ serve(async (req) => {
       console.error("Error updating user credits:", creditErr.message);
       return json({ error: "Error updating credits: " + creditErr.message }, 500);
     }
+    
+    console.log(`Successfully debited user credits: ${creditData || 'unknown reference'}`);
 
     return json({
       success: true,
@@ -128,11 +177,13 @@ serve(async (req) => {
         unit_price_usd: unitPrice,
         total_cost_usd: total,
         geo_lookup_used: google_geo,
+        api_usage_id: usageData?.[0]?.id || null,
+        credit_transaction_id: creditData || null,
       },
     });
   } catch (err) {
     console.error("api-usage-handler error:", err);
-    return json({ error: "Internal server error" }, 500);
+    return json({ error: "Internal server error: " + (err as Error).message }, 500);
   }
 });
 

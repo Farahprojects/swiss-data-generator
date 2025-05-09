@@ -1,5 +1,6 @@
 
 
+
 -- This SQL will need to be run to create the flow tracking table
 
 CREATE TABLE IF NOT EXISTS public.stripe_flow_tracking (
@@ -125,3 +126,34 @@ BEGIN
   RETURN _usage_id;
 END;
 $$;
+
+-- Create or replace trigger function to notify new logs
+CREATE OR REPLACE FUNCTION public.notify_new_log()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  PERFORM net.http_post(
+    url := current_setting('app.supabase_url') || '/functions/v1/api-usage-handler',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json', 
+      'Authorization', 'Bearer ' || current_setting('app.supabase_key')
+    ),
+    body := jsonb_build_object('log_id', NEW.id)
+  );
+  RETURN NEW;
+END;
+$$;
+
+-- Check if the trigger already exists and drop it if it does
+DROP TRIGGER IF EXISTS notify_new_log_trigger ON translator_logs;
+
+-- Create the trigger to call the function after insert
+CREATE TRIGGER notify_new_log_trigger
+AFTER INSERT ON translator_logs
+FOR EACH ROW
+EXECUTE FUNCTION notify_new_log();
+
+-- Set the necessary configuration for the trigger function
+ALTER SYSTEM SET app.supabase_url = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
+ALTER SYSTEM SET app.supabase_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
