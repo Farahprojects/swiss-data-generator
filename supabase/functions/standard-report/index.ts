@@ -1,31 +1,71 @@
 
-// Standard Report Edge Function
-// Generates standard reports using Google's Gemini 2.5 Flash Preview model
-// Uses system prompts from the reports_prompts table
-
+/*───────────────────────────────────────────────────────────────────────────────
+  standard-report.ts
+  Edge Function: Generates standard reports using Google's Gemini 2.5 Flash Preview model
+  Uses system prompts from the reports_prompts table
+────────────────────────────────────────────────────────────────────────────────*/
+import "https://deno.land/x/xhr@0.1.0/mod.ts"; // fetch polyfill for Edge runtime
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Initialize environment variables
-const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+/*───────────────────────────────────────────────────────────────────────────────
+  CONFIG & SINGLETONS
+────────────────────────────────────────────────────────────────────────────────*/
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
 
-if (!GOOGLE_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error("[standard-report] Missing required environment variables");
-  throw new Error("Missing required environment variables");
+// Enhanced debugging for initialization
+console.log(`[standard-report] Edge function initialized with config:
+- SUPABASE_URL: ${SUPABASE_URL ? "Exists (first 10 chars): " + SUPABASE_URL.substring(0, 10) + "..." : "MISSING"}
+- SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY ? "Exists (length: " + SUPABASE_SERVICE_KEY.length + ")" : "MISSING"}
+- GOOGLE_API_KEY: ${GOOGLE_API_KEY ? "Exists (length: " + GOOGLE_API_KEY.length + ", starts with: " + GOOGLE_API_KEY.substring(0, 4) + "...)" : "MISSING"}`);
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  console.error("[standard-report] Missing required Supabase environment variables");
+  throw new Error("Missing required Supabase environment variables");
+}
+
+if (!GOOGLE_API_KEY) {
+  console.error("[standard-report] Missing Google API key");
+  throw new Error("Missing Google API key");
 }
 
 // Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+let supabase: SupabaseClient;
+try {
+  console.log("[standard-report] Creating Supabase client...");
+  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  console.log("[standard-report] Supabase client created successfully");
+} catch (err) {
+  console.error("[standard-report] Failed to create Supabase client:", err);
+  throw err;
+}
+
+const GOOGLE_MODEL = "gemini-2.5-flash-preview";
+const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1/models/${GOOGLE_MODEL}:generateContent`;
 
 // CORS headers for cross-domain requests
-const corsHeaders = {
+const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json',
 };
+
+/*───────────────────────────────────────────────────────────────────────────────
+  UTILS
+────────────────────────────────────────────────────────────────────────────────*/
+function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: {
+      ...CORS_HEADERS,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+}
 
 // Fetch the system prompt from the reports_prompts table
 async function getSystemPrompt(): Promise<string> {
@@ -69,35 +109,46 @@ async function generateReport(systemPrompt: string, reportData: any): Promise<st
       ...reportData
     });
     
-    // Call the Gemini API - FIX: Use the correct model name gemini-2.5-flash-preview instead of gemini-2.5-flash-preview-04-17
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-preview:generateContent?key=${GOOGLE_API_KEY}`, {
+    console.log(`[standard-report] Calling Gemini API with model: ${GOOGLE_MODEL}`);
+    console.log(`[standard-report] API Key format check: ${GOOGLE_API_KEY.length > 20 ? "Valid length" : "Invalid length"}`);
+    
+    // Call the Gemini API with the correct model name
+    const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
+    console.log(`[standard-report] API URL (without key): ${GOOGLE_ENDPOINT}`);
+    
+    const requestBody = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: systemPrompt },
+            { text: userMessage }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+      }
+    };
+    
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: systemPrompt },
-              { text: userMessage }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 8192,
-        }
-      })
+      body: JSON.stringify(requestBody)
     });
+    
+    // Log response status and headers for debugging
+    console.log(`[standard-report] Gemini API response status: ${response.status}`);
     
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[standard-report] Gemini API error: ${response.status} - ${errorText}`);
-      throw new Error(`Gemini API error: ${response.status}`);
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
     
     const data = await response.json();
@@ -125,15 +176,15 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     console.log("[standard-report] Handling OPTIONS request (CORS preflight)");
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
   
   // Only accept POST requests
   if (req.method !== "POST") {
     console.warn(`[standard-report] Method not allowed: ${req.method}`);
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: corsHeaders }
+    return jsonResponse(
+      { error: "Method not allowed" },
+      { status: 405 }
     );
   }
   
@@ -145,9 +196,9 @@ serve(async (req) => {
     // Validate required fields
     if (!reportData.chartData || !reportData.endpoint) {
       console.error("[standard-report] Missing required fields in request payload");
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: chartData and endpoint are required" }),
-        { status: 400, headers: corsHeaders }
+      return jsonResponse(
+        { error: "Missing required fields: chartData and endpoint are required" },
+        { status: 400 }
       );
     }
     
@@ -159,22 +210,16 @@ serve(async (req) => {
     
     // Return the generated report
     console.log("[standard-report] Successfully processed request");
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        report: report 
-      }),
-      { status: 200, headers: corsHeaders }
-    );
+    return jsonResponse({ 
+      success: true,
+      report: report 
+    });
   } catch (err) {
     console.error(`[standard-report] Error processing request: ${err instanceof Error ? err.message : String(err)}`);
-    return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: err instanceof Error ? err.message : "An unexpected error occurred"
-      }),
-      { status: 500, headers: corsHeaders }
-    );
+    return jsonResponse({ 
+      success: false,
+      error: err instanceof Error ? err.message : "An unexpected error occurred"
+    }, { status: 500 });
   }
 });
 

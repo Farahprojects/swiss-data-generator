@@ -1,32 +1,48 @@
 
+# Updated Supabase configuration
 project_id = "wrvqqvqvwqmfdqvqmaar"
 
 [api]
-enabled = true
 port = 54321
+types_email = "types@example.com"
 schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["extensions"]
+max_rows = 1000
 
 [db]
-port = 54322
-shadow_port = 54320
+port = 5432
+shadow_port = 5433
 major_version = 15
 
 [studio]
-enabled = true
 port = 54323
-api_url = "http://localhost"
-
-[inbucket]
-enabled = true
-port = 54324
 
 [storage]
+file_size_limit = "10MiB"
+
+[auth]
+site_url = "http://localhost:3000"
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.external.github]
 enabled = true
-port = 54325
+client_id = "env(SUPABASE_AUTH_GITHUB_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GITHUB_SECRET)"
+
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 
 [functions]
-[functions.standard-report]
-verify_jwt = false
+timeout = 30
 
-[functions.swiss]
+[functions.standard-report]
 verify_jwt = false
