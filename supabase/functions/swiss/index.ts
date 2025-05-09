@@ -90,19 +90,8 @@ async function validateKey(k: string): Promise<string | null> {
   }
 }
 
-async function recordUsage(uid: string, endpoint: string) {
-    console.info(`Attempting to record usage for user: ${uid}, endpoint: ${endpoint}`);
-    const { error } = await sb.from("api_usage").insert({ 
-      user_id: uid,
-      endpoint: endpoint
-    });
-    if (error) {
-        // Log error but don't fail the request for usage recording issues
-        console.error(`Failed to record usage for user ${uid}:`, error.message);
-    } else {
-        console.info(`Usage successfully recorded for user: ${uid}, endpoint: ${endpoint}`);
-    }
-}
+// Note: This function is removed as api_usage table no longer exists
+// Logging is handled by translator.ts which writes to translator_logs
 
 /*─────────────────────────── Handler */
 serve(async (req) => {
@@ -180,9 +169,6 @@ serve(async (req) => {
   const pathParts = urlObj.pathname.split('/');
   const endpoint = pathParts[pathParts.length - 1] || 'swiss'; // Use the last path segment or 'swiss' if empty
   
-  // Record Usage (async, don't block response)
-  recordUsage(userId, endpoint); // Fire and forget, logging handled inside
-
   // Call the translator
   try {
     console.info("Calling the translator helper function...");

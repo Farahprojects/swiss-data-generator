@@ -41,36 +41,47 @@ export type Database = {
       }
       api_usage: {
         Row: {
-          cost_usd: number | null
+          created_at: string | null
           endpoint: string
           id: string
-          processing_time_ms: number | null
-          request_params: Json | null
-          response_status: number | null
-          timestamp: string | null
-          user_id: string | null
+          report_tier: string | null
+          total_cost_usd: number
+          translator_log_id: string
+          unit_price_usd: number
+          used_geo_lookup: boolean | null
+          user_id: string
         }
         Insert: {
-          cost_usd?: number | null
+          created_at?: string | null
           endpoint: string
           id?: string
-          processing_time_ms?: number | null
-          request_params?: Json | null
-          response_status?: number | null
-          timestamp?: string | null
-          user_id?: string | null
+          report_tier?: string | null
+          total_cost_usd: number
+          translator_log_id: string
+          unit_price_usd: number
+          used_geo_lookup?: boolean | null
+          user_id: string
         }
         Update: {
-          cost_usd?: number | null
+          created_at?: string | null
           endpoint?: string
           id?: string
-          processing_time_ms?: number | null
-          request_params?: Json | null
-          response_status?: number | null
-          timestamp?: string | null
-          user_id?: string | null
+          report_tier?: string | null
+          total_cost_usd?: number
+          translator_log_id?: string
+          unit_price_usd?: number
+          used_geo_lookup?: boolean | null
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_translator_log_id_fkey"
+            columns: ["translator_log_id"]
+            isOneToOne: false
+            referencedRelation: "translator_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_transactions: {
         Row: {
@@ -201,27 +212,30 @@ export type Database = {
         }
         Relationships: []
       }
-      pricelist: {
+      price_list: {
         Row: {
           description: string | null
           endpoint: string | null
           id: string
-          name: string | null
-          unit_price_usd: number | null
+          name: string
+          report_tier: string | null
+          unit_price_usd: number
         }
         Insert: {
           description?: string | null
           endpoint?: string | null
           id: string
-          name?: string | null
-          unit_price_usd?: number | null
+          name: string
+          report_tier?: string | null
+          unit_price_usd: number
         }
         Update: {
           description?: string | null
           endpoint?: string | null
           id?: string
-          name?: string | null
-          unit_price_usd?: number | null
+          name?: string
+          report_tier?: string | null
+          unit_price_usd?: number
         }
         Relationships: []
       }
