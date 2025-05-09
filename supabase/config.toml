@@ -28,3 +28,6 @@ port = 54325
 [functions.standard-report]
 verify_jwt = false
 
+[functions.swiss]
+verify_jwt = false
+

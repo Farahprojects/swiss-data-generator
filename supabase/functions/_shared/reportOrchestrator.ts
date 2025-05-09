@@ -1,4 +1,3 @@
-
 // Report orchestrator utility
 // Handles report processing workflow including balance checks and report generation
 
@@ -14,8 +13,18 @@ const initSupabase = () => {
     console.error("[reportOrchestrator] Missing Supabase credentials");
     throw new Error("Missing Supabase credentials");
   }
+
+  console.log(`[reportOrchestrator] Initializing Supabase client with URL: ${supabaseUrl}`);
+  console.log(`[reportOrchestrator] Service key format check: ${supabaseServiceKey.startsWith("eyJ") ? "Correct" : "Incorrect"} format`);
   
-  return createClient(supabaseUrl, supabaseServiceKey);
+  try {
+    const client = createClient(supabaseUrl, supabaseServiceKey);
+    console.log(`[reportOrchestrator] Supabase client successfully initialized`);
+    return client;
+  } catch (error) {
+    console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨: Failed to initialize Supabase client: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  }
 };
 
 interface ReportPayload {
@@ -54,25 +63,57 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     }
 
     // Step 2: Get cost from price_list
-    const supabase = initSupabase();
-    const { data: priceData, error: priceError } = await supabase
-      .from("price_list")
-      .select("unit_price_usd")
-      .eq("report_tier", payload.report_type)
-      .maybeSingle();
-    
-    if (priceError || !priceData) {
-      console.error(`[reportOrchestrator] Error fetching price for ${payload.report_type} report:`, priceError?.message || "No price found");
+    let supabase;
+    try {
+      supabase = initSupabase();
+    } catch (initError) {
+      console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨: Failed to initialize Supabase: ${initError instanceof Error ? initError.message : String(initError)}`);
       return {
         success: false,
-        errorMessage: "Could not determine report price"
+        errorMessage: "Authentication error when initializing database connection"
+      };
+    }
+
+    try {
+      const { data: priceData, error: priceError } = await supabase
+        .from("price_list")
+        .select("unit_price_usd")
+        .eq("report_tier", payload.report_type)
+        .maybeSingle();
+      
+      if (priceError) {
+        if (priceError.message?.includes("JWT")) {
+          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 in price fetch: ${priceError.message}`);
+        } else {
+          console.error(`[reportOrchestrator] Error fetching price: ${priceError.message}`);
+        }
+        throw priceError;
+      }
+      
+      if (!priceData) {
+        console.error(`[reportOrchestrator] No price found for ${payload.report_type} report`);
+        return {
+          success: false,
+          errorMessage: "Could not determine report price"
+        };
+      }
+      
+      const reportCost = priceData.unit_price_usd;
+      console.log(`[reportOrchestrator] ${payload.report_type} report cost: ${reportCost}`);
+    } catch (dbError) {
+      if (String(dbError).includes("JWT")) {
+        console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 during database query: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
+      } else {
+        console.error(`[reportOrchestrator] Database error: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
+      }
+      return {
+        success: false,
+        errorMessage: "Error retrieving pricing information"
       };
     }
     
-    const reportCost = priceData.unit_price_usd;
-    console.log(`[reportOrchestrator] ${payload.report_type} report cost: ${reportCost}`);
-    
     // Step 3: Check user balance with balanceChecker
+    console.log(`[reportOrchestrator] Calling balanceChecker with API key: ${payload.apiKey.substring(0, 4)}...`);
     const { isValid, userId, hasBalance, errorMessage } = await checkApiKeyAndBalance(payload.apiKey);
     
     if (!isValid || !hasBalance) {
@@ -125,7 +166,13 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
       report: report.data
     };
   } catch (err) {
-    console.error(`[reportOrchestrator] Unexpected error:`, err);
+    // Check for JWT errors specifically
+    if (String(err).includes("JWT") || String(err).includes("401")) {
+      console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨: ${err instanceof Error ? err.message : String(err)}`);
+    } else {
+      console.error(`[reportOrchestrator] Unexpected error:`, err);
+    }
+    
     return {
       success: false,
       errorMessage: err instanceof Error ? err.message : String(err)
@@ -141,6 +188,7 @@ async function generateReport(payload: ReportPayload) {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     if (!supabaseUrl) {
+      console.error(`[reportOrchestrator] Missing SUPABASE_URL environment variable`);
       throw new Error("Missing SUPABASE_URL environment variable");
     }
     
@@ -173,14 +221,15 @@ async function generateReport(payload: ReportPayload) {
         if (!response.ok) {
           const errorText = await response.text();
           const status = response.status;
-          console.error(`[reportOrchestrator] Error from standard-report function: ${status} - ${errorText}`);
           
-          if (status === 401) {
+          if (status === 401 || errorText.includes("JWT")) {
+            console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 from standard-report function: ${status} - ${errorText}`);
             return {
               success: false,
               errorMessage: `JWT authentication error (401): ${errorText}`
             };
           } else {
+            console.error(`[reportOrchestrator] Error from standard-report function: ${status} - ${errorText}`);
             return {
               success: false,
               errorMessage: `Report generation failed with status ${status}: ${errorText}`
@@ -200,7 +249,11 @@ async function generateReport(payload: ReportPayload) {
           }
         };
       } catch (fetchErr) {
-        console.error(`[reportOrchestrator] Fetch error calling standard-report:`, fetchErr);
+        if (String(fetchErr).includes("JWT") || String(fetchErr).includes("401")) {
+          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 calling standard-report: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
+        } else {
+          console.error(`[reportOrchestrator] Fetch error calling standard-report:`, fetchErr);
+        }
         return {
           success: false,
           errorMessage: `Network error calling report service: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`
@@ -208,7 +261,11 @@ async function generateReport(payload: ReportPayload) {
       }
     }
   } catch (err) {
-    console.error(`[reportOrchestrator] Error generating report:`, err);
+    if (String(err).includes("JWT") || String(err).includes("401")) {
+      console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 generating report: ${err instanceof Error ? err.message : String(err)}`);
+    } else {
+      console.error(`[reportOrchestrator] Error generating report:`, err);
+    }
     return {
       success: false,
       errorMessage: err instanceof Error ? err.message : String(err)
@@ -226,4 +283,3 @@ async function mockPremiumReport(payload: ReportPayload) {
     generated_at: new Date().toISOString()
   };
 }
-

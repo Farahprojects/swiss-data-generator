@@ -16,11 +16,24 @@ import { checkApiKeyAndBalance } from "../_shared/balanceChecker.ts";
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 if (!SB_URL || !SB_KEY) {
-    console.error("Supabase env vars missing (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY)");
+    console.error("[swiss] ❌ Supabase env vars missing (SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY)");
     throw new Error("Supabase env vars missing");
 }
-const sb = createClient(SB_URL, SB_KEY);
-console.info("Swiss function initialized. Supabase client created.");
+
+// Add JWT format validation check
+if (!SB_KEY.startsWith("eyJ")) {
+    console.error("[swiss] 🚨 JWT ERROR 🚨: SUPABASE_SERVICE_ROLE_KEY does not appear to be in correct JWT format");
+}
+
+let sb;
+try {
+    console.log("[swiss] Initializing Supabase client...");
+    sb = createClient(SB_URL, SB_KEY);
+    console.info("[swiss] Supabase client created successfully");
+} catch (err) {
+    console.error(`[swiss] 🚨 JWT ERROR 🚨: Failed to initialize Supabase client: ${err instanceof Error ? err.message : String(err)}`);
+    throw err;
+}
 
 /*─────────────────────────── CONFIG */
 const MAX_BODY = 1_048_576; // 1 MB
@@ -77,17 +90,17 @@ function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown
 /*─────────────────────────── Handler */
 serve(async (req) => {
   const urlObj = new URL(req.url);
-  console.info(`[${req.method}] Received request for: ${urlObj.pathname}${urlObj.search}`);
+  console.info(`[swiss] [${req.method}] Received request for: ${urlObj.pathname}${urlObj.search}`);
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    console.info("Handling OPTIONS request (CORS preflight).");
+    console.info("[swiss] Handling OPTIONS request (CORS preflight).");
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   // Check allowed methods
   if (!["GET", "POST"].includes(req.method)) {
-    console.warn(`Method not allowed: ${req.method}`);
+    console.warn(`[swiss] Method not allowed: ${req.method}`);
     return json({ success: false, message: "Method not allowed" }, 405);
   }
 
@@ -97,11 +110,11 @@ serve(async (req) => {
       try {
           const bodyBytes = await readBody(req);
           if (bodyBytes && bodyBytes.length > 0) {
-              console.info("Attempting to parse JSON body...");
+              console.info("[swiss] Attempting to parse JSON body...");
               bodyJson = JSON.parse(new TextDecoder().decode(bodyBytes));
-              console.info("JSON body successfully parsed.");
+              console.info("[swiss] JSON body successfully parsed.");
           } else {
-              console.info("Request body is empty.");
+              console.info("[swiss] Request body is empty.");
           }
       } catch (err) {
           if (err instanceof SyntaxError) {
@@ -124,56 +137,71 @@ serve(async (req) => {
   }
 
   // Use the new balance checker utility
-  console.info("Validating API key and checking balance...");
-  const validationResult = await checkApiKeyAndBalance(apiKey);
-  
-  if (!validationResult.isValid) {
-    console.warn("API key validation failed");
-    return json({ success: false, message: validationResult.errorMessage }, 401);
-  }
-  
-  if (!validationResult.hasBalance) {
-    console.warn(`User ${validationResult.userId} has insufficient balance`);
-    return json({ success: false, message: validationResult.errorMessage }, 402); // 402 Payment Required
-  }
-  
-  // API key and balance check passed, proceed with API call
-  const userId = validationResult.userId;
-  console.info(`API key and balance validation passed for user: ${userId}`);
-
-  // Prepare payload for translator
-  console.info("Preparing payload for translator...");
-  urlObj.searchParams.delete("api_key"); // Ensure key isn't passed downstream
-  const queryObj = Object.fromEntries(urlObj.searchParams.entries());
-  const mergedPayload = { 
-    ...(bodyJson ?? {}), 
-    ...queryObj,
-    user_id: userId, // Add the user ID to the payload
-    api_key: apiKey  // Pass the API key for the report orchestrator
-  };
-  console.info("Translator payload prepared.");
-
-  // Extract endpoint from the path for usage recording
-  const pathParts = urlObj.pathname.split('/');
-  const endpoint = pathParts[pathParts.length - 1] || 'swiss'; // Use the last path segment or 'swiss' if empty
-  
-  // Call the translator
+  console.info("[swiss] Validating API key and checking balance...");
   try {
-    console.info("Calling the translator helper function...");
-    const { status, text } = await translate(mergedPayload);
-    console.info(`Translator helper returned status: ${status}`);
-    // Note: Intentionally using Response directly for potential non-JSON translator outputs
-    // Ensure CORS headers are still applied for successful translation responses
-    const responseHeaders = new Headers(corsHeaders);
-    // Preserve Content-Type if translator sets it, otherwise default to JSON
-    if (!responseHeaders.has('Content-Type')) {
-        responseHeaders.set('Content-Type', 'application/json');
+    const validationResult = await checkApiKeyAndBalance(apiKey);
+    
+    if (!validationResult.isValid) {
+      console.warn("[swiss] API key validation failed");
+      return json({ success: false, message: validationResult.errorMessage }, 401);
     }
-    return new Response(text, { status, headers: responseHeaders });
-  } catch (err) {
-    console.error("Error calling translator helper:", (err as Error).message, err);
-    return json({ success: false, message: `Translation failed: ${(err as Error).message}` }, 500);
+    
+    if (!validationResult.hasBalance) {
+      console.warn(`[swiss] User ${validationResult.userId} has insufficient balance`);
+      return json({ success: false, message: validationResult.errorMessage }, 402); // 402 Payment Required
+    }
+    
+    // API key and balance check passed, proceed with API call
+    const userId = validationResult.userId;
+    console.info(`[swiss] API key and balance validation passed for user: ${userId}`);
+
+    // Prepare payload for translator
+    console.info("[swiss] Preparing payload for translator...");
+    urlObj.searchParams.delete("api_key"); // Ensure key isn't passed downstream
+    const queryObj = Object.fromEntries(urlObj.searchParams.entries());
+    const mergedPayload = { 
+      ...(bodyJson ?? {}), 
+      ...queryObj,
+      user_id: userId, // Add the user ID to the payload
+      api_key: apiKey  // Pass the API key for the report orchestrator
+    };
+    console.info("[swiss] Translator payload prepared.");
+
+    // Extract endpoint from the path for usage recording
+    const pathParts = urlObj.pathname.split('/');
+    const endpoint = pathParts[pathParts.length - 1] || 'swiss'; // Use the last path segment or 'swiss' if empty
+    
+    // Call the translator
+    try {
+      console.info("[swiss] Calling the translator helper function...");
+      const { status, text } = await translate(mergedPayload);
+      console.info(`[swiss] Translator helper returned status: ${status}`);
+      // Note: Intentionally using Response directly for potential non-JSON translator outputs
+      // Ensure CORS headers are still applied for successful translation responses
+      const responseHeaders = new Headers(corsHeaders);
+      // Preserve Content-Type if translator sets it, otherwise default to JSON
+      if (!responseHeaders.has('Content-Type')) {
+          responseHeaders.set('Content-Type', 'application/json');
+      }
+      return new Response(text, { status, headers: responseHeaders });
+    } catch (err) {
+      if (String(err).includes("JWT") || String(err).includes("401")) {
+        console.error(`[swiss] 🚨 JWT ERROR 🚨 calling translator helper: ${err instanceof Error ? err.message : String(err)}`);
+      } else {
+        console.error("[swiss] Error calling translator helper:", (err as Error).message, err);
+      }
+      return json({ success: false, message: `Translation failed: ${(err as Error).message}` }, 500);
+    }
+  } catch (balanceError) {
+    // Special handling for JWT errors in the balance checker
+    if (String(balanceError).includes("JWT") || String(balanceError).includes("401")) {
+      console.error(`[swiss] 🚨 JWT ERROR 🚨 in balance checker: ${balanceError instanceof Error ? balanceError.message : String(balanceError)}`);
+      return json({ success: false, message: "Authentication error during API key validation. Please try again." }, 500);
+    } else {
+      console.error("[swiss] Balance checker error:", balanceError);
+      return json({ success: false, message: "Error validating API key. Please try again." }, 500);
+    }
   }
 });
 
-console.info("Swiss function handler registered.");
+console.info("[swiss] Swiss function handler registered.");
