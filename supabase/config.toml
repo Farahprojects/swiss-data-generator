@@ -30,4 +30,3 @@ verify_jwt = false
 
 [functions.swiss]
 verify_jwt = false
-
