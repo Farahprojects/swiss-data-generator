@@ -45,8 +45,14 @@ export async function checkApiKeyAndBalance(
   res.isValid = true;
   res.userId  = row.user_id;
 
-  const balance = Number(row.balance_usd);
-  if (isNaN(balance) || balance <= 0) {
+  console.log("[balanceChecker] Row from view:", row);
+  console.log("[balanceChecker] Raw balance value:", row.balance_usd);
+
+  const balance = parseFloat(String(row.balance_usd));
+
+  console.log("[balanceChecker] Parsed balance:", balance);
+
+  if (!isFinite(balance) || balance <= 0) {
     res.errorMessage = `Your account is active, but available balance is ${balance}.`;
     return res;
   }
