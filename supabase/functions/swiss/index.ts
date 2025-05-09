@@ -59,14 +59,6 @@ serve(async (req) => {
   }
 
   const apiKey = extractApiKey(req.headers, urlObj, bodyJson);
-
-  // 🔍 Add debug log to confirm we're extracting the key correctly
-  await sb.from("debug_logs").insert([{
-    source: "swiss",
-    message: "Extracted API key",
-    data: { apiKey }
-  }]);
-
   if (!apiKey) {
     return json({
       success: false,
@@ -76,7 +68,12 @@ serve(async (req) => {
   }
 
   const check = await checkApiKeyAndBalance(apiKey);
-  if (!check.isValid || !check.hasBalance) {
+
+  if (!check.isValid) {
+    return json({ success: false, message: check.errorMessage }, 401);
+  }
+
+  if (!check.hasBalance) {
     return json({ success: false, message: check.errorMessage }, 402);
   }
 
