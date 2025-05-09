@@ -8,7 +8,7 @@ export interface BalanceCheckResult {
   errorMessage?: string;
 }
 
-// Direct Supabase log to debug_logs
+// Log helper: writes to debug_logs table
 async function logDebug(source: string, message: string, data: unknown = null) {
   try {
     await sb.from("debug_logs").insert([{
@@ -17,12 +17,12 @@ async function logDebug(source: string, message: string, data: unknown = null) {
       data: data ? JSON.parse(JSON.stringify(data)) : null,
     }]);
   } catch (err) {
-    console.error("[logDebug] Failed to log:", err);
+    console.error("[logDebug] Failed to insert log:", err);
   }
 }
 
 export async function checkApiKeyAndBalance(clientApiKey: string): Promise<BalanceCheckResult> {
-  await logDebug("balanceChecker", "Checking API key and balance", { clientApiKey });
+  await logDebug("balanceChecker", "Checking API key and balance for", { clientApiKey });
 
   const res: BalanceCheckResult = {
     isValid: false,
@@ -30,7 +30,6 @@ export async function checkApiKeyAndBalance(clientApiKey: string): Promise<Balan
     hasBalance: false,
   };
 
-  // Validate client API key and get user + balance via view
   const { data: row, error } = await sb
     .from("v_api_key_balance")
     .select("user_id, balance_usd")
@@ -48,9 +47,9 @@ export async function checkApiKeyAndBalance(clientApiKey: string): Promise<Balan
   res.userId = row.user_id;
 
   const balance = parseFloat(String(row.balance_usd));
-  await logDebug("balanceChecker", "Parsed balance", { balance });
+  await logDebug("balanceChecker", "Parsed balance result", { balance });
 
-  if (!isFinite(balance) || balance <= 0) {
+  if (!Number.isFinite(balance) || balance <= 0) {
     res.errorMessage = `Your account is active, but balance is ${balance}.`;
     return res;
   }
