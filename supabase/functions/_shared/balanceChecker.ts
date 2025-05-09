@@ -1,5 +1,5 @@
 // _shared/balanceChecker.ts
-// Validates API key and verifies the user has positive credits via view, with Supabase logging
+// Validates API key and verifies the user has positive credits via view, with logging to Supabase
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -16,7 +16,7 @@ export interface BalanceCheckResult {
   errorMessage?: string;
 }
 
-// Helper: log to Supabase debug_logs
+// Logging helper – safely logs to debug_logs
 async function logDebug(source: string, message: string, data: any = null) {
   try {
     await sb.from("debug_logs").insert([{
@@ -32,6 +32,9 @@ async function logDebug(source: string, message: string, data: any = null) {
 export async function checkApiKeyAndBalance(
   apiKey: string,
 ): Promise<BalanceCheckResult> {
+  // Log every run
+  await logDebug("balanceChecker", "Balance check started", { apiKey });
+
   const res: BalanceCheckResult = {
     isValid: false,
     userId: null,
@@ -59,9 +62,10 @@ export async function checkApiKeyAndBalance(
   res.isValid = true;
   res.userId  = row.user_id;
 
+  await logDebug("balanceChecker", "Row from view", row);
+
   const balance = parseFloat(String(row.balance_usd));
 
-  await logDebug("balanceChecker", "Row from view", row);
   await logDebug("balanceChecker", "Parsed balance", { balance });
 
   if (!isFinite(balance) || balance <= 0) {
