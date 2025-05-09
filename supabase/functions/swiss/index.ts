@@ -1,4 +1,3 @@
-
 // supabase/functions/swiss/index.ts
 // Single edge‑function that:
 //   1. Validates API key
@@ -11,6 +10,7 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { translate } from "../_shared/translator.ts";  // relative to /functions/swiss/
+import { checkApiKeyAndBalance } from "../_shared/balanceChecker.ts";
 
 /*─────────────────────────── ENV */
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
@@ -69,29 +69,10 @@ function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown
   return null;
 }
 
-async function validateKey(k: string): Promise<string | null> {
-  console.info("Attempting to validate API key...");
-  
-  // Updated to directly query the api_key field without using digest function
-  const { data, error } = await sb.from("api_keys").select("user_id,is_active").eq("api_key", k).maybeSingle();
-  
-  if (error) {
-      console.error("Error validating API key:", error.message);
-      throw new Error(error.message); // Propagate DB errors
-  }
-  
-  const isValid = data && data.is_active;
-  if (isValid) {
-      console.info(`API key successfully validated for user: ${data.user_id}`);
-      return data.user_id as string;
-  } else {
-      console.warn(`API key validation failed. Key found: ${!!data}, Active: ${data?.is_active}`);
-      return null;
-  }
-}
-
-// Note: This function is removed as api_usage table no longer exists
-// Logging is handled by translator.ts which writes to translator_logs
+// This function is no longer needed as we're using the balanceChecker instead
+// async function validateKey(k: string): Promise<string | null> {
+//   // ... keep existing code (old validation function)
+// }
 
 /*─────────────────────────── Handler */
 serve(async (req) => {
@@ -136,23 +117,29 @@ serve(async (req) => {
   const apiKey = extractApiKey(req.headers, urlObj, bodyJson);
   if (!apiKey) {
     // Warning already logged in extractApiKey
-    return json({ success: false, message: "API key required" }, 401);
+    return json({ 
+      success: false, 
+      message: "Hmm, we couldn't verify your API key. Please log in at theraiapi.com to check your credentials or generate a new key." 
+    }, 401);
   }
 
-  // Validate API Key
-  let userId: string | null = null;
-  try {
-      userId = await validateKey(apiKey);
-  } catch (dbError) {
-      // Error already logged in validateKey
-      return json({ success: false, message: "Error during API key validation" }, 500);
+  // Use the new balance checker utility
+  console.info("Validating API key and checking balance...");
+  const validationResult = await checkApiKeyAndBalance(apiKey);
+  
+  if (!validationResult.isValid) {
+    console.warn("API key validation failed");
+    return json({ success: false, message: validationResult.errorMessage }, 401);
   }
-
-  if (!userId) {
-      // Warning already logged in validateKey
-      return json({ success: false, message: "Invalid or inactive API key" }, 401);
+  
+  if (!validationResult.hasBalance) {
+    console.warn(`User ${validationResult.userId} has insufficient balance`);
+    return json({ success: false, message: validationResult.errorMessage }, 402); // 402 Payment Required
   }
-  // API Key is valid, proceed.
+  
+  // API key and balance check passed, proceed with API call
+  const userId = validationResult.userId;
+  console.info(`API key and balance validation passed for user: ${userId}`);
 
   // Prepare payload for translator
   console.info("Preparing payload for translator...");
