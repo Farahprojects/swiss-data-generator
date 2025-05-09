@@ -1,17 +1,17 @@
 
 // Standard Report Edge Function
-// Generates standard reports using Google's Gemini 2.5 Flash Preview model
+// Generates standard reports using OpenAI's GPT-4.5 model
 // Uses system prompts from the reports_prompts table
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Initialize environment variables
-const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-if (!GOOGLE_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+if (!OPENAI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error("[standard-report] Missing required environment variables");
   throw new Error("Missing required environment variables");
 }
@@ -56,9 +56,9 @@ async function getSystemPrompt(): Promise<string> {
   }
 }
 
-// Generate report using Gemini API
+// Generate report using OpenAI API
 async function generateReport(systemPrompt: string, reportData: any): Promise<string> {
-  console.log("[standard-report] Generating report with Gemini");
+  console.log("[standard-report] Generating report with OpenAI GPT-4.5");
   
   try {
     // Format the user message with the chart data
@@ -69,53 +69,46 @@ async function generateReport(systemPrompt: string, reportData: any): Promise<st
       ...reportData
     });
     
-    // Updated to use the correct model name: gemini-1.5-flash
-    // According to the latest Gemini API documentation, this is the most stable model
-    console.log("[standard-report] Calling Gemini API with model: gemini-1.5-flash");
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`, {
+    // Call the OpenAI API with GPT-4.5 model
+    console.log("[standard-report] Calling OpenAI API with model: gpt-4.5-preview");
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: systemPrompt },
-              { text: userMessage }
-            ]
-          }
+        model: "gpt-4.5-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage }
         ],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 8192,
-        }
+        temperature: 0.2,
+        max_tokens: 8192,
+        top_p: 0.95
       })
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[standard-report] Gemini API error: ${response.status} - ${errorText}`);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error(`[standard-report] OpenAI API error: ${response.status} - ${errorText}`);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
     
     const data = await response.json();
     
     // Extract the generated text from the response
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
-      console.error("[standard-report] No content returned from Gemini API");
-      throw new Error("No content returned from Gemini API");
+    if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
+      console.error("[standard-report] No content returned from OpenAI API");
+      throw new Error("No content returned from OpenAI API");
     }
     
-    const generatedText = data.candidates[0].content.parts[0].text;
+    const generatedText = data.choices[0].message.content;
     console.log("[standard-report] Successfully generated report");
     
     return generatedText;
   } catch (err) {
-    console.error("[standard-report] Error generating report with Gemini:", err);
+    console.error("[standard-report] Error generating report with OpenAI:", err);
     throw err;
   }
 }
@@ -180,4 +173,4 @@ serve(async (req) => {
   }
 });
 
-console.log("[standard-report] Function initialized and ready to process requests");
+console.log("[standard-report] Function initialized and ready to process reports with OpenAI GPT-4.5");
