@@ -25,15 +25,16 @@ async function logDebug(source: string, message: string, data: any = null) {
       data
     }]);
   } catch (err) {
-    console.error("[debug_logs] Failed to write log:", err);
+    // Force error visibility in logs if insert fails
+    throw new Error("[debug_logs] Insert failed: " + (err instanceof Error ? err.message : String(err)));
   }
 }
 
 export async function checkApiKeyAndBalance(
   apiKey: string,
 ): Promise<BalanceCheckResult> {
-  // Log every run
-  await logDebug("balanceChecker", "Balance check started", { apiKey });
+  // Log every run at the very start
+  await logDebug("balanceChecker", "STARTED balance check", { raw: apiKey });
 
   const res: BalanceCheckResult = {
     isValid: false,
