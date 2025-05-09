@@ -70,7 +70,8 @@ async function generateReport(systemPrompt: string, reportData: any): Promise<st
     });
     
     // Call the Gemini API
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-preview-0514:generateContent?key=${GOOGLE_API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-preview-0409:generateContent?key=${GOOGLE_API_KEY}`, {
+{
       method: "POST",
       headers: {
         "Content-Type": "application/json"
