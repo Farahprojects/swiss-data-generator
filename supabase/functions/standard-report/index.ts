@@ -69,8 +69,10 @@ async function generateReport(systemPrompt: string, reportData: any): Promise<st
       ...reportData
     });
     
-    // Call the Gemini API - FIX: Use the correct model name gemini-2.5-flash-preview instead of gemini-2.5-flash-preview-04-17
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-preview:generateContent?key=${GOOGLE_API_KEY}`, {
+    // Updated to use the correct model name: gemini-1.5-flash
+    // According to the latest Gemini API documentation, this is the most stable model
+    console.log("[standard-report] Calling Gemini API with model: gemini-1.5-flash");
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
