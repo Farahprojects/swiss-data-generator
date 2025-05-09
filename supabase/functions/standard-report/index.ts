@@ -16,7 +16,16 @@ console.log("[standard-report] Environment check:");
 console.log(`[standard-report] SUPABASE_URL exists: ${!!SUPABASE_URL}`);
 console.log(`[standard-report] SUPABASE_SERVICE_KEY exists: ${!!SUPABASE_SERVICE_KEY}`);
 console.log(`[standard-report] OPENAI_API_KEY exists: ${!!OPENAI_API_KEY}`);
-console.log(`[standard-report] OPENAI_API_KEY format check: ${OPENAI_API_KEY?.startsWith('sk-') ? 'Correct format' : 'Incorrect format'}`);
+
+// Validate API key format - look for actual OpenAI key format (typically starts with 'sk-')
+if (OPENAI_API_KEY) {
+  console.log(`[standard-report] OPENAI_API_KEY length: ${OPENAI_API_KEY.length}`);
+  console.log(`[standard-report] OPENAI_API_KEY first 5 chars: ${OPENAI_API_KEY.substring(0, 5)}`);
+  
+  if (!OPENAI_API_KEY.startsWith('sk-')) {
+    console.error("[standard-report] ⚠️ OPENAI_API_KEY has incorrect format. Make sure it starts with 'sk-'");
+  }
+}
 
 if (!OPENAI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error("[standard-report] Missing required environment variables");
@@ -76,10 +85,13 @@ async function generateReport(systemPrompt: string, reportData: any): Promise<st
       ...reportData
     });
     
+    // Check API key format before making the request
+    if (!OPENAI_API_KEY.startsWith('sk-')) {
+      throw new Error("Invalid OpenAI API key format. OpenAI API keys should begin with 'sk-'.");
+    }
+    
     // Call the OpenAI API with GPT-4.5 model
     console.log("[standard-report] Calling OpenAI API with model: gpt-4.5-preview");
-    console.log("[standard-report] API key format validation: ", OPENAI_API_KEY.startsWith('sk-') ? 'Valid format' : 'Invalid format');
-    console.log("[standard-report] API key length: ", OPENAI_API_KEY.length);
     
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
