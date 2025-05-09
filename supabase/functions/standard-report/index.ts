@@ -11,6 +11,13 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+// Add detailed logging for debugging
+console.log("[standard-report] Environment check:");
+console.log(`[standard-report] SUPABASE_URL exists: ${!!SUPABASE_URL}`);
+console.log(`[standard-report] SUPABASE_SERVICE_KEY exists: ${!!SUPABASE_SERVICE_KEY}`);
+console.log(`[standard-report] OPENAI_API_KEY exists: ${!!OPENAI_API_KEY}`);
+console.log(`[standard-report] OPENAI_API_KEY format check: ${OPENAI_API_KEY?.startsWith('sk-') ? 'Correct format' : 'Incorrect format'}`);
+
 if (!OPENAI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error("[standard-report] Missing required environment variables");
   throw new Error("Missing required environment variables");
@@ -71,6 +78,9 @@ async function generateReport(systemPrompt: string, reportData: any): Promise<st
     
     // Call the OpenAI API with GPT-4.5 model
     console.log("[standard-report] Calling OpenAI API with model: gpt-4.5-preview");
+    console.log("[standard-report] API key format validation: ", OPENAI_API_KEY.startsWith('sk-') ? 'Valid format' : 'Invalid format');
+    console.log("[standard-report] API key length: ", OPENAI_API_KEY.length);
+    
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
