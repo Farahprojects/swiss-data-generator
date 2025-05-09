@@ -1,6 +1,5 @@
-
 // Standard Report Edge Function
-// Generates standard reports using OpenAI's GPT-4.5 model
+// Generates standard reports using OpenAI's GPT-4.5 model (GPT-4-turbo)
 // Uses system prompts from the reports_prompts table
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -11,21 +10,11 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-// Add detailed logging for debugging
+// Log environment checks
 console.log("[standard-report] Environment check:");
 console.log(`[standard-report] SUPABASE_URL exists: ${!!SUPABASE_URL}`);
 console.log(`[standard-report] SUPABASE_SERVICE_KEY exists: ${!!SUPABASE_SERVICE_KEY}`);
 console.log(`[standard-report] OPENAI_API_KEY exists: ${!!OPENAI_API_KEY}`);
-
-// Validate API key format - look for actual OpenAI key format (typically starts with 'sk-')
-if (OPENAI_API_KEY) {
-  console.log(`[standard-report] OPENAI_API_KEY length: ${OPENAI_API_KEY.length}`);
-  console.log(`[standard-report] OPENAI_API_KEY first 5 chars: ${OPENAI_API_KEY.substring(0, 5)}`);
-  
-  if (!OPENAI_API_KEY.startsWith('sk-')) {
-    console.error("[standard-report] ⚠️ OPENAI_API_KEY has incorrect format. Make sure it starts with 'sk-'");
-  }
-}
 
 if (!OPENAI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error("[standard-report] Missing required environment variables");
@@ -35,7 +24,7 @@ if (!OPENAI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 // Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// CORS headers for cross-domain requests
+// CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -43,156 +32,109 @@ const corsHeaders = {
   'Content-Type': 'application/json',
 };
 
-// Fetch the system prompt from the reports_prompts table
+// Fetch the system prompt from the database
 async function getSystemPrompt(): Promise<string> {
   console.log("[standard-report] Fetching system prompt from database");
   
-  try {
-    const { data, error } = await supabase
-      .from("report_prompts")
-      .select("system_prompt")
-      .eq("name", "standard")
-      .maybeSingle();
-    
-    if (error) {
-      console.error("[standard-report] Error fetching system prompt:", error.message);
-      throw new Error(`Failed to fetch system prompt: ${error.message}`);
-    }
-    
-    if (!data || !data.system_prompt) {
-      console.error("[standard-report] No system prompt found for 'standard'");
-      throw new Error("System prompt not found for standard report");
-    }
-    
-    console.log("[standard-report] Successfully retrieved system prompt");
-    return data.system_prompt;
-  } catch (err) {
-    console.error("[standard-report] Unexpected error fetching system prompt:", err);
-    throw err;
+  const { data, error } = await supabase
+    .from("report_prompts")
+    .select("system_prompt")
+    .eq("name", "standard")
+    .maybeSingle();
+
+  if (error || !data?.system_prompt) {
+    console.error("[standard-report] Failed to fetch system prompt:", error?.message);
+    throw new Error("System prompt not found for standard report");
   }
+
+  return data.system_prompt;
 }
 
-// Generate report using OpenAI API
+// Generate report using OpenAI GPT-4.5 (turbo)
 async function generateReport(systemPrompt: string, reportData: any): Promise<string> {
-  console.log("[standard-report] Generating report with OpenAI GPT-4.5");
-  
-  try {
-    // Format the user message with the chart data
-    const userMessage = JSON.stringify({
-      chartData: reportData.chartData,
-      endpoint: reportData.endpoint,
-      // Include any other relevant data from the request
-      ...reportData
-    });
-    
-    // Check API key format before making the request
-    if (!OPENAI_API_KEY.startsWith('sk-')) {
-      throw new Error("Invalid OpenAI API key format. OpenAI API keys should begin with 'sk-'.");
-    }
-    
-    // Call the OpenAI API with GPT-4.5 model
-    console.log("[standard-report] Calling OpenAI API with model: gpt-4.5-preview");
-    
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4.5-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage }
-        ],
-        temperature: 0.2,
-        max_tokens: 8192,
-        top_p: 0.95
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[standard-report] OpenAI API error: ${response.status} - ${errorText}`);
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    // Extract the generated text from the response
-    if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
-      console.error("[standard-report] No content returned from OpenAI API");
-      throw new Error("No content returned from OpenAI API");
-    }
-    
-    const generatedText = data.choices[0].message.content;
-    console.log("[standard-report] Successfully generated report");
-    
-    return generatedText;
-  } catch (err) {
-    console.error("[standard-report] Error generating report with OpenAI:", err);
-    throw err;
+  console.log("[standard-report] Generating report with GPT-4-turbo");
+
+  const userMessage = JSON.stringify({
+    chartData: reportData.chartData,
+    endpoint: reportData.endpoint,
+    ...reportData
+  });
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage }
+      ],
+      temperature: 0.2,
+      max_tokens: 8192,
+      top_p: 0.95
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[standard-report] OpenAI API error: ${response.status} - ${errorText}`);
+    throw new Error(`OpenAI API error: ${response.status}`);
   }
+
+  const data = await response.json();
+
+  if (!data.choices?.[0]?.message?.content) {
+    throw new Error("No content returned from OpenAI API");
+  }
+
+  return data.choices[0].message.content;
 }
 
-// Main handler function
+// Edge Function entrypoint
 serve(async (req) => {
   console.log(`[standard-report] Received ${req.method} request`);
-  
-  // Handle CORS preflight requests
+
   if (req.method === "OPTIONS") {
-    console.log("[standard-report] Handling OPTIONS request (CORS preflight)");
     return new Response(null, { status: 204, headers: corsHeaders });
   }
-  
-  // Only accept POST requests
+
   if (req.method !== "POST") {
-    console.warn(`[standard-report] Method not allowed: ${req.method}`);
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: corsHeaders }
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: corsHeaders
+    });
   }
-  
+
   try {
-    // Parse the request payload
     const reportData = await req.json();
-    console.log(`[standard-report] Processing report for endpoint: ${reportData.endpoint}`);
-    
-    // Validate required fields
+
     if (!reportData.chartData || !reportData.endpoint) {
-      console.error("[standard-report] Missing required fields in request payload");
       return new Response(
         JSON.stringify({ error: "Missing required fields: chartData and endpoint are required" }),
         { status: 400, headers: corsHeaders }
       );
     }
-    
-    // Fetch the system prompt
+
     const systemPrompt = await getSystemPrompt();
-    
-    // Generate the report
     const report = await generateReport(systemPrompt, reportData);
-    
-    // Return the generated report
-    console.log("[standard-report] Successfully processed request");
+
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        report: report 
-      }),
+      JSON.stringify({ success: true, report }),
       { status: 200, headers: corsHeaders }
     );
   } catch (err) {
-    console.error(`[standard-report] Error processing request: ${err instanceof Error ? err.message : String(err)}`);
+    console.error("[standard-report] Error:", err instanceof Error ? err.message : String(err));
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: false,
-        error: err instanceof Error ? err.message : "An unexpected error occurred"
+        error: err instanceof Error ? err.message : "Unexpected error generating report"
       }),
       { status: 500, headers: corsHeaders }
     );
   }
 });
 
-console.log("[standard-report] Function initialized and ready to process reports with OpenAI GPT-4.5");
+console.log("[standard-report] Ready to generate standard reports with GPT-4.5 (turbo)");
