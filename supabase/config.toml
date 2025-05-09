@@ -48,3 +48,7 @@ verify_jwt = true
 # Disable JWT verification for the swiss function
 [functions.swiss]
 verify_jwt = false
+
+# Disable JWT verification for the API usage handler
+[functions.api-usage-handler]
+verify_jwt = false
