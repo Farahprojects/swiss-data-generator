@@ -1,26 +1,13 @@
 // _shared/balanceChecker.ts
-// Validates API key and checks if the user has sufficient credits
+// Validates API key and verifies the user has positive credits.
 
-const supabaseUrl        = Deno.env.get("SUPABASE_URL");
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error("[balanceChecker] Missing Supabase credentials");
-  throw new Error("Missing Supabase credentials");
-}
+const supabaseUrl        = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-console.log(`[balanceChecker] Using Supabase URL: ${supabaseUrl}`);
-console.log(
-  `[balanceChecker] Service key format check: ${
-    supabaseServiceKey.startsWith("eyJ") ? "Looks like a JWT" : "Service-role key (not a JWT)"
-  }`,
-);
-
-// ── ONLY apikey header; NO Authorization header ─────────────────────────────
-const headers = {
-  "apikey": supabaseServiceKey,
-  "Content-Type": "application/json",
-};
+// Single admin client – bypasses RLS
+const sb: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
 export interface BalanceCheckResult {
   isValid:    boolean;
@@ -29,63 +16,67 @@ export interface BalanceCheckResult {
   errorMessage?: string;
 }
 
-export const checkApiKeyAndBalance = async (
+export async function checkApiKeyAndBalance(
   apiKey: string,
-): Promise<BalanceCheckResult> => {
-  console.log(
-    `[balanceChecker] Checking API key and balance for: ${apiKey.substring(0, 4)}...`,
-  );
+): Promise<BalanceCheckResult> {
+  console.log(`[balanceChecker] 🔑 ${apiKey.slice(0, 5)}…`);
 
-  const result: BalanceCheckResult = {
+  const res: BalanceCheckResult = {
     isValid: false,
     userId: null,
     hasBalance: false,
   };
 
-  try {
-    /*────────────────── 1 Validate API key ──────────────────*/
-    const apiKeyUrl =
-      `${supabaseUrl}/rest/v1/api_keys?api_key=eq.${apiKey}`;
-    const apiKeyRes = await fetch(apiKeyUrl, { headers });
+  /*───────── 1. validate API key ─────────*/
+  const { data: keyRow, error: keyErr } = await sb
+    .from("api_keys")
+    .select("user_id, is_active")
+    .eq("api_key", apiKey)
+    .maybeSingle();
 
-    if (!apiKeyRes.ok) {
-      const body = await apiKeyRes.text().catch(() => "");
-      throw new Error(
-        `API-key lookup failed [${apiKeyRes.status}]: ${body}`,
-      );
-    }
-
-    const apiKeyData = (await apiKeyRes.json())[0];
-    if (!apiKeyData?.is_active) {
-      result.errorMessage =
-        "Hmm, we couldn't verify your API key. Please log in at theraiapi.com to check your credentials or generate a new key.";
-      return result;
-    }
-
-    result.isValid = true;
-    result.userId = apiKeyData.user_id;
-
-    /*────────────────── 2 Check balance ─────────────────────*/
-    const creditUrl =
-      `${supabaseUrl}/rest/v1/user_credits?user_id=eq.${apiKeyData.user_id}`;
-    const creditRes = await fetch(creditUrl, { headers });
-
-    if (!creditRes.ok) {
-      const body = await creditRes.text().catch(() => "");
-      throw new Error(`Balance lookup failed [${creditRes.status}]: ${body}`);
-    }
-
-    const creditData = (await creditRes.json())[0];
-    if (!creditData || creditData.balance_usd <= 0) {
-      result.errorMessage =
-        "Your account is active, but there's an issue with your payment method. Please log in at theraiapi.com to update your billing details.";
-      return result;
-    }
-
-    result.hasBalance = true;
-    return result;
-  } catch (err) {
-    result.errorMessage = (err as Error).message;
-    return result;
+  if (keyErr || !keyRow?.is_active) {
+    console.warn("[balanceChecker] API key not found / inactive");
+    res.errorMessage =
+      "Hmm, we couldn't verify your API key. Please log in at theraiapi.com to check your credentials or generate a new key.";
+    return res;
   }
-};
+
+  res.isValid = true;
+  res.userId  = keyRow.user_id;
+
+  /*───────── 2. latest balance row ───────*/
+  const { data: balanceRow, error: balErr } = await sb
+    .from("user_credits")
+    .select("balance_usd")
+    .eq("user_id", keyRow.user_id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (balErr) {
+    console.error("[balanceChecker] Balance lookup failed:", balErr.message);
+    res.errorMessage = "Error checking account balance. Please try again.";
+    return res;
+  }
+
+  if (!balanceRow) {
+    console.warn("[balanceChecker] No balance row for user", keyRow.user_id);
+    res.errorMessage =
+      "Your account is active, but there's no balance record. Please contact support.";
+    return res;
+  }
+
+  const balance = Number(balanceRow.balance_usd);
+  console.log(
+    `[balanceChecker] Balance for ${keyRow.user_id}: ${balance.toFixed(2)} USD`,
+  );
+
+  if (isNaN(balance) || balance <= 0) {
+    res.errorMessage =
+      "Your account is active, but there's an issue with your payment method. Please log in at theraiapi.com to update your billing details.";
+    return res;
+  }
+
+  res.hasBalance = true;
+  return res;
+}
