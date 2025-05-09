@@ -1,9 +1,5 @@
 // _shared/balanceChecker.ts
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const sb: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+import { sb } from "./supabaseAdmin.ts";
 
 export interface BalanceCheckResult {
   isValid: boolean;
@@ -12,7 +8,7 @@ export interface BalanceCheckResult {
   errorMessage?: string;
 }
 
-// Logs to debug_logs with JSON-safe payload
+// Direct Supabase log to debug_logs
 async function logDebug(source: string, message: string, data: unknown = null) {
   try {
     await sb.from("debug_logs").insert([{
@@ -21,19 +17,12 @@ async function logDebug(source: string, message: string, data: unknown = null) {
       data: data ? JSON.parse(JSON.stringify(data)) : null,
     }]);
   } catch (err) {
-    console.error(`[debug_logs] Failed to log from ${source}:`, err);
+    console.error("[logDebug] Failed to log:", err);
   }
 }
 
-export async function checkApiKeyAndBalance(apiKey: string): Promise<BalanceCheckResult> {
-  // 🔥 Manual test log – forces a write on every call
-  await sb.from("debug_logs").insert([{
-    source: "balanceChecker",
-    message: "MANUAL test log from balanceChecker",
-    data: { now: new Date().toISOString(), test: true }
-  }]);
-
-  await logDebug("balanceChecker", "START: checking API key and balance", { apiKey });
+export async function checkApiKeyAndBalance(clientApiKey: string): Promise<BalanceCheckResult> {
+  await logDebug("balanceChecker", "Checking API key and balance", { clientApiKey });
 
   const res: BalanceCheckResult = {
     isValid: false,
@@ -41,17 +30,17 @@ export async function checkApiKeyAndBalance(apiKey: string): Promise<BalanceChec
     hasBalance: false,
   };
 
+  // Validate client API key and get user + balance via view
   const { data: row, error } = await sb
     .from("v_api_key_balance")
     .select("user_id, balance_usd")
-    .eq("api_key", apiKey)
+    .eq("api_key", clientApiKey)
     .maybeSingle();
 
-  await logDebug("balanceChecker", "Query result", { row, error });
+  await logDebug("balanceChecker", "v_api_key_balance result", { row, error });
 
   if (error || !row) {
-    res.errorMessage = "Hmm, we couldn't verify your API key. Please log in at theraiapi.com to check your credentials or generate a new key.";
-    await logDebug("balanceChecker", "API key invalid or not found", { error, row });
+    res.errorMessage = "We couldn’t verify your API key. Please log in at theraiapi.com to check your credentials.";
     return res;
   }
 
@@ -62,7 +51,7 @@ export async function checkApiKeyAndBalance(apiKey: string): Promise<BalanceChec
   await logDebug("balanceChecker", "Parsed balance", { balance });
 
   if (!isFinite(balance) || balance <= 0) {
-    res.errorMessage = `Your account is active, but available balance is ${balance}.`;
+    res.errorMessage = `Your account is active, but balance is ${balance}.`;
     return res;
   }
 
