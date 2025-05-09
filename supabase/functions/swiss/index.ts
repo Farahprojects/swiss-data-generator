@@ -169,7 +169,11 @@ serve(async (req) => {
   console.info("Preparing payload for translator...");
   urlObj.searchParams.delete("api_key"); // Ensure key isn't passed downstream
   const queryObj = Object.fromEntries(urlObj.searchParams.entries());
-  const mergedPayload = { ...(bodyJson ?? {}), ...queryObj };
+  const mergedPayload = { 
+    ...(bodyJson ?? {}), 
+    ...queryObj,
+    user_id: userId // Add the user ID to the payload
+  };
   console.info("Translator payload prepared.");
 
   // Extract endpoint from the path for usage recording

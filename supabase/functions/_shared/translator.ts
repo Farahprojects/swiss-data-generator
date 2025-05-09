@@ -71,6 +71,7 @@ async function logToSupabase(
   processingTime: number,
   errorMessage?: string,
   googleGeoUsed = false,
+  userId?: string,
 ) {
   /* extract report tier, if present */
   const reportTier =
@@ -87,6 +88,7 @@ async function logToSupabase(
     error_message:      errorMessage,
     google_geo:         googleGeoUsed,
     report_tier:        reportTier,
+    user_id:            userId,
   });
   if (error) console.error("Failed to log to Supabase:", error.message);
 }
@@ -164,6 +166,7 @@ export async function translate(
   const startTime     = Date.now();
   let   requestType   = "unknown";
   let   googleGeoUsed = false;
+  const userId        = raw.user_id; // Extract user ID from the payload
 
   try {
     const body = Base.parse(raw);
@@ -180,6 +183,7 @@ export async function translate(
         Date.now() - startTime,
         err,
         googleGeoUsed,
+        userId,
       );
       return { status: 400, text: JSON.stringify({ error: err }) };
     }
@@ -197,6 +201,7 @@ export async function translate(
         Date.now() - startTime,
         undefined,
         googleGeoUsed,
+        userId,
       );
       return { status: 200, text: JSON.stringify({ message: msg }) };
     }
@@ -213,6 +218,7 @@ export async function translate(
           Date.now() - startTime,
           err,
           googleGeoUsed,
+          userId,
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
@@ -247,6 +253,7 @@ export async function translate(
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
+        userId,
       );
 
       return { status: r.status, text: txt };
@@ -264,6 +271,7 @@ export async function translate(
           Date.now() - startTime,
           err,
           googleGeoUsed,
+          userId,
         );
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
@@ -290,6 +298,7 @@ export async function translate(
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
+        userId,
       );
 
       return { status: r.status, text: txt };
@@ -309,6 +318,7 @@ export async function translate(
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
+        userId,
       );
       return { status: r.status, text: txt };
     }
@@ -329,6 +339,7 @@ export async function translate(
         Date.now() - startTime,
         !r.ok ? `Swiss API returned ${r.status}` : undefined,
         googleGeoUsed,
+        userId,
       );
       return { status: r.status, text: txt };
     }
@@ -343,7 +354,7 @@ export async function translate(
       We no longer need a separate ROUTE map.  The canonical
       value itself *is* the Swiss-API path.
     ------------------------------------------------------*/
-    const path = canon;                   // e.g. “mindset”, “monthly”, …
+    const path = canon;                   // e.g. "mindset", "monthly", …
 
     const r   = await fetch(`${SWISS_API}/${path}`, {
       method:  "POST",
@@ -360,6 +371,7 @@ export async function translate(
       Date.now() - startTime,
       !r.ok ? `Swiss API returned ${r.status}` : undefined,
       googleGeoUsed,
+      userId,
     );
 
     return { status: r.status, text: txt };
@@ -373,6 +385,7 @@ export async function translate(
       Date.now() - startTime,
       msg,
       googleGeoUsed,
+      userId,
     );
     return { status: 500, text: JSON.stringify({ error: msg }) };
   }
