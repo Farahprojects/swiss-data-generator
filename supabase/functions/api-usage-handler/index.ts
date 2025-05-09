@@ -1,3 +1,4 @@
+
 /* ========================================================================== *
   Supabase Edge Function – API Usage Handler
   Trigger: pg_net → called by DB trigger when a translator_log row is inserted
@@ -38,8 +39,12 @@ serve(async (req) => {
   if (req.method !== "POST")    return json({ error: "Method not allowed" }, 405);
 
   try {
+    console.log("API Usage Handler function initialized");
+    
     const { log_id } = await req.json();
     if (!log_id) return json({ error: "Missing log_id parameter" }, 400);
+
+    console.log(`Processing log ID: ${log_id}`);
 
     /* ── fetch log ─────────────────────────────────────────────────────── */
     const { data: log, error: logErr } = await sb
@@ -82,6 +87,7 @@ serve(async (req) => {
       }, 422);
 
     const unitPrice = parseFloat(String(priceRow.unit_price_usd));
+    console.log(`Found price for ${request_type}: ${unitPrice}`);
 
     /* ── total cost ────────────────────────────────────────────────────── */
     let total = unitPrice;
@@ -100,23 +106,28 @@ serve(async (req) => {
     if (usageErr) return json({ error: "Error recording usage" }, 500);
 
     /* ── debit user credits via RPC ────────────────────────────────────── */
+    // Here's the fixed function call with correct parameter names
     const { error: creditErr } = await sb.rpc("record_api_usage", {
-      _user_id:            user_id,
-      _endpoint:           request_type,
-      _cost_usd:           total,
-      _request_params:     null,
-      _response_status:    response_status,
+      _user_id: user_id,
+      _endpoint: request_type,
+      _cost_usd: total,
+      _request_params: null,
+      _response_status: response_status,
       _processing_time_ms: processing_time_ms,
     });
-    if (creditErr) return json({ error: "Error updating credits" }, 500);
+    
+    if (creditErr) {
+      console.error("Error updating user credits:", creditErr.message);
+      return json({ error: "Error updating credits: " + creditErr.message }, 500);
+    }
 
     return json({
       success: true,
       details: {
         user_id,
         endpoint: request_type,
-        unit_price: unitPrice,
-        total_cost: total,
+        unit_price_usd: unitPrice,
+        total_cost_usd: total,
         geo_lookup_used: google_geo,
       },
     });
