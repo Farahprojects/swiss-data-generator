@@ -139,6 +139,11 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
  */
 async function generateReport(payload: ReportPayload) {
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!supabaseUrl) {
+      throw new Error("Missing SUPABASE_URL environment variable");
+    }
+    
     // For now, we'll just have placeholders for the report generation functions
     // These would be implemented in separate functions or edge functions
     if (payload.report_type === "premium") {
@@ -149,11 +154,36 @@ async function generateReport(payload: ReportPayload) {
         data: await mockPremiumReport(payload)
       };
     } else {
-      // This would call standard_report() function
-      console.log("[reportOrchestrator] Generating standard report");
+      // Call the standard-report edge function
+      console.log("[reportOrchestrator] Calling standard-report edge function");
+      const response = await fetch(`${supabaseUrl}/functions/v1/standard-report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[reportOrchestrator] Error from standard-report function: ${response.status} - ${errorText}`);
+        return {
+          success: false,
+          errorMessage: `Report generation failed with status ${response.status}`
+        };
+      }
+      
+      const reportResult = await response.json();
+      console.log("[reportOrchestrator] Successfully received report from standard-report function");
+      
       return {
         success: true,
-        data: await mockStandardReport(payload)
+        data: {
+          title: `Standard ${payload.endpoint} Report`,
+          content: reportResult.report,
+          generated_at: new Date().toISOString()
+        }
       };
     }
   } catch (err) {
@@ -165,16 +195,7 @@ async function generateReport(payload: ReportPayload) {
   }
 }
 
-// Placeholder functions that would be replaced with actual report generation logic
-async function mockStandardReport(payload: ReportPayload) {
-  // In a real implementation, this would call an AI service or other logic
-  return {
-    title: `Standard ${payload.endpoint} Report`,
-    content: "This is a placeholder for the standard report content",
-    generated_at: new Date().toISOString()
-  };
-}
-
+// Placeholder function for premium reports that would be replaced with actual report generation logic
 async function mockPremiumReport(payload: ReportPayload) {
   // In a real implementation, this would call an AI service or other logic
   return {
