@@ -1,27 +1,25 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { translate } from "../_shared/translator.ts";
-import { checkApiKeyAndBalance } from "../_shared/balanceChecker.ts";
 
-const SB_URL = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const sb = createClient(SB_URL, SB_KEY);
+/*──────────────────── ENV */
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+/*──────────────────── CORS + Helpers */
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "x-api-key, apikey, authorization, content-type",
+  "Access-Control-Allow-Headers": "x-api-key, apikey, authorization, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Content-Type": "application/json",
 };
-const json = (b: unknown, s = 200) =>
-  new Response(JSON.stringify(b), { status: s, headers: corsHeaders });
 
-function extractApiKey(
-  headers: Headers,
-  url: URL,
-  body?: Record<string, unknown>,
-): string | null {
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: corsHeaders });
+
+function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown>): string | null {
   const auth = headers.get("authorization");
   if (auth) {
     const match = auth.match(/^Bearer\s+(.+)$/i);
@@ -40,12 +38,14 @@ function extractApiKey(
   return null;
 }
 
+/*──────────────────── Handler */
 serve(async (req) => {
   const urlObj = new URL(req.url);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
   if (!["GET", "POST"].includes(req.method)) {
     return json({ success: false, message: "Method not allowed" }, 405);
   }
@@ -53,40 +53,48 @@ serve(async (req) => {
   let bodyJson: Record<string, unknown> | undefined;
   if (req.method === "POST") {
     const raw = await req.arrayBuffer();
-    if (raw.byteLength) bodyJson = JSON.parse(new TextDecoder().decode(raw));
+    if (raw.byteLength) {
+      bodyJson = JSON.parse(new TextDecoder().decode(raw));
+    }
   }
 
   const apiKey = extractApiKey(req.headers, urlObj, bodyJson);
   if (!apiKey) {
+    return json({ success: false, message: "Missing API key." }, 401);
+  }
+
+  /*───────── Direct view check (no imports) */
+  const { data: row, error } = await sb
+    .from("v_api_key_balance")
+    .select("user_id, balance_usd")
+    .eq("api_key", apiKey)
+    .maybeSingle();
+
+  if (error) {
+    return json({ success: false, message: "Balance lookup failed.", debug: error.message }, 500);
+  }
+
+  if (!row) {
     return json({
       success: false,
-      message:
-        "API key missing. Pass it in the 'x-api-key', 'apikey', 'Authorization' header, ?api_key query param, or api_key JSON field.",
+      message: "Invalid API key. Log in at theraiapi.com to check your credentials.",
     }, 401);
   }
 
-  // 🔍 Injected debug log before calling balance checker
-  await sb.from("debug_logs").insert([{
-    source: "swiss",
-    message: "About to check API key and balance",
-    data: { apiKey }
-  }]);
-
-  const check = await checkApiKeyAndBalance(apiKey);
-
-  if (!check.isValid) {
-    return json({ success: false, message: check.errorMessage }, 401);
+  const balance = parseFloat(String(row.balance_usd));
+  if (!Number.isFinite(balance) || balance <= 0) {
+    return json({
+      success: false,
+      message: `Your account is active, but your balance is $${balance}. Please top up to continue.`,
+    }, 402);
   }
 
-  if (!check.hasBalance) {
-    return json({ success: false, message: check.errorMessage }, 402);
-  }
-
+  /*───────── Valid: Pass request through to translator */
   urlObj.searchParams.delete("api_key");
   const mergedPayload = {
     ...(bodyJson ?? {}),
     ...Object.fromEntries(urlObj.searchParams.entries()),
-    user_id: check.userId,
+    user_id: row.user_id,
     api_key: apiKey,
   };
 
