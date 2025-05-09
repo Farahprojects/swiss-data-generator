@@ -9,14 +9,13 @@ import { checkApiKeyAndBalance } from "../_shared/balanceChecker.ts";
 /*──────────────────── ENV */
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
 const sb = createClient(SB_URL, SB_KEY);
 
 /*──────────────────── Misc */
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "x-api-key, apikey, content-type",
+    "x-api-key, apikey, authorization, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Content-Type": "application/json",
 };
@@ -29,16 +28,24 @@ function extractApiKey(
   url: URL,
   body?: Record<string, unknown>,
 ): string | null {
-  // 1 Custom headers
+  // 1. Authorization: Bearer xxx
+  const auth = headers.get("authorization");
+  if (auth) {
+    const match = auth.match(/^Bearer\s+(.+)$/i);
+    const token = match ? match[1] : auth;
+    if (token && token.length > 16) return token;
+  }
+
+  // 2. Custom headers
   const h1 = headers.get("x-api-key") || headers.get("apikey");
-  if (h1) return h1;
+  if (h1 && h1.length > 16) return h1;
 
-  // 2 Query param
+  // 3. Query param
   const qp = url.searchParams.get("api_key");
-  if (qp) return qp;
+  if (qp && qp.length > 16) return qp;
 
-  // 3 JSON body
-  if (body && typeof body.api_key === "string") return body.api_key;
+  // 4. JSON body
+  if (body?.api_key && String(body.api_key).length > 16) return String(body.api_key);
 
   return null;
 }
@@ -68,7 +75,7 @@ serve(async (req) => {
       {
         success: false,
         message:
-          "API key missing. Pass it in the 'x-api-key' header, the 'apikey' header, the ?api_key query param, or the api_key JSON field.",
+          "API key missing. Pass it in the 'x-api-key', 'apikey', 'Authorization' header, ?api_key query param, or api_key JSON field.",
       },
       401,
     );
