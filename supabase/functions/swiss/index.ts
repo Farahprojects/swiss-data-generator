@@ -4,7 +4,7 @@ import { translate } from "../_shared/translator.ts";
 import { checkApiKeyAndBalance } from "../_shared/balanceChecker.ts";
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
-const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SB_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
 const sb = createClient(SB_URL, SB_KEY);
 
 const corsHeaders = {
