@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -180,6 +179,11 @@ const ActivityLogs = () => {
     return status >= 400;
   };
 
+  // Helper function to check if a log has a valid report
+  const hasValidReport = (log: ActivityLog): boolean => {
+    return !!log.report_tier && !isFailedLog(log.response_status);
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <UnifiedNavigation />
@@ -350,15 +354,13 @@ const ActivityLogs = () => {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          {isFailedLog(log.response_status) ? (
+                          {isFailedLog(log.response_status) || !log.report_tier ? (
                             <span className="text-gray-400">None</span>
-                          ) : log.report_tier ? (
+                          ) : (
                             <span className="capitalize text-primary hover:underline cursor-pointer" 
                               onClick={() => openDrawer(log)}>
                               {log.report_tier}
                             </span>
-                          ) : (
-                            <span className="text-gray-400">None</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
