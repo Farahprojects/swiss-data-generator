@@ -17,14 +17,10 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders });
 
-// Simple log helper
+// Log helper
 async function logDebug(source: string, message: string, data: any = null) {
   try {
-    await sb.from("debug_logs").insert([{ 
-      source, 
-      message, 
-      data
-    }]);
+    await sb.from("debug_logs").insert([{ source, message, data }]);
   } catch (err) {
     console.error("[debug_logs] Insert failed:", err);
   }
@@ -57,7 +53,6 @@ serve(async (req) => {
   }
 
   if (!["GET", "POST"].includes(req.method)) {
-    await logDebug("swiss", "Method not allowed", { method: req.method });
     return json({ success: false, message: "Method not allowed" }, 405);
   }
 
@@ -71,7 +66,7 @@ serve(async (req) => {
 
   const apiKey = extractApiKey(req.headers, urlObj, bodyJson);
   if (!apiKey) {
-    await logDebug("swiss", "Missing API key", { headers: Object.fromEntries(req.headers) });
+    await logDebug("swiss", "Missing API key", { headers: req.headers });
     return json({ success: false, message: "Missing API key." }, 401);
   }
 
@@ -118,7 +113,5 @@ serve(async (req) => {
   await logDebug("swiss", "Sending payload to translator", { user_id: row.user_id });
 
   const { status, text } = await translate(mergedPayload);
-  await logDebug("swiss", "Received response from translator", { status });
-  
   return new Response(text, { status, headers: corsHeaders });
 });
