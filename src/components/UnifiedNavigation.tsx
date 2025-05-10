@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
 import { useSidebar } from '@/components/ui/sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -19,8 +20,9 @@ const UnifiedNavigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
-  // Safely use sidebar context
+  // Safely use sidebar context with optional chaining
   const sidebarContext = useSidebar();
   
   const isLoggedIn = !!user;
@@ -44,17 +46,17 @@ const UnifiedNavigation = () => {
         <div className="flex justify-between items-center py-4">
           {/* Left section with menu trigger for logged in users */}
           <div className="flex items-center">
-            {isLoggedIn && sidebarContext ? (
+            {isLoggedIn && (
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="md:flex hidden mr-2" 
-                onClick={sidebarContext.toggleSidebar}
+                className="mr-2" 
+                onClick={sidebarContext?.toggleSidebar}
               >
                 <Menu size={20} />
                 <span className="sr-only">Toggle sidebar</span>
               </Button>
-            ) : null}
+            )}
           </div>
           
           {/* Centered logo */}
@@ -119,73 +121,42 @@ const UnifiedNavigation = () => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <button
-              onClick={toggleMenu}
-              className="text-gray-700 focus:outline-none"
-            >
-              {isMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
+          {/* Mobile Menu Button - Only for non-logged in users */}
+          {!isLoggedIn && (
+            <div className="md:hidden">
+              <button
+                onClick={toggleMenu}
+                className="text-gray-700 focus:outline-none"
+              >
+                {isMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isMenuOpen && (
+      {/* Mobile Menu - Only for non-logged in users */}
+      {isMenuOpen && !isLoggedIn && (
         <div className="md:hidden bg-white border-t py-4">
           <div className="container mx-auto px-4 space-y-2">
-            {!isLoggedIn ? (
-              <>
-                <Link to="/api-products" className="block text-gray-700 hover:text-primary py-2">API Products</Link>
-                <Link to="/pricing" className="block text-gray-700 hover:text-primary py-2">Pricing</Link>
-                <Link to="/documentation" className="block text-gray-700 hover:text-primary py-2">Documentation</Link>
-                <Link to="/about" className="block text-gray-700 hover:text-primary py-2">About</Link>
-                <Link to="/contact" className="block text-gray-700 hover:text-primary py-2">Contact</Link>
-              </>
-            ) : (
-              <>
-                <Link to="/dashboard" className="block text-gray-700 hover:text-primary py-2">Dashboard</Link>
-                <Link to="/dashboard/upgrade" className="block text-gray-700 hover:text-primary py-2">Upgrade</Link>
-              </>
-            )}
+            <Link to="/api-products" className="block text-gray-700 hover:text-primary py-2">API Products</Link>
+            <Link to="/pricing" className="block text-gray-700 hover:text-primary py-2">Pricing</Link>
+            <Link to="/documentation" className="block text-gray-700 hover:text-primary py-2">Documentation</Link>
+            <Link to="/about" className="block text-gray-700 hover:text-primary py-2">About</Link>
+            <Link to="/contact" className="block text-gray-700 hover:text-primary py-2">Contact</Link>
             
-            {isLoggedIn ? (
-              <div className="space-y-2 pt-4">
-                <div className="flex items-center">
-                  <UserAvatar size="sm" />
-                  <span className="ml-2 font-medium">{user.email}</span>
-                </div>
-                <Button variant="ghost" className="w-full justify-start" onClick={() => handleViewSettings('account')}>
-                  Account Settings
-                </Button>
-                <Button variant="ghost" className="w-full justify-start" onClick={() => handleViewSettings('billing')}>
-                  Billing & Subscription
-                </Button>
-                <Button variant="ghost" className="w-full justify-start" onClick={() => handleViewSettings('apikeys')}>
-                  API Keys
-                </Button>
-                <Button variant="ghost" className="w-full justify-start" onClick={() => handleViewSettings('support')}>
-                  Support
-                </Button>
-                <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col space-y-2 pt-4">
-                <Link to="/login">
-                  <Button variant="outline" className="w-full">Log In</Button>
-                </Link>
-                <Link to="/signup">
-                  <Button className="w-full">Sign Up</Button>
-                </Link>
-              </div>
-            )}
+            <div className="flex flex-col space-y-2 pt-4">
+              <Link to="/login">
+                <Button variant="outline" className="w-full">Log In</Button>
+              </Link>
+              <Link to="/signup">
+                <Button className="w-full">Sign Up</Button>
+              </Link>
+            </div>
           </div>
         </div>
       )}
