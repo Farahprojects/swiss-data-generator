@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { translate } from "../_shared/translator.ts";
@@ -16,6 +15,15 @@ const corsHeaders = {
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders });
+
+// Log helper
+async function logDebug(source: string, message: string, data: any = null) {
+  try {
+    await sb.from("debug_logs").insert([{ source, message, data }]);
+  } catch (err) {
+    console.error("[debug_logs] Insert failed:", err);
+  }
+}
 
 function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown>): string | null {
   const auth = headers.get("authorization");
@@ -57,8 +65,11 @@ serve(async (req) => {
 
   const apiKey = extractApiKey(req.headers, urlObj, bodyJson);
   if (!apiKey) {
+    await logDebug("swiss", "Missing API key", { headers: req.headers });
     return json({ success: false, message: "Missing API key." }, 401);
   }
+
+  await logDebug("swiss", "Extracted API key", { apiKey });
 
   const { data: row, error } = await sb
     .from("v_api_key_balance")
@@ -67,10 +78,12 @@ serve(async (req) => {
     .maybeSingle();
 
   if (error) {
+    await logDebug("swiss", "Balance lookup error", { apiKey, error });
     return json({ success: false, message: "Balance lookup failed." }, 500);
   }
 
   if (!row) {
+    await logDebug("swiss", "API key not found in v_api_key_balance", { apiKey });
     return json({
       success: false,
       message: "Invalid API key. Log in at theraiapi.com to check your credentials.",
@@ -78,7 +91,10 @@ serve(async (req) => {
   }
 
   const balance = parseFloat(String(row.balance_usd));
+  await logDebug("swiss", "Balance fetched", { user_id: row.user_id, balance });
+
   if (!Number.isFinite(balance) || balance <= 0) {
+    await logDebug("swiss", "Insufficient balance", { user_id: row.user_id, balance });
     return json({
       success: false,
       message: `Your account is active, but your balance is $${balance}. Please top up to continue.`,
@@ -92,6 +108,8 @@ serve(async (req) => {
     user_id: row.user_id,
     api_key: apiKey,
   };
+
+  await logDebug("swiss", "Sending payload to translator", { user_id: row.user_id });
 
   const { status, text } = await translate(mergedPayload);
   return new Response(text, { status, headers: corsHeaders });
