@@ -167,6 +167,30 @@ export type Database = {
         }
         Relationships: []
       }
+      debug_logs: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string | null
+          source: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string | null
+          source: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string | null
+          source?: string
+        }
+        Relationships: []
+      }
       geo_cache: {
         Row: {
           lat: number
@@ -583,6 +607,14 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_event_id?: string | null
           stripe_event_type?: string | null
+        }
+        Relationships: []
+      }
+      v_api_key_balance: {
+        Row: {
+          api_key: string | null
+          balance_usd: number | null
+          user_id: string | null
         }
         Relationships: []
       }
