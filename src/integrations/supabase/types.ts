@@ -172,21 +172,30 @@ export type Database = {
           created_at: string | null
           data: Json | null
           id: string
+          log_level: string | null
           message: string | null
+          sequence_number: number | null
+          session_id: string | null
           source: string
         }
         Insert: {
           created_at?: string | null
           data?: Json | null
           id?: string
+          log_level?: string | null
           message?: string | null
+          sequence_number?: number | null
+          session_id?: string | null
           source: string
         }
         Update: {
           created_at?: string | null
           data?: Json | null
           id?: string
+          log_level?: string | null
           message?: string | null
+          sequence_number?: number | null
+          session_id?: string | null
           source?: string
         }
         Relationships: []
@@ -485,6 +494,42 @@ export type Database = {
         }
         Relationships: []
       }
+      swissdebuglogs: {
+        Row: {
+          api_key: string | null
+          balance_usd: number | null
+          id: number
+          request_payload: Json | null
+          request_type: string | null
+          response_status: number | null
+          response_text: string | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          balance_usd?: number | null
+          id?: number
+          request_payload?: Json | null
+          request_type?: string | null
+          response_status?: number | null
+          response_text?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          balance_usd?: number | null
+          id?: number
+          request_payload?: Json | null
+          request_type?: string | null
+          response_status?: number | null
+          response_text?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       topup_queue: {
         Row: {
           amount_usd: number
@@ -639,6 +684,10 @@ export type Database = {
         Returns: string
       }
       generate_api_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_session_id: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { translate } from "../_shared/translator.ts";
@@ -17,7 +18,7 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders });
 
-// Log helper function
+// Log helper function that writes to SwissDebugLogs table
 async function logSwissDebug(request: any, responseStatus: number, responseText: string) {
   try {
     const logData = {
