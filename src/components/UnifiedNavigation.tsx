@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSidebar } from '@/components/ui/sidebar';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +21,7 @@ const UnifiedNavigation = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { toggleSidebar } = useSidebar();
   
   const isLoggedIn = !!user;
 
@@ -39,9 +42,19 @@ const UnifiedNavigation = () => {
     <nav className="sticky top-0 bg-white z-50 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
-          {/* Left section - empty for logged in users */}
+          {/* Left section with hamburger menu for logged in users on mobile */}
           <div className="flex items-center">
-            {/* Removed sidebar toggle button */}
+            {isLoggedIn && isMobile && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleSidebar} 
+                className="mr-2"
+                aria-label="Toggle sidebar"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
           </div>
           
           {/* Centered logo */}
