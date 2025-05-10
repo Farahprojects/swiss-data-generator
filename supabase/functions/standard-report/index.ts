@@ -1,4 +1,3 @@
-
 /*───────────────────────────────────────────────────────────────────────────────
   standard-report.ts
   Edge Function: Generates standard reports using Google's Gemini 2.5 Flash Preview model
@@ -43,7 +42,8 @@ try {
 }
 
 const GOOGLE_MODEL = "gemini-2.5-flash-preview";
-const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1/models/${GOOGLE_MODEL}:generateContent`;
+// Corrected Line: Changed "v1" to "v1beta" in the endpoint URL
+const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent`;
 
 // CORS headers for cross-domain requests
 const CORS_HEADERS = {
@@ -112,9 +112,9 @@ async function generateReport(systemPrompt: string, reportData: any): Promise<st
     console.log(`[standard-report] Calling Gemini API with model: ${GOOGLE_MODEL}`);
     console.log(`[standard-report] API Key format check: ${GOOGLE_API_KEY.length > 20 ? "Valid length" : "Invalid length"}`);
     
-    // Call the Gemini API with the correct model name
+    // Call the Gemini API with the correct model name and API version
     const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
-    console.log(`[standard-report] API URL (without key): ${GOOGLE_ENDPOINT}`);
+    console.log(`[standard-report] API URL (without key): ${GOOGLE_ENDPOINT}`); // Will now show v1beta
     
     const requestBody = {
       contents: [
@@ -154,9 +154,9 @@ async function generateReport(systemPrompt: string, reportData: any): Promise<st
     const data = await response.json();
     
     // Extract the generated text from the response
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
-      console.error("[standard-report] No content returned from Gemini API");
-      throw new Error("No content returned from Gemini API");
+    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
+      console.error("[standard-report] No content or parts returned from Gemini API in candidate");
+      throw new Error("No content or parts returned from Gemini API in candidate");
     }
     
     const generatedText = data.candidates[0].content.parts[0].text;
