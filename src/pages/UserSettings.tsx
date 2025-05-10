@@ -5,6 +5,8 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 const UserSettings = () => {
   const navigate = useNavigate();
@@ -18,20 +20,26 @@ const UserSettings = () => {
       <UnifiedNavigation />
       
       <main className="flex-grow bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-semibold">Settings</h1>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={handleClose} 
-              className="rounded-full hover:bg-gray-300 shadow-md hover:shadow-lg border-2 border-gray-400 transition-all duration-300"
-            >
-              <X size={20} className="text-gray-800 hover:text-gray-900" />
-            </Button>
+        <SidebarProvider>
+          <div className="flex w-full">
+            <DashboardSidebar />
+            
+            <div className="flex-1 p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">Settings</h1>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={handleClose} 
+                  className="rounded-full hover:bg-gray-300 shadow-md hover:shadow-lg border-2 border-gray-400 transition-all duration-300"
+                >
+                  <X size={20} className="text-gray-800 hover:text-gray-900" />
+                </Button>
+              </div>
+              <UserSettingsLayout />
+            </div>
           </div>
-        </div>
-        <UserSettingsLayout />
+        </SidebarProvider>
       </main>
       
       <Footer />
