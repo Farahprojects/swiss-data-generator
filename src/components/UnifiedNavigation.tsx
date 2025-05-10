@@ -19,7 +19,9 @@ const UnifiedNavigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { toggleSidebar } = useSidebar();
+  
+  // Safely use sidebar context
+  const sidebarContext = useSidebar();
   
   const isLoggedIn = !!user;
 
@@ -42,12 +44,12 @@ const UnifiedNavigation = () => {
         <div className="flex justify-between items-center py-4">
           {/* Left section with menu trigger for logged in users */}
           <div className="flex items-center">
-            {isLoggedIn ? (
+            {isLoggedIn && sidebarContext ? (
               <Button 
                 variant="ghost" 
                 size="icon" 
                 className="md:flex hidden mr-2" 
-                onClick={toggleSidebar}
+                onClick={sidebarContext.toggleSidebar}
               >
                 <Menu size={20} />
                 <span className="sr-only">Toggle sidebar</span>
