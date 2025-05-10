@@ -51,11 +51,23 @@ interface ReportResult {
  */
 export const processReportRequest = async (payload: ReportPayload): Promise<ReportResult> => {
   console.log(`[reportOrchestrator] Processing ${payload.report_type} report request for endpoint: ${payload.endpoint}`);
+  const startTime = Date.now();
   
   try {
     // Step 1: Validate report type
     if (!["standard", "premium"].includes(payload.report_type)) {
       console.error(`[reportOrchestrator] Invalid report type: ${payload.report_type}`);
+      await logReportAttempt(
+        payload.apiKey, 
+        payload.user_id, 
+        payload.report_type, 
+        payload.endpoint,
+        payload.chartData, 
+        null, 
+        "failed", 
+        Date.now() - startTime,
+        "Invalid report type. Supported types: standard, premium"
+      );
       return { 
         success: false, 
         errorMessage: "Invalid report type. Supported types: standard, premium" 
@@ -68,6 +80,17 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
       supabase = initSupabase();
     } catch (initError) {
       console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨: Failed to initialize Supabase: ${initError instanceof Error ? initError.message : String(initError)}`);
+      await logReportAttempt(
+        payload.apiKey, 
+        payload.user_id, 
+        payload.report_type, 
+        payload.endpoint,
+        payload.chartData, 
+        null, 
+        "failed", 
+        Date.now() - startTime,
+        "Authentication error when initializing database connection"
+      );
       return {
         success: false,
         errorMessage: "Authentication error when initializing database connection"
@@ -87,11 +110,33 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
         } else {
           console.error(`[reportOrchestrator] Error fetching price: ${priceError.message}`);
         }
+        await logReportAttempt(
+          payload.apiKey, 
+          payload.user_id, 
+          payload.report_type, 
+          payload.endpoint,
+          payload.chartData, 
+          null, 
+          "failed", 
+          Date.now() - startTime,
+          `Error fetching price: ${priceError.message}`
+        );
         throw priceError;
       }
       
       if (!priceData) {
         console.error(`[reportOrchestrator] No price found for ${payload.report_type} report`);
+        await logReportAttempt(
+          payload.apiKey, 
+          payload.user_id, 
+          payload.report_type, 
+          payload.endpoint,
+          payload.chartData, 
+          null, 
+          "failed", 
+          Date.now() - startTime,
+          "Could not determine report price"
+        );
         return {
           success: false,
           errorMessage: "Could not determine report price"
@@ -106,6 +151,17 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
       } else {
         console.error(`[reportOrchestrator] Database error: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
       }
+      await logReportAttempt(
+        payload.apiKey, 
+        payload.user_id, 
+        payload.report_type, 
+        payload.endpoint,
+        payload.chartData, 
+        null, 
+        "failed", 
+        Date.now() - startTime,
+        `Database error: ${dbError instanceof Error ? dbError.message : String(dbError)}`
+      );
       return {
         success: false,
         errorMessage: "Error retrieving pricing information"
@@ -119,6 +175,17 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     const report = await generateReport(payload);
     
     if (!report.success) {
+      await logReportAttempt(
+        payload.apiKey, 
+        payload.user_id, 
+        payload.report_type, 
+        payload.endpoint,
+        payload.chartData, 
+        null, 
+        "failed", 
+        Date.now() - startTime,
+        report.errorMessage || "Failed to generate report"
+      );
       return {
         success: false,
         errorMessage: report.errorMessage || "Failed to generate report"
@@ -127,6 +194,19 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     
     // Step 4: Log usage is handled by the record_api_usage trigger
     console.log(`[reportOrchestrator] Successfully generated ${payload.report_type} report for user: ${userId}`);
+    
+    // Log successful report generation
+    await logReportAttempt(
+      payload.apiKey, 
+      payload.user_id, 
+      payload.report_type, 
+      payload.endpoint,
+      payload.chartData, 
+      report.data?.content, 
+      "success", 
+      Date.now() - startTime,
+      null
+    );
     
     return {
       success: true,
@@ -140,12 +220,61 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
       console.error(`[reportOrchestrator] Unexpected error:`, err);
     }
     
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    await logReportAttempt(
+      payload.apiKey, 
+      payload.user_id, 
+      payload.report_type, 
+      payload.endpoint,
+      payload.chartData, 
+      null, 
+      "failed", 
+      Date.now() - startTime,
+      errorMessage
+    );
+    
     return {
       success: false,
-      errorMessage: err instanceof Error ? err.message : String(err)
+      errorMessage
     };
   }
 };
+
+// Log report generation attempt to the report_logs table
+async function logReportAttempt(
+  apiKey: string,
+  userId: string,
+  reportType: string,
+  endpoint: string,
+  swissPayload: any,
+  reportText: string | null,
+  status: string,
+  durationMs: number,
+  errorMessage: string | null
+) {
+  try {
+    const supabase = initSupabase();
+    const { error } = await supabase.from("report_logs").insert({
+      api_key: apiKey,
+      user_id: userId,
+      report_type: reportType,
+      endpoint: endpoint,
+      swiss_payload: swissPayload,
+      report_text: reportText,
+      status: status,
+      duration_ms: durationMs,
+      error_message: errorMessage
+    });
+    
+    if (error) {
+      console.error(`[reportOrchestrator] Error logging report attempt: ${error.message}`);
+    } else {
+      console.log(`[reportOrchestrator] Successfully logged ${status} report attempt for user ${userId}`);
+    }
+  } catch (err) {
+    console.error(`[reportOrchestrator] Failed to log report attempt: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
 
 /**
  * Generate the appropriate report based on type

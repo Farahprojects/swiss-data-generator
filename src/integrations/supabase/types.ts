@@ -278,6 +278,48 @@ export type Database = {
         }
         Relationships: []
       }
+      report_logs: {
+        Row: {
+          api_key: string
+          created_at: string | null
+          duration_ms: number | null
+          endpoint: string
+          error_message: string | null
+          id: string
+          report_text: string | null
+          report_type: string
+          status: string | null
+          swiss_payload: Json | null
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string | null
+          duration_ms?: number | null
+          endpoint: string
+          error_message?: string | null
+          id?: string
+          report_text?: string | null
+          report_type: string
+          status?: string | null
+          swiss_payload?: Json | null
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string | null
+          duration_ms?: number | null
+          endpoint?: string
+          error_message?: string | null
+          id?: string
+          report_text?: string | null
+          report_type?: string
+          status?: string | null
+          swiss_payload?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       report_prompts: {
         Row: {
           created_at: string | null

@@ -20,7 +20,7 @@ const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
 const MAX_API_RETRIES = parseInt(Deno.env.get("MAX_API_RETRIES") || "3");
 const INITIAL_RETRY_DELAY_MS = parseInt(Deno.env.get("INITIAL_RETRY_DELAY_MS") || "1000");
 const RETRY_BACKOFF_FACTOR = parseFloat(Deno.env.get("RETRY_BACKOFF_FACTOR") || "2");
-const API_TIMEOUT_MS = parseInt(Deno.env.get("API_TIMEOUT_MS") || "90000"); /
+const API_TIMEOUT_MS = parseInt(Deno.env.get("API_TIMEOUT_MS") || "90000"); 
 const MAX_DB_RETRIES = parseInt(Deno.env.get("MAX_DB_RETRIES") || "2");
 
 
@@ -265,10 +265,50 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
   }
 }
 
+// Log report generation attempt to the report_logs table
+async function logReportAttempt(
+  apiKey: string,
+  userId: string,
+  reportType: string,
+  endpoint: string,
+  swissPayload: any,
+  reportText: string | null,
+  status: string,
+  durationMs: number,
+  errorMessage: string | null,
+  requestId: string
+) {
+  const logPrefix = `[standard-report][${requestId}]`;
+  try {
+    console.log(`${logPrefix} Logging report attempt to report_logs table`);
+    
+    const { error } = await supabase.from("report_logs").insert({
+      api_key: apiKey,
+      user_id: userId,
+      report_type: reportType,
+      endpoint: endpoint,
+      swiss_payload: swissPayload,
+      report_text: reportText,
+      status: status,
+      duration_ms: durationMs,
+      error_message: errorMessage
+    });
+    
+    if (error) {
+      console.error(`${logPrefix} Error logging report attempt: ${error.message}`);
+    } else {
+      console.log(`${logPrefix} Successfully logged ${status} report attempt for user ${userId}`);
+    }
+  } catch (err) {
+    console.error(`${logPrefix} Failed to log report attempt: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 // Main handler function
 serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8); // Short unique ID for this request
   const logPrefix = `[standard-report][${requestId}]`;
+  const startTime = Date.now();
 
   console.log(`${logPrefix} Received ${req.method} request for ${req.url}`);
 
@@ -308,6 +348,23 @@ serve(async (req) => {
     // Validate required fields
     if (!reportData || !reportData.chartData || !reportData.endpoint) {
       console.error(`${logPrefix} Missing required fields in request payload. Received:`, reportData);
+      
+      // Log the failed attempt
+      if (reportData && reportData.apiKey && reportData.user_id) {
+        await logReportAttempt(
+          reportData.apiKey,
+          reportData.user_id,
+          reportData.report_type || "standard",
+          reportData.endpoint || "unknown",
+          null,
+          null,
+          "failed",
+          Date.now() - startTime,
+          "Missing required fields: chartData and endpoint are required",
+          requestId
+        );
+      }
+      
       return jsonResponse(
         { error: "Missing required fields: chartData and endpoint are required", requestId },
         { status: 400 },
@@ -320,9 +377,25 @@ serve(async (req) => {
 
     // Generate the report
     const report = await generateReport(systemPrompt, reportData, requestId);
+    
+    // Log successful report generation
+    if (reportData.apiKey && reportData.user_id) {
+      await logReportAttempt(
+        reportData.apiKey,
+        reportData.user_id,
+        reportData.report_type || "standard",
+        reportData.endpoint,
+        reportData.chartData,
+        report,
+        "success",
+        Date.now() - startTime,
+        null,
+        requestId
+      );
+    }
 
     // Return the generated report
-    console.log(`${logPrefix} Successfully processed request`);
+    console.log(`${logPrefix} Successfully processed request in ${Date.now() - startTime}ms`);
     return jsonResponse({
       success: true,
       report: report,
@@ -332,6 +405,26 @@ serve(async (req) => {
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
     console.error(`${logPrefix} Error processing request: ${errorMessage}`, err instanceof Error ? err.stack : err);
+    
+    // Log the failed attempt if we have user info
+    if (err instanceof Error && err.cause && typeof err.cause === 'object' && err.cause !== null) {
+      const payload = err.cause as any;
+      if (payload.apiKey && payload.user_id) {
+        await logReportAttempt(
+          payload.apiKey,
+          payload.user_id,
+          payload.report_type || "standard",
+          payload.endpoint || "unknown",
+          payload.chartData,
+          null,
+          "failed",
+          Date.now() - startTime,
+          errorMessage,
+          requestId
+        );
+      }
+    }
+    
     return jsonResponse({
       success: false,
       error: errorMessage,
