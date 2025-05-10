@@ -333,12 +333,11 @@ const ActivityLogs = () => {
                     <table className="w-full table-auto">
                       <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                         <tr>
-                          <th className="px-4 py-3 text-left">Timestamp</th>
+                          <th className="px-4 py-3 text-left">Date</th>
                           <th className="px-4 py-3 text-left">Status</th>
-                          <th className="px-4 py-3 text-left">Endpoint</th>
-                          <th className="px-4 py-3 text-left">Report Type</th>
+                          <th className="px-4 py-3 text-left">Report</th>
                           <th className="px-4 py-3 text-right">Cost</th>
-                          <th className="px-4 py-3 text-right">Processing Time</th>
+                          <th className="px-4 py-3 text-right">Time</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -359,20 +358,17 @@ const ActivityLogs = () => {
                               {isFailedLog(log.response_status) ? (
                                 <span className="text-gray-400">None</span>
                               ) : (
-                                <span className="font-medium cursor-pointer text-primary hover:underline" 
-                                  onClick={() => openDrawer(log)}>
-                                  {log.request_type}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {isFailedLog(log.response_status) || !log.report_tier ? (
-                                <span className="text-gray-400">None</span>
-                              ) : (
-                                <span className="capitalize text-primary hover:underline cursor-pointer" 
-                                  onClick={() => openDrawer(log)}>
-                                  {log.report_tier}
-                                </span>
+                                <div className="flex flex-col">
+                                  <span className="font-medium cursor-pointer text-primary hover:underline" 
+                                    onClick={() => openDrawer(log)}>
+                                    {log.request_type}
+                                  </span>
+                                  {log.report_tier && (
+                                    <span className="text-xs text-gray-500 capitalize">
+                                      {log.report_tier}
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">
