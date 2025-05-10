@@ -84,7 +84,7 @@ const DashboardSidebar = () => {
     >
       <SidebarContent className="pt-6">
         {/* Collapsible button at the top */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 pt-3">
           <Button 
             variant="ghost" 
             onClick={toggleSidebar} 
