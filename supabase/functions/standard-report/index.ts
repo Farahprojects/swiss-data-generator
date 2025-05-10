@@ -145,6 +145,8 @@ async function getSystemPrompt(requestId: string): Promise<string> {
       console.error(`${logPrefix} No system prompt found for 'standard'`);
       throw new Error("System prompt not found for standard report");
     }
+    
+    console.log(`${logPrefix} Retrieved system prompt for 'standard' report type`);
     return data.system_prompt;
   };
 
@@ -163,6 +165,11 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
   const logPrefix = `[standard-report][${requestId}]`;
   console.log(`${logPrefix} Generating report with Gemini`);
 
+  // Enhanced logging of the incoming payload
+  console.log(`${logPrefix} Report data endpoint: ${reportData.endpoint}`);
+  console.log(`${logPrefix} Report data contains chartData: ${reportData.chartData ? "Yes" : "No"}`);
+  
+  // Structure data for the prompt
   const userMessage = JSON.stringify({
     chartData: reportData.chartData,
     endpoint: reportData.endpoint,
@@ -286,6 +293,7 @@ serve(async (req) => {
     let reportData;
     try {
       reportData = await req.json();
+      console.log(`${logPrefix} Successfully parsed request payload`);
     } catch (parseError) {
       console.error(`${logPrefix} Invalid JSON payload:`, parseError);
       return jsonResponse(
@@ -295,6 +303,7 @@ serve(async (req) => {
       );
     }
     console.log(`${logPrefix} Processing report for endpoint: ${reportData?.endpoint}`);
+    console.log(`${logPrefix} Payload structure check - keys: ${Object.keys(reportData || {}).join(', ')}`);
 
     // Validate required fields
     if (!reportData || !reportData.chartData || !reportData.endpoint) {
