@@ -21,6 +21,12 @@ const json = (body: unknown, status = 200) =>
 // Log helper function that writes to swissdebuglogs table (lowercase)
 async function logSwissDebug(request: any, responseStatus: number, responseText: string) {
   try {
+    // Skip logging if this is a report request - standard-report will handle that
+    if (request.requestType === "reports" || (request.payload?.report && ["standard", "premium"].includes(request.payload.report))) {
+      console.log("[swiss] Skipping debug log for report request, will be logged by report service");
+      return;
+    }
+    
     const logData = {
       api_key: request.apiKey,
       user_id: request.userId,
@@ -117,14 +123,18 @@ serve(async (req) => {
 
   const { status, text } = await translate(mergedPayload);
 
-  // Log the request and response data into the swissdebuglogs table
-  await logSwissDebug({
-    apiKey,
-    userId: row.user_id,
-    balance,
-    requestType: "natal",
-    payload: mergedPayload
-  }, status, text);
+  // Only log non-report requests here, reports are logged by the standard-report function
+  const isReportRequest = mergedPayload.request === "reports" || (mergedPayload.report && ["standard", "premium"].includes(String(mergedPayload.report)));
+  if (!isReportRequest) {
+    // Log the request and response data into the swissdebuglogs table
+    await logSwissDebug({
+      apiKey,
+      userId: row.user_id,
+      balance,
+      requestType: mergedPayload.request || "unknown",
+      payload: mergedPayload
+    }, status, text);
+  }
 
   return new Response(text, { status, headers: corsHeaders });
 });

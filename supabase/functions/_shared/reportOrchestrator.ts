@@ -195,7 +195,8 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     // Step 4: Log usage is handled by the record_api_usage trigger
     console.log(`[reportOrchestrator] Successfully generated ${payload.report_type} report for user: ${userId}`);
     
-    // Log successful report generation
+    // Log successful report generation - Note that standard-report will also log this separately
+    // This is fine as they go to different tables
     await logReportAttempt(
       payload.apiKey, 
       payload.user_id, 

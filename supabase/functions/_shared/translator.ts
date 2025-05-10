@@ -398,6 +398,8 @@ export async function translate(
             report: reportResult.report
           };
           
+          // Log here but note that the report service also logs - we may want to consolidate this
+          // in the future to avoid duplication
           await logToSupabase(
             requestType,
             raw,
