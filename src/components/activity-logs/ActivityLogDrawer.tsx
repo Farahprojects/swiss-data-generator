@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import { 
   Drawer,
@@ -16,7 +16,7 @@ type ActivityLogItem = {
   id: string;
   created_at: string;
   response_status: number;
-  endpoint?: string; // Make endpoint optional to match ActivityLog type
+  endpoint?: string;
   request_type?: string;
   report_tier: string | null;
   total_cost_usd: number;
@@ -77,7 +77,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
   };
 
   // Determine which tab to show by default
-  React.useEffect(() => {
+  useEffect(() => {
     if (logData) {
       const hasReport = logData.response_payload?.report;
       setActiveTab(hasReport ? "report" : "payload");
@@ -119,7 +119,9 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="h-[90vh] max-w-[40vw] mx-auto">
         <DrawerHeader className="flex flex-row items-center justify-between border-b p-4">
-          <DrawerTitle className="text-xl">API Log Details</DrawerTitle>
+          <DrawerTitle className="text-xl">
+            {logData?.report_tier ? `${logData.report_tier} Report` : 'API Response'}
+          </DrawerTitle>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleDownloadCSV}>
               <Download className="h-4 w-4 mr-1" />
@@ -140,52 +142,12 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
         <div className="p-4">
           {logData && (
             <div className="mb-4">
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Timestamp</p>
-                  <p className="font-medium">{new Date(logData.created_at).toLocaleString()}</p>
+              {logData.error_message && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm font-medium text-red-600">Error</p>
+                  <p className="text-red-600">{logData.error_message}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-medium">
-                    {logData.response_status >= 200 && logData.response_status < 300
-                      ? 'Success'
-                      : 'Failed'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Endpoint</p>
-                  <p className="font-medium">{logData.endpoint || logData.request_type || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Report Type</p>
-                  <p className="font-medium capitalize">{logData.report_tier || 'None'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Cost</p>
-                  <p className="font-medium">${logData.total_cost_usd?.toFixed(3) || '0.000'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Processing Time</p>
-                  <p className="font-medium">
-                    {logData.processing_time_ms 
-                      ? `${(logData.processing_time_ms / 1000).toFixed(2)}s` 
-                      : 'N/A'}
-                  </p>
-                </div>
-                {logData.error_message && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Error</p>
-                    <p className="font-medium text-red-600">{logData.error_message}</p>
-                  </div>
-                )}
-                {logData.google_geo && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Geo Lookup</p>
-                    <p className="font-medium">Yes</p>
-                  </div>
-                )}
-              </div>
+              )}
               
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid grid-cols-2">
@@ -204,7 +166,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 </TabsList>
                 
                 <TabsContent value="report" className="mt-4">
-                  <ScrollArea className="h-[50vh]">
+                  <ScrollArea className="h-[65vh]">
                     <div className="p-4 bg-gray-50 rounded-md">
                       {logData.response_payload?.report ? (
                         renderReport(logData.response_payload.report)
@@ -218,7 +180,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 </TabsContent>
                 
                 <TabsContent value="payload" className="mt-4">
-                  <ScrollArea className="h-[50vh]">
+                  <ScrollArea className="h-[65vh]">
                     <div className="p-4 bg-gray-50 rounded-md">
                       {(logData.response_payload || logData.request_payload) ? (
                         <div>
