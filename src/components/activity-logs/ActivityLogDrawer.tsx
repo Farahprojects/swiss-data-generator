@@ -16,7 +16,7 @@ type ActivityLogItem = {
   id: string;
   created_at: string;
   response_status: number;
-  endpoint: string;
+  endpoint?: string; // Make endpoint optional to match ActivityLog type
   request_type?: string;
   report_tier: string | null;
   total_cost_usd: number;
@@ -43,11 +43,11 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     if (!logData) return;
     
     // Create CSV content
-    const headers = "Timestamp,Status,Endpoint,Report Type,Cost,Processing Time\n";
+    const headers = "Timestamp,Status,Endpoint/Type,Report Type,Cost,Processing Time\n";
     const row = [
       new Date(logData.created_at).toLocaleString(),
       logData.response_status,
-      logData.endpoint,
+      logData.endpoint || logData.request_type || 'N/A',
       logData.report_tier || 'None',
       logData.total_cost_usd.toFixed(3),
       logData.processing_time_ms ? `${(logData.processing_time_ms / 1000).toFixed(2)}s` : 'N/A'
@@ -124,7 +124,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Endpoint</p>
-                  <p className="font-medium">{logData.endpoint}</p>
+                  <p className="font-medium">{logData.endpoint || logData.request_type || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Report Type</p>
