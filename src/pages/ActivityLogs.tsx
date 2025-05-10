@@ -34,6 +34,15 @@ type ActivityLog = {
   google_geo?: boolean;
 };
 
+// Define the filter state type
+type ActivityLogsFilterState = {
+  startDate?: Date;
+  endDate?: Date;
+  reportType: string | null;
+  status: string | null;
+  search: string;
+};
+
 const ActivityLogs = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
