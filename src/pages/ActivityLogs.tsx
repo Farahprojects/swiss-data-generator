@@ -396,7 +396,7 @@ const ActivityLogs = () => {
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              ${log.total_cost_usd?.toFixed(3) || '0.000'}
+                              ${log.total_cost_usd?.toFixed(2) || '0.00'}
                             </td>
                             <td className="px-4 py-3 text-right">
                               {log.processing_time_ms ? 

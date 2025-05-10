@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import { 
@@ -49,7 +48,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
       logData.response_status,
       logData.endpoint || logData.request_type || 'N/A',
       logData.report_tier || 'None',
-      logData.total_cost_usd.toFixed(3),
+      logData.total_cost_usd.toFixed(2),
       logData.processing_time_ms ? `${(logData.processing_time_ms / 1000).toFixed(2)}s` : 'N/A'
     ].join(',');
     
