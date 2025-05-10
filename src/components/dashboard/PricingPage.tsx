@@ -83,9 +83,21 @@ export const PricingPage = () => {
     );
   }
 
-  // Format price to remove unnecessary zeros
+  // Format price to correctly display dollar amounts
   const formatPrice = (price: number): string => {
-    return `$${price.toFixed(price % 1 === 0 ? 0 : 4).replace(/\.?0+$/, '')}`;
+    // If price is a whole dollar amount (e.g., 1, 5, 10)
+    if (price >= 1 && price % 1 === 0) {
+      return `$${price.toFixed(0)}`;
+    }
+    // For prices with cents like 0.05, show up to 2 decimal places (e.g., $0.05)
+    else if (price < 1) {
+      // Ensure we show 2 decimal places for cents but remove trailing zeros
+      return `$${price.toFixed(2).replace(/\.?0+$/, '')}`;
+    }
+    // For prices with dollars and cents (e.g., 1.50)
+    else {
+      return `$${price.toFixed(2).replace(/\.?0+$/, '')}`;
+    }
   };
 
   return (
