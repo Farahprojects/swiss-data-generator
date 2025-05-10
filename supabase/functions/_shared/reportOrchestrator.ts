@@ -153,7 +153,13 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
  */
 async function generateReport(payload: ReportPayload) {
   try {
-    // For now, we'll just have placeholders since standard-report is being replaced
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!supabaseUrl) {
+      console.error(`[reportOrchestrator] Missing SUPABASE_URL environment variable`);
+      throw new Error("Missing SUPABASE_URL environment variable");
+    }
+    
+    // Based on report type, call the appropriate function
     if (payload.report_type === "premium") {
       // This would call premium_report() function
       console.log("[reportOrchestrator] Generating premium report");
@@ -162,12 +168,61 @@ async function generateReport(payload: ReportPayload) {
         data: await mockPremiumReport(payload)
       };
     } else {
-      // Standard report function is being replaced
-      console.log("[reportOrchestrator] Standard report function is currently unavailable (pending replacement)");
-      return {
-        success: false,
-        errorMessage: "Standard report generation is temporarily unavailable"
-      };
+      // Call the standard-report edge function
+      console.log("[reportOrchestrator] Calling standard-report edge function");
+      
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/standard-report`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // No Authorization header as verify_jwt = false in config.toml
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        // Improved error handling for HTTP errors
+        if (!response.ok) {
+          const errorText = await response.text();
+          const status = response.status;
+          
+          if (status === 401 || errorText.includes("JWT")) {
+            console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 from standard-report function: ${status} - ${errorText}`);
+            return {
+              success: false,
+              errorMessage: `JWT authentication error (401): ${errorText}`
+            };
+          } else {
+            console.error(`[reportOrchestrator] Error from standard-report function: ${status} - ${errorText}`);
+            return {
+              success: false,
+              errorMessage: `Report generation failed with status ${status}: ${errorText}`
+            };
+          }
+        }
+        
+        const reportResult = await response.json();
+        console.log("[reportOrchestrator] Successfully received report from standard-report function");
+        
+        return {
+          success: true,
+          data: {
+            title: `Standard ${payload.endpoint} Report`,
+            content: reportResult.report,
+            generated_at: new Date().toISOString()
+          }
+        };
+      } catch (fetchErr) {
+        if (String(fetchErr).includes("JWT") || String(fetchErr).includes("401")) {
+          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 calling standard-report: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
+        } else {
+          console.error(`[reportOrchestrator] Fetch error calling standard-report:`, fetchErr);
+        }
+        return {
+          success: false,
+          errorMessage: `Network error calling report service: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`
+        };
+      }
     }
   } catch (err) {
     if (String(err).includes("JWT") || String(err).includes("401")) {
