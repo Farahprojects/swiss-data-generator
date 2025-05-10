@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,6 @@ import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
-import { useSidebar } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   DropdownMenu,
@@ -21,9 +19,6 @@ const UnifiedNavigation = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  
-  // Safely use sidebar context with optional chaining
-  const sidebarContext = useSidebar();
   
   const isLoggedIn = !!user;
 
@@ -44,19 +39,9 @@ const UnifiedNavigation = () => {
     <nav className="sticky top-0 bg-white z-50 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
-          {/* Left section with menu trigger for logged in users */}
+          {/* Left section - empty for logged in users */}
           <div className="flex items-center">
-            {isLoggedIn && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="mr-2" 
-                onClick={sidebarContext?.toggleSidebar}
-              >
-                <Menu size={20} />
-                <span className="sr-only">Toggle sidebar</span>
-              </Button>
-            )}
+            {/* Removed sidebar toggle button */}
           </div>
           
           {/* Centered logo */}
