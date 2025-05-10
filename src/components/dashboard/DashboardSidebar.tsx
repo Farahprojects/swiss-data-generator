@@ -5,7 +5,9 @@ import {
   SidebarContent, 
   SidebarMenu, 
   SidebarMenuItem, 
-  SidebarMenuButton
+  SidebarMenuButton,
+  SidebarTrigger,
+  useSidebar
 } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
@@ -14,12 +16,15 @@ import {
   FileText, 
   FileQuestion, 
   CreditCard,
-  DollarSign 
+  DollarSign,
+  Menu
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const DashboardSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { state } = useSidebar();
   
   const menuItems = [
     {
@@ -71,32 +76,57 @@ const DashboardSidebar = () => {
     return location.pathname === path;
   };
 
+  // Mobile sidebar trigger for small screens
+  const MobileSidebarTrigger = () => {
+    const { toggleSidebar } = useSidebar();
+    
+    return (
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="md:hidden fixed top-16 left-2 z-40 bg-white/80 backdrop-blur-sm shadow-sm rounded-full"
+        onClick={toggleSidebar}
+      >
+        <Menu size={20} />
+        <span className="sr-only">Toggle sidebar</span>
+      </Button>
+    );
+  };
+
   return (
-    <Sidebar variant="sidebar" collapsible="icon" className="border-r border-gray-200">
-      <SidebarContent className="pt-16"> {/* Increased padding-top from pt-4 to pt-16 */}
-        <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.name}>
-              <SidebarMenuButton 
-                isActive={isPathActive(item.path)}
-                className="text-black hover:text-primary data-[active=true]:text-primary data-[active=true]:bg-accent/20 flex items-center gap-3 px-4 py-2 w-full"
-                onClick={() => {
-                  if (item.path.includes('?tab=')) {
-                    const [path, params] = item.path.split('?tab=');
-                    navigate(`${path}?tab=${params}`);
-                  } else {
-                    navigate(item.path);
-                  }
-                }}
-              >
-                {item.icon}
-                <span>{item.name}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarContent>
-    </Sidebar>
+    <>
+      <MobileSidebarTrigger />
+      <Sidebar 
+        variant="sidebar" 
+        collapsible="icon" 
+        className="border-r border-gray-200"
+      >
+        <SidebarContent className="pt-16">
+          <SidebarMenu>
+            {menuItems.map((item) => (
+              <SidebarMenuItem key={item.name}>
+                <SidebarMenuButton 
+                  isActive={isPathActive(item.path)}
+                  className="text-black hover:text-primary data-[active=true]:text-primary data-[active=true]:bg-accent/20 flex items-center gap-3 px-4 py-2 w-full"
+                  onClick={() => {
+                    if (item.path.includes('?tab=')) {
+                      const [path, params] = item.path.split('?tab=');
+                      navigate(`${path}?tab=${params}`);
+                    } else {
+                      navigate(item.path);
+                    }
+                  }}
+                  tooltip={state === "collapsed" ? item.name : undefined}
+                >
+                  {item.icon}
+                  <span>{item.name}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarContent>
+      </Sidebar>
+    </>
   );
 };
 
