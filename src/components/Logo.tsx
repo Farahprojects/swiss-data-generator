@@ -21,19 +21,26 @@ const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProp
   };
 
   const logoElement = (
-    <div className={cn('flex items-baseline', className)}>
+    <div className={cn('flex items-center', className)}>
       <span 
         className={cn(
-          'font-gt-sectra font-medium tracking-tight text-black', 
+          'font-gt-sectra font-medium text-black tracking-wide', 
           sizeClasses[size]
         )}
-        style={{ letterSpacing: '-0.02em' }}
       >
         Therai
       </span>
       <span 
         className={cn(
-          'font-sans font-medium text-[#7B61FF] ml-[0.15em]', 
+          'font-gt-sectra font-medium text-black mr-0.5', 
+          sizeClasses[size]
+        )}
+      >
+        .
+      </span>
+      <span 
+        className={cn(
+          'font-sans font-medium text-[#7B61FF]', 
           sizeClasses[size]
         )}
       >
@@ -44,7 +51,7 @@ const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProp
 
   if (asLink) {
     return (
-      <Link to={homePath} className={cn('flex items-baseline', linkClassName)}>
+      <Link to={homePath} className={cn('flex items-center', linkClassName)}>
         {logoElement}
       </Link>
     );
