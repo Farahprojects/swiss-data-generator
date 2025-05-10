@@ -84,6 +84,37 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     }
   }, [logData]);
 
+  // Helper function to safely render a report
+  const renderReport = (report: any) => {
+    // If report is a string, render it directly
+    if (typeof report === 'string') {
+      return report;
+    }
+    
+    // If report is an object with specific structure, render its content
+    if (report && typeof report === 'object') {
+      // Handle object with title, content structure
+      if ('title' in report && 'content' in report) {
+        return (
+          <div>
+            <h4 className="font-medium mb-2">{report.title}</h4>
+            <div className="whitespace-pre-wrap">{report.content}</div>
+            {report.generated_at && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Generated at: {new Date(report.generated_at).toLocaleString()}
+              </p>
+            )}
+          </div>
+        );
+      }
+      
+      // If it's some other object, stringify it
+      return JSON.stringify(report, null, 2);
+    }
+    
+    return 'No report content available';
+  };
+
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="h-[90vh] max-w-[40vw] mx-auto">
@@ -176,12 +207,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                   <ScrollArea className="h-[50vh]">
                     <div className="p-4 bg-gray-50 rounded-md">
                       {logData.response_payload?.report ? (
-                        <div>
-                          <h3 className="font-medium mb-2">{logData.report_tier?.toUpperCase()} Report</h3>
-                          <div className="whitespace-pre-wrap">
-                            {logData.response_payload.report}
-                          </div>
-                        </div>
+                        renderReport(logData.response_payload.report)
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
                           No report available
