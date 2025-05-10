@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -383,10 +382,10 @@ const ActivityLogs = () => {
                             </td>
                             <td className="px-4 py-3">
                               {isFailedLog(log.response_status) ? (
-                                <span className="text-gray-500">None</span>
+                                <span className="text-gray-500 text-sm">None</span>
                               ) : (
                                 <div className="flex flex-col">
-                                  <span className="font-medium cursor-pointer text-primary hover:underline" 
+                                  <span className="font-medium cursor-pointer text-primary hover:underline text-sm" 
                                     onClick={() => openDrawer(log)}>
                                     {log.request_type}
                                   </span>
