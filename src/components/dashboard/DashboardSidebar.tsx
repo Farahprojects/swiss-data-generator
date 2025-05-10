@@ -67,7 +67,7 @@ const DashboardSidebar = () => {
 
   return (
     <Sidebar variant="sidebar" collapsible="icon" className="border-r border-gray-200">
-      <SidebarContent className="pt-4">
+      <SidebarContent className="pt-16"> {/* Increased padding-top from pt-4 to pt-16 */}
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.name}>
