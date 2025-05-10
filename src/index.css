@@ -52,6 +52,8 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --header-height: 64px; /* Define header height as CSS variable */
   }
 
   .dark {
@@ -105,4 +107,22 @@
   .font-gt-sectra {
     font-family: 'GT Sectra', serif;
   }
+}
+
+/* Updated layout structure to account for header height */
+.dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.dashboard-content {
+  display: flex;
+  flex-grow: 1;
+}
+
+/* Ensure the sidebar starts below the header */
+[data-sidebar="sidebar"] {
+  padding-top: 0;
+  margin-top: 0;
 }

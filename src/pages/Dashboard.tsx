@@ -69,7 +69,7 @@ const Dashboard = () => {
       </div>
       
       {/* Main content area - flexes below the header */}
-      <div className="flex flex-grow bg-gray-50 pt-1">
+      <div className="flex flex-grow bg-gray-50 mt-0">
         <div className="flex w-full">
           <DashboardSidebar />
           
