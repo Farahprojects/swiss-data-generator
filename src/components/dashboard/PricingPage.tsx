@@ -83,6 +83,11 @@ export const PricingPage = () => {
     );
   }
 
+  // Format price to remove unnecessary zeros
+  const formatPrice = (price: number): string => {
+    return `$${price.toFixed(price % 1 === 0 ? 0 : 4).replace(/\.?0+$/, '')}`;
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -117,7 +122,7 @@ export const PricingPage = () => {
                         <p className="text-sm text-gray-500 mt-1">{price.description || 'Standard pricing'}</p>
                       </div>
                       <Badge variant="outline" className="text-primary border-primary">
-                        ${price.unit_price_usd.toFixed(4)}
+                        {formatPrice(price.unit_price_usd)}
                       </Badge>
                     </div>
                     
