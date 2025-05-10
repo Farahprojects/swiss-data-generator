@@ -42,7 +42,7 @@ client_id  = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
 secret     = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 
 [functions]
-timeout = 30
+timeout = 90
 
 # Edge-function–specific settings
 [functions.standard-report]
