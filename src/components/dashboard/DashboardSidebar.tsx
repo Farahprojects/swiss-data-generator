@@ -13,7 +13,8 @@ import {
   Activity, 
   FileText, 
   FileQuestion, 
-  CreditCard 
+  CreditCard,
+  DollarSign 
 } from 'lucide-react';
 
 const DashboardSidebar = () => {
@@ -35,6 +36,11 @@ const DashboardSidebar = () => {
       name: "Activity Logs",
       path: "/dashboard/activity-logs",
       icon: <Activity size={20} />
+    },
+    {
+      name: "Pricing",
+      path: "/dashboard?tab=pricing",
+      icon: <DollarSign size={20} />
     },
     {
       name: "Reports",

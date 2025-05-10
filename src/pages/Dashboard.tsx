@@ -9,6 +9,7 @@ import { RecentApiCalls } from "@/components/dashboard/RecentApiCalls";
 import { BillingSection } from "@/components/dashboard/BillingSection";
 import { WebhookLogsViewer } from "@/components/dashboard/WebhookLogsViewer";
 import { SwissDebugLogsViewer } from "@/components/dashboard/SwissDebugLogsViewer";
+import { PricingPage } from "@/components/dashboard/PricingPage";
 import { useAuth } from "@/contexts/AuthContext";
 import ApiDocumentationContent from "@/components/dashboard/ApiDocumentationContent";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -44,6 +45,8 @@ const Dashboard = () => {
         return <WebhookLogsViewer />;
       case "swiss-debug-logs":
         return <SwissDebugLogsViewer />;
+      case "pricing":
+        return <PricingPage />;
       case "overview":
       default:
         return (
