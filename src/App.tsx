@@ -14,6 +14,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
 import PaymentReturn from './pages/PaymentReturn';
+import ActivityLogs from './pages/ActivityLogs';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "sonner";
@@ -75,6 +76,14 @@ function AppContent() {
           element={
             <AuthGuard>
               <UpgradePlan />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/dashboard/activity-logs"
+          element={
+            <AuthGuard>
+              <ActivityLogs />
             </AuthGuard>
           }
         />

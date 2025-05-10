@@ -10,6 +10,9 @@ import { WebhookLogsViewer } from "@/components/dashboard/WebhookLogsViewer";
 import { SwissDebugLogsViewer } from "@/components/dashboard/SwissDebugLogsViewer";
 import { useAuth } from "@/contexts/AuthContext";
 import ApiDocumentationContent from "@/components/dashboard/ApiDocumentationContent";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Activity } from "lucide-react";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -20,7 +23,17 @@ const Dashboard = () => {
       
       <main className="flex-grow bg-gray-50">
         <div className="container mx-auto px-4 py-12">
-          <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <div className="flex items-center gap-4">
+              <Link to="/dashboard/activity-logs">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Activity size={16} />
+                  Activity Logs
+                </Button>
+              </Link>
+            </div>
+          </div>
           
           <Tabs defaultValue="overview" className="space-y-8">
             <TabsList>
