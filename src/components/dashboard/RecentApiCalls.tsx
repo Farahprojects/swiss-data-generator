@@ -1,6 +1,8 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Card,
   CardContent,
@@ -24,6 +26,8 @@ interface ApiRequestLog {
 export const RecentApiCalls = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   // Mock data instead of querying a non-existent table
   const recentCalls: ApiRequestLog[] = [
@@ -62,6 +66,10 @@ export const RecentApiCalls = () => {
     );
   }
 
+  const handleViewAllActivity = () => {
+    navigate('/dashboard/activity-logs');
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -76,7 +84,9 @@ export const RecentApiCalls = () => {
                 <th className="text-left py-3 px-4 font-medium">Endpoint</th>
                 <th className="text-left py-3 px-4 font-medium">System</th>
                 <th className="text-left py-3 px-4 font-medium">Status</th>
-                <th className="text-left py-3 px-4 font-medium">Time</th>
+                {!isMobile && (
+                  <th className="text-left py-3 px-4 font-medium">Time</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -96,9 +106,11 @@ export const RecentApiCalls = () => {
                       {call.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-gray-500">
-                    {new Date(call.created_at).toLocaleString()}
-                  </td>
+                  {!isMobile && (
+                    <td className="py-3 px-4 text-gray-500">
+                      {new Date(call.created_at).toLocaleString()}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -106,7 +118,13 @@ export const RecentApiCalls = () => {
         </div>
       </CardContent>
       <CardFooter>
-        <Button variant="outline" className="w-full">View All Activity</Button>
+        <Button 
+          variant="outline" 
+          className="w-full"
+          onClick={handleViewAllActivity}
+        >
+          View All Activity
+        </Button>
       </CardFooter>
     </Card>
   );

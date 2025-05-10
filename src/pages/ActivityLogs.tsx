@@ -18,6 +18,7 @@ import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Table,
   TableBody,
@@ -64,6 +65,7 @@ const ActivityLogs = () => {
     status: null,
     search: '',
   });
+  const isMobile = useIsMobile();
   
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -237,11 +239,11 @@ const ActivityLogs = () => {
             <div className="p-4 md:p-0">
               <h1 className="text-2xl font-bold mb-6">API Activity Logs</h1>
               
-              {/* Filters Bar */}
+              {/* Filters Bar - Mobile Friendly */}
               <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
                 <div className="flex flex-col gap-4">
                   {/* Date Range Picker */}
-                  <div className="flex-1 min-w-[200px]">
+                  <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <Popover>
                         <PopoverTrigger asChild>
@@ -294,7 +296,8 @@ const ActivityLogs = () => {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Responsive grid for filter controls */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     {/* Report Type Dropdown */}
                     <div>
                       <Select
@@ -337,7 +340,7 @@ const ActivityLogs = () => {
                     </div>
                     
                     {/* Search Field */}
-                    <div>
+                    <div className="sm:col-span-2 md:col-span-1">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -371,7 +374,10 @@ const ActivityLogs = () => {
                           <th className="px-4 py-3 text-left">Status</th>
                           <th className="px-4 py-3 text-left">Type</th>
                           <th className="px-4 py-3 text-right">Cost</th>
-                          <th className="px-4 py-3 text-right">Time</th>
+                          {/* Hide Time column on mobile */}
+                          {!isMobile && (
+                            <th className="px-4 py-3 text-right">Time</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -408,11 +414,14 @@ const ActivityLogs = () => {
                             <td className="px-4 py-3 text-right">
                               ${log.total_cost_usd?.toFixed(2) || '0.00'}
                             </td>
-                            <td className="px-4 py-3 text-right">
-                              {log.processing_time_ms ? 
-                                `${(log.processing_time_ms / 1000).toFixed(2)}s` : 
-                                'N/A'}
-                            </td>
+                            {/* Hide Time column on mobile */}
+                            {!isMobile && (
+                              <td className="px-4 py-3 text-right">
+                                {log.processing_time_ms ? 
+                                  `${(log.processing_time_ms / 1000).toFixed(2)}s` : 
+                                  'N/A'}
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
