@@ -34,6 +34,13 @@ type ActivityLog = {
   total_cost_usd: number;
   processing_time_ms: number | null;
   response_payload?: any;
+  // Add additional fields that might come from the database
+  translator_log_id?: string;
+  unit_price_usd?: number;
+  report_price_usd?: number;
+  geo_price_usd?: number;
+  used_geo_lookup?: boolean;
+  user_id?: string;
 };
 
 const ActivityLogs = () => {
@@ -58,7 +65,7 @@ const ActivityLogs = () => {
     try {
       let query = supabase
         .from('api_usage')
-        .select('*')
+        .select('*, translator_logs(response_status, processing_time_ms, response_payload)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
@@ -82,17 +89,17 @@ const ActivityLogs = () => {
         // Convert the text status to a number
         const statusCode = filters.status === 'success' ? 200 : 
                           filters.status === 'failed' ? 400 : null;
-        if (statusCode) {
-          query = query.eq('response_status', statusCode);
+        if (statusCode && statusCode === 200) {
+          query = query.eq('translator_logs.response_status', statusCode);
+        } else if (statusCode && statusCode === 400) {
+          query = query.or('translator_logs.response_status.gt.399,translator_logs.response_status.lt.600');
         }
       }
       
       if (filters.search) {
         // This is a simplified search - in a real implementation you'd need to 
         // check if the database supports full-text search or adjust accordingly
-        query = query.textSearch('endpoint', filters.search, {
-          config: 'english'
-        });
+        query = query.ilike('endpoint', `%${filters.search}%`);
       }
       
       const { data, error } = await query;
@@ -101,8 +108,19 @@ const ActivityLogs = () => {
         console.error("Error fetching logs:", error);
         return;
       }
+
+      // Process the data to match the ActivityLog type
+      const processedData: ActivityLog[] = data?.map(item => {
+        const translatorData = item.translator_logs?.[0] || {};
+        return {
+          ...item,
+          response_status: translatorData.response_status || 0,
+          processing_time_ms: translatorData.processing_time_ms || null,
+          response_payload: translatorData.response_payload || null
+        };
+      }) || [];
       
-      setLogs(data as ActivityLog[]);
+      setLogs(processedData);
     } catch (err) {
       console.error("Unexpected error loading logs:", err);
     } finally {
@@ -213,7 +231,7 @@ const ActivityLogs = () => {
                     <SelectValue placeholder="Report Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Types</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="standard">Standard</SelectItem>
                     <SelectItem value="premium">Premium</SelectItem>
                     <SelectItem value="essence">Essence</SelectItem>
@@ -236,7 +254,7 @@ const ActivityLogs = () => {
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Status</SelectItem>
+                    <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="success">Success</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
                   </SelectContent>
