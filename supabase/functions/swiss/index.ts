@@ -1,8 +1,8 @@
-
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { translate } from "../_shared/translator.ts";
 
+// Initialize Supabase client
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -17,15 +17,27 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders });
 
-// Log helper
-async function logDebug(source: string, message: string, data: any = null) {
+// Log helper function
+async function logSwissDebug(request: any, responseStatus: number, responseText: string) {
   try {
-    await sb.from("debug_logs").insert([{ source, message, data }]);
+    const logData = {
+      api_key: request.apiKey,
+      user_id: request.userId,
+      balance_usd: request.balance,
+      request_type: request.requestType,
+      request_payload: request.payload,
+      response_status: responseStatus,
+      response_text: responseText
+    };
+    
+    // Insert log data into SwissDebugLogs table
+    await sb.from("SwissDebugLogs").insert([logData]);
   } catch (err) {
-    console.error("[debug_logs] Insert failed:", err);
+    console.error("[SwissDebugLogs] Failed to write log:", err);
   }
 }
 
+// Function to extract API key from request
 function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown>): string | null {
   const auth = headers.get("authorization");
   if (auth) {
@@ -66,11 +78,8 @@ serve(async (req) => {
 
   const apiKey = extractApiKey(req.headers, urlObj, bodyJson);
   if (!apiKey) {
-    await logDebug("swiss", "Missing API key", { headers: req.headers });
     return json({ success: false, message: "Missing API key." }, 401);
   }
-
-  await logDebug("swiss", "Extracted API key", { apiKey });
 
   const { data: row, error } = await sb
     .from("v_api_key_balance")
@@ -79,12 +88,10 @@ serve(async (req) => {
     .maybeSingle();
 
   if (error) {
-    await logDebug("swiss", "Balance lookup error", { apiKey, error });
     return json({ success: false, message: "Balance lookup failed." }, 500);
   }
 
   if (!row) {
-    await logDebug("swiss", "API key not found in v_api_key_balance", { apiKey });
     return json({
       success: false,
       message: "Invalid API key. Log in at theraiapi.com to check your credentials.",
@@ -92,10 +99,7 @@ serve(async (req) => {
   }
 
   const balance = parseFloat(String(row.balance_usd));
-  await logDebug("swiss", "Balance fetched", { user_id: row.user_id, balance });
-
   if (!Number.isFinite(balance) || balance <= 0) {
-    await logDebug("swiss", "Insufficient balance", { user_id: row.user_id, balance });
     return json({
       success: false,
       message: `Your account is active, but your balance is $${balance}. Please top up to continue.`,
@@ -110,8 +114,16 @@ serve(async (req) => {
     api_key: apiKey,
   };
 
-  await logDebug("swiss", "Sending payload to translator", { user_id: row.user_id });
-
   const { status, text } = await translate(mergedPayload);
+
+  // Log the request and response data into the SwissDebugLogs table
+  await logSwissDebug({
+    apiKey,
+    userId: row.user_id,
+    balance,
+    requestType: "natal",
+    payload: mergedPayload
+  }, status, text);
+
   return new Response(text, { status, headers: corsHeaders });
 });
