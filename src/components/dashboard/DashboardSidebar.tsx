@@ -66,7 +66,7 @@ const DashboardSidebar = () => {
   };
 
   return (
-    <Sidebar variant="sidebar" collapsible="icon" className="border-r border-gray-200 min-h-[calc(100vh-64px)]">
+    <Sidebar variant="sidebar" collapsible="icon" className="border-r border-gray-200">
       <SidebarContent className="pt-4">
         <SidebarMenu>
           {menuItems.map((item) => (

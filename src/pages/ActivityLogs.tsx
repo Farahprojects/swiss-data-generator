@@ -191,7 +191,7 @@ const ActivityLogs = () => {
     <div className="flex flex-col min-h-screen">
       <UnifiedNavigation />
       
-      <main className="flex-grow bg-gray-50">
+      <div className="flex flex-grow bg-gray-50">
         <SidebarProvider>
           <div className="flex w-full">
             <DashboardSidebar />
@@ -418,7 +418,7 @@ const ActivityLogs = () => {
             </div>
           </div>
         </SidebarProvider>
-      </main>
+      </div>
       
       {/* Drawer for displaying log details */}
       <ActivityLogDrawer
