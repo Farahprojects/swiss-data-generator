@@ -18,7 +18,7 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders });
 
-// Log helper function that writes to SwissDebugLogs table
+// Log helper function that writes to swissdebuglogs table (lowercase)
 async function logSwissDebug(request: any, responseStatus: number, responseText: string) {
   try {
     const logData = {
@@ -31,10 +31,10 @@ async function logSwissDebug(request: any, responseStatus: number, responseText:
       response_text: responseText
     };
     
-    // Insert log data into SwissDebugLogs table
-    await sb.from("SwissDebugLogs").insert([logData]);
+    // Insert log data into swissdebuglogs table (lowercase)
+    await sb.from("swissdebuglogs").insert([logData]);
   } catch (err) {
-    console.error("[SwissDebugLogs] Failed to write log:", err);
+    console.error("[swissdebuglogs] Failed to write log:", err);
   }
 }
 
@@ -117,7 +117,7 @@ serve(async (req) => {
 
   const { status, text } = await translate(mergedPayload);
 
-  // Log the request and response data into the SwissDebugLogs table
+  // Log the request and response data into the swissdebuglogs table
   await logSwissDebug({
     apiKey,
     userId: row.user_id,

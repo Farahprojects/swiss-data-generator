@@ -167,39 +167,6 @@ export type Database = {
         }
         Relationships: []
       }
-      debug_logs: {
-        Row: {
-          created_at: string | null
-          data: Json | null
-          id: string
-          log_level: string | null
-          message: string | null
-          sequence_number: number | null
-          session_id: string | null
-          source: string
-        }
-        Insert: {
-          created_at?: string | null
-          data?: Json | null
-          id?: string
-          log_level?: string | null
-          message?: string | null
-          sequence_number?: number | null
-          session_id?: string | null
-          source: string
-        }
-        Update: {
-          created_at?: string | null
-          data?: Json | null
-          id?: string
-          log_level?: string | null
-          message?: string | null
-          sequence_number?: number | null
-          session_id?: string | null
-          source?: string
-        }
-        Relationships: []
-      }
       geo_cache: {
         Row: {
           lat: number

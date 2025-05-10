@@ -7,6 +7,7 @@ import { AiCreditsCard } from "@/components/dashboard/AiCreditsCard";
 import { RecentApiCalls } from "@/components/dashboard/RecentApiCalls";
 import { BillingSection } from "@/components/dashboard/BillingSection";
 import { WebhookLogsViewer } from "@/components/dashboard/WebhookLogsViewer";
+import { SwissDebugLogsViewer } from "@/components/dashboard/SwissDebugLogsViewer";
 import { useAuth } from "@/contexts/AuthContext";
 import ApiDocumentationContent from "@/components/dashboard/ApiDocumentationContent";
 
@@ -29,7 +30,10 @@ const Dashboard = () => {
               <TabsTrigger value="docs">Documentation</TabsTrigger>
               <TabsTrigger value="billing">Billing</TabsTrigger>
               {user?.email?.includes('admin') && (
-                <TabsTrigger value="webhook-logs">Webhook Logs</TabsTrigger>
+                <>
+                  <TabsTrigger value="webhook-logs">Webhook Logs</TabsTrigger>
+                  <TabsTrigger value="swiss-debug-logs">Swiss Debug Logs</TabsTrigger>
+                </>
               )}
             </TabsList>
             
@@ -58,9 +62,15 @@ const Dashboard = () => {
             </TabsContent>
 
             {user?.email?.includes('admin') && (
-              <TabsContent value="webhook-logs" className="space-y-6">
-                <WebhookLogsViewer />
-              </TabsContent>
+              <>
+                <TabsContent value="webhook-logs" className="space-y-6">
+                  <WebhookLogsViewer />
+                </TabsContent>
+                
+                <TabsContent value="swiss-debug-logs" className="space-y-6">
+                  <SwissDebugLogsViewer />
+                </TabsContent>
+              </>
             )}
           </Tabs>
         </div>
