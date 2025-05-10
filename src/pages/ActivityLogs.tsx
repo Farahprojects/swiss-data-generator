@@ -395,7 +395,7 @@ const ActivityLogs = () => {
                                 <div className="flex flex-col">
                                   <span className="font-medium cursor-pointer text-primary hover:underline text-sm" 
                                     onClick={() => openDrawer(log)}>
-                                    {log.request_type}
+                                    {formatTypeValue(log.request_type)}
                                   </span>
                                   {log.report_tier && (
                                     <span className="text-sm text-primary">
