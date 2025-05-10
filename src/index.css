@@ -106,15 +106,3 @@
     font-family: 'GT Sectra', serif;
   }
 }
-
-/* Sidebar responsive behavior */
-@media (max-width: 1023px) {
-  [data-sidebar="sidebar"] {
-    display: none;
-  }
-  
-  [data-sidebar="sidebar"].visible,
-  [data-sidebar="sidebar"][data-mobile-open="true"] {
-    display: block;
-  }
-}
