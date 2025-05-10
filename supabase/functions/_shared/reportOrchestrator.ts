@@ -1,8 +1,8 @@
+
 // Report orchestrator utility
 // Handles report processing workflow including balance checks and report generation
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { checkApiKeyAndBalance } from "./balanceChecker.ts";
 
 // Initialize Supabase client
 const initSupabase = () => {
@@ -112,43 +112,10 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
       };
     }
     
-    // Step 3: Check user balance with balanceChecker
-    console.log(`[reportOrchestrator] Calling balanceChecker with API key: ${payload.apiKey.substring(0, 4)}...`);
-    const { isValid, userId, hasBalance, errorMessage } = await checkApiKeyAndBalance(payload.apiKey);
+    // Trust the payload for user_id instead of checking balances
+    const userId = payload.user_id;
     
-    if (!isValid || !hasBalance) {
-      console.error(`[reportOrchestrator] Balance check failed: ${errorMessage}`);
-      
-      // Step 4: If balance insufficient, check if user has payment method on file
-      if (isValid && !hasBalance) {
-        // Check if user has any stripe customer ID
-        const { data: stripeData } = await supabase
-          .from("stripe_users")
-          .select("stripe_customer_id")
-          .eq("user_id", userId)
-          .maybeSingle();
-        
-        if (stripeData?.stripe_customer_id) {
-          // Queue auto top-up
-          console.log(`[reportOrchestrator] Queuing auto top-up for user: ${userId}`);
-          await supabase
-            .from("topup_queue")
-            .insert({
-              user_id: userId,
-              amount_usd: 100.00 // Use the new $100 top-up amount
-            });
-          
-          return {
-            success: false,
-            errorMessage: "Your account is being topped up. Please try your request again in a few moments."
-          };
-        }
-      }
-      
-      return { success: false, errorMessage: errorMessage || "Insufficient balance" };
-    }
-    
-    // Step 5: Generate the report
+    // Step 3: Generate the report
     const report = await generateReport(payload);
     
     if (!report.success) {
@@ -158,7 +125,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
       };
     }
     
-    // Step 6: Log usage is handled by the record_api_usage trigger
+    // Step 4: Log usage is handled by the record_api_usage trigger
     console.log(`[reportOrchestrator] Successfully generated ${payload.report_type} report for user: ${userId}`);
     
     return {
