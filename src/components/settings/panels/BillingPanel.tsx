@@ -1,6 +1,7 @@
+
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, PlusCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -8,21 +9,20 @@ import { getStripeLinkByName, STRIPE_LINK_TYPES } from "@/utils/stripe-links";
 import { supabase } from "@/integrations/supabase/client";
 
 // Mock data - this would come from database in a real app
-const mockSubscriptionData = {
-  plan: "Starter",
-  apiCallLimit: 50000,
-  apiCallsUsed: 5000,
-  nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  invoices: [
-    { id: "inv_123", date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), amount: 19.99 },
-    { id: "inv_456", date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), amount: 19.99 },
-    { id: "inv_789", date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), amount: 19.99 },
+const mockData = {
+  currentBalance: 250,
+  apiCallsRemaining: 5000,
+  costPerCall: 0.05,
+  transactions: [
+    { id: "tx_123", date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), amount: 100 },
+    { id: "tx_456", date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), amount: 200 },
+    { id: "tx_789", date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), amount: 50 },
   ]
 };
 
 export const BillingPanel = () => {
   const { user } = useAuth();
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
+  const [isProcessingTopup, setIsProcessingTopup] = useState(false);
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
   const location = useLocation();
   
@@ -42,25 +42,44 @@ export const BillingPanel = () => {
     }
   }, [location]);
   
-  const handleManageSubscription = async () => {
-    setIsLoadingSubscription(true);
+  const handleTopup = async () => {
+    if (!user) {
+      toast.error("You must be logged in to top-up credits");
+      return;
+    }
     
+    setIsProcessingTopup(true);
     try {
-      // Get the subscription management link from the database
-      const subscriptionLink = await getStripeLinkByName(STRIPE_LINK_TYPES.MANAGE_SUBSCRIPTION);
+      // Try to get API credits topup link from the database
+      const topupLink = await getStripeLinkByName(STRIPE_LINK_TYPES.API_CREDITS_TOPUP);
       
-      if (!subscriptionLink || !subscriptionLink.url) {
-        toast.error("Could not find subscription management link");
-        throw new Error("Could not find subscription management link");
+      if (!topupLink || !topupLink.url) {
+        // Fallback to creating a topup checkout session
+        const { data, error } = await supabase.functions.invoke("create-checkout", {
+          body: {
+            mode: "payment",
+            product: "API Credits",
+            amount: 100, // Default amount for topup
+            returnPath: location.pathname
+          }
+        });
+        
+        if (error || !data?.url) {
+          toast.error("Could not create checkout session");
+          throw new Error("Could not create checkout session");
+        }
+        
+        // Redirect to the payment URL
+        window.location.href = data.url;
+      } else {
+        // Use the preconfigured topup link
+        window.location.href = topupLink.url;
       }
-      
-      // Redirect to the subscription management URL
-      window.location.href = subscriptionLink.url;
-    } catch (error) {
-      console.error("Failed to redirect to subscription portal:", error);
-      toast.error("Could not access subscription management. Please try again later.");
+    } catch (err) {
+      console.error("Failed to initiate topup:", err);
+      toast.error("Failed to process topup. Please try again.");
     } finally {
-      setIsLoadingSubscription(false);
+      setIsProcessingTopup(false);
     }
   };
   
@@ -103,38 +122,35 @@ export const BillingPanel = () => {
 
   return (
     <div className="p-6 bg-white rounded-lg shadow">
-      <h2 className="text-2xl font-semibold mb-6">Billing & Subscription</h2>
+      <h2 className="text-2xl font-semibold mb-6">Billing & API Credits</h2>
       
       <div className="mb-8 p-6 border rounded-lg">
-        <h3 className="text-lg font-medium mb-4">Current Plan</h3>
+        <h3 className="text-lg font-medium mb-4">API Credits Balance</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <p className="text-sm text-gray-500">Plan Name</p>
-            <p className="font-medium">{mockSubscriptionData.plan}</p>
+            <p className="text-sm text-gray-500">Current Balance</p>
+            <p className="font-medium">${mockData.currentBalance.toFixed(2)}</p>
           </div>
           
           <div>
-            <p className="text-sm text-gray-500">Next Billing Date</p>
-            <p className="font-medium">
-              {mockSubscriptionData.nextBillingDate.toLocaleDateString()}
-            </p>
+            <p className="text-sm text-gray-500">API Calls Remaining</p>
+            <p className="font-medium">{mockData.apiCallsRemaining.toLocaleString()}</p>
           </div>
           
           <div>
-            <p className="text-sm text-gray-500">API Calls</p>
-            <p className="font-medium">
-              {mockSubscriptionData.apiCallsUsed.toLocaleString()} / {mockSubscriptionData.apiCallLimit.toLocaleString()}
-            </p>
+            <p className="text-sm text-gray-500">Cost Per Call</p>
+            <p className="font-medium">${mockData.costPerCall.toFixed(3)}</p>
           </div>
         </div>
         
         <Button 
-          onClick={handleManageSubscription} 
-          disabled={isLoadingSubscription}
+          onClick={handleTopup} 
+          disabled={isProcessingTopup}
+          className="flex items-center gap-2"
         >
-          <ExternalLink size={16} className="mr-2" />
-          {isLoadingSubscription ? "Loading..." : "Manage Subscription"}
+          <PlusCircle size={16} />
+          {isProcessingTopup ? "Processing..." : "Top-up Credits"}
         </Button>
       </div>
       
@@ -164,27 +180,27 @@ export const BillingPanel = () => {
       </div>
       
       <div>
-        <h3 className="text-lg font-medium mb-4">Billing History</h3>
+        <h3 className="text-lg font-medium mb-4">Transaction History</h3>
         
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b">
                 <th className="text-left py-3 px-4 font-medium text-gray-500">Date</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Invoice</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-500">Transaction ID</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-500">Amount</th>
               </tr>
             </thead>
             <tbody>
-              {mockSubscriptionData.invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-b">
-                  <td className="py-3 px-4">{invoice.date.toLocaleDateString()}</td>
+              {mockData.transactions.map((transaction) => (
+                <tr key={transaction.id} className="border-b">
+                  <td className="py-3 px-4">{transaction.date.toLocaleDateString()}</td>
                   <td className="py-3 px-4">
                     <Button variant="link" className="p-0 h-auto">
-                      {invoice.id}
+                      {transaction.id}
                     </Button>
                   </td>
-                  <td className="py-3 px-4">${invoice.amount.toFixed(2)}</td>
+                  <td className="py-3 px-4">${transaction.amount.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

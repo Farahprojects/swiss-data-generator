@@ -8,34 +8,79 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useState } from "react";
+import { toast } from "sonner";
+import { PlusCircle } from "lucide-react";
+
+// Mock data - this would come from an API in a real app
+const mockData = {
+  currentBalance: 250,
+  apiCallsRemaining: 5000,
+  costPerCall: 0.05,
+  transactions: [
+    { id: "tx_123", date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), amount: 100, description: "API Credits Top-up" },
+    { id: "tx_456", date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), amount: 200, description: "API Credits Top-up" },
+    { id: "tx_789", date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), amount: 50, description: "API Credits Top-up" },
+  ]
+};
 
 export const BillingSection = () => {
+  const [isProcessingTopup, setIsProcessingTopup] = useState(false);
+  
+  const handleTopup = async () => {
+    setIsProcessingTopup(true);
+    
+    try {
+      // In a real app, this would call an API endpoint to initiate the topup process
+      // For example: await supabase.functions.invoke('create-topup-checkout')
+      
+      toast.success("Redirecting to payment page...");
+      setTimeout(() => {
+        setIsProcessingTopup(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to initiate topup:", error);
+      toast.error("Could not process topup. Please try again.");
+      setIsProcessingTopup(false);
+    }
+  };
+  
   return (
     <>
-      <Card>
+      <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Subscription</CardTitle>
-          <CardDescription>Manage your plan and billing</CardDescription>
+          <CardTitle>API Credits Balance</CardTitle>
+          <CardDescription>Your current API credits and usage</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex justify-between items-center pb-4 border-b">
               <div>
-                <h3 className="font-medium">Professional Plan</h3>
-                <p className="text-sm text-gray-500">50,000 API calls/month</p>
+                <h3 className="font-medium">Current Balance</h3>
+                <p className="text-sm text-gray-500">{mockData.apiCallsRemaining} API calls remaining</p>
               </div>
               <div className="text-right">
-                <p className="font-bold">$79/month</p>
-                <p className="text-sm text-gray-500">Next billing: May 25, 2023</p>
+                <p className="font-bold">${mockData.currentBalance.toFixed(2)}</p>
+                <p className="text-sm text-gray-500">${mockData.costPerCall.toFixed(3)} per API call</p>
               </div>
             </div>
-            <div className="pt-2 space-y-4">
-              <div className="flex justify-between">
-                <Button variant="outline">Change Plan</Button>
-                <Button variant="outline" className="text-red-500 border-red-200 hover:bg-red-50">
-                  Cancel Subscription
-                </Button>
-              </div>
+            <div className="pt-2">
+              <Button 
+                onClick={handleTopup}
+                disabled={isProcessingTopup}
+                className="flex items-center gap-2"
+              >
+                <PlusCircle size={16} />
+                {isProcessingTopup ? "Processing..." : "Top-up Credits"}
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -64,50 +109,36 @@ export const BillingSection = () => {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Billing History</CardTitle>
-          <CardDescription>View your previous invoices</CardDescription>
+          <CardTitle>Transaction History</CardTitle>
+          <CardDescription>Your recent API credit purchases</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Date</th>
-                  <th className="text-left py-3 px-4 font-medium">Description</th>
-                  <th className="text-left py-3 px-4 font-medium">Amount</th>
-                  <th className="text-left py-3 px-4 font-medium">Invoice</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-3 px-4">Apr 25, 2023</td>
-                  <td className="py-3 px-4">Professional Plan - Monthly</td>
-                  <td className="py-3 px-4">$79.00</td>
-                  <td className="py-3 px-4">
-                    <a href="#" className="text-primary hover:underline">PDF</a>
-                  </td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-3 px-4">Mar 25, 2023</td>
-                  <td className="py-3 px-4">Professional Plan - Monthly</td>
-                  <td className="py-3 px-4">$79.00</td>
-                  <td className="py-3 px-4">
-                    <a href="#" className="text-primary hover:underline">PDF</a>
-                  </td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-3 px-4">Feb 25, 2023</td>
-                  <td className="py-3 px-4">Professional Plan - Monthly</td>
-                  <td className="py-3 px-4">$79.00</td>
-                  <td className="py-3 px-4">
-                    <a href="#" className="text-primary hover:underline">PDF</a>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Transaction</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Receipt</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {mockData.transactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell>{transaction.date.toLocaleDateString()}</TableCell>
+                  <TableCell>{transaction.description}</TableCell>
+                  <TableCell>${transaction.amount.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Button variant="link" className="p-0 h-auto">
+                      PDF
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </>
