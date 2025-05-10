@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -206,6 +207,13 @@ const ActivityLogs = () => {
     return !!log.report_tier && !isFailedLog(log.response_status);
   };
 
+  // Format the type value with proper capitalization and consistent display
+  const formatTypeValue = (type: string | null): string => {
+    if (!type) return 'None';
+    // Ensure first letter is capitalized
+    return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Fixed header at the top */}
@@ -354,7 +362,7 @@ const ActivityLogs = () => {
                         <tr>
                           <th className="px-4 py-3 text-left">Date</th>
                           <th className="px-4 py-3 text-left">Status</th>
-                          <th className="px-4 py-3 text-left">Report</th>
+                          <th className="px-4 py-3 text-left">Type</th>
                           <th className="px-4 py-3 text-right">Cost</th>
                           <th className="px-4 py-3 text-right">Time</th>
                         </tr>
@@ -375,18 +383,16 @@ const ActivityLogs = () => {
                             </td>
                             <td className="px-4 py-3">
                               {isFailedLog(log.response_status) ? (
-                                <span className="text-gray-400">None</span>
+                                <span className="text-gray-500">None</span>
                               ) : (
                                 <div className="flex flex-col">
                                   <span className="font-medium cursor-pointer text-primary hover:underline" 
                                     onClick={() => openDrawer(log)}>
                                     {log.request_type}
                                   </span>
-                                  {log.report_tier && (
-                                    <span className="text-xs text-gray-500 capitalize">
-                                      {log.report_tier}
-                                    </span>
-                                  )}
+                                  <span className="text-sm text-primary">
+                                    {formatTypeValue(log.report_tier)}
+                                  </span>
                                 </div>
                               )}
                             </td>
