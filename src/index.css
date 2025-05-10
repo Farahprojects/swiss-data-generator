@@ -113,7 +113,8 @@
     display: none;
   }
   
-  [data-sidebar="sidebar"].visible {
+  [data-sidebar="sidebar"].visible,
+  [data-sidebar="sidebar"][data-mobile-open="true"] {
     display: block;
   }
 }
