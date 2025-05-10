@@ -339,7 +339,6 @@ const ActivityLogs = () => {
                           <th className="px-4 py-3 text-left">Report Type</th>
                           <th className="px-4 py-3 text-right">Cost</th>
                           <th className="px-4 py-3 text-right">Processing Time</th>
-                          <th className="px-4 py-3 text-center">Details</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -383,36 +382,6 @@ const ActivityLogs = () => {
                               {log.processing_time_ms ? 
                                 `${(log.processing_time_ms / 1000).toFixed(2)}s` : 
                                 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              {isFailedLog(log.response_status) ? (
-                                <span className="text-gray-400">None</span>
-                              ) : (
-                                <div className="flex justify-center items-center space-x-2">
-                                  {log.response_payload?.report && (
-                                    <Button
-                                      variant="ghost" 
-                                      size="sm" 
-                                      className="text-primary hover:text-primary/80 p-1 h-auto"
-                                      onClick={() => openDrawer(log)}
-                                    >
-                                      <Badge className="h-4 w-4 mr-1" />
-                                      <span className="text-xs">Report</span>
-                                    </Button>
-                                  )}
-                                  {log.response_payload && (
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      className="text-primary hover:text-primary/80 p-1 h-auto" 
-                                      onClick={() => openDrawer(log)}
-                                    >
-                                      <FileText className="h-4 w-4 mr-1" />
-                                      <span className="text-xs">Payload</span>
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
                             </td>
                           </tr>
                         ))}
