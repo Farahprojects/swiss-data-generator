@@ -172,21 +172,30 @@ export type Database = {
           created_at: string | null
           data: Json | null
           id: string
+          log_level: string | null
           message: string | null
+          sequence_number: number | null
+          session_id: string | null
           source: string
         }
         Insert: {
           created_at?: string | null
           data?: Json | null
           id?: string
+          log_level?: string | null
           message?: string | null
+          sequence_number?: number | null
+          session_id?: string | null
           source: string
         }
         Update: {
           created_at?: string | null
           data?: Json | null
           id?: string
+          log_level?: string | null
           message?: string | null
+          sequence_number?: number | null
+          session_id?: string | null
           source?: string
         }
         Relationships: []
@@ -577,6 +586,16 @@ export type Database = {
       }
     }
     Views: {
+      consolidated_debug_logs: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          log_entries: Json | null
+          session_id: string | null
+          source: string | null
+        }
+        Relationships: []
+      }
       stripe_webhook_logs: {
         Row: {
           created_at: string | null
@@ -639,6 +658,10 @@ export type Database = {
         Returns: string
       }
       generate_api_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_session_id: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

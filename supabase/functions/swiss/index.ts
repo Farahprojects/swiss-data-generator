@@ -17,12 +17,30 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders });
 
-// Log helper
-async function logDebug(source: string, message: string, data: any = null) {
+// Enhanced log helper with session tracking
+async function logDebug(sessionId: string, source: string, message: string, data: any = null, level: string = 'info', sequence: number = 0) {
   try {
-    await sb.from("debug_logs").insert([{ source, message, data }]);
+    await sb.from("debug_logs").insert([{ 
+      source, 
+      message, 
+      data, 
+      session_id: sessionId,
+      log_level: level,
+      sequence_number: sequence
+    }]);
   } catch (err) {
     console.error("[debug_logs] Insert failed:", err);
+  }
+}
+
+// Helper to generate a session ID
+async function generateSessionId() {
+  try {
+    const { data } = await sb.rpc('generate_session_id');
+    return data || crypto.randomUUID().replace(/-/g, '').substring(0, 16);
+  } catch (err) {
+    // Fallback if RPC fails
+    return crypto.randomUUID().replace(/-/g, '').substring(0, 16);
   }
 }
 
@@ -47,12 +65,15 @@ function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown
 
 serve(async (req) => {
   const urlObj = new URL(req.url);
+  const sessionId = await generateSessionId();
+  let sequenceNum = 0;
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (!["GET", "POST"].includes(req.method)) {
+    await logDebug(sessionId, "swiss", "Method not allowed", { method: req.method }, "error", sequenceNum++);
     return json({ success: false, message: "Method not allowed" }, 405);
   }
 
@@ -66,11 +87,11 @@ serve(async (req) => {
 
   const apiKey = extractApiKey(req.headers, urlObj, bodyJson);
   if (!apiKey) {
-    await logDebug("swiss", "Missing API key", { headers: req.headers });
+    await logDebug(sessionId, "swiss", "Missing API key", { headers: Object.fromEntries(req.headers) }, "error", sequenceNum++);
     return json({ success: false, message: "Missing API key." }, 401);
   }
 
-  await logDebug("swiss", "Extracted API key", { apiKey });
+  await logDebug(sessionId, "swiss", "Extracted API key", { apiKey }, "info", sequenceNum++);
 
   const { data: row, error } = await sb
     .from("v_api_key_balance")
@@ -79,12 +100,12 @@ serve(async (req) => {
     .maybeSingle();
 
   if (error) {
-    await logDebug("swiss", "Balance lookup error", { apiKey, error });
+    await logDebug(sessionId, "swiss", "Balance lookup error", { apiKey, error }, "error", sequenceNum++);
     return json({ success: false, message: "Balance lookup failed." }, 500);
   }
 
   if (!row) {
-    await logDebug("swiss", "API key not found in v_api_key_balance", { apiKey });
+    await logDebug(sessionId, "swiss", "API key not found in v_api_key_balance", { apiKey }, "error", sequenceNum++);
     return json({
       success: false,
       message: "Invalid API key. Log in at theraiapi.com to check your credentials.",
@@ -92,10 +113,10 @@ serve(async (req) => {
   }
 
   const balance = parseFloat(String(row.balance_usd));
-  await logDebug("swiss", "Balance fetched", { user_id: row.user_id, balance });
+  await logDebug(sessionId, "swiss", "Balance fetched", { user_id: row.user_id, balance }, "info", sequenceNum++);
 
   if (!Number.isFinite(balance) || balance <= 0) {
-    await logDebug("swiss", "Insufficient balance", { user_id: row.user_id, balance });
+    await logDebug(sessionId, "swiss", "Insufficient balance", { user_id: row.user_id, balance }, "warning", sequenceNum++);
     return json({
       success: false,
       message: `Your account is active, but your balance is $${balance}. Please top up to continue.`,
@@ -110,8 +131,10 @@ serve(async (req) => {
     api_key: apiKey,
   };
 
-  await logDebug("swiss", "Sending payload to translator", { user_id: row.user_id });
+  await logDebug(sessionId, "swiss", "Sending payload to translator", { user_id: row.user_id }, "info", sequenceNum++);
 
   const { status, text } = await translate(mergedPayload);
+  await logDebug(sessionId, "swiss", "Received response from translator", { status }, "info", sequenceNum++);
+  
   return new Response(text, { status, headers: corsHeaders });
 });
