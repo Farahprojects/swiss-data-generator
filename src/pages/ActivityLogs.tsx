@@ -175,6 +175,11 @@ const ActivityLogs = () => {
     }
   };
 
+  // Helper function to check if a log is failed
+  const isFailedLog = (status: number): boolean => {
+    return status >= 400;
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <UnifiedNavigation />
@@ -334,13 +339,24 @@ const ActivityLogs = () => {
                         <td className="px-4 py-3">
                           {renderStatusBadge(log.response_status)}
                         </td>
-                        <td className="px-4 py-3 font-medium cursor-pointer text-primary hover:underline" 
-                            onClick={() => openDrawer(log)}>
-                          {log.request_type} {/* Changed from log.endpoint to log.request_type */}
+                        <td className="px-4 py-3">
+                          {isFailedLog(log.response_status) ? (
+                            <span className="text-gray-400">None</span>
+                          ) : (
+                            <span className="font-medium cursor-pointer text-primary hover:underline" 
+                              onClick={() => openDrawer(log)}>
+                              {log.request_type}
+                            </span>
+                          )}
                         </td>
-                        <td className="px-4 py-3 cursor-pointer" onClick={() => openDrawer(log)}>
-                          {log.report_tier ? (
-                            <span className="capitalize text-primary hover:underline">{log.report_tier}</span>
+                        <td className="px-4 py-3">
+                          {isFailedLog(log.response_status) ? (
+                            <span className="text-gray-400">None</span>
+                          ) : log.report_tier ? (
+                            <span className="capitalize text-primary hover:underline cursor-pointer" 
+                              onClick={() => openDrawer(log)}>
+                              {log.report_tier}
+                            </span>
                           ) : (
                             <span className="text-gray-400">None</span>
                           )}
@@ -354,30 +370,34 @@ const ActivityLogs = () => {
                             'N/A'}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center items-center space-x-2">
-                            {log.response_payload?.report && (
-                              <Button
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-primary hover:text-primary/80 p-1 h-auto"
-                                onClick={() => openDrawer(log)}
-                              >
-                                <Badge className="h-4 w-4 mr-1" />
-                                <span className="text-xs">Report</span>
-                              </Button>
-                            )}
-                            {log.response_payload && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-primary hover:text-primary/80 p-1 h-auto" 
-                                onClick={() => openDrawer(log)}
-                              >
-                                <FileText className="h-4 w-4 mr-1" />
-                                <span className="text-xs">Payload</span>
-                              </Button>
-                            )}
-                          </div>
+                          {isFailedLog(log.response_status) ? (
+                            <span className="text-gray-400">None</span>
+                          ) : (
+                            <div className="flex justify-center items-center space-x-2">
+                              {log.response_payload?.report && (
+                                <Button
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-primary hover:text-primary/80 p-1 h-auto"
+                                  onClick={() => openDrawer(log)}
+                                >
+                                  <Badge className="h-4 w-4 mr-1" />
+                                  <span className="text-xs">Report</span>
+                                </Button>
+                              )}
+                              {log.response_payload && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-primary hover:text-primary/80 p-1 h-auto" 
+                                  onClick={() => openDrawer(log)}
+                                >
+                                  <FileText className="h-4 w-4 mr-1" />
+                                  <span className="text-xs">Payload</span>
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
