@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
+import { useSidebar } from '@/components/ui/sidebar';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +19,7 @@ const UnifiedNavigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toggleSidebar } = useSidebar();
   
   const isLoggedIn = !!user;
 
@@ -37,11 +40,27 @@ const UnifiedNavigation = () => {
     <nav className="sticky top-0 bg-white z-50 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
+          {/* Left section with menu trigger for logged in users */}
           <div className="flex items-center">
+            {isLoggedIn ? (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="md:flex hidden mr-2" 
+                onClick={toggleSidebar}
+              >
+                <Menu size={20} />
+                <span className="sr-only">Toggle sidebar</span>
+              </Button>
+            ) : null}
+          </div>
+          
+          {/* Centered logo */}
+          <div className="absolute left-1/2 transform -translate-x-1/2">
             <Logo />
           </div>
           
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - only for not logged in users */}
           <div className="hidden md:flex items-center space-x-8">
             {!isLoggedIn && (
               <>
@@ -52,16 +71,10 @@ const UnifiedNavigation = () => {
                 <Link to="/contact" className="text-gray-700 hover:text-primary text-sm font-medium">Contact</Link>
               </>
             )}
-            {isLoggedIn && (
-              <>
-                <Link to="/dashboard" className="text-gray-700 hover:text-primary text-sm font-medium">Dashboard</Link>
-                <Link to="/dashboard/upgrade" className="text-gray-700 hover:text-primary text-sm font-medium">Upgrade</Link>
-              </>
-            )}
           </div>
 
           {/* Call to Action Buttons or User Menu */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="flex items-center space-x-4">
             {isLoggedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
