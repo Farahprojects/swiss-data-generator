@@ -19,7 +19,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "sonner";
 import NavigationStateProvider from './contexts/NavigationStateContext';
-import { SidebarProvider } from '@/components/ui/sidebar';
 
 // RouteHistoryTracker component to track and save route history
 const RouteHistoryTracker = () => {
@@ -98,11 +97,9 @@ function App() {
   return (
     <AuthProvider>
       <NavigationStateProvider>
-        <SidebarProvider>
-          <Router>
-            <AppContent />
-          </Router>
-        </SidebarProvider>
+        <Router>
+          <AppContent />
+        </Router>
       </NavigationStateProvider>
       <Toaster />
     </AuthProvider>

@@ -13,7 +13,7 @@ import { PricingPage } from "@/components/dashboard/PricingPage";
 import { useAuth } from "@/contexts/AuthContext";
 import ApiDocumentationContent from "@/components/dashboard/ApiDocumentationContent";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import { SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -70,17 +70,17 @@ const Dashboard = () => {
       
       {/* Main content area - flexes below the header */}
       <div className="flex flex-grow bg-gray-50 pt-1">
-        <div className="flex w-full">
-          <DashboardSidebar />
-          
-          <SidebarInset className="p-0 md:p-6">
-            <div className="p-4 md:p-0">
+        <SidebarProvider>
+          <div className="flex w-full">
+            <DashboardSidebar />
+            
+            <div className="flex-1 p-6">
               <div className="bg-white rounded-lg shadow-sm p-6">
                 {renderContent()}
               </div>
             </div>
-          </SidebarInset>
-        </div>
+          </div>
+        </SidebarProvider>
       </div>
       
       <Footer />

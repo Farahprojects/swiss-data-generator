@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,22 +19,7 @@ const UnifiedNavigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Safely check if we're on dashboard routes to determine if we should use sidebar
-  const isDashboardRoute = location.pathname.startsWith('/dashboard');
-  
-  // Create a wrapper for useSidebar that safely handles the context
-  const useSidebarSafely = () => {
-    try {
-      return useSidebar();
-    } catch (error) {
-      // Return a default object with a no-op function when not in a SidebarProvider
-      return { toggleSidebar: () => {} };
-    }
-  };
-  
-  const { toggleSidebar } = useSidebarSafely();
+  const { toggleSidebar } = useSidebar();
   
   const isLoggedIn = !!user;
 
@@ -57,7 +42,7 @@ const UnifiedNavigation = () => {
         <div className="flex justify-between items-center py-4">
           {/* Left section with menu trigger for logged in users */}
           <div className="flex items-center">
-            {isLoggedIn && isDashboardRoute ? (
+            {isLoggedIn ? (
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -163,6 +148,7 @@ const UnifiedNavigation = () => {
             ) : (
               <>
                 <Link to="/dashboard" className="block text-gray-700 hover:text-primary py-2">Dashboard</Link>
+                <Link to="/dashboard/upgrade" className="block text-gray-700 hover:text-primary py-2">Upgrade</Link>
               </>
             )}
             
