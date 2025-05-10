@@ -1,3 +1,4 @@
+
 // supabase/functions/_shared/translator.ts
 // Pure helper module – NO Edge Function wrapper
 // Exported translate() returns { status, text } so other functions can await it.
@@ -372,6 +373,32 @@ export async function translate(
     // Check if this request includes a report generation
     if (raw.report && ["standard", "premium"].includes(raw.report)) {
       console.log(`[translator] Report requested: ${raw.report} for ${canon}`);
+
+      // First check if the response was successful
+      if (!r.ok) {
+        console.log(`[translator] Swiss API returned error ${r.status}, not generating report`);
+        
+        // Return the Swiss API error without attempting to generate a report
+        await logToSupabase(
+          requestType,
+          raw,
+          r.status,
+          (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
+          Date.now() - startTime,
+          `Swiss API returned ${r.status}, report generation skipped`,
+          googleGeoUsed,
+          userId,
+        );
+        
+        return { 
+          status: r.status, 
+          text: JSON.stringify({
+            error: "Unable to generate report due to invalid request data",
+            message: "Please check your request details and try again",
+            details: (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })()
+          })
+        };
+      }
       
       try {
         // Parse the Swiss API response
