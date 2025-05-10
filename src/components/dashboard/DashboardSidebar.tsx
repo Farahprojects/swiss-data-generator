@@ -15,16 +15,13 @@ import {
   FileText, 
   FileQuestion, 
   CreditCard,
-  DollarSign,
-  ChevronLeft,
-  ChevronRight
+  DollarSign
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 const DashboardSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { state, toggleSidebar } = useSidebar();
+  const { state } = useSidebar();
   
   const menuItems = [
     {
@@ -83,19 +80,6 @@ const DashboardSidebar = () => {
       className="border-r border-gray-200"
     >
       <SidebarContent className="pt-6">
-        {/* Collapsible button at the top */}
-        <div className="px-4 pb-4 pt-2">
-          <Button 
-            variant="ghost" 
-            onClick={toggleSidebar} 
-            className="w-full flex justify-between items-center text-gray-700 hover:bg-gray-100"
-            size="sm"
-          >
-            <span className="text-sm">{state === "collapsed" ? "Expand" : "Collapse"}</span>
-            {state === "collapsed" ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </Button>
-        </div>
-        
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.name}>
