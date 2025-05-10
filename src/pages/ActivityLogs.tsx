@@ -18,6 +18,14 @@ import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Define the structure of the API activity log entry
 type ActivityLog = {
@@ -389,9 +397,11 @@ const ActivityLogs = () => {
                                     onClick={() => openDrawer(log)}>
                                     {log.request_type}
                                   </span>
-                                  <span className="text-sm text-primary">
-                                    {formatTypeValue(log.report_tier)}
-                                  </span>
+                                  {log.report_tier && (
+                                    <span className="text-sm text-primary">
+                                      {formatTypeValue(log.report_tier)}
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </td>
