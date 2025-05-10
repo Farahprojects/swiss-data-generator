@@ -17,10 +17,14 @@ type ActivityLogItem = {
   created_at: string;
   response_status: number;
   endpoint: string;
+  request_type?: string;
   report_tier: string | null;
   total_cost_usd: number;
   processing_time_ms: number | null;
   response_payload?: any;
+  request_payload?: any;
+  error_message?: string;
+  google_geo?: boolean;
 };
 
 interface ActivityLogDrawerProps {
@@ -138,6 +142,18 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                       : 'N/A'}
                   </p>
                 </div>
+                {logData.error_message && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Error</p>
+                    <p className="font-medium text-red-600">{logData.error_message}</p>
+                  </div>
+                )}
+                {logData.google_geo && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Geo Lookup</p>
+                    <p className="font-medium">Yes</p>
+                  </div>
+                )}
               </div>
               
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -150,7 +166,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                   </TabsTrigger>
                   <TabsTrigger 
                     value="payload"
-                    disabled={!logData.response_payload}
+                    disabled={!logData.response_payload && !logData.request_payload}
                   >
                     Payload
                   </TabsTrigger>
@@ -178,10 +194,26 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 <TabsContent value="payload" className="mt-4">
                   <ScrollArea className="h-[50vh]">
                     <div className="p-4 bg-gray-50 rounded-md">
-                      {logData.response_payload ? (
-                        <pre className="whitespace-pre-wrap font-mono text-sm">
-                          {JSON.stringify(logData.response_payload, null, 2)}
-                        </pre>
+                      {(logData.response_payload || logData.request_payload) ? (
+                        <div>
+                          {logData.request_payload && (
+                            <div className="mb-4">
+                              <h4 className="text-sm font-medium mb-2">Request Payload</h4>
+                              <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto bg-gray-100 p-2 rounded">
+                                {JSON.stringify(logData.request_payload, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                          
+                          {logData.response_payload && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Response Payload</h4>
+                              <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto bg-gray-100 p-2 rounded">
+                                {JSON.stringify(logData.response_payload, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
                           No payload available

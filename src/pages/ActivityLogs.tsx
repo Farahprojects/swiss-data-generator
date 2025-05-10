@@ -31,17 +31,14 @@ type ActivityLog = {
   created_at: string;
   response_status: number;
   endpoint: string;
+  request_type: string;
   report_tier: string | null;
   total_cost_usd: number;
   processing_time_ms: number | null;
   response_payload?: any;
-  // Add additional fields that might come from the database
-  translator_log_id?: string;
-  unit_price_usd?: number;
-  report_price_usd?: number;
-  geo_price_usd?: number;
-  used_geo_lookup?: boolean;
-  user_id?: string;
+  request_payload?: any;
+  error_message?: string;
+  google_geo?: boolean;
 };
 
 const ActivityLogs = () => {
@@ -75,8 +72,11 @@ const ActivityLogs = () => {
     
     try {
       let query = supabase
-        .from('api_usage')
-        .select('*, translator_logs(response_status, processing_time_ms, response_payload)')
+        .from('translator_logs')
+        .select(`
+          *,
+          api_usage!translator_log_id(total_cost_usd)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
@@ -101,16 +101,16 @@ const ActivityLogs = () => {
         const statusCode = filters.status === 'success' ? 200 : 
                           filters.status === 'failed' ? 400 : null;
         if (statusCode && statusCode === 200) {
-          query = query.eq('translator_logs.response_status', statusCode);
+          query = query.eq('response_status', statusCode);
         } else if (statusCode && statusCode === 400) {
-          query = query.or('translator_logs.response_status.gt.399,translator_logs.response_status.lt.600');
+          query = query.or('response_status.gt.399,response_status.lt.600');
         }
       }
       
       if (filters.search) {
         // This is a simplified search - in a real implementation you'd need to 
         // check if the database supports full-text search or adjust accordingly
-        query = query.ilike('endpoint', `%${filters.search}%`);
+        query = query.or(`request_type.ilike.%${filters.search}%,endpoint.ilike.%${filters.search}%`);
       }
       
       const { data, error } = await query;
@@ -122,12 +122,19 @@ const ActivityLogs = () => {
 
       // Process the data to match the ActivityLog type
       const processedData: ActivityLog[] = data?.map(item => {
-        const translatorData = item.translator_logs?.[0] || {};
         return {
-          ...item,
-          response_status: translatorData.response_status || 0,
-          processing_time_ms: translatorData.processing_time_ms || null,
-          response_payload: translatorData.response_payload || null
+          id: item.id,
+          created_at: item.created_at,
+          response_status: item.response_status || 0,
+          endpoint: item.endpoint || item.request_type || 'unknown',
+          request_type: item.request_type || '',
+          report_tier: item.report_tier,
+          total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
+          processing_time_ms: item.processing_time_ms,
+          response_payload: item.response_payload,
+          request_payload: item.request_payload,
+          error_message: item.error_message,
+          google_geo: item.google_geo
         };
       }) || [];
       
@@ -235,7 +242,7 @@ const ActivityLogs = () => {
               <div className="w-full md:w-[180px]">
                 <Select
                   value={filters.reportType || ""}
-                  onValueChange={(value) => handleFilterChange('reportType', value || null)}
+                  onValueChange={(value) => handleFilterChange('reportType', value === "all" ? null : value)}
                 >
                   <SelectTrigger>
                     <FileText className="mr-2 h-4 w-4" />
@@ -258,7 +265,7 @@ const ActivityLogs = () => {
               <div className="w-full md:w-[180px]">
                 <Select
                   value={filters.status || ""}
-                  onValueChange={(value) => handleFilterChange('status', value || null)}
+                  onValueChange={(value) => handleFilterChange('status', value === "all" ? null : value)}
                 >
                   <SelectTrigger>
                     <Filter className="mr-2 h-4 w-4" />
