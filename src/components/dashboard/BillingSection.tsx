@@ -16,41 +16,152 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PlusCircle } from "lucide-react";
-
-// Mock data - this would come from an API in a real app
-const mockData = {
-  currentBalance: 250,
-  apiCallsRemaining: 5000,
-  costPerCall: 0.05,
-  transactions: [
-    { id: "tx_123", date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), amount: 100, description: "API Credits Top-up" },
-    { id: "tx_456", date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), amount: 200, description: "API Credits Top-up" },
-    { id: "tx_789", date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), amount: 50, description: "API Credits Top-up" },
-  ]
-};
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useLocation } from "react-router-dom";
 
 export const BillingSection = () => {
+  const { user } = useAuth();
+  const location = useLocation();
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [transactions, setTransactions] = useState([]);
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [creditProduct, setCreditProduct] = useState(null);
+
+  useEffect(() => {
+    const fetchUserBalance = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from("user_credits")
+          .select("balance_usd, last_updated")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching user balance:", error);
+          return;
+        }
+
+        // Set balance to data.balance_usd if available, otherwise 0
+        setBalance(data?.balance_usd || 0);
+        setLastUpdate(data?.last_updated || null);
+      } catch (err) {
+        console.error("Failed to fetch user balance:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const fetchTransactions = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("credit_transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("ts", { ascending: false })
+          .limit(10);
+
+        if (error) {
+          console.error("Error fetching transactions:", error);
+          return;
+        }
+
+        setTransactions(data || []);
+      } catch (err) {
+        console.error("Failed to fetch transactions:", err);
+      }
+    };
+
+    // Load the API credits product
+    const fetchCreditProduct = async () => {
+      try {
+        // Fetch products of type 'credit' from the stripe_products table
+        const { data, error } = await supabase
+          .from("stripe_products")
+          .select("price_id, amount_usd")
+          .eq("active", true)
+          .eq("type", "credit")
+          .order("amount_usd", { ascending: true })
+          .limit(1);
+
+        if (error) {
+          console.error("Error fetching credit product:", error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          setCreditProduct(data[0]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch credit product:", err);
+      }
+    };
+
+    fetchUserBalance();
+    fetchTransactions();
+    fetchCreditProduct();
+  }, [user]);
   
   const handleTopup = async () => {
+    if (!user) {
+      toast.error("You must be logged in to top up credits");
+      return;
+    }
+
+    if (!creditProduct?.price_id) {
+      toast.error("No credit product available. Please contact support.");
+      return;
+    }
+
     setIsProcessingTopup(true);
-    
     try {
-      // In a real app, this would call an API endpoint to initiate the topup process
-      // For example: await supabase.functions.invoke('create-topup-checkout')
+      // Store the current path in localStorage
+      localStorage.setItem("stripe_return_path", location.pathname);
+      if (location.search) {
+        localStorage.setItem("stripe_return_tab", location.search.substring(1));
+      }
       
-      toast.success("Redirecting to payment page...");
-      setTimeout(() => {
-        setIsProcessingTopup(false);
-      }, 2000);
-    } catch (error) {
-      console.error("Failed to initiate topup:", error);
-      toast.error("Could not process topup. Please try again.");
+      // Use the create-checkout edge function to create a dynamic checkout session
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          mode: "payment",
+          priceId: creditProduct.price_id,
+          amount: creditProduct.amount_usd,
+          returnPath: location.pathname,
+          returnTab: location.search ? location.search.substring(1) : ""
+        }
+      });
+
+      if (error || !data?.url) {
+        console.error("Error creating checkout session:", error);
+        toast.error("Failed to create checkout session. Please try again.");
+        return;
+      }
+      
+      // Redirect to the Stripe Checkout session
+      window.location.href = data.url;
+    } catch (err) {
+      console.error("Failed to initiate top-up:", err);
+      toast.error("Failed to create checkout session. Please try again.");
+    } finally {
       setIsProcessingTopup(false);
     }
+  };
+  
+  // Format date from timestamp
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "-";
+    return new Date(timestamp).toLocaleDateString();
   };
   
   return (
@@ -65,21 +176,24 @@ export const BillingSection = () => {
             <div className="flex justify-between items-center pb-4 border-b">
               <div>
                 <h3 className="font-medium">Current Balance</h3>
-                <p className="text-sm text-gray-500">{mockData.apiCallsRemaining} API calls remaining</p>
+                <p className="text-sm text-gray-500">
+                  {lastUpdate ? `Last updated: ${formatDate(lastUpdate)}` : ""}
+                </p>
               </div>
               <div className="text-right">
-                <p className="font-bold">${mockData.currentBalance.toFixed(2)}</p>
-                <p className="text-sm text-gray-500">${mockData.costPerCall.toFixed(3)} per API call</p>
+                <p className="font-bold">${isLoading ? "..." : balance.toFixed(2)}</p>
               </div>
             </div>
             <div className="pt-2">
               <Button 
                 onClick={handleTopup}
-                disabled={isProcessingTopup}
+                disabled={isProcessingTopup || !creditProduct}
                 className="flex items-center gap-2"
               >
                 <PlusCircle size={16} />
-                {isProcessingTopup ? "Processing..." : "Top-up Credits"}
+                {isProcessingTopup ? "Processing..." : creditProduct 
+                  ? `Top-up Credits ($${creditProduct.amount_usd})` 
+                  : "Top-up Credits"}
               </Button>
             </div>
           </div>
@@ -112,33 +226,39 @@ export const BillingSection = () => {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Transaction History</CardTitle>
-          <CardDescription>Your recent API credit purchases</CardDescription>
+          <CardDescription>Your recent API credit transactions</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Transaction</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Receipt</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockData.transactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>{transaction.date.toLocaleDateString()}</TableCell>
-                  <TableCell>{transaction.description}</TableCell>
-                  <TableCell>${transaction.amount.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Button variant="link" className="p-0 h-auto">
-                      PDF
-                    </Button>
-                  </TableCell>
+          {transactions.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Transaction</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Type</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell>{formatDate(transaction.ts)}</TableCell>
+                    <TableCell>{transaction.description || transaction.api_call_type || "-"}</TableCell>
+                    <TableCell>${transaction.amount_usd?.toFixed(2) || "0.00"}</TableCell>
+                    <TableCell>
+                      <span className={transaction.type === 'debit' ? 'text-red-500' : 'text-green-500'}>
+                        {transaction.type || "-"}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              {isLoading ? "Loading transactions..." : "No transactions found"}
+            </div>
+          )}
         </CardContent>
       </Card>
     </>
