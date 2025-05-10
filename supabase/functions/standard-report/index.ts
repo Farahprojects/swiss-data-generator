@@ -1,4 +1,3 @@
-
 /*───────────────────────────────────────────────────────────────────────────────
   standard-report.ts
   Edge Function: Generates standard reports using Google's Gemini 2.5 Flash Preview model
@@ -57,8 +56,7 @@ try {
   throw err;
 }
 
-// Note: Changed model from gemini-2.5-flash-preview to gemini-pro as it's more widely available
-const GOOGLE_MODEL = "gemini-pro";
+const GOOGLE_MODEL = "gemini-2.5-flash-preview";
 const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent`;
 
 // CORS headers for cross-domain requests
