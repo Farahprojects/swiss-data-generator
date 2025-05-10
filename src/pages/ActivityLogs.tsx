@@ -382,21 +382,16 @@ const ActivityLogs = () => {
                             </td>
                             <td className="px-4 py-3">
                               {isFailedLog(log.response_status) ? (
-                                <span className="font-medium cursor-pointer text-primary hover:underline text-sm" 
-                                  onClick={() => openDrawer(log)}>
-                                  {log.request_type}
-                                </span>
+                                <span className="text-gray-500 text-sm">None</span>
                               ) : (
                                 <div className="flex flex-col">
                                   <span className="font-medium cursor-pointer text-primary hover:underline text-sm" 
                                     onClick={() => openDrawer(log)}>
                                     {log.request_type}
                                   </span>
-                                  {log.report_tier && (
-                                    <span className="text-sm text-primary">
-                                      {formatTypeValue(log.report_tier)}
-                                    </span>
-                                  )}
+                                  <span className="text-sm text-primary">
+                                    {formatTypeValue(log.report_tier)}
+                                  </span>
                                 </div>
                               )}
                             </td>
