@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 
 type ActivityLogsFilterState = {
   startDate: Date | undefined;
@@ -55,6 +56,16 @@ const ActivityLogs = () => {
     status: null,
     search: '',
   });
+  
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
+
+  // Function to open the drawer with a specific log
+  const openDrawer = (log: ActivityLog) => {
+    setSelectedLog(log);
+    setDrawerOpen(true);
+  };
 
   // Function to load logs from the database
   const loadLogs = async () => {
@@ -314,10 +325,13 @@ const ActivityLogs = () => {
                         <td className="px-4 py-3">
                           {renderStatusBadge(log.response_status)}
                         </td>
-                        <td className="px-4 py-3 font-medium">{log.endpoint}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 font-medium cursor-pointer text-primary hover:underline" 
+                            onClick={() => openDrawer(log)}>
+                          {log.endpoint}
+                        </td>
+                        <td className="px-4 py-3 cursor-pointer" onClick={() => openDrawer(log)}>
                           {log.report_tier ? (
-                            <span className="capitalize">{log.report_tier}</span>
+                            <span className="capitalize text-primary hover:underline">{log.report_tier}</span>
                           ) : (
                             <span className="text-gray-400">None</span>
                           )}
@@ -337,10 +351,7 @@ const ActivityLogs = () => {
                                 variant="ghost" 
                                 size="sm" 
                                 className="text-primary hover:text-primary/80 p-1 h-auto"
-                                onClick={() => {
-                                  // This will be wired up to show report details later
-                                  console.log("Show report details for:", log.id);
-                                }}
+                                onClick={() => openDrawer(log)}
                               >
                                 <Badge className="h-4 w-4 mr-1" />
                                 <span className="text-xs">Report</span>
@@ -351,10 +362,7 @@ const ActivityLogs = () => {
                                 variant="ghost" 
                                 size="sm" 
                                 className="text-primary hover:text-primary/80 p-1 h-auto" 
-                                onClick={() => {
-                                  // This will be wired up to show payload details later
-                                  console.log("Show payload details for:", log.id);
-                                }}
+                                onClick={() => openDrawer(log)}
                               >
                                 <FileText className="h-4 w-4 mr-1" />
                                 <span className="text-xs">Payload</span>
@@ -371,6 +379,13 @@ const ActivityLogs = () => {
           </div>
         </div>
       </main>
+      
+      {/* Drawer for displaying log details */}
+      <ActivityLogDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        logData={selectedLog}
+      />
       
       <Footer />
     </div>
