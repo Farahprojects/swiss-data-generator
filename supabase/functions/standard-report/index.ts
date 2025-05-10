@@ -1,5 +1,5 @@
 
-/*───────────────────────────────────────────────────────────────────────────────
+/*─────────────────────Made──────────────────────────────────────────────────────────
   standard-report.ts
   Edge Function: Generates standard reports using Google's Gemini 2.5 Flash Preview model
   Uses system prompts from the reports_prompts table
