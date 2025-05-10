@@ -17,6 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Define the structure of the API activity log entry
 type ActivityLog = {
@@ -160,19 +161,37 @@ const ActivityLogs = () => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  // Render status badge with appropriate color
-  const renderStatusBadge = (status: number) => {
+  // Render status icon with tooltip
+  const renderStatusIcon = (status: number) => {
     if (status >= 200 && status < 300) {
       return (
-        <UiBadge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200">
-          <Check className="mr-1 h-3 w-3" /> Success
-        </UiBadge>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100">
+                <Check className="h-4 w-4 text-green-600" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="bg-white">
+              <p>Success</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     } else {
       return (
-        <UiBadge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-200">
-          <X className="mr-1 h-3 w-3" /> Failed
-        </UiBadge>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-100">
+                <X className="h-4 w-4 text-red-600" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="bg-white">
+              <p>Failed</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     }
   };
@@ -352,7 +371,7 @@ const ActivityLogs = () => {
                                 'N/A'}
                             </td>
                             <td className="px-4 py-3">
-                              {renderStatusBadge(log.response_status)}
+                              {renderStatusIcon(log.response_status)}
                             </td>
                             <td className="px-4 py-3">
                               {isFailedLog(log.response_status) ? (
