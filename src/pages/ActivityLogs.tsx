@@ -30,8 +30,8 @@ type ActivityLog = {
   id: string;
   created_at: string;
   response_status: number;
-  endpoint: string;
   request_type: string;
+  endpoint?: string; // Make endpoint optional since it might not exist in translator_logs
   report_tier: string | null;
   total_cost_usd: number;
   processing_time_ms: number | null;
@@ -110,7 +110,7 @@ const ActivityLogs = () => {
       if (filters.search) {
         // This is a simplified search - in a real implementation you'd need to 
         // check if the database supports full-text search or adjust accordingly
-        query = query.or(`request_type.ilike.%${filters.search}%,endpoint.ilike.%${filters.search}%`);
+        query = query.or(`request_type.ilike.%${filters.search}%`);
       }
       
       const { data, error } = await query;
@@ -126,7 +126,9 @@ const ActivityLogs = () => {
           id: item.id,
           created_at: item.created_at,
           response_status: item.response_status || 0,
-          endpoint: item.endpoint || item.request_type || 'unknown',
+          // Use request_type as the endpoint display value 
+          // since endpoint doesn't exist in translator_logs
+          endpoint: item.request_type || 'unknown',
           request_type: item.request_type || '',
           report_tier: item.report_tier,
           total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
@@ -334,7 +336,7 @@ const ActivityLogs = () => {
                         </td>
                         <td className="px-4 py-3 font-medium cursor-pointer text-primary hover:underline" 
                             onClick={() => openDrawer(log)}>
-                          {log.endpoint}
+                          {log.request_type} {/* Changed from log.endpoint to log.request_type */}
                         </td>
                         <td className="px-4 py-3 cursor-pointer" onClick={() => openDrawer(log)}>
                           {log.report_tier ? (
