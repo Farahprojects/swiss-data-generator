@@ -17,9 +17,13 @@ const UserSettings = () => {
   
   return (
     <div className="flex flex-col min-h-screen">
-      <UnifiedNavigation />
+      {/* Fixed header at the top */}
+      <div className="sticky top-0 z-50">
+        <UnifiedNavigation />
+      </div>
       
-      <div className="flex flex-grow bg-gray-50">
+      {/* Main content area - flexes below the header */}
+      <div className="flex flex-grow bg-gray-50 pt-1">
         <SidebarProvider>
           <div className="flex w-full">
             <DashboardSidebar />
