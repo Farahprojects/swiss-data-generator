@@ -1,3 +1,4 @@
+
 /* ========================================================================== *
    Supabase Edge Function – Stripe Webhook Handler
    Author:  YOU
@@ -203,7 +204,20 @@ serve(async (req) => {
         const pi = event.data.object;
         const userId = pi.metadata?.user_id;
         if (!userId) throw new Error("metadata.user_id missing");
-        await creditUser(userId, pi.amount_received / 100, pi.id);
+        
+        // If this is a topup request, update the topup queue record
+        if (pi.metadata?.topup_request_id) {
+          await supabase
+            .from("topup_queue")
+            .update({
+              status: "completed",
+              processed_at: new Date().toISOString(),
+              error_message: null
+            })
+            .eq("id", pi.metadata.topup_request_id);
+        }
+        
+        await creditUser(userId, pi.amount / 100, pi.id);
         await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
         break;
       }
@@ -231,7 +245,7 @@ serve(async (req) => {
           throw new Error(`PaymentIntent ${pi.id} not succeeded (${pi.status})`);
         }
 
-        await creditUser(userId, pi.amount_received / 100, pi.id);
+        await creditUser(userId, pi.amount / 100, pi.id);
         await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
         break;
       }

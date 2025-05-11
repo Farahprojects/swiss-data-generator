@@ -82,6 +82,7 @@ serve(async (req) => {
 
           // Try to get Stripe customer ID for this user
           let stripeCustomerId;
+          let stripePaymentMethodId;
           
           try {
             // First attempt to get from RPC if it exists
@@ -98,7 +99,7 @@ serve(async (req) => {
               // Fallback: try to get customer ID from credit_transactions table
               const { data: txnData } = await supabase
                 .from("credit_transactions")
-                .select("stripe_customer_id")
+                .select("stripe_customer_id, stripe_pid")
                 .eq("user_id", request.user_id)
                 .not("stripe_customer_id", "is", null)
                 .order("ts", { ascending: false })
@@ -106,14 +107,15 @@ serve(async (req) => {
                 
               if (txnData && txnData.length > 0 && txnData[0].stripe_customer_id) {
                 stripeCustomerId = txnData[0].stripe_customer_id;
+                stripePaymentMethodId = txnData[0].stripe_pid;
               }
             }
           } catch (lookupErr) {
             console.error(`Error looking up Stripe customer ID for ${request.id}:`, lookupErr);
           }
 
-          if (!stripeCustomerId) {
-            const errorMessage = "No Stripe customer ID found for user.";
+          if (!stripeCustomerId || !stripePaymentMethodId) {
+            const errorMessage = "No Stripe customer ID or payment method found for user.";
             await updateRequestStatus(request.id, "failed", errorMessage);
             return { id: request.id, status: "failed", error: errorMessage };
           }
@@ -138,39 +140,38 @@ serve(async (req) => {
             return { id: request.id, status: "failed", error: errorMessage };
           }
 
-          console.log(`Creating checkout session for ${request.id} with price ${creditProduct.price_id} ($${creditProduct.amount_usd})`);
+          console.log(`Creating payment intent for ${request.id} ($${creditProduct.amount_usd})`);
           
-          // Create Stripe checkout session
-          const session = await stripe.checkout.sessions.create({
+          // Create Stripe payment intent
+          const intent = await stripe.paymentIntents.create({
             customer: stripeCustomerId,
-            payment_method_types: ["card"],
-            line_items: [{ price: creditProduct.price_id, quantity: 1 }],
-            mode: "payment",
-            success_url: `${SUPABASE_URL}/payment-return?success=true&topup=true`,
-            cancel_url: `${SUPABASE_URL}/dashboard?topup=cancelled`,
+            amount: 10000, // $100 in cents
+            currency: "usd",
+            payment_method: stripePaymentMethodId,
+            off_session: true,
+            confirm: true,
             metadata: {
               user_id: request.user_id,
               topup_request_id: request.id,
-              amount_usd: creditProduct.amount_usd.toFixed(2),
-              auto_topup: "true",
-            },
+              auto_topup: "true"
+            }
           });
 
           // Update request processed_at and error_message but NOT status
           // The webhook will update the status to "completed" when payment is confirmed
           await supabase.from("topup_queue").update({
             processed_at: new Date().toISOString(),
-            error_message: "Checkout session created successfully: " + session.id
+            error_message: "Payment intent created successfully: " + intent.id
           }).eq("id", request.id);
 
-          console.log(`Successfully created checkout session for ${request.id}: ${session.id}`);
-          return { id: request.id, checkout_session_id: session.id, checkout_url: session.url };
+          console.log(`Successfully created payment intent for ${request.id}: ${intent.id}`);
+          return { id: request.id, payment_intent_id: intent.id, status: intent.status };
         } catch (err) {
           const errorMessage = err.message || "Unknown error occurred";
           console.error(`Error processing request ${request.id}:`, errorMessage);
           
           // If at max retries, mark as failed
-          const status = request.retry_count + 1 >= request.max_retries ? "failed" : "failed";
+          const status = request.retry_count + 1 >= request.max_retries ? "max_retries_reached" : "failed";
           await updateRequestStatus(request.id, status, errorMessage);
           return { id: request.id, status, error: errorMessage };
         }
