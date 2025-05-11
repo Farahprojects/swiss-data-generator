@@ -378,7 +378,7 @@ serve(async (req) => {
     // Generate the report
     const report = await generateReport(systemPrompt, reportData, requestId);
     
-    // Log successful report generation
+    // Log successful report generation - this is now the ONLY place reports are logged
     if (reportData.apiKey && reportData.user_id) {
       await logReportAttempt(
         reportData.apiKey,
@@ -386,7 +386,7 @@ serve(async (req) => {
         reportData.report_type || "standard",
         reportData.endpoint,
         reportData.chartData,
-        report,
+        report, // Make sure this contains the actual report text
         "success",
         Date.now() - startTime,
         null,
