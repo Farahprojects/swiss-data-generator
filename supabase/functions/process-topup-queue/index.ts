@@ -18,92 +18,158 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async () => {
-  const { data: requestsToProcess, error: fetchError } = await supabase
-    .from("topup_queue")
-    .select("id, user_id, amount_usd, status, error_message, retry_count, max_retries, last_retry_at")
-    .eq("status", "pending")
-    .lt("retry_count", 3)
-    .order("retry_count", { ascending: true })
-    .limit(10);
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
-  if (fetchError || !requestsToProcess || requestsToProcess.length === 0) {
-    return new Response(JSON.stringify({ message: "No requests to process." }), {
+  try {
+    console.log("Starting topup queue processor");
+
+    const { data: requestsToProcess, error: fetchError } = await supabase
+      .from("topup_queue")
+      .select("id, user_id, amount_usd, status, error_message, retry_count, max_retries, last_retry_at")
+      .eq("status", "pending")
+      .lt("retry_count", 3)
+      .order("retry_count", { ascending: true })
+      .limit(10);
+
+    if (fetchError) {
+      console.error("Error fetching pending requests:", fetchError);
+      return new Response(JSON.stringify({ error: "Failed to fetch pending requests", details: fetchError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!requestsToProcess || requestsToProcess.length === 0) {
+      console.log("No pending requests to process");
+      return new Response(JSON.stringify({ message: "No requests to process." }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`Found ${requestsToProcess.length} pending requests to process`);
+
+    const results = await Promise.all(
+      requestsToProcess.map(async (request) => {
+        try {
+          console.log(`Processing request ${request.id}, retry ${request.retry_count + 1}`);
+
+          // Update retry count and timestamp first
+          const { error: updateError } = await supabase.from("topup_queue").update({
+            retry_count: request.retry_count + 1,
+            last_retry_at: new Date().toISOString(),
+          }).eq("id", request.id);
+
+          if (updateError) {
+            console.error(`Failed to update retry count for ${request.id}:`, updateError);
+          }
+
+          // Try to get Stripe customer ID for this user
+          let stripeCustomerId;
+          
+          try {
+            // First attempt to get from RPC if it exists
+            const { data, error: lookupError } = await supabase.rpc(
+              "get_stripe_customer_id_for_user",
+              { user_id_param: request.user_id }
+            );
+            
+            if (data && !lookupError) {
+              stripeCustomerId = data;
+            } else if (lookupError) {
+              console.warn(`RPC error for ${request.id}:`, lookupError);
+              
+              // Fallback: try to get customer ID from credit_transactions table
+              const { data: txnData } = await supabase
+                .from("credit_transactions")
+                .select("stripe_customer_id")
+                .eq("user_id", request.user_id)
+                .not("stripe_customer_id", "is", null)
+                .order("ts", { ascending: false })
+                .limit(1);
+                
+              if (txnData && txnData.length > 0 && txnData[0].stripe_customer_id) {
+                stripeCustomerId = txnData[0].stripe_customer_id;
+              }
+            }
+          } catch (lookupErr) {
+            console.error(`Error looking up Stripe customer ID for ${request.id}:`, lookupErr);
+          }
+
+          if (!stripeCustomerId) {
+            const errorMessage = "No Stripe customer ID found for user.";
+            await updateRequestStatus(request.id, "failed", errorMessage);
+            return { id: request.id, status: "failed", error: errorMessage };
+          }
+
+          // Get the credit product to use
+          const { data: creditProduct, error: productError } = await supabase
+            .from("stripe_products")
+            .select("price_id")
+            .eq("active", true)
+            .eq("type", "credit")
+            .single();
+
+          if (!creditProduct || productError) {
+            const errorMessage = "Credit product not found in database.";
+            await updateRequestStatus(request.id, "failed", errorMessage);
+            return { id: request.id, status: "failed", error: errorMessage };
+          }
+
+          console.log(`Creating checkout session for ${request.id} with price ${creditProduct.price_id}`);
+          
+          // Create Stripe checkout session
+          const session = await stripe.checkout.sessions.create({
+            customer: stripeCustomerId,
+            payment_method_types: ["card"],
+            line_items: [{ price: creditProduct.price_id, quantity: 1 }],
+            mode: "payment",
+            success_url: `${SUPABASE_URL}/payment-return?success=true&topup=true`,
+            cancel_url: `${SUPABASE_URL}/dashboard?topup=cancelled`,
+            metadata: {
+              user_id: request.user_id,
+              topup_request_id: request.id,
+              amount_usd: request.amount_usd.toFixed(2),
+              auto_topup: "true",
+            },
+          });
+
+          // Update request status to checkout_created
+          await supabase.from("topup_queue").update({
+            status: "checkout_created",
+            processed_at: new Date().toISOString(),
+            error_message: null,
+          }).eq("id", request.id);
+
+          console.log(`Successfully created checkout session for ${request.id}: ${session.id}`);
+          return { id: request.id, status: "checkout_created", checkout_url: session.url };
+        } catch (err) {
+          const errorMessage = err.message || "Unknown error occurred";
+          console.error(`Error processing request ${request.id}:`, errorMessage);
+          
+          const status = request.retry_count + 1 >= request.max_retries ? "max_retries_reached" : "failed";
+          await updateRequestStatus(request.id, status, errorMessage);
+          return { id: request.id, status, error: errorMessage };
+        }
+      })
+    );
+
+    console.log(`Processed ${results.length} requests`);
+    return new Response(JSON.stringify({ results }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  } catch (e) {
+    console.error("Unexpected error in topup queue processor:", e);
+    return new Response(JSON.stringify({ error: "Unexpected error", details: e.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
-
-  const results = await Promise.all(
-    requestsToProcess.map(async (request) => {
-      try {
-        await supabase.from("topup_queue").update({
-          retry_count: request.retry_count + 1,
-          last_retry_at: new Date().toISOString(),
-        }).eq("id", request.id);
-
-        const { data: stripeCustomerId, error: lookupError } = await supabase.rpc(
-          "get_stripe_customer_id_for_user",
-          { user_id_param: request.user_id }
-        );
-
-        if (!stripeCustomerId || lookupError) {
-          const errorMessage = "No Stripe customer ID found.";
-          await updateRequestStatus(request.id, "failed", errorMessage);
-          return { id: request.id, status: "failed", error: errorMessage };
-        }
-
-        const { data: creditProduct, error: productError } = await supabase
-          .from("stripe_products")
-          .select("price_id")
-          .eq("active", true)
-          .eq("type", "credit")
-          .single();
-
-        if (!creditProduct || productError) {
-          const errorMessage = "Credit product not found.";
-          await updateRequestStatus(request.id, "failed", errorMessage);
-          return { id: request.id, status: "failed", error: errorMessage };
-        }
-
-        const session = await stripe.checkout.sessions.create({
-          customer: stripeCustomerId,
-          payment_method_types: ["card"],
-          line_items: [{ price: creditProduct.price_id, quantity: 1 }],
-          mode: "payment",
-          success_url: `${SUPABASE_URL}/payment-return?success=true&topup=true`,
-          cancel_url: `${SUPABASE_URL}/dashboard?topup=cancelled`,
-          metadata: {
-            user_id: request.user_id,
-            topup_request_id: request.id,
-            amount_usd: request.amount_usd.toFixed(2),
-            auto_topup: "true",
-          },
-        });
-
-        await supabase.from("topup_queue").update({
-          status: "checkout_created",
-          processed_at: new Date().toISOString(),
-          error_message: null,
-        }).eq("id", request.id);
-
-        return { id: request.id, status: "checkout_created", checkout_url: session.url };
-      } catch (err) {
-        const errorMessage = err.message || "Unknown error occurred";
-        await updateRequestStatus(
-          request.id,
-          request.retry_count + 1 >= request.max_retries ? "max_retries_reached" : "failed",
-          errorMessage
-        );
-        return { id: request.id, status: "failed", error: errorMessage };
-      }
-    })
-  );
-
-  return new Response(JSON.stringify({ results }), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
 });
 
 async function updateRequestStatus(id: string, status: string, errorMessage?: string) {
@@ -112,5 +178,9 @@ async function updateRequestStatus(id: string, status: string, errorMessage?: st
     processed_at: new Date().toISOString(),
   };
   if (errorMessage) updates.error_message = errorMessage;
-  await supabase.from("topup_queue").update(updates).eq("id", id);
+  
+  const { error } = await supabase.from("topup_queue").update(updates).eq("id", id);
+  if (error) {
+    console.error(`Failed to update status for request ${id}:`, error);
+  }
 }
