@@ -97,9 +97,6 @@ const UnifiedNavigation = () => {
                   <DropdownMenuItem onClick={() => handleViewSettings('account')}>
                     Account Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleViewSettings('billing')}>
-                    Billing & Subscription
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleViewSettings('apikeys')}>
                     API Keys
                   </DropdownMenuItem>
