@@ -344,18 +344,39 @@ serve(async (req) => {
       }
       /* ------------------------------------------------------- */
       case "setup_intent.succeeded": {
-        const setupIntent = event.data.object;
-        const userId = setupIntent.metadata?.user_id;
+        const intent = event.data.object;
+        const userId = intent.metadata?.user_id;
+        const paymentMethodId = intent.payment_method;
         
-        if (!userId) {
-          console.log("No user ID in setup intent metadata, checking client_reference_id");
-          throw new Error("metadata.user_id missing in setup intent");
+        if (!userId || !paymentMethodId) {
+          console.error("Missing user_id or payment_method from setup_intent");
+          throw new Error("Missing user_id or payment_method from setup_intent");
         }
         
-        console.log(`Setup intent succeeded for user ${userId} with payment method ${setupIntent.payment_method}`);
+        // Fetch payment method details
+        const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
         
-        // Save the payment method details
-        await savePaymentMethodDetails(userId, setupIntent);
+        // Save minimal info to credit_transactions
+        await supabase.from("credit_transactions").insert({
+          user_id: userId,
+          stripe_payment_method_id: paymentMethodId,
+          card_brand: pm.card?.brand || null,
+          card_last4: pm.card?.last4 || null,
+          type: "card_setup",
+          description: "Saved payment method via setup intent",
+        });
+        
+        await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
+        break;
+      }
+      /* ------------------------------------------------------- */
+      case "payment_method.attached": {
+        const pm = event.data.object;
+        const customer = pm.customer;
+        if (!customer || pm.type !== "card") break;
+        
+        // Optional logging or sync if needed
+        console.log(`Payment method attached to customer ${customer}: ${pm.id}`);
         await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
         break;
       }
