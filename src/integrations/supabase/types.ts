@@ -110,6 +110,7 @@ export type Database = {
           state: string | null
           stripe_customer_id: string | null
           stripe_invoice_id: string | null
+          stripe_payment_method_id: string | null
           stripe_pid: string | null
           ts: string | null
           type: string | null
@@ -135,6 +136,7 @@ export type Database = {
           state?: string | null
           stripe_customer_id?: string | null
           stripe_invoice_id?: string | null
+          stripe_payment_method_id?: string | null
           stripe_pid?: string | null
           ts?: string | null
           type?: string | null
@@ -160,6 +162,7 @@ export type Database = {
           state?: string | null
           stripe_customer_id?: string | null
           stripe_invoice_id?: string | null
+          stripe_payment_method_id?: string | null
           stripe_pid?: string | null
           ts?: string | null
           type?: string | null
@@ -675,7 +678,10 @@ export type Database = {
       }
       get_stripe_customer_id_for_user: {
         Args: { user_id_param: string }
-        Returns: string
+        Returns: {
+          stripe_customer_id: string
+          stripe_payment_method_id: string
+        }[]
       }
       get_user_email_by_id: {
         Args: { user_id_param: string }

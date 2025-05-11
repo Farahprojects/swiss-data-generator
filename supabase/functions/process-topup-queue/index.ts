@@ -94,17 +94,17 @@ serve(async (req) => {
             if (data && !lookupError) {
               stripeCustomerId = data;
               
-              // Now also fetch stripe_pid manually from credit_transactions
+              // Now also fetch stripe_payment_method_id manually from credit_transactions
               const { data: txnData } = await supabase
                 .from("credit_transactions")
-                .select("stripe_pid")
+                .select("stripe_payment_method_id")
                 .eq("user_id", request.user_id)
-                .not("stripe_pid", "is", null)
+                .not("stripe_payment_method_id", "is", null)
                 .order("ts", { ascending: false })
                 .limit(1);
                 
               if (txnData && txnData.length > 0) {
-                stripePaymentMethodId = txnData[0].stripe_pid;
+                stripePaymentMethodId = txnData[0].stripe_payment_method_id;
               }
             } else if (lookupError) {
               console.warn(`RPC error for ${request.id}:`, lookupError);
@@ -112,7 +112,7 @@ serve(async (req) => {
               // Fallback: try to get customer ID from credit_transactions table
               const { data: txnData } = await supabase
                 .from("credit_transactions")
-                .select("stripe_customer_id, stripe_pid")
+                .select("stripe_customer_id, stripe_payment_method_id")
                 .eq("user_id", request.user_id)
                 .not("stripe_customer_id", "is", null)
                 .order("ts", { ascending: false })
@@ -120,7 +120,7 @@ serve(async (req) => {
                 
               if (txnData && txnData.length > 0 && txnData[0].stripe_customer_id) {
                 stripeCustomerId = txnData[0].stripe_customer_id;
-                stripePaymentMethodId = txnData[0].stripe_pid;
+                stripePaymentMethodId = txnData[0].stripe_payment_method_id;
               }
             }
           } catch (lookupErr) {
