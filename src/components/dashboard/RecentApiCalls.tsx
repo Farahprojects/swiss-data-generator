@@ -191,7 +191,7 @@ export const RecentApiCalls = () => {
                 >
                   <TableCell className="py-3 text-sm">
                     {log.created_at ? 
-                      format(new Date(log.created_at), 'MMM d, yyyy') : 
+                      format(new Date(log.created_at), 'MMM d, yyyy HH:mm:ss') : 
                       'N/A'}
                   </TableCell>
                   <TableCell className="py-3">
