@@ -29,6 +29,11 @@ const PaymentReturn = () => {
       redirectUrl += `&${returnTab}`;
     }
     
+    // Add the status parameter to pass through to the billing section
+    if (status && !redirectUrl.includes('status=')) {
+      redirectUrl += redirectUrl.includes('?') ? `&status=${status}` : `?status=${status}`;
+    }
+    
     // Show appropriate toast based on the payment status
     setTimeout(() => {
       if (status === 'success') {

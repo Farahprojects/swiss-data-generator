@@ -18,15 +18,16 @@ import {
 } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { AlertCircle, CreditCard, PlusCircle } from "lucide-react";
+import { AlertCircle, CreditCard, PlusCircle, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const BillingSection = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
   const [isUpdatingPaymentMethod, setIsUpdatingPaymentMethod] = useState(false);
   const [balance, setBalance] = useState(0);
@@ -36,6 +37,16 @@ export const BillingSection = () => {
   const [creditProduct, setCreditProduct] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [isLoadingPaymentMethod, setIsLoadingPaymentMethod] = useState(true);
+
+  // Check if we're returning from a successful payment method setup
+  useEffect(() => {
+    const status = searchParams.get('status');
+    if (status === 'setup-success') {
+      // Refresh payment method data
+      fetchPaymentMethod();
+      toast.success("Payment method updated successfully!");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchUserBalance = async () => {
@@ -86,44 +97,6 @@ export const BillingSection = () => {
       }
     };
 
-    // Load the user's payment method
-    const fetchPaymentMethod = async () => {
-      if (!user?.id) return;
-      
-      try {
-        setIsLoadingPaymentMethod(true);
-        
-        // First, check the most recent transaction to find a payment method ID
-        const { data: txData, error: txError } = await supabase
-          .from("credit_transactions")
-          .select("stripe_payment_method_id, card_brand, card_last4, stripe_customer_id")
-          .eq("user_id", user.id)
-          .not('stripe_payment_method_id', 'is', null)
-          .order("ts", { ascending: false })
-          .limit(1);
-        
-        if (txError) {
-          console.error("Error fetching payment method:", txError);
-          return;
-        }
-        
-        if (txData && txData.length > 0 && txData[0].stripe_payment_method_id) {
-          // Create a simple payment method object with the available data
-          setPaymentMethod({
-            payment_method_id: txData[0].stripe_payment_method_id,
-            last4: txData[0].card_last4 || "****", 
-            exp_month: null,  // We don't have this data in credit_transactions
-            exp_year: null,   // We don't have this data in credit_transactions
-            brand: txData[0].card_brand || "card" 
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch payment method:", err);
-      } finally {
-        setIsLoadingPaymentMethod(false);
-      }
-    };
-
     // Load the API credits product
     const fetchCreditProduct = async () => {
       try {
@@ -154,6 +127,44 @@ export const BillingSection = () => {
     fetchCreditProduct();
     fetchPaymentMethod();
   }, [user]);
+  
+  // Separated payment method fetching function so we can call it after setup completes
+  const fetchPaymentMethod = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setIsLoadingPaymentMethod(true);
+      
+      // First, check the most recent transaction to find a payment method ID
+      const { data: txData, error: txError } = await supabase
+        .from("credit_transactions")
+        .select("stripe_payment_method_id, card_brand, card_last4, stripe_customer_id")
+        .eq("user_id", user.id)
+        .not('stripe_payment_method_id', 'is', null)
+        .order("ts", { ascending: false })
+        .limit(1);
+      
+      if (txError) {
+        console.error("Error fetching payment method:", txError);
+        return;
+      }
+      
+      if (txData && txData.length > 0 && txData[0].stripe_payment_method_id) {
+        // Create a simple payment method object with the available data
+        setPaymentMethod({
+          payment_method_id: txData[0].stripe_payment_method_id,
+          last4: txData[0].card_last4 || "****", 
+          exp_month: null,  // We don't have this data in credit_transactions
+          exp_year: null,   // We don't have this data in credit_transactions
+          brand: txData[0].card_brand || "card" 
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch payment method:", err);
+    } finally {
+      setIsLoadingPaymentMethod(false);
+    }
+  };
   
   const handleTopup = async () => {
     if (!user) {
@@ -342,6 +353,7 @@ export const BillingSection = () => {
                         {paymentMethod.brand ? paymentMethod.brand.charAt(0).toUpperCase() + paymentMethod.brand.slice(1) : "Card"}
                       </span>
                       <span className="ml-2">•••• {paymentMethod.last4 || "****"}</span>
+                      <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
                     </div>
                     {paymentMethod.exp_month && paymentMethod.exp_year && (
                       <span className="text-sm text-gray-500">

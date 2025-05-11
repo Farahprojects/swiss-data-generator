@@ -186,6 +186,46 @@ async function creditUser(
   }
 }
 
+// New function to handle saving payment method details from a setup session
+async function savePaymentMethodDetails(
+  userId: string, 
+  setupIntent: any
+): Promise<void> {
+  try {
+    // Get the payment method details from Stripe
+    const paymentMethod = await stripe.paymentMethods.retrieve(setupIntent.payment_method);
+    
+    if (!paymentMethod) {
+      console.error("Could not retrieve payment method details");
+      return;
+    }
+    
+    // Create a transaction record to store the payment method info
+    const { error } = await supabase
+      .from("credit_transactions")
+      .insert({
+        user_id: userId,
+        type: 'setup',
+        amount_usd: 0, // No charge for setup
+        description: 'Payment method setup',
+        stripe_payment_method_id: paymentMethod.id,
+        card_brand: paymentMethod.card?.brand || 'unknown',
+        card_last4: paymentMethod.card?.last4 || '****',
+        stripe_customer_id: paymentMethod.customer,
+        payment_method_type: paymentMethod.type
+      });
+    
+    if (error) {
+      console.error("Error saving payment method details:", error.message);
+      return;
+    }
+    
+    console.log(`Successfully saved payment method details for user ${userId}, method ${paymentMethod.id}`);
+  } catch (err) {
+    console.error("Error in savePaymentMethodDetails:", err);
+  }
+}
+
 /* ───────────────────────── MAIN HANDLER ────────────────────────────────── */
 
 serve(async (req) => {
@@ -263,31 +303,59 @@ serve(async (req) => {
         const session = event.data.object;
         const userId  = session.metadata?.user_id;
         if (!userId) throw new Error("metadata.user_id missing");
-        if (!session.payment_intent) throw new Error("payment_intent id missing");
+        
+        // Handle payment session
+        if (session.mode === "payment" && session.payment_intent) {
+          // If this is a topup request, update the topup queue record
+          if (session.metadata?.topup_request_id) {
+            await supabase
+              .from("topup_queue")
+              .update({
+                status: "completed",
+                processed_at: new Date().toISOString(),
+                error_message: null
+              })
+              .eq("id", session.metadata.topup_request_id);
+          }
 
-        // If this is a topup request, update the topup queue record
-        if (session.metadata?.topup_request_id) {
-          await supabase
-            .from("topup_queue")
-            .update({
-              status: "completed",
-              processed_at: new Date().toISOString(),
-              error_message: null
-            })
-            .eq("id", session.metadata.topup_request_id);
+          // Retrieve the full payment intent to get payment_method
+          const pi = await stripe.paymentIntents.retrieve(session.payment_intent);
+          if (pi.status !== "succeeded" && pi.status !== "requires_capture") {
+            throw new Error(`PaymentIntent ${pi.id} not succeeded (${pi.status})`);
+          }
+
+          // Extract payment_method from the payment intent
+          const paymentMethodId = pi.payment_method;
+          console.log(`Checkout completed with payment method: ${paymentMethodId}`);
+
+          await creditUser(userId, pi.amount / 100, pi.id, paymentMethodId);
         }
-
-        // Retrieve the full payment intent to get payment_method
-        const pi = await stripe.paymentIntents.retrieve(session.payment_intent);
-        if (pi.status !== "succeeded" && pi.status !== "requires_capture") {
-          throw new Error(`PaymentIntent ${pi.id} not succeeded (${pi.status})`);
+        // Handle setup session (payment method update/setup)
+        else if (session.mode === "setup" && session.setup_intent) {
+          console.log(`Setup session completed: ${session.setup_intent}`);
+          
+          // Retrieve setup intent to get payment method details
+          const setupIntent = await stripe.setupIntents.retrieve(session.setup_intent);
+          await savePaymentMethodDetails(userId, setupIntent);
         }
-
-        // Extract payment_method from the payment intent
-        const paymentMethodId = pi.payment_method;
-        console.log(`Checkout completed with payment method: ${paymentMethodId}`);
-
-        await creditUser(userId, pi.amount / 100, pi.id, paymentMethodId);
+        
+        await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
+        break;
+      }
+      /* ------------------------------------------------------- */
+      case "setup_intent.succeeded": {
+        const setupIntent = event.data.object;
+        const userId = setupIntent.metadata?.user_id;
+        
+        if (!userId) {
+          console.log("No user ID in setup intent metadata, checking client_reference_id");
+          throw new Error("metadata.user_id missing in setup intent");
+        }
+        
+        console.log(`Setup intent succeeded for user ${userId} with payment method ${setupIntent.payment_method}`);
+        
+        // Save the payment method details
+        await savePaymentMethodDetails(userId, setupIntent);
         await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
         break;
       }
