@@ -308,6 +308,42 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_flow_tracking: {
+        Row: {
+          add_ons: Json | null
+          created_at: string | null
+          email: string | null
+          flow_state: string
+          id: string
+          plan_type: string | null
+          session_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          add_ons?: Json | null
+          created_at?: string | null
+          email?: string | null
+          flow_state: string
+          id?: string
+          plan_type?: string | null
+          session_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          add_ons?: Json | null
+          created_at?: string | null
+          email?: string | null
+          flow_state?: string
+          id?: string
+          plan_type?: string | null
+          session_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       stripe_links: {
         Row: {
           created_at: string | null
@@ -699,6 +735,15 @@ export type Database = {
       generate_session_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_flow_status: {
+        Args: { user_email: string }
+        Returns: {
+          session_id: string
+          flow_state: string
+          created_at: string
+          updated_at: string
+        }[]
       }
       record_api_usage: {
         Args: {
