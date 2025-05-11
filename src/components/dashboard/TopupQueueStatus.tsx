@@ -77,14 +77,10 @@ export const TopupQueueStatus = () => {
         return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
       case "processing":
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300"><RefreshCw className="w-3 h-3 mr-1 animate-spin" />Processing</Badge>;
-      case "checkout_created":
-        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">Checkout Created</Badge>;
       case "completed":
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
       case "failed":
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
-      case "max_retries_reached":
-        return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-300"><AlertCircle className="w-3 h-3 mr-1" />Max Retries Reached</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -93,6 +89,14 @@ export const TopupQueueStatus = () => {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleString();
+  };
+
+  const extractCheckoutId = (errorMessage: string | null) => {
+    if (!errorMessage) return null;
+    if (errorMessage.startsWith("Checkout session created: ")) {
+      return errorMessage.replace("Checkout session created: ", "");
+    }
+    return null;
   };
 
   if (!user) return null;
@@ -128,37 +132,55 @@ export const TopupQueueStatus = () => {
             <div className="grid grid-cols-12 text-sm font-medium text-gray-500 border-b pb-2">
               <div className="col-span-2">Status</div>
               <div className="col-span-2">Amount</div>
-              <div className="col-span-4">Requested</div>
-              <div className="col-span-2">Retries</div>
-              <div className="col-span-2">Last Try</div>
+              <div className="col-span-3">Requested</div>
+              <div className="col-span-3">Processed</div>
+              <div className="col-span-2">Info</div>
             </div>
-            {topupRequests.map((request) => (
-              <div key={request.id} className="grid grid-cols-12 text-sm py-2 border-b last:border-0">
-                <div className="col-span-2">
-                  {request.error_message ? (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center">
-                            {getStatusBadge(request.status)}
-                            <AlertCircle className="w-3 h-3 ml-1 text-amber-500" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="max-w-xs text-xs">{request.error_message}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ) : (
-                    getStatusBadge(request.status)
-                  )}
+            {topupRequests.map((request) => {
+              const checkoutId = extractCheckoutId(request.error_message);
+              
+              return (
+                <div key={request.id} className="grid grid-cols-12 text-sm py-2 border-b last:border-0">
+                  <div className="col-span-2">
+                    {getStatusBadge(request.status)}
+                  </div>
+                  <div className="col-span-2">${request.amount_usd?.toFixed(2)}</div>
+                  <div className="col-span-3">{formatDate(request.requested_at)}</div>
+                  <div className="col-span-3">{formatDate(request.processed_at)}</div>
+                  <div className="col-span-2">
+                    {checkoutId ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center cursor-help">
+                              <span className="truncate max-w-[100px]">{checkoutId.substring(0, 8)}...</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs text-xs">{checkoutId}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : request.error_message ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center cursor-help">
+                              <AlertCircle className="w-3 h-3 text-amber-500" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs text-xs">{request.error_message}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      "-"
+                    )}
+                  </div>
                 </div>
-                <div className="col-span-2">${request.amount_usd?.toFixed(2)}</div>
-                <div className="col-span-4">{formatDate(request.requested_at)}</div>
-                <div className="col-span-2">{request.retry_count} of {request.max_retries}</div>
-                <div className="col-span-2">{formatDate(request.last_retry_at)}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-6 text-gray-500">
