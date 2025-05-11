@@ -18,20 +18,24 @@ import {
 } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { PlusCircle } from "lucide-react";
+import { AlertCircle, CreditCard, PlusCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const BillingSection = () => {
   const { user } = useAuth();
   const location = useLocation();
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
+  const [isUpdatingPaymentMethod, setIsUpdatingPaymentMethod] = useState(false);
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [creditProduct, setCreditProduct] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState(null);
+  const [isLoadingPaymentMethod, setIsLoadingPaymentMethod] = useState(true);
 
   useEffect(() => {
     const fetchUserBalance = async () => {
@@ -82,6 +86,55 @@ export const BillingSection = () => {
       }
     };
 
+    // Load the user's payment method
+    const fetchPaymentMethod = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setIsLoadingPaymentMethod(true);
+        
+        // First, check the most recent transaction to find a payment method ID
+        const { data: txData, error: txError } = await supabase
+          .from("credit_transactions")
+          .select("stripe_payment_method_id")
+          .eq("user_id", user.id)
+          .is("stripe_payment_method_id", "not.null")
+          .order("ts", { ascending: false })
+          .limit(1);
+        
+        if (txError) {
+          console.error("Error fetching payment method:", txError);
+          return;
+        }
+        
+        if (txData && txData.length > 0 && txData[0].stripe_payment_method_id) {
+          // Get payment method details from a metadata table if it exists
+          const { data: pmData, error: pmError } = await supabase
+            .from("payment_methods")
+            .select("*")
+            .eq("payment_method_id", txData[0].stripe_payment_method_id)
+            .maybeSingle();
+            
+          if (!pmError && pmData) {
+            setPaymentMethod(pmData);
+          } else {
+            // If no metadata found, create a simple object with just the ID
+            setPaymentMethod({
+              payment_method_id: txData[0].stripe_payment_method_id,
+              last4: "****", // Fallback
+              exp_month: null,
+              exp_year: null,
+              brand: "card" // Default fallback
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch payment method:", err);
+      } finally {
+        setIsLoadingPaymentMethod(false);
+      }
+    };
+
     // Load the API credits product
     const fetchCreditProduct = async () => {
       try {
@@ -110,6 +163,7 @@ export const BillingSection = () => {
     fetchUserBalance();
     fetchTransactions();
     fetchCreditProduct();
+    fetchPaymentMethod();
   }, [user]);
   
   const handleTopup = async () => {
@@ -158,10 +212,64 @@ export const BillingSection = () => {
     }
   };
   
+  const handleUpdatePaymentMethod = async () => {
+    if (!user) {
+      toast.error("You must be logged in to update your payment method");
+      return;
+    }
+
+    setIsUpdatingPaymentMethod(true);
+    try {
+      // Store the current path in localStorage for return
+      localStorage.setItem("stripe_return_path", location.pathname);
+      if (location.search) {
+        localStorage.setItem("stripe_return_tab", location.search.substring(1));
+      }
+      
+      // Use the create-checkout edge function with mode: "setup"
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          mode: "setup",
+          returnPath: location.pathname,
+          returnTab: location.search ? location.search.substring(1) : ""
+        }
+      });
+
+      if (error || !data?.url) {
+        console.error("Error creating setup session:", error);
+        toast.error("Failed to create payment method setup session. Please try again.");
+        return;
+      }
+      
+      // Redirect to the Stripe Checkout session
+      window.location.href = data.url;
+    } catch (err) {
+      console.error("Failed to initiate payment method update:", err);
+      toast.error("Failed to update payment method. Please try again.");
+    } finally {
+      setIsUpdatingPaymentMethod(false);
+    }
+  };
+  
   // Format date from timestamp
   const formatDate = (timestamp) => {
     if (!timestamp) return "-";
     return new Date(timestamp).toLocaleDateString();
+  };
+
+  // Get CSS class for card brand
+  const getCardBrandClass = (brand) => {
+    const brandMap = {
+      'visa': 'bg-blue-900',
+      'mastercard': 'bg-gradient-to-r from-red-500 to-orange-500',
+      'amex': 'bg-blue-500',
+      'discover': 'bg-orange-500',
+      'diners': 'bg-gray-700',
+      'jcb': 'bg-green-600',
+      'unionpay': 'bg-red-700',
+    };
+    
+    return brandMap[brand?.toLowerCase()] || 'bg-gray-800';
   };
   
   return (
@@ -206,20 +314,65 @@ export const BillingSection = () => {
           <CardDescription>Manage your payment settings</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-12 h-8 bg-gray-800 rounded mr-4"></div>
-                <span>•••• •••• •••• 4242</span>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Expires 09/25</span>
+          {isLoadingPaymentMethod ? (
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-pulse flex items-center">
+                <div className="h-8 w-8 rounded-full bg-gray-300 mr-3"></div>
+                <div className="h-4 bg-gray-300 rounded w-48"></div>
               </div>
             </div>
-            <div className="pt-2">
-              <Button variant="outline">Update Payment Method</Button>
+          ) : !paymentMethod ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No payment method found. Add a payment method to enable automatic top-ups.
+              </AlertDescription>
+              <Button 
+                onClick={handleUpdatePaymentMethod} 
+                variant="outline" 
+                size="sm" 
+                className="ml-auto"
+                disabled={isUpdatingPaymentMethod}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                {isUpdatingPaymentMethod ? "Processing..." : "Add Payment Method"}
+              </Button>
+            </Alert>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div 
+                    className={`w-12 h-8 ${getCardBrandClass(paymentMethod.brand)} rounded mr-4 flex items-center justify-center text-white text-xs font-bold uppercase`}
+                  >
+                    {paymentMethod.brand || "Card"}
+                  </div>
+                  <div>
+                    <div className="flex items-center">
+                      <span className="font-medium">
+                        {paymentMethod.brand ? paymentMethod.brand.charAt(0).toUpperCase() + paymentMethod.brand.slice(1) : "Card"}
+                      </span>
+                      <span className="ml-2">•••• {paymentMethod.last4 || "****"}</span>
+                    </div>
+                    {paymentMethod.exp_month && paymentMethod.exp_year && (
+                      <span className="text-sm text-gray-500">
+                        Expires {paymentMethod.exp_month}/{paymentMethod.exp_year.toString().substr(-2)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleUpdatePaymentMethod} 
+                  disabled={isUpdatingPaymentMethod}
+                >
+                  {isUpdatingPaymentMethod ? "Processing..." : "Update Payment Method"}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
