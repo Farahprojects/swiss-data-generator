@@ -102,9 +102,12 @@ export function ApiKeySection() {
     setShowApiKey(prev => !prev);
   };
 
+  // Improved API key masking with more realistic length representation
   const maskApiKey = (key: string | null) => {
-    if (!key) return "••••••••••••••••••••••";
-    return showApiKey ? key : key.substring(0, 4) + "••••••••••••••••••" + key.substring(key.length - 4);
+    if (!key) return "••••••••••••••";
+    // Use the actual key length, showing first 4 chars and last 4 chars
+    const maskedMiddle = "•".repeat(Math.min(key.length - 8, 12)); // Max 12 dots for middle part
+    return showApiKey ? key : key.substring(0, 4) + maskedMiddle + key.substring(key.length - 4);
   };
 
   const renderRegenerateButton = () => {
@@ -125,7 +128,7 @@ export function ApiKeySection() {
             variant="outline" 
             onClick={handleRegenerateClick}
             disabled={isLoading}
-            className="w-full mb-2 bg-white text-black border-black hover:bg-gray-100"
+            className="w-full bg-white text-black border-black hover:bg-gray-100"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
             {isLoading ? "Processing..." : "Regenerate API Key"}
@@ -186,14 +189,14 @@ export function ApiKeySection() {
 
   return (
     <>
-      <Card className="w-full">
+      <Card className="w-full h-full flex flex-col">
         <CardHeader>
           <CardTitle>API Key</CardTitle>
           <CardDescription>
             Your API key for integrating with our service.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 flex-grow">
           <div className="relative">
             <div className="bg-muted p-3 rounded-md font-mono text-sm flex justify-between items-start">
               <div className="w-full pr-16 break-all">{maskApiKey(apiKey)}</div>
@@ -227,7 +230,7 @@ export function ApiKeySection() {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end">
+        <CardFooter className="mt-auto pt-5">
           <div className="w-full">
             {renderRegenerateButton()}
           </div>
