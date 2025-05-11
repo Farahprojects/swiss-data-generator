@@ -32,8 +32,10 @@ serve(async (req) => {
     // We'll retry failed requests that don't have specific error messages related to customer creation
     const { data: requestsToProcess, error: fetchError } = await supabase
       .from("topup_queue")
-      .select("id, user_id, amount_usd, status, error_message")
+      .select("id, user_id, amount_usd, status, error_message, retry_count, max_retries")
       .or("status.eq.pending,and(status.eq.failed,error_message.not.ilike.%customer%)")
+      .lt("retry_count", 3) // Only process if under max retries
+      .order("retry_count", { ascending: true }) // Process lower retry counts first
       .limit(10); // Process in batches
 
     if (fetchError) {
@@ -58,11 +60,17 @@ serve(async (req) => {
     const results = await Promise.all(
       requestsToProcess.map(async (request) => {
         try {
-          // Update status to processing
+          // Update status to processing and increment retry count
           await supabase
             .from("topup_queue")
-            .update({ status: "processing" })
+            .update({ 
+              status: "processing", 
+              retry_count: request.retry_count + 1,
+              last_retry_at: new Date().toISOString()
+            })
             .eq("id", request.id);
+
+          console.log(`Processing topup request ${request.id} (attempt ${request.retry_count + 1}/${request.max_retries})`);
 
           // Get user email using our database function
           const { data: userEmailData, error: userEmailError } = await supabase.rpc(
@@ -73,18 +81,26 @@ serve(async (req) => {
           if (userEmailError || !userEmailData) {
             console.error(`User email not found for ID: ${request.user_id}`, userEmailError);
             await updateRequestStatus(request.id, "failed", "User email not found");
-            return { id: request.id, status: "failed", error: "User email not found" };
+            return { id: request.id, status: "failed", error: "User email not found", retry: request.retry_count + 1 };
           }
           
           const userEmail = userEmailData;
+          console.log(`Found email for user ${request.user_id}: ${userEmail}`);
 
           // Get or create stripe customer
           let stripeCustomerId = await getStripeCustomerId(request.user_id, userEmail);
           if (!stripeCustomerId) {
             console.error(`Failed to get/create Stripe customer for user: ${request.user_id}`);
             await updateRequestStatus(request.id, "failed", "Could not create Stripe customer");
-            return { id: request.id, status: "failed", error: "Stripe customer creation failed" };
+            return { 
+              id: request.id, 
+              status: "failed", 
+              error: "Stripe customer creation failed", 
+              retry: request.retry_count + 1 
+            };
           }
+
+          console.log(`Using Stripe customer ID: ${stripeCustomerId}`);
 
           // Look up the credit product
           const { data: creditProduct, error: productError } = await supabase
@@ -97,8 +113,15 @@ serve(async (req) => {
           if (productError || !creditProduct) {
             console.error("No active credit product found");
             await updateRequestStatus(request.id, "failed", "Credit product not found");
-            return { id: request.id, status: "failed", error: "Credit product not found" };
+            return { 
+              id: request.id, 
+              status: "failed", 
+              error: "Credit product not found", 
+              retry: request.retry_count + 1 
+            };
           }
+
+          console.log(`Using credit product with price ID: ${creditProduct.price_id}`);
 
           // Create checkout session
           const session = await stripe.checkout.sessions.create({
@@ -121,6 +144,8 @@ serve(async (req) => {
             },
           });
 
+          console.log(`Created checkout session: ${session.id} with URL: ${session.url}`);
+
           // Update request with session information
           await supabase
             .from("topup_queue")
@@ -136,15 +161,26 @@ serve(async (req) => {
             id: request.id,
             status: "checkout_created",
             checkout_url: session.url,
+            retry: request.retry_count,
           };
         } catch (err) {
-          console.error(`Error processing request ${request.id}:`, err);
-          await updateRequestStatus(request.id, "failed", err.message);
-          return { id: request.id, status: "failed", error: err.message };
+          console.error(`Error processing request ${request.id} (attempt ${request.retry_count + 1}/${request.max_retries}):`, err);
+          await updateRequestStatus(
+            request.id, 
+            request.retry_count + 1 >= request.max_retries ? "max_retries_reached" : "failed", 
+            err.message
+          );
+          return { 
+            id: request.id, 
+            status: request.retry_count + 1 >= request.max_retries ? "max_retries_reached" : "failed", 
+            error: err.message,
+            retry: request.retry_count + 1
+          };
         }
       })
     );
 
+    console.log("Processing complete. Results:", JSON.stringify(results, null, 2));
     return new Response(
       JSON.stringify({ results }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -168,6 +204,8 @@ async function updateRequestStatus(id: string, status: string, errorMessage?: st
   if (errorMessage) {
     updates.error_message = errorMessage;
   }
+  
+  console.log(`Updating request ${id} status to: ${status}${errorMessage ? ` (Error: ${errorMessage})` : ''}`);
   
   return await supabase
     .from("topup_queue")

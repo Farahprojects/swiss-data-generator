@@ -7,6 +7,7 @@ import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { getStripeLinkByName, STRIPE_LINK_TYPES } from "@/utils/stripe-links";
 import { supabase } from "@/integrations/supabase/client";
+import { TopupQueueStatus } from "@/components/dashboard/TopupQueueStatus";
 
 // Mock data - this would come from database in a real app
 const mockData = {
@@ -152,6 +153,11 @@ export const BillingPanel = () => {
           <PlusCircle size={16} />
           {isProcessingTopup ? "Processing..." : "Top-up Credits"}
         </Button>
+      </div>
+      
+      {/* Add the TopupQueueStatus component */}
+      <div className="mb-8">
+        <TopupQueueStatus />
       </div>
       
       <div className="mb-8 p-6 border rounded-lg">

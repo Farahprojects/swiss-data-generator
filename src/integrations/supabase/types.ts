@@ -499,8 +499,11 @@ export type Database = {
           amount_usd: number
           error_message: string | null
           id: string
+          last_retry_at: string | null
+          max_retries: number
           processed_at: string | null
           requested_at: string | null
+          retry_count: number
           status: string | null
           user_id: string | null
         }
@@ -508,8 +511,11 @@ export type Database = {
           amount_usd: number
           error_message?: string | null
           id?: string
+          last_retry_at?: string | null
+          max_retries?: number
           processed_at?: string | null
           requested_at?: string | null
+          retry_count?: number
           status?: string | null
           user_id?: string | null
         }
@@ -517,8 +523,11 @@ export type Database = {
           amount_usd?: number
           error_message?: string | null
           id?: string
+          last_retry_at?: string | null
+          max_retries?: number
           processed_at?: string | null
           requested_at?: string | null
+          retry_count?: number
           status?: string | null
           user_id?: string | null
         }
