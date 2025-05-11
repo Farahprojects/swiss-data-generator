@@ -27,6 +27,18 @@ serve(async (req) => {
   try {
     console.log("Starting topup queue processor");
 
+    // First, let's check if we have valid statuses in our database
+    const { data: validStatuses, error: statusError } = await supabase
+      .from("topup_queue")
+      .select("status")
+      .limit(1);
+    
+    if (statusError) {
+      console.error("Error checking valid statuses:", statusError);
+    } else {
+      console.log("Existing database statuses sample:", validStatuses);
+    }
+
     const { data: requestsToProcess, error: fetchError } = await supabase
       .from("topup_queue")
       .select("id, user_id, amount_usd, status, error_message, retry_count, max_retries, last_retry_at")
@@ -58,7 +70,7 @@ serve(async (req) => {
         try {
           console.log(`Processing request ${request.id}, retry ${request.retry_count + 1}`);
 
-          // Update retry count and timestamp first
+          // Update retry count and timestamp first - using a safer approach
           const { error: updateError } = await supabase.from("topup_queue").update({
             retry_count: request.retry_count + 1,
             last_retry_at: new Date().toISOString(),
@@ -139,11 +151,7 @@ serve(async (req) => {
           });
 
           // Update request status to checkout_created
-          await supabase.from("topup_queue").update({
-            status: "checkout_created",
-            processed_at: new Date().toISOString(),
-            error_message: null,
-          }).eq("id", request.id);
+          await updateRequestStatus(request.id, "checkout_created", null);
 
           console.log(`Successfully created checkout session for ${request.id}: ${session.id}`);
           return { id: request.id, status: "checkout_created", checkout_url: session.url };
@@ -151,7 +159,8 @@ serve(async (req) => {
           const errorMessage = err.message || "Unknown error occurred";
           console.error(`Error processing request ${request.id}:`, errorMessage);
           
-          const status = request.retry_count + 1 >= request.max_retries ? "max_retries_reached" : "failed";
+          // If at max retries, update to failed; don't use "max_retries_reached"
+          const status = request.retry_count + 1 >= request.max_retries ? "failed" : "failed";
           await updateRequestStatus(request.id, status, errorMessage);
           return { id: request.id, status, error: errorMessage };
         }
@@ -184,3 +193,4 @@ async function updateRequestStatus(id: string, status: string, errorMessage?: st
     console.error(`Failed to update status for request ${id}:`, error);
   }
 }
+
