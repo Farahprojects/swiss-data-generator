@@ -1,3 +1,4 @@
+
 -- This SQL will need to be run to create the flow tracking table
 
 CREATE TABLE IF NOT EXISTS public.stripe_flow_tracking (
@@ -173,3 +174,4 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+

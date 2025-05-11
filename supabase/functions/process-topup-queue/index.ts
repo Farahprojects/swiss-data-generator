@@ -1,4 +1,3 @@
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@13.2.0?target=deno";
@@ -28,16 +27,12 @@ serve(async (req) => {
   try {
     console.log("Process topup queue function started");
 
-    // Get current timestamp for stale processing check
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-
-    // Get pending topup requests, failed requests that could be retried, and stalled processing requests
+    // Get pending topup requests and failed requests that could be retried
+    // We don't use a "processing" status anymore to avoid stuck jobs
     const { data: requestsToProcess, error: fetchError } = await supabase
       .from("topup_queue")
       .select("id, user_id, amount_usd, status, error_message, retry_count, max_retries, last_retry_at")
-      .or(
-        `status.eq.pending,and(status.eq.failed,error_message.not.ilike.%customer%),and(status.eq.processing,last_retry_at.lt.${tenMinutesAgo})`
-      )
+      .or("status.eq.pending,and(status.eq.failed,error_message.not.ilike.%customer%)")
       .lt("retry_count", 3) // Only process if under max retries
       .order("retry_count", { ascending: true }) // Process lower retry counts first
       .limit(10); // Process in batches
@@ -64,11 +59,11 @@ serve(async (req) => {
     const results = await Promise.all(
       requestsToProcess.map(async (request) => {
         try {
-          // Update status to processing and increment retry count
+          // Update retry count and last retry timestamp, but keep status as is
+          // This avoids the job getting "stuck" in a processing state
           await supabase
             .from("topup_queue")
             .update({ 
-              status: "processing", 
               retry_count: request.retry_count + 1,
               last_retry_at: new Date().toISOString()
             })
@@ -143,14 +138,14 @@ serve(async (req) => {
             metadata: {
               user_id: request.user_id,
               topup_request_id: request.id,
-              amount_usd: "100.00",  // Updated to $100
+              amount_usd: "100.00",  // $100 topup amount
               auto_topup: "true"
             },
           });
 
           console.log(`Created checkout session: ${session.id} with URL: ${session.url}`);
 
-          // Update request with session information
+          // Update request with session information - direct completion
           await supabase
             .from("topup_queue")
             .update({
