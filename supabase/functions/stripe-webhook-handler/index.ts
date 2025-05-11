@@ -142,6 +142,7 @@ async function creditUser(
   userId: string,
   usd: number,
   stripePid: string,
+  paymentMethodId: string | null = null, // Add payment method ID parameter
 ): Promise<void> {
   const { error } = await supabase.rpc("add_user_credits", {
     _user_id:    userId,
@@ -150,7 +151,39 @@ async function creditUser(
     _description:"Stripe auto-top-up",
     _stripe_pid: stripePid,
   });
+  
   if (error) throw error;
+  
+  // If we have a payment method ID, update the credit_transactions table
+  if (paymentMethodId) {
+    // Find the transaction that was just created by the RPC call
+    const { data: transactions, error: txError } = await supabase
+      .from("credit_transactions")
+      .select("id")
+      .eq("stripe_pid", stripePid)
+      .eq("user_id", userId)
+      .order("ts", { ascending: false })
+      .limit(1);
+    
+    if (txError) {
+      console.error("Error finding transaction:", txError.message);
+      return;
+    }
+    
+    if (transactions && transactions.length > 0) {
+      // Update the transaction with the payment method ID
+      const { error: updateError } = await supabase
+        .from("credit_transactions")
+        .update({ stripe_payment_method_id: paymentMethodId })
+        .eq("id", transactions[0].id);
+      
+      if (updateError) {
+        console.error("Error updating transaction with payment method ID:", updateError.message);
+      } else {
+        console.log(`Successfully added payment method ID ${paymentMethodId} to transaction ${transactions[0].id}`);
+      }
+    }
+  }
 }
 
 /* ───────────────────────── MAIN HANDLER ────────────────────────────────── */
@@ -205,6 +238,10 @@ serve(async (req) => {
         const userId = pi.metadata?.user_id;
         if (!userId) throw new Error("metadata.user_id missing");
         
+        // Get the payment method ID from the payment intent
+        const paymentMethodId = pi.payment_method;
+        console.log(`Payment intent succeeded with payment method: ${paymentMethodId}`);
+        
         // If this is a topup request, update the topup queue record
         if (pi.metadata?.topup_request_id) {
           await supabase
@@ -217,7 +254,7 @@ serve(async (req) => {
             .eq("id", pi.metadata.topup_request_id);
         }
         
-        await creditUser(userId, pi.amount / 100, pi.id);
+        await creditUser(userId, pi.amount / 100, pi.id, paymentMethodId);
         await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
         break;
       }
@@ -240,12 +277,17 @@ serve(async (req) => {
             .eq("id", session.metadata.topup_request_id);
         }
 
+        // Retrieve the full payment intent to get payment_method
         const pi = await stripe.paymentIntents.retrieve(session.payment_intent);
         if (pi.status !== "succeeded" && pi.status !== "requires_capture") {
           throw new Error(`PaymentIntent ${pi.id} not succeeded (${pi.status})`);
         }
 
-        await creditUser(userId, pi.amount / 100, pi.id);
+        // Extract payment_method from the payment intent
+        const paymentMethodId = pi.payment_method;
+        console.log(`Checkout completed with payment method: ${paymentMethodId}`);
+
+        await creditUser(userId, pi.amount / 100, pi.id, paymentMethodId);
         await markEvent(event.id, { processed: true, processed_at: new Date().toISOString() });
         break;
       }
