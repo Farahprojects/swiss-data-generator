@@ -93,6 +93,27 @@ export const getProductByType = async (type: string): Promise<StripeProduct[]> =
   }
 };
 
+export const getActiveCreditProduct = async (): Promise<StripeProduct | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('stripe_products')
+      .select('*')
+      .eq('active', true)
+      .eq('type', 'credit')
+      .single();
+    
+    if (error) {
+      console.error('Error fetching active credit product:', error);
+      return null;
+    }
+    
+    return data;
+  } catch (err) {
+    console.error('Failed to fetch active credit product:', err);
+    return null;
+  }
+};
+
 // Function to ensure we have a credit product in the database
 export const ensureCreditProduct = async () => {
   try {

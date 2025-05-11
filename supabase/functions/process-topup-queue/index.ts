@@ -118,21 +118,27 @@ serve(async (req) => {
             return { id: request.id, status: "failed", error: errorMessage };
           }
 
-          // Get the credit product to use
+          // Get the active credit product to use
           const { data: creditProduct, error: productError } = await supabase
             .from("stripe_products")
-            .select("price_id")
+            .select("price_id, amount_usd")
             .eq("active", true)
             .eq("type", "credit")
             .single();
 
           if (!creditProduct || productError) {
-            const errorMessage = "Credit product not found in database.";
+            let errorMessage = "Credit product not found in database.";
+            if (productError) {
+              console.error(`Error fetching credit product for ${request.id}:`, productError);
+              errorMessage += " Database error: " + productError.message;
+            } else {
+              console.error(`No active credit product found for ${request.id}`);
+            }
             await updateRequestStatus(request.id, "failed", errorMessage);
             return { id: request.id, status: "failed", error: errorMessage };
           }
 
-          console.log(`Creating checkout session for ${request.id} with price ${creditProduct.price_id}`);
+          console.log(`Creating checkout session for ${request.id} with price ${creditProduct.price_id} ($${creditProduct.amount_usd})`);
           
           // Create Stripe checkout session
           const session = await stripe.checkout.sessions.create({
@@ -145,7 +151,7 @@ serve(async (req) => {
             metadata: {
               user_id: request.user_id,
               topup_request_id: request.id,
-              amount_usd: request.amount_usd.toFixed(2),
+              amount_usd: creditProduct.amount_usd.toFixed(2),
               auto_topup: "true",
             },
           });

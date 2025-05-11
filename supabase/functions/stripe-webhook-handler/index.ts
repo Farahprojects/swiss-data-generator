@@ -214,6 +214,18 @@ serve(async (req) => {
         if (!userId) throw new Error("metadata.user_id missing");
         if (!session.payment_intent) throw new Error("payment_intent id missing");
 
+        // If this is a topup request, update the topup queue record
+        if (session.metadata?.topup_request_id) {
+          await supabase
+            .from("topup_queue")
+            .update({
+              status: "completed",
+              processed_at: new Date().toISOString(),
+              error_message: null
+            })
+            .eq("id", session.metadata.topup_request_id);
+        }
+
         const pi = await stripe.paymentIntents.retrieve(session.payment_intent);
         if (pi.status !== "succeeded" && pi.status !== "requires_capture") {
           throw new Error(`PaymentIntent ${pi.id} not succeeded (${pi.status})`);
