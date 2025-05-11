@@ -135,6 +135,12 @@ serve(async (req) => {
             metadata: {
               user_id: user.id,
             },
+            setup_future_usage: 'off_session'
+          },
+          setup_intent_data: {
+            metadata: { 
+              user_id: user.id 
+            }
           },
           billing_address_collection: 'auto',
           allow_promotion_codes: true,
@@ -176,6 +182,12 @@ serve(async (req) => {
             metadata: {
               user_id: user.id,
             },
+            setup_future_usage: 'off_session'
+          },
+          setup_intent_data: {
+            metadata: { 
+              user_id: user.id 
+            }
           },
           billing_address_collection: 'auto',
           allow_promotion_codes: true,
@@ -202,6 +214,11 @@ serve(async (req) => {
           user_id: user.id,
           return_path: returnPath || "/dashboard/settings",
           return_tab: returnTab || "panel=billing"
+        },
+        setup_intent_data: {
+          metadata: { 
+            user_id: user.id 
+          }
         },
         customer_update: {
           address: 'auto',
