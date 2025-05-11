@@ -150,16 +150,20 @@ serve(async (req) => {
             },
           });
 
-          // Update request status to completed (previously checkout_created)
-          await updateRequestStatus(request.id, "completed", "Checkout session created: " + session.id);
+          // Update request processed_at and error_message but NOT status
+          // The webhook will update the status to "completed" when payment is confirmed
+          await supabase.from("topup_queue").update({
+            processed_at: new Date().toISOString(),
+            error_message: "Checkout session created successfully: " + session.id
+          }).eq("id", request.id);
 
           console.log(`Successfully created checkout session for ${request.id}: ${session.id}`);
-          return { id: request.id, status: "completed", checkout_url: session.url };
+          return { id: request.id, checkout_session_id: session.id, checkout_url: session.url };
         } catch (err) {
           const errorMessage = err.message || "Unknown error occurred";
           console.error(`Error processing request ${request.id}:`, errorMessage);
           
-          // If at max retries, update to failed; don't use "max_retries_reached"
+          // If at max retries, mark as failed
           const status = request.retry_count + 1 >= request.max_retries ? "failed" : "failed";
           await updateRequestStatus(request.id, status, errorMessage);
           return { id: request.id, status, error: errorMessage };
