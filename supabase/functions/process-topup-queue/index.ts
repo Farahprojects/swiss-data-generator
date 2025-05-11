@@ -28,34 +28,35 @@ serve(async (req) => {
   try {
     console.log("Process topup queue function started");
 
-    // Get pending topup requests
-    const { data: pendingRequests, error: fetchError } = await supabase
+    // Get pending topup requests and failed requests that could be retried
+    // We'll retry failed requests that don't have specific error messages related to customer creation
+    const { data: requestsToProcess, error: fetchError } = await supabase
       .from("topup_queue")
-      .select("id, user_id, amount_usd")
-      .eq("status", "pending")
+      .select("id, user_id, amount_usd, status, error_message")
+      .or("status.eq.pending,and(status.eq.failed,error_message.not.ilike.%customer%)")
       .limit(10); // Process in batches
 
     if (fetchError) {
-      console.error("Error fetching pending topups:", fetchError.message);
+      console.error("Error fetching requests to process:", fetchError.message);
       return new Response(
-        JSON.stringify({ error: "Failed to fetch pending topup requests" }),
+        JSON.stringify({ error: "Failed to fetch topup requests" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!pendingRequests || pendingRequests.length === 0) {
-      console.log("No pending topup requests found");
+    if (!requestsToProcess || requestsToProcess.length === 0) {
+      console.log("No pending or retriable failed topup requests found");
       return new Response(
-        JSON.stringify({ message: "No pending topup requests" }),
+        JSON.stringify({ message: "No requests to process" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Found ${pendingRequests.length} pending topup requests`);
+    console.log(`Found ${requestsToProcess.length} topup requests to process`);
 
     // Process each request
     const results = await Promise.all(
-      pendingRequests.map(async (request) => {
+      requestsToProcess.map(async (request) => {
         try {
           // Update status to processing
           await supabase
@@ -63,7 +64,7 @@ serve(async (req) => {
             .update({ status: "processing" })
             .eq("id", request.id);
 
-          // Get user email using our new database function
+          // Get user email using our database function
           const { data: userEmailData, error: userEmailError } = await supabase.rpc(
             "get_user_email_by_id", 
             { user_id_param: request.user_id }
@@ -126,6 +127,7 @@ serve(async (req) => {
             .update({
               status: "checkout_created",
               processed_at: new Date().toISOString(),
+              error_message: null, // Clear any previous error message
             })
             .eq("id", request.id);
 
