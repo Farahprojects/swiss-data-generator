@@ -96,9 +96,9 @@ export const BillingSection = () => {
         // First, check the most recent transaction to find a payment method ID
         const { data: txData, error: txError } = await supabase
           .from("credit_transactions")
-          .select("stripe_payment_method_id")
+          .select("stripe_payment_method_id, card_brand, card_last4, stripe_customer_id")
           .eq("user_id", user.id)
-          .is("stripe_payment_method_id", "not.null")
+          .not('stripe_payment_method_id', 'is', null)
           .order("ts", { ascending: false })
           .limit(1);
         
@@ -108,25 +108,14 @@ export const BillingSection = () => {
         }
         
         if (txData && txData.length > 0 && txData[0].stripe_payment_method_id) {
-          // Get payment method details from a metadata table if it exists
-          const { data: pmData, error: pmError } = await supabase
-            .from("payment_methods")
-            .select("*")
-            .eq("payment_method_id", txData[0].stripe_payment_method_id)
-            .maybeSingle();
-            
-          if (!pmError && pmData) {
-            setPaymentMethod(pmData);
-          } else {
-            // If no metadata found, create a simple object with just the ID
-            setPaymentMethod({
-              payment_method_id: txData[0].stripe_payment_method_id,
-              last4: "****", // Fallback
-              exp_month: null,
-              exp_year: null,
-              brand: "card" // Default fallback
-            });
-          }
+          // Create a simple payment method object with the available data
+          setPaymentMethod({
+            payment_method_id: txData[0].stripe_payment_method_id,
+            last4: txData[0].card_last4 || "****", 
+            exp_month: null,  // We don't have this data in credit_transactions
+            exp_year: null,   // We don't have this data in credit_transactions
+            brand: txData[0].card_brand || "card" 
+          });
         }
       } catch (err) {
         console.error("Failed to fetch payment method:", err);

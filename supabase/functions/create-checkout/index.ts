@@ -34,9 +34,10 @@ serve(async (req) => {
     
     console.log(`Request data: mode=${mode}, priceId=${priceId}, productId=${productId}, returnPath=${returnPath}`);
     
-    if (!priceId && !amount) {
-      console.error("Missing required parameter: either priceId or amount must be provided");
-      throw new Error("Either priceId or amount must be provided");
+    // Only require priceId or amount for payment mode
+    if (mode === 'payment' && !priceId && !amount) {
+      console.error("Missing required parameter for payment: either priceId or amount must be provided");
+      throw new Error("For payment mode, either priceId or amount must be provided");
     }
     
     // Get user from Authorization header
