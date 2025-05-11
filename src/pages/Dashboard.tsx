@@ -33,8 +33,6 @@ const Dashboard = () => {
   
   const renderContent = () => {
     switch (activeTab) {
-      case "api-keys":
-        return <ApiKeySection />;
       case "usage":
         return <RecentApiCalls />;
       case "docs":

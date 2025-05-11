@@ -15,6 +15,7 @@ import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
 import PaymentReturn from './pages/PaymentReturn';
 import ActivityLogs from './pages/ActivityLogs';
+import ApiKeysPage from './pages/ApiKeysPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "sonner";
@@ -85,6 +86,14 @@ function AppContent() {
           element={
             <AuthGuard>
               <ActivityLogs />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/dashboard/api-keys"
+          element={
+            <AuthGuard>
+              <ApiKeysPage />
             </AuthGuard>
           }
         />
