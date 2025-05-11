@@ -93,6 +93,19 @@ serve(async (req) => {
             
             if (data && !lookupError) {
               stripeCustomerId = data;
+              
+              // Now also fetch stripe_pid manually from credit_transactions
+              const { data: txnData } = await supabase
+                .from("credit_transactions")
+                .select("stripe_pid")
+                .eq("user_id", request.user_id)
+                .not("stripe_pid", "is", null)
+                .order("ts", { ascending: false })
+                .limit(1);
+                
+              if (txnData && txnData.length > 0) {
+                stripePaymentMethodId = txnData[0].stripe_pid;
+              }
             } else if (lookupError) {
               console.warn(`RPC error for ${request.id}:`, lookupError);
               
