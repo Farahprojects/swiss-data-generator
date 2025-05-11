@@ -419,87 +419,6 @@ export type Database = {
         }
         Relationships: []
       }
-      stripe_users: {
-        Row: {
-          addon_relationship_compatibility: boolean | null
-          addon_transit_12_months: boolean | null
-          addon_yearly_cycle: boolean | null
-          billing_address_line1: string | null
-          billing_address_line2: string | null
-          card_brand: string | null
-          card_last4: string | null
-          city: string | null
-          country: string | null
-          created_at: string | null
-          email: string
-          full_name: string | null
-          id: string
-          payment_method_type: string | null
-          payment_status: string | null
-          phone: string | null
-          plan_name: string | null
-          postal_code: string | null
-          state: string | null
-          stripe_customer_id: string
-          stripe_invoice_id: string | null
-          stripe_subscription_id: string | null
-          subscription_current_period_end: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          addon_relationship_compatibility?: boolean | null
-          addon_transit_12_months?: boolean | null
-          addon_yearly_cycle?: boolean | null
-          billing_address_line1?: string | null
-          billing_address_line2?: string | null
-          card_brand?: string | null
-          card_last4?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          email: string
-          full_name?: string | null
-          id?: string
-          payment_method_type?: string | null
-          payment_status?: string | null
-          phone?: string | null
-          plan_name?: string | null
-          postal_code?: string | null
-          state?: string | null
-          stripe_customer_id: string
-          stripe_invoice_id?: string | null
-          stripe_subscription_id?: string | null
-          subscription_current_period_end?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          addon_relationship_compatibility?: boolean | null
-          addon_transit_12_months?: boolean | null
-          addon_yearly_cycle?: boolean | null
-          billing_address_line1?: string | null
-          billing_address_line2?: string | null
-          card_brand?: string | null
-          card_last4?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          email?: string
-          full_name?: string | null
-          id?: string
-          payment_method_type?: string | null
-          payment_status?: string | null
-          phone?: string | null
-          plan_name?: string | null
-          postal_code?: string | null
-          state?: string | null
-          stripe_customer_id?: string
-          stripe_invoice_id?: string | null
-          stripe_subscription_id?: string | null
-          subscription_current_period_end?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       stripe_webhook_events: {
         Row: {
           created_at: string
@@ -744,6 +663,14 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      get_stripe_customer_id_for_user: {
+        Args: { user_id_param: string }
+        Returns: string
+      }
+      get_user_email_by_id: {
+        Args: { user_id_param: string }
+        Returns: string
       }
       record_api_usage: {
         Args: {

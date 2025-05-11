@@ -63,21 +63,22 @@ serve(async (req) => {
             .update({ status: "processing" })
             .eq("id", request.id);
 
-          // Get user email
-          const { data: userData, error: userError } = await supabase
-            .from("auth.users")
-            .select("email")
-            .eq("id", request.user_id)
-            .single();
-
-          if (userError || !userData) {
-            console.error(`User not found for ID: ${request.user_id}`);
-            await updateRequestStatus(request.id, "failed", "User not found");
-            return { id: request.id, status: "failed", error: "User not found" };
+          // Get user email using our new database function
+          const { data: userEmailData, error: userEmailError } = await supabase.rpc(
+            "get_user_email_by_id", 
+            { user_id_param: request.user_id }
+          );
+          
+          if (userEmailError || !userEmailData) {
+            console.error(`User email not found for ID: ${request.user_id}`, userEmailError);
+            await updateRequestStatus(request.id, "failed", "User email not found");
+            return { id: request.id, status: "failed", error: "User email not found" };
           }
+          
+          const userEmail = userEmailData;
 
           // Get or create stripe customer
-          let stripeCustomerId = await getStripeCustomerId(request.user_id, userData.email);
+          let stripeCustomerId = await getStripeCustomerId(request.user_id, userEmail);
           if (!stripeCustomerId) {
             console.error(`Failed to get/create Stripe customer for user: ${request.user_id}`);
             await updateRequestStatus(request.id, "failed", "Could not create Stripe customer");
@@ -174,18 +175,43 @@ async function updateRequestStatus(id: string, status: string, errorMessage?: st
 
 // Helper to get or create stripe customer
 async function getStripeCustomerId(userId: string, email: string) {
-  // Check if user already has a stripe customer id
-  const { data: stripeUser } = await supabase
-    .from("stripe_users")
-    .select("stripe_customer_id")
-    .eq("email", email)
-    .maybeSingle();
-
-  if (stripeUser?.stripe_customer_id) {
-    return stripeUser.stripe_customer_id;
+  // First, check if user already has a stripe_customer_id in credit_transactions
+  const { data: stripeCustomerId, error: customerIdError } = await supabase.rpc(
+    "get_stripe_customer_id_for_user", 
+    { user_id_param: userId }
+  );
+  
+  if (stripeCustomerId && !customerIdError) {
+    console.log(`Found existing Stripe customer ID in credit_transactions: ${stripeCustomerId}`);
+    return stripeCustomerId;
   }
 
-  // Create a new customer
+  // If not found in our DB, check if customer exists in Stripe by email
+  try {
+    const customers = await stripe.customers.list({ email, limit: 1 });
+    if (customers.data.length > 0) {
+      const customerId = customers.data[0].id;
+      console.log(`Found existing customer in Stripe: ${customerId}`);
+      
+      // Record this customer ID in credit_transactions for future reference
+      await supabase
+        .from("credit_transactions")
+        .insert({
+          user_id: userId,
+          email: email,
+          stripe_customer_id: customerId,
+          type: "link",
+          description: "Linked existing Stripe customer",
+          amount_usd: 0,
+        });
+      
+      return customerId;
+    }
+  } catch (stripeErr) {
+    console.error("Error checking Stripe customers:", stripeErr);
+  }
+
+  // Create a new customer if none was found
   try {
     const customer = await stripe.customers.create({
       email,
@@ -193,16 +219,19 @@ async function getStripeCustomerId(userId: string, email: string) {
         user_id: userId,
       },
     });
-
-    // Save customer id
+    
+    console.log(`Created new Stripe customer: ${customer.id}`);
+    
+    // Save customer id in credit_transactions
     await supabase
-      .from("stripe_users")
-      .upsert({
-        email,
+      .from("credit_transactions")
+      .insert({
+        user_id: userId,
+        email: email,
         stripe_customer_id: customer.id,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: "email"
+        type: "create",
+        description: "Created new Stripe customer",
+        amount_usd: 0,
       });
 
     return customer.id;
