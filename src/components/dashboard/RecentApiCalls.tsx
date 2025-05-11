@@ -2,7 +2,8 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Card,
   CardContent,
@@ -11,51 +12,138 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useState } from "react";
+import { Check, X } from "lucide-react";
+import { format } from "date-fns";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-// Using a mock data interface instead of querying non-existent table
-interface ApiRequestLog {
-  log_id: string;
-  endpoint_called: string;
-  system: string;
-  status: string;
+// Define the structure of the API activity log entry (same as ActivityLogs.tsx)
+type ActivityLog = {
+  id: string;
   created_at: string;
+  response_status: number;
+  request_type: string;
+  endpoint?: string;
+  report_tier: string | null;
+  total_cost_usd: number;
+  processing_time_ms: number | null;
+  response_payload?: any;
+  request_payload?: any;
   error_message?: string;
-}
+  google_geo?: boolean;
+};
 
 export const RecentApiCalls = () => {
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
-  // Mock data instead of querying a non-existent table
-  const recentCalls: ApiRequestLog[] = [
-    {
-      log_id: '1',
-      endpoint_called: 'chart',
-      system: 'API',
-      status: 'success',
-      created_at: new Date().toISOString()
-    },
-    {
-      log_id: '2',
-      endpoint_called: 'predictions',
-      system: 'API',
-      status: 'success',
-      created_at: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      log_id: '3',
-      endpoint_called: 'data',
-      system: 'API',
-      status: 'error',
-      created_at: new Date(Date.now() - 7200000).toISOString(),
-      error_message: 'Invalid request parameters'
-    }
-  ];
+  // Function to load logs from the database - simplified version of ActivityLogs
+  const loadLogs = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('translator_logs')
+        .select(`
+          *,
+          api_usage!translator_log_id(total_cost_usd)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(4); // Only get the 4 most recent logs
+      
+      if (error) {
+        console.error("Error fetching logs:", error);
+        return;
+      }
 
-  if (isLoading) {
+      // Process the data to match the ActivityLog type (same as ActivityLogs.tsx)
+      const processedData: ActivityLog[] = data?.map(item => {
+        return {
+          id: item.id,
+          created_at: item.created_at,
+          response_status: item.response_status || 0,
+          endpoint: item.request_type || 'unknown',
+          request_type: item.request_type || '',
+          report_tier: item.report_tier,
+          total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
+          processing_time_ms: item.processing_time_ms,
+          response_payload: item.response_payload,
+          request_payload: item.request_payload,
+          error_message: item.error_message,
+          google_geo: item.google_geo
+        };
+      }) || [];
+      
+      setLogs(processedData);
+    } catch (err) {
+      console.error("Unexpected error loading logs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load logs when component mounts
+  useEffect(() => {
+    loadLogs();
+  }, [user]);
+
+  const handleViewAllActivity = () => {
+    navigate('/dashboard/activity-logs');
+  };
+
+  // Format the type value with proper capitalization and consistent display - same as ActivityLogs
+  const formatTypeValue = (type: string | null): string => {
+    if (!type) return 'None';
+    return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+  };
+
+  // Helper function to check if a log is failed - same as ActivityLogs
+  const isFailedLog = (status: number): boolean => {
+    return status >= 400;
+  };
+
+  // Render status icon with tooltip - same as ActivityLogs
+  const renderStatusIcon = (status: number) => {
+    if (status >= 200 && status < 300) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100">
+                <Check className="h-4 w-4 text-green-600" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="bg-white">
+              <p>Success</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    } else {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-100">
+                <X className="h-4 w-4 text-red-600" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="bg-white">
+              <p>Failed</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+  };
+
+  if (loading) {
     return (
       <Card>
         <CardHeader>
@@ -66,10 +154,6 @@ export const RecentApiCalls = () => {
     );
   }
 
-  const handleViewAllActivity = () => {
-    navigate('/dashboard/activity-logs');
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -78,43 +162,58 @@ export const RecentApiCalls = () => {
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4 font-medium">Endpoint</th>
-                <th className="text-left py-3 px-4 font-medium">System</th>
-                <th className="text-left py-3 px-4 font-medium">Status</th>
-                {!isMobile && (
-                  <th className="text-left py-3 px-4 font-medium">Time</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {recentCalls.map((call) => (
-                <tr key={call.log_id} className="border-b">
-                  <td className="py-3 px-4 font-mono capitalize">{call.endpoint_called}</td>
-                  <td className="py-3 px-4">{call.system}</td>
-                  <td className="py-3 px-4">
-                    <span 
-                      className={`inline-block px-2 py-1 text-xs font-medium rounded ${
-                        call.status === 'success' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                      title={call.error_message || ''}
-                    >
-                      {call.status}
-                    </span>
-                  </td>
-                  {!isMobile && (
-                    <td className="py-3 px-4 text-gray-500">
-                      {new Date(call.created_at).toLocaleString()}
-                    </td>
-                  )}
+          {logs.length === 0 ? (
+            <div className="text-center py-4">
+              <p>No activity logs found.</p>
+            </div>
+          ) : (
+            <table className="w-full table-auto">
+              <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
+                <tr>
+                  <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Type</th>
+                  <th className="px-4 py-3 text-right">Cost</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {logs.map((log) => (
+                  <tr 
+                    key={log.id} 
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-sm">
+                      {log.created_at ? 
+                        format(new Date(log.created_at), 'MMM d, yyyy') : 
+                        'N/A'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {renderStatusIcon(log.response_status)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {isFailedLog(log.response_status) ? (
+                        <span className="text-gray-500 text-sm">None</span>
+                      ) : (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">
+                            {formatTypeValue(log.request_type)}
+                          </span>
+                          {log.report_tier && (
+                            <span className="text-xs text-primary">
+                              {formatTypeValue(log.report_tier)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm">
+                      ${log.total_cost_usd?.toFixed(2) || '0.00'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </CardContent>
       <CardFooter>
