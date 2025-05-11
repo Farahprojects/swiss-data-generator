@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Info, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 type PriceItem = {
   id: string;
@@ -45,16 +45,14 @@ export const PricingPage = () => {
     fetchPrices();
   }, []);
 
-  // Group prices by endpoint or report_tier
+  // Group prices by report_tier only - removing the API Endpoints category
   const groupedPrices = prices.reduce((acc, price) => {
     let category;
     
     if (price.report_tier) {
       category = 'Report Tiers';
-    } else if (price.endpoint) {
-      category = 'API Endpoints';
     } else {
-      category = 'Other Services';
+      category = 'Other Services'; // All other items go here
     }
     
     if (!acc[category]) {
@@ -104,38 +102,31 @@ export const PricingPage = () => {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">API Pricing</h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 mb-4">
           Our transparent pricing ensures you only pay for what you use, with no hidden fees or charges.
         </p>
         
-        <Card className="mt-4 bg-gray-50">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-primary mt-1" />
-              <div>
-                <h3 className="font-medium text-lg">All prices include:</h3>
-                <ul className="mt-2 grid gap-y-2 gap-x-6 sm:grid-cols-2">
-                  <li className="flex items-center gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Pay-as-you-go billing</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Direct API access</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Usage-based pricing</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-primary">•</span>
-                    <span>No long-term commitments</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mt-4">
+          <h3 className="font-medium text-lg mb-2">All prices include:</h3>
+          <ul className="grid gap-y-2 gap-x-6 sm:grid-cols-2">
+            <li className="flex items-center gap-2">
+              <span className="text-primary">•</span>
+              <span>Pay-as-you-go billing</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-primary">•</span>
+              <span>Direct API access</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-primary">•</span>
+              <span>Usage-based pricing</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-primary">•</span>
+              <span>No long-term commitments</span>
+            </li>
+          </ul>
+        </div>
       </div>
       
       {Object.keys(groupedPrices).length === 0 ? (
@@ -149,7 +140,6 @@ export const PricingPage = () => {
               <CardTitle>{category}</CardTitle>
               <CardDescription>
                 {category === 'Report Tiers' && 'Pricing for different report complexity levels'}
-                {category === 'API Endpoints' && 'Pricing for specific API endpoints and features'}
                 {category === 'Other Services' && 'Additional services and features'}
               </CardDescription>
             </CardHeader>
@@ -169,21 +159,15 @@ export const PricingPage = () => {
                     
                     <Separator className="my-4" />
                     
-                    {/* Show only specific details for this price item, not the generic info */}
-                    <div className="text-sm text-gray-600">
-                      {price.report_tier && (
+                    {/* Only show report_tier information, removed endpoint display */}
+                    {price.report_tier && (
+                      <div className="text-sm text-gray-600">
                         <div className="flex items-center gap-2">
                           <span className="text-primary">•</span>
                           <span>Report tier: {price.report_tier}</span>
                         </div>
-                      )}
-                      {price.endpoint && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-primary">•</span>
-                          <span>Endpoint: {price.endpoint}</span>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
