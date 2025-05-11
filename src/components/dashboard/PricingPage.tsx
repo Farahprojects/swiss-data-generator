@@ -45,8 +45,23 @@ export const PricingPage = () => {
     fetchPrices();
   }, []);
 
-  // Only include prices with report_tier - removing the "Other Services" category
-  const filteredPrices = prices.filter(price => price.report_tier);
+  // Group prices by report_tier only - removing the API Endpoints category
+  const groupedPrices = prices.reduce((acc, price) => {
+    let category;
+    
+    if (price.report_tier) {
+      category = 'Report Tiers';
+    } else {
+      category = 'Other Services'; // All other items go here
+    }
+    
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    
+    acc[category].push(price);
+    return acc;
+  }, {} as Record<string, PriceItem[]>);
   
   if (loading) {
     return (
@@ -114,43 +129,51 @@ export const PricingPage = () => {
         </div>
       </div>
       
-      {filteredPrices.length === 0 ? (
+      {Object.keys(groupedPrices).length === 0 ? (
         <div className="p-6 text-center text-gray-500">
           No pricing information available at this time.
         </div>
       ) : (
-        <Card key="report-tiers" className="overflow-hidden">
-          <CardHeader className="bg-gray-50 border-b">
-            <CardTitle>Report Tiers</CardTitle>
-            <CardDescription>
-              Pricing for different report complexity levels
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredPrices.map((price) => (
-                <div key={price.id} className="bg-white p-5 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 flex flex-col">
-                  <div>
-                    <h3 className="text-lg font-medium">{price.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{price.description || 'Standard pricing'}</p>
+        Object.entries(groupedPrices).map(([category, items]) => (
+          <Card key={category} className="overflow-hidden">
+            <CardHeader className="bg-gray-50 border-b">
+              <CardTitle>{category}</CardTitle>
+              <CardDescription>
+                {category === 'Report Tiers' && 'Pricing for different report complexity levels'}
+                {category === 'Other Services' && 'Additional services and features'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map((price) => (
+                  <div key={price.id} className="bg-white p-5 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-lg font-medium">{price.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{price.description || 'Standard pricing'}</p>
+                      </div>
+                      <Badge variant="outline" className="text-primary border-primary">
+                        {formatPrice(price.unit_price_usd)}
+                      </Badge>
+                    </div>
+                    
+                    <Separator className="my-4" />
+                    
+                    {/* Only show report_tier information, removed endpoint display */}
+                    {price.report_tier && (
+                      <div className="text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <span className="text-primary">•</span>
+                          <span>Report tier: {price.report_tier}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
-                  <Separator className="my-4" />
-                  
-                  {/* Spacer to push price to bottom */}
-                  <div className="flex-grow"></div>
-                  
-                  {/* Centered price at bottom */}
-                  <div className="text-center mt-4">
-                    <Badge variant="outline" className="text-primary border-primary px-3 py-1 text-lg">
-                      {formatPrice(price.unit_price_usd)}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))
       )}
       
       <Card>
