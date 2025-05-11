@@ -42,9 +42,9 @@ const UnifiedNavigation = () => {
     <nav className="sticky top-0 bg-white z-50 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
-          {/* Left section with hamburger menu for logged in users on mobile */}
+          {/* Left section with hamburger menu for logged in users on mobile or logo for not logged in */}
           <div className="flex items-center">
-            {isLoggedIn && isMobile && (
+            {isLoggedIn && isMobile ? (
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -54,13 +54,18 @@ const UnifiedNavigation = () => {
               >
                 <Menu className="h-5 w-5" />
               </Button>
+            ) : (
+              /* Only show logo on left for not logged in users */
+              !isLoggedIn && <Logo />
             )}
           </div>
           
-          {/* Centered logo */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
-            <Logo />
-          </div>
+          {/* Centered logo - only for logged in users */}
+          {isLoggedIn && (
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+              <Logo />
+            </div>
+          )}
           
           {/* Desktop Navigation - only for not logged in users */}
           <div className="hidden md:flex items-center space-x-8">
