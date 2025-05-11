@@ -31,7 +31,7 @@ const DashboardSidebar = () => {
     },
     {
       name: "API Keys",
-      path: "/dashboard?tab=api-keys",
+      path: "/dashboard/settings?panel=apikeys",
       icon: <Key size={20} />
     },
     {
@@ -63,6 +63,10 @@ const DashboardSidebar = () => {
 
   const isPathActive = (path: string) => {
     if (path === "/dashboard" && location.pathname === "/dashboard" && !location.search) {
+      return true;
+    }
+    
+    if (path.includes('?panel=') && location.search.includes(path.split('?panel=')[1])) {
       return true;
     }
     
