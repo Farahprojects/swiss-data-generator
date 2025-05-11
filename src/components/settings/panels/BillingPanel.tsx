@@ -1,13 +1,14 @@
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { ExternalLink, PlusCircle } from "lucide-react";
+import { ExternalLink, PlusCircle, CreditCard, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { getStripeLinkByName, STRIPE_LINK_TYPES } from "@/utils/stripe-links";
 import { supabase } from "@/integrations/supabase/client";
 import { TopupQueueStatus } from "@/components/dashboard/TopupQueueStatus";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Mock data - this would come from database in a real app
 const mockData = {
@@ -25,6 +26,8 @@ export const BillingPanel = () => {
   const { user } = useAuth();
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<any>(null);
+  const [isLoadingPaymentMethod, setIsLoadingPaymentMethod] = useState(true);
   const location = useLocation();
   
   useEffect(() => {
@@ -36,12 +39,43 @@ export const BillingPanel = () => {
       toast.success("Payment method updated successfully!");
       // Clean up URL params
       window.history.replaceState({}, document.title, window.location.pathname);
+      fetchPaymentMethod(); // Refresh payment method data
     } else if (setup === 'cancelled') {
       toast.info("Payment method update cancelled.");
       // Clean up URL params
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [location]);
+  
+  // Fetch the user's saved payment method
+  const fetchPaymentMethod = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setIsLoadingPaymentMethod(true);
+      
+      const { data, error } = await supabase.rpc('get_stripe_customer_id_for_user', {
+        user_id_param: user.id
+      });
+      
+      if (error) {
+        console.error("Error fetching payment method:", error);
+        return;
+      }
+      
+      setPaymentMethod(data);
+    } catch (err) {
+      console.error("Failed to fetch payment method:", err);
+    } finally {
+      setIsLoadingPaymentMethod(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (user?.id) {
+      fetchPaymentMethod();
+    }
+  }, [user]);
   
   const handleTopup = async () => {
     if (!user) {
@@ -121,6 +155,64 @@ export const BillingPanel = () => {
     }
   };
 
+  // Function to render payment method information or alert
+  const renderPaymentMethodSection = () => {
+    if (isLoadingPaymentMethod) {
+      return (
+        <div className="py-4 text-center text-gray-500">
+          Loading payment information...
+        </div>
+      );
+    }
+    
+    // If no payment method found
+    if (!paymentMethod?.stripe_payment_method_id) {
+      return (
+        <Alert className="mb-4 border-amber-200 bg-amber-50 text-amber-800">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            You haven't added a payment method yet. This is required for automatic top-ups when your balance is low.
+            <Button 
+              variant="outline" 
+              onClick={handleUpdatePayment}
+              disabled={isUpdatingPayment}
+              className="w-full mt-3"
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              {isUpdatingPayment ? "Processing..." : "Add Payment Method"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    
+    // If payment method exists
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="w-12 h-8 bg-gray-800 rounded mr-4"></div>
+            <span>•••• •••• •••• 4242</span>
+          </div>
+          <div>
+            <span className="text-sm text-gray-500">Expires 09/25</span>
+          </div>
+        </div>
+        <div className="pt-2">
+          <Button 
+            variant="outline" 
+            onClick={handleUpdatePayment}
+            disabled={isUpdatingPayment}
+            className="flex items-center"
+          >
+            <CreditCard className="mr-2 h-4 w-4" />
+            {isUpdatingPayment ? "Processing..." : "Update Payment Method"}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-6 bg-white rounded-lg shadow">
       <h2 className="text-2xl font-semibold mb-6">Billing & API Credits</h2>
@@ -162,27 +254,7 @@ export const BillingPanel = () => {
       
       <div className="mb-8 p-6 border rounded-lg">
         <h3 className="text-lg font-medium mb-4">Payment Method</h3>
-        
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-12 h-8 bg-gray-800 rounded mr-4"></div>
-              <span>•••• •••• •••• 4242</span>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">Expires 09/25</span>
-            </div>
-          </div>
-          <div className="pt-2">
-            <Button 
-              variant="outline" 
-              onClick={handleUpdatePayment}
-              disabled={isUpdatingPayment}
-            >
-              {isUpdatingPayment ? "Processing..." : "Update Payment Method"}
-            </Button>
-          </div>
-        </div>
+        {renderPaymentMethodSection()}
       </div>
       
       <div>
