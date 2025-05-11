@@ -140,11 +140,16 @@ async function markEvent(
 
 /* ──────────────────────  BUSINESS LOGIC HELPERS  ───────────────────────── */
 
+/**
+ * Adds credit, then back-fills stripe_customer_id and/or stripe_payment_method_id
+ * on the resulting credit_transactions row.
+ */
 async function creditUser(
   userId: string,
   usd: number,
   stripePid: string,
   paymentMethodId: string | null = null,
+  stripeCustomerId: string | null = null,           // ← NEW
 ): Promise<void> {
   const { error } = await supabase.rpc("add_user_credits", {
     _user_id: userId,
@@ -156,40 +161,42 @@ async function creditUser(
 
   if (error) throw error;
 
-  if (paymentMethodId) {
-    const { data: transactions, error: txError } = await supabase
-      .from("credit_transactions")
-      .select("id")
-      .eq("stripe_pid", stripePid)
-      .eq("user_id", userId)
-      .order("ts", { ascending: false })
-      .limit(1);
+  /* Back-fill anything that wasn’t stored by the database function */
+  const { data: transactions, error: txError } = await supabase
+    .from("credit_transactions")
+    .select("id, stripe_payment_method_id, stripe_customer_id")
+    .eq("stripe_pid", stripePid)
+    .eq("user_id", userId)
+    .order("ts", { ascending: false })
+    .limit(1);
 
-    if (txError) {
-      console.error("Error finding transaction:", txError.message);
-      return;
+  if (txError) {
+    console.error("Error finding transaction:", txError.message);
+    return;
+  }
+
+  if (transactions?.length) {
+    const updates: Record<string, unknown> = {};
+    if (paymentMethodId && !transactions[0].stripe_payment_method_id) {
+      updates.stripe_payment_method_id = paymentMethodId;
     }
-
-    if (transactions?.length) {
+    if (stripeCustomerId && !transactions[0].stripe_customer_id) {
+      updates.stripe_customer_id = stripeCustomerId;
+    }
+    if (Object.keys(updates).length) {
       const { error: updateError } = await supabase
         .from("credit_transactions")
-        .update({ stripe_payment_method_id: paymentMethodId })
+        .update(updates)
         .eq("id", transactions[0].id);
 
       if (updateError) {
-        console.error(
-          `Error updating transaction with payment method ID: ${updateError.message}`,
-        );
-      } else {
-        console.log(
-          `✅ Added payment method ID ${paymentMethodId} to transaction ${transactions[0].id}`,
-        );
+        console.error("Error updating transaction:", updateError.message);
       }
     }
   }
 }
 
-/* Save payment-method details for setup sessions triggered via Checkout */
+/* Save payment-method details for setup-mode Checkout sessions */
 async function savePaymentMethodDetails(
   userId: string,
   setupIntent: any,
@@ -283,6 +290,7 @@ serve(async (req) => {
         if (!userId) throw new Error("metadata.user_id missing");
 
         const paymentMethodId = pi.payment_method;
+        const customerId = pi.customer || null;                    // ← NEW
         if (pi.metadata?.topup_request_id) {
           await supabase
             .from("topup_queue")
@@ -294,7 +302,13 @@ serve(async (req) => {
             .eq("id", pi.metadata.topup_request_id);
         }
 
-        await creditUser(userId, pi.amount / 100, pi.id, paymentMethodId);
+        await creditUser(
+          userId,
+          pi.amount / 100,
+          pi.id,
+          paymentMethodId,
+          customerId,                                             // ← NEW
+        );
         await markEvent(event.id, {
           processed: true,
           processed_at: new Date().toISOString(),
@@ -323,7 +337,13 @@ serve(async (req) => {
             session.payment_intent,
           );
           const paymentMethodId = pi.payment_method;
-          await creditUser(userId, pi.amount / 100, pi.id, paymentMethodId);
+          await creditUser(
+            userId,
+            pi.amount / 100,
+            pi.id,
+            paymentMethodId,
+            pi.customer as string | null,                          // ← NEW
+          );
         } else if (session.mode === "setup" && session.setup_intent) {
           const setupIntent = await stripe.setupIntents.retrieve(
             session.setup_intent,
