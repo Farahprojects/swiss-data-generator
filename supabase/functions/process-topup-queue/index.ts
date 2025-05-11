@@ -150,11 +150,11 @@ serve(async (req) => {
             },
           });
 
-          // Update request status to checkout_created
-          await updateRequestStatus(request.id, "checkout_created", null);
+          // Update request status to completed (previously checkout_created)
+          await updateRequestStatus(request.id, "completed", "Checkout session created: " + session.id);
 
           console.log(`Successfully created checkout session for ${request.id}: ${session.id}`);
-          return { id: request.id, status: "checkout_created", checkout_url: session.url };
+          return { id: request.id, status: "completed", checkout_url: session.url };
         } catch (err) {
           const errorMessage = err.message || "Unknown error occurred";
           console.error(`Error processing request ${request.id}:`, errorMessage);
@@ -193,4 +193,3 @@ async function updateRequestStatus(id: string, status: string, errorMessage?: st
     console.error(`Failed to update status for request ${id}:`, error);
   }
 }
-
