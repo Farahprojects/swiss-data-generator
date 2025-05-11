@@ -30,7 +30,7 @@ serve(async (req) => {
     const { data: requestsToProcess, error: fetchError } = await supabase
       .from("topup_queue")
       .select("id, user_id, amount_usd, status, error_message, retry_count, max_retries, last_retry_at")
-      .eq("status", "pending")
+      .or("status.eq.pending,status.eq.failed")
       .lt("retry_count", 3)
       .order("retry_count", { ascending: true })
       .limit(10);
