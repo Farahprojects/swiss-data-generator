@@ -37,7 +37,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 /* ───────────────────────────── CORS  ───────────────────────────────────── */
 
 const CORS = {
-  "Access-Control-Allow-Origin": "*", // fine for Stripe (server-to-server)
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, stripe-signature",
@@ -70,7 +70,6 @@ async function verifyStripeSignature(
   const sigs = parts.v1 ? parts.v1.split(" ") : [];
   if (!ts || !sigs.length) throw new Error("Malformed Stripe-Signature header");
 
-  // Replay protection
   const now = Math.floor(Date.now() / 1000);
   if (Math.abs(now - Number(ts)) > toleranceSec) {
     throw new Error("Timestamp outside tolerance");
@@ -116,7 +115,7 @@ async function upsertEvent(evt: any): Promise<boolean> {
         stripe_event_type: evt.type,
         stripe_kind: evt.type?.split(".")[0] ?? "unknown",
         stripe_customer_id: stripeCustomerId,
-        payload: evt, // JSONB column recommended
+        payload: evt,
         processed: false,
       },
       { ignoreDuplicates: true },
@@ -190,7 +189,7 @@ async function creditUser(
   }
 }
 
-/* Save payment-method details from a setup session */
+/* Save payment-method details for setup sessions triggered via Checkout */
 async function savePaymentMethodDetails(
   userId: string,
   setupIntent: any,
@@ -219,10 +218,6 @@ async function savePaymentMethodDetails(
 
     if (error) {
       console.error("Error saving payment-method details:", error.message);
-    } else {
-      console.log(
-        `✅ Saved payment-method details for user ${userId}, method ${paymentMethod.id}`,
-      );
     }
   } catch (err) {
     console.error("Error in savePaymentMethodDetails:", err);
@@ -268,7 +263,6 @@ serve(async (req) => {
     return new Response("Invalid JSON", { status: 400, headers: CORS });
   }
 
-  /* Store every event exactly once */
   try {
     const fresh = await upsertEvent(event);
     if (!fresh) {
@@ -289,10 +283,6 @@ serve(async (req) => {
         if (!userId) throw new Error("metadata.user_id missing");
 
         const paymentMethodId = pi.payment_method;
-        console.log(
-          `✅ payment_intent.succeeded with payment method: ${paymentMethodId}`,
-        );
-
         if (pi.metadata?.topup_request_id) {
           await supabase
             .from("topup_queue")
@@ -332,20 +322,9 @@ serve(async (req) => {
           const pi = await stripe.paymentIntents.retrieve(
             session.payment_intent,
           );
-          if (!["succeeded", "requires_capture"].includes(pi.status)) {
-            throw new Error(
-              `PaymentIntent ${pi.id} not succeeded (${pi.status})`,
-            );
-          }
-
           const paymentMethodId = pi.payment_method;
-          console.log(
-            `✅ checkout.session.completed with payment method: ${paymentMethodId}`,
-          );
-
           await creditUser(userId, pi.amount / 100, pi.id, paymentMethodId);
         } else if (session.mode === "setup" && session.setup_intent) {
-          console.log(`ℹ️  setup session completed: ${session.setup_intent}`);
           const setupIntent = await stripe.setupIntents.retrieve(
             session.setup_intent,
           );
@@ -361,23 +340,60 @@ serve(async (req) => {
       /* ------------------------------------------------------- */
       case "setup_intent.succeeded": {
         const intent = event.data.object;
-        const userId = intent.metadata?.user_id;
-        const paymentMethodId = intent.payment_method;
+        let userId: string | null = intent.metadata?.user_id || null;
+        const paymentMethodId: string | null = intent.payment_method;
+        const customerId: string | null = intent.customer;
 
-        if (!userId || !paymentMethodId) {
-          throw new Error("Missing user_id or payment_method from setup_intent");
+        if (!paymentMethodId || !customerId) {
+          throw new Error(
+            "Missing payment_method or customer ID in setup_intent",
+          );
         }
 
-        const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+        // Look up the most recent credit transaction for this customer
+        const { data: existingTxns, error } = await supabase
+          .from("credit_transactions")
+          .select("id, user_id, stripe_payment_method_id")
+          .eq("stripe_customer_id", customerId)
+          .order("ts", { ascending: false })
+          .limit(1);
 
-        await supabase.from("credit_transactions").insert({
-          user_id: userId,
-          stripe_payment_method_id: paymentMethodId,
-          card_brand: pm.card?.brand || null,
-          card_last4: pm.card?.last4 || null,
-          type: "card_setup",
-          description: "Saved payment method via setup intent",
-        });
+        if (error) throw error;
+
+        if (existingTxns && existingTxns.length > 0) {
+          const txn = existingTxns[0];
+
+          // If metadata lacked user_id, backfill from existing row
+          if (!userId) userId = txn.user_id;
+
+          // Update payment method if missing
+          if (!txn.stripe_payment_method_id) {
+            await supabase
+              .from("credit_transactions")
+              .update({
+                stripe_payment_method_id: paymentMethodId,
+                description:
+                  "Backfilled saved payment method via setup_intent",
+              })
+              .eq("id", txn.id);
+          }
+        } else {
+          // No previous transaction for this customer – create placeholder
+          if (!userId) {
+            throw new Error(
+              "User ID is required to create fallback credit transaction",
+            );
+          }
+
+          await supabase.from("credit_transactions").insert({
+            user_id: userId,
+            stripe_customer_id: customerId,
+            stripe_payment_method_id: paymentMethodId,
+            type: "card_setup",
+            description: "Saved payment method via setup_intent",
+            amount_usd: 0,
+          });
+        }
 
         await markEvent(event.id, {
           processed: true,
