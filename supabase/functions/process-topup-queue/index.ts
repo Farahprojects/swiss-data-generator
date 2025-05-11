@@ -28,12 +28,16 @@ serve(async (req) => {
   try {
     console.log("Process topup queue function started");
 
-    // Get pending topup requests and failed requests that could be retried
-    // We'll retry failed requests that don't have specific error messages related to customer creation
+    // Get current timestamp for stale processing check
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+    // Get pending topup requests, failed requests that could be retried, and stalled processing requests
     const { data: requestsToProcess, error: fetchError } = await supabase
       .from("topup_queue")
-      .select("id, user_id, amount_usd, status, error_message, retry_count, max_retries")
-      .or("status.eq.pending,and(status.eq.failed,error_message.not.ilike.%customer%)")
+      .select("id, user_id, amount_usd, status, error_message, retry_count, max_retries, last_retry_at")
+      .or(
+        `status.eq.pending,and(status.eq.failed,error_message.not.ilike.%customer%),and(status.eq.processing,last_retry_at.lt.${tenMinutesAgo})`
+      )
       .lt("retry_count", 3) // Only process if under max retries
       .order("retry_count", { ascending: true }) // Process lower retry counts first
       .limit(10); // Process in batches

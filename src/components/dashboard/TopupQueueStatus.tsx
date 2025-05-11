@@ -13,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TopupRequest {
   id: string;
@@ -128,7 +134,25 @@ export const TopupQueueStatus = () => {
             </div>
             {topupRequests.map((request) => (
               <div key={request.id} className="grid grid-cols-12 text-sm py-2 border-b last:border-0">
-                <div className="col-span-2">{getStatusBadge(request.status)}</div>
+                <div className="col-span-2">
+                  {request.error_message ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center">
+                            {getStatusBadge(request.status)}
+                            <AlertCircle className="w-3 h-3 ml-1 text-amber-500" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs text-xs">{request.error_message}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    getStatusBadge(request.status)
+                  )}
+                </div>
                 <div className="col-span-2">${request.amount_usd?.toFixed(2)}</div>
                 <div className="col-span-4">{formatDate(request.requested_at)}</div>
                 <div className="col-span-2">{request.retry_count} of {request.max_retries}</div>
