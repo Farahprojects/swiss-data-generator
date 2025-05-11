@@ -1,3 +1,4 @@
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@13.2.0?target=deno";
@@ -78,9 +79,10 @@ serve(async (req) => {
           );
           
           if (userEmailError || !userEmailData) {
-            console.error(`User email not found for ID: ${request.user_id}`, userEmailError);
-            await updateRequestStatus(request.id, "failed", "User email not found");
-            return { id: request.id, status: "failed", error: "User email not found", retry: request.retry_count + 1 };
+            const errorMessage = `User email not found for ID: ${request.user_id}`;
+            console.error(errorMessage, userEmailError);
+            await updateRequestStatus(request.id, "failed", errorMessage);
+            return { id: request.id, status: "failed", error: errorMessage, retry: request.retry_count + 1 };
           }
           
           const userEmail = userEmailData;
@@ -89,12 +91,13 @@ serve(async (req) => {
           // Get or create stripe customer
           let stripeCustomerId = await getStripeCustomerId(request.user_id, userEmail);
           if (!stripeCustomerId) {
-            console.error(`Failed to get/create Stripe customer for user: ${request.user_id}`);
-            await updateRequestStatus(request.id, "failed", "Could not create Stripe customer");
+            const errorMessage = `Failed to get/create Stripe customer for user: ${request.user_id}`;
+            console.error(errorMessage);
+            await updateRequestStatus(request.id, "failed", errorMessage);
             return { 
               id: request.id, 
               status: "failed", 
-              error: "Stripe customer creation failed", 
+              error: errorMessage, 
               retry: request.retry_count + 1 
             };
           }
@@ -110,12 +113,13 @@ serve(async (req) => {
             .single();
 
           if (productError || !creditProduct) {
-            console.error("No active credit product found");
-            await updateRequestStatus(request.id, "failed", "Credit product not found");
+            const errorMessage = "Credit product not found";
+            console.error(errorMessage);
+            await updateRequestStatus(request.id, "failed", errorMessage);
             return { 
               id: request.id, 
               status: "failed", 
-              error: "Credit product not found", 
+              error: errorMessage, 
               retry: request.retry_count + 1 
             };
           }
@@ -164,15 +168,19 @@ serve(async (req) => {
           };
         } catch (err) {
           console.error(`Error processing request ${request.id} (attempt ${request.retry_count + 1}/${request.max_retries}):`, err);
+          const errorMessage = err.message || "Unknown error occurred";
+          
+          // Always persist the latest error message with every failure
           await updateRequestStatus(
             request.id, 
             request.retry_count + 1 >= request.max_retries ? "max_retries_reached" : "failed", 
-            err.message
+            errorMessage
           );
+          
           return { 
             id: request.id, 
             status: request.retry_count + 1 >= request.max_retries ? "max_retries_reached" : "failed", 
-            error: err.message,
+            error: errorMessage,
             retry: request.retry_count + 1
           };
         }
