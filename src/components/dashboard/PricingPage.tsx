@@ -146,28 +146,19 @@ export const PricingPage = () => {
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {items.map((price) => (
-                  <div key={price.id} className="bg-white p-5 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-medium">{price.name}</h3>
-                        <p className="text-sm text-gray-500 mt-1">{price.description || 'Standard pricing'}</p>
-                      </div>
-                      <Badge variant="outline" className="text-primary border-primary">
-                        {formatPrice(price.unit_price_usd)}
-                      </Badge>
+                  <div key={price.id} className="bg-white p-5 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 flex flex-col h-full">
+                    <div className="flex-grow">
+                      <h3 className="text-lg font-medium">{price.name}</h3>
+                      <p className="text-sm text-gray-500 mt-1">{price.description || 'Standard pricing'}</p>
                     </div>
                     
                     <Separator className="my-4" />
                     
-                    {/* Only show report_tier information, removed endpoint display */}
-                    {price.report_tier && (
-                      <div className="text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <span className="text-primary">•</span>
-                          <span>Report tier: {price.report_tier}</span>
-                        </div>
-                      </div>
-                    )}
+                    <div className="text-center mt-auto">
+                      <Badge variant="outline" className="text-primary border-primary text-lg px-4 py-1">
+                        {formatPrice(price.unit_price_usd)}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </div>
