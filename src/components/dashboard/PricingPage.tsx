@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Check, Loader2 } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
 
 type PriceItem = {
   id: string;
@@ -107,6 +107,35 @@ export const PricingPage = () => {
         <p className="text-gray-600">
           Our transparent pricing ensures you only pay for what you use, with no hidden fees or charges.
         </p>
+        
+        <Card className="mt-4 bg-gray-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-primary mt-1" />
+              <div>
+                <h3 className="font-medium text-lg">All prices include:</h3>
+                <ul className="mt-2 grid gap-y-2 gap-x-6 sm:grid-cols-2">
+                  <li className="flex items-center gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Pay-as-you-go billing</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Direct API access</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Usage-based pricing</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-primary">•</span>
+                    <span>No long-term commitments</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       {Object.keys(groupedPrices).length === 0 ? (
@@ -140,24 +169,17 @@ export const PricingPage = () => {
                     
                     <Separator className="my-4" />
                     
+                    {/* Show only specific details for this price item, not the generic info */}
                     <div className="text-sm text-gray-600">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Check className="h-4 w-4 text-green-500" />
-                        <span>Pay-as-you-go billing</span>
-                      </div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Check className="h-4 w-4 text-green-500" />
-                        <span>Direct API access</span>
-                      </div>
                       {price.report_tier && (
                         <div className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-500" />
+                          <span className="text-primary">•</span>
                           <span>Report tier: {price.report_tier}</span>
                         </div>
                       )}
                       {price.endpoint && (
                         <div className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-500" />
+                          <span className="text-primary">•</span>
                           <span>Endpoint: {price.endpoint}</span>
                         </div>
                       )}
