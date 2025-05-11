@@ -16,6 +16,14 @@ import { Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Define the structure of the API activity log entry (same as ActivityLogs.tsx)
 type ActivityLog = {
@@ -40,7 +48,7 @@ export const RecentApiCalls = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
-  // Function to load logs from the database - simplified version of ActivityLogs
+  // Function to load logs from the database - simplified version for recent calls
   const loadLogs = async () => {
     if (!user) return;
     
@@ -161,60 +169,58 @@ export const RecentApiCalls = () => {
         <CardDescription>View your latest API activity</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          {logs.length === 0 ? (
-            <div className="text-center py-4">
-              <p>No activity logs found.</p>
-            </div>
-          ) : (
-            <table className="w-full table-auto">
-              <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
-                <tr>
-                  <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-left">Type</th>
-                  <th className="px-4 py-3 text-right">Cost</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {logs.map((log) => (
-                  <tr 
-                    key={log.id} 
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 py-3 text-sm">
-                      {log.created_at ? 
-                        format(new Date(log.created_at), 'MMM d, yyyy') : 
-                        'N/A'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {renderStatusIcon(log.response_status)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {isFailedLog(log.response_status) ? (
-                        <span className="text-gray-500 text-sm">None</span>
-                      ) : (
-                        <div className="flex flex-col">
-                          <span className="font-medium text-sm">
-                            {formatTypeValue(log.request_type)}
+        {logs.length === 0 ? (
+          <div className="text-center py-4">
+            <p>No activity logs found.</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-gray-500">Type</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-gray-500 text-right">Cost</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-100">
+              {logs.map((log) => (
+                <TableRow 
+                  key={log.id} 
+                  className="hover:bg-gray-50 transition-colors"
+                >
+                  <TableCell className="py-3 text-sm">
+                    {log.created_at ? 
+                      format(new Date(log.created_at), 'MMM d, yyyy') : 
+                      'N/A'}
+                  </TableCell>
+                  <TableCell className="py-3">
+                    {renderStatusIcon(log.response_status)}
+                  </TableCell>
+                  <TableCell className="py-3">
+                    {isFailedLog(log.response_status) ? (
+                      <span className="text-gray-500 text-sm">None</span>
+                    ) : (
+                      <div className="flex flex-col">
+                        <span className="font-medium text-sm">
+                          {formatTypeValue(log.request_type)}
+                        </span>
+                        {log.report_tier && (
+                          <span className="text-xs text-primary">
+                            {formatTypeValue(log.report_tier)}
                           </span>
-                          {log.report_tier && (
-                            <span className="text-xs text-primary">
-                              {formatTypeValue(log.report_tier)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right text-sm">
-                      ${log.total_cost_usd?.toFixed(2) || '0.00'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-3 text-right text-sm">
+                    ${log.total_cost_usd?.toFixed(2) || '0.00'}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
       <CardFooter>
         <Button 
