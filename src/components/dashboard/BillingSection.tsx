@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { AlertCircle, CreditCard, PlusCircle, CheckCircle } from "lucide-react";
+import { AlertCircle, CreditCard, PlusCircle, CheckCircle, DollarSign } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useSearchParams } from "react-router-dom";
@@ -279,32 +279,49 @@ export const BillingSection = () => {
   };
   
   return (
-    <>
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>API Credits Balance</CardTitle>
-          <CardDescription>Your current API credits and usage</CardDescription>
+    <div className="max-w-4xl mx-auto">
+      <h2 className="text-3xl font-bold mb-6">Billing & Credits</h2>
+      
+      {/* Credit Balance Card */}
+      <Card className="mb-6 overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                API Credits Balance
+              </CardTitle>
+              <CardDescription>Your current API credits and usage</CardDescription>
+            </div>
+            <div className="bg-primary/10 text-primary px-4 py-2 rounded-full font-semibold text-lg">
+              ${isLoading ? "..." : balance.toFixed(2)}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex justify-between items-center pb-4 border-b">
               <div>
-                <h3 className="font-medium">Current Balance</h3>
+                <h3 className="font-medium">Balance Status</h3>
                 <p className="text-sm text-gray-500">
-                  {lastUpdate ? `Last updated: ${formatDate(lastUpdate)}` : ""}
+                  {lastUpdate ? `Last updated: ${formatDate(lastUpdate)}` : "Not yet updated"}
                 </p>
               </div>
               <div className="text-right">
-                <p className="font-bold">${isLoading ? "..." : balance.toFixed(2)}</p>
+                <span className={`inline-block px-3 py-1 rounded-full text-sm ${balance > 10 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  {balance > 10 ? 'Healthy' : 'Low Balance'}
+                </span>
               </div>
             </div>
             <div className="pt-2">
               <Button 
                 onClick={handleTopup}
                 disabled={isProcessingTopup || !creditProduct}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 w-full sm:w-auto"
+                size="lg"
               >
-                <PlusCircle size={16} />
+                <PlusCircle size={18} />
                 {isProcessingTopup ? "Processing..." : creditProduct 
                   ? `Top-up Credits ($${creditProduct.amount_usd})` 
                   : "Top-up Credits"}
@@ -314,9 +331,14 @@ export const BillingSection = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Method</CardTitle>
+      {/* Payment Method Card */}
+      <Card className="mb-6 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-500/10 to-transparent p-1"></div>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-blue-600" />
+            Payment Method
+          </CardTitle>
           <CardDescription>Manage your payment settings</CardDescription>
         </CardHeader>
         <CardContent>
@@ -328,16 +350,16 @@ export const BillingSection = () => {
               </div>
             </div>
           ) : !paymentMethod ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
+            <Alert className="bg-blue-50 border border-blue-100">
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+              <AlertDescription className="text-blue-800">
                 No payment method found. Add a payment method to enable automatic top-ups.
               </AlertDescription>
               <Button 
                 onClick={handleUpdatePaymentMethod} 
                 variant="outline" 
                 size="sm" 
-                className="ml-auto"
+                className="ml-auto border border-blue-200 text-blue-700 hover:bg-blue-50"
                 disabled={isUpdatingPaymentMethod}
               >
                 <CreditCard className="mr-2 h-4 w-4" />
@@ -346,10 +368,10 @@ export const BillingSection = () => {
             </Alert>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
                 <div className="flex items-center">
                   <div 
-                    className={`w-12 h-8 ${getCardBrandClass(paymentMethod.brand)} rounded mr-4 flex items-center justify-center text-white text-xs font-bold uppercase`}
+                    className={`w-14 h-10 ${getCardBrandClass(paymentMethod.brand)} rounded-md mr-4 flex items-center justify-center text-white text-xs font-bold uppercase`}
                   >
                     {paymentMethod.brand || "Card"}
                   </div>
@@ -358,8 +380,8 @@ export const BillingSection = () => {
                       <span className="font-medium">
                         {paymentMethod.brand ? paymentMethod.brand.charAt(0).toUpperCase() + paymentMethod.brand.slice(1) : "Card"}
                       </span>
-                      <span className="ml-2">•••• {paymentMethod.last4 || "****"}</span>
-                      <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                      <span className="mx-2 text-gray-400">•••• {paymentMethod.last4 || "****"}</span>
+                      <CheckCircle className="h-4 w-4 text-green-500" />
                     </div>
                     {paymentMethod.exp_month && paymentMethod.exp_year && (
                       <span className="text-sm text-gray-500">
@@ -368,14 +390,14 @@ export const BillingSection = () => {
                     )}
                   </div>
                 </div>
-              </div>
-              <div className="pt-2">
                 <Button 
                   variant="outline" 
                   onClick={handleUpdatePaymentMethod} 
                   disabled={isUpdatingPaymentMethod}
+                  size="sm"
+                  className="whitespace-nowrap"
                 >
-                  {isUpdatingPaymentMethod ? "Processing..." : "Update Payment Method"}
+                  {isUpdatingPaymentMethod ? "Processing..." : "Update Card"}
                 </Button>
               </div>
             </div>
@@ -383,42 +405,56 @@ export const BillingSection = () => {
         </CardContent>
       </Card>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
+      {/* Transaction History Card */}
+      <Card className="overflow-hidden">
+        <div className="bg-gradient-to-r from-purple-500/10 to-transparent p-1"></div>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl">Transaction History</CardTitle>
           <CardDescription>Your recent API credit transactions</CardDescription>
         </CardHeader>
         <CardContent>
           {transactions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Transaction</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Type</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{formatDate(transaction.created_at)}</TableCell>
-                    <TableCell>{transaction.endpoint || "-"}</TableCell>
-                    <TableCell>${transaction.total_cost_usd?.toFixed(2) || "0.00"}</TableCell>
-                    <TableCell>
-                      <span className="text-red-500">debit</span>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="w-[120px]">Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right w-[100px]">Amount</TableHead>
+                    <TableHead className="w-[80px]">Type</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction) => (
+                    <TableRow key={transaction.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{formatDate(transaction.created_at)}</TableCell>
+                      <TableCell className="max-w-[300px] truncate">{transaction.endpoint || "API Usage"}</TableCell>
+                      <TableCell className="text-right font-medium">${transaction.total_cost_usd?.toFixed(2) || "0.00"}</TableCell>
+                      <TableCell>
+                        <span className="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs">debit</span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
-            <div className="text-center py-4 text-gray-500">
-              {isLoading ? "Loading transactions..." : "No transactions found"}
+            <div className="text-center py-10 bg-gray-50 rounded-lg">
+              {isLoading ? (
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 bg-gray-300 rounded w-32 mx-auto"></div>
+                  <div className="h-3 bg-gray-200 rounded w-48 mx-auto"></div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-gray-500 mb-2">No transactions found</p>
+                  <p className="text-sm text-gray-400">Your transactions will appear here once you start using the API</p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 };
