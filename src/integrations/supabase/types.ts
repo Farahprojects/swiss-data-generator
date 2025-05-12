@@ -89,87 +89,6 @@ export type Database = {
           },
         ]
       }
-      credit_transactions: {
-        Row: {
-          amount_usd: number | null
-          api_call_type: string | null
-          billing_address_line1: string | null
-          billing_address_line2: string | null
-          card_brand: string | null
-          card_last4: string | null
-          city: string | null
-          country: string | null
-          description: string | null
-          email: string | null
-          full_name: string | null
-          id: number
-          payment_method_type: string | null
-          payment_status: string | null
-          postal_code: string | null
-          reference_id: string | null
-          state: string | null
-          stripe_customer_id: string | null
-          stripe_invoice_id: string | null
-          stripe_payment_method_id: string | null
-          stripe_pid: string | null
-          ts: string | null
-          type: string | null
-          user_id: string | null
-        }
-        Insert: {
-          amount_usd?: number | null
-          api_call_type?: string | null
-          billing_address_line1?: string | null
-          billing_address_line2?: string | null
-          card_brand?: string | null
-          card_last4?: string | null
-          city?: string | null
-          country?: string | null
-          description?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: number
-          payment_method_type?: string | null
-          payment_status?: string | null
-          postal_code?: string | null
-          reference_id?: string | null
-          state?: string | null
-          stripe_customer_id?: string | null
-          stripe_invoice_id?: string | null
-          stripe_payment_method_id?: string | null
-          stripe_pid?: string | null
-          ts?: string | null
-          type?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          amount_usd?: number | null
-          api_call_type?: string | null
-          billing_address_line1?: string | null
-          billing_address_line2?: string | null
-          card_brand?: string | null
-          card_last4?: string | null
-          city?: string | null
-          country?: string | null
-          description?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: number
-          payment_method_type?: string | null
-          payment_status?: string | null
-          postal_code?: string | null
-          reference_id?: string | null
-          state?: string | null
-          stripe_customer_id?: string | null
-          stripe_invoice_id?: string | null
-          stripe_payment_method_id?: string | null
-          stripe_pid?: string | null
-          ts?: string | null
-          type?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       geo_cache: {
         Row: {
           lat: number
@@ -218,6 +137,81 @@ export type Database = {
           published_date?: string
           title?: string
           version?: string
+        }
+        Relationships: []
+      }
+      payment_method: {
+        Row: {
+          billing_address_line1: string | null
+          billing_address_line2: string | null
+          card_brand: string | null
+          card_last4: string | null
+          city: string | null
+          country: string | null
+          email: string | null
+          exp_month: number | null
+          exp_year: number | null
+          fingerprint: string | null
+          full_name: string | null
+          id: number
+          is_default: boolean
+          payment_method_type: string | null
+          payment_status: string | null
+          postal_code: string | null
+          state: string | null
+          stripe_customer_id: string | null
+          stripe_payment_method_id: string | null
+          stripe_pid: string | null
+          ts: string | null
+          user_id: string | null
+        }
+        Insert: {
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          card_brand?: string | null
+          card_last4?: string | null
+          city?: string | null
+          country?: string | null
+          email?: string | null
+          exp_month?: number | null
+          exp_year?: number | null
+          fingerprint?: string | null
+          full_name?: string | null
+          id?: number
+          is_default?: boolean
+          payment_method_type?: string | null
+          payment_status?: string | null
+          postal_code?: string | null
+          state?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
+          stripe_pid?: string | null
+          ts?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          card_brand?: string | null
+          card_last4?: string | null
+          city?: string | null
+          country?: string | null
+          email?: string | null
+          exp_month?: number | null
+          exp_year?: number | null
+          fingerprint?: string | null
+          full_name?: string | null
+          id?: number
+          is_default?: boolean
+          payment_method_type?: string | null
+          payment_status?: string | null
+          postal_code?: string | null
+          state?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
+          stripe_pid?: string | null
+          ts?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -433,7 +427,7 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_event_id: string
           stripe_event_type: string
-          stripe_kind: Database["public"]["Enums"]["stripe_event_kind"]
+          stripe_kind: string
         }
         Insert: {
           created_at?: string
@@ -445,7 +439,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_event_id: string
           stripe_event_type: string
-          stripe_kind?: Database["public"]["Enums"]["stripe_event_kind"]
+          stripe_kind: string
         }
         Update: {
           created_at?: string
@@ -457,7 +451,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_event_id?: string
           stripe_event_type?: string
-          stripe_kind?: Database["public"]["Enums"]["stripe_event_kind"]
+          stripe_kind?: string
         }
         Relationships: []
       }
@@ -716,14 +710,7 @@ export type Database = {
       }
     }
     Enums: {
-      stripe_event_kind:
-        | "payment_intent"
-        | "charge"
-        | "customer"
-        | "invoice"
-        | "checkout"
-        | "subscription"
-        | "unknown"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -838,16 +825,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      stripe_event_kind: [
-        "payment_intent",
-        "charge",
-        "customer",
-        "invoice",
-        "checkout",
-        "subscription",
-        "unknown",
-      ],
-    },
+    Enums: {},
   },
 } as const

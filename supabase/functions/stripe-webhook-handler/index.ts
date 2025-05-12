@@ -1,8 +1,9 @@
+
 /* ========================================================================== *
    Supabase Edge Function – Stripe Webhook Handler (card-save only edition)
    Purpose : 1) Verify Stripe HMAC
              2) Record every event once (stripe_webhook_events)
-             3) Upsert the user’s saved card in public.payment_method
+             3) Upsert the user's saved card in public.payment_method
    Runtime : Supabase Edge / Deno Deploy
  * ========================================================================== */
 
@@ -121,7 +122,7 @@ async function markEventDone(evtId: string, err?: string) {
 /* ───────── Save / Update Payment-Method ───────── */
 
 async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
-  await supabase.from("payment_method").upsert(
+  const { error } = await supabase.from("payment_method").upsert(
     {
       user_id:                 userId,
       stripe_customer_id:      pm.customer as string | null,
@@ -144,6 +145,11 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
     },
     { onConflict: "stripe_payment_method_id" },
   );
+
+  if (error) {
+    console.error("Supabase insert error", error);
+    throw error;
+  }
 }
 
 /* ───────── MAIN ───────── */
@@ -182,6 +188,8 @@ serve(async (req) => {
       /* ─────────── setup_intent.succeeded ─────────── */
       case "setup_intent.succeeded": {
         const si = evt.data.object as Stripe.SetupIntent;
+        console.log(`Setup session completed: ${si.id}`);
+        
         const userId = si.metadata?.user_id;
         if (!userId) throw new Error("metadata.user_id missing");
 
@@ -194,23 +202,23 @@ serve(async (req) => {
 
       /* ─────────── payment_method.attached ───────────
          (covers cases where SetupIntent was created without metadata
-          but we’ve already mapped customer→user in DB) */
+          but we've already mapped customer→user in DB) */
       case "payment_method.attached": {
         const pmEvt = evt.data.object as Stripe.PaymentMethod;
-        const customerId = pmEvt.customer as string | null;
+        console.log(`Payment method attached to customer ${pmEvt.customer}: ${pmEvt.id}`);
+        
+        let userId = pmEvt.metadata?.user_id as string | undefined;
 
-        /* try find user_id via customerId */
-        if (!customerId) break;
+        // fallback → grab customer metadata
+        if (!userId && pmEvt.customer) {
+          const cust = await stripe.customers.retrieve(pmEvt.customer as string);
+          userId = (cust as Stripe.Customer).metadata?.user_id;
+        }
 
-        const { data, error } = await supabase
-          .from("payment_method")
-          .select("user_id")
-          .eq("stripe_customer_id", customerId)
-          .limit(1);
-
-        if (error) throw error;
-        const userId = data?.[0]?.user_id;
-        if (!userId) break; // we don’t know the mapping yet
+        if (!userId) {
+          console.warn("No user_id metadata; skipping saveCard");
+          break; // nothing we can do
+        }
 
         await saveCard(pmEvt, userId);
         break;
@@ -222,6 +230,7 @@ serve(async (req) => {
     await markEventDone(evt.id);
     return new Response("ok", { status: 200, headers: CORS_HEADERS });
   } catch (err) {
+    console.error(`Error saving payment method details: ${err}`);
     await markEventDone(evt.id, String(err));
     return new Response("handler error", { status: 500, headers: CORS_HEADERS });
   }
