@@ -62,8 +62,9 @@ serve(async (req) => {
             .from("payment_method")
             .select("stripe_customer_id, stripe_payment_method_id")
             .eq("user_id", request.user_id)
-            .order("created_at", { ascending: false })
+            .order("ts", { ascending: false }) 
             .limit(1);
+
 
           if (paymentData && paymentData.length > 0) {
             stripeCustomerId = paymentData[0].stripe_customer_id;
