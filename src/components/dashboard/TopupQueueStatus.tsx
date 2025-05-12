@@ -129,7 +129,7 @@ export const TopupQueueStatus = () => {
                     Processed: {new Date(request.processed_at).toLocaleString()}
                   </div>
                 )}
-                {request.error_message && (
+                {request.message && (
                   <div className="mt-1 text-xs text-gray-700">
                     <div className="font-medium">Details:</div>
                     <div className="break-all whitespace-pre-wrap">
