@@ -72,16 +72,20 @@ export const getLatestFlowByEmail = async (email: string): Promise<FlowRecord | 
       .select('*')
       .eq('email', email)
       .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
 
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 is the "no rows returned" error, which we handle by returning null
+    if (error) {
       console.error('Error getting flow tracking data:', error);
       throw error;
     }
 
-    return data as FlowRecord;
+    // If no data was found, return null
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    // Return the first (and only) result
+    return data[0] as FlowRecord;
   } catch (error) {
     console.error('Failed to get flow tracking data:', error);
     throw error;
@@ -100,11 +104,16 @@ export const getFlowBySessionId = async (sessionId: string): Promise<FlowRecord 
       .from('stripe_flow_tracking' as any)
       .select('*')
       .eq('session_id', sessionId)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       console.error('Error getting flow tracking data by session:', error);
       throw error;
+    }
+
+    // If no data was found, return null
+    if (!data) {
+      return null;
     }
 
     return data as FlowRecord;
