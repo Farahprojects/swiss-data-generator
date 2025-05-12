@@ -1,4 +1,3 @@
-
 /* ========================================================================== *
    Supabase Edge Function – Stripe Webhook Handler (card-save only edition)
    Purpose : 1) Verify Stripe HMAC
@@ -125,9 +124,6 @@ async function markEventDone(evtId: string, err?: string) {
     .eq("stripe_event_id", evtId);
 }
 
-
-
-
 /* ───────── Save / Update Payment-Method ───────── */
 async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
   const data = {
@@ -156,9 +152,8 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
   .from("payment_method")
   .insert(data);
 
-
   if (error) {
-    console.error("Supabase upsert error", error);
+    console.error("Supabase insert error", error);
     throw error;
   }
 }
@@ -180,7 +175,8 @@ serve(async (req) => {
       sig,
       Deno.env.get("STRIPE_WEBHOOK_SECRET")!,
     );
-  } catch {
+  } catch (err) {
+    console.error("Signature verification failed:", err);
     return new Response("Bad signature", { status: 400, headers: CORS_HEADERS });
   }
 
@@ -189,24 +185,31 @@ serve(async (req) => {
   /* 2️⃣  Record event for idempotency / audit */
   try {
     await upsertEvent(evt);
-  } catch {
+  } catch (err) {
+    console.error("Error recording event:", err);
     return new Response("DB error", { status: 500, headers: CORS_HEADERS });
   }
 
-  /* 3️⃣  Handle only card-save events */
+  /* 3️⃣  Handle card-save events */
   try {
+    console.log(`Processing event: ${evt.type}`);
+    
     switch (evt.type) {
       case "setup_intent.succeeded": {
         const si = evt.data.object as Stripe.SetupIntent;
         console.log(`Setup session completed: ${si.id}`);
 
         const userId = si.metadata?.user_id;
-        if (!userId) throw new Error("metadata.user_id missing");
+        if (!userId) {
+          console.error("Missing metadata.user_id in setup_intent");
+          throw new Error("metadata.user_id missing");
+        }
 
         const pm = await stripe.paymentMethods.retrieve(
           si.payment_method as string,
         );
         await saveCard(pm, userId);
+        console.log(`Successfully saved payment method: ${pm.id} for user: ${userId}`);
         break;
       }
 
@@ -218,22 +221,26 @@ serve(async (req) => {
 
         let userId = pmEvt.metadata?.user_id as string | undefined;
 
-        /* fallback → grab customer metadata */
+        // fallback → grab customer metadata
         if (!userId && pmEvt.customer) {
+          console.log("No user_id in payment method metadata, retrieving from customer");
           const cust = await stripe.customers.retrieve(pmEvt.customer as string);
           userId = (cust as Stripe.Customer).metadata?.user_id;
         }
 
         if (!userId) {
           console.warn("No user_id metadata; skipping saveCard");
-          break;
+          break;           // nothing we can do
         }
 
         await saveCard(pmEvt, userId);
+        console.log(`Successfully saved payment method: ${pmEvt.id} for user: ${userId}`);
         break;
       }
 
       /* ignore all other event types */
+      default:
+        console.log(`Ignoring event: ${evt.type}`);
     }
 
     await markEventDone(evt.id);

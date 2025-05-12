@@ -136,15 +136,18 @@ export const BillingSection = () => {
     try {
       setIsLoadingPaymentMethod(true);
       
-      // Fetch payment method directly from payment_method table
+      // Fetch the latest payment method for the user from payment_method table
       const { data, error } = await supabase
         .from("payment_method")
         .select("*")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .order("ts", { ascending: false })
+        .limit(1)
+        .single();
       
       if (error) {
         console.error("Error fetching payment method:", error);
+        setPaymentMethod(null);
         return;
       }
       
@@ -163,6 +166,7 @@ export const BillingSection = () => {
       }
     } catch (err) {
       console.error("Failed to fetch payment method:", err);
+      setPaymentMethod(null);
     } finally {
       setIsLoadingPaymentMethod(false);
     }
