@@ -305,42 +305,6 @@ export type Database = {
         }
         Relationships: []
       }
-      stripe_flow_tracking: {
-        Row: {
-          add_ons: Json | null
-          created_at: string | null
-          email: string | null
-          flow_state: string
-          id: string
-          plan_type: string | null
-          session_id: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          add_ons?: Json | null
-          created_at?: string | null
-          email?: string | null
-          flow_state: string
-          id?: string
-          plan_type?: string | null
-          session_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          add_ons?: Json | null
-          created_at?: string | null
-          email?: string | null
-          flow_state?: string
-          id?: string
-          plan_type?: string | null
-          session_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       stripe_links: {
         Row: {
           created_at: string | null
@@ -491,16 +455,76 @@ export type Database = {
         }
         Relationships: []
       }
+      topup_logs: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          id: string
+          status: string
+          stripe_payment_intent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string | null
+          id?: string
+          status: string
+          stripe_payment_intent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          id?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      topup_logs_failed: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          error_message: string | null
+          id: string
+          reviewed: boolean | null
+          status: string | null
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          reviewed?: boolean | null
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          reviewed?: boolean | null
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       topup_queue: {
         Row: {
           amount_usd: number
           error_message: string | null
           id: string
-          last_retry_at: string | null
-          max_retries: number
           processed_at: string | null
           requested_at: string | null
-          retry_count: number
           status: string | null
           user_id: string | null
         }
@@ -508,11 +532,8 @@ export type Database = {
           amount_usd: number
           error_message?: string | null
           id?: string
-          last_retry_at?: string | null
-          max_retries?: number
           processed_at?: string | null
           requested_at?: string | null
-          retry_count?: number
           status?: string | null
           user_id?: string | null
         }
@@ -520,11 +541,8 @@ export type Database = {
           amount_usd?: number
           error_message?: string | null
           id?: string
-          last_retry_at?: string | null
-          max_retries?: number
           processed_at?: string | null
           requested_at?: string | null
-          retry_count?: number
           status?: string | null
           user_id?: string | null
         }
@@ -592,39 +610,6 @@ export type Database = {
       }
     }
     Views: {
-      stripe_webhook_logs: {
-        Row: {
-          created_at: string | null
-          id: string | null
-          processed: boolean | null
-          processed_at: string | null
-          processing_error: string | null
-          stripe_customer_id: string | null
-          stripe_event_id: string | null
-          stripe_event_type: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string | null
-          processed?: boolean | null
-          processed_at?: string | null
-          processing_error?: string | null
-          stripe_customer_id?: string | null
-          stripe_event_id?: string | null
-          stripe_event_type?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string | null
-          processed?: boolean | null
-          processed_at?: string | null
-          processing_error?: string | null
-          stripe_customer_id?: string | null
-          stripe_event_id?: string | null
-          stripe_event_type?: string | null
-        }
-        Relationships: []
-      }
       v_api_key_balance: {
         Row: {
           api_key: string | null

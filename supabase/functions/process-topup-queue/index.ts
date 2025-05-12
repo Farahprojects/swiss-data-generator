@@ -1,4 +1,3 @@
-
 // Refactored cron logic for Supabase Edge Function (top-up queue processor)
 // Assumes: 1-minute cron schedule, no email lookups, Stripe customer based on user_id only
 
