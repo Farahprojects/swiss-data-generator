@@ -128,44 +128,35 @@ async function markEventDone(evtId: string, err?: string) {
 
 
 /* ───────── Save / Update Payment-Method ───────── */
-
 async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
-  /* 1️⃣ get email if present in the PaymentMethod */
-  let email: string | null = pm.billing_details?.email ?? null;
+  const data = {
+    user_id:                userId,
+    stripe_customer_id:     pm.customer as string | null,
+    stripe_payment_method_id: pm.id,
+    payment_method_type:    pm.type,
+    payment_status:         "active",
+    email:                  pm.billing_details?.email ?? null,
+    card_brand:             pm.card?.brand ?? null,
+    card_last4:             pm.card?.last4 ?? null,
+    exp_month:              pm.card?.exp_month ?? null,
+    exp_year:               pm.card?.exp_year ?? null,
+    fingerprint:            pm.card?.fingerprint ?? null,
+    billing_name:           pm.billing_details?.name ?? null,
+    billing_address_line1:  pm.billing_details?.address?.line1 ?? null,
+    billing_address_line2:  pm.billing_details?.address?.line2 ?? null,
+    city:                   pm.billing_details?.address?.city ?? null,
+    state:                  pm.billing_details?.address?.state ?? null,
+    postal_code:            pm.billing_details?.address?.postal_code ?? null,
+    country:                pm.billing_details?.address?.country ?? null,
+    is_default:             false,
+  };
 
-  /* 2️⃣ fallback: pull it from the Customer object once */
-  if (!email && typeof pm.customer === "string") {
-    const cust = await stripe.customers.retrieve(pm.customer);
-    email = (cust as Stripe.Customer).email ?? null;
-  }
-
-  const { error } = await supabase.from("payment_method").upsert(
-    {
-      user_id: userId,
-      stripe_customer_id: pm.customer as string | null,
-      stripe_payment_method_id: pm.id,
-      payment_method_type: pm.type,
-      payment_status: "active",
-      email,                                 // 👈 NEW
-      card_brand: pm.card?.brand ?? null,
-      card_last4: pm.card?.last4 ?? null,
-      exp_month: pm.card?.exp_month ?? null,
-      exp_year: pm.card?.exp_year ?? null,
-      fingerprint: pm.card?.fingerprint ?? null,
-      billing_name: pm.billing_details?.name ?? null,
-      billing_address_line1: pm.billing_details?.address?.line1 ?? null,
-      billing_address_line2: pm.billing_details?.address?.line2 ?? null,
-      city: pm.billing_details?.address?.city ?? null,
-      state: pm.billing_details?.address?.state ?? null,
-      postal_code: pm.billing_details?.address?.postal_code ?? null,
-      country: pm.billing_details?.address?.country ?? null,
-      is_default: false,
-    },
-    { onConflict: "stripe_payment_method_id" },
-  );
+  const { error } = await supabase
+    .from("payment_method")
+    .upsert(data, { onConflict: "user_id" });   // ← this line
 
   if (error) {
-    console.error("Supabase insert error", error);
+    console.error("Supabase upsert error", error);
     throw error;
   }
 }
