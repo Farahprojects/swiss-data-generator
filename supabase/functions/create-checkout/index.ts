@@ -1,210 +1,136 @@
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@12.14.0?target=deno";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+/*  pin Stripe & Supabase imports to the same std version  */
+import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  /* ──────────────  CORS pre-flight  ────────────── */
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Initialize Stripe with the secret key from environment variables
+  /* ──────────────  Stripe init  ────────────── */
   const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-    apiVersion: '2024-04-10',
+    apiVersion: "2024-04-10",
   });
 
   try {
-    console.log("Starting create-checkout function");
-    const { 
-      mode, 
-      amount, 
-      priceId, 
-      productId, 
-      successUrl, 
+    /* -------- Request body -------- */
+    const {
+      mode,
+      amount,
+      priceId,
+      productId,
+      successUrl,
       cancelUrl,
       returnPath,
-      returnTab 
+      returnTab,
     } = await req.json();
-    
-    console.log(`Request data: mode=${mode}, priceId=${priceId}, productId=${productId}, returnPath=${returnPath}`);
-    
-    // Only require priceId or amount for payment mode
-    if (mode === 'payment' && !priceId && !amount) {
-      console.error("Missing required parameter for payment: either priceId or amount must be provided");
+
+    if (mode === "payment" && !priceId && !amount) {
       throw new Error("For payment mode, either priceId or amount must be provided");
     }
-    
-    // Get user from Authorization header
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_ANON_KEY") || ""
+
+    /* -------- User auth -------- */
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")  || "",
+      Deno.env.get("SUPABASE_ANON_KEY") || "",
     );
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.log("No authorization header");
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    
-    if (userError || !userData.user) {
-      console.log("Invalid token:", userError);
+    const { data: userRes, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userRes.user) {
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    
-    console.log("User authenticated:", userData.user.id);
-    const user = userData.user;
-    
-    // Find existing Stripe customer or create new one
-    let customerId;
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-      console.log("Found existing customer:", customerId);
+    const user = userRes.user;
+
+    /* -------- Find / create customer -------- */
+    let customerId: string;
+    const custList = await stripe.customers.list({ email: user.email, limit: 1 });
+    if (custList.data.length) {
+      customerId = custList.data[0].id;
     } else {
-      const newCustomer = await stripe.customers.create({
+      const cust = await stripe.customers.create({
         email: user.email,
-        metadata: { user_id: user.id }
+        metadata: { user_id: user.id },
       });
-      customerId = newCustomer.id;
-      console.log("Created new customer:", customerId);
+      customerId = cust.id;
     }
-    
-    // Prepare standardized success and cancel URLs that redirect through our payment return handler
-    const baseUrl = req.headers.get("origin") || "";
-    
-    // Use provided URLs or construct defaults that go through our payment-return handler
-    let finalSuccessUrl;
-    let finalCancelUrl;
-    
-    if (successUrl) {
-      finalSuccessUrl = successUrl;
-    } else {
-      const paymentStatus = mode === "payment" ? "success" : "setup-success";
-      let url = `${baseUrl}/payment-return?status=${paymentStatus}`;
-      if (amount && mode === "payment") url += `&amount=${amount}`;
-      finalSuccessUrl = url;
-    }
-    
-    if (cancelUrl) {
-      finalCancelUrl = cancelUrl; 
-    } else {
-      const paymentStatus = mode === "payment" ? "cancelled" : "setup-cancelled";
-      finalCancelUrl = `${baseUrl}/payment-return?status=${paymentStatus}`;
-    }
-    
-    // Create session based on mode
-    let session;
-    
+
+    /* -------- Success & cancel URLs -------- */
+    const baseOrigin = req.headers.get("origin") || "";
+    const paymentStatus = mode === "payment" ? "success" : "setup-success";
+    const cancelStatus  = mode === "payment" ? "cancelled" : "setup-cancelled";
+
+    const finalSuccessUrl =
+      successUrl ??
+      `${baseOrigin}/payment-return?status=${paymentStatus}` +
+        (mode === "payment" && amount ? `&amount=${amount}` : "");
+    const finalCancelUrl =
+      cancelUrl ?? `${baseOrigin}/payment-return?status=${cancelStatus}`;
+
+    /* -------- Create checkout session -------- */
+    let session: Stripe.Checkout.Session;
+
     if (mode === "payment") {
-      console.log("Creating payment session");
-      // For top-up credits payment
-      if (priceId) {
-        // Use the price ID directly if provided
-        console.log("Using provided price ID:", priceId);
-        session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          mode: "payment",
-          customer: customerId,
-          line_items: [{
-            price: priceId,
-            quantity: 1,
-          }],
-          success_url: finalSuccessUrl,
-          cancel_url: finalCancelUrl,
-          metadata: {
-            user_id: user.id,
-            return_path: returnPath || "/dashboard",
-            return_tab: returnTab || ""
-          },
-          payment_intent_data: {
-            metadata: {
-              user_id: user.id,
-            },
-            setup_future_usage: 'off_session'
-          },
-          setup_intent_data: {
-            metadata: { 
-              user_id: user.id 
-            }
-          },
-          billing_address_collection: 'auto',
-          allow_promotion_codes: true,
-          customer_update: {
-            address: 'auto',
-          },
-          custom_text: {
-            submit: {
-              message: 'Your payment is securely processed by Stripe.',
-            },
-          }
-        });
-      } else {
-        // Fall back to creating a price on the fly
-        console.log("Creating ad-hoc price");
-        session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          mode: "payment",
-          customer: customerId,
-          line_items: [{
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: "API Credits Top-up",
-                description: "Top up your API credits"
+      const common = {
+        payment_method_types: ["card"] as const,
+        mode: "payment" as const,
+        customer: customerId,
+        success_url: finalSuccessUrl,
+        cancel_url: finalCancelUrl,
+        metadata: {
+          user_id: user.id,
+          return_path: returnPath || "/dashboard",
+          return_tab:  returnTab  || "",
+        },
+        payment_intent_data: {
+          metadata: { user_id: user.id },
+          setup_future_usage: "off_session" as const,
+        },
+        setup_intent_data: { metadata: { user_id: user.id } },
+        billing_address_collection: "auto" as const,
+        allow_promotion_codes: true,
+        customer_update: { address: "auto" as const },
+        custom_text: { submit: { message: "Your payment is securely processed by Stripe." } },
+      };
+
+      session = priceId
+        ? await stripe.checkout.sessions.create({
+            ...common,
+            line_items: [{ price: priceId, quantity: 1 }],
+          })
+        : await stripe.checkout.sessions.create({
+            ...common,
+            line_items: [
+              {
+                price_data: {
+                  currency: "usd",
+                  product_data: { name: "API Credits Top-up", description: "Top up your API credits" },
+                  unit_amount: Math.round(amount * 100),
+                },
+                quantity: 1,
               },
-              unit_amount: Math.round(amount * 100), // Convert dollars to cents, ensure integer
-            },
-            quantity: 1,
-          }],
-          success_url: finalSuccessUrl,
-          cancel_url: finalCancelUrl,
-          metadata: {
-            user_id: user.id,
-            return_path: returnPath || "/dashboard",
-            return_tab: returnTab || ""
-          },
-          payment_intent_data: {
-            metadata: {
-              user_id: user.id,
-            },
-            setup_future_usage: 'off_session'
-          },
-          setup_intent_data: {
-            metadata: { 
-              user_id: user.id 
-            }
-          },
-          billing_address_collection: 'auto',
-          allow_promotion_codes: true,
-          customer_update: {
-            address: 'auto',
-          },
-          custom_text: {
-            submit: {
-              message: 'Your payment is securely processed by Stripe.',
-            },
-          }
-        });
-      }
+            ],
+          });
     } else if (mode === "setup") {
-      console.log("Creating payment method setup session");
-      // For setting up or updating payment method
       session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         mode: "setup",
@@ -214,39 +140,27 @@ serve(async (req) => {
         metadata: {
           user_id: user.id,
           return_path: returnPath || "/dashboard/settings",
-          return_tab: returnTab || "panel=billing"
+          return_tab:  returnTab  || "panel=billing",
         },
-        setup_intent_data: {
-          metadata: { 
-            user_id: user.id 
-          }
-        },
-        customer_update: {
-          address: 'auto',
-        }
+        setup_intent_data: { metadata: { user_id: user.id } },
+        customer_update:  { address: "auto" },
       });
     } else {
-      console.log("Invalid mode:", mode);
       return new Response(
         JSON.stringify({ error: "Invalid mode. Must be 'payment' or 'setup'" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Log for debugging
-    console.log(`Checkout session created for ${mode} mode with ID: ${session.id}`);
-    console.log(`Success URL: ${session.success_url}`);
-    console.log(`Cancel URL: ${session.cancel_url}`);
-
     return new Response(
       JSON.stringify({ sessionId: session.id, url: session.url }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  } catch (error) {
-    console.error("Error creating checkout session:", error);
+  } catch (err: any) {
+    console.error("Error creating checkout session:", err);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: err.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
