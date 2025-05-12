@@ -157,7 +157,7 @@ async function logTopupFailure(userId: string, pi: Stripe.PaymentIntent) {
     user_id: userId,
     stripe_payment_intent_id: pi.id,
     amount_cents: pi.amount,
-    error_message: pi.last_payment_error?.message ?? "Unknown failure",
+    message: pi.last_payment_error?.message ?? "Unknown failure",
   });
   if (error) throw error;
 }
