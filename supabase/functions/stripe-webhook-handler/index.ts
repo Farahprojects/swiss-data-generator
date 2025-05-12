@@ -119,9 +119,9 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
     is_default:              false,
   };
 
-  await supabase
+  const { error } = await supabase
   .from("payment_method")
-  .insert(row, { ignoreDuplicates: true });   
+  .insert(row, { ignoreDuplicates: true });  
 
   if (error) throw error;
 }
