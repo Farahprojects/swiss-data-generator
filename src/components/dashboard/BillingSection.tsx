@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -79,11 +78,13 @@ export const BillingSection = () => {
       if (!user?.id) return;
       
       try {
+        // Note: this query will fail as credit_transactions table doesn't exist yet
+        // We'll keep it but handle the error gracefully until the table is created
         const { data, error } = await supabase
-          .from("credit_transactions")
+          .from("api_usage")
           .select("*")
           .eq("user_id", user.id)
-          .order("ts", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(10);
 
         if (error) {
@@ -135,29 +136,30 @@ export const BillingSection = () => {
     try {
       setIsLoadingPaymentMethod(true);
       
-      // First, check the most recent transaction to find a payment method ID
-      const { data: txData, error: txError } = await supabase
-        .from("credit_transactions")
-        .select("stripe_payment_method_id, card_brand, card_last4, stripe_customer_id")
+      // Fetch payment method directly from payment_method table
+      const { data, error } = await supabase
+        .from("payment_method")
+        .select("*")
         .eq("user_id", user.id)
-        .not('stripe_payment_method_id', 'is', null)
-        .order("ts", { ascending: false })
-        .limit(1);
+        .maybeSingle();
       
-      if (txError) {
-        console.error("Error fetching payment method:", txError);
+      if (error) {
+        console.error("Error fetching payment method:", error);
         return;
       }
       
-      if (txData && txData.length > 0 && txData[0].stripe_payment_method_id) {
-        // Create a simple payment method object with the available data
+      if (data && data.stripe_payment_method_id) {
+        // Create a payment method object with the available data
         setPaymentMethod({
-          payment_method_id: txData[0].stripe_payment_method_id,
-          last4: txData[0].card_last4 || "****", 
-          exp_month: null,  // We don't have this data in credit_transactions
-          exp_year: null,   // We don't have this data in credit_transactions
-          brand: txData[0].card_brand || "card" 
+          payment_method_id: data.stripe_payment_method_id,
+          last4: data.card_last4 || "****", 
+          exp_month: data.exp_month,
+          exp_year: data.exp_year,
+          brand: data.card_brand || "card" 
         });
+      } else {
+        console.log("No payment method found for user");
+        setPaymentMethod(null);
       }
     } catch (err) {
       console.error("Failed to fetch payment method:", err);
@@ -396,13 +398,11 @@ export const BillingSection = () => {
               <TableBody>
                 {transactions.map((transaction) => (
                   <TableRow key={transaction.id}>
-                    <TableCell>{formatDate(transaction.ts)}</TableCell>
-                    <TableCell>{transaction.description || transaction.api_call_type || "-"}</TableCell>
-                    <TableCell>${transaction.amount_usd?.toFixed(2) || "0.00"}</TableCell>
+                    <TableCell>{formatDate(transaction.created_at)}</TableCell>
+                    <TableCell>{transaction.endpoint || "-"}</TableCell>
+                    <TableCell>${transaction.total_cost_usd?.toFixed(2) || "0.00"}</TableCell>
                     <TableCell>
-                      <span className={transaction.type === 'debit' ? 'text-red-500' : 'text-green-500'}>
-                        {transaction.type || "-"}
-                      </span>
+                      <span className="text-red-500">debit</span>
                     </TableCell>
                   </TableRow>
                 ))}

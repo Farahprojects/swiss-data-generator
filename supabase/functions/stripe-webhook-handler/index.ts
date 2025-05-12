@@ -1,8 +1,9 @@
+
 /* ========================================================================== *
    Supabase Edge Function – Stripe Webhook Handler (card-save only edition)
    Purpose : 1) Verify Stripe HMAC
              2) Record every event once (stripe_webhook_events)
-             3) Upsert the user’s saved card in public.payment_method
+             3) Upsert the user's saved card in public.payment_method
    Runtime : Supabase Edge / Deno Deploy
  * ========================================================================== */
 
@@ -153,7 +154,7 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
 
   const { error } = await supabase
     .from("payment_method")
-    .upsert(data, { onConflict: "user_id" });   // ← this line
+    .upsert(data, { onConflict: "stripe_payment_method_id" });
 
   if (error) {
     console.error("Supabase upsert error", error);

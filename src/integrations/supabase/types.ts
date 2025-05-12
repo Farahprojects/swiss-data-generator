@@ -144,6 +144,7 @@ export type Database = {
         Row: {
           billing_address_line1: string | null
           billing_address_line2: string | null
+          billing_name: string | null
           card_brand: string | null
           card_last4: string | null
           city: string | null
@@ -152,7 +153,6 @@ export type Database = {
           exp_month: number | null
           exp_year: number | null
           fingerprint: string | null
-          full_name: string | null
           id: number
           is_default: boolean
           payment_method_type: string | null
@@ -168,6 +168,7 @@ export type Database = {
         Insert: {
           billing_address_line1?: string | null
           billing_address_line2?: string | null
+          billing_name?: string | null
           card_brand?: string | null
           card_last4?: string | null
           city?: string | null
@@ -176,7 +177,6 @@ export type Database = {
           exp_month?: number | null
           exp_year?: number | null
           fingerprint?: string | null
-          full_name?: string | null
           id?: number
           is_default?: boolean
           payment_method_type?: string | null
@@ -192,6 +192,7 @@ export type Database = {
         Update: {
           billing_address_line1?: string | null
           billing_address_line2?: string | null
+          billing_name?: string | null
           card_brand?: string | null
           card_last4?: string | null
           city?: string | null
@@ -200,7 +201,6 @@ export type Database = {
           exp_month?: number | null
           exp_year?: number | null
           fingerprint?: string | null
-          full_name?: string | null
           id?: number
           is_default?: boolean
           payment_method_type?: string | null
