@@ -133,18 +133,18 @@ export const TopupQueueStatus = () => {
                   <div className="mt-1 text-xs text-gray-700">
                     <div className="font-medium">Details:</div>
                     <div className="break-all whitespace-pre-wrap">
-                      {request.error_message.includes("Payment intent created successfully") ? (
+                      {request.message.includes("Payment intent created successfully") ? (
                         <>
                           Payment initiated
                           <div className="mt-1 font-mono text-xs">
-                            Intent ID: {request.error_message.replace("Payment intent created successfully: ", "")}
+                            Intent ID: {request.message.replace("Payment intent created successfully: ", "")}
                           </div>
                         </>
-                      ) : request.error_message.includes("Checkout session created successfully") ? (
+                      ) : request.message.includes("Checkout session created successfully") ? (
                         <>
                           Payment checkout initiated
                           <div className="mt-1 font-mono text-xs">
-                            Session ID: {request.error_message.replace("Checkout session created successfully: ", "")}
+                            Session ID: {request.message.replace("Checkout session created successfully: ", "")}
                           </div>
                         </>
                       ) : (

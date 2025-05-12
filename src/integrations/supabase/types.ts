@@ -596,8 +596,8 @@ export type Database = {
       topup_queue: {
         Row: {
           amount_usd: number
-          error_message: string | null
           id: string
+          message: string | null
           processed_at: string | null
           requested_at: string | null
           status: string | null
@@ -605,8 +605,8 @@ export type Database = {
         }
         Insert: {
           amount_usd: number
-          error_message?: string | null
           id?: string
+          message?: string | null
           processed_at?: string | null
           requested_at?: string | null
           status?: string | null
@@ -614,8 +614,8 @@ export type Database = {
         }
         Update: {
           amount_usd?: number
-          error_message?: string | null
           id?: string
+          message?: string | null
           processed_at?: string | null
           requested_at?: string | null
           status?: string | null
