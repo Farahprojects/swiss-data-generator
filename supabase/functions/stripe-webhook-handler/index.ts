@@ -4,6 +4,8 @@
  * ========================================================================== */
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+/* node Buffer poly-fill for Deno */
+import { Buffer } from "https://deno.land/std@0.224.0/node/buffer.ts";
 
 /* pin npm packages to the same std to avoid runMicrotasks crash */
 import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
@@ -162,14 +164,14 @@ serve(async (req) => {
     return new Response(null, { status: 204, headers: CORS });
   }
 
-  /* Stripe needs the exact “raw” body (no JSON.parse) for sig verification */
-  const rawBody = await req.text();
+  /* 1. raw bytes – DO NOT convert to string here */
+  const bodyBuffer = Buffer.from(await req.arrayBuffer());
   const sigHeader = req.headers.get("stripe-signature") ?? "";
 
   let evt: Stripe.Event;
   try {
     evt = stripe.webhooks.constructEvent(
-      rawBody,
+      bodyBuffer,                        // <-- exact bytes
       sigHeader,
       Deno.env.get("STRIPE_WEBHOOK_SECRET")!,
     );
@@ -205,7 +207,7 @@ serve(async (req) => {
     console.error(`Handler error (${evt.type}):`, errMsg);
   }
 
-  /* mark bookkeeping row (if it exists) */
+  /* mark bookkeeping row (if we inserted one) */
   if (rowInserted) {
     await markProcessed(evt.id, ok, errMsg);
   }
