@@ -26,7 +26,7 @@ async function updateRequestStatus(id: string, status: string, msg?: string) {
     .update({
       status,
       processed_at: new Date().toISOString(),
-      error_message: msg ?? null,
+      message: msg ?? null,
     })
     .eq("id", id);
   if (error) console.error(`Failed to update request ${id}:`, error);
