@@ -71,8 +71,8 @@ const Dashboard = () => {
         <div className="flex w-full">
           <DashboardSidebar />
           
-          <SidebarInset className="p-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
+          <SidebarInset className="p-4 md:p-6 w-full">
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 w-full">
               {renderContent()}
             </div>
           </SidebarInset>
