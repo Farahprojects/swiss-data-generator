@@ -14,8 +14,6 @@ type TopupRequest = {
   requested_at: string;
   processed_at: string | null;
   error_message: string | null;
-  retry_count: number;
-  max_retries: number;
 };
 
 export const TopupQueueStatus = () => {
@@ -42,16 +40,14 @@ export const TopupQueueStatus = () => {
           return;
         }
         
-        // Transform the data to ensure it matches our expected type
+        // Transform the data to match our expected type
         const typedRequests: TopupRequest[] = (data || []).map(item => ({
           id: item.id,
           status: item.status,
           amount_usd: item.amount_usd,
           requested_at: item.requested_at,
           processed_at: item.processed_at,
-          error_message: item.error_message,
-          retry_count: item.retry_count || 0,
-          max_retries: item.max_retries || 3
+          error_message: item.error_message
         }));
         
         setRequests(typedRequests);
@@ -155,11 +151,6 @@ export const TopupQueueStatus = () => {
                         request.error_message
                       )}
                     </div>
-                  </div>
-                )}
-                {request.retry_count > 0 && (
-                  <div className="mt-1 text-xs text-gray-500">
-                    Retry: {request.retry_count} of {request.max_retries}
                   </div>
                 )}
               </div>
