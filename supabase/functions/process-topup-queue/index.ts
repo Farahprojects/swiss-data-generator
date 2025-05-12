@@ -18,7 +18,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -26,24 +25,10 @@ serve(async (req) => {
   try {
     console.log("Starting topup queue processor");
 
-    // First, let's check if we have valid statuses in our database
-    const { data: validStatuses, error: statusError } = await supabase
-      .from("topup_queue")
-      .select("status")
-      .limit(1);
-    
-    if (statusError) {
-      console.error("Error checking valid statuses:", statusError);
-    } else {
-      console.log("Existing database statuses sample:", validStatuses);
-    }
-
     const { data: requestsToProcess, error: fetchError } = await supabase
       .from("topup_queue")
-      .select("id, user_id, amount_usd, status, error_message, retry_count, max_retries, last_retry_at")
-      .or("status.eq.pending,status.eq.failed")
-      .lt("retry_count", 3)
-      .order("retry_count", { ascending: true })
+      .select("id, user_id, amount_cents, status")
+      .eq("status", "pending")
       .limit(10);
 
     if (fetchError) {
@@ -67,63 +52,21 @@ serve(async (req) => {
     const results = await Promise.all(
       requestsToProcess.map(async (request) => {
         try {
-          console.log(`Processing request ${request.id}, retry ${request.retry_count + 1}`);
+          console.log(`Processing request ${request.id}`);
 
-          // Update retry count and timestamp first - using a safer approach
-          const { error: updateError } = await supabase.from("topup_queue").update({
-            retry_count: request.retry_count + 1,
-            last_retry_at: new Date().toISOString(),
-          }).eq("id", request.id);
-
-          if (updateError) {
-            console.error(`Failed to update retry count for ${request.id}:`, updateError);
-          }
-
-          // Try to get Stripe customer ID for this user
           let stripeCustomerId;
           let stripePaymentMethodId;
-          
-          try {
-            // First attempt to get from RPC if it exists
-            const { data, error: lookupError } = await supabase.rpc(
-              "get_stripe_customer_id_for_user",
-              { user_id_param: request.user_id }
-            );
-            
-            if (data && !lookupError) {
-              stripeCustomerId = data;
-              
-              // Now also fetch stripe_payment_method_id manually from credit_transactions
-              const { data: txnData } = await supabase
-                .from("credit_transactions")
-                .select("stripe_payment_method_id")
-                .eq("user_id", request.user_id)
-                .not("stripe_payment_method_id", "is", null)
-                .order("ts", { ascending: false })
-                .limit(1);
-                
-              if (txnData && txnData.length > 0) {
-                stripePaymentMethodId = txnData[0].stripe_payment_method_id;
-              }
-            } else if (lookupError) {
-              console.warn(`RPC error for ${request.id}:`, lookupError);
-              
-              // Fallback: try to get customer ID from credit_transactions table
-              const { data: txnData } = await supabase
-                .from("credit_transactions")
-                .select("stripe_customer_id, stripe_payment_method_id")
-                .eq("user_id", request.user_id)
-                .not("stripe_customer_id", "is", null)
-                .order("ts", { ascending: false })
-                .limit(1);
-                
-              if (txnData && txnData.length > 0 && txnData[0].stripe_customer_id) {
-                stripeCustomerId = txnData[0].stripe_customer_id;
-                stripePaymentMethodId = txnData[0].stripe_payment_method_id;
-              }
-            }
-          } catch (lookupErr) {
-            console.error(`Error looking up Stripe customer ID for ${request.id}:`, lookupErr);
+
+          const { data: paymentData } = await supabase
+            .from("payment_method")
+            .select("stripe_customer_id, stripe_payment_method_id")
+            .eq("user_id", request.user_id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          if (paymentData && paymentData.length > 0) {
+            stripeCustomerId = paymentData[0].stripe_customer_id;
+            stripePaymentMethodId = paymentData[0].stripe_payment_method_id;
           }
 
           if (!stripeCustomerId || !stripePaymentMethodId) {
@@ -132,32 +75,9 @@ serve(async (req) => {
             return { id: request.id, status: "failed", error: errorMessage };
           }
 
-          // Get the active credit product to use
-          const { data: creditProduct, error: productError } = await supabase
-            .from("stripe_products")
-            .select("price_id, amount_usd")
-            .eq("active", true)
-            .eq("type", "credit")
-            .single();
-
-          if (!creditProduct || productError) {
-            let errorMessage = "Credit product not found in database.";
-            if (productError) {
-              console.error(`Error fetching credit product for ${request.id}:`, productError);
-              errorMessage += " Database error: " + productError.message;
-            } else {
-              console.error(`No active credit product found for ${request.id}`);
-            }
-            await updateRequestStatus(request.id, "failed", errorMessage);
-            return { id: request.id, status: "failed", error: errorMessage };
-          }
-
-          console.log(`Creating payment intent for ${request.id} ($${creditProduct.amount_usd})`);
-          
-          // Create Stripe payment intent
           const intent = await stripe.paymentIntents.create({
             customer: stripeCustomerId,
-            amount: 10000, // $100 in cents
+            amount: request.amount_cents,
             currency: "usd",
             payment_method: stripePaymentMethodId,
             off_session: true,
@@ -169,8 +89,6 @@ serve(async (req) => {
             }
           });
 
-          // Update request processed_at and error_message but NOT status
-          // The webhook will update the status to "completed" when payment is confirmed
           await supabase.from("topup_queue").update({
             processed_at: new Date().toISOString(),
             error_message: "Payment intent created successfully: " + intent.id
@@ -181,11 +99,8 @@ serve(async (req) => {
         } catch (err) {
           const errorMessage = err.message || "Unknown error occurred";
           console.error(`Error processing request ${request.id}:`, errorMessage);
-          
-          // If at max retries, mark as failed
-          const status = request.retry_count + 1 >= request.max_retries ? "max_retries_reached" : "failed";
-          await updateRequestStatus(request.id, status, errorMessage);
-          return { id: request.id, status, error: errorMessage };
+          await updateRequestStatus(request.id, "failed", errorMessage);
+          return { id: request.id, status: "failed", error: errorMessage };
         }
       })
     );
@@ -210,7 +125,7 @@ async function updateRequestStatus(id: string, status: string, errorMessage?: st
     processed_at: new Date().toISOString(),
   };
   if (errorMessage) updates.error_message = errorMessage;
-  
+
   const { error } = await supabase.from("topup_queue").update(updates).eq("id", id);
   if (error) {
     console.error(`Failed to update status for request ${id}:`, error);
