@@ -1,15 +1,16 @@
-
 /* ========================================================================== *
    Supabase Edge Function – Stripe Webhook Handler (card-save only edition)
    Purpose : 1) Verify Stripe HMAC
              2) Record every event once (stripe_webhook_events)
-             3) Upsert the user's saved card in public.payment_method
+             3) Upsert the user’s saved card in public.payment_method
    Runtime : Supabase Edge / Deno Deploy
  * ========================================================================== */
 
-import { serve }   from "https://deno.land/std@0.224.0/http/server.ts";
-import Stripe      from "https://esm.sh/stripe@12.14.0?target=deno";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
+/*  ➜ pin npm imports to the same std version to avoid runMicrotasks crash  */
+import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
 
 /* ──────────────── ENV ─────────────── */
 
@@ -35,7 +36,7 @@ const supabase = createClient(
 /* ──────────────── CORS ─────────────── */
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin":  "*",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, stripe-signature",
@@ -62,7 +63,7 @@ async function verifyStripeSignature(
     return acc;
   }, {});
 
-  const ts   = parts.t;
+  const ts = parts.t;
   const sigs = parts.v1?.split(" ") ?? [];
   if (!ts || !sigs.length) throw new Error("Malformed Stripe-Signature");
 
@@ -100,13 +101,13 @@ async function upsertEvent(evt: any) {
     .from("stripe_webhook_events")
     .insert(
       {
-        stripe_event_id:   evt.id,
+        stripe_event_id: evt.id,
         stripe_event_type: evt.type,
-        stripe_kind:       evt.type.split(".")[0],
+        stripe_kind: evt.type.split(".")[0],
         stripe_customer_id:
           evt.data?.object?.customer ?? evt.data?.object?.customer_id ?? null,
-        payload:    evt,
-        processed:  false,
+        payload: evt,
+        processed: false,
       },
       { ignoreDuplicates: true },
     );
@@ -115,7 +116,11 @@ async function upsertEvent(evt: any) {
 
 async function markEventDone(evtId: string, err?: string) {
   await supabase.from("stripe_webhook_events")
-    .update({ processed: !err, processed_at: new Date().toISOString(), processing_error: err ?? null })
+    .update({
+      processed: !err,
+      processed_at: new Date().toISOString(),
+      processing_error: err ?? null,
+    })
     .eq("stripe_event_id", evtId);
 }
 
@@ -124,24 +129,24 @@ async function markEventDone(evtId: string, err?: string) {
 async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
   const { error } = await supabase.from("payment_method").upsert(
     {
-      user_id:                 userId,
-      stripe_customer_id:      pm.customer as string | null,
+      user_id: userId,
+      stripe_customer_id: pm.customer as string | null,
       stripe_payment_method_id: pm.id,
-      payment_method_type:     pm.type,
-      payment_status:          "active",
-      card_brand:              pm.card?.brand ?? null,
-      card_last4:              pm.card?.last4 ?? null,
-      exp_month:               pm.card?.exp_month ?? null,
-      exp_year:                pm.card?.exp_year ?? null,
-      fingerprint:             pm.card?.fingerprint ?? null,
-      billing_name:            pm.billing_details?.name ?? null,
-      billing_address_line1:   pm.billing_details?.address?.line1 ?? null,
-      billing_address_line2:   pm.billing_details?.address?.line2 ?? null,
-      city:                    pm.billing_details?.address?.city ?? null,
-      state:                   pm.billing_details?.address?.state ?? null,
-      postal_code:             pm.billing_details?.address?.postal_code ?? null,
-      country:                 pm.billing_details?.address?.country ?? null,
-      is_default:              false,   // caller can toggle later
+      payment_method_type: pm.type,
+      payment_status: "active",
+      card_brand: pm.card?.brand ?? null,
+      card_last4: pm.card?.last4 ?? null,
+      exp_month: pm.card?.exp_month ?? null,
+      exp_year: pm.card?.exp_year ?? null,
+      fingerprint: pm.card?.fingerprint ?? null,
+      billing_name: pm.billing_details?.name ?? null,
+      billing_address_line1: pm.billing_details?.address?.line1 ?? null,
+      billing_address_line2: pm.billing_details?.address?.line2 ?? null,
+      city: pm.billing_details?.address?.city ?? null,
+      state: pm.billing_details?.address?.state ?? null,
+      postal_code: pm.billing_details?.address?.postal_code ?? null,
+      country: pm.billing_details?.address?.country ?? null,
+      is_default: false,
     },
     { onConflict: "stripe_payment_method_id" },
   );
@@ -185,11 +190,10 @@ serve(async (req) => {
   /* 3️⃣  Handle only card-save events */
   try {
     switch (evt.type) {
-      /* ─────────── setup_intent.succeeded ─────────── */
       case "setup_intent.succeeded": {
         const si = evt.data.object as Stripe.SetupIntent;
         console.log(`Setup session completed: ${si.id}`);
-        
+
         const userId = si.metadata?.user_id;
         if (!userId) throw new Error("metadata.user_id missing");
 
@@ -200,16 +204,15 @@ serve(async (req) => {
         break;
       }
 
-      /* ─────────── payment_method.attached ───────────
-         (covers cases where SetupIntent was created without metadata
-          but we've already mapped customer→user in DB) */
       case "payment_method.attached": {
         const pmEvt = evt.data.object as Stripe.PaymentMethod;
-        console.log(`Payment method attached to customer ${pmEvt.customer}: ${pmEvt.id}`);
-        
+        console.log(
+          `Payment method attached to customer ${pmEvt.customer}: ${pmEvt.id}`,
+        );
+
         let userId = pmEvt.metadata?.user_id as string | undefined;
 
-        // fallback → grab customer metadata
+        /* fallback → grab customer metadata */
         if (!userId && pmEvt.customer) {
           const cust = await stripe.customers.retrieve(pmEvt.customer as string);
           userId = (cust as Stripe.Customer).metadata?.user_id;
@@ -217,14 +220,14 @@ serve(async (req) => {
 
         if (!userId) {
           console.warn("No user_id metadata; skipping saveCard");
-          break; // nothing we can do
+          break;
         }
 
         await saveCard(pmEvt, userId);
         break;
       }
 
-      /* ignore everything else */
+      /* ignore all other event types */
     }
 
     await markEventDone(evt.id);
