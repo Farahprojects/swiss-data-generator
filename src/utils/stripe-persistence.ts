@@ -1,5 +1,4 @@
 
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Flow state types
@@ -82,6 +81,7 @@ export const getLatestFlowByEmail = async (email: string): Promise<FlowRecord | 
     }
 
     // Return the first (and only) result
+    // Use type assertion with 'as' after checking data exists
     return data[0] as FlowRecord;
   } catch (error) {
     console.error('Failed to get flow tracking data:', error);
@@ -117,6 +117,7 @@ export const getFlowBySessionId = async (sessionId: string): Promise<FlowRecord 
       return null;
     }
 
+    // Type assertion after checking data exists
     return data as FlowRecord;
   } catch (error) {
     console.error('Failed to get flow tracking data by session:', error);
