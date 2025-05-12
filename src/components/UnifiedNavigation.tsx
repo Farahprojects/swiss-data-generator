@@ -39,8 +39,8 @@ const UnifiedNavigation = () => {
   };
 
   return (
-    <nav className="sticky top-0 bg-white z-50 shadow-sm">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="sticky top-0 bg-white z-50 shadow-sm w-full">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           {/* Left section with hamburger menu for logged in users on mobile or logo for not logged in */}
           <div className="flex items-center">
@@ -141,8 +141,8 @@ const UnifiedNavigation = () => {
 
       {/* Mobile Menu - Only for non-logged in users */}
       {isMenuOpen && !isLoggedIn && (
-        <div className="md:hidden bg-white border-t py-4">
-          <div className="container mx-auto px-4 space-y-2">
+        <div className="md:hidden bg-white border-t py-4 w-full">
+          <div className="px-4 space-y-2">
             <Link to="/api-products" className="block text-gray-700 hover:text-primary py-2">API Products</Link>
             <Link to="/pricing" className="block text-gray-700 hover:text-primary py-2">Pricing</Link>
             <Link to="/documentation" className="block text-gray-700 hover:text-primary py-2">Documentation</Link>

@@ -110,7 +110,7 @@
   }
 }
 
-/* Updated layout structure to account for header height */
+/* Updated layout structure for consistent header width */
 .dashboard-layout {
   display: flex;
   flex-direction: column;
@@ -122,6 +122,14 @@
   display: flex;
   flex-grow: 1;
   width: 100%;
+}
+
+/* Ensure header spans full width */
+nav.sticky {
+  width: 100vw;
+  max-width: 100%;
+  left: 0;
+  right: 0;
 }
 
 /* Ensure the sidebar starts below the header */

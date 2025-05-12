@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
@@ -91,19 +90,19 @@ const ApiKeysPage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Fixed header at the top */}
-      <div className="sticky top-0 z-50">
+    <div className="flex flex-col min-h-screen w-full">
+      {/* Fixed header at the top that spans full width */}
+      <div className="sticky top-0 z-50 w-full">
         <UnifiedNavigation />
       </div>
       
       {/* Main content area - flexes below the header */}
-      <div className="flex flex-grow bg-gray-50 mt-0">
+      <div className="flex flex-grow bg-gray-50 mt-0 w-full">
         <div className="flex w-full">
           <DashboardSidebar />
           
-          <SidebarInset className="p-6">
-            <div className="space-y-8">
+          <SidebarInset className="p-6 w-full">
+            <div className="space-y-8 w-full">
               <div className="flex items-center gap-3 mb-2">
                 <Key size={28} className="text-primary" />
                 <h2 className="text-2xl font-semibold">API Keys</h2>
