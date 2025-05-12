@@ -1,4 +1,5 @@
 
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Flow state types
@@ -16,10 +17,6 @@ export interface FlowRecord {
   created_at?: string;
   updated_at?: string;
 }
-
-// Since we're getting TypeScript errors related to missing stripe_flow_tracking table,
-// we'll modify these functions to work with a safer approach that doesn't rely on 
-// type inference from the database schema
 
 /**
  * Creates a new flow tracking record or updates an existing one
@@ -106,7 +103,11 @@ export const getFlowBySessionId = async (sessionId: string): Promise<FlowRecord 
       .eq('session_id', sessionId)
       .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      // Check for the PGRST116 error code which means no rows were found
+      if (error.code === 'PGRST116') {
+        return null;
+      }
       console.error('Error getting flow tracking data by session:', error);
       throw error;
     }
