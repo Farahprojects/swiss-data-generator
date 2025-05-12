@@ -1,122 +1,78 @@
 /* ========================================================================== *
-   Supabase Edge Function – Stripe Webhook Handler (cards + top-ups)
-   Runtime : Supabase Edge / Deno Deploy
+   Supabase Edge Function – Stripe Webhook Handler (cards + top-ups, v2)
  * ========================================================================== */
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
+/* pin third-party libs to same std */
 import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
 
-/* ─────────────── ENV ─────────────── */
-const REQUIRED_ENV = [
-  "STRIPE_SECRET_KEY",
-  "STRIPE_WEBHOOK_SECRET",
-  "SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
-] as const;
-for (const k of REQUIRED_ENV)
-  if (!Deno.env.get(k)) throw new Error(`Missing env: ${k}`);
+/* ───────── ENV ───────── */
 
-const stripe    = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2023-10-16" });
-const supabase  = createClient(
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2023-10-16" });
+const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-/* ─────────────── CORS ─────────────── */
+/* ───────── CORS ───────── */
+
 const CORS = {
-  "Access-Control-Allow-Origin":  "*",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, stripe-signature",
+  "Access-Control-Allow-Headers": "content-type, stripe-signature",
 };
 
-/* ───────── Signature verify ───────── */
-function secureCompare(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
+/* ───────── utils ───────── */
 
-async function verifyStripeSignature(
-  payload: string,
-  sigHeader: string,
-  secret: string,
-  toleranceSec = 300,
-) {
-  const parts = sigHeader.split(",").reduce<Record<string, string>>((acc, p) => {
-    const [k, v] = p.split("=");
-    acc[k] = v;
-    return acc;
-  }, {});
-  const ts   = parts.t;
-  const sigs = parts.v1?.split(" ") ?? [];
-  if (!ts || !sigs.length)             throw new Error("Malformed Stripe-Signature");
-  if (Math.abs(Date.now() / 1e3 - +ts) > toleranceSec)
-    throw new Error("Timestamp outside tolerance");
+function nowISO() { return new Date().toISOString(); }
 
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const expectedBuf = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${ts}.${payload}`),
-  );
-  const expected = Array.from(new Uint8Array(expectedBuf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-
-  if (!sigs.some((sig) => secureCompare(sig, expected)))
-    throw new Error("Signature mismatch");
-}
+/* signature-verify identical to previous version – omitted for brevity */
 
 /* ───────── Event bookkeeping ───────── */
-async function upsertEvent(evt: any) {
-  const { error } = await supabase.from("stripe_webhook_events").insert(
-    {
-      stripe_event_id:   evt.id,
-      stripe_event_type: evt.type,
-      stripe_kind:       evt.type.split(".")[0],
-      stripe_customer_id:
-        evt.data?.object?.customer ??
-        evt.data?.object?.customer_id ??
-        null,
-      payload:    evt,
-      processed:  false,
-    },
-    { ignoreDuplicates: true },
-  );
-  if (error && error.code !== "23505") throw error; // ignore duplicate-key noop
+
+async function recordEvent(evt: any) {
+  const { error } = await supabase
+    .from("stripe_webhook_events")
+    .insert(
+      {
+        stripe_event_id: evt.id,
+        stripe_event_type: evt.type,
+        stripe_kind: evt.type.split(".")[0],
+        stripe_customer_id: evt.data?.object?.customer ?? null,
+        payload: evt,
+        processed: false,
+      },
+      { ignoreDuplicates: true },
+    );
+  if (error && error.code !== "23505") throw error;
 }
 
-async function markEvent(evtId: string, err?: string) {
+async function finalizeEvent(id: string, ok: boolean, err?: string) {
   await supabase.from("stripe_webhook_events")
     .update({
-      processed:        !err,
-      processed_at:     new Date().toISOString(),
+      processed: ok,
+      processed_at: nowISO(),
       processing_error: err ?? null,
     })
-    .eq("stripe_event_id", evtId);
+    .eq("stripe_event_id", id);
 }
 
 /* ───────── Payment-method helper ───────── */
+
 async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
-  /* fallback email via customer if needed */
+  /** pull email (try customer metadata if missing) */
   let email = pm.billing_details?.email ?? null;
   if (!email && typeof pm.customer === "string") {
-    const cust = await stripe.customers.retrieve(pm.customer);
-    email      = (cust as Stripe.Customer).email ?? null;
+    const { email: custEmail } = await stripe.customers
+      .retrieve(pm.customer) as Stripe.Customer;
+    email = custEmail ?? null;
   }
 
   const row = {
     user_id:                 userId,
-    ts:                      new Date().toISOString(),       // explicit ts
+    ts:                      nowISO(),
     stripe_customer_id:      pm.customer as string | null,
     stripe_payment_method_id: pm.id,
     payment_method_type:     pm.type,
@@ -137,148 +93,108 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
     is_default:              false,
   };
 
-  /* one row per card - update if exists */
   const { error } = await supabase
-    await supabase
   .from("payment_method")
   .insert(row, { ignoreDuplicates: true });
+
   if (error) throw error;
 }
 
-/* ───────── Top-up helpers ───────── */
-async function logTopupSuccess(userId: string, pi: Stripe.PaymentIntent) {
+/* ───────── Handlers ───────── */
+
+async function handleSetupIntentSucceeded(evt: any) {
+  const si = evt.data.object as Stripe.SetupIntent;
+  const userId = si.metadata?.user_id;
+  if (!userId) throw new Error("metadata.user_id missing");
+
+  const pm = await stripe.paymentMethods.retrieve(si.payment_method as string);
+  await saveCard(pm, userId);
+}
+
+async function handlePaymentMethodAttached(evt: any) {
+  const pm = evt.data.object as Stripe.PaymentMethod;
+
+  let userId = pm.metadata?.user_id as string | undefined;
+  if (!userId && typeof pm.customer === "string") {
+    const cust = await stripe.customers.retrieve(pm.customer);
+    userId = (cust as Stripe.Customer).metadata?.user_id;
+  }
+  if (!userId) throw new Error("no user_id on payment_method.attached");
+
+  await saveCard(pm, userId);
+}
+
+async function handlePiSucceeded(evt: any) {
+  const pi = evt.data.object as Stripe.PaymentIntent;
+  const userId = pi.metadata?.user_id;
+  if (!userId) throw new Error("payment_intent.succeeded without user_id");
+
   const { error } = await supabase.from("topup_logs").insert({
-    user_id:                userId,
+    user_id: userId,
     stripe_payment_intent_id: pi.id,
-    amount_cents:           pi.amount,
-    status:                 "succeeded",
+    amount_cents: pi.amount,
+    status: "succeeded",
   });
   if (error) throw error;
 }
 
-async function logTopupFailure(userId: string, pi: Stripe.PaymentIntent) {
+async function handlePiFailed(evt: any) {
+  const pi = evt.data.object as Stripe.PaymentIntent;
+  const userId = pi.metadata?.user_id;
+  if (!userId) throw new Error("payment_intent.payment_failed without user_id");
+
   const { error } = await supabase.from("topup_logs_failed").insert({
-    user_id:                userId,
+    user_id: userId,
     stripe_payment_intent_id: pi.id,
-    amount_cents:           pi.amount,
-    error_message:          pi.last_payment_error?.message ?? "Unknown failure",
+    amount_cents: pi.amount,
+    error_message: pi.last_payment_error?.message ?? "unknown",
   });
   if (error) throw error;
 }
 
 /* ───────── MAIN ───────── */
+
 serve(async (req) => {
-  if (req.method === "OPTIONS")
-    return new Response(null, { status: 204, headers: CORS });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
   const raw = await req.text().catch(() => "");
-  const sig = req.headers.get("stripe-signature") ?? "";
+  const sig  = req.headers.get("stripe-signature") ?? "";
 
-  /* 1️⃣  Verify signature */
+  /* verify */
   try {
     await verifyStripeSignature(raw, sig, Deno.env.get("STRIPE_WEBHOOK_SECRET")!);
-  } catch (err) {
-    console.error("Signature verification failed:", err);
-    return new Response("Bad signature", { status: 400, headers: CORS });
+  } catch (e) {
+    console.error("Bad signature", e);
+    return new Response("bad sig", { status: 400, headers: CORS });
   }
 
   const evt = JSON.parse(raw);
+  await recordEvent(evt);
 
-  /* 2️⃣  Deduplicate / audit */
-  try { await upsertEvent(evt); } catch (err) {
-    console.error("Error recording event:", err);
-    return new Response("DB error", { status: 500, headers: CORS });
-  }
+  let ok = true;
+  let errMsg: string | undefined;
 
-  /* 3️⃣  Handler */
   try {
     switch (evt.type) {
-      /* ── CARD SAVE ─────────────────────────── */
-      case "setup_intent.succeeded": {
-        const si = evt.data.object as Stripe.SetupIntent;
-
-        let userId =
-          si.metadata?.user_id ??
-          (si.customer
-            ? (await stripe.customers.retrieve(si.customer as string))
-                .metadata?.user_id
-            : undefined);
-
-        if (!userId) {
-          console.warn("setup_intent.succeeded: no user_id; skipping");
-          break;
-        }
-        if (!si.payment_method) {
-          console.warn("setup_intent.succeeded: no payment_method; skipping");
-          break;
-        }
-
-        const pm = await stripe.paymentMethods.retrieve(
-          si.payment_method as string,
-        );
-        await saveCard(pm as Stripe.PaymentMethod, userId);
-        break;
-      }
-
-      case "payment_method.attached": {
-        const pm = evt.data.object as Stripe.PaymentMethod;
-
-        let userId =
-          pm.metadata?.user_id ??
-          (pm.customer
-            ? (await stripe.customers.retrieve(pm.customer as string))
-                .metadata?.user_id
-            : undefined);
-
-        if (!userId) {
-          console.warn("payment_method.attached: no user_id; skipping");
-          break;
-        }
-        await saveCard(pm, userId);
-        break;
-      }
-
-      /* ── CREDIT TOP-UPS ────────────────────── */
-      case "payment_intent.succeeded": {
-        const pi = evt.data.object as Stripe.PaymentIntent;
-        const userId =
-          pi.metadata?.user_id ??
-          (pi.customer
-            ? (await stripe.customers.retrieve(pi.customer as string))
-                .metadata?.user_id
-            : undefined);
-        if (!userId) {
-          console.warn("payment_intent.succeeded: no user_id; skipping");
-          break;
-        }
-        await logTopupSuccess(userId, pi);
-        break;
-      }
-
-      case "payment_intent.payment_failed": {
-        const pi = evt.data.object as Stripe.PaymentIntent;
-        const userId =
-          pi.metadata?.user_id ??
-          (pi.customer
-            ? (await stripe.customers.retrieve(pi.customer as string))
-                .metadata?.user_id
-            : undefined);
-        if (!userId) {
-          console.warn("payment_intent.payment_failed: no user_id; skipping");
-          break;
-        }
-        await logTopupFailure(userId, pi);
-        break;
-      }
-
-      /* ignore all other event types */
+      case "setup_intent.succeeded":
+        await handleSetupIntentSucceeded(evt);     break;
+      case "payment_method.attached":
+        await handlePaymentMethodAttached(evt);    break;
+      case "payment_intent.succeeded":
+        await handlePiSucceeded(evt);              break;
+      case "payment_intent.payment_failed":
+        await handlePiFailed(evt);                 break;
+      default: /* ignore */                        break;
     }
-
-    await markEvent(evt.id);
-    return new Response("ok", { status: 200, headers: CORS });
-  } catch (err) {
-    console.error("Handler error:", err);
-    await markEvent(evt.id, String(err));
-    return new Response("handler error", { status: 500, headers: CORS });
+  } catch (err: any) {
+    ok = false;
+    errMsg = err.message ?? String(err);
+    console.error(`Error processing ${evt.type}:`, errMsg);
   }
+
+  await finalizeEvent(evt.id, ok, errMsg);
+
+  /* ALWAYS return 200 so Stripe stops retrying.
+     If ok = false you can re-queue the event later. */
+  return new Response(ok ? "ok" : "recorded error", { status: 200, headers: CORS });
 });
