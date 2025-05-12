@@ -13,7 +13,7 @@ type TopupRequest = {
   amount_usd: number;
   requested_at: string;
   processed_at: string | null;
-  error_message: string | null;
+  message: string | null;
 };
 
 export const TopupQueueStatus = () => {
@@ -47,7 +47,7 @@ export const TopupQueueStatus = () => {
           amount_usd: item.amount_usd,
           requested_at: item.requested_at,
           processed_at: item.processed_at,
-          error_message: item.error_message
+          message: item.message
         }));
         
         setRequests(typedRequests);
@@ -148,7 +148,7 @@ export const TopupQueueStatus = () => {
                           </div>
                         </>
                       ) : (
-                        request.error_message
+                        request.message
                       )}
                     </div>
                   </div>
