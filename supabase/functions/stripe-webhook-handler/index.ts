@@ -124,9 +124,21 @@ async function markEventDone(evtId: string, err?: string) {
     .eq("stripe_event_id", evtId);
 }
 
+
+
+
 /* ───────── Save / Update Payment-Method ───────── */
 
 async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
+  /* 1️⃣ get email if present in the PaymentMethod */
+  let email: string | null = pm.billing_details?.email ?? null;
+
+  /* 2️⃣ fallback: pull it from the Customer object once */
+  if (!email && typeof pm.customer === "string") {
+    const cust = await stripe.customers.retrieve(pm.customer);
+    email = (cust as Stripe.Customer).email ?? null;
+  }
+
   const { error } = await supabase.from("payment_method").upsert(
     {
       user_id: userId,
@@ -134,6 +146,7 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
       stripe_payment_method_id: pm.id,
       payment_method_type: pm.type,
       payment_status: "active",
+      email,                                 // 👈 NEW
       card_brand: pm.card?.brand ?? null,
       card_last4: pm.card?.last4 ?? null,
       exp_month: pm.card?.exp_month ?? null,
