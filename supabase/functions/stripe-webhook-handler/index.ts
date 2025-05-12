@@ -1,5 +1,5 @@
 /* ========================================================================== *
-   Supabase Edge Function – Stripe Webhook Handler (cards + top‑ups)
+   Supabase Edge Function – Stripe Webhook Handler (cards + top-ups)
    Runtime : Supabase Edge / Deno Deploy
  * ========================================================================== */
 
@@ -31,53 +31,6 @@ const CORS = {
 
 const nowISO = () => new Date().toISOString();
 
-/* constant‑time string comparison */
-function secureCompare(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
-/* HMAC verification (no Stripe SDK needed) */
-async function verifyStripeSignature(
-  payload: string,
-  sigHeader: string,
-  secret: string,
-  toleranceSec = 300,
-) {
-  const parts = Object.fromEntries(
-    sigHeader.split(",").map((p) => p.split("=", 2) as [string, string]),
-  );
-  const ts = parts.t;
-  const sigs = parts.v1?.split(" ") ?? [];
-  if (!ts || !sigs.length) throw new Error("Malformed Stripe‑Signature");
-
-  if (Math.abs(Date.now() / 1e3 - Number(ts)) > toleranceSec) {
-    throw new Error("Timestamp outside tolerance");
-  }
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const expectedBuf = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${ts}.${payload}`),
-  );
-  const expected = Array.from(new Uint8Array(expectedBuf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-
-  if (!sigs.some((s) => secureCompare(s, expected))) {
-    throw new Error("Signature mismatch");
-  }
-}
-
 /* ───────── Bookkeeping (stripe_webhook_events) ───────── */
 
 async function insertWebhookRow(evt: any) {
@@ -106,7 +59,7 @@ async function markProcessed(id: string, ok: boolean, err?: string) {
     .eq("stripe_event_id", id);
 }
 
-/* ───────── Payment‑method upsert ───────── */
+/* ───────── Payment-method upsert ───────── */
 
 async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
   let email = pm.billing_details?.email ?? null;
@@ -144,7 +97,7 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
   if (error) throw error;
 }
 
-/* ───────── Top‑up log helpers ───────── */
+/* ───────── Top-up log helpers ───────── */
 
 const logTopupSuccess = async (uid: string, pi: Stripe.PaymentIntent) =>
   supabase.from("topup_logs").insert({
@@ -162,7 +115,7 @@ const logTopupFailure = async (uid: string, pi: Stripe.PaymentIntent) =>
     error_message: pi.last_payment_error?.message ?? "unknown",
   });
 
-/* ───────── Event‑specific handlers ───────── */
+/* ───────── Event-specific handlers ───────── */
 
 async function handleSetupIntentSucceeded(evt: any) {
   const si = evt.data.object as Stripe.SetupIntent;
@@ -205,22 +158,27 @@ async function handlePiFailed(evt: any) {
 /* ───────── MAIN ───────── */
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS });
+  }
 
-  const raw = await req.text().catch(() => "");
-  const sig = req.headers.get("stripe-signature") ?? "";
+  /* Stripe needs the exact “raw” body (no JSON.parse) for sig verification */
+  const rawBody = await req.text();
+  const sigHeader = req.headers.get("stripe-signature") ?? "";
 
-  /* verify signature */
+  let evt: Stripe.Event;
   try {
-    await verifyStripeSignature(raw, sig, Deno.env.get("STRIPE_WEBHOOK_SECRET")!);
+    evt = stripe.webhooks.constructEvent(
+      rawBody,
+      sigHeader,
+      Deno.env.get("STRIPE_WEBHOOK_SECRET")!,
+    );
   } catch (e) {
     console.error("Bad signature:", e);
     return new Response("bad sig", { status: 400, headers: CORS });
   }
 
-  const evt = JSON.parse(raw);
-
-  /* try to insert bookkeeping row, but don't crash if it fails */
+  /* bookkeeping row (best-effort) */
   let rowInserted = true;
   try {
     const { error } = await insertWebhookRow(evt);
@@ -235,10 +193,10 @@ serve(async (req) => {
   let errMsg: string | undefined;
   try {
     switch (evt.type) {
-      case "setup_intent.succeeded":      await handleSetupIntentSucceeded(evt); break;
-      case "payment_method.attached":     await handlePaymentMethodAttached(evt); break;
-      case "payment_intent.succeeded":    await handlePiSucceeded(evt);           break;
-      case "payment_intent.payment_failed": await handlePiFailed(evt);            break;
+      case "setup_intent.succeeded":        await handleSetupIntentSucceeded(evt); break;
+      case "payment_method.attached":       await handlePaymentMethodAttached(evt); break;
+      case "payment_intent.succeeded":      await handlePiSucceeded(evt);           break;
+      case "payment_intent.payment_failed": await handlePiFailed(evt);              break;
       /* ignore others */
     }
   } catch (e: any) {
@@ -247,11 +205,11 @@ serve(async (req) => {
     console.error(`Handler error (${evt.type}):`, errMsg);
   }
 
-  /* update bookkeeping row if we have one */
+  /* mark bookkeeping row (if it exists) */
   if (rowInserted) {
     await markProcessed(evt.id, ok, errMsg);
   }
 
-  /* always return 200 so Stripe stops retrying */
+  /* Always 200 so Stripe stops retrying */
   return new Response(ok ? "ok" : "recorded error", { status: 200, headers: CORS });
 });
