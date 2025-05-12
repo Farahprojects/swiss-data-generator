@@ -42,7 +42,19 @@ export const TopupQueueStatus = () => {
           return;
         }
         
-        setRequests(data || []);
+        // Transform the data to ensure it matches our expected type
+        const typedRequests: TopupRequest[] = (data || []).map(item => ({
+          id: item.id,
+          status: item.status,
+          amount_usd: item.amount_usd,
+          requested_at: item.requested_at,
+          processed_at: item.processed_at,
+          error_message: item.error_message,
+          retry_count: item.retry_count || 0,
+          max_retries: item.max_retries || 3
+        }));
+        
+        setRequests(typedRequests);
       } catch (err) {
         console.error("Failed to fetch topup requests:", err);
       } finally {
