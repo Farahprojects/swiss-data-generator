@@ -153,8 +153,9 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
   };
 
   const { error } = await supabase
-    .from("payment_method")
-    .upsert(data, { onConflict: "stripe_payment_method_id" });
+  .from("payment_method")
+  .insert(data);
+
 
   if (error) {
     console.error("Supabase upsert error", error);
