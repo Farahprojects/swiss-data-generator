@@ -50,7 +50,7 @@ serve(async (req) => {
       try {
         /* get latest saved card */
         const { data: pmRows, error: pmErr } = await supabase
-          .from("payment_method")
+          .from("active_payment_method")
           .select("stripe_customer_id, stripe_payment_method_id")
           .eq("user_id", job.user_id)
           .order("ts", { ascending: false })
