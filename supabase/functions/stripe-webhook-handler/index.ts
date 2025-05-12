@@ -130,13 +130,26 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
 /* ───────── Top-up helpers ───────── */
 
 async function logTopupSuccess(userId: string, pi: Stripe.PaymentIntent) {
-  const { error } = await supabase.from("topup_logs").insert({
+  const { error: insertError } = await supabase.from("topup_logs").insert({
     user_id: userId,
     stripe_payment_intent_id: pi.id,
     amount_cents: pi.amount,
     status: "succeeded",
   });
-  if (error) throw error;
+  if (insertError) throw insertError;
+
+  const topupRequestId = pi.metadata?.topup_request_id;
+  if (topupRequestId) {
+    const { error: updateError } = await supabase
+      .from("topup_queue")
+      .update({ status: "completed" })
+      .eq("id", topupRequestId)
+      .eq("user_id", userId);
+
+    if (updateError) {
+      console.error(`Failed to update topup_queue status for ${topupRequestId}:`, updateError);
+    }
+  }
 }
 
 async function logTopupFailure(userId: string, pi: Stripe.PaymentIntent) {
