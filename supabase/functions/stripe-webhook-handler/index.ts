@@ -134,7 +134,7 @@ async function logTopupSuccess(userId: string, pi: Stripe.PaymentIntent) {
     user_id: userId,
     stripe_payment_intent_id: pi.id,
     amount_cents: pi.amount,
-    status: "succeeded",
+    status: "completed",
   });
   if (insertError) throw insertError;
 
