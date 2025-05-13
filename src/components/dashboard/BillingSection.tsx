@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { AlertCircle, CreditCard, PlusCircle, CheckCircle, DollarSign, ExternalLink, Download, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,7 +46,11 @@ export const BillingSection = () => {
     if (status === 'setup-success') {
       // Refresh payment method data
       fetchPaymentMethod();
-      toast.success("Payment method updated successfully!");
+      toast({
+        title: "Success",
+        description: "Payment method updated successfully!",
+        variant: "success"
+      });
     }
   }, [searchParams]);
 
@@ -154,6 +159,7 @@ export const BillingSection = () => {
       }
       
       if (data && data.stripe_payment_method_id) {
+        console.log("Payment method found:", data);
         // Create a payment method object with the available data
         setPaymentMethod({
           payment_method_id: data.stripe_payment_method_id,
@@ -262,14 +268,24 @@ export const BillingSection = () => {
   // Handle deleting payment method
   const handleDeletePaymentMethod = async () => {
     if (!user?.id || !paymentMethod?.payment_method_id) {
-      toast.error("No payment method to delete");
+      toast({
+        title: "Error", 
+        description: "No payment method to delete",
+        variant: "destructive"
+      });
       return;
     }
 
     setIsDeletingPaymentMethod(true);
     try {
+      console.log("Attempting to delete payment method:", paymentMethod.payment_method_id);
+      
+      // Debug: Log the user ID and payment method ID being used
+      console.log("User ID:", user.id);
+      console.log("Payment Method ID:", paymentMethod.payment_method_id);
+      
       // Update the payment_method record to set active to false
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("payment_method")
         .update({
           active: false,
@@ -277,20 +293,35 @@ export const BillingSection = () => {
           status_changed_at: new Date().toISOString()
         })
         .eq("user_id", user.id)
-        .eq("stripe_payment_method_id", paymentMethod.payment_method_id);
+        .eq("stripe_payment_method_id", paymentMethod.payment_method_id)
+        .select();
 
       if (error) {
         console.error("Error deleting payment method:", error);
-        toast.error("Failed to delete payment method. Please try again.");
+        toast({
+          title: "Error", 
+          description: "Failed to delete payment method. Please try again.",
+          variant: "destructive"
+        });
         return;
       }
       
+      console.log("Payment method deletion result:", data);
+      
       // Clear the payment method from state
       setPaymentMethod(null);
-      toast.success("Payment method deleted successfully");
+      toast({
+        title: "Success",
+        description: "Payment method deleted successfully",
+        variant: "success"
+      });
     } catch (err) {
       console.error("Failed to delete payment method:", err);
-      toast.error("Failed to delete payment method. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to delete payment method. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsDeletingPaymentMethod(false);
     }
