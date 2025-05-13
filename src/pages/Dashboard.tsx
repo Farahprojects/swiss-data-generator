@@ -15,8 +15,6 @@ import ApiDocumentationContent from "@/components/dashboard/ApiDocumentationCont
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { TopupQueueStatus } from "@/components/dashboard/TopupQueueStatus";
-import { CurrentPlanCard } from "@/components/dashboard/CurrentPlanCard";
-import { SupportCard } from "@/components/dashboard/SupportCard";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -55,10 +53,6 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <ApiKeySection />
               <AiCreditsCard />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <CurrentPlanCard />
-              <SupportCard />
             </div>
             <TopupQueueStatus />
             <RecentApiCalls />
