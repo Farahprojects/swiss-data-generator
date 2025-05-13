@@ -108,8 +108,9 @@ export const ApiKeysPanel = () => {
         </CardContent>
       </Card>
       
-      <Card className="border border-gray-200 shadow-sm">
-        <CardHeader>
+      <Card className="mb-6 overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+        <CardHeader className="pb-3">
           <CardTitle>Your API Key</CardTitle>
           <CardDescription>
             Use this key to authenticate your API requests
@@ -169,8 +170,9 @@ export const ApiKeysPanel = () => {
         </CardFooter>
       </Card>
       
-      <Card className="border border-gray-200 shadow-sm">
-        <CardHeader>
+      <Card className="overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+        <CardHeader className="pb-3">
           <CardTitle>API Usage Guidelines</CardTitle>
           <CardDescription>Best practices for using your API key</CardDescription>
         </CardHeader>
