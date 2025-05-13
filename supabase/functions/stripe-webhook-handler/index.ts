@@ -129,11 +129,18 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
 /* ───────── Top-up helpers ───────── */
 
 async function logTopupSuccess(userId: string, pi: Stripe.PaymentIntent) {
+  /* extract receipt URL from first charge (if present) */
+  const receiptUrl =
+    pi.charges?.data?.[0]?.receipt_url ??
+    null;
+
   const { error: insertError } = await supabase.from("topup_logs").insert({
     user_id: userId,
     stripe_payment_intent_id: pi.id,
     amount_cents: pi.amount,
     status: "completed",
+    credited: true,           // credit is available immediately
+    receipt_url: receiptUrl,  // invoice / receipt link (nullable)
   });
   if (insertError) throw insertError;
 
