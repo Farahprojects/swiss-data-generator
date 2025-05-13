@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, RefreshCw, Eye, EyeOff, Check } from "lucide-react";
+import { Copy, RefreshCw, Eye, EyeOff, Check, Key } from "lucide-react";
 import { useApiKey } from "@/hooks/useApiKey";
 import {
   AlertDialog,
@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 export function ApiKeySection() {
   const [isCopying, setIsCopying] = useState(false);
@@ -139,7 +139,8 @@ export function ApiKeySection() {
 
   if (isLoading && !apiKey) {
     return (
-      <Card className="w-full">
+      <Card className="w-full h-full overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
         <CardContent className="pt-6">
           <div className="flex flex-col items-center justify-center py-8">
             <RefreshCw className="h-8 w-8 animate-spin mb-4 text-gray-500" />
@@ -152,7 +153,8 @@ export function ApiKeySection() {
 
   if (error) {
     return (
-      <Card className="w-full">
+      <Card className="w-full h-full overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
         <CardContent className="pt-6">
           <div className="bg-red-50 p-4 rounded-md border border-red-200 mb-4">
             <p className="text-red-600 font-medium">Error loading API key:</p>
@@ -168,7 +170,8 @@ export function ApiKeySection() {
 
   if (!apiKey) {
     return (
-      <Card className="w-full">
+      <Card className="w-full h-full overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
         <CardContent className="pt-6">
           <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 mb-4">
             <p className="text-amber-700 font-medium">No API key found</p>
@@ -189,16 +192,20 @@ export function ApiKeySection() {
 
   return (
     <>
-      <Card className="w-full h-full flex flex-col">
-        <CardHeader>
-          <CardTitle>API Key</CardTitle>
+      <Card className="w-full h-full flex flex-col overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-medium flex items-center gap-2">
+            <Key className="h-5 w-5 text-primary" />
+            API Key
+          </CardTitle>
           <CardDescription>
             Your API key for integrating with our service.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 flex-grow">
           <div className="relative">
-            <div className="bg-muted p-3 rounded-md font-mono text-sm flex justify-between items-start">
+            <div className="bg-gray-50 p-3 rounded-md font-mono text-sm flex justify-between items-start border border-gray-200">
               <div className="w-full pr-16 break-all">{maskApiKey(apiKey)}</div>
               <div className="flex space-x-1 shrink-0 absolute right-3 top-3">
                 <Button
