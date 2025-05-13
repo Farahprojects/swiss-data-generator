@@ -110,11 +110,12 @@ const ApiProducts = () => {
             {apiModules.map((module, index) => (
               <Card 
                 key={index} 
-                className={`relative flex h-full flex-col overflow-hidden border border-gray-100 transition-shadow hover:shadow-md ${
+                className={`relative flex h-full flex-col overflow-hidden border-2 border-gray-100 transition-shadow hover:shadow-md ${
                   module.featured ? "md:col-span-2" : ""
                 }`}
               >
-                <CardHeader>
+                <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+                <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-2xl font-bold">
                       {module.title}

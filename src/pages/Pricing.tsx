@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -30,43 +31,46 @@ const PricingPlanCard = ({
 }) => {
   return (
     <div
-      className={`flex h-full flex-col rounded-xl p-6 ${
-        highlight ? "ring-2 ring-primary" : "border border-gray-200"
+      className={`flex h-full flex-col rounded-xl overflow-hidden border-2 ${
+        highlight ? "border-primary" : "border-gray-100"
       } bg-white shadow-sm transition-shadow hover:shadow-md`}
     >
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          {icon && <span className="text-2xl text-primary">{icon}</span>}
-          <h3 className="text-2xl font-bold text-gray-900">{name}</h3>
-        </div>
-        <p className="text-gray-600">{description}</p>
-        <p className="text-4xl font-bold text-primary">{price}</p>
-      </div>
-
-      <div className="mt-6 flex-grow space-y-3">
-        {features.map((f, i) => (
-          <div key={i} className="flex items-start gap-2 text-gray-700">
-            <Check className="h-5 w-5 shrink-0 text-primary" />
-            <span>{f}</span>
+      <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+      <div className="p-6">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            {icon && <span className="text-2xl text-primary">{icon}</span>}
+            <h3 className="text-2xl font-bold text-gray-900">{name}</h3>
           </div>
-        ))}
-      </div>
+          <p className="text-gray-600">{description}</p>
+          <p className="text-4xl font-bold text-primary">{price}</p>
+        </div>
 
-      <div className="mt-8">
-        <Button 
-          className="w-full bg-primary py-6 text-lg font-medium hover:bg-primary/90"
-          onClick={onSubscribe}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            "Start Free Trial"
-          )}
-        </Button>
+        <div className="mt-6 flex-grow space-y-3">
+          {features.map((f, i) => (
+            <div key={i} className="flex items-start gap-2 text-gray-700">
+              <Check className="h-5 w-5 shrink-0 text-primary" />
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8">
+          <Button 
+            className="w-full bg-primary py-6 text-lg font-medium hover:bg-primary/90"
+            onClick={onSubscribe}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              "Start Free Trial"
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -209,15 +213,45 @@ const Pricing = () => {
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 {addOns.map((addon) => (
-                  <PricingPlanCard 
+                  <div
                     key={addon.name}
-                    name={addon.name}
-                    price={addon.price}
-                    description={addon.description}
-                    features={addon.details}
-                    onSubscribe={() => handleAddOn(addon.name)}
-                    isLoading={loadingAddOn === addon.name}
-                  />
+                    className="flex h-full flex-col rounded-xl overflow-hidden border-2 border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md"
+                  >
+                    <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+                    <div className="p-6">
+                      <div className="space-y-4">
+                        <h3 className="text-2xl font-bold text-gray-900">{addon.name}</h3>
+                        <p className="text-gray-600">{addon.description}</p>
+                        <p className="text-4xl font-bold text-primary">{addon.price}</p>
+                      </div>
+
+                      <div className="mt-6 flex-grow space-y-3">
+                        {addon.details.map((detail, i) => (
+                          <div key={i} className="flex items-start gap-2 text-gray-700">
+                            <Check className="h-5 w-5 shrink-0 text-primary" />
+                            <span>{detail}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-8">
+                        <Button 
+                          className="w-full bg-primary py-6 text-lg font-medium hover:bg-primary/90"
+                          onClick={() => handleAddOn(addon.name)}
+                          disabled={loadingAddOn === addon.name}
+                        >
+                          {loadingAddOn === addon.name ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            addon.status === "included" ? "Included" : "Add for " + addon.price
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

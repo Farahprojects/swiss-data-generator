@@ -135,8 +135,9 @@ export const PricingPage = () => {
         </div>
       ) : (
         Object.entries(groupedPrices).map(([category, items]) => (
-          <Card key={category} className="overflow-hidden">
-            <CardHeader className="bg-gray-50 border-b">
+          <Card key={category} className="overflow-hidden border-2 border-gray-100">
+            <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+            <CardHeader className="bg-gray-50 border-b pb-3">
               <CardTitle>{category}</CardTitle>
               <CardDescription>
                 {category === 'Report Tiers' && 'Pricing for different report complexity levels'}
@@ -146,9 +147,10 @@ export const PricingPage = () => {
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {items.map((price) => (
-                  <div key={price.id} className="bg-white p-5 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 flex flex-col h-full">
+                  <div key={price.id} className="bg-white p-5 rounded-lg border-2 border-gray-100 hover:shadow-md transition-shadow duration-200 flex flex-col h-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-primary/10 to-transparent p-1 -mx-5 -mt-5 mb-4"></div>
                     <div className="flex-grow">
-                      <h3 className="text-lg font-medium">{price.name}</h3>
+                      <h3 className="text-lg font-medium text-gray-900">{price.name}</h3>
                       <p className="text-sm text-gray-500 mt-1">{price.description || 'Standard pricing'}</p>
                     </div>
                     
@@ -167,8 +169,9 @@ export const PricingPage = () => {
         ))
       )}
       
-      <Card>
-        <CardHeader>
+      <Card className="overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+        <CardHeader className="pb-3">
           <CardTitle>Volume Discounts</CardTitle>
           <CardDescription>Benefit from reduced pricing with higher usage volumes</CardDescription>
         </CardHeader>
