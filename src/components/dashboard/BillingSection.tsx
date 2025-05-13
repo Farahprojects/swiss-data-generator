@@ -394,10 +394,10 @@ export const BillingSection = () => {
 
       {/* Payment Method Card */}
       <Card className="mb-6 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500/10 to-transparent p-1"></div>
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
         <CardHeader className="pb-3">
           <CardTitle className="text-xl flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-blue-600" />
+            <CreditCard className="h-5 w-5 text-primary" />
             Payment Method
           </CardTitle>
           <CardDescription>Manage your payment settings</CardDescription>
@@ -411,16 +411,16 @@ export const BillingSection = () => {
               </div>
             </div>
           ) : !paymentMethod ? (
-            <Alert className="bg-blue-50 border border-blue-100">
-              <AlertCircle className="h-5 w-5 text-blue-600" />
-              <AlertDescription className="text-blue-800">
+            <Alert className="bg-gray-50 border border-gray-200">
+              <AlertCircle className="h-5 w-5 text-primary" />
+              <AlertDescription className="text-gray-800">
                 No payment method found. Add a payment method to enable automatic top-ups.
               </AlertDescription>
               <Button 
                 onClick={handleUpdatePaymentMethod} 
                 variant="outline" 
                 size="sm" 
-                className="ml-auto border border-blue-200 text-blue-700 hover:bg-blue-50"
+                className="ml-auto border border-primary/20 text-primary hover:bg-primary/10"
                 disabled={isUpdatingPaymentMethod}
               >
                 <CreditCard className="mr-2 h-4 w-4" />
@@ -457,7 +457,7 @@ export const BillingSection = () => {
                     onClick={handleUpdatePaymentMethod} 
                     disabled={isUpdatingPaymentMethod}
                     size="sm"
-                    className="whitespace-nowrap"
+                    className="whitespace-nowrap text-primary border-primary/20 hover:bg-primary/10"
                   >
                     {isUpdatingPaymentMethod ? "Processing..." : "Update Card"}
                   </Button>
@@ -483,9 +483,9 @@ export const BillingSection = () => {
         <TopupQueueStatus />
       </div>
 
-      {/* Transaction History Card - Updated with Download Button */}
+      {/* Transaction History Card */}
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-500/10 to-transparent p-1"></div>
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
         <CardHeader className="pb-3">
           <CardTitle className="text-xl">Transaction History</CardTitle>
           <CardDescription>Your recent credit top-ups and payments</CardDescription>
