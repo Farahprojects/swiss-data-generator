@@ -48,9 +48,11 @@ const JsonResponseExample: React.FC<JsonResponseExampleProps> = ({
             )}
           </Button>
         </div>
-        <pre className="p-4 overflow-x-auto text-gray-100 text-sm">
-          <code>{jsonCode}</code>
-        </pre>
+        <div className="overflow-x-auto">
+          <pre className="p-4 text-gray-100 text-sm whitespace-pre-wrap break-words">
+            <code>{jsonCode}</code>
+          </pre>
+        </div>
       </div>
     </div>
   );
