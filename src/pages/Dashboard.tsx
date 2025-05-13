@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import ApiDocumentationContent from "@/components/dashboard/ApiDocumentationContent";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { SidebarInset } from "@/components/ui/sidebar";
+import { TopupQueueStatus } from "@/components/dashboard/TopupQueueStatus";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -53,6 +54,7 @@ const Dashboard = () => {
               <ApiKeySection />
               <AiCreditsCard />
             </div>
+            <TopupQueueStatus />
             <RecentApiCalls />
           </div>
         );

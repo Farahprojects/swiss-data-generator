@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TopupQueueStatus } from "@/components/dashboard/TopupQueueStatus";
 
 export const BillingSection = () => {
   const { user } = useAuth();
@@ -404,6 +405,11 @@ export const BillingSection = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Auto Top-up Status */}
+      <div className="mb-6">
+        <TopupQueueStatus />
+      </div>
 
       {/* Transaction History Card */}
       <Card className="overflow-hidden">
