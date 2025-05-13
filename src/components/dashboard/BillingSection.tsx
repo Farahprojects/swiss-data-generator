@@ -409,7 +409,7 @@ export const BillingSection = () => {
     <div className="max-w-4xl mx-auto">
       <h2 className="text-3xl font-bold mb-6">Billing & Credits</h2>
       
-      {/* Credit Balance Card */}
+      {/* Credit Balance Card - Modified to remove status indicator and topup button */}
       <Card className="mb-6 overflow-hidden border-2 border-gray-100">
         <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
         <CardHeader className="pb-3">
@@ -435,25 +435,9 @@ export const BillingSection = () => {
                   {lastUpdate ? `Last updated: ${formatDate(lastUpdate)}` : "Not yet updated"}
                 </p>
               </div>
-              <div className="text-right">
-                <span className={`inline-block px-3 py-1 rounded-full text-sm ${balance > 10 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                  {balance > 10 ? 'Healthy' : 'Low Balance'}
-                </span>
-              </div>
+              {/* Removed the "Healthy" / "Low Balance" status indicator */}
             </div>
-            <div className="pt-2">
-              <Button 
-                onClick={handleTopup}
-                disabled={isProcessingTopup || !creditProduct}
-                className="flex items-center gap-2 w-full sm:w-auto"
-                size="lg"
-              >
-                <PlusCircle size={18} />
-                {isProcessingTopup ? "Processing..." : creditProduct 
-                  ? `Top-up Credits ($${creditProduct.amount_usd})` 
-                  : "Top-up Credits"}
-              </Button>
-            </div>
+            {/* Removed the top-up button */}
           </div>
         </CardContent>
       </Card>
