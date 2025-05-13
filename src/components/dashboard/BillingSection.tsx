@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { AlertCircle, CreditCard, PlusCircle, CheckCircle, DollarSign } from "lucide-react";
+import { AlertCircle, CreditCard, PlusCircle, CheckCircle, DollarSign, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useSearchParams } from "react-router-dom";
@@ -79,10 +80,9 @@ export const BillingSection = () => {
       if (!user?.id) return;
       
       try {
-        // Note: this query will fail as credit_transactions table doesn't exist yet
-        // We'll keep it but handle the error gracefully until the table is created
+        // Updated to fetch from topup_logs instead of api_usage
         const { data, error } = await supabase
-          .from("api_usage")
+          .from("topup_logs")
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
@@ -264,6 +264,12 @@ export const BillingSection = () => {
     return new Date(timestamp).toLocaleDateString();
   };
 
+  // Format amount in dollars from cents
+  const formatAmountFromCents = (cents) => {
+    if (cents === null || cents === undefined) return "$0.00";
+    return `$${(cents / 100).toFixed(2)}`;
+  };
+
   // Get CSS class for card brand
   const getCardBrandClass = (brand) => {
     const brandMap = {
@@ -411,12 +417,12 @@ export const BillingSection = () => {
         <TopupQueueStatus />
       </div>
 
-      {/* Transaction History Card */}
+      {/* Transaction History Card - Updated for topup_logs */}
       <Card className="overflow-hidden">
         <div className="bg-gradient-to-r from-purple-500/10 to-transparent p-1"></div>
         <CardHeader className="pb-3">
           <CardTitle className="text-xl">Transaction History</CardTitle>
-          <CardDescription>Your recent API credit transactions</CardDescription>
+          <CardDescription>Your recent credit top-ups and payments</CardDescription>
         </CardHeader>
         <CardContent>
           {transactions.length > 0 ? (
@@ -425,19 +431,47 @@ export const BillingSection = () => {
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="w-[120px]">Date</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Payment</TableHead>
                     <TableHead className="text-right w-[100px]">Amount</TableHead>
-                    <TableHead className="w-[80px]">Type</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="w-[80px]">Receipt</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {transactions.map((transaction) => (
                     <TableRow key={transaction.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">{formatDate(transaction.created_at)}</TableCell>
-                      <TableCell className="max-w-[300px] truncate">{transaction.endpoint || "API Usage"}</TableCell>
-                      <TableCell className="text-right font-medium">${transaction.total_cost_usd?.toFixed(2) || "0.00"}</TableCell>
                       <TableCell>
-                        <span className="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs">debit</span>
+                        Credit Top-up
+                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
+                          {transaction.stripe_payment_intent_id}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatAmountFromCents(transaction.amount_cents)}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-block px-2 py-1 rounded text-xs ${
+                          transaction.status === 'completed' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {transaction.status}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {transaction.receipt_url ? (
+                          <a 
+                            href={transaction.receipt_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center text-blue-600 hover:text-blue-800"
+                          >
+                            <ExternalLink size={16} />
+                          </a>
+                        ) : (
+                          <span className="text-gray-400 text-center block">-</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -454,7 +488,7 @@ export const BillingSection = () => {
               ) : (
                 <div>
                   <p className="text-gray-500 mb-2">No transactions found</p>
-                  <p className="text-sm text-gray-400">Your transactions will appear here once you start using the API</p>
+                  <p className="text-sm text-gray-400">Your payment history will appear here once you make your first top-up</p>
                 </div>
               )}
             </div>
