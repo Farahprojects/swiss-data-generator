@@ -1,28 +1,20 @@
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { getProductByType } from "@/utils/stripe-products";
-import { useLocation } from "react-router-dom";
 
 export const AiCreditsCard = () => {
   const { user } = useAuth();
-  const location = useLocation();
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
-  const [creditProduct, setCreditProduct] = useState<{ price_id: string; amount_usd: number } | null>(null);
 
   useEffect(() => {
     const fetchUserBalance = async () => {
@@ -53,88 +45,6 @@ export const AiCreditsCard = () => {
 
     fetchUserBalance();
   }, [user]);
-
-  // Load the API credits product
-  useEffect(() => {
-    const fetchCreditProduct = async () => {
-      try {
-        // Fetch products of type 'credit' from the stripe_products table
-        const { data, error } = await supabase
-          .from("stripe_products")
-          .select("price_id, amount_usd")
-          .eq("active", true)
-          .eq("type", "credit")
-          .order("amount_usd", { ascending: true })
-          .limit(1);
-
-        if (error) {
-          console.error("Error fetching credit product:", error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          setCreditProduct(data[0]);
-          console.log("Found credit product:", data[0]);
-        } else {
-          console.warn("No active credit products found in the database");
-        }
-      } catch (err) {
-        console.error("Failed to fetch credit product:", err);
-      }
-    };
-
-    fetchCreditProduct();
-  }, []);
-
-  const handleTopUp = async () => {
-    if (!user) {
-      toast.error("You must be logged in to top up credits");
-      return;
-    }
-
-    if (!creditProduct?.price_id) {
-      toast.error("No credit product available. Please contact support.");
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      console.log("Creating checkout session with price ID:", creditProduct.price_id);
-      
-      // Store the current path and tab in localStorage
-      localStorage.setItem("stripe_return_path", location.pathname);
-      if (location.search) {
-        localStorage.setItem("stripe_return_tab", location.search.substring(1));
-      }
-      
-      // Use the create-checkout edge function to create a dynamic checkout session
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          mode: "payment",
-          priceId: creditProduct.price_id,
-          amount: creditProduct.amount_usd,
-          returnPath: location.pathname,
-          returnTab: location.search ? location.search.substring(1) : ""
-        }
-      });
-
-      if (error || !data?.url) {
-        console.error("Error creating checkout session:", error);
-        toast.error("Failed to create checkout session. Please try again.");
-        return;
-      }
-      
-      console.log("Checkout session created, redirecting to:", data.url);
-      
-      // Redirect to the Stripe Checkout session
-      window.location.href = data.url;
-    } catch (err) {
-      console.error("Failed to initiate top-up:", err);
-      toast.error("Failed to create checkout session. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   // Format date to show in the UI
   const formattedLastTopUp = lastUpdate 
@@ -169,17 +79,6 @@ export const AiCreditsCard = () => {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="mt-auto">
-        <Button 
-          className="w-full bg-white text-black border-black border hover:bg-gray-100"
-          onClick={handleTopUp}
-          disabled={isProcessing || !creditProduct}
-        >
-          {isProcessing ? "Processing..." : creditProduct 
-            ? `Top Up Credits ($100)` 
-            : "Top Up Credits"}
-        </Button>
-      </CardFooter>
     </Card>
   );
 }
