@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -182,12 +181,20 @@ export const BillingSection = () => {
   
   const handleTopup = async () => {
     if (!user) {
-      toast.error("You must be logged in to top up credits");
+      toast({
+        title: "Error",
+        description: "You must be logged in to top up credits",
+        variant: "destructive"
+      });
       return;
     }
 
     if (!creditProduct?.price_id) {
-      toast.error("No credit product available. Please contact support.");
+      toast({
+        title: "Error",
+        description: "No credit product available. Please contact support.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -212,7 +219,11 @@ export const BillingSection = () => {
 
       if (error || !data?.url) {
         console.error("Error creating checkout session:", error);
-        toast.error("Failed to create checkout session. Please try again.");
+        toast({
+          title: "Error",
+          description: "Failed to create checkout session. Please try again.",
+          variant: "destructive"
+        });
         return;
       }
       
@@ -220,7 +231,11 @@ export const BillingSection = () => {
       window.location.href = data.url;
     } catch (err) {
       console.error("Failed to initiate top-up:", err);
-      toast.error("Failed to create checkout session. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to create checkout session. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsProcessingTopup(false);
     }
@@ -228,7 +243,11 @@ export const BillingSection = () => {
   
   const handleUpdatePaymentMethod = async () => {
     if (!user) {
-      toast.error("You must be logged in to update your payment method");
+      toast({
+        title: "Error",
+        description: "You must be logged in to update your payment method",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -251,7 +270,11 @@ export const BillingSection = () => {
 
       if (error || !data?.url) {
         console.error("Error creating setup session:", error);
-        toast.error("Failed to create payment method setup session. Please try again.");
+        toast({
+          title: "Error",
+          description: "Failed to create payment method setup session. Please try again.",
+          variant: "destructive"
+        });
         return;
       }
       
@@ -259,7 +282,11 @@ export const BillingSection = () => {
       window.location.href = data.url;
     } catch (err) {
       console.error("Failed to initiate payment method update:", err);
-      toast.error("Failed to update payment method. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to update payment method. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsUpdatingPaymentMethod(false);
     }
@@ -330,7 +357,11 @@ export const BillingSection = () => {
   // Handle downloading receipt
   const handleDownloadReceipt = async (receiptUrl) => {
     if (!receiptUrl) {
-      toast.error("No receipt available for this transaction");
+      toast({
+        title: "Error",
+        description: "No receipt available for this transaction",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -339,7 +370,11 @@ export const BillingSection = () => {
       window.open(receiptUrl, '_blank');
     } catch (error) {
       console.error("Failed to download receipt:", error);
-      toast.error("Failed to download receipt. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to download receipt. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   
