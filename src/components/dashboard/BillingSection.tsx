@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { AlertCircle, CreditCard, PlusCircle, CheckCircle, DollarSign, ExternalLink } from "lucide-react";
+import { AlertCircle, CreditCard, PlusCircle, CheckCircle, DollarSign, ExternalLink, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useSearchParams } from "react-router-dom";
@@ -258,6 +257,22 @@ export const BillingSection = () => {
     }
   };
   
+  // Handle downloading receipt
+  const handleDownloadReceipt = async (receiptUrl) => {
+    if (!receiptUrl) {
+      toast.error("No receipt available for this transaction");
+      return;
+    }
+
+    try {
+      // Open receipt in a new tab
+      window.open(receiptUrl, '_blank');
+    } catch (error) {
+      console.error("Failed to download receipt:", error);
+      toast.error("Failed to download receipt. Please try again.");
+    }
+  };
+  
   // Format date from timestamp
   const formatDate = (timestamp) => {
     if (!timestamp) return "-";
@@ -417,7 +432,7 @@ export const BillingSection = () => {
         <TopupQueueStatus />
       </div>
 
-      {/* Transaction History Card - Updated for topup_logs */}
+      {/* Transaction History Card - Updated with Download Button */}
       <Card className="overflow-hidden">
         <div className="bg-gradient-to-r from-purple-500/10 to-transparent p-1"></div>
         <CardHeader className="pb-3">
@@ -434,7 +449,7 @@ export const BillingSection = () => {
                     <TableHead>Payment</TableHead>
                     <TableHead className="text-right w-[100px]">Amount</TableHead>
                     <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead className="w-[80px]">Receipt</TableHead>
+                    <TableHead className="w-[140px] text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -460,18 +475,32 @@ export const BillingSection = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {transaction.receipt_url ? (
-                          <a 
-                            href={transaction.receipt_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center text-blue-600 hover:text-blue-800"
-                          >
-                            <ExternalLink size={16} />
-                          </a>
-                        ) : (
-                          <span className="text-gray-400 text-center block">-</span>
-                        )}
+                        <div className="flex items-center justify-center gap-2">
+                          {transaction.receipt_url ? (
+                            <>
+                              <Button
+                                variant="ghost" 
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1 h-8 w-8"
+                                onClick={() => handleDownloadReceipt(transaction.receipt_url)}
+                                title="Download Receipt"
+                              >
+                                <Download size={16} />
+                              </Button>
+                              <a 
+                                href={transaction.receipt_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1 rounded-md h-8 w-8"
+                                title="View Receipt"
+                              >
+                                <ExternalLink size={16} />
+                              </a>
+                            </>
+                          ) : (
+                            <span className="text-gray-400 text-center block">No receipt</span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
