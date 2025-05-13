@@ -57,9 +57,10 @@ serve(async (req) => {
         try {
           /* get latest active card */
           const { data: pmRow, error: pmErr } = await supabase
-            .from("active_payment_method")
+            .from("payment_method")  // Updated to use payment_method table
             .select("stripe_customer_id, stripe_payment_method_id")
             .eq("user_id", job.user_id)
+            .eq("active", true)      // Only get active payment methods
             .maybeSingle();
 
           if (pmErr) throw pmErr;

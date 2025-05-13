@@ -141,7 +141,7 @@ export const BillingSection = () => {
     try {
       setIsLoadingPaymentMethod(true);
       
-      // Fetch the latest payment method for the user from payment_method table
+      // Updated to fetch from payment_method table and filter by active=true
       const { data, error } = await supabase
         .from("payment_method")
         .select("*")

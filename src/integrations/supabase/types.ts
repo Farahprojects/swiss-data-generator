@@ -9,81 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      active_payment_method: {
-        Row: {
-          billing_address_line1: string | null
-          billing_address_line2: string | null
-          billing_name: string | null
-          card_brand: string | null
-          card_last4: string | null
-          city: string | null
-          country: string | null
-          email: string | null
-          exp_month: number | null
-          exp_year: number | null
-          fingerprint: string | null
-          id: number | null
-          is_default: boolean | null
-          payment_method_type: string | null
-          payment_status: string | null
-          postal_code: string | null
-          state: string | null
-          stripe_customer_id: string | null
-          stripe_payment_method_id: string | null
-          stripe_pid: string | null
-          ts: string | null
-          user_id: string | null
-        }
-        Insert: {
-          billing_address_line1?: string | null
-          billing_address_line2?: string | null
-          billing_name?: string | null
-          card_brand?: string | null
-          card_last4?: string | null
-          city?: string | null
-          country?: string | null
-          email?: string | null
-          exp_month?: number | null
-          exp_year?: number | null
-          fingerprint?: string | null
-          id?: number | null
-          is_default?: boolean | null
-          payment_method_type?: string | null
-          payment_status?: string | null
-          postal_code?: string | null
-          state?: string | null
-          stripe_customer_id?: string | null
-          stripe_payment_method_id?: string | null
-          stripe_pid?: string | null
-          ts?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          billing_address_line1?: string | null
-          billing_address_line2?: string | null
-          billing_name?: string | null
-          card_brand?: string | null
-          card_last4?: string | null
-          city?: string | null
-          country?: string | null
-          email?: string | null
-          exp_month?: number | null
-          exp_year?: number | null
-          fingerprint?: string | null
-          id?: number | null
-          is_default?: boolean | null
-          payment_method_type?: string | null
-          payment_status?: string | null
-          postal_code?: string | null
-          state?: string | null
-          stripe_customer_id?: string | null
-          stripe_payment_method_id?: string | null
-          stripe_pid?: string | null
-          ts?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       api_keys: {
         Row: {
           api_key: string
@@ -230,7 +155,6 @@ export type Database = {
           exp_year: number | null
           fingerprint: string | null
           id: number
-          is_default: boolean
           payment_method_type: string | null
           payment_status: string | null
           postal_code: string | null
@@ -257,7 +181,6 @@ export type Database = {
           exp_year?: number | null
           fingerprint?: string | null
           id?: number
-          is_default?: boolean
           payment_method_type?: string | null
           payment_status?: string | null
           postal_code?: string | null
@@ -284,7 +207,6 @@ export type Database = {
           exp_year?: number | null
           fingerprint?: string | null
           id?: number
-          is_default?: boolean
           payment_method_type?: string | null
           payment_status?: string | null
           postal_code?: string | null
