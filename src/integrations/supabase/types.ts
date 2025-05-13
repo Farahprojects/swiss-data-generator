@@ -536,6 +536,7 @@ export type Database = {
           created_at: string | null
           credited: boolean | null
           id: string
+          receipt_url: string | null
           status: string
           stripe_payment_intent_id: string | null
           user_id: string
@@ -545,6 +546,7 @@ export type Database = {
           created_at?: string | null
           credited?: boolean | null
           id?: string
+          receipt_url?: string | null
           status: string
           stripe_payment_intent_id?: string | null
           user_id: string
@@ -554,6 +556,7 @@ export type Database = {
           created_at?: string | null
           credited?: boolean | null
           id?: string
+          receipt_url?: string | null
           status?: string
           stripe_payment_intent_id?: string | null
           user_id?: string
