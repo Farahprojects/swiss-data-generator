@@ -2,28 +2,17 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react"; // Using Mail icon as Google isn't available in lucide-react
-import { useToast } from "@/components/ui/use-toast";
 
 interface SocialLoginProps {
   onGoogleSignIn: () => void;
 }
 
 const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn }) => {
-  const { toast } = useToast();
-  
   const handleGoogleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Inform user they are being redirected
-    toast({
-      title: "Redirecting to Google",
-      description: "You'll be redirected to Google for authentication. This page will reload after login.",
-    });
-    
-    // Small delay to allow toast to display before redirect
-    setTimeout(() => {
-      onGoogleSignIn();
-    }, 500);
+    // Directly call the Google sign-in function without showing toast
+    onGoogleSignIn();
   };
 
   return (
