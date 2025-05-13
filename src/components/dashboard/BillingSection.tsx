@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { AlertCircle, CreditCard, PlusCircle, CheckCircle, DollarSign, ExternalLink, Download } from "lucide-react";
+import { AlertCircle, CreditCard, PlusCircle, CheckCircle, DollarSign, ExternalLink, Download, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useSearchParams } from "react-router-dom";
@@ -30,6 +30,7 @@ export const BillingSection = () => {
   const [searchParams] = useSearchParams();
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
   const [isUpdatingPaymentMethod, setIsUpdatingPaymentMethod] = useState(false);
+  const [isDeletingPaymentMethod, setIsDeletingPaymentMethod] = useState(false);
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
@@ -141,6 +142,7 @@ export const BillingSection = () => {
         .from("payment_method")
         .select("*")
         .eq("user_id", user.id)
+        .eq("active", true)  // Only fetch active payment methods
         .order("ts", { ascending: false })
         .limit(1)
         .single();
@@ -254,6 +256,43 @@ export const BillingSection = () => {
       toast.error("Failed to update payment method. Please try again.");
     } finally {
       setIsUpdatingPaymentMethod(false);
+    }
+  };
+
+  // Handle deleting payment method
+  const handleDeletePaymentMethod = async () => {
+    if (!user?.id || !paymentMethod?.payment_method_id) {
+      toast.error("No payment method to delete");
+      return;
+    }
+
+    setIsDeletingPaymentMethod(true);
+    try {
+      // Update the payment_method record to set active to false
+      const { error } = await supabase
+        .from("payment_method")
+        .update({
+          active: false,
+          status_reason: "deleted_by_user",
+          status_changed_at: new Date().toISOString()
+        })
+        .eq("user_id", user.id)
+        .eq("stripe_payment_method_id", paymentMethod.payment_method_id);
+
+      if (error) {
+        console.error("Error deleting payment method:", error);
+        toast.error("Failed to delete payment method. Please try again.");
+        return;
+      }
+      
+      // Clear the payment method from state
+      setPaymentMethod(null);
+      toast.success("Payment method deleted successfully");
+    } catch (err) {
+      console.error("Failed to delete payment method:", err);
+      toast.error("Failed to delete payment method. Please try again.");
+    } finally {
+      setIsDeletingPaymentMethod(false);
     }
   };
   
@@ -412,15 +451,27 @@ export const BillingSection = () => {
                     )}
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  onClick={handleUpdatePaymentMethod} 
-                  disabled={isUpdatingPaymentMethod}
-                  size="sm"
-                  className="whitespace-nowrap"
-                >
-                  {isUpdatingPaymentMethod ? "Processing..." : "Update Card"}
-                </Button>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleUpdatePaymentMethod} 
+                    disabled={isUpdatingPaymentMethod}
+                    size="sm"
+                    className="whitespace-nowrap"
+                  >
+                    {isUpdatingPaymentMethod ? "Processing..." : "Update Card"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDeletePaymentMethod}
+                    disabled={isDeletingPaymentMethod}
+                    size="sm"
+                    className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    {isDeletingPaymentMethod ? "Deleting..." : "Delete"}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

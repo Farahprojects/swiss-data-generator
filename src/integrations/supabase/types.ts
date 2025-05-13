@@ -217,6 +217,7 @@ export type Database = {
       }
       payment_method: {
         Row: {
+          active: boolean | null
           billing_address_line1: string | null
           billing_address_line2: string | null
           billing_name: string | null
@@ -234,6 +235,8 @@ export type Database = {
           payment_status: string | null
           postal_code: string | null
           state: string | null
+          status_changed_at: string | null
+          status_reason: string | null
           stripe_customer_id: string | null
           stripe_payment_method_id: string | null
           stripe_pid: string | null
@@ -241,6 +244,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          active?: boolean | null
           billing_address_line1?: string | null
           billing_address_line2?: string | null
           billing_name?: string | null
@@ -258,6 +262,8 @@ export type Database = {
           payment_status?: string | null
           postal_code?: string | null
           state?: string | null
+          status_changed_at?: string | null
+          status_reason?: string | null
           stripe_customer_id?: string | null
           stripe_payment_method_id?: string | null
           stripe_pid?: string | null
@@ -265,6 +271,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          active?: boolean | null
           billing_address_line1?: string | null
           billing_address_line2?: string | null
           billing_name?: string | null
@@ -282,6 +289,8 @@ export type Database = {
           payment_status?: string | null
           postal_code?: string | null
           state?: string | null
+          status_changed_at?: string | null
+          status_reason?: string | null
           stripe_customer_id?: string | null
           stripe_payment_method_id?: string | null
           stripe_pid?: string | null
