@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, RefreshCw, Eye, EyeOff, Check, ShieldAlert, Key } from "lucide-react";
+import { Copy, RefreshCw, Eye, EyeOff, Check, Key } from "lucide-react";
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -89,18 +89,18 @@ export const ApiKeysPanel = () => {
         <h2 className="text-2xl font-semibold">API Keys</h2>
       </div>
       
-      <Card className="border border-gray-200 shadow-sm">
-        <CardHeader>
+      <Card className="mb-6 overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+        <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>API Key Security</CardTitle>
               <CardDescription>Important information about your API key</CardDescription>
             </div>
-            <ShieldAlert className="h-8 w-8 text-amber-500" />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="bg-amber-50 p-4 rounded-md border border-amber-200 text-amber-800 text-sm">
+          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 text-black text-sm">
             <p className="font-medium mb-2">Keep your API key secure</p>
             <p>Your API key provides full access to your account and services. Never share your API key in public repositories, client-side code, or with unauthorized individuals. If you suspect your key has been compromised, regenerate it immediately.</p>
             <p className="mt-2">We recommend storing your API key in environment variables or secure secret management systems.</p>
