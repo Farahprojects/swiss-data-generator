@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { DollarSign } from "lucide-react";
 
 export const CurrentPlanCard = () => {
   const { user } = useAuth();
@@ -54,23 +55,32 @@ export const CurrentPlanCard = () => {
   };
 
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">Current Plan</CardTitle>
+    <Card className="flex flex-col h-full overflow-hidden border-2 border-gray-100">
+      <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-medium flex items-center gap-2">
+          <DollarSign className="h-5 w-5 text-primary" />
+          Current Plan
+        </CardTitle>
         <CardDescription className="capitalize">{userData?.plan_type || 'Starter'}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="text-3xl font-bold">{getPlanPrice(userData?.plan_type || 'starter')}/month</p>
+        <p className="text-3xl font-bold text-primary">{getPlanPrice(userData?.plan_type || 'starter')}/month</p>
         <p className="text-sm text-gray-500 mt-1">
           Next billing: {subscriptionData?.current_period_end ? new Date(subscriptionData.current_period_end).toLocaleDateString() : getNextBillingDate()}
         </p>
         <div className="mt-4">
-          <p className="text-sm text-gray-500">
-            API Calls: {userData?.api_calls_count?.toLocaleString() || '0'} / {userData?.calls_limit?.toLocaleString() || '50,000'}
-          </p>
-          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-gray-600">
+              API Calls
+            </p>
+            <p className="text-sm text-gray-600 font-medium">
+              {userData?.api_calls_count?.toLocaleString() || '0'} / {userData?.calls_limit?.toLocaleString() || '50,000'}
+            </p>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2 mt-2">
             <div 
-              className="bg-[#9b87f5] h-2 rounded-full" 
+              className="bg-primary h-2 rounded-full" 
               style={{ 
                 width: `${((userData?.api_calls_count || 0) / (userData?.calls_limit || 50000) * 100)}%` 
               }}
@@ -80,7 +90,7 @@ export const CurrentPlanCard = () => {
       </CardContent>
       <CardFooter className="mt-auto">
         <Link to="/dashboard/upgrade" className="w-full">
-          <Button variant="outline" className="w-full border-black">Upgrade Plan</Button>
+          <Button variant="outline" className="w-full border-primary/20 text-primary hover:bg-primary/10">Upgrade Plan</Button>
         </Link>
       </CardFooter>
     </Card>

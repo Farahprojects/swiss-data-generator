@@ -153,7 +153,8 @@ export const RecentApiCalls = () => {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="overflow-hidden border-2 border-gray-100">
+        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
         <CardHeader>
           <CardTitle>Recent API Calls</CardTitle>
           <CardDescription>Loading recent activity...</CardDescription>
@@ -163,69 +164,73 @@ export const RecentApiCalls = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent API Calls</CardTitle>
+    <Card className="overflow-hidden border-2 border-gray-100">
+      <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-medium">Recent API Calls</CardTitle>
         <CardDescription>View your latest API activity</CardDescription>
       </CardHeader>
       <CardContent>
         {logs.length === 0 ? (
-          <div className="text-center py-4">
-            <p>No activity logs found.</p>
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-600">No activity logs found.</p>
+            <p className="text-sm text-gray-500 mt-1">Your API calls will appear here once you start using the API.</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader className="bg-gray-50">
-              <TableRow>
-                <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
-                <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
-                <TableHead className="text-xs font-semibold uppercase text-gray-500">Type</TableHead>
-                <TableHead className="text-xs font-semibold uppercase text-gray-500 text-right">Cost</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-gray-100">
-              {logs.map((log) => (
-                <TableRow 
-                  key={log.id} 
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <TableCell className="py-3 text-sm">
-                    {log.created_at ? 
-                      format(new Date(log.created_at), 'MMM d, yyyy HH:mm:ss') : 
-                      'N/A'}
-                  </TableCell>
-                  <TableCell className="py-3">
-                    {renderStatusIcon(log.response_status)}
-                  </TableCell>
-                  <TableCell className="py-3">
-                    {isFailedLog(log.response_status) ? (
-                      <span className="text-gray-500 text-sm">None</span>
-                    ) : (
-                      <div className="flex flex-col">
-                        <span className="font-medium text-sm">
-                          {formatTypeValue(log.request_type)}
-                        </span>
-                        {log.report_tier && (
-                          <span className="text-xs text-primary">
-                            {formatTypeValue(log.report_tier)}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-3 text-right text-sm">
-                    ${log.total_cost_usd?.toFixed(2) || '0.00'}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-gray-50">
+                <TableRow>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Status</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Type</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-right">Cost</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-100">
+                {logs.map((log) => (
+                  <TableRow 
+                    key={log.id} 
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <TableCell className="py-3 text-sm">
+                      {log.created_at ? 
+                        format(new Date(log.created_at), 'MMM d, yyyy HH:mm:ss') : 
+                        'N/A'}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      {renderStatusIcon(log.response_status)}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      {isFailedLog(log.response_status) ? (
+                        <span className="text-gray-500 text-sm">None</span>
+                      ) : (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">
+                            {formatTypeValue(log.request_type)}
+                          </span>
+                          {log.report_tier && (
+                            <span className="text-xs text-primary">
+                              {formatTypeValue(log.report_tier)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3 text-right text-sm">
+                      ${log.total_cost_usd?.toFixed(2) || '0.00'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
       <CardFooter>
         <Button 
           variant="outline" 
-          className="w-full"
+          className="w-full border-primary/20 text-primary hover:bg-primary/10"
           onClick={handleViewAllActivity}
         >
           View All Activity

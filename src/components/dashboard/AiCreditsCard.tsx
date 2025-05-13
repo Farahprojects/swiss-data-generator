@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Wallet } from "lucide-react";
 
 export const AiCreditsCard = () => {
   const { user } = useAuth();
@@ -56,26 +57,35 @@ export const AiCreditsCard = () => {
     : "No top-ups yet";
 
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">API Wallet Balance</CardTitle>
+    <Card className="flex flex-col h-full overflow-hidden border-2 border-gray-100">
+      <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-medium flex items-center gap-2">
+          <Wallet className="h-5 w-5 text-primary" />
+          API Wallet Balance
+        </CardTitle>
         <CardDescription>Available for API requests</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-gray-600">Balance:</span>
-          <span className="text-2xl font-bold">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-gray-600">Current Balance:</span>
+          <span className="text-2xl font-bold text-primary">
             ${isLoading ? "..." : balance.toFixed(2)} USD
           </span>
         </div>
-        <div className="space-y-2 text-sm text-gray-500">
-          <div className="flex justify-between">
-            <span>Last Top-Up:</span>
-            <span>{formattedLastTopUp}</span>
+        <div className="space-y-3 text-sm">
+          <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+            <span className="text-gray-600">Last Updated:</span>
+            <span className="font-medium">{formattedLastTopUp}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Trigger:</span>
-            <span>Auto top-up at $45</span>
+          <div className="flex justify-between items-center pb-2">
+            <span className="text-gray-600">Auto Top-up Trigger:</span>
+            <span className="font-medium text-gray-800">$45.00</span>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 mt-2">
+            <p className="text-gray-800 text-sm">
+              Your API wallet will automatically top up when the balance falls below $45. Visit the billing section to update your payment method or manage auto top-up settings.
+            </p>
           </div>
         </div>
       </CardContent>
