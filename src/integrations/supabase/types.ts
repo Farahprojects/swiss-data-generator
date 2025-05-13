@@ -534,6 +534,7 @@ export type Database = {
         Row: {
           amount_cents: number
           created_at: string | null
+          credited: boolean | null
           id: string
           status: string
           stripe_payment_intent_id: string | null
@@ -542,6 +543,7 @@ export type Database = {
         Insert: {
           amount_cents: number
           created_at?: string | null
+          credited?: boolean | null
           id?: string
           status: string
           stripe_payment_intent_id?: string | null
@@ -550,6 +552,7 @@ export type Database = {
         Update: {
           amount_cents?: number
           created_at?: string | null
+          credited?: boolean | null
           id?: string
           status?: string
           stripe_payment_intent_id?: string | null
@@ -705,6 +708,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      clean_completed_topups: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_user_after_payment: {
         Args: { user_id: string; plan_type?: string }
         Returns: undefined
@@ -740,6 +747,10 @@ export type Database = {
       get_user_email_by_id: {
         Args: { user_id_param: string }
         Returns: string
+      }
+      increment_user_balance: {
+        Args: { user_id_param: string; amount_param: number }
+        Returns: undefined
       }
       record_api_usage: {
         Args: {
