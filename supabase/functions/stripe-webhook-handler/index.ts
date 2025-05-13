@@ -1,4 +1,3 @@
-
 /* ========================================================================== *
    Supabase Edge Function – Stripe Webhook Handler (cards + top-ups)
    Purpose : 1) Verify Stripe HMAC
@@ -121,8 +120,8 @@ async function saveCard(pm: Stripe.PaymentMethod, userId: string) {
   };
 
   const { error } = await supabase
-  .from("payment_method")
-  .insert(row, { ignoreDuplicates: true });  
+    .from("payment_method")
+    .insert(row, { ignoreDuplicates: true });
 
   if (error) throw error;
 }
@@ -229,6 +228,28 @@ serve(async (req) => {
           break;
         }
         await logTopupSuccess(userId, pi);
+        break;
+      }
+
+      case "charge.succeeded": {
+        const ch = evt.data.object as Stripe.Charge;
+
+        let userId = ch.metadata?.user_id as string | undefined;
+        if (!userId && ch.customer) {
+          const cust = await stripe.customers.retrieve(ch.customer as string);
+          userId = (cust as Stripe.Customer).metadata?.user_id;
+        }
+        if (!userId) {
+          console.warn("charge.succeeded: no user_id");
+          break;
+        }
+
+        if (ch.payment_intent) {
+          const pi = await stripe.paymentIntents.retrieve(ch.payment_intent as string);
+          await logTopupSuccess(userId, pi);
+        } else {
+          console.warn(`charge.succeeded (${ch.id}): no payment_intent`);
+        }
         break;
       }
 
