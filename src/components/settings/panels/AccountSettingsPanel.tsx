@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +12,12 @@ import {
   FormLabel, 
   FormMessage 
 } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { Link } from "react-router-dom";
 import { validatePassword } from "@/utils/authValidation";
 import { Check } from "lucide-react";
+import { useInlineToast, InlineToastProps } from "@/hooks/use-inline-toast";
 
 type PasswordFormValues = {
   currentPassword: string;
@@ -31,7 +32,7 @@ type EmailFormValues = {
 
 export const AccountSettingsPanel = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { message, showToast, clearToast } = useInlineToast();
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [passwordStep, setPasswordStep] = useState<'verify' | 'create' | 'confirm'>('verify');
@@ -78,6 +79,7 @@ export const AccountSettingsPanel = () => {
     if (!currentPassword) return;
     
     setIsUpdatingPassword(true);
+    clearToast();
     
     try {
       // Verify current password by attempting to sign in
@@ -87,7 +89,7 @@ export const AccountSettingsPanel = () => {
       });
 
       if (error) {
-        toast({
+        showToast({
           variant: "destructive",
           title: "Error",
           description: "Current password is incorrect."
@@ -100,7 +102,7 @@ export const AccountSettingsPanel = () => {
       setPasswordStep('create');
       setIsUpdatingPassword(false);
     } catch (error) {
-      toast({
+      showToast({
         variant: "destructive",
         title: "Error",
         description: "There was an error verifying your password."
@@ -118,6 +120,7 @@ export const AccountSettingsPanel = () => {
     }
     
     setIsUpdatingPassword(true);
+    clearToast();
     
     try {
       // Update the password
@@ -126,7 +129,7 @@ export const AccountSettingsPanel = () => {
       });
       
       if (error) {
-        toast({
+        showToast({
           variant: "destructive",
           title: "Error",
           description: error.message || "There was an error updating your password."
@@ -134,7 +137,7 @@ export const AccountSettingsPanel = () => {
         return;
       }
       
-      toast({
+      showToast({
         title: "Password updated",
         description: "Your password has been updated successfully."
       });
@@ -142,7 +145,7 @@ export const AccountSettingsPanel = () => {
       passwordForm.reset();
       setPasswordStep('verify');
     } catch (error) {
-      toast({
+      showToast({
         variant: "destructive",
         title: "Error",
         description: "There was an error updating your password."
@@ -161,6 +164,7 @@ export const AccountSettingsPanel = () => {
     }
     
     setIsUpdatingEmail(true);
+    clearToast();
     
     try {
       // Verify password first
@@ -170,7 +174,7 @@ export const AccountSettingsPanel = () => {
       });
 
       if (verifyError) {
-        toast({
+        showToast({
           variant: "destructive",
           title: "Error",
           description: "Password is incorrect."
@@ -184,7 +188,7 @@ export const AccountSettingsPanel = () => {
       });
       
       if (error) {
-        toast({
+        showToast({
           variant: "destructive",
           title: "Error",
           description: error.message || "There was an error updating your email address."
@@ -192,14 +196,14 @@ export const AccountSettingsPanel = () => {
         return;
       }
       
-      toast({
+      showToast({
         title: "Email update initiated",
         description: "Please check your new email address for a confirmation link."
       });
       
       emailForm.reset();
     } catch (error) {
-      toast({
+      showToast({
         variant: "destructive",
         title: "Error",
         description: "There was an error updating your email address."
@@ -211,6 +215,7 @@ export const AccountSettingsPanel = () => {
 
   const resetPassword = async () => {
     if (!user?.email) return;
+    clearToast();
     
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
@@ -218,7 +223,7 @@ export const AccountSettingsPanel = () => {
       });
       
       if (error) {
-        toast({
+        showToast({
           variant: "destructive",
           title: "Error",
           description: error.message || "Failed to send reset password email."
@@ -226,12 +231,12 @@ export const AccountSettingsPanel = () => {
         return;
       }
       
-      toast({
+      showToast({
         title: "Reset email sent",
         description: "Check your email for a password reset link."
       });
     } catch (error) {
-      toast({
+      showToast({
         variant: "destructive",
         title: "Error",
         description: "Failed to send reset password email."
@@ -245,6 +250,22 @@ export const AccountSettingsPanel = () => {
       <span className={met ? "ml-5" : "ml-7"}>{text}</span>
     </div>
   );
+
+  // Function to render inline toast message
+  const renderInlineMessage = () => {
+    if (!message) return null;
+    
+    return (
+      <div 
+        className={`ml-4 text-sm rounded-md px-3 py-2 ${
+          message.variant === "destructive" ? "bg-red-50 text-red-800 border border-red-200" : "bg-green-50 text-green-800 border border-green-200"
+        }`}
+      >
+        {message.title && <p className="font-medium">{message.title}</p>}
+        {message.description && <p>{message.description}</p>}
+      </div>
+    );
+  };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow">
@@ -328,7 +349,7 @@ export const AccountSettingsPanel = () => {
                   )}
                 />
                 
-                <div className="flex justify-between items-center mt-2">
+                <div className="flex items-center justify-between mt-2">
                   <Button 
                     type="button"
                     variant="link"
@@ -338,13 +359,16 @@ export const AccountSettingsPanel = () => {
                     Forgot password?
                   </Button>
                   
-                  <Button 
-                    type="button" 
-                    onClick={handleCurrentPasswordVerification}
-                    disabled={!currentPassword || isUpdatingPassword}
-                  >
-                    {isUpdatingPassword ? "Verifying..." : "OK"}
-                  </Button>
+                  <div className="flex items-center">
+                    <Button 
+                      type="button" 
+                      onClick={handleCurrentPasswordVerification}
+                      disabled={!currentPassword || isUpdatingPassword}
+                    >
+                      {isUpdatingPassword ? "Verifying..." : "OK"}
+                    </Button>
+                    {message && passwordStep === 'verify' && renderInlineMessage()}
+                  </div>
                 </div>
               </>
             )}
@@ -397,7 +421,7 @@ export const AccountSettingsPanel = () => {
                     />
                   )}
                   
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-end">
                     <Button 
                       type="submit" 
                       disabled={
@@ -409,6 +433,7 @@ export const AccountSettingsPanel = () => {
                     >
                       {isUpdatingPassword ? "Updating..." : "Update Password"}
                     </Button>
+                    {message && passwordStep === 'create' && renderInlineMessage()}
                   </div>
                 </div>
               </>
