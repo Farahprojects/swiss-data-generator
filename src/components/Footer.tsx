@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Logo from '@/components/Logo';
@@ -14,7 +15,7 @@ const Footer = () => {
           <div className="flex flex-col items-center justify-center">
             <Logo className="mb-4" />
             <div className="border-t border-gray-200 w-full my-4"></div>
-            <p className="text-sm text-center">&copy; {new Date().getFullYear()} Theraiapi. All rights reserved.</p>
+            <p className="text-sm text-center">&copy; {new Date().getFullYear()} Therai Astro. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -84,7 +85,7 @@ const Footer = () => {
         </div>
         
         <div className="border-t border-gray-200 mt-12 pt-8 text-sm text-center">
-          <p>&copy; {new Date().getFullYear()} Theraiapi. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Therai Astro. All rights reserved.</p>
         </div>
       </div>
     </footer>
