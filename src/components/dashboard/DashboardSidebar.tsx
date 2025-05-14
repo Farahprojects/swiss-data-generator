@@ -74,13 +74,28 @@ const DashboardSidebar = () => {
     // If this is a tab-based path
     if (tab && location.pathname === "/dashboard") {
       const searchParams = new URLSearchParams(location.search);
-      return searchParams.get("tab") === tab;
+      const currentTab = searchParams.get("tab");
+      return currentTab === tab;
     }
     
     return false;
   };
 
   const handleNavigation = (path: string, tab?: string) => {
+    // Log the navigation attempt for debugging
+    console.log(`DashboardSidebar: Navigation requested to ${path}${tab ? `?tab=${tab}` : ''}`);
+    
+    // Prevent unnecessary navigation if we're already at this location
+    const currentParams = new URLSearchParams(location.search);
+    const currentTab = currentParams.get("tab");
+    
+    if (path === location.pathname) {
+      if ((tab && tab === currentTab) || (!tab && !currentTab)) {
+        console.log('DashboardSidebar: Already at this location, skipping navigation');
+        return;
+      }
+    }
+    
     if (tab) {
       navigate(`${path}?tab=${tab}`, { replace: true });
     } else {

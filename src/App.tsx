@@ -23,22 +23,39 @@ import NavigationStateProvider from './contexts/NavigationStateContext';
 import { SidebarProvider } from './components/ui/sidebar';
 
 // RouteHistoryTracker component to track and save route history
+// with improved handling for dashboard tabs
 const RouteHistoryTracker = () => {
   const location = useLocation();
   
   useEffect(() => {
     // Don't track login, signup, or payment-return pages in history
     const nonTrackableRoutes = ['/login', '/signup', '/payment-return'];
-    if (!nonTrackableRoutes.includes(location.pathname)) {
-      // Store the current path and search parameters
+    
+    if (nonTrackableRoutes.includes(location.pathname)) {
+      return; // Exit early for non-trackable routes
+    }
+    
+    // Special handling for dashboard with tab parameters
+    if (location.pathname === '/dashboard') {
+      const searchParams = new URLSearchParams(location.search);
+      const tab = searchParams.get('tab');
+      
+      // If we're at the dashboard with a tab parameter, store both
       localStorage.setItem('last_route', location.pathname);
-      if (location.search) {
-        localStorage.setItem('last_route_params', location.search);
+      if (tab) {
+        localStorage.setItem('last_route_params', `?tab=${tab}`);
+        console.log(`RouteHistoryTracker: Saved dashboard with tab=${tab}`);
       } else {
         localStorage.removeItem('last_route_params');
+        console.log('RouteHistoryTracker: Saved dashboard with no tab');
       }
+    } else {
+      // For other routes, just store the path and clear any params
+      localStorage.setItem('last_route', location.pathname);
+      localStorage.removeItem('last_route_params');
+      console.log(`RouteHistoryTracker: Saved route ${location.pathname}`);
     }
-  }, [location]);
+  }, [location.pathname, location.search]);
   
   return null;
 };

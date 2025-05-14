@@ -1,6 +1,6 @@
 
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import { ApiKeySection } from "@/components/dashboard/ApiKeySection";
@@ -19,22 +19,24 @@ import { TopupQueueStatus } from "@/components/dashboard/TopupQueueStatus";
 const Dashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>("overview");
   
-  // Handle tab changes from URL when the component mounts or URL changes
-  useEffect(() => {
+  // Memoized function to get tab from URL
+  const getTabFromUrl = useCallback(() => {
     const searchParams = new URLSearchParams(location.search);
-    const tab = searchParams.get("tab");
-    
-    if (tab) {
-      setActiveTab(tab);
-    } else if (location.pathname === "/dashboard" && !location.search) {
-      setActiveTab("overview");
-    }
-  }, [location.search, location.pathname]);
+    return searchParams.get("tab") || "overview";
+  }, [location.search]);
+  
+  // Handle tab changes from URL when component mounts or URL changes
+  useEffect(() => {
+    const currentTab = getTabFromUrl();
+    console.log(`Dashboard: Setting active tab to ${currentTab} from URL`);
+    setActiveTab(currentTab);
+  }, [location.search, getTabFromUrl]);
   
   const renderContent = () => {
+    console.log(`Dashboard: Rendering content for tab: ${activeTab}`);
+    
     switch (activeTab) {
       case "usage":
         return <RecentApiCalls />;

@@ -45,28 +45,25 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
     }
   });
 
-  // Persist to localStorage with error handling
+  // Read from localStorage every render to stay in sync
+  // This is critical for state consistency between components
   useEffect(() => {
     try {
-      localStorage.setItem('last_route', lastRoute);
-      console.log('Saved last route to localStorage:', lastRoute);
-    } catch (e) {
-      console.error('Error saving last_route to localStorage:', e);
-    }
-  }, [lastRoute]);
-
-  useEffect(() => {
-    try {
-      if (lastRouteParams) {
-        localStorage.setItem('last_route_params', lastRouteParams);
-        console.log('Saved route params to localStorage:', lastRouteParams);
-      } else {
-        localStorage.removeItem('last_route_params');
+      const storedRoute = localStorage.getItem('last_route');
+      if (storedRoute && storedRoute !== lastRoute) {
+        console.log(`NavigationStateContext: Updated lastRoute from localStorage to ${storedRoute}`);
+        setLastRoute(storedRoute);
+      }
+      
+      const storedParams = localStorage.getItem('last_route_params') || '';
+      if (storedParams !== lastRouteParams) {
+        console.log(`NavigationStateContext: Updated lastRouteParams from localStorage to ${storedParams}`);
+        setLastRouteParams(storedParams);
       }
     } catch (e) {
-      console.error('Error handling last_route_params in localStorage:', e);
+      console.error('Error syncing with localStorage in NavigationStateContext:', e);
     }
-  }, [lastRouteParams]);
+  }, []);
 
   // More robust safe redirect path retrieval
   const getSafeRedirectPath = (): string => {
@@ -96,10 +93,11 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
       // Check if storedPath is a restricted route
       const restrictedRoutes = ['/login', '/signup', '/payment-return'];
       if (restrictedRoutes.includes(storedPath)) {
+        console.log('NavigationStateContext: Redirecting to /dashboard (restricted route detected)');
         return '/dashboard';
       }
       
-      console.log('Using safe redirect path:', `${storedPath}${storedParams}`);
+      console.log(`NavigationStateContext: Safe redirect path: ${storedPath}${storedParams}`);
       // Return the safe path with params if available
       return `${storedPath}${storedParams}`;
     } catch (e) {
