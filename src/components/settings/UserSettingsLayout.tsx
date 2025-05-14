@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { SettingsSidebar } from "./SettingsSidebar";
 import { AccountSettingsPanel } from "./panels/AccountSettingsPanel";
-import { ApiKeysPanel } from "./panels/ApiKeysPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 
@@ -16,10 +15,10 @@ export const UserSettingsLayout = () => {
     const searchParams = new URLSearchParams(location.search);
     const panel = searchParams.get("panel");
     
-    if (panel && ["account", "apikeys", "delete", "support"].includes(panel)) {
+    if (panel && ["account", "delete", "support"].includes(panel)) {
       setActivePanel(panel);
-    } else if (panel === "billing") {
-      // If 'billing' is requested but no longer available, default to account
+    } else if (panel === "billing" || panel === "apikeys") {
+      // If 'billing' or 'apikeys' is requested but no longer available, default to account
       setActivePanel("account");
     }
   }, [location]);
@@ -28,8 +27,6 @@ export const UserSettingsLayout = () => {
     switch (activePanel) {
       case "account":
         return <AccountSettingsPanel />;
-      case "apikeys":
-        return <ApiKeysPanel />;
       case "delete":
         return <DeleteAccountPanel />;
       case "support":

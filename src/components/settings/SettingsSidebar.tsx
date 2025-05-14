@@ -4,7 +4,6 @@ import { UserAvatar } from "./UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { 
-  Key, 
   LogOut, 
   Settings, 
   Trash2,
@@ -27,7 +26,6 @@ export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarPro
 
   const menuItems: MenuItem[] = [
     { id: 'account', label: 'Account Settings', icon: <Settings size={18} /> },
-    { id: 'apikeys', label: 'API Keys', icon: <Key size={18} /> },
     { id: 'support', label: 'Support', icon: <HelpCircle size={18} /> },
     { id: 'delete', label: 'Delete Account', icon: <Trash2 size={18} /> },
   ];
