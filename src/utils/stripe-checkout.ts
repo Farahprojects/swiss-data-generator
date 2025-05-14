@@ -33,8 +33,8 @@ export const initiateStripeCheckout = async ({
         amount,
         priceId,
         productId,
-        successUrl,
-        cancelUrl,
+        successUrl: successUrl || window.location.origin + '/payment-return?status=success',
+        cancelUrl: cancelUrl || window.location.origin + '/payment-return?status=cancelled',
         returnPath: currentPath,
       },
     });

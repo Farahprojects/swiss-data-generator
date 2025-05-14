@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -8,7 +7,8 @@ import { plans, addOns, faqs } from "@/utils/pricing";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { getStripeLinkByName, getStandardLinkName, STRIPE_LINK_TYPES } from "@/utils/stripe-links";
+import { storeStripeReturnPath } from "@/utils/stripe-links";
+import { supabase } from "@/integrations/supabase/client";
 
 const PricingPlanCard = ({
   name,
@@ -121,19 +121,45 @@ const Pricing = () => {
         return;
       }
       
-      // Get link for the selected plan from the database
-      const linkName = getStandardLinkName(STRIPE_LINK_TYPES.PLAN_PREFIX, planType);
-      const planLink = await getStripeLinkByName(linkName);
+      // Store current path for return after Stripe checkout
+      storeStripeReturnPath(window.location.pathname);
       
-      if (!planLink || !planLink.url) {
-        toast.error(`Could not find checkout link for ${planType} plan`);
+      // Get price information based on plan type
+      let priceId = '';
+      switch(planType.toLowerCase()) {
+        case 'starter':
+          priceId = 'price_starter123'; // Replace with your actual price ID
+          break;
+        case 'growth':
+          priceId = 'price_growth123'; // Replace with your actual price ID
+          break;
+        case 'professional':
+          priceId = 'price_pro123'; // Replace with your actual price ID
+          break;
+        default:
+          priceId = 'price_starter123'; // Default price ID
+      }
+      
+      // Use the create-checkout edge function directly
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          mode: "subscription",
+          priceId: priceId,
+          successUrl: window.location.origin + '/payment-return?status=success',
+          cancelUrl: window.location.origin + '/payment-return?status=cancelled'
+        },
+      });
+      
+      if (error || !data?.url) {
+        toast.error(`Could not create checkout session for ${planType} plan`);
+        console.error("Checkout error:", error || "No URL returned");
         return;
       }
       
-      console.log(`Found link for ${planType} plan:`, planLink);
+      console.log(`Created checkout for ${planType} plan:`, data);
       
-      // Redirect to the Stripe Checkout link
-      window.location.href = planLink.url;
+      // Redirect to the Stripe Checkout URL
+      window.location.href = data.url;
     } catch (err) {
       console.error("Failed to start subscription:", err);
       toast.error("There was a problem starting your subscription. Please try again.");
@@ -152,19 +178,47 @@ const Pricing = () => {
         return;
       }
       
-      // Get link for the selected add-on from the database
-      const linkName = getStandardLinkName(STRIPE_LINK_TYPES.ADDON_PREFIX, addonName);
-      const addonLink = await getStripeLinkByName(linkName);
+      // Store current path for return after Stripe checkout
+      storeStripeReturnPath(window.location.pathname);
       
-      if (!addonLink || !addonLink.url) {
-        toast.error(`Could not find checkout link for ${addonName} add-on`);
+      // Get price information based on addon name
+      let priceId = '';
+      switch(addonName.toLowerCase()) {
+        case 'transits':
+          priceId = 'price_transits123'; // Replace with your actual price ID
+          break;
+        case 'relationship':
+          priceId = 'price_relationship123'; // Replace with your actual price ID
+          break;
+        default:
+          priceId = '';
+      }
+      
+      if (!priceId) {
+        toast.error(`Unknown add-on: ${addonName}`);
         return;
       }
       
-      console.log(`Found link for ${addonName} add-on:`, addonLink);
+      // Use the create-checkout edge function directly
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          mode: "payment",
+          priceId: priceId,
+          successUrl: window.location.origin + '/payment-return?status=success',
+          cancelUrl: window.location.origin + '/payment-return?status=cancelled'
+        },
+      });
       
-      // Redirect to the Stripe Checkout link
-      window.location.href = addonLink.url;
+      if (error || !data?.url) {
+        toast.error(`Could not create checkout session for ${addonName} add-on`);
+        console.error("Checkout error:", error || "No URL returned");
+        return;
+      }
+      
+      console.log(`Created checkout for ${addonName} add-on:`, data);
+      
+      // Redirect to the Stripe Checkout URL
+      window.location.href = data.url;
     } catch (err) {
       console.error("Failed to add subscription add-on:", err);
       toast.error("There was a problem adding this feature. Please try again.");

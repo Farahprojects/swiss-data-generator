@@ -205,10 +205,7 @@ export const BillingSection = () => {
     setIsProcessingTopup(true);
     try {
       // Store the current path in localStorage
-      localStorage.setItem("stripe_return_path", location.pathname);
-      if (location.search) {
-        localStorage.setItem("stripe_return_tab", location.search.substring(1));
-      }
+      storeStripeReturnPath(location.pathname + (location.search || ''));
       
       // Use the create-checkout edge function to create a dynamic checkout session
       const { data, error } = await supabase.functions.invoke("create-checkout", {
@@ -258,10 +255,7 @@ export const BillingSection = () => {
     setIsUpdatingPaymentMethod(true);
     try {
       // Store the current path in localStorage for return
-      localStorage.setItem("stripe_return_path", location.pathname);
-      if (location.search) {
-        localStorage.setItem("stripe_return_tab", location.search.substring(1));
-      }
+      storeStripeReturnPath(location.pathname + (location.search || ''));
       
       // Use the create-checkout edge function with mode: "setup"
       const { data, error } = await supabase.functions.invoke("create-checkout", {
