@@ -19,3 +19,12 @@ export function useToast() {
 
   return { toast };
 }
+
+// Export a standalone toast function for convenience
+export const toast = ({ title, description, action, variant = "default" }: ToastProps = {}) => {
+  sonnerToast(title, {
+    description,
+    action,
+    className: variant === "destructive" ? "bg-destructive text-destructive-foreground" : "",
+  });
+};
