@@ -151,3 +151,34 @@ export const STRIPE_LINK_TYPES = {
   PLAN_PREFIX: 'Plan',
   ADDON_PREFIX: 'Addon'
 };
+
+/**
+ * Stores the current location before redirecting to Stripe
+ * @param path The path to return to after Stripe checkout
+ */
+export const storeStripeReturnPath = (path: string): void => {
+  try {
+    localStorage.setItem('stripe_return_location', path);
+    console.log(`Stored Stripe return location: ${path}`);
+  } catch (e) {
+    console.error('Error storing Stripe return location:', e);
+  }
+};
+
+/**
+ * Gets the stored return location for Stripe redirect
+ * @param defaultPath Default path to return to if no stored location
+ */
+export const getStripeReturnLocation = (defaultPath: string = '/dashboard'): string => {
+  try {
+    const storedLocation = localStorage.getItem('stripe_return_location');
+    if (storedLocation) {
+      // Remove the stored location after retrieving it
+      localStorage.removeItem('stripe_return_location');
+      return storedLocation;
+    }
+  } catch (e) {
+    console.error('Error retrieving Stripe return location:', e);
+  }
+  return defaultPath;
+};

@@ -3,13 +3,12 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useNavigationState } from "@/contexts/NavigationStateContext";
+import { getStripeReturnLocation } from "@/utils/stripe-links";
 
 const PaymentReturn = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [redirecting, setRedirecting] = useState(true);
-  const { getSafeRedirectPath } = useNavigationState();
   
   useEffect(() => {
     // Parse URL parameters
@@ -17,19 +16,11 @@ const PaymentReturn = () => {
     const status = params.get('status');
     const amount = params.get('amount');
     
-    // Get the return path from localStorage with fallback
-    const returnPath = localStorage.getItem('stripe_return_path') || getSafeRedirectPath();
-    const returnTab = localStorage.getItem('stripe_return_tab') || '';
+    // Get the return location with a fallback to dashboard
+    const returnLocation = getStripeReturnLocation('/dashboard');
     
-    // Build the return URL with the appropriate tab if available
-    let redirectUrl = returnPath;
-    if (returnTab && !redirectUrl.includes('?')) {
-      redirectUrl += `?${returnTab}`;
-    } else if (returnTab) {
-      redirectUrl += `&${returnTab}`;
-    }
-    
-    // Add the status parameter to pass through to the billing section
+    // Create the final URL with status parameter if available
+    let redirectUrl = returnLocation;
     if (status && !redirectUrl.includes('status=')) {
       redirectUrl += redirectUrl.includes('?') ? `&status=${status}` : `?status=${status}`;
     }
@@ -48,15 +39,11 @@ const PaymentReturn = () => {
         toast.info(status === 'cancelled' ? "Payment was cancelled." : "Payment method update was cancelled.");
       }
       
-      // Remove stored paths from localStorage
-      localStorage.removeItem('stripe_return_path');
-      localStorage.removeItem('stripe_return_tab');
-      
       // Redirect the user
       navigate(redirectUrl, { replace: true });
       setRedirecting(false);
     }, 500); // Small delay to ensure transition feels smooth
-  }, [location, navigate, getSafeRedirectPath]);
+  }, [location, navigate]);
 
   return (
     <div className="h-screen w-screen flex flex-col items-center justify-center">

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 /*  pin Stripe & Supabase imports to the same std version  */
@@ -30,7 +31,6 @@ serve(async (req) => {
       successUrl,
       cancelUrl,
       returnPath,
-      returnTab,
     } = await req.json();
 
     if (mode === "payment" && !priceId && !amount) {
@@ -99,7 +99,6 @@ serve(async (req) => {
         metadata: {
           user_id: user.id,
           return_path: returnPath || "/dashboard",
-          return_tab:  returnTab  || "",
         },
         payment_intent_data: {
           metadata: { user_id: user.id },
@@ -140,7 +139,6 @@ serve(async (req) => {
         metadata: {
           user_id: user.id,
           return_path: returnPath || "/dashboard/settings",
-          return_tab:  returnTab  || "panel=billing",
         },
         setup_intent_data: { metadata: { user_id: user.id } },
         customer_update:  { address: "auto" },
