@@ -44,7 +44,7 @@ const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProp
           sizeClasses[size]
         )}
       >
-        api
+        Astro
       </span>
     </div>
   );
