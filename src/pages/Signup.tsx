@@ -144,7 +144,7 @@ const Signup = () => {
                 isValid={passwordValid}
                 onChange={(value) => {
                   setPassword(value);
-                  setPasswordValid(value.length >= 6);
+                  setPasswordValid(value.length >= 8);
                   setPasswordsMatch(value === confirmPassword);
                 }}
               />

@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +38,7 @@ export const AccountSettingsPanel = () => {
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [passwordStep, setPasswordStep] = useState<'verify' | 'create' | 'confirm'>('verify');
   const [passwordValid, setPasswordValid] = useState({
-    length: false,
-    number: false,
-    special: false
+    length: false
   });
   
   const passwordForm = useForm<PasswordFormValues>({
@@ -61,17 +60,15 @@ export const AccountSettingsPanel = () => {
   const newPassword = passwordForm.watch("newPassword");
   const confirmPassword = passwordForm.watch("confirmPassword");
   
-  // Check if all password requirements are met
-  const allRequirementsMet = passwordValid.length && passwordValid.number && passwordValid.special;
+  // Check if password requirement is met
+  const passwordRequirementMet = passwordValid.length;
 
   // Check for password validation on change
   const handlePasswordChange = (value: string) => {
     passwordForm.setValue("newPassword", value);
     
     setPasswordValid({
-      length: value.length >= 8,
-      number: /[0-9]/.test(value),
-      special: /[!@#$%^&*]/.test(value)
+      length: value.length >= 8
     });
   };
 
@@ -399,11 +396,9 @@ export const AccountSettingsPanel = () => {
                   
                   <div className="mt-2 space-y-2 bg-gray-50 p-3 rounded-md">
                     {renderPasswordRequirement(passwordValid.length, "At least 8 characters")}
-                    {renderPasswordRequirement(passwordValid.number, "At least one number")}
-                    {renderPasswordRequirement(passwordValid.special, "At least one special character")}
                   </div>
                   
-                  {allRequirementsMet && (
+                  {passwordRequirementMet && (
                     <FormField
                       control={passwordForm.control}
                       name="confirmPassword"
@@ -428,8 +423,8 @@ export const AccountSettingsPanel = () => {
                       type="submit" 
                       disabled={
                         !newPassword || 
-                        !allRequirementsMet || 
-                        (allRequirementsMet && !confirmPassword) ||
+                        !passwordRequirementMet || 
+                        (passwordRequirementMet && !confirmPassword) ||
                         isUpdatingPassword
                       }
                     >
