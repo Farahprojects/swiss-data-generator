@@ -1,8 +1,5 @@
 
-import { toast as sonnerToast } from "sonner";
+// Re-export our custom useToast hook from the hooks folder
+export { useToast, type ToastProps } from "@/hooks/use-toast";
 
-// Re-export Sonner's toast function
-export { sonnerToast as toast };
-
-// Export our custom useToast hook from the hooks folder
-export { useToast, toast, type ToastProps } from "@/hooks/use-toast";
+// We're no longer using Sonner's toast as we're moving to inline toast messages

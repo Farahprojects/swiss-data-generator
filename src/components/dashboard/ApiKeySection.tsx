@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, RefreshCw, Eye, EyeOff, Check, Key } from "lucide-react";
+import { Copy, RefreshCw, Eye, EyeOff, Check, Key, AlertCircle } from "lucide-react";
 import { useApiKey } from "@/hooks/useApiKey";
 import {
   AlertDialog,
@@ -15,13 +14,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function ApiKeySection() {
   const [isCopying, setIsCopying] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [regenerationState, setRegenerationState] = useState<'idle' | 'loading' | 'success'>('idle');
-  const { toast } = useToast();
+  const { toast, message, clearToast } = useToast();
   
   const { 
     apiKey, 
@@ -137,6 +137,33 @@ export function ApiKeySection() {
     }
   };
 
+  // Helper function to render the inline toast message
+  const renderToastMessage = () => {
+    if (!message) return null;
+    
+    return (
+      <Alert className={`mb-4 ${
+        message.variant === "destructive" 
+          ? "bg-red-50 border-red-200 text-red-800" 
+          : message.variant === "success"
+          ? "bg-green-50 border-green-200 text-green-800"
+          : "bg-blue-50 border-blue-200 text-blue-800"
+      }`}>
+        <AlertCircle className={`h-4 w-4 ${
+          message.variant === "destructive" 
+            ? "text-red-600" 
+            : message.variant === "success"
+            ? "text-green-600"
+            : "text-blue-600"
+        }`} />
+        <AlertDescription>
+          {message.title && <p className="font-medium">{message.title}</p>}
+          {message.description && <p>{message.description}</p>}
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
   if (isLoading && !apiKey) {
     return (
       <Card className="w-full h-full overflow-hidden border-2 border-gray-100">
@@ -204,6 +231,9 @@ export function ApiKeySection() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 flex-grow">
+          {/* Display inline toast message if present */}
+          {message && renderToastMessage()}
+          
           <div className="relative">
             <div className="bg-gray-50 p-3 rounded-md font-mono text-sm flex justify-between items-start border border-gray-200">
               <div className="w-full pr-16 break-all">{maskApiKey(apiKey)}</div>

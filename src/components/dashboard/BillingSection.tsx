@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useState, useEffect } from "react";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { AlertCircle, CreditCard, PlusCircle, CheckCircle, DollarSign, ExternalLink, Download, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,7 @@ export const BillingSection = () => {
   const { user } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { toast, message, clearToast } = useToast();
   const [isProcessingTopup, setIsProcessingTopup] = useState(false);
   const [isUpdatingPaymentMethod, setIsUpdatingPaymentMethod] = useState(false);
   const [isDeletingPaymentMethod, setIsDeletingPaymentMethod] = useState(false);
@@ -405,9 +406,39 @@ export const BillingSection = () => {
     return brandMap[brand?.toLowerCase()] || 'bg-gray-800';
   };
   
+  // Helper function to render the inline toast message
+  const renderToastMessage = () => {
+    if (!message) return null;
+    
+    return (
+      <Alert className={`mb-4 ${
+        message.variant === "destructive" 
+          ? "bg-red-50 border-red-200 text-red-800" 
+          : message.variant === "success"
+          ? "bg-green-50 border-green-200 text-green-800"
+          : "bg-blue-50 border-blue-200 text-blue-800"
+      }`}>
+        <AlertCircle className={`h-4 w-4 ${
+          message.variant === "destructive" 
+            ? "text-red-600" 
+            : message.variant === "success"
+            ? "text-green-600"
+            : "text-blue-600"
+        }`} />
+        <AlertDescription>
+          {message.title && <p className="font-medium">{message.title}</p>}
+          {message.description && <p>{message.description}</p>}
+        </AlertDescription>
+      </Alert>
+    );
+  };
+  
   return (
     <div className="max-w-4xl mx-auto">
       <h2 className="text-3xl font-bold mb-6">Billing & Credits</h2>
+      
+      {/* Display inline toast message at the top if present */}
+      {message && renderToastMessage()}
       
       {/* Credit Balance Card - Modified to remove status indicator and topup button */}
       <Card className="mb-6 overflow-hidden border-2 border-gray-100">

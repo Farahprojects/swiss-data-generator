@@ -1,18 +1,6 @@
 
-import { Toaster as SonnerToaster } from "sonner";
-
+// This is a placeholder component that doesn't render anything
+// since we're using inline toast messages instead of pop-up toasts
 export function Toaster() {
-  return (
-    <SonnerToaster 
-      position="top-right"
-      toastOptions={{
-        style: {
-          background: 'hsl(var(--background))',
-          color: 'hsl(var(--foreground))',
-          border: '1px solid hsl(var(--border))',
-        },
-        className: 'border-border',
-      }}
-    />
-  );
+  return null;
 }

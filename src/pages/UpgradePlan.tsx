@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Check, PackageCheck, Shield, Star } from "lucide-react";
+import { Check, PackageCheck, Shield, Star, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { plans, addOns, getPriceId } from "@/utils/pricing";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Plan = "Starter" | "Growth" | "Professional";
 type AddOn = "Relationship Compatibility" | "Yearly Cycle" | "Transits";
@@ -21,6 +22,7 @@ interface SelectedAddOns {
 
 const UpgradePlan = () => {
   const { user } = useAuth();
+  const { toast, message, clearToast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<Plan>("Starter");
   const [selectedAddOns, setSelectedAddOns] = useState<SelectedAddOns>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -205,6 +207,33 @@ const UpgradePlan = () => {
     }
   };
 
+  // Helper function to render the inline toast message
+  const renderToastMessage = () => {
+    if (!message) return null;
+    
+    return (
+      <Alert className={`mb-6 ${
+        message.variant === "destructive" 
+          ? "bg-red-50 border-red-200 text-red-800" 
+          : message.variant === "success"
+          ? "bg-green-50 border-green-200 text-green-800"
+          : "bg-blue-50 border-blue-200 text-blue-800"
+      }`}>
+        <AlertCircle className={`h-4 w-4 ${
+          message.variant === "destructive" 
+            ? "text-red-600" 
+            : message.variant === "success"
+            ? "text-green-600"
+            : "text-blue-600"
+        }`} />
+        <AlertDescription>
+          {message.title && <p className="font-medium">{message.title}</p>}
+          {message.description && <p>{message.description}</p>}
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <UnifiedNavigation />
@@ -212,6 +241,9 @@ const UpgradePlan = () => {
       <main className="flex-grow bg-gray-50 py-8">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold mb-8">Upgrade Your Plan</h1>
+          
+          {/* Display inline toast message if present */}
+          {message && renderToastMessage()}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">

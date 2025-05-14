@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +15,9 @@ import { supabase } from "@/integrations/supabase/client";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { Link } from "react-router-dom";
 import { validatePassword } from "@/utils/authValidation";
-import { Check } from "lucide-react";
-import { useInlineToast, InlineToastProps } from "@/hooks/use-inline-toast";
+import { Check, AlertCircle } from "lucide-react";
+import { useToast, ToastProps } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type PasswordFormValues = {
   currentPassword: string;
@@ -32,7 +32,7 @@ type EmailFormValues = {
 
 export const AccountSettingsPanel = () => {
   const { user } = useAuth();
-  const { message, showToast, clearToast } = useInlineToast();
+  const { toast, message, clearToast } = useToast();
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [passwordStep, setPasswordStep] = useState<'verify' | 'create' | 'confirm'>('verify');
@@ -89,7 +89,7 @@ export const AccountSettingsPanel = () => {
       });
 
       if (error) {
-        showToast({
+        toast({
           variant: "destructive",
           title: "Error",
           description: "Current password is incorrect."
@@ -102,7 +102,7 @@ export const AccountSettingsPanel = () => {
       setPasswordStep('create');
       setIsUpdatingPassword(false);
     } catch (error) {
-      showToast({
+      toast({
         variant: "destructive",
         title: "Error",
         description: "There was an error verifying your password."
@@ -129,7 +129,7 @@ export const AccountSettingsPanel = () => {
       });
       
       if (error) {
-        showToast({
+        toast({
           variant: "destructive",
           title: "Error",
           description: error.message || "There was an error updating your password."
@@ -137,7 +137,7 @@ export const AccountSettingsPanel = () => {
         return;
       }
       
-      showToast({
+      toast({
         title: "Password updated",
         description: "Your password has been updated successfully."
       });
@@ -145,7 +145,7 @@ export const AccountSettingsPanel = () => {
       passwordForm.reset();
       setPasswordStep('verify');
     } catch (error) {
-      showToast({
+      toast({
         variant: "destructive",
         title: "Error",
         description: "There was an error updating your password."
@@ -174,7 +174,7 @@ export const AccountSettingsPanel = () => {
       });
 
       if (verifyError) {
-        showToast({
+        toast({
           variant: "destructive",
           title: "Error",
           description: "Password is incorrect."
@@ -188,7 +188,7 @@ export const AccountSettingsPanel = () => {
       });
       
       if (error) {
-        showToast({
+        toast({
           variant: "destructive",
           title: "Error",
           description: error.message || "There was an error updating your email address."
@@ -196,14 +196,14 @@ export const AccountSettingsPanel = () => {
         return;
       }
       
-      showToast({
+      toast({
         title: "Email update initiated",
         description: "Please check your new email address for a confirmation link."
       });
       
       emailForm.reset();
     } catch (error) {
-      showToast({
+      toast({
         variant: "destructive",
         title: "Error",
         description: "There was an error updating your email address."
@@ -223,7 +223,7 @@ export const AccountSettingsPanel = () => {
       });
       
       if (error) {
-        showToast({
+        toast({
           variant: "destructive",
           title: "Error",
           description: error.message || "Failed to send reset password email."
@@ -231,12 +231,12 @@ export const AccountSettingsPanel = () => {
         return;
       }
       
-      showToast({
+      toast({
         title: "Reset email sent",
         description: "Check your email for a password reset link."
       });
     } catch (error) {
-      showToast({
+      toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to send reset password email."
@@ -256,20 +256,25 @@ export const AccountSettingsPanel = () => {
     if (!message) return null;
     
     return (
-      <div 
-        className={`ml-4 text-sm rounded-md px-3 py-2 ${
+      <Alert 
+        className={`mb-4 ${
           message.variant === "destructive" ? "bg-red-50 text-red-800 border border-red-200" : "bg-green-50 text-green-800 border border-green-200"
         }`}
       >
-        {message.title && <p className="font-medium">{message.title}</p>}
-        {message.description && <p>{message.description}</p>}
-      </div>
+        <AlertCircle className={`h-4 w-4 ${message.variant === "destructive" ? "text-red-600" : "text-green-600"}`} />
+        <AlertDescription>
+          {message.title && <p className="font-medium">{message.title}</p>}
+          {message.description && <p>{message.description}</p>}
+        </AlertDescription>
+      </Alert>
     );
   };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow">
       <h2 className="text-2xl font-semibold mb-6">Account Settings</h2>
+      
+      {message && renderInlineMessage()}
       
       <div className="mb-8">
         <h3 className="text-lg font-medium mb-3">Email Address</h3>
@@ -359,16 +364,13 @@ export const AccountSettingsPanel = () => {
                     Forgot password?
                   </Button>
                   
-                  <div className="flex items-center">
-                    <Button 
-                      type="button" 
-                      onClick={handleCurrentPasswordVerification}
-                      disabled={!currentPassword || isUpdatingPassword}
-                    >
-                      {isUpdatingPassword ? "Verifying..." : "OK"}
-                    </Button>
-                    {message && passwordStep === 'verify' && renderInlineMessage()}
-                  </div>
+                  <Button 
+                    type="button" 
+                    onClick={handleCurrentPasswordVerification}
+                    disabled={!currentPassword || isUpdatingPassword}
+                  >
+                    {isUpdatingPassword ? "Verifying..." : "OK"}
+                  </Button>
                 </div>
               </>
             )}
@@ -433,7 +435,6 @@ export const AccountSettingsPanel = () => {
                     >
                       {isUpdatingPassword ? "Updating..." : "Update Password"}
                     </Button>
-                    {message && passwordStep === 'create' && renderInlineMessage()}
                   </div>
                 </div>
               </>
