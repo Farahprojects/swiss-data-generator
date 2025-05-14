@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { translate } from "../_shared/translator.ts";
@@ -64,7 +63,7 @@ function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown
   return null;
 }
 
-// New function to retrieve API key by email
+// Updated function to retrieve API key by email using Admin API
 async function getApiKeyByEmail(email: string): Promise<string | null> {
   if (!email || typeof email !== 'string' || !email.includes('@')) {
     console.log("[swiss] Invalid email format:", email);
@@ -74,19 +73,19 @@ async function getApiKeyByEmail(email: string): Promise<string | null> {
   try {
     console.log("[swiss] Looking up API key for email:", email);
     
-    // First, get the user_id associated with this email
-    const { data: userData, error: userError } = await sb
-      .from("auth.users")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
+    // Use the Admin API to look up the user by email
+    const { data: userData, error: userError } = await sb.auth.admin.listUsers({
+      filter: {
+        email: email
+      }
+    });
       
-    if (userError || !userData) {
+    if (userError || !userData || userData.users.length === 0) {
       console.log("[swiss] Failed to find user with email:", email, userError);
       return null;
     }
     
-    const userId = userData.id;
+    const userId = userData.users[0].id;
     
     // Then, get the API key associated with this user_id
     const { data: keyData, error: keyError } = await sb
