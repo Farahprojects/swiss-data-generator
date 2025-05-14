@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import { ApiKeySection } from "@/components/dashboard/ApiKeySection";
@@ -19,15 +19,17 @@ import { TopupQueueStatus } from "@/components/dashboard/TopupQueueStatus";
 const Dashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>("overview");
   
+  // Handle tab changes from URL when the component mounts or URL changes
   useEffect(() => {
-    // Get the active tab from URL parameters
     const searchParams = new URLSearchParams(location.search);
     const tab = searchParams.get("tab");
+    
     if (tab) {
       setActiveTab(tab);
-    } else {
+    } else if (location.pathname === "/dashboard" && !location.search) {
       setActiveTab("overview");
     }
   }, [location]);

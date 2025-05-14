@@ -41,36 +41,51 @@ const DashboardSidebar = () => {
     },
     {
       name: "Pricing",
-      path: "/dashboard?tab=pricing",
+      path: "/dashboard",
+      tabParam: "pricing",
       icon: <DollarSign size={20} />
     },
     {
       name: "Reports",
-      path: "/dashboard?tab=usage",
+      path: "/dashboard",
+      tabParam: "usage",
       icon: <FileText size={20} />
     },
     {
       name: "Documentation",
-      path: "/dashboard?tab=docs",
+      path: "/dashboard",
+      tabParam: "docs",
       icon: <FileQuestion size={20} />
     },
     {
       name: "Billing",
-      path: "/dashboard?tab=billing",
+      path: "/dashboard",
+      tabParam: "billing",
       icon: <CreditCard size={20} />
     }
   ];
 
-  const isPathActive = (path: string) => {
-    if (path === "/dashboard" && location.pathname === "/dashboard" && !location.search) {
-      return true;
+  const isPathActive = (path: string, tabParam?: string) => {
+    // If it's a regular path (no tab parameter)
+    if (!tabParam && path === location.pathname) {
+      return !location.search; // Active only if no search params
     }
     
-    if (path.includes('?tab=') && location.search.includes(path.split('?tab=')[1])) {
-      return true;
+    // If this is a tab-based path
+    if (tabParam && location.pathname === "/dashboard") {
+      const searchParams = new URLSearchParams(location.search);
+      return searchParams.get("tab") === tabParam;
     }
     
-    return location.pathname === path;
+    return false;
+  };
+
+  const handleNavigation = (path: string, tabParam?: string) => {
+    if (tabParam) {
+      navigate(`${path}?tab=${tabParam}`, { replace: false });
+    } else {
+      navigate(path, { replace: false });
+    }
   };
 
   return (
@@ -84,16 +99,9 @@ const DashboardSidebar = () => {
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.name}>
               <SidebarMenuButton 
-                isActive={isPathActive(item.path)}
+                isActive={isPathActive(item.path, item.tabParam)}
                 className="text-black hover:text-primary data-[active=true]:text-primary data-[active=true]:bg-accent/20 flex items-center gap-3 px-4 py-2 w-full"
-                onClick={() => {
-                  if (item.path.includes('?tab=')) {
-                    const [path, params] = item.path.split('?tab=');
-                    navigate(`${path}?tab=${params}`);
-                  } else {
-                    navigate(item.path);
-                  }
-                }}
+                onClick={() => handleNavigation(item.path, item.tabParam)}
                 tooltip={state === "collapsed" ? item.name : undefined}
               >
                 {item.icon}
