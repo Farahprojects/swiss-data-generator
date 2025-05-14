@@ -64,6 +64,51 @@ function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown
   return null;
 }
 
+// New function to retrieve API key by email
+async function getApiKeyByEmail(email: string): Promise<string | null> {
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    console.log("[swiss] Invalid email format:", email);
+    return null;
+  }
+
+  try {
+    console.log("[swiss] Looking up API key for email:", email);
+    
+    // First, get the user_id associated with this email
+    const { data: userData, error: userError } = await sb
+      .from("auth.users")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+      
+    if (userError || !userData) {
+      console.log("[swiss] Failed to find user with email:", email, userError);
+      return null;
+    }
+    
+    const userId = userData.id;
+    
+    // Then, get the API key associated with this user_id
+    const { data: keyData, error: keyError } = await sb
+      .from("api_keys")
+      .select("api_key")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+      
+    if (keyError || !keyData) {
+      console.log("[swiss] Failed to find API key for user:", userId, keyError);
+      return null;
+    }
+    
+    console.log("[swiss] Successfully found API key for email:", email);
+    return keyData.api_key;
+  } catch (err) {
+    console.error("[swiss] Error looking up API key by email:", err);
+    return null;
+  }
+}
+
 serve(async (req) => {
   const urlObj = new URL(req.url);
 
@@ -83,11 +128,29 @@ serve(async (req) => {
     }
   }
 
-  const apiKey = extractApiKey(req.headers, urlObj, bodyJson);
-  if (!apiKey) {
-    return json({ success: false, message: "Missing API key." }, 401);
+  // Try to extract API key using standard methods
+  let apiKey = extractApiKey(req.headers, urlObj, bodyJson);
+  let authMethod = "api_key";
+  
+  // If no API key found but email is provided, try to look up API key by email
+  if (!apiKey && bodyJson?.email) {
+    console.log("[swiss] No API key found, trying email lookup with:", bodyJson.email);
+    apiKey = await getApiKeyByEmail(String(bodyJson.email));
+    if (apiKey) {
+      console.log("[swiss] Successfully authenticated via email");
+      authMethod = "email";
+    }
   }
 
+  // If still no API key, return unauthorized
+  if (!apiKey) {
+    return json({ 
+      success: false, 
+      message: "Authentication required. Please provide an API key or valid email." 
+    }, 401);
+  }
+
+  // Proceed with balance check using the API key (regardless of how it was obtained)
   const { data: row, error } = await sb
     .from("v_api_key_balance")
     .select("user_id, balance_usd")
@@ -119,6 +182,7 @@ serve(async (req) => {
     ...Object.fromEntries(urlObj.searchParams.entries()),
     user_id: row.user_id,
     api_key: apiKey,
+    auth_method: authMethod, // Include authentication method in payload for logging
   };
 
   const { status, text } = await translate(mergedPayload);
