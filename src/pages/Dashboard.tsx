@@ -32,7 +32,7 @@ const Dashboard = () => {
     } else if (location.pathname === "/dashboard" && !location.search) {
       setActiveTab("overview");
     }
-  }, [location]);
+  }, [location.search, location.pathname]);
   
   const renderContent = () => {
     switch (activeTab) {
