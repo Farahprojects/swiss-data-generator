@@ -97,34 +97,49 @@ const Index = () => {
             className="absolute inset-0 bg-[url('/svg/stars.svg')] bg-repeat opacity-5 [mask-image:radial-gradient(white,transparent)]"
           />
 
-          <div className="container relative z-10 mx-auto flex h-full flex-col items-center justify-center px-4 text-center">
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-4xl font-extrabold text-transparent md:text-5xl lg:text-6xl"
-            >
-              Astro
-              <br />
-              The Intelligent Engine Behind the Stars
-            </motion.h1>
+          {/* Subtle glow behind the title */}
+          <div 
+            aria-hidden
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-primary/10 blur-3xl opacity-60"
+          />
 
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-              className="mx-auto mt-6 max-w-xl text-lg text-gray-700 md:text-xl"
-            >
-              Astrology intelligence for platforms, advisors, and visionary teams.
-              <br />
-              Powered by Swiss Ephemeris with 0.001″ precision, global time-zones, and blazing-fast responses.
-            </motion.p>
+          <div className="container relative z-10 mx-auto flex h-full flex-col items-center justify-center px-4 text-center">
+            <div className="mx-auto max-w-xl space-y-2">
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-5xl font-extrabold text-transparent md:text-6xl lg:text-7xl"
+              >
+                Astro
+              </motion.h1>
+
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
+                className="text-2xl font-medium text-gray-600 md:text-3xl"
+              >
+                The Intelligent Engine Behind the Stars
+              </motion.h2>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+                className="mt-3 text-lg text-gray-500"
+              >
+                Astrology intelligence for platforms, advisors, and visionary teams.
+                Powered by Swiss Ephemeris with 0.001″ precision, global time-zones,
+                and blazing-fast responses.
+              </motion.p>
+            </div>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="mt-10 flex flex-col items-center gap-4 sm:flex-row"
+              className="mt-8 flex flex-row items-center gap-4"
             >
               <Link to="/signup">
                 <Button size="lg">Start Free Trial</Button>
