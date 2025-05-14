@@ -90,21 +90,21 @@ const Index = () => {
 
       <main className="flex-grow overflow-hidden">
         {/* Hero */}
-        <section className="relative h-[90vh] w-full overflow-hidden bg-gradient-to-b from-primary/5 via-white to-white">
+        <section className="relative h-[90vh] w-full overflow-hidden bg-gradient-to-b from-primary/5 via-white to-white pt-20">
           {/* Starfield overlay */}
           <div
             aria-hidden
             className="absolute inset-0 bg-[url('/svg/stars.svg')] bg-repeat opacity-5 [mask-image:radial-gradient(white,transparent)]"
           />
 
-          {/* Subtle glow behind the title */}
+          {/* Enhanced radial glow behind the title */}
           <div 
             aria-hidden
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-primary/10 blur-3xl opacity-60"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-gradient-to-r from-[#9b87f5]/20 to-[#D3E4FD]/20 blur-3xl opacity-70"
           />
 
           <div className="container relative z-10 mx-auto flex h-full flex-col items-center justify-center px-4 text-center">
-            <div className="mx-auto max-w-xl space-y-2">
+            <div className="mx-auto max-w-xl">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -118,7 +118,7 @@ const Index = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
-                className="text-2xl font-medium text-gray-600 md:text-3xl"
+                className="mt-1 text-2xl font-normal text-gray-600 md:text-3xl"
               >
                 The Intelligent Engine Behind the Stars
               </motion.h2>
@@ -127,7 +127,7 @@ const Index = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-                className="mt-3 text-lg text-gray-500"
+                className="mt-4 text-lg text-gray-500 leading-relaxed max-w-xl mx-auto"
               >
                 Astrology intelligence for platforms, advisors, and visionary teams.
                 Powered by Swiss Ephemeris with 0.001″ precision, global time-zones,
@@ -139,13 +139,22 @@ const Index = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="mt-8 flex flex-row items-center gap-4"
+              className="mt-6 flex flex-row items-center justify-center gap-4"
             >
               <Link to="/signup">
-                <Button size="lg">Start Free Trial</Button>
+                <Button 
+                  size="lg" 
+                  className="transform transition duration-200 hover:scale-105 hover:bg-primary-hover"
+                >
+                  Start Free Trial
+                </Button>
               </Link>
               <Link to="/documentation">
-                <Button variant="outline" size="lg">
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  className="transform transition duration-200 hover:scale-105 hover:bg-accent"
+                >
                   View Docs
                 </Button>
               </Link>
@@ -268,7 +277,7 @@ const Index = () => {
               className="mx-auto mb-8 max-w-2xl text-xl opacity-90"
             >
               Get a free key &mdash; no credit‑card required. Scale to millions of
-              calls when you’re ready.
+              calls when you're ready.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
