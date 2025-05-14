@@ -1,3 +1,4 @@
+
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -103,7 +104,9 @@ const Index = () => {
               transition={{ duration: 0.8, ease: "easeOut" }}
               className="bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-4xl font-extrabold text-transparent md:text-5xl lg:text-6xl"
             >
-              Swiss‑Ephemeris&nbsp;API for Visionary Builders
+              Astro
+              <br />
+              The Intelligent Engine Behind the Stars
             </motion.h1>
 
             <motion.p
@@ -112,9 +115,9 @@ const Index = () => {
               transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
               className="mx-auto mt-6 max-w-xl text-lg text-gray-700 md:text-xl"
             >
-              Plug‑and‑play celestial intelligence for apps, dashboards & voice
-              assistants. 0.001″ accuracy, global time‑zones, and blazing‑fast
-              responses.
+              Astrology intelligence for platforms, advisors, and visionary teams.
+              <br />
+              Powered by Swiss Ephemeris with 0.001″ precision, global time-zones, and blazing-fast responses.
             </motion.p>
 
             <motion.div
