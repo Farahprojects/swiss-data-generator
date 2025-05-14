@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TopupQueueStatus } from "@/components/dashboard/TopupQueueStatus";
+import { storeStripeReturnPath } from "@/utils/stripe-links";
 
 export const BillingSection = () => {
   const { user } = useAuth();

@@ -311,39 +311,6 @@ export type Database = {
         }
         Relationships: []
       }
-      stripe_links: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          environment: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-          updated_at: string | null
-          url: string
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          environment?: string | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          updated_at?: string | null
-          url: string
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          environment?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          updated_at?: string | null
-          url?: string
-        }
-        Relationships: []
-      }
       stripe_products: {
         Row: {
           active: boolean | null
