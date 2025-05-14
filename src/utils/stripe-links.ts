@@ -158,6 +158,7 @@ export const STRIPE_LINK_TYPES = {
  */
 export const storeStripeReturnPath = (path: string): void => {
   try {
+    // Make sure we're storing the full path including query params
     localStorage.setItem('stripe_return_location', path);
     console.log(`Stored Stripe return location: ${path}`);
   } catch (e) {
@@ -169,7 +170,7 @@ export const storeStripeReturnPath = (path: string): void => {
  * Gets the stored return location for Stripe redirect
  * @param defaultPath Default path to return to if no stored location
  */
-export const getStripeReturnLocation = (defaultPath: string = '/dashboard'): string => {
+export const getStripeReturnLocation = (defaultPath: string = '/dashboard/billing'): string => {
   try {
     const storedLocation = localStorage.getItem('stripe_return_location');
     if (storedLocation) {
@@ -180,5 +181,7 @@ export const getStripeReturnLocation = (defaultPath: string = '/dashboard'): str
   } catch (e) {
     console.error('Error retrieving Stripe return location:', e);
   }
+  // Default to billing page instead of dashboard root
   return defaultPath;
 };
+

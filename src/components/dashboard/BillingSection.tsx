@@ -39,6 +39,7 @@ export const BillingSection = () => {
   const [creditProduct, setCreditProduct] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [isLoadingPaymentMethod, setIsLoadingPaymentMethod] = useState(true);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
   // Check if we're returning from a successful payment method setup
   useEffect(() => {
@@ -46,11 +47,13 @@ export const BillingSection = () => {
     if (status === 'setup-success') {
       // Refresh payment method data
       fetchPaymentMethod();
-      toast({
-        title: "Success",
-        description: "Payment method updated successfully!",
-        variant: "success"
-      });
+      // Trigger success animation instead of toast
+      setShowPaymentSuccess(true);
+      
+      // Clear the animation after a few seconds
+      setTimeout(() => {
+        setShowPaymentSuccess(false);
+      }, 3000);
     }
   }, [searchParams]);
 
@@ -523,7 +526,11 @@ export const BillingSection = () => {
                         {paymentMethod.brand ? paymentMethod.brand.charAt(0).toUpperCase() + paymentMethod.brand.slice(1) : "Card"}
                       </span>
                       <span className="mx-2 text-gray-400">•••• {paymentMethod.last4 || "****"}</span>
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle 
+                        className={`h-4 w-4 text-green-500 ${showPaymentSuccess ? 
+                          "animate-[spin_1s_ease-in-out_forwards,scale_0.5s_ease-in-out_forwards,pulse_0.5s_ease-in-out_0.8s_forwards]" 
+                          : ""}`} 
+                      />
                     </div>
                     {paymentMethod.exp_month && paymentMethod.exp_year && (
                       <span className="text-sm text-gray-500">

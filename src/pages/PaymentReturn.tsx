@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { getStripeReturnLocation } from "@/utils/stripe-links";
 
@@ -14,10 +13,9 @@ const PaymentReturn = () => {
     // Parse URL parameters
     const params = new URLSearchParams(location.search);
     const status = params.get('status');
-    const amount = params.get('amount');
     
-    // Get the return location with a fallback to dashboard
-    const returnLocation = getStripeReturnLocation('/dashboard');
+    // Get the return location with a fallback to dashboard/billing
+    const returnLocation = getStripeReturnLocation('/dashboard/billing');
     
     // Create the final URL with status parameter if available
     let redirectUrl = returnLocation;
@@ -25,20 +23,8 @@ const PaymentReturn = () => {
       redirectUrl += redirectUrl.includes('?') ? `&status=${status}` : `?status=${status}`;
     }
     
-    // Show appropriate toast based on the payment status
+    // No toasts - we'll handle success indication with animations in the component
     setTimeout(() => {
-      if (status === 'success') {
-        if (amount) {
-          toast.success(`Successfully topped up $${amount} in credits!`);
-        } else {
-          toast.success("Payment completed successfully!");
-        }
-      } else if (status === 'setup-success') {
-        toast.success("Payment method updated successfully!");
-      } else if (status === 'cancelled' || status === 'setup-cancelled') {
-        toast.info(status === 'cancelled' ? "Payment was cancelled." : "Payment method update was cancelled.");
-      }
-      
       // Redirect the user
       navigate(redirectUrl, { replace: true });
       setRedirecting(false);
