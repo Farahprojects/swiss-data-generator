@@ -1,33 +1,41 @@
 
-import { toast as sonnerToast } from "sonner";
+import { toast } from "sonner";
 
 export type ToastProps = {
   title?: string;
   description?: string;
-  variant?: "default" | "destructive" | "success";
+  duration?: number;
+  variant?: "default" | "destructive";
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 };
 
-export function toast(props: ToastProps) {
-  const { title, description, variant = "default" } = props;
-
-  switch (variant) {
-    case "destructive":
-      return sonnerToast.error(title, {
+export const useToast = () => {
+  const showToast = ({ 
+    title, 
+    description, 
+    variant = "default", 
+    duration = 5000,
+    action
+  }: ToastProps) => {
+    if (variant === "destructive") {
+      toast.error(title, {
         description,
+        duration,
+        action
       });
-    case "success":
-      return sonnerToast.success(title, {
+    } else {
+      toast(title, {
         description,
+        duration,
+        action
       });
-    default:
-      return sonnerToast(title, {
-        description,
-      });
-  }
-}
-
-export function useToast() {
-  return {
-    toast,
+    }
   };
-}
+
+  return { toast: showToast };
+};
+
+export { toast };

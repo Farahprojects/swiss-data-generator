@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,10 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import PasswordInput from "@/components/auth/PasswordInput";
+import { Link } from "react-router-dom";
+import { validatePassword } from "@/utils/authValidation";
+import { Check } from "lucide-react";
 
 type PasswordFormValues = {
   currentPassword: string;
@@ -31,6 +34,12 @@ export const AccountSettingsPanel = () => {
   const { toast } = useToast();
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [passwordStep, setPasswordStep] = useState<'verify' | 'create' | 'confirm'>('verify');
+  const [passwordValid, setPasswordValid] = useState({
+    length: false,
+    number: false,
+    special: false
+  });
   
   const passwordForm = useForm<PasswordFormValues>({
     defaultValues: {
@@ -47,6 +56,59 @@ export const AccountSettingsPanel = () => {
     }
   });
 
+  const currentPassword = passwordForm.watch("currentPassword");
+  const newPassword = passwordForm.watch("newPassword");
+  const confirmPassword = passwordForm.watch("confirmPassword");
+  
+  // Check if all password requirements are met
+  const allRequirementsMet = passwordValid.length && passwordValid.number && passwordValid.special;
+
+  // Check for password validation on change
+  const handlePasswordChange = (value: string) => {
+    passwordForm.setValue("newPassword", value);
+    
+    setPasswordValid({
+      length: value.length >= 8,
+      number: /[0-9]/.test(value),
+      special: /[!@#$%^&*]/.test(value)
+    });
+  };
+
+  const handleCurrentPasswordVerification = async () => {
+    if (!currentPassword) return;
+    
+    setIsUpdatingPassword(true);
+    
+    try {
+      // Verify current password by attempting to sign in
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: currentPassword
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Current password is incorrect."
+        });
+        setIsUpdatingPassword(false);
+        return;
+      }
+
+      // Password verified, move to next step
+      setPasswordStep('create');
+      setIsUpdatingPassword(false);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was an error verifying your password."
+      });
+      setIsUpdatingPassword(false);
+    }
+  };
+
   const onPasswordSubmit = async (data: PasswordFormValues) => {
     if (data.newPassword !== data.confirmPassword) {
       passwordForm.setError("confirmPassword", { 
@@ -58,21 +120,6 @@ export const AccountSettingsPanel = () => {
     setIsUpdatingPassword(true);
     
     try {
-      // Verify current password first by attempting to sign in
-      const { error: verifyError } = await supabase.auth.signInWithPassword({
-        email: user?.email || '',
-        password: data.currentPassword
-      });
-
-      if (verifyError) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Current password is incorrect."
-        });
-        return;
-      }
-
       // Update the password
       const { error } = await supabase.auth.updateUser({ 
         password: data.newPassword 
@@ -93,6 +140,7 @@ export const AccountSettingsPanel = () => {
       });
       
       passwordForm.reset();
+      setPasswordStep('verify');
     } catch (error) {
       toast({
         variant: "destructive",
@@ -161,6 +209,43 @@ export const AccountSettingsPanel = () => {
     }
   };
 
+  const resetPassword = async () => {
+    if (!user?.email) return;
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/dashboard/settings`,
+      });
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to send reset password email."
+        });
+        return;
+      }
+      
+      toast({
+        title: "Reset email sent",
+        description: "Check your email for a password reset link."
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to send reset password email."
+      });
+    }
+  };
+
+  const renderPasswordRequirement = (met: boolean, text: string) => (
+    <div className={`flex items-center text-sm ${met ? 'text-green-600' : 'text-gray-600'}`}>
+      {met && <Check size={16} className="mr-2 text-green-600" />}
+      <span className={met ? "ml-5" : "ml-7"}>{text}</span>
+    </div>
+  );
+
   return (
     <div className="p-6 bg-white rounded-lg shadow">
       <h2 className="text-2xl font-semibold mb-6">Account Settings</h2>
@@ -223,55 +308,111 @@ export const AccountSettingsPanel = () => {
         
         <Form {...passwordForm}>
           <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4 max-w-md">
-            <FormField
-              control={passwordForm.control}
-              name="currentPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {passwordStep === 'verify' && (
+              <>
+                <FormField
+                  control={passwordForm.control}
+                  name="currentPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Password</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          {...field} 
+                          placeholder="Enter your current password"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex justify-between items-center mt-2">
+                  <Button 
+                    type="button"
+                    variant="link"
+                    className="text-sm p-0 h-auto"
+                    onClick={resetPassword}
+                  >
+                    Forgot password?
+                  </Button>
+                  
+                  <Button 
+                    type="button" 
+                    onClick={handleCurrentPasswordVerification}
+                    disabled={!currentPassword || isUpdatingPassword}
+                  >
+                    {isUpdatingPassword ? "Verifying..." : "OK"}
+                  </Button>
+                </div>
+              </>
+            )}
             
-            <FormField
-              control={passwordForm.control}
-              name="newPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={passwordForm.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm New Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Button 
-              type="submit" 
-              disabled={isUpdatingPassword}
-              className="mt-2"
-            >
-              {isUpdatingPassword ? "Updating..." : "Update Password"}
-            </Button>
+            {passwordStep === 'create' && (
+              <>
+                <div className="space-y-4">
+                  <FormField
+                    control={passwordForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="password"
+                            placeholder="Enter your new password"
+                            value={field.value}
+                            onChange={(e) => handlePasswordChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="mt-2 space-y-2 bg-gray-50 p-3 rounded-md">
+                    {renderPasswordRequirement(passwordValid.length, "At least 8 characters")}
+                    {renderPasswordRequirement(passwordValid.number, "At least one number")}
+                    {renderPasswordRequirement(passwordValid.special, "At least one special character")}
+                  </div>
+                  
+                  {allRequirementsMet && (
+                    <FormField
+                      control={passwordForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm New Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              {...field} 
+                              placeholder="Confirm your new password"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
+                  <div className="flex justify-end">
+                    <Button 
+                      type="submit" 
+                      disabled={
+                        !newPassword || 
+                        !allRequirementsMet || 
+                        (allRequirementsMet && !confirmPassword) ||
+                        isUpdatingPassword
+                      }
+                    >
+                      {isUpdatingPassword ? "Updating..." : "Update Password"}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </form>
         </Form>
       </div>
