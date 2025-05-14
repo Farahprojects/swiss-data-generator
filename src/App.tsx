@@ -25,48 +25,51 @@ import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "sonner";
 import { SidebarProvider } from './components/ui/sidebar';
+import NavigationStateProvider from './contexts/NavigationStateContext';
 
 function App() {
   return (
     <AuthProvider>
-      <SidebarProvider>
-        <Router>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/api-products" element={<ApiProducts />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/documentation" element={<Documentation />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/payment-return" element={<PaymentReturn />} />
-            
-            {/* Protected dashboard routes with nested structure */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <AuthGuard>
-                  <DashboardLayout />
-                </AuthGuard>
-              }
-            >
-              <Route index element={<DashboardHome />} />
-              <Route path="settings" element={<UserSettings />} />
-              <Route path="upgrade" element={<UpgradePlan />} />
-              <Route path="activity-logs" element={<ActivityLogs />} />
-              <Route path="api-keys" element={<ApiKeys />} />
-              <Route path="docs" element={<ApiDocs />} />
-              <Route path="usage" element={<UsagePage />} />
-              <Route path="billing" element={<BillingPage />} />
-              <Route path="pricing" element={<PricingPage />} />
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Router>
-      </SidebarProvider>
+      <NavigationStateProvider>
+        <SidebarProvider>
+          <Router>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/api-products" element={<ApiProducts />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/documentation" element={<Documentation />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/payment-return" element={<PaymentReturn />} />
+              
+              {/* Protected dashboard routes with nested structure */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <AuthGuard>
+                    <DashboardLayout />
+                  </AuthGuard>
+                }
+              >
+                <Route index element={<DashboardHome />} />
+                <Route path="settings" element={<UserSettings />} />
+                <Route path="upgrade" element={<UpgradePlan />} />
+                <Route path="activity-logs" element={<ActivityLogs />} />
+                <Route path="api-keys" element={<ApiKeys />} />
+                <Route path="docs" element={<ApiDocs />} />
+                <Route path="usage" element={<UsagePage />} />
+                <Route path="billing" element={<BillingPage />} />
+                <Route path="pricing" element={<PricingPage />} />
+              </Route>
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+        </SidebarProvider>
+      </NavigationStateProvider>
       <Toaster />
     </AuthProvider>
   );
