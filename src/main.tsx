@@ -4,4 +4,13 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Use StrictMode only in development
+const StrictModeWrapper = process.env.NODE_ENV === 'development' 
+  ? React.StrictMode
+  : React.Fragment;
+
+createRoot(document.getElementById("root")!).render(
+  <StrictModeWrapper>
+    <App />
+  </StrictModeWrapper>
+);

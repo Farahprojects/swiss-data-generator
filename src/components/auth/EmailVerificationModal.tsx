@@ -67,7 +67,7 @@ export function EmailVerificationModal({
     return () => {
       if (id) clearInterval(id);
     };
-  }, [isOpen, onVerified, intervalId]);
+  }, [isOpen, onVerified]);
 
   const handleRefreshClick = async () => {
     setIsChecking(true);
@@ -83,7 +83,7 @@ export function EmailVerificationModal({
     }
   };
 
-  const handleCancel = async () => {
+  const handleCancel = () => {
     // The user wants to cancel the email change
     if (intervalId) {
       clearInterval(intervalId);
@@ -93,11 +93,7 @@ export function EmailVerificationModal({
   };
 
   return (
-    <Dialog 
-      open={isOpen} 
-      onOpenChange={() => {}}
-      // We need to use a different approach to prevent closing on escape key
-    >
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent 
         className="sm:max-w-md" 
         onPointerDownOutside={(e) => e.preventDefault()}

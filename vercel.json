@@ -9,7 +9,7 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "s-maxage=0" }
+        { "key": "Cache-Control", "value": "no-store, must-revalidate" }
       ]
     }
   ]
