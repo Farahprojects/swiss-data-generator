@@ -23,7 +23,7 @@ import BillingPage from './pages/dashboard/BillingPage';
 import PricingPage from './pages/dashboard/PricingPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
-import { Toaster } from "sonner";
+import { Toaster } from "./components/ui/toaster";
 import { SidebarProvider } from './components/ui/sidebar';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 

@@ -2,7 +2,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { 
   Form, 
@@ -14,11 +14,11 @@ import {
 } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
 import PasswordInput from "@/components/auth/PasswordInput";
-import { Link } from "react-router-dom";
 import { validatePassword } from "@/utils/authValidation";
-import { Check, AlertCircle } from "lucide-react";
+import { Check, AlertCircle, Loader } from "lucide-react";
 import { useToast, ToastProps } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
 
 type PasswordFormValues = {
   currentPassword: string;
@@ -32,7 +32,7 @@ type EmailFormValues = {
 };
 
 export const AccountSettingsPanel = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast, message, clearToast } = useToast();
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
@@ -40,6 +40,8 @@ export const AccountSettingsPanel = () => {
   const [passwordValid, setPasswordValid] = useState({
     length: false
   });
+  const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
+  const [newEmailAddress, setNewEmailAddress] = useState("");
   
   const passwordForm = useForm<PasswordFormValues>({
     defaultValues: {
@@ -60,6 +62,17 @@ export const AccountSettingsPanel = () => {
   const newPassword = passwordForm.watch("newPassword");
   const confirmPassword = passwordForm.watch("confirmPassword");
   
+  // Check if the user has a pending email verification
+  useEffect(() => {
+    if (user && !user.email_confirmed_at && user.email) {
+      // If email is not confirmed, show the verification modal
+      setPendingEmailVerification(true);
+      setNewEmailAddress(user.email);
+    } else {
+      setPendingEmailVerification(false);
+    }
+  }, [user]);
+
   // Check if password requirement is met
   const passwordRequirementMet = passwordValid.length;
 
@@ -179,6 +192,9 @@ export const AccountSettingsPanel = () => {
         return;
       }
 
+      // Store the new email before updating
+      setNewEmailAddress(data.newEmail);
+
       // Update the email
       const { error } = await supabase.auth.updateUser({ 
         email: data.newEmail 
@@ -193,11 +209,10 @@ export const AccountSettingsPanel = () => {
         return;
       }
       
-      toast({
-        title: "Email update initiated",
-        description: "Please check your new email address for a confirmation link."
-      });
+      // Show the verification modal
+      setPendingEmailVerification(true);
       
+      // Reset the form
       emailForm.reset();
     } catch (error) {
       toast({
@@ -207,6 +222,37 @@ export const AccountSettingsPanel = () => {
       });
     } finally {
       setIsUpdatingEmail(false);
+    }
+  };
+
+  const handleEmailVerificationComplete = () => {
+    // The email has been verified, close the modal
+    setPendingEmailVerification(false);
+    
+    toast({
+      title: "Email verified",
+      description: "Your email address has been successfully verified."
+    });
+    
+    // Force refresh user session to get the latest email
+    supabase.auth.refreshSession();
+  };
+
+  const handleCancelEmailChange = async () => {
+    // User wants to cancel the email change
+    setPendingEmailVerification(false);
+    
+    // Try to revert to the old email if possible
+    if (user && user.email && user.email !== newEmailAddress) {
+      try {
+        await supabase.auth.updateUser({ email: user.email });
+        toast({
+          title: "Email change cancelled",
+          description: "Your email address change has been cancelled."
+        });
+      } catch (error) {
+        console.error("Error reverting email change:", error);
+      }
     }
   };
 
@@ -273,6 +319,14 @@ export const AccountSettingsPanel = () => {
       
       {message && renderInlineMessage()}
       
+      {/* Email Verification Modal */}
+      <EmailVerificationModal 
+        isOpen={pendingEmailVerification}
+        newEmail={newEmailAddress}
+        onVerified={handleEmailVerificationComplete}
+        onCancel={handleCancelEmailChange}
+      />
+      
       <div className="mb-8">
         <h3 className="text-lg font-medium mb-3">Email Address</h3>
         <Input 
@@ -316,7 +370,12 @@ export const AccountSettingsPanel = () => {
               disabled={isUpdatingEmail}
               className="mt-2"
             >
-              {isUpdatingEmail ? "Updating..." : "Update Email"}
+              {isUpdatingEmail ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : "Update Email"}
             </Button>
           </form>
         </Form>
@@ -366,7 +425,12 @@ export const AccountSettingsPanel = () => {
                     onClick={handleCurrentPasswordVerification}
                     disabled={!currentPassword || isUpdatingPassword}
                   >
-                    {isUpdatingPassword ? "Verifying..." : "OK"}
+                    {isUpdatingPassword ? (
+                      <>
+                        <Loader className="h-4 w-4 mr-2 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : "OK"}
                   </Button>
                 </div>
               </>
@@ -428,7 +492,12 @@ export const AccountSettingsPanel = () => {
                         isUpdatingPassword
                       }
                     >
-                      {isUpdatingPassword ? "Updating..." : "Update Password"}
+                      {isUpdatingPassword ? (
+                        <>
+                          <Loader className="h-4 w-4 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : "Update Password"}
                     </Button>
                   </div>
                 </div>
