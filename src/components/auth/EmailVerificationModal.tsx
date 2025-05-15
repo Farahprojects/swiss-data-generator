@@ -96,8 +96,7 @@ export function EmailVerificationModal({
     <Dialog 
       open={isOpen} 
       onOpenChange={() => {}}
-      // This next line ensures the modal cannot be dismissed by clicking outside
-      onEscapeKeyDown={(e) => e.preventDefault()}
+      // We need to use a different approach to prevent closing on escape key
     >
       <DialogContent 
         className="sm:max-w-md" 
