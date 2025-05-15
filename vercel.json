@@ -1,10 +1,11 @@
 
 {
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/dashboard(.*)", "dest": "/index.html" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
+  "github": {
+    "silent": true
+  },
   "headers": [
     {
       "source": "/(.*)",

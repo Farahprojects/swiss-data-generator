@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
+import App from './App';
 import './index.css';
 
 // Use StrictMode only in development
-const StrictModeWrapper = process.env.NODE_ENV === 'development' 
+const StrictModeWrapper = import.meta.env.DEV
   ? React.StrictMode
   : React.Fragment;
 

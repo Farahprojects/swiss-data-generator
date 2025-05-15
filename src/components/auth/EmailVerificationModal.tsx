@@ -22,6 +22,32 @@ export function EmailVerificationModal({
   const [checkCount, setCheckCount] = useState(0);
   const [intervalId, setIntervalId] = useState<number | null>(null);
 
+  // Set up auth state listener for email change events
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    console.log("Setting up auth state listener for email verification");
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state change event:", event);
+      
+      if (event === 'EMAIL_CHANGE_CONFIRMED' || event === 'USER_UPDATED') {
+        console.log("Email change confirmed or user updated:", session?.user);
+        
+        // Check if the user's email matches the new email and is confirmed
+        if (session?.user?.email === newEmail && session?.user?.email_confirmed_at) {
+          console.log("Email verified successfully:", newEmail);
+          onVerified();
+        }
+      }
+    });
+    
+    return () => {
+      console.log("Cleaning up auth state listener");
+      subscription.unsubscribe();
+    };
+  }, [isOpen, newEmail, onVerified]);
+
   // Poll for email verification status
   useEffect(() => {
     if (!isOpen) return;
@@ -29,52 +55,69 @@ export function EmailVerificationModal({
     // Clear any existing intervals when component mounts or isOpen changes
     if (intervalId) {
       clearInterval(intervalId);
+      setIntervalId(null);
     }
 
     const checkEmailVerificationStatus = async () => {
-      setIsChecking(true);
-      try {
-        const { data } = await supabase.auth.getUser();
-        
-        if (data?.user?.email_confirmed_at) {
-          console.log("Email verified at:", data.user.email_confirmed_at);
+      if (!isChecking) {
+        setIsChecking(true);
+        try {
+          // Force refresh the session to get the latest user data
+          await supabase.auth.refreshSession();
+          const { data } = await supabase.auth.getUser();
           
-          // Clear the interval if email is verified
-          if (intervalId) {
-            clearInterval(intervalId);
-            setIntervalId(null);
+          console.log("Checking email verification status:", data?.user?.email, "New email:", newEmail);
+          console.log("Email confirmed at:", data?.user?.email_confirmed_at);
+          
+          // Check if the current email matches the new email and is confirmed
+          if (data?.user?.email === newEmail && data?.user?.email_confirmed_at) {
+            console.log("Email verified at:", data.user.email_confirmed_at);
+            
+            if (intervalId) {
+              clearInterval(intervalId);
+              setIntervalId(null);
+            }
+            
+            onVerified();
+          } else {
+            console.log("Email not verified yet, poll count:", checkCount + 1);
+            setCheckCount(prev => prev + 1);
           }
-          
-          onVerified();
-        } else {
-          setCheckCount(prev => prev + 1);
+        } catch (error) {
+          console.error("Error checking verification status:", error);
+        } finally {
+          setIsChecking(false);
         }
-      } catch (error) {
-        console.error("Error checking verification status:", error);
-      } finally {
-        setIsChecking(false);
       }
     };
 
     // Run immediately when the modal opens
     checkEmailVerificationStatus();
 
-    // Then set interval for polling
-    const id = window.setInterval(checkEmailVerificationStatus, 5000); // Poll every 5 seconds
+    // Then set interval for polling with a shorter interval (2 seconds)
+    const id = window.setInterval(checkEmailVerificationStatus, 2000);
     setIntervalId(id);
     
     // Cleanup function to clear interval when component unmounts or isOpen changes
     return () => {
       if (id) clearInterval(id);
     };
-  }, [isOpen, onVerified]);
+  }, [isOpen, newEmail, onVerified, checkCount, isChecking]);
 
-  const handleRefreshClick = async () => {
+  const handleManualVerifyClick = async () => {
     setIsChecking(true);
     try {
+      // Force refresh the session to get the latest user data
+      await supabase.auth.refreshSession();
       const { data } = await supabase.auth.getUser();
-      if (data?.user?.email_confirmed_at) {
+      
+      console.log("Manual verification check:", data?.user?.email, "New email:", newEmail);
+      
+      if (data?.user?.email === newEmail && data?.user?.email_confirmed_at) {
+        console.log("Email verified during manual check");
         onVerified();
+      } else {
+        console.log("Email still not verified after manual check");
       }
     } catch (error) {
       console.error("Error checking verification status:", error);
@@ -90,6 +133,27 @@ export function EmailVerificationModal({
       setIntervalId(null);
     }
     onCancel();
+  };
+
+  const handleResendVerification = async () => {
+    setIsChecking(true);
+    try {
+      // Try to update the email again to trigger a new verification email
+      const { error } = await supabase.auth.updateUser({ 
+        email: newEmail 
+      });
+      
+      if (error) {
+        console.error("Error resending verification email:", error);
+      } else {
+        console.log("Verification email resent to:", newEmail);
+        setCheckCount(0); // Reset the check count
+      }
+    } catch (error) {
+      console.error("Error resending verification:", error);
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   return (
@@ -116,6 +180,17 @@ export function EmailVerificationModal({
               </p>
             )}
           </div>
+          
+          {checkCount > 5 && (
+            <Button 
+              variant="outline" 
+              onClick={handleResendVerification}
+              disabled={isChecking}
+              className="w-full"
+            >
+              Resend Verification Email
+            </Button>
+          )}
         </div>
         
         <div className="flex space-x-2 justify-between items-center">
@@ -127,7 +202,7 @@ export function EmailVerificationModal({
           </Button>
           
           <Button 
-            onClick={handleRefreshClick} 
+            onClick={handleManualVerifyClick} 
             disabled={isChecking}
             className="flex items-center space-x-2"
           >

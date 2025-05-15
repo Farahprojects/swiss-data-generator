@@ -13,10 +13,8 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
-import PasswordInput from "@/components/auth/PasswordInput";
-import { validatePassword } from "@/utils/authValidation";
 import { Check, AlertCircle, Loader } from "lucide-react";
-import { useToast, ToastProps } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
 
@@ -62,13 +60,37 @@ export const AccountSettingsPanel = () => {
   const newPassword = passwordForm.watch("newPassword");
   const confirmPassword = passwordForm.watch("confirmPassword");
   
+  // Set up auth state listener for email change events
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("AccountSettingsPanel: Auth state change event:", event);
+      
+      if (event === 'EMAIL_CHANGE_CONFIRMED' || event === 'USER_UPDATED') {
+        console.log("AccountSettingsPanel: Email change confirmed or user updated:", session?.user);
+        
+        // If the user has confirmed their email, close the verification modal
+        if (session?.user?.email_confirmed_at && pendingEmailVerification) {
+          console.log("AccountSettingsPanel: Email verified, closing modal");
+          handleEmailVerificationComplete();
+        }
+      }
+    });
+    
+    return () => {
+      console.log("Cleaning up auth state listener");
+      subscription.unsubscribe();
+    };
+  }, [pendingEmailVerification]);
+  
   // Check if the user has a pending email verification
   useEffect(() => {
     if (user && !user.email_confirmed_at && user.email) {
       // If email is not confirmed, show the verification modal
       setPendingEmailVerification(true);
       setNewEmailAddress(user.email);
+      console.log("User has pending email verification:", user.email);
     } else {
+      console.log("User email status:", user?.email, "confirmed at:", user?.email_confirmed_at);
       setPendingEmailVerification(false);
     }
   }, [user]);
@@ -173,6 +195,14 @@ export const AccountSettingsPanel = () => {
       return;
     }
     
+    // Prevent changing to the same email
+    if (data.newEmail === user?.email) {
+      emailForm.setError("newEmail", { 
+        message: "This is already your current email address." 
+      });
+      return;
+    }
+    
     setIsUpdatingEmail(true);
     clearToast();
     
@@ -189,16 +219,21 @@ export const AccountSettingsPanel = () => {
           title: "Error",
           description: "Password is incorrect."
         });
+        setIsUpdatingEmail(false);
         return;
       }
 
+      console.log("Initiating email change from", user?.email, "to", data.newEmail);
+      
       // Store the new email before updating
       setNewEmailAddress(data.newEmail);
 
       // Update the email
-      const { error } = await supabase.auth.updateUser({ 
+      const { error, data: updateData } = await supabase.auth.updateUser({ 
         email: data.newEmail 
       });
+      
+      console.log("Update user response:", updateData);
       
       if (error) {
         toast({
@@ -206,6 +241,7 @@ export const AccountSettingsPanel = () => {
           title: "Error",
           description: error.message || "There was an error updating your email address."
         });
+        setIsUpdatingEmail(false);
         return;
       }
       
@@ -225,17 +261,23 @@ export const AccountSettingsPanel = () => {
     }
   };
 
-  const handleEmailVerificationComplete = () => {
+  const handleEmailVerificationComplete = async () => {
     // The email has been verified, close the modal
     setPendingEmailVerification(false);
+    
+    // Force refresh the session to get the latest user data
+    try {
+      await supabase.auth.refreshSession();
+      const { data } = await supabase.auth.getUser();
+      console.log("Session refreshed after email verification:", data?.user);
+    } catch (error) {
+      console.error("Error refreshing session:", error);
+    }
     
     toast({
       title: "Email verified",
       description: "Your email address has been successfully verified."
     });
-    
-    // Force refresh user session to get the latest email
-    supabase.auth.refreshSession();
   };
 
   const handleCancelEmailChange = async () => {
@@ -245,7 +287,6 @@ export const AccountSettingsPanel = () => {
     // Try to revert to the old email if possible
     if (user && user.email && user.email !== newEmailAddress) {
       try {
-        await supabase.auth.updateUser({ email: user.email });
         toast({
           title: "Email change cancelled",
           description: "Your email address change has been cancelled."

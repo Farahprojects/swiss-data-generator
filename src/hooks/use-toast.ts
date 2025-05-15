@@ -1,34 +1,28 @@
 
 import { useState } from "react";
-import { toast as sonnerToast } from "sonner";
 
-export type ToastProps = {
+export type ToastVariant = "default" | "destructive";
+
+export interface ToastProps {
   title?: string;
   description?: string;
-  action?: React.ReactNode;
-  variant?: "default" | "destructive" | "success";
-};
+  variant?: ToastVariant;
+}
 
-// Our main useToast hook for inline toast messages
-export function useToast() {
+export const useToast = () => {
   const [message, setMessage] = useState<ToastProps | null>(null);
-  
-  const toast = (props: ToastProps = {}) => {
+
+  const toast = (props: ToastProps) => {
     setMessage(props);
-    
-    // Auto-clear success messages after 3 seconds
-    if (props.variant !== "destructive") {
-      setTimeout(() => {
-        setMessage(null);
-      }, 3000);
-    }
   };
-  
+
   const clearToast = () => {
     setMessage(null);
   };
-  
-  return { toast, message, clearToast };
-}
 
-// We no longer export a standalone toast function since we're moving to inline toasts
+  return {
+    toast,
+    clearToast,
+    message
+  };
+};
