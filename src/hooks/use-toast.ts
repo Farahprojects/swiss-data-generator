@@ -13,10 +13,12 @@ export const useToast = () => {
   const [message, setMessage] = useState<ToastProps | null>(null);
 
   const toast = (props: ToastProps) => {
+    console.log("Toast message:", props);
     setMessage(props);
   };
 
   const clearToast = () => {
+    console.log("Clearing toast message");
     setMessage(null);
   };
 

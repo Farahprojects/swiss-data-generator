@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Loader } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmailVerificationModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function EmailVerificationModal({
   const [isChecking, setIsChecking] = useState(false);
   const [checkCount, setCheckCount] = useState(0);
   const [intervalId, setIntervalId] = useState<number | null>(null);
+  const { toast } = useToast();
 
   // Set up auth state listener for email change events
   useEffect(() => {
@@ -37,6 +39,18 @@ export function EmailVerificationModal({
         // Check if the user's email matches the new email and is confirmed
         if (session?.user?.email === newEmail && session?.user?.email_confirmed_at) {
           console.log("Email verified successfully:", newEmail);
+          
+          // Stop polling when email is verified
+          if (intervalId) {
+            clearInterval(intervalId);
+            setIntervalId(null);
+          }
+          
+          // Clear all verification-related state
+          setIsChecking(false);
+          setCheckCount(0);
+          
+          // Only then call the onVerified callback
           onVerified();
         }
       }
@@ -45,8 +59,13 @@ export function EmailVerificationModal({
     return () => {
       console.log("Cleaning up auth state listener");
       subscription.unsubscribe();
+      
+      // Also clear any polling intervals when component unmounts
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
-  }, [isOpen, newEmail, onVerified]);
+  }, [isOpen, newEmail, onVerified, intervalId]);
 
   // Poll for email verification status
   useEffect(() => {
@@ -78,14 +97,16 @@ export function EmailVerificationModal({
               setIntervalId(null);
             }
             
-            onVerified();
+            // Don't call onVerified here, let the auth state listener handle it
+            // This avoids potential race conditions or double-calling
+            setIsChecking(false);
           } else {
             console.log("Email not verified yet, poll count:", checkCount + 1);
             setCheckCount(prev => prev + 1);
+            setIsChecking(false);
           }
         } catch (error) {
           console.error("Error checking verification status:", error);
-        } finally {
           setIsChecking(false);
         }
       }
@@ -94,15 +115,15 @@ export function EmailVerificationModal({
     // Run immediately when the modal opens
     checkEmailVerificationStatus();
 
-    // Then set interval for polling with a shorter interval (2 seconds)
-    const id = window.setInterval(checkEmailVerificationStatus, 2000);
+    // Then set interval for polling with a shorter interval (3 seconds)
+    const id = window.setInterval(checkEmailVerificationStatus, 3000);
     setIntervalId(id);
     
     // Cleanup function to clear interval when component unmounts or isOpen changes
     return () => {
       if (id) clearInterval(id);
     };
-  }, [isOpen, newEmail, onVerified, checkCount, isChecking]);
+  }, [isOpen, newEmail, checkCount, isChecking]);
 
   const handleManualVerifyClick = async () => {
     setIsChecking(true);
@@ -118,10 +139,15 @@ export function EmailVerificationModal({
         onVerified();
       } else {
         console.log("Email still not verified after manual check");
+        toast({
+          variant: "destructive", 
+          title: "Email not verified",
+          description: "Please check your inbox and click the verification link."
+        });
+        setIsChecking(false);
       }
     } catch (error) {
       console.error("Error checking verification status:", error);
-    } finally {
       setIsChecking(false);
     }
   };
@@ -145,12 +171,27 @@ export function EmailVerificationModal({
       
       if (error) {
         console.error("Error resending verification email:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to resend verification email. Please try again."
+        });
       } else {
         console.log("Verification email resent to:", newEmail);
+        toast({
+          variant: "success",
+          title: "Email sent",
+          description: "Verification email has been resent. Please check your inbox."
+        });
         setCheckCount(0); // Reset the check count
       }
     } catch (error) {
       console.error("Error resending verification:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again."
+      });
     } finally {
       setIsChecking(false);
     }
@@ -188,7 +229,14 @@ export function EmailVerificationModal({
               disabled={isChecking}
               className="w-full"
             >
-              Resend Verification Email
+              {isChecking ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Resend Verification Email"
+              )}
             </Button>
           )}
         </div>
@@ -208,7 +256,7 @@ export function EmailVerificationModal({
           >
             {isChecking ? (
               <>
-                <Loader className="h-4 w-4 animate-spin" />
+                <Loader className="h-4 w-4 animate-spin mr-2" />
                 <span>Checking...</span>
               </>
             ) : (

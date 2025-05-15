@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +61,8 @@ export const AccountSettingsPanel = () => {
   
   // Set up auth state listener for email change events
   useEffect(() => {
+    console.log("Setting up AccountSettingsPanel auth state listener");
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("AccountSettingsPanel: Auth state change event:", event);
       
@@ -69,7 +70,9 @@ export const AccountSettingsPanel = () => {
         console.log("AccountSettingsPanel: Email change confirmed or user updated:", session?.user);
         
         // If the user has confirmed their email, close the verification modal
-        if (session?.user?.email_confirmed_at && pendingEmailVerification) {
+        if (session?.user?.email_confirmed_at && 
+            pendingEmailVerification && 
+            session?.user?.email === newEmailAddress) {
           console.log("AccountSettingsPanel: Email verified, closing modal");
           handleEmailVerificationComplete();
         }
@@ -77,10 +80,10 @@ export const AccountSettingsPanel = () => {
     });
     
     return () => {
-      console.log("Cleaning up auth state listener");
+      console.log("Cleaning up auth state listener in AccountSettingsPanel");
       subscription.unsubscribe();
     };
-  }, [pendingEmailVerification]);
+  }, [pendingEmailVerification, newEmailAddress]);
   
   // Check if the user has a pending email verification
   useEffect(() => {
@@ -248,6 +251,12 @@ export const AccountSettingsPanel = () => {
       // Show the verification modal
       setPendingEmailVerification(true);
       
+      toast({
+        variant: "success",
+        title: "Verification email sent",
+        description: "Please check your inbox to verify your new email address."
+      });
+      
       // Reset the form
       emailForm.reset();
     } catch (error) {
@@ -270,31 +279,31 @@ export const AccountSettingsPanel = () => {
       await supabase.auth.refreshSession();
       const { data } = await supabase.auth.getUser();
       console.log("Session refreshed after email verification:", data?.user);
+      
+      toast({
+        variant: "success",
+        title: "Email verified",
+        description: "Your email address has been successfully verified."
+      });
     } catch (error) {
       console.error("Error refreshing session:", error);
+      
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was a problem refreshing your session. Please try logging out and back in."
+      });
     }
-    
-    toast({
-      title: "Email verified",
-      description: "Your email address has been successfully verified."
-    });
   };
 
   const handleCancelEmailChange = async () => {
     // User wants to cancel the email change
     setPendingEmailVerification(false);
     
-    // Try to revert to the old email if possible
-    if (user && user.email && user.email !== newEmailAddress) {
-      try {
-        toast({
-          title: "Email change cancelled",
-          description: "Your email address change has been cancelled."
-        });
-      } catch (error) {
-        console.error("Error reverting email change:", error);
-      }
-    }
+    toast({
+      title: "Email change cancelled",
+      description: "Your email address change has been cancelled."
+    });
   };
 
   const resetPassword = async () => {
