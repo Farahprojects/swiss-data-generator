@@ -2,7 +2,15 @@
 {
   "routes": [
     { "handle": "filesystem" },
-    { "src": "/dashboard.*", "dest": "/index.html" },
+    { "src": "/dashboard(.*)", "dest": "/index.html" },
     { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=0" }
+      ]
+    }
   ]
 }

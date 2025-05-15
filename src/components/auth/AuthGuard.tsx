@@ -2,24 +2,26 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const { toast } = useToast();
+  const [hasShownToast, setHasShownToast] = useState(false);
 
-  // Show toast if not authenticated
+  // Show toast if not authenticated - but only once
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !hasShownToast) {
       console.log('AuthGuard: Authentication required, showing toast');
       toast({
         variant: "destructive",
         title: "Authentication Required",
         description: "Please log in to access this page.",
       });
+      setHasShownToast(true);
     }
-  }, [loading, user, toast]);
+  }, [loading, user, toast, hasShownToast]);
 
   if (loading) {
     return (

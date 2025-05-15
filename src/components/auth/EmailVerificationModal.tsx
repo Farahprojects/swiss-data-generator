@@ -20,10 +20,16 @@ export function EmailVerificationModal({
 }: EmailVerificationModalProps) {
   const [isChecking, setIsChecking] = useState(false);
   const [checkCount, setCheckCount] = useState(0);
+  const [intervalId, setIntervalId] = useState<number | null>(null);
 
   // Poll for email verification status
   useEffect(() => {
     if (!isOpen) return;
+
+    // Clear any existing intervals when component mounts or isOpen changes
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
 
     const checkEmailVerificationStatus = async () => {
       setIsChecking(true);
@@ -32,6 +38,13 @@ export function EmailVerificationModal({
         
         if (data?.user?.email_confirmed_at) {
           console.log("Email verified at:", data.user.email_confirmed_at);
+          
+          // Clear the interval if email is verified
+          if (intervalId) {
+            clearInterval(intervalId);
+            setIntervalId(null);
+          }
+          
           onVerified();
         } else {
           setCheckCount(prev => prev + 1);
@@ -47,9 +60,14 @@ export function EmailVerificationModal({
     checkEmailVerificationStatus();
 
     // Then set interval for polling
-    const interval = setInterval(checkEmailVerificationStatus, 5000); // Poll every 5 seconds
-    return () => clearInterval(interval);
-  }, [isOpen, onVerified]);
+    const id = window.setInterval(checkEmailVerificationStatus, 5000); // Poll every 5 seconds
+    setIntervalId(id);
+    
+    // Cleanup function to clear interval when component unmounts or isOpen changes
+    return () => {
+      if (id) clearInterval(id);
+    };
+  }, [isOpen, onVerified, intervalId]);
 
   const handleRefreshClick = async () => {
     setIsChecking(true);
@@ -67,12 +85,25 @@ export function EmailVerificationModal({
 
   const handleCancel = async () => {
     // The user wants to cancel the email change
+    if (intervalId) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
     onCancel();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={() => {}}
+      // This next line ensures the modal cannot be dismissed by clicking outside
+      onEscapeKeyDown={(e) => e.preventDefault()}
+    >
+      <DialogContent 
+        className="sm:max-w-md" 
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Verify Your Email Address</DialogTitle>
           <DialogDescription>

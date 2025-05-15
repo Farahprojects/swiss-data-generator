@@ -4,12 +4,21 @@ import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { SidebarInset } from "@/components/ui/sidebar";
+import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * DashboardLayout serves as the outer shell for all dashboard pages
  * It maintains consistent navigation, sidebar, and footer across all dashboard routes
  */
 const DashboardLayout = () => {
+  const { user } = useAuth();
+  
+  // Add a console log to track when DashboardLayout renders
+  useEffect(() => {
+    console.log("DashboardLayout mounted or updated, user:", user?.email);
+  }, [user]);
+
   return (
     <div className="flex flex-col min-h-screen w-full">
       {/* Fixed header at the top that spans full width */}
