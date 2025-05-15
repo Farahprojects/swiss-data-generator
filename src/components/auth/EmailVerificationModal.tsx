@@ -31,7 +31,7 @@ export function EmailVerificationModal({
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state change event:", event);
       
-      if (event === 'EMAIL_CHANGE_CONFIRMED' || event === 'USER_UPDATED') {
+      if (event === 'USER_UPDATED' || event === 'SIGNED_IN') {
         console.log("Email change confirmed or user updated:", session?.user);
         
         // Check if the user's email matches the new email and is confirmed

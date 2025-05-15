@@ -65,7 +65,7 @@ export const AccountSettingsPanel = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("AccountSettingsPanel: Auth state change event:", event);
       
-      if (event === 'EMAIL_CHANGE_CONFIRMED' || event === 'USER_UPDATED') {
+      if (event === 'USER_UPDATED' || event === 'SIGNED_IN') {
         console.log("AccountSettingsPanel: Email change confirmed or user updated:", session?.user);
         
         // If the user has confirmed their email, close the verification modal

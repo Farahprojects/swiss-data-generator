@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 
-export type ToastVariant = "default" | "destructive";
+export type ToastVariant = "default" | "destructive" | "success";
 
 export interface ToastProps {
   title?: string;
