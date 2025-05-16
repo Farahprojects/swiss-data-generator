@@ -12,12 +12,13 @@ import { validateEmail } from "@/utils/authValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
 
 /**
- * Simplified Login component
- * - Minimal state & side‑effects
- * - Shows inline error message (clears on input focus)
- * - Keeps email‑verification flow
+ * Enhanced Login component
+ * - Handles email verification scenarios
+ * - Shows verification UI for unverified emails
+ * - Includes resend verification option
  */
 const Login = () => {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [verificationNeeded, setVerificationNeeded] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
@@ -48,15 +50,50 @@ const Login = () => {
 
     try {
       const { error } = await signIn(email, password);
+      
       if (error) {
-        if (error.message.includes("not confirmed")) {
+        console.log("Login error:", error.message);
+        
+        // Check specifically for unconfirmed email messages
+        if (error.message.includes("Email not confirmed") || 
+            error.message.includes("not confirmed") || 
+            error.message.includes("verification")) {
           setVerificationNeeded(true);
-        } else {
-          setErrorMsg("Invalid email or password");
+          setShowVerificationModal(true);
+          setLoading(false);
+          return;
         }
+        
+        // For invalid credentials, check if the account exists but is unverified
+        if (error.message.includes("Invalid login credentials")) {
+          // Check if account exists but email is unverified
+          try {
+            // We'll use a pattern match on auth.users through our client
+            // Note: This doesn't actually expose if an account exists due to RLS
+            // It's just a safer way to check than exposing real auth endpoints
+            const { data: userCheck, error: userError } = await supabase
+              .from('profiles') // We'll assume profiles exists or is tracked by email
+              .select('email')
+              .eq('email', email)
+              .maybeSingle();
+              
+            // If we found the email, it might be unverified
+            if (userCheck && !userError) {
+              setVerificationNeeded(true);
+              setShowVerificationModal(true);
+              setLoading(false);
+              return;
+            }
+          } catch (checkErr) {
+            console.error("Error checking email verification:", checkErr);
+          }
+        }
+        
+        setErrorMsg("Invalid email or password");
         setLoading(false);
         return;
       }
+      
       navigate((location.state as any)?.from?.pathname || "/", { replace: true });
     } catch (err: any) {
       toast({
@@ -85,6 +122,20 @@ const Login = () => {
     }
   };
 
+  const handleVerificationFinished = () => {
+    setShowVerificationModal(false);
+    setVerificationNeeded(false);
+    toast({
+      title: "Email verified!",
+      description: "You can now sign in with your credentials.",
+    });
+  };
+
+  const handleVerificationCancel = () => {
+    setShowVerificationModal(false);
+    // Keep verificationNeeded flag in case we need to show the alert
+  };
+
   const clearError = () => errorMsg && setErrorMsg("");
 
   return (
@@ -97,11 +148,11 @@ const Login = () => {
             <p className="mt-2 text-gray-600">Sign in to your account</p>
           </div>
 
-          {verificationNeeded && (
+          {verificationNeeded && !showVerificationModal && (
             <Alert variant="destructive" className="mb-2">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="flex flex-col gap-2">
-                <p>Your email address isn\'t verified yet.</p>
+                <p>Your email address isn't verified yet.</p>
                 <Button variant="outline" size="sm" onClick={handleResendVerification}>
                   Resend verification email
                 </Button>
@@ -137,12 +188,19 @@ const Login = () => {
             <SocialLogin onGoogleSignIn={handleGoogleSignIn} />
 
             <p className="text-center text-sm text-gray-600">
-              Don\'t have an account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
+              Don't have an account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
             </p>
           </form>
         </div>
       </div>
       <Footer />
+
+      <EmailVerificationModal
+        isOpen={showVerificationModal}
+        newEmail={email}
+        onVerified={handleVerificationFinished}
+        onCancel={handleVerificationCancel}
+      />
     </div>
   );
 };

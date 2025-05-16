@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Loader } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 interface EmailVerificationModalProps {
   isOpen: boolean;
@@ -164,9 +164,9 @@ export function EmailVerificationModal({
   const handleResendVerification = async () => {
     setIsChecking(true);
     try {
-      // Try to update the email again to trigger a new verification email
-      const { error } = await supabase.auth.updateUser({ 
-        email: newEmail 
+      // Different approach for login verification vs email change verification
+      const { error } = await supabase.auth.resetPasswordForEmail(newEmail, {
+        redirectTo: `${window.location.origin}/login`
       });
       
       if (error) {
@@ -179,7 +179,6 @@ export function EmailVerificationModal({
       } else {
         console.log("Verification email resent to:", newEmail);
         toast({
-          variant: "success",
           title: "Email sent",
           description: "Verification email has been resent. Please check your inbox."
         });
@@ -215,30 +214,29 @@ export function EmailVerificationModal({
         <div className="flex flex-col space-y-4 py-4">
           <div className="text-sm text-gray-500">
             You won't be able to continue using the app until you verify your email address.
-            {checkCount > 3 && (
+            {checkCount > 0 && (
               <p className="mt-2 text-amber-600">
                 Still haven't received the email? Check your spam folder or try again.
               </p>
             )}
           </div>
           
-          {checkCount > 5 && (
-            <Button 
-              variant="outline" 
-              onClick={handleResendVerification}
-              disabled={isChecking}
-              className="w-full"
-            >
-              {isChecking ? (
-                <>
-                  <Loader className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                "Resend Verification Email"
-              )}
-            </Button>
-          )}
+          {/* Make resend button available immediately */}
+          <Button 
+            variant="outline" 
+            onClick={handleResendVerification}
+            disabled={isChecking}
+            className="w-full"
+          >
+            {isChecking ? (
+              <>
+                <Loader className="h-4 w-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              "Resend Verification Email"
+            )}
+          </Button>
         </div>
         
         <div className="flex space-x-2 justify-between items-center">
@@ -246,7 +244,7 @@ export function EmailVerificationModal({
             variant="outline" 
             onClick={handleCancel}
           >
-            Cancel Change
+            Cancel
           </Button>
           
           <Button 
