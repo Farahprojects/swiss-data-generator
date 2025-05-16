@@ -30,11 +30,10 @@ import ConfirmEmail from './pages/auth/ConfirmEmail';
 
 function App() {
   return (
-    // Changed order: NavigationStateProvider wraps AuthProvider to resolve the dependency issue
-    <NavigationStateProvider>
-      <AuthProvider>
-        <SidebarProvider>
-          <Router>
+    <Router>
+      <NavigationStateProvider>
+        <AuthProvider>
+          <SidebarProvider>
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Home />} />
@@ -72,11 +71,11 @@ function App() {
               
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </Router>
-        </SidebarProvider>
-      </AuthProvider>
-      <Toaster />
-    </NavigationStateProvider>
+          </SidebarProvider>
+        </AuthProvider>
+        <Toaster />
+      </NavigationStateProvider>
+    </Router>
   );
 }
 
