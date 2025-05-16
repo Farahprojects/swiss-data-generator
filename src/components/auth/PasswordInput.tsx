@@ -11,6 +11,7 @@ interface PasswordInputProps {
   showRequirements?: boolean;
   onChange: (password: string) => void;
   label?: string;
+  onFocus?: () => void;
 }
 
 const PasswordInput: React.FC<PasswordInputProps> = ({ 
@@ -18,7 +19,8 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   isValid, 
   showRequirements = true, 
   onChange,
-  label = "Password" 
+  label = "Password",
+  onFocus
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -31,6 +33,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           type={showPassword ? "text" : "password"}
           value={password}
           onChange={(e) => onChange(e.target.value)}
+          onFocus={onFocus}
           className={`mt-1 pr-10 ${!isValid && password ? 'border-red-500' : ''}`}
           required
         />

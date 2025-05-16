@@ -9,6 +9,7 @@ interface EmailInputProps {
   onChange: (email: string) => void;
   disabled?: boolean;
   label?: string;
+  onFocus?: () => void;
 }
 
 const EmailInput: React.FC<EmailInputProps> = ({ 
@@ -16,7 +17,8 @@ const EmailInput: React.FC<EmailInputProps> = ({
   isValid, 
   onChange, 
   disabled = false, 
-  label = "Email" 
+  label = "Email",
+  onFocus
 }) => {
   return (
     <div className="space-y-2">
@@ -26,6 +28,7 @@ const EmailInput: React.FC<EmailInputProps> = ({
         type="email"
         value={email}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
         className={`mt-1 ${!isValid && email ? 'border-red-500' : ''} ${disabled ? 'bg-gray-100' : ''}`}
         required
         disabled={disabled}
@@ -39,4 +42,3 @@ const EmailInput: React.FC<EmailInputProps> = ({
 };
 
 export default EmailInput;
-

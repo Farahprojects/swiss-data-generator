@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +30,13 @@ const Login = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { getSafeRedirectPath } = useNavigationState();
+
+  // Clear error message when user clicks on an input field
+  const handleInputFocus = () => {
+    if (invalidCredentials) {
+      setInvalidCredentials(false);
+    }
+  };
 
   // Reset the invalid credentials message when user types in the forms
   useEffect(() => {
@@ -267,12 +273,11 @@ const Login = () => {
           )}
 
           {invalidCredentials && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
+            <div className="text-center mb-4">
+              <p className="text-red-600 font-medium">
                 Invalid email or password. Please try again.
-              </AlertDescription>
-            </Alert>
+              </p>
+            </div>
           )}
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -284,6 +289,7 @@ const Login = () => {
                   setEmail(value);
                   setEmailValid(validateEmail(value));
                 }}
+                onFocus={handleInputFocus}
               />
 
               <PasswordInput
@@ -294,6 +300,7 @@ const Login = () => {
                   setPassword(value);
                   setPasswordValid(value.length >= 6);
                 }}
+                onFocus={handleInputFocus}
               />
             </div>
 
