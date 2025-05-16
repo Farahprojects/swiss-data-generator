@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader } from "lucide-react";
+import { Loader, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -24,6 +24,7 @@ export function EmailVerificationModal({
   const [checkCount, setCheckCount] = useState(0);
   const [intervalId, setIntervalId] = useState<number | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [emailSendStatus, setEmailSendStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const { toast } = useToast();
 
   // Set up auth state listener for email change events
@@ -172,22 +173,25 @@ export function EmailVerificationModal({
 
   const handleResendVerification = async () => {
     setIsSending(true);
+    setEmailSendStatus('sending');
     try {
       // Different approach for login verification vs email change verification
-      const { error } = await supabase.auth.resetPasswordForEmail(newEmail, {
+      const { error, data } = await supabase.auth.resetPasswordForEmail(newEmail, {
         redirectTo: `${window.location.origin}/login`
       });
       
       if (error) {
         console.error("Error resending verification email:", error);
+        setEmailSendStatus('error');
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to resend verification email. Please try again."
+          description: "Failed to send verification email. Please try again."
         });
       } else {
-        console.log("Verification email resent to:", newEmail);
+        console.log("Verification email sent to:", newEmail, "Response:", data);
         setEmailSent(true);
+        setEmailSendStatus('success');
         toast({
           title: "Email sent",
           description: "Verification email has been sent. Please check your inbox."
@@ -196,6 +200,7 @@ export function EmailVerificationModal({
       }
     } catch (error) {
       console.error("Error resending verification:", error);
+      setEmailSendStatus('error');
       toast({
         variant: "destructive",
         title: "Error",
@@ -204,6 +209,26 @@ export function EmailVerificationModal({
     } finally {
       setIsSending(false);
     }
+  };
+
+  // Helper to get notification message based on status
+  const getNotificationMessage = () => {
+    if (emailSendStatus === 'success') {
+      return (
+        <div className="mt-4 p-2 bg-green-50 text-green-700 rounded-md flex items-center">
+          <CheckCircle2 className="h-5 w-5 mr-2 flex-shrink-0" />
+          <p className="text-sm">Email successfully sent to <strong>{newEmail}</strong></p>
+        </div>
+      );
+    } else if (emailSendStatus === 'error') {
+      return (
+        <div className="mt-4 p-2 bg-red-50 text-red-700 rounded-md flex items-center">
+          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+          <p className="text-sm">Failed to send email. Please try again.</p>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -246,6 +271,9 @@ export function EmailVerificationModal({
               </>
             )}
           </div>
+          
+          {/* Email send status notification */}
+          {getNotificationMessage()}
           
           {/* Resend button is always available, with visual feedback */}
           <Button 
