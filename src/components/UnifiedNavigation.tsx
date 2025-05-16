@@ -31,7 +31,7 @@ const UnifiedNavigation = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login');
+    // Removed navigate('/login') as signOut already handles redirection
   };
 
   const handleViewSettings = (section: string) => {

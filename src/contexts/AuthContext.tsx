@@ -171,8 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Continue even if this fails
       }
       
-      // Force reload to ensure clean state
-      window.location.href = '/';
+      // Force navigation to login page instead of home
+      window.location.href = '/login';
     } catch (error) {
       console.error("Sign out unexpected error:", error);
     } finally {

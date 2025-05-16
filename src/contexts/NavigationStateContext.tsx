@@ -26,7 +26,30 @@ interface NavigationStateProviderProps {
 }
 
 // List of routes that should not be stored as the last route
-const RESTRICTED_ROUTES = ['/login', '/signup', '/payment-return', '/auth/email'];
+// Added all dashboard routes to prevent dashboard redirect loops
+const RESTRICTED_ROUTES = [
+  '/login', 
+  '/signup', 
+  '/payment-return', 
+  '/auth/email',
+  '/dashboard',
+  '/dashboard/settings',
+  '/dashboard/upgrade',
+  '/dashboard/activity-logs',
+  '/dashboard/api-keys',
+  '/dashboard/docs',
+  '/dashboard/usage',
+  '/dashboard/billing',
+  '/dashboard/pricing'
+];
+
+// Helper function to check if a path is a dashboard path regardless of query params
+const isDashboardPath = (path: string): boolean => {
+  return path.startsWith('/dashboard') || RESTRICTED_ROUTES.some(route => {
+    // Check if the path matches a restricted route or is a sub-route with query params
+    return path === route || path.startsWith(`${route}/`) || path.startsWith(`${route}?`);
+  });
+};
 
 const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ children }) => {
   // Initialize from localStorage with more error handling
@@ -57,8 +80,8 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
     const currentPath = location.pathname;
     const currentParams = location.search;
     
-    // Only store non-restricted routes
-    if (!RESTRICTED_ROUTES.includes(currentPath)) {
+    // Check if the current path is restricted using the enhanced dashboard check
+    if (!isDashboardPath(currentPath)) {
       try {
         localStorage.setItem('last_route', currentPath);
         setLastRoute(currentPath);
@@ -74,6 +97,8 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
       } catch (e) {
         console.error('Error saving route to localStorage:', e);
       }
+    } else {
+      console.log(`NavigationState: Not saving restricted route: ${currentPath}`);
     }
   }, [location.pathname, location.search]);
 
@@ -93,18 +118,18 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   // More robust safe redirect path retrieval
   const getSafeRedirectPath = (): string => {
     try {
-      let storedPath = '/'; // Default fallback to home instead of dashboard
+      let storedPath = '/'; // Default fallback to home
       let storedParams = '';
       
       // Try to get from state first (most recent)
-      if (lastRoute && !RESTRICTED_ROUTES.includes(lastRoute)) {
+      if (lastRoute && !isDashboardPath(lastRoute)) {
         storedPath = lastRoute;
         storedParams = lastRouteParams;
       } else {
         // Fall back to localStorage if state is restricted
         const localPath = localStorage.getItem('last_route');
         if (localPath && typeof localPath === 'string' 
-            && !RESTRICTED_ROUTES.includes(localPath)) {
+            && !isDashboardPath(localPath)) {
           storedPath = localPath;
           const localParams = localStorage.getItem('last_route_params');
           if (localParams && typeof localParams === 'string') {
