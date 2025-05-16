@@ -47,7 +47,7 @@ function App() {
               <Route path="/contact" element={<Contact />} />
               <Route path="/payment-return" element={<PaymentReturn />} />
               
-              {/* Auth redirect pages */}
+              {/* Auth redirect pages - Accessible on www.theraiastro.com */}
               <Route path="/auth/verify-email-change" element={<VerifyEmailChange />} />
               <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
               
