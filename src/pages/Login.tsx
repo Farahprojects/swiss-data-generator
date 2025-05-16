@@ -27,7 +27,7 @@ const Login = () => {
   // Redirect authenticated users
   if (user) {
     console.log("User already authenticated, redirecting");
-    // Get the path from location state, fallback to the last saved route, or default to dashboard
+    // Get the path from location state, fallback to the last saved route, or default to home
     const from = 
       (location.state?.from?.pathname) || 
       getSafeRedirectPath();
@@ -51,7 +51,7 @@ const Login = () => {
         description: "Successfully signed in!",
       });
 
-      // Use the location state, navigation context, or fallback to dashboard
+      // Use the location state, navigation context, or fallback to home
       const redirectPath = 
         (location.state?.from?.pathname) || 
         getSafeRedirectPath();

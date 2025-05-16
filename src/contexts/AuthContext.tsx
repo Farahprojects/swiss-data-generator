@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { cleanupAuthState } from '@/utils/authCleanup';
+import { useNavigationState } from '@/contexts/NavigationStateContext';
 
 type AuthContextType = {
   user: User | null;
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { clearNavigationState } = useNavigationState();
 
   useEffect(() => {
     // Set up auth state listener first
@@ -154,7 +156,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Signing out...");
       setLoading(true);
       
-      // Clean up auth state first
+      // Clear navigation state first to prevent redirect loops
+      clearNavigationState();
+      
+      // Clean up auth state
       cleanupAuthState();
       
       // Try global sign out (more thorough)

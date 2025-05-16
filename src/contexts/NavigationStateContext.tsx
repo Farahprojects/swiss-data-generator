@@ -1,11 +1,13 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 type NavigationStateContextType = {
   lastRoute: string;
   setLastRoute: (route: string) => void;
   lastRouteParams: string;
   setLastRouteParams: (params: string) => void;
+  clearNavigationState: () => void;
   getSafeRedirectPath: () => string;
 };
 
@@ -23,15 +25,18 @@ interface NavigationStateProviderProps {
   children: React.ReactNode;
 }
 
+// List of routes that should not be stored as the last route
+const RESTRICTED_ROUTES = ['/login', '/signup', '/payment-return', '/auth/email'];
+
 const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ children }) => {
   // Initialize from localStorage with more error handling
   const [lastRoute, setLastRoute] = useState<string>(() => {
     try {
       const storedRoute = localStorage.getItem('last_route');
-      return storedRoute && typeof storedRoute === 'string' ? storedRoute : '/dashboard';
+      return storedRoute && typeof storedRoute === 'string' ? storedRoute : '/';
     } catch (e) {
       console.error('Error reading last_route from localStorage:', e);
-      return '/dashboard';
+      return '/';
     }
   });
   
@@ -45,43 +50,61 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
     }
   });
 
-  // Read from localStorage every render to stay in sync
-  // This is critical for state consistency between components
+  const location = useLocation();
+
+  // Automatically track and save the current route when it changes
   useEffect(() => {
-    try {
-      const storedRoute = localStorage.getItem('last_route');
-      if (storedRoute && storedRoute !== lastRoute) {
-        console.log(`NavigationStateContext: Updated lastRoute from localStorage to ${storedRoute}`);
-        setLastRoute(storedRoute);
+    const currentPath = location.pathname;
+    const currentParams = location.search;
+    
+    // Only store non-restricted routes
+    if (!RESTRICTED_ROUTES.includes(currentPath)) {
+      try {
+        localStorage.setItem('last_route', currentPath);
+        setLastRoute(currentPath);
+        
+        if (currentParams) {
+          localStorage.setItem('last_route_params', currentParams);
+          setLastRouteParams(currentParams);
+        } else {
+          localStorage.removeItem('last_route_params');
+          setLastRouteParams('');
+        }
+        console.log(`NavigationState: Saved route ${currentPath}${currentParams}`);
+      } catch (e) {
+        console.error('Error saving route to localStorage:', e);
       }
-      
-      const storedParams = localStorage.getItem('last_route_params') || '';
-      if (storedParams !== lastRouteParams) {
-        console.log(`NavigationStateContext: Updated lastRouteParams from localStorage to ${storedParams}`);
-        setLastRouteParams(storedParams);
-      }
-    } catch (e) {
-      console.error('Error syncing with localStorage in NavigationStateContext:', e);
     }
-  }, []);
+  }, [location.pathname, location.search]);
+
+  // Clear navigation state (used on signout)
+  const clearNavigationState = () => {
+    try {
+      localStorage.removeItem('last_route');
+      localStorage.removeItem('last_route_params');
+      setLastRoute('/');
+      setLastRouteParams('');
+      console.log('NavigationState: Cleared navigation state');
+    } catch (e) {
+      console.error('Error clearing navigation state:', e);
+    }
+  };
 
   // More robust safe redirect path retrieval
   const getSafeRedirectPath = (): string => {
     try {
-      let storedPath = '/dashboard'; // Default fallback
+      let storedPath = '/'; // Default fallback to home instead of dashboard
       let storedParams = '';
       
       // Try to get from state first (most recent)
-      if (lastRoute && lastRoute !== '/login' && lastRoute !== '/signup' && lastRoute !== '/payment-return') {
+      if (lastRoute && !RESTRICTED_ROUTES.includes(lastRoute)) {
         storedPath = lastRoute;
         storedParams = lastRouteParams;
       } else {
         // Fall back to localStorage if state is restricted
         const localPath = localStorage.getItem('last_route');
         if (localPath && typeof localPath === 'string' 
-            && localPath !== '/login' 
-            && localPath !== '/signup' 
-            && localPath !== '/payment-return') {
+            && !RESTRICTED_ROUTES.includes(localPath)) {
           storedPath = localPath;
           const localParams = localStorage.getItem('last_route_params');
           if (localParams && typeof localParams === 'string') {
@@ -90,19 +113,12 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
         }
       }
       
-      // Check if storedPath is a restricted route
-      const restrictedRoutes = ['/login', '/signup', '/payment-return'];
-      if (restrictedRoutes.includes(storedPath)) {
-        console.log('NavigationStateContext: Redirecting to /dashboard (restricted route detected)');
-        return '/dashboard';
-      }
-      
       console.log(`NavigationStateContext: Safe redirect path: ${storedPath}${storedParams}`);
       // Return the safe path with params if available
       return `${storedPath}${storedParams}`;
     } catch (e) {
       console.error('Error in getSafeRedirectPath:', e);
-      return '/dashboard'; // Ultimate fallback
+      return '/'; // Ultimate fallback to home instead of dashboard
     }
   };
 
@@ -113,6 +129,7 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
         setLastRoute, 
         lastRouteParams, 
         setLastRouteParams,
+        clearNavigationState,
         getSafeRedirectPath
       }}
     >
