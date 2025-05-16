@@ -176,13 +176,33 @@ serve(async (req) => {
   }
 
   urlObj.searchParams.delete("api_key");
+  
+  // Create the merged payload from URL parameters and body
   const mergedPayload = {
     ...(bodyJson ?? {}),
     ...Object.fromEntries(urlObj.searchParams.entries()),
     user_id: row.user_id,
     api_key: apiKey,
-    auth_method: authMethod, // Include authentication method in payload for logging
+    auth_method: authMethod, 
   };
+
+  // Special handling for email-based requests
+  if (authMethod === "email" && bodyJson?.body) {
+    console.log("[swiss] Processing email payload with body:", bodyJson.body);
+    
+    // Extract the body content and use it as the "request" field
+    mergedPayload.request = String(bodyJson.body);
+    
+    // Set subject as additional metadata if available
+    if (bodyJson.subject) {
+      mergedPayload.email_subject = bodyJson.subject;
+    }
+    
+    // Remove the original body field as we've now extracted its content
+    delete mergedPayload.body;
+    
+    console.log("[swiss] Transformed email payload:", mergedPayload);
+  }
 
   const { status, text } = await translate(mergedPayload);
 
