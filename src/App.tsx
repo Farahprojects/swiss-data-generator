@@ -26,6 +26,8 @@ import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "./components/ui/toaster";
 import { SidebarProvider } from './components/ui/sidebar';
 import NavigationStateProvider from './contexts/NavigationStateContext';
+import VerifyEmailChange from './pages/auth/VerifyEmailChange';
+import ConfirmEmail from './pages/auth/ConfirmEmail';
 
 function App() {
   return (
@@ -44,6 +46,10 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/payment-return" element={<PaymentReturn />} />
+              
+              {/* Auth redirect pages */}
+              <Route path="/auth/verify-email-change" element={<VerifyEmailChange />} />
+              <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
               
               {/* Protected dashboard routes with nested structure */}
               <Route 
