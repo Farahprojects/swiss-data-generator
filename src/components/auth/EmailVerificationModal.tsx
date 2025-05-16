@@ -1,319 +1,167 @@
-
-import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEffect, useState, useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
-interface EmailVerificationModalProps {
+interface Props {
   isOpen: boolean;
   newEmail: string;
   onVerified: () => void;
   onCancel: () => void;
 }
 
-export function EmailVerificationModal({
-  isOpen,
-  newEmail,
-  onVerified,
-  onCancel,
-}: EmailVerificationModalProps) {
-  const [isChecking, setIsChecking] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [checkCount, setCheckCount] = useState(0);
-  const [intervalId, setIntervalId] = useState<number | null>(null);
-  const [emailSent, setEmailSent] = useState(false);
-  const [emailSendStatus, setEmailSendStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+/**
+ * Modal that sends / tracks Supabase email‑change verification.
+ * – Sends a confirmation email via `updateUser({ email })` when opened or on resend.
+ * – Listens for `USER_UPDATED` events and polls every 3 s until the email is confirmed.
+ * – Keeps UX feedback minimal but clear.
+ */
+export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel }: Props) {
   const { toast } = useToast();
 
-  // Set up auth state listener for email change events
-  useEffect(() => {
-    if (!isOpen) return;
-    
-    console.log("Setting up auth state listener for email verification");
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state change event:", event);
-      
-      if (event === 'USER_UPDATED' || event === 'SIGNED_IN') {
-        console.log("Email change confirmed or user updated:", session?.user);
-        
-        // Check if the user's email matches the new email and is confirmed
-        if (session?.user?.email === newEmail && session?.user?.email_confirmed_at) {
-          console.log("Email verified successfully:", newEmail);
-          
-          // Stop polling when email is verified
-          if (intervalId) {
-            clearInterval(intervalId);
-            setIntervalId(null);
-          }
-          
-          // Clear all verification-related state
-          setIsChecking(false);
-          setCheckCount(0);
-          
-          // Only then call the onVerified callback
-          onVerified();
-        }
-      }
-    });
-    
-    return () => {
-      console.log("Cleaning up auth state listener");
-      subscription.unsubscribe();
-      
-      // Also clear any polling intervals when component unmounts
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [isOpen, newEmail, onVerified, intervalId]);
+  // UI state
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [checking, setChecking] = useState(false);
 
-  // Poll for email verification status
-  useEffect(() => {
-    if (!isOpen) return;
+  // keep a stable interval id without rerenders
+  const intervalRef = useRef<number | null>(null);
 
-    // Clear any existing intervals when component mounts or isOpen changes
-    if (intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
+  /* ------------------------------------------------------------------ */
+  /* Helpers                                                            */
+  /* ------------------------------------------------------------------ */
+  const clearPolling = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
+  };
 
-    const checkEmailVerificationStatus = async () => {
-      if (!isChecking) {
-        setIsChecking(true);
-        try {
-          // Force refresh the session to get the latest user data
-          await supabase.auth.refreshSession();
-          const { data } = await supabase.auth.getUser();
-          
-          console.log("Checking email verification status:", data?.user?.email, "New email:", newEmail);
-          console.log("Email confirmed at:", data?.user?.email_confirmed_at);
-          
-          // Check if the current email matches the new email and is confirmed
-          if (data?.user?.email === newEmail && data?.user?.email_confirmed_at) {
-            console.log("Email verified at:", data.user.email_confirmed_at);
-            
-            if (intervalId) {
-              clearInterval(intervalId);
-              setIntervalId(null);
-            }
-            
-            // Don't call onVerified here, let the auth state listener handle it
-            // This avoids potential race conditions or double-calling
-            setIsChecking(false);
-          } else {
-            console.log("Email not verified yet, poll count:", checkCount + 1);
-            setCheckCount(prev => prev + 1);
-            setIsChecking(false);
-          }
-        } catch (error) {
-          console.error("Error checking verification status:", error);
-          setIsChecking(false);
-        }
-      }
-    };
+  const startPolling = () => {
+    clearPolling();
+    const id = window.setInterval(checkVerified, 3000);
+    intervalRef.current = id;
+  };
 
-    // Run immediately when the modal opens
-    checkEmailVerificationStatus();
-
-    // Then set interval for polling with a shorter interval (3 seconds)
-    const id = window.setInterval(checkEmailVerificationStatus, 3000);
-    setIntervalId(id);
-    
-    // Cleanup function to clear interval when component unmounts or isOpen changes
-    return () => {
-      if (id) clearInterval(id);
-    };
-  }, [isOpen, newEmail, checkCount, isChecking]);
-
-  // Auto-send verification email when modal opens
-  useEffect(() => {
-    if (isOpen && !emailSent) {
-      handleResendVerification();
-    }
-  }, [isOpen]);
-
-  const handleManualVerifyClick = async () => {
-    setIsChecking(true);
+  const checkVerified = async () => {
+    if (checking) return;
+    setChecking(true);
     try {
-      // Force refresh the session to get the latest user data
       await supabase.auth.refreshSession();
       const { data } = await supabase.auth.getUser();
-      
-      console.log("Manual verification check:", data?.user?.email, "New email:", newEmail);
-      
-      if (data?.user?.email === newEmail && data?.user?.email_confirmed_at) {
-        console.log("Email verified during manual check");
+      if (data.user?.email === newEmail && data.user?.email_confirmed_at) {
+        clearPolling();
         onVerified();
-      } else {
-        console.log("Email still not verified after manual check");
-        toast({
-          variant: "destructive", 
-          title: "Email not verified",
-          description: "Please check your inbox and click the verification link."
-        });
-        setIsChecking(false);
       }
-    } catch (error) {
-      console.error("Error checking verification status:", error);
-      setIsChecking(false);
-    }
-  };
-
-  const handleCancel = () => {
-    // The user wants to cancel the email change
-    if (intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
-    }
-    onCancel();
-  };
-
-  const handleResendVerification = async () => {
-    setIsSending(true);
-    setEmailSendStatus('sending');
-    try {
-      // Different approach for login verification vs email change verification
-      const { error, data } = await supabase.auth.resetPasswordForEmail(newEmail, {
-        redirectTo: `${window.location.origin}/login`
-      });
-      
-      if (error) {
-        console.error("Error resending verification email:", error);
-        setEmailSendStatus('error');
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to send verification email. Please try again."
-        });
-      } else {
-        console.log("Verification email sent to:", newEmail, "Response:", data);
-        setEmailSent(true);
-        setEmailSendStatus('success');
-        toast({
-          title: "Email sent",
-          description: "Verification email has been sent. Please check your inbox."
-        });
-        setCheckCount(0); // Reset the check count
-      }
-    } catch (error) {
-      console.error("Error resending verification:", error);
-      setEmailSendStatus('error');
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An unexpected error occurred. Please try again."
-      });
     } finally {
-      setIsSending(false);
+      setChecking(false);
     }
   };
 
-  // Helper to get notification message based on status
-  const getNotificationMessage = () => {
-    if (emailSendStatus === 'success') {
+  const sendVerification = async () => {
+    setStatus("sending");
+    try {
+      /**
+       * Supabase will send a confirmation link automatically when we update the email.
+       */
+      const { error } = await supabase.auth.updateUser({ email: newEmail });
+      if (error) throw error;
+      setStatus("success");
+      toast({ title: "Email sent", description: "Check your inbox for the verification link." });
+      startPolling();
+    } catch (err: any) {
+      setStatus("error");
+      toast({ variant: "destructive", title: "Error", description: err.message });
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Lifecycle                                                          */
+  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    if (!isOpen) {
+      clearPolling();
+      return;
+    }
+
+    // Fire once when modal opens
+    sendVerification();
+
+    // Listen for direct auth events (covers instant clicks)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "USER_UPDATED" && session?.user?.email === newEmail && session.user.email_confirmed_at) {
+        clearPolling();
+        onVerified();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearPolling();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, newEmail]);
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
+  const renderNotif = () => {
+    if (status === "success")
       return (
-        <div className="mt-4 p-2 bg-green-50 text-green-700 rounded-md flex items-center">
-          <CheckCircle2 className="h-5 w-5 mr-2 flex-shrink-0" />
-          <p className="text-sm">Email successfully sent to <strong>{newEmail}</strong></p>
+        <div className="mt-4 flex items-center rounded-md bg-green-50 p-2 text-green-700">
+          <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0" />
+          <p className="text-sm">Email sent to <strong>{newEmail}</strong></p>
         </div>
       );
-    } else if (emailSendStatus === 'error') {
+    if (status === "error")
       return (
-        <div className="mt-4 p-2 bg-red-50 text-red-700 rounded-md flex items-center">
-          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+        <div className="mt-4 flex items-center rounded-md bg-red-50 p-2 text-red-700">
+          <AlertCircle className="mr-2 h-5 w-5 flex-shrink-0" />
           <p className="text-sm">Failed to send email. Please try again.</p>
         </div>
       );
-    }
     return null;
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent 
-        className="sm:max-w-md" 
+      <DialogContent
+        className="sm:max-w-md"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle>Verify Your Email Address</DialogTitle>
           <DialogDescription>
-            {emailSent ? (
-              <>
-                We've sent a verification link to <strong>{newEmail}</strong>.
-                Please check your inbox and confirm to continue.
-              </>
-            ) : (
-              <>
-                Your email address <strong>{newEmail}</strong> needs to be verified.
-              </>
-            )}
+            We’ve sent a verification link to <strong>{newEmail}</strong>. Please confirm to continue.
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="flex flex-col space-y-4 py-4">
-          <div className="text-sm text-gray-500">
-            {emailSent ? (
+
+        <div className="flex flex-col space-y-4 py-4 text-sm text-gray-600">
+          You won’t be able to continue using the app until you verify your email address.
+          {renderNotif()}
+          <Button variant="outline" onClick={sendVerification} disabled={status === "sending"} className="w-full">
+            {status === "sending" ? (
               <>
-                You won't be able to continue using the app until you verify your email address.
-                {checkCount > 0 && (
-                  <p className="mt-2 text-amber-600">
-                    Still haven't received the email? Check your spam folder or try again.
-                  </p>
-                )}
+                <Loader className="mr-2 h-4 w-4 animate-spin" /> Sending…
               </>
             ) : (
-              <>
-                Click the button below to send a verification email.
-              </>
-            )}
-          </div>
-          
-          {/* Email send status notification */}
-          {getNotificationMessage()}
-          
-          {/* Resend button is always available, with visual feedback */}
-          <Button 
-            variant="outline" 
-            onClick={handleResendVerification}
-            disabled={isSending}
-            className="w-full"
-          >
-            {isSending ? (
-              <>
-                <Loader className="h-4 w-4 mr-2 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              emailSent ? "Resend Verification Email" : "Send Verification Email"
+              "Resend verification email"
             )}
           </Button>
         </div>
-        
-        <div className="flex space-x-2 justify-between items-center">
-          <Button 
-            variant="outline" 
-            onClick={handleCancel}
-          >
-            Cancel
-          </Button>
-          
-          <Button 
-            onClick={handleManualVerifyClick} 
-            disabled={isChecking}
-            className="flex items-center space-x-2"
-          >
-            {isChecking ? (
-              <>
-                <Loader className="h-4 w-4 animate-spin mr-2" />
-                <span>Checking...</span>
-              </>
-            ) : (
-              <span>I've Verified My Email</span>
-            )}
+
+        <div className="flex items-center justify-between space-x-2">
+          <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button onClick={checkVerified} disabled={checking} className="flex items-center space-x-2">
+            {checking && <Loader className="mr-2 h-4 w-4 animate-spin" />} I’ve verified my email
           </Button>
         </div>
       </DialogContent>
