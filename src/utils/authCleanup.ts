@@ -67,3 +67,41 @@ export const checkForAuthRemnants = () => {
   return false;
 };
 
+/**
+ * Detects phantom authentication states and cleans them up
+ * Should be used on public pages to prevent redirect loops
+ * @returns true if phantom auth was found and cleaned up
+ */
+export const detectAndCleanPhantomAuth = async (supabase: any): Promise<boolean> => {
+  console.log("🔍 Checking for phantom authentication state");
+  
+  // Check for auth remnants
+  const hasAuthRemnants = checkForAuthRemnants();
+  
+  if (hasAuthRemnants) {
+    console.log("🔍 Auth remnants found, checking if session exists");
+    
+    try {
+      // Try to get the current session from Supabase
+      const { data } = await supabase.auth.getSession();
+      const validSession = data?.session;
+      
+      // If we have auth remnants but no valid session, clean up
+      if (!validSession) {
+        console.log("🧹 Phantom auth detected! Auth remnants exist but no valid session found");
+        cleanupAuthState();
+        return true;
+      } else {
+        console.log("✅ Valid session exists, not a phantom auth situation");
+      }
+    } catch (error) {
+      console.error("❌ Error checking session, cleaning up just in case", error);
+      cleanupAuthState();
+      return true;
+    }
+  } else {
+    console.log("✅ No auth remnants found, clean state");
+  }
+  
+  return false;
+};

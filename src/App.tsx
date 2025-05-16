@@ -27,8 +27,10 @@ import { Toaster } from "./components/ui/toaster";
 import { SidebarProvider } from './components/ui/sidebar';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
+import { detectAndCleanPhantomAuth } from './utils/authCleanup';
+import { supabase } from './integrations/supabase/client';
 
-// Route debugging wrapper
+// Route debugging wrapper with phantom auth detection
 const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   
@@ -44,6 +46,27 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
       console.log("Found Supabase items in localStorage:", supabaseItems);
     } else {
       console.log("No Supabase items found in localStorage");
+    }
+    
+    // Check if we're on a public page that needs phantom auth detection
+    const isPublicPage = [
+      '/', 
+      '/login', 
+      '/signup', 
+      '/api-products', 
+      '/pricing', 
+      '/documentation',
+      '/about',
+      '/contact'
+    ].includes(location.pathname);
+    
+    if (isPublicPage) {
+      console.log("On public page, checking for phantom authentication");
+      detectAndCleanPhantomAuth(supabase).then(wasPhantom => {
+        if (wasPhantom) {
+          console.log("Phantom auth was detected and cleaned up");
+        }
+      });
     }
   }, [location]);
   
