@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,12 +24,20 @@ const Login = () => {
   const [passwordValid, setPasswordValid] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [verificationNeeded, setVerificationNeeded] = useState(false);
+  const [invalidCredentials, setInvalidCredentials] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
   const { signIn, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const { getSafeRedirectPath } = useNavigationState();
+
+  // Reset the invalid credentials message when user types in the forms
+  useEffect(() => {
+    if (invalidCredentials && (email || password)) {
+      setInvalidCredentials(false);
+    }
+  }, [email, password, invalidCredentials]);
 
   // Check for login loop on mount and force cleanup if needed
   useEffect(() => {
@@ -98,6 +107,7 @@ const Login = () => {
     
     setLoading(true);
     setVerificationNeeded(false);
+    setInvalidCredentials(false);
     console.log("🔑 Login form submitted for:", email);
     console.log("🔑 Current localStorage before login:", Object.keys(localStorage));
     
@@ -113,8 +123,13 @@ const Login = () => {
       if (error) {
         console.error("🔑 Login error:", error);
         
-        // Check specifically for email verification errors
-        if (error.message?.includes("Email not confirmed") || 
+        // Check specifically for invalid credentials error
+        if (error.message?.includes("Invalid login credentials")) {
+          console.log("🔑 Invalid credentials detected");
+          setInvalidCredentials(true);
+        }
+        // Check for email verification errors
+        else if (error.message?.includes("Email not confirmed") || 
             error.message?.includes("not confirmed") ||
             error.message?.includes("not verified")) {
           console.log("🔑 Email verification needed");
@@ -247,6 +262,15 @@ const Login = () => {
                 >
                   {resendLoading ? "Sending..." : "Resend Verification Email"}
                 </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {invalidCredentials && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Invalid email or password. Please try again.
               </AlertDescription>
             </Alert>
           )}
