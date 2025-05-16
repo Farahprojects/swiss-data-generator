@@ -1,44 +1,47 @@
-
-import React from 'react';
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-interface EmailInputProps {
+interface Props {
   email: string;
   isValid: boolean;
-  onChange: (email: string) => void;
-  disabled?: boolean;
-  label?: string;
+  onChange: (value: string) => void;
   onFocus?: () => void;
+  disabled?: boolean;
 }
 
-const EmailInput: React.FC<EmailInputProps> = ({ 
-  email, 
-  isValid, 
-  onChange, 
-  disabled = false, 
-  label = "Email",
-  onFocus
-}) => {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor="email">{label}</Label>
-      <Input
-        id="email"
-        type="email"
-        value={email}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={onFocus}
-        className={`mt-1 ${!isValid && email ? 'border-red-500' : ''} ${disabled ? 'bg-gray-100' : ''}`}
-        required
-        disabled={disabled}
-        placeholder={disabled ? "Email verified from payment" : "Enter your email"}
-      />
-      {!isValid && email && (
-        <p className="text-sm text-red-500 mt-1">Please enter a valid email address</p>
-      )}
-    </div>
-  );
-};
+/**
+ * Slimmed‑down email field.
+ *  – Border turns red on invalid input.
+ *  – Error text appears only after the user types.
+ *  – Clears parent‑level form errors through onFocus.
+ */
+const EmailInput: React.FC<Props> = ({
+  email,
+  isValid,
+  onChange,
+  onFocus,
+  disabled = false,
+}) => (
+  <div className="space-y-1">
+    <Label htmlFor="email">Email</Label>
+
+    <Input
+      id="email"
+      type="email"
+      value={email}
+      onChange={(e) => onChange(e.target.value)}
+      onFocus={onFocus}
+      disabled={disabled}
+      placeholder="you@example.com"
+      className={!isValid && email ? "border-red-500" : ""}
+      required
+    />
+
+    {!isValid && email && (
+      <p className="text-xs text-red-600">Please enter a valid email address</p>
+    )}
+  </div>
+);
 
 export default EmailInput;
