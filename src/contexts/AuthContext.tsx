@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
-import { cleanupAuthState } from '@/utils/authCleanup';
+import { cleanupAuthState, checkForAuthRemnants } from '@/utils/authCleanup';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 
 type AuthContextType = {
@@ -23,11 +23,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { clearNavigationState } = useNavigationState();
 
+  // Check for auth remnants on mount
+  useEffect(() => {
+    console.log("========== AUTH CONTEXT INITIALIZATION ==========");
+    const hasRemnants = checkForAuthRemnants();
+    console.log("Auth remnants detected on mount:", hasRemnants);
+  }, []);
+
   useEffect(() => {
     console.log("AuthProvider: Setting up auth state listener");
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state change event:", event);
+      console.log("🔥 Auth state change event:", event, "With session:", !!session);
+      console.log("Auth state user email:", session?.user?.email || "no user");
+      console.log("Current path on auth change:", window.location.pathname);
+      
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -36,17 +46,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Use setTimeout to defer execution to next event loop
         setTimeout(() => {
           console.log("User authenticated:", session.user.email);
+          // Only redirect if on a public route
+          const isAuthPage = window.location.pathname === '/login' || window.location.pathname === '/signup';
+          if (isAuthPage) {
+            console.log("On auth page with authenticated user - should redirect to safe path");
+          }
         }, 0);
       }
       
       if (event === 'SIGNED_OUT') {
-        console.log("User signed out");
+        console.log("User signed out - auth event triggered");
+        console.log("Current localStorage after SIGNED_OUT event:", Object.keys(localStorage));
+        
+        // Check if there are any auth remnants after the event
+        setTimeout(() => {
+          console.log("Checking for auth remnants after SIGNED_OUT event");
+          const hasRemnants = checkForAuthRemnants();
+          console.log("Auth remnants after SIGNED_OUT:", hasRemnants);
+        }, 100);
       }
     });
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log("Initial session check:", session ? "Session found" : "No session");
+      if (session) {
+        console.log("Session user email:", session.user.email);
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -162,7 +188,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      console.log("Signing out...");
+      console.log("========== SIGN OUT PROCESS STARTED ==========");
+      console.log("Current path on sign out:", window.location.pathname);
+      console.log("Current localStorage before sign out:", Object.keys(localStorage));
+      console.log("Is user authenticated before sign out:", !!user);
       setLoading(true);
       
       // Clear navigation state first to prevent redirect loops
@@ -175,20 +204,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Try global sign out (more thorough)
       try {
-        await supabase.auth.signOut({ scope: 'global' });
-        console.log("Global sign out successful");
+        const { error } = await supabase.auth.signOut({ scope: 'global' });
+        if (error) {
+          console.error("Sign out API error:", error);
+        } else {
+          console.log("Global sign out API call successful");
+        }
       } catch (error) {
         console.error("Sign out error:", error);
         // Continue even if this fails
       }
       
-      console.log("Redirecting to login page after sign out");
-      // Force navigation to login page instead of home
-      window.location.href = '/login';
+      // Double check if auth state is really gone
+      setTimeout(() => {
+        console.log("Checking for auth remnants after signOut");
+        const hasRemnants = checkForAuthRemnants();
+        console.log("Auth remnants after signOut:", hasRemnants);
+        
+        // Force redirect to login page
+        console.log("Redirecting to login page after sign out using window.location");
+        window.location.href = '/login';
+      }, 200);
     } catch (error) {
       console.error("Sign out unexpected error:", error);
     } finally {
       setLoading(false);
+      console.log("========== SIGN OUT PROCESS COMPLETED ==========");
     }
   };
 

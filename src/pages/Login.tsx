@@ -11,6 +11,7 @@ import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail } from "@/utils/authValidation";
 import { useNavigationState } from "@/contexts/NavigationStateContext";
+import { checkForAuthRemnants } from "@/utils/authCleanup";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -24,21 +25,41 @@ const Login = () => {
   const { toast } = useToast();
   const { getSafeRedirectPath } = useNavigationState();
 
+  // Check for login loop on mount
+  useEffect(() => {
+    console.log("🔑 Login page mounted");
+    console.log("🔑 Current localStorage on Login mount:", Object.keys(localStorage));
+    const hasRemnants = checkForAuthRemnants();
+    console.log("🔑 Auth remnants detected on Login mount:", hasRemnants);
+    
+    // This is critical to detect if we're in a login loop
+    const mountTime = new Date().toISOString();
+    console.log(`🔑 Login page mount timestamp: ${mountTime}`);
+    
+    // Log referrer information
+    console.log("🔑 Document referrer:", document.referrer);
+    console.log("🔑 Previous navigation:", performance.getEntriesByType("navigation"));
+    
+    return () => {
+      console.log("🔑 Login page unmounted");
+    };
+  }, []);
+
   // Log incoming location state for debugging
   useEffect(() => {
-    console.log("Login page loaded with location state:", location.state);
-    console.log("Current localStorage:", Object.keys(localStorage));
+    console.log("🔑 Login page loaded with location state:", location.state);
+    console.log("🔑 Current localStorage:", Object.keys(localStorage));
   }, [location]);
 
   // Redirect authenticated users
   if (user) {
-    console.log("User already authenticated, redirecting");
+    console.log("🔑 User already authenticated, redirecting");
     // Get the path from location state, fallback to the last saved route, or default to home
     const from = 
       (location.state?.from?.pathname) || 
       getSafeRedirectPath();
     
-    console.log("Redirecting authenticated user to:", from);
+    console.log("🔑 Redirecting authenticated user to:", from);
     return <Navigate to={from} replace />;
   }
 
@@ -47,7 +68,8 @@ const Login = () => {
     if (!emailValid || !passwordValid) return;
     
     setLoading(true);
-    console.log("Login form submitted for:", email);
+    console.log("🔑 Login form submitted for:", email);
+    console.log("🔑 Current localStorage before login:", Object.keys(localStorage));
 
     try {
       const { error } = await signIn(email, password);
@@ -63,12 +85,12 @@ const Login = () => {
         (location.state?.from?.pathname) || 
         getSafeRedirectPath();
       
-      console.log("Login successful, redirecting to:", redirectPath);
+      console.log("🔑 Login successful, redirecting to:", redirectPath);
       
       // Force a full page reload after successful login to ensure clean state
       window.location.href = redirectPath;
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("🔑 Login error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to sign in",
