@@ -56,6 +56,7 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   const [lastRoute, setLastRoute] = useState<string>(() => {
     try {
       const storedRoute = localStorage.getItem('last_route');
+      console.log("NavigationStateProvider: Initial lastRoute from localStorage:", storedRoute);
       return storedRoute && typeof storedRoute === 'string' ? storedRoute : '/';
     } catch (e) {
       console.error('Error reading last_route from localStorage:', e);
@@ -66,6 +67,7 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   const [lastRouteParams, setLastRouteParams] = useState<string>(() => {
     try {
       const storedParams = localStorage.getItem('last_route_params');
+      console.log("NavigationStateProvider: Initial lastRouteParams from localStorage:", storedParams);
       return storedParams && typeof storedParams === 'string' ? storedParams : '';
     } catch (e) {
       console.error('Error reading last_route_params from localStorage:', e);
@@ -79,6 +81,8 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   useEffect(() => {
     const currentPath = location.pathname;
     const currentParams = location.search;
+    
+    console.log(`NavigationState: Current path: ${currentPath}, current params: ${currentParams}`);
     
     // Check if the current path is restricted using the enhanced dashboard check
     if (!isDashboardPath(currentPath)) {
@@ -105,11 +109,12 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   // Clear navigation state (used on signout)
   const clearNavigationState = () => {
     try {
+      console.log('NavigationState: Clearing navigation state');
       localStorage.removeItem('last_route');
       localStorage.removeItem('last_route_params');
       setLastRoute('/');
       setLastRouteParams('');
-      console.log('NavigationState: Cleared navigation state');
+      console.log('NavigationState: Cleared navigation state - lastRoute=/, lastRouteParams=""');
     } catch (e) {
       console.error('Error clearing navigation state:', e);
     }

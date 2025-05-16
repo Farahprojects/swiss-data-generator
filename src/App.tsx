@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
 import Login from './pages/Login';
@@ -28,49 +28,73 @@ import { SidebarProvider } from './components/ui/sidebar';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
 
+// Route debugging wrapper
+const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  
+  useEffect(() => {
+    console.log(`Route changed: ${location.pathname}${location.search}`);
+    
+    // Check if there are any localStorage items with 'supabase' in their names
+    const supabaseItems = Object.keys(localStorage).filter(key => 
+      key.includes('supabase') || key.includes('sb-')
+    );
+    
+    if (supabaseItems.length > 0) {
+      console.log("Found Supabase items in localStorage:", supabaseItems);
+    } else {
+      console.log("No Supabase items found in localStorage");
+    }
+  }, [location]);
+  
+  return <>{children}</>;
+};
+
 function App() {
   return (
     <Router>
       <NavigationStateProvider>
         <AuthProvider>
           <SidebarProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/api-products" element={<ApiProducts />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/documentation" element={<Documentation />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/payment-return" element={<PaymentReturn />} />
-              
-              {/* Auth redirect page - Accessible on www.theraiastro.com */}
-              <Route path="/auth/email" element={<ConfirmEmail />} />
-              
-              {/* Protected dashboard routes with nested structure */}
-              <Route 
-                path="/dashboard" 
-                element={
-                  <AuthGuard>
-                    <DashboardLayout />
-                  </AuthGuard>
-                }
-              >
-                <Route index element={<DashboardHome />} />
-                <Route path="settings" element={<UserSettings />} />
-                <Route path="upgrade" element={<UpgradePlan />} />
-                <Route path="activity-logs" element={<ActivityLogs />} />
-                <Route path="api-keys" element={<ApiKeys />} />
-                <Route path="docs" element={<ApiDocs />} />
-                <Route path="usage" element={<UsagePage />} />
-                <Route path="billing" element={<BillingPage />} />
-                <Route path="pricing" element={<PricingPage />} />
-              </Route>
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <RouteDebugger>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/api-products" element={<ApiProducts />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/documentation" element={<Documentation />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/payment-return" element={<PaymentReturn />} />
+                
+                {/* Auth redirect page - Accessible on www.theraiastro.com */}
+                <Route path="/auth/email" element={<ConfirmEmail />} />
+                
+                {/* Protected dashboard routes with nested structure */}
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <AuthGuard>
+                      <DashboardLayout />
+                    </AuthGuard>
+                  }
+                >
+                  <Route index element={<DashboardHome />} />
+                  <Route path="settings" element={<UserSettings />} />
+                  <Route path="upgrade" element={<UpgradePlan />} />
+                  <Route path="activity-logs" element={<ActivityLogs />} />
+                  <Route path="api-keys" element={<ApiKeys />} />
+                  <Route path="docs" element={<ApiDocs />} />
+                  <Route path="usage" element={<UsagePage />} />
+                  <Route path="billing" element={<BillingPage />} />
+                  <Route path="pricing" element={<PricingPage />} />
+                </Route>
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </RouteDebugger>
           </SidebarProvider>
         </AuthProvider>
         <Toaster />

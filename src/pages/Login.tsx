@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,12 @@ const Login = () => {
   const { toast } = useToast();
   const { getSafeRedirectPath } = useNavigationState();
 
+  // Log incoming location state for debugging
+  useEffect(() => {
+    console.log("Login page loaded with location state:", location.state);
+    console.log("Current localStorage:", Object.keys(localStorage));
+  }, [location]);
+
   // Redirect authenticated users
   if (user) {
     console.log("User already authenticated, redirecting");
@@ -32,6 +38,7 @@ const Login = () => {
       (location.state?.from?.pathname) || 
       getSafeRedirectPath();
     
+    console.log("Redirecting authenticated user to:", from);
     return <Navigate to={from} replace />;
   }
 

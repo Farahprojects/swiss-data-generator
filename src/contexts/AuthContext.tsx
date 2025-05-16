@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { clearNavigationState } = useNavigationState();
 
   useEffect(() => {
+    console.log("AuthProvider: Setting up auth state listener");
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state change event:", event);
@@ -51,7 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log("AuthProvider: Unsubscribing from auth state changes");
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -61,10 +65,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Clean up existing auth state to prevent conflicts
       cleanupAuthState();
+      console.log("Auth state cleaned up before sign in");
       
       // Try to sign out globally first to clear any existing sessions
       try {
         await supabase.auth.signOut({ scope: 'global' });
+        console.log("Global sign out completed before sign in");
       } catch (err) {
         console.log("Global sign out failed, continuing anyway:", err);
         // Continue even if this fails
@@ -95,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Clean up existing auth state
       cleanupAuthState();
+      console.log("Auth state cleaned up before sign up");
       
       const { data, error } = await supabase.auth.signUp({ 
         email, 
@@ -122,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     // Clean up existing auth state
     cleanupAuthState();
+    console.log("Auth state cleaned up before Google sign-in");
     
     // Get the current URL's base
     const baseUrl = window.location.origin;
@@ -132,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Try to sign out globally first
       try {
         await supabase.auth.signOut({ scope: 'global' });
+        console.log("Global sign out completed before Google sign-in");
       } catch (err) {
         console.log("Global sign out failed, continuing anyway");
         // Continue even if this fails
@@ -158,9 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Clear navigation state first to prevent redirect loops
       clearNavigationState();
+      console.log("Navigation state cleared during sign out");
       
       // Clean up auth state
       cleanupAuthState();
+      console.log("Auth state cleaned up during sign out");
       
       // Try global sign out (more thorough)
       try {
@@ -171,6 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Continue even if this fails
       }
       
+      console.log("Redirecting to login page after sign out");
       // Force navigation to login page instead of home
       window.location.href = '/login';
     } catch (error) {
