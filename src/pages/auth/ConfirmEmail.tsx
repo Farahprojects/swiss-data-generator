@@ -9,44 +9,49 @@ import Logo from '@/components/Logo';
 
 const ConfirmEmail = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState<string>('Confirming your email address...');
+  const [message, setMessage] = useState<string>('Verifying your email...');
   const navigate = useNavigate();
   const location = useLocation();
   
   useEffect(() => {
-    const confirmEmail = async () => {
+    const processEmailVerification = async () => {
       try {
-        // Get token from URL
+        // Get token and type from URL
         const searchParams = new URLSearchParams(location.search);
         const token = searchParams.get('token');
         const type = searchParams.get('type');
         
         if (!token) {
           setStatus('error');
-          setMessage('Invalid confirmation link. No token provided.');
+          setMessage('Invalid verification link. No token provided.');
           return;
         }
 
-        // The type should be 'signup' for new account confirmations
-        if (type !== 'signup') {
+        // Handle both email confirmation and email change
+        if (type !== 'signup' && type !== 'email_change') {
           setStatus('error');
-          setMessage('Invalid confirmation link type.');
+          setMessage('Invalid verification link type.');
           return;
         }
         
-        // Attempt to confirm the email
+        // Attempt to verify the email based on the type
         const { error } = await supabase.auth.verifyOtp({
           token_hash: token,
-          type: 'signup'
+          type: type as 'signup' | 'email_change'
         });
         
         if (error) {
-          console.error('Error confirming email:', error);
+          console.error('Error verifying email:', error);
           setStatus('error');
-          setMessage(error.message || 'Failed to confirm email. The link may have expired.');
+          setMessage(error.message || 'Failed to verify email. The link may have expired.');
         } else {
           setStatus('success');
-          setMessage('Your email has been successfully confirmed! You can now access your account.');
+          
+          if (type === 'signup') {
+            setMessage('Your email has been successfully confirmed! You can now access your account.');
+          } else if (type === 'email_change') {
+            setMessage('Your email has been successfully changed!');
+          }
           
           // Redirect to dashboard after 3 seconds
           setTimeout(() => {
@@ -54,21 +59,21 @@ const ConfirmEmail = () => {
           }, 3000);
         }
       } catch (error) {
-        console.error('Unexpected error during email confirmation:', error);
+        console.error('Unexpected error during email verification:', error);
         setStatus('error');
         setMessage('An unexpected error occurred. Please try again later.');
       }
     };
     
-    confirmEmail();
+    processEmailVerification();
   }, [location.search, navigate]);
+  
+  const handleReturnToDashboard = () => {
+    navigate('/dashboard');
+  };
   
   const handleGoToLogin = () => {
     navigate('/login');
-  };
-  
-  const handleGoToDashboard = () => {
-    navigate('/dashboard');
   };
   
   return (
@@ -80,10 +85,10 @@ const ConfirmEmail = () => {
         
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Email Confirmation</CardTitle>
+            <CardTitle className="text-2xl">Email Verification</CardTitle>
             <CardDescription>
-              {status === 'loading' ? 'Processing your confirmation...' : (
-                status === 'success' ? 'Your email is confirmed' : 'Confirmation failed'
+              {status === 'loading' ? 'Processing your verification...' : (
+                status === 'success' ? 'Verification successful' : 'Verification failed'
               )}
             </CardDescription>
           </CardHeader>
@@ -105,7 +110,7 @@ const ConfirmEmail = () => {
             
             {status === 'success' && (
               <p className="text-sm text-muted-foreground mt-2">
-                Redirecting you to your dashboard...
+                Redirecting you to the dashboard...
               </p>
             )}
           </CardContent>
@@ -113,7 +118,7 @@ const ConfirmEmail = () => {
           <CardFooter>
             {status === 'success' ? (
               <Button 
-                onClick={handleGoToDashboard} 
+                onClick={handleReturnToDashboard} 
                 className="w-full"
               >
                 Go to Dashboard
