@@ -66,19 +66,17 @@ const Login = () => {
         
         // For invalid credentials, check if the account exists but is unverified
         if (error.message.includes("Invalid login credentials")) {
-          // Check if account exists but email is unverified
+          // We can't directly check if an account exists due to security restrictions
+          // However, we can try a password reset to see if the email exists in the system
           try {
-            // We'll use a pattern match on auth.users through our client
-            // Note: This doesn't actually expose if an account exists due to RLS
-            // It's just a safer way to check than exposing real auth endpoints
-            const { data: userCheck, error: userError } = await supabase
-              .from('profiles') // We'll assume profiles exists or is tracked by email
-              .select('email')
-              .eq('email', email)
-              .maybeSingle();
-              
-            // If we found the email, it might be unverified
-            if (userCheck && !userError) {
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+              email, 
+              { redirectTo: `${window.location.origin}/login` }
+            );
+            
+            // If there's no error with reset password, it likely means the account exists
+            // but we'll use a generic message for security reasons
+            if (!resetError) {
               setVerificationNeeded(true);
               setShowVerificationModal(true);
               setLoading(false);
