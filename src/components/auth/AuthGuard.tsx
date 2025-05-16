@@ -4,28 +4,58 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { checkForAuthRemnants } from '@/utils/authCleanup';
+import { checkForAuthRemnants, cleanupAuthState } from '@/utils/authCleanup';
+import { supabase } from '@/integrations/supabase/client';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const { toast } = useToast();
   const [hasShownToast, setHasShownToast] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const location = useLocation();
 
-  // Check for auth remnants on mount
+  // First check for direct session from Supabase
   useEffect(() => {
-    console.log("🛡️ AuthGuard: Mounting for path:", location.pathname);
-    const hasRemnants = checkForAuthRemnants();
-    console.log("🛡️ AuthGuard: Auth remnants detected on mount:", hasRemnants);
+    console.log("🛡️ AuthGuard: Initial auth check for path:", location.pathname);
     
-    return () => {
-      console.log("🛡️ AuthGuard: Unmounting from path:", location.pathname);
-    };
-  }, [location.pathname]);
+    async function checkAuth() {
+      try {
+        // First check for auth remnants
+        const hasRemnants = checkForAuthRemnants();
+        console.log("🛡️ AuthGuard: Auth remnants detected:", hasRemnants);
+        
+        // If we have remnants but no user from context, double-check with Supabase
+        if (hasRemnants && !user && !loading) {
+          console.log("🛡️ AuthGuard: Checking Supabase session directly");
+          const { data } = await supabase.auth.getSession();
+          
+          if (!data.session) {
+            console.log("🛡️ AuthGuard: No valid session found, cleaning up remnants");
+            cleanupAuthState();
+            setIsAuthenticated(false);
+          } else {
+            console.log("🛡️ AuthGuard: Valid session found from direct check");
+            setIsAuthenticated(true);
+          }
+        } else {
+          setIsAuthenticated(!!user);
+        }
+        
+        setIsCheckingAuth(false);
+      } catch (error) {
+        console.error("🛡️ AuthGuard: Error checking auth:", error);
+        setIsCheckingAuth(false);
+        setIsAuthenticated(false);
+      }
+    }
+    
+    checkAuth();
+  }, [user, loading, location.pathname]);
 
   // Show toast if not authenticated - but only once
   useEffect(() => {
-    if (!loading && !user && !hasShownToast) {
+    if (!loading && !isCheckingAuth && !isAuthenticated && !hasShownToast) {
       console.log("🛡️ AuthGuard: Authentication required, showing toast");
       toast({
         variant: "destructive",
@@ -34,11 +64,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       });
       setHasShownToast(true);
     }
-  }, [loading, user, toast, hasShownToast]);
+  }, [loading, isCheckingAuth, isAuthenticated, toast, hasShownToast]);
 
-  console.log(`🛡️ AuthGuard: Current path: ${location.pathname}, isLoading: ${loading}, isAuthenticated: ${!!user}`);
+  console.log(`🛡️ AuthGuard: Current path: ${location.pathname}, isLoading: ${loading || isCheckingAuth}, isAuthenticated: ${isAuthenticated}`);
 
-  if (loading) {
+  if (loading || isCheckingAuth) {
     console.log("🛡️ AuthGuard: Still loading, showing spinner");
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -50,7 +80,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     console.log(`🛡️ AuthGuard: No user found, redirecting to login from ${location.pathname}`);
     // Save current location to redirect back after login
     return <Navigate to="/login" state={{ from: location }} replace />;

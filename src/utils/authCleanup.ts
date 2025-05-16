@@ -59,6 +59,14 @@ export const checkForAuthRemnants = () => {
     }
   });
   
+  // Check for auth cookies as well
+  document.cookie.split(';').forEach(c => {
+    const cookieName = c.split('=')[0].trim();
+    if (cookieName.startsWith('sb-') || cookieName.includes('supabase')) {
+      authKeys.push(`cookie: ${cookieName}`);
+    }
+  });
+  
   if (authKeys.length > 0) {
     console.warn("⚠️ AUTH REMNANTS DETECTED:", authKeys);
     return true;
@@ -90,6 +98,15 @@ export const detectAndCleanPhantomAuth = async (supabase: any): Promise<boolean>
       if (!validSession) {
         console.log("🧹 Phantom auth detected! Auth remnants exist but no valid session found");
         cleanupAuthState();
+        
+        // For stubborn cookies/state, attempt a global sign out too
+        try {
+          await supabase.auth.signOut({ scope: 'global' });
+          console.log("🧹 Performed global sign out for additional cleanup");
+        } catch (error) {
+          console.error("❌ Global sign out failed, but local cleanup was performed", error);
+        }
+        
         return true;
       } else {
         console.log("✅ Valid session exists, not a phantom auth situation");
@@ -104,4 +121,32 @@ export const detectAndCleanPhantomAuth = async (supabase: any): Promise<boolean>
   }
   
   return false;
+};
+
+/**
+ * Stronger reset that handles edge cases where normal cleanup fails
+ * Uses multiple approaches to ensure clean state
+ */
+export const forceAuthReset = async (supabase: any): Promise<void> => {
+  console.log("🔄 Performing forced auth reset");
+  
+  // First, clear all state and storage
+  cleanupAuthState();
+  
+  // Then attempt a global sign out
+  try {
+    await supabase.auth.signOut({ scope: 'global' });
+    console.log("🔄 Global sign out completed");
+  } catch (error) {
+    console.error("🔄 Global sign out failed:", error);
+  }
+  
+  // Clear all cookies forcefully
+  document.cookie.split(';').forEach(c => {
+    const cookieName = c.split('=')[0].trim();
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    console.log(`🔄 Cookie removed: ${cookieName}`);
+  });
+  
+  console.log("🔄 Forced auth reset complete");
 };

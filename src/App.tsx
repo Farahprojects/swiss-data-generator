@@ -27,7 +27,7 @@ import { Toaster } from "./components/ui/toaster";
 import { SidebarProvider } from './components/ui/sidebar';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
-import { detectAndCleanPhantomAuth } from './utils/authCleanup';
+import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
 import { supabase } from './integrations/supabase/client';
 
 // Route debugging wrapper with phantom auth detection
@@ -67,6 +67,13 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
           console.log("Phantom auth was detected and cleaned up");
         }
       });
+      
+      // If user is stuck in login loop (e.g., coming back to login repeatedly),
+      // perform a stronger reset
+      if (location.pathname === '/login' && document.referrer.includes('/login')) {
+        console.log("Possible login loop detected, performing stronger reset");
+        forceAuthReset(supabase);
+      }
     }
   }, [location]);
   

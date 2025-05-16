@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const { clearNavigationState } = useNavigationState();
 
   // Check for auth remnants on mount
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      setAuthInitialized(true);
     });
 
     return () => {
@@ -194,6 +196,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Is user authenticated before sign out:", !!user);
       setLoading(true);
       
+      // Explicitly set user and session to null first to prevent UI flickers
+      setUser(null);
+      setSession(null);
+      
       // Clear navigation state first to prevent redirect loops
       clearNavigationState();
       console.log("Navigation state cleared during sign out");
@@ -214,6 +220,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Sign out error:", error);
         // Continue even if this fails
       }
+      
+      // Clear cookies that might be related to authentication
+      document.cookie.split(';').forEach((cookie) => {
+        const name = cookie.split('=')[0].trim();
+        if (name.includes('sb-') || name.includes('supabase')) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+          console.log(`Cookie cleared: ${name}`);
+        }
+      });
       
       // Double check if auth state is really gone
       setTimeout(() => {

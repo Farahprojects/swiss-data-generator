@@ -15,7 +15,8 @@ export const supabase = createClient<Database>(
   {
     auth: {
       persistSession: true,
-      autoRefreshToken: true,
+      autoRefreshToken: false, // Disable automatic token refresh to prevent loops
+      storageKey: 'supabase.auth.token',
       storage: typeof window !== 'undefined' ? localStorage : undefined
     }
   }
