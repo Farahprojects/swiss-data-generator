@@ -30,8 +30,9 @@ import ConfirmEmail from './pages/auth/ConfirmEmail';
 
 function App() {
   return (
-    <AuthProvider>
-      <NavigationStateProvider>
+    // Changed order: NavigationStateProvider wraps AuthProvider to resolve the dependency issue
+    <NavigationStateProvider>
+      <AuthProvider>
         <SidebarProvider>
           <Router>
             <Routes>
@@ -73,9 +74,9 @@ function App() {
             </Routes>
           </Router>
         </SidebarProvider>
-      </NavigationStateProvider>
+      </AuthProvider>
       <Toaster />
-    </AuthProvider>
+    </NavigationStateProvider>
   );
 }
 
