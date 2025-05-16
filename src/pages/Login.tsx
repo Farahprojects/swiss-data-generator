@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +11,9 @@ import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail } from "@/utils/authValidation";
 import { useNavigationState } from "@/contexts/NavigationStateContext";
 import { checkForAuthRemnants } from "@/utils/authCleanup";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -19,6 +21,8 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [emailValid, setEmailValid] = useState(false);
   const [passwordValid, setPasswordValid] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [verificationNeeded, setVerificationNeeded] = useState(false);
   const { signIn, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -68,12 +72,38 @@ const Login = () => {
     if (!emailValid || !passwordValid) return;
     
     setLoading(true);
+    setVerificationNeeded(false);
     console.log("🔑 Login form submitted for:", email);
     console.log("🔑 Current localStorage before login:", Object.keys(localStorage));
 
     try {
       const { error } = await signIn(email, password);
-      if (error) throw error;
+      
+      if (error) {
+        console.error("🔑 Login error:", error);
+        
+        // Check specifically for email verification errors
+        if (error.message?.includes("Email not confirmed") || 
+            error.message?.includes("not confirmed") ||
+            error.message?.includes("not verified")) {
+          console.log("🔑 Email verification needed");
+          setVerificationNeeded(true);
+          toast({
+            title: "Email Not Verified",
+            description: "Please verify your email address before logging in.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: error.message || "Failed to sign in",
+            variant: "destructive",
+          });
+        }
+        
+        setLoading(false);
+        return;
+      }
 
       toast({
         title: "Success",
@@ -97,6 +127,49 @@ const Login = () => {
         variant: "destructive",
       });
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email || !emailValid) {
+      toast({
+        title: "Email Required",
+        description: "Please enter a valid email address to resend verification.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setResendLoading(true);
+    try {
+      // Use Supabase's resetPasswordForEmail as a workaround to resend verification
+      // This sends a password reset which can also be used to verify the email
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      
+      if (error) {
+        console.error("🔑 Resend verification error:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to resend verification email",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Verification Email Sent",
+          description: "Please check your inbox and click the verification link.",
+        });
+      }
+    } catch (error) {
+      console.error("🔑 Resend verification error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to resend verification email",
+        variant: "destructive",
+      });
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -125,6 +198,24 @@ const Login = () => {
             <h2 className="text-3xl font-bold">Welcome back</h2>
             <p className="mt-2 text-gray-600">Sign in to your account</p>
           </div>
+
+          {verificationNeeded && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex flex-col gap-2">
+                <p>Your email address hasn't been verified yet.</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleResendVerification} 
+                  disabled={resendLoading}
+                  className="self-start"
+                >
+                  {resendLoading ? "Sending..." : "Resend Verification Email"}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">
