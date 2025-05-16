@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,8 +11,6 @@ import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail } from "@/utils/authValidation";
 import { supabase } from "@/integrations/supabase/client";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
 
 /**
@@ -30,7 +29,6 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [verificationNeeded, setVerificationNeeded] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   const emailValid = validateEmail(email);
@@ -58,7 +56,6 @@ const Login = () => {
         if (error.message.includes("Email not confirmed") || 
             error.message.includes("not confirmed") || 
             error.message.includes("verification")) {
-          setVerificationNeeded(true);
           setShowVerificationModal(true);
           setLoading(false);
           return;
@@ -77,7 +74,6 @@ const Login = () => {
             // If there's no error with reset password, it likely means the account exists
             // but we'll use a generic message for security reasons
             if (!resetError) {
-              setVerificationNeeded(true);
               setShowVerificationModal(true);
               setLoading(false);
               return;
@@ -111,18 +107,8 @@ const Login = () => {
     }
   };
 
-  const handleResendVerification = async () => {
-    try {
-      await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/login` });
-      toast({ title: "Verification email sent", description: "Check your inbox." });
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    }
-  };
-
   const handleVerificationFinished = () => {
     setShowVerificationModal(false);
-    setVerificationNeeded(false);
     toast({
       title: "Email verified!",
       description: "You can now sign in with your credentials.",
@@ -131,7 +117,6 @@ const Login = () => {
 
   const handleVerificationCancel = () => {
     setShowVerificationModal(false);
-    // Keep verificationNeeded flag in case we need to show the alert
   };
 
   const clearError = () => errorMsg && setErrorMsg("");
@@ -145,18 +130,6 @@ const Login = () => {
             <h2 className="text-3xl font-bold">Welcome back</h2>
             <p className="mt-2 text-gray-600">Sign in to your account</p>
           </div>
-
-          {verificationNeeded && !showVerificationModal && (
-            <Alert variant="destructive" className="mb-2">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="flex flex-col gap-2">
-                <p>Your email address isn't verified yet.</p>
-                <Button variant="outline" size="sm" onClick={handleResendVerification}>
-                  Resend verification email
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">

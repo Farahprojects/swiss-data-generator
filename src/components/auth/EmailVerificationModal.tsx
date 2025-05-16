@@ -20,6 +20,7 @@ export function EmailVerificationModal({
   onCancel,
 }: EmailVerificationModalProps) {
   const [isChecking, setIsChecking] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [checkCount, setCheckCount] = useState(0);
   const [intervalId, setIntervalId] = useState<number | null>(null);
   const { toast } = useToast();
@@ -162,7 +163,7 @@ export function EmailVerificationModal({
   };
 
   const handleResendVerification = async () => {
-    setIsChecking(true);
+    setIsSending(true);
     try {
       // Different approach for login verification vs email change verification
       const { error } = await supabase.auth.resetPasswordForEmail(newEmail, {
@@ -192,7 +193,7 @@ export function EmailVerificationModal({
         description: "An unexpected error occurred. Please try again."
       });
     } finally {
-      setIsChecking(false);
+      setIsSending(false);
     }
   };
 
@@ -221,14 +222,14 @@ export function EmailVerificationModal({
             )}
           </div>
           
-          {/* Make resend button available immediately */}
+          {/* Resend button is always available, with visual feedback */}
           <Button 
             variant="outline" 
             onClick={handleResendVerification}
-            disabled={isChecking}
+            disabled={isSending}
             className="w-full"
           >
-            {isChecking ? (
+            {isSending ? (
               <>
                 <Loader className="h-4 w-4 mr-2 animate-spin" />
                 Sending...
