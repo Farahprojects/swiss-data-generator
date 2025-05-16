@@ -23,6 +23,7 @@ export function EmailVerificationModal({
   const [isSending, setIsSending] = useState(false);
   const [checkCount, setCheckCount] = useState(0);
   const [intervalId, setIntervalId] = useState<number | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const { toast } = useToast();
 
   // Set up auth state listener for email change events
@@ -126,6 +127,13 @@ export function EmailVerificationModal({
     };
   }, [isOpen, newEmail, checkCount, isChecking]);
 
+  // Auto-send verification email when modal opens
+  useEffect(() => {
+    if (isOpen && !emailSent) {
+      handleResendVerification();
+    }
+  }, [isOpen]);
+
   const handleManualVerifyClick = async () => {
     setIsChecking(true);
     try {
@@ -179,9 +187,10 @@ export function EmailVerificationModal({
         });
       } else {
         console.log("Verification email resent to:", newEmail);
+        setEmailSent(true);
         toast({
           title: "Email sent",
-          description: "Verification email has been resent. Please check your inbox."
+          description: "Verification email has been sent. Please check your inbox."
         });
         setCheckCount(0); // Reset the check count
       }
@@ -207,18 +216,34 @@ export function EmailVerificationModal({
         <DialogHeader>
           <DialogTitle>Verify Your Email Address</DialogTitle>
           <DialogDescription>
-            We've sent a verification link to <strong>{newEmail}</strong>.
-            Please check your inbox and confirm to continue.
+            {emailSent ? (
+              <>
+                We've sent a verification link to <strong>{newEmail}</strong>.
+                Please check your inbox and confirm to continue.
+              </>
+            ) : (
+              <>
+                Your email address <strong>{newEmail}</strong> needs to be verified.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         
         <div className="flex flex-col space-y-4 py-4">
           <div className="text-sm text-gray-500">
-            You won't be able to continue using the app until you verify your email address.
-            {checkCount > 0 && (
-              <p className="mt-2 text-amber-600">
-                Still haven't received the email? Check your spam folder or try again.
-              </p>
+            {emailSent ? (
+              <>
+                You won't be able to continue using the app until you verify your email address.
+                {checkCount > 0 && (
+                  <p className="mt-2 text-amber-600">
+                    Still haven't received the email? Check your spam folder or try again.
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                Click the button below to send a verification email.
+              </>
             )}
           </div>
           
@@ -235,7 +260,7 @@ export function EmailVerificationModal({
                 Sending...
               </>
             ) : (
-              "Resend Verification Email"
+              emailSent ? "Resend Verification Email" : "Send Verification Email"
             )}
           </Button>
         </div>
