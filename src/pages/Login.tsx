@@ -11,9 +11,13 @@ import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { EmailVerificationModal } from '@/components/auth/EmailVerificationModal';
+import { supabase } from '@/integrations/supabase/client';
 
 /** Dev‑only logger */
 const debug = (...a: any[]) => process.env.NODE_ENV !== 'production' && console.log('[Login]', ...a);
+
+// Import the hardcoded URL directly from where it's defined
+const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -49,17 +53,26 @@ const Login = () => {
     setErrorMsg('');
 
     try {
-      // PART 1: Pre-auth email change check (before any Supabase auth starts)
-      const emailCheckRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/email-check`, {
+      // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
+      const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/email-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
       
-      const emailCheckData = await emailCheckRes.json();
+      console.log("Email check response status:", emailCheckRes.status);
+      
+      let emailCheckData;
+      try {
+        emailCheckData = await emailCheckRes.json();
+        console.log("Email check data:", emailCheckData);
+      } catch (err) {
+        console.error("Failed to parse email-check response:", err);
+        // Continue with sign-in even if email check fails
+      }
       
       // If there's a pending email change, show the verification modal
-      if (emailCheckData.status === 'pending') {
+      if (emailCheckData && emailCheckData.status === 'pending') {
         debug('Pending email change found, showing verification modal');
         return openVerificationModal();
       }

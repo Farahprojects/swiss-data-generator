@@ -25,6 +25,9 @@ interface Props {
 /* Dev‑only logger ---------------------------------------------------------*/
 const debug = (...a: any[]) => process.env.NODE_ENV !== 'production' && console.log('[EVModal]', ...a);
 
+// Import the hardcoded URL directly
+const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+
 /* Component ---------------------------------------------------------------*/
 export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCancel, newEmail }: Props) {
   const { toast } = useToast();
@@ -71,8 +74,8 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     setStatus('sending');
     
     try {
-      // PART 2: Using the edge function to resend verification
-      const emailCheckRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/email-check`, {
+      // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
+      const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/email-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,7 +84,22 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
         }),
       });
       
-      const emailCheckData = await emailCheckRes.json();
+      console.log("Email check response status in modal:", emailCheckRes.status);
+      
+      let emailCheckData;
+      try {
+        emailCheckData = await emailCheckRes.json();
+        console.log("Email check data in modal:", emailCheckData);
+      } catch (err) {
+        console.error("Failed to parse email-check response in modal:", err);
+        setStatus('error');
+        toast({ 
+          title: 'Error', 
+          description: 'Failed to process server response', 
+          variant: 'destructive' 
+        });
+        return;
+      }
       
       // If we get an error from the edge function
       if (emailCheckData.error) {
