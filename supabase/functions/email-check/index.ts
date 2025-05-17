@@ -16,21 +16,33 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   try {
-    const { email, resend } = await req.json();
+    const body = await req.json();
+    const { email, resend } = body;
+
+    console.log('[Incoming Request]', JSON.stringify({ email, resend }));
 
     if (!email) {
+      console.warn('[Validation Error] Missing email in payload');
       return new Response(
         JSON.stringify({ error: 'Email is required.' }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
-    console.log(`Checking email status for: ${email}`);
+    console.log(`[Supabase Lookup] Checking user with email: ${email}`);
 
     const { data: users, error } = await supabase.auth.admin.listUsers({ email });
 
-    if (error || !users || users.length === 0) {
-      console.error('Error querying user or user not found:', error);
+    if (error) {
+      console.error('[Supabase Admin API Error]', error.message);
+      return new Response(
+        JSON.stringify({ error: 'Failed to query user.', details: error.message }),
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    if (!users || users.length === 0) {
+      console.log('[User Not Found] No user matches email:', email);
       return new Response(
         JSON.stringify({ status: 'no_pending_change' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -38,12 +50,17 @@ serve(async (req) => {
     }
 
     const user = users[0];
-
-    // These fields are available only from the admin API
     const pendingChange = user.email_change;
     const token = user.email_change_token_new;
 
+    console.log('[User Found]', {
+      email: user.email,
+      email_change: pendingChange,
+      has_token: !!token
+    });
+
     if (!pendingChange || !token) {
+      console.log('[No Pending Email Change] Either email_change or token is missing.');
       return new Response(
         JSON.stringify({ status: 'no_pending_change' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -51,7 +68,7 @@ serve(async (req) => {
     }
 
     if (resend === true) {
-      console.log('Resending email change verification to:', pendingChange);
+      console.log('[Resend Requested] Triggering Supabase verification to:', pendingChange);
 
       const verifyRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
         method: 'POST',
@@ -67,25 +84,27 @@ serve(async (req) => {
 
       if (!verifyRes.ok) {
         const msg = await verifyRes.text();
-        console.error('Resend failed:', msg);
+        console.error('[Verification Resend Failed]', msg);
         return new Response(
           JSON.stringify({ error: 'Resend failed', details: msg }),
           { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
 
+      console.log('[Verification Email Resent Successfully]');
       return new Response(
         JSON.stringify({ status: 'resent' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
+    console.log('[Pending Email Detected] Resend not triggered.');
     return new Response(
       JSON.stringify({ status: 'pending' }),
       { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   } catch (err) {
-    console.error('Unexpected error:', err);
+    console.error('[Unhandled Exception]', err.message);
     return new Response(
       JSON.stringify({ error: 'Unexpected error', details: err.message }),
       { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
