@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,14 +9,13 @@ import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail } from "@/utils/authValidation";
-import { supabase } from "@/integrations/supabase/client";
 import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
 
 /**
  * Enhanced Login component
- * - Handles email verification scenarios
- * - Shows verification UI for unverified emails
- * - Includes resend verification option
+ * - Detects unverified emails and triggers verification flow
+ * - Delegates verification process to a modal
+ * - Automatically retries login after successful verification
  */
 const Login = () => {
   const navigate = useNavigate();
@@ -48,58 +46,34 @@ const Login = () => {
 
     try {
       const { data, error } = await signIn(email, password);
-      
+
       if (error) {
-        console.log("Login error:", error.message);
-        
-        // Check specifically for unconfirmed email messages
-        if (error.message.includes("Email not confirmed") || 
-            error.message.includes("not confirmed") || 
-            error.message.includes("verification")) {
+        const message = error.message.toLowerCase();
+
+        const maybeUnverified =
+          message.includes("email not confirmed") ||
+          message.includes("not confirmed") ||
+          message.includes("verification") ||
+          (message.includes("invalid login credentials") && !message.includes("not found"));
+
+        if (maybeUnverified) {
           setShowVerificationModal(true);
           setLoading(false);
           return;
         }
-        
-        // For invalid credentials, check if we need to handle unverified emails
-        if (error.message.includes("Invalid login credentials")) {
-          // We can try checking if the user exists but is unverified
-          try {
-            // First check if the user exists at all by using getUserByEmail (admin-only function)
-            const { data: userData } = await supabase.auth.admin.getUserByEmail(email);
-            
-            if (userData?.user && !userData.user.email_confirmed_at) {
-              // User exists but hasn't verified their email
-              setShowVerificationModal(true);
-              setLoading(false);
-              return;
-            }
-          } catch (err) {
-            // Fallback: if we don't have admin access, we'll use a heuristic
-            // If the error specifically mentions wrong password (not "user not found"),
-            // it's likely the account exists but isn't verified
-            if (error.message.includes("password") && 
-                !error.message.includes("not found")) {
-              setShowVerificationModal(true);
-              setLoading(false);
-              return;
-            }
-          }
-        }
-        
-        // For other errors, use a standard error message
+
         setErrorMsg("Invalid email or password");
         setLoading(false);
         return;
       }
-      
-      // If we have user data but no email_confirmed_at, show verification modal
+
+      // Additional safeguard — check for email unconfirmed even if no error
       if (data?.user && !data.user.email_confirmed_at) {
         setShowVerificationModal(true);
         setLoading(false);
         return;
       }
-      
+
       navigate((location.state as any)?.from?.pathname || "/", { replace: true });
     } catch (err: any) {
       toast({
@@ -119,12 +93,32 @@ const Login = () => {
     }
   };
 
-  const handleVerificationFinished = () => {
+  const handleVerificationFinished = async () => {
     setShowVerificationModal(false);
+
     toast({
       title: "Email verified!",
-      description: "You can now sign in with your credentials.",
+      description: "You can now sign in.",
     });
+
+    // Retry login automatically
+    setLoading(true);
+    try {
+      const { error } = await signIn(email, password);
+      if (error) {
+        setErrorMsg("Login failed after verification. Please try again.");
+      } else {
+        navigate((location.state as any)?.from?.pathname || "/", { replace: true });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message ?? "Something went wrong after verifying",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerificationCancel = () => {
