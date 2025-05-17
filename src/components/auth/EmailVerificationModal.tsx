@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
@@ -14,18 +15,20 @@ import { useToast } from '@/components/ui/use-toast';
 /* Types -------------------------------------------------------------------*/
 interface Props {
   isOpen: boolean;
-  email: string;
-  resend: (email: string) => Promise<{ error: Error | null }>;
+  email?: string;  // Making email optional
+  resend?: (email: string) => Promise<{ error: Error | null }>; // Making resend optional
   onVerified: () => void;
   onCancel: () => void;
+  newEmail?: string; // Added newEmail prop to match usage in AccountSettingsPanel
 }
 
 /* Dev‑only logger ---------------------------------------------------------*/
 const debug = (...a: any[]) => process.env.NODE_ENV !== 'production' && console.log('[EVModal]', ...a);
 
 /* Component ---------------------------------------------------------------*/
-export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCancel }: Props) {
+export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCancel, newEmail }: Props) {
   const { toast } = useToast();
+  const targetEmail = newEmail || email || ''; // Use newEmail if provided, fall back to email
 
   /** request state */
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
@@ -57,9 +60,16 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
 
   /* send / resend link -----------------------------------------------------*/
   const sendLink = async () => {
-    debug('Resending confirmation to', email);
+    if (!targetEmail || !resend) {
+      debug('No email or resend function provided');
+      setStatus('error');
+      toast({ title: 'Error', description: 'Unable to send verification email', variant: 'destructive' });
+      return;
+    }
+
+    debug('Resending confirmation to', targetEmail);
     setStatus('sending');
-    const { error } = await resend(email);
+    const { error } = await resend(targetEmail);
 
     if (error) {
       debug('resend error', error);
@@ -69,7 +79,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     }
 
     setStatus('success');
-    toast({ title: 'Verification email sent', description: `Check ${email}` });
+    toast({ title: 'Verification email sent', description: `Check ${targetEmail}` });
     stopPolling();
     intervalRef.current = window.setInterval(poll, 3000);
   };
@@ -81,8 +91,14 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
       return;
     }
 
-    // auto‑trigger when modal opens
-    sendLink();
+    // auto‑trigger when modal opens and resend function is available
+    if (resend) {
+      sendLink();
+    } else {
+      // If no resend function, just set up polling
+      stopPolling();
+      intervalRef.current = window.setInterval(poll, 3000);
+    }
 
     // realtime listener (covers user clicking link in another tab)
     const {
@@ -100,7 +116,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
       stopPolling();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, email]);
+  }, [isOpen, targetEmail]);
 
   /* render helpers ---------------------------------------------------------*/
   const Notice = () => {
@@ -109,7 +125,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
         <div className="mt-4 flex items-center rounded-md bg-green-50 p-2 text-green-700">
           <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0" />
           <p className="text-sm">
-            Verification sent to <strong>{email}</strong>
+            Verification sent to <strong>{targetEmail}</strong>
           </p>
         </div>
       );
@@ -134,25 +150,27 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
         <DialogHeader>
           <DialogTitle>Verify your email address</DialogTitle>
           <DialogDescription>
-            We just sent a verification link to <strong>{email}</strong>. Please confirm to continue.
+            We just sent a verification link to <strong>{targetEmail}</strong>. Please confirm to continue.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col space-y-4 py-4 text-sm text-gray-600">
-          You won’t be able to sign in until your email is verified.
+          You won't be able to sign in until your email is verified.
           <Notice />
-          <Button
-            variant="outline"
-            onClick={sendLink}
-            disabled={status === 'sending'}
-            className="w-full"
-          >
-            {status === 'sending' ? (
-              <span className="flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" /> Sending…</span>
-            ) : (
-              'Resend verification email'
-            )}
-          </Button>
+          {resend && (
+            <Button
+              variant="outline"
+              onClick={sendLink}
+              disabled={status === 'sending'}
+              className="w-full"
+            >
+              {status === 'sending' ? (
+                <span className="flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" /> Sending…</span>
+              ) : (
+                'Resend verification email'
+              )}
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center justify-between space-x-2">

@@ -337,6 +337,17 @@ export const AccountSettingsPanel = () => {
     }
   };
 
+  const resendEmailChangeVerification = async (email: string) => {
+    console.log("Resending email verification to", email);
+    try {
+      const { error } = await supabase.auth.updateUser({ email });
+      return { error: error ? new Error(error.message) : null };
+    } catch (err) {
+      console.error("Error resending verification:", err);
+      return { error: err as Error };
+    }
+  };
+
   const renderPasswordRequirement = (met: boolean, text: string) => (
     <div className={`flex items-center text-sm ${met ? 'text-green-600' : 'text-gray-600'}`}>
       {met && <Check size={16} className="mr-2 text-green-600" />}
@@ -372,7 +383,8 @@ export const AccountSettingsPanel = () => {
       {/* Email Verification Modal */}
       <EmailVerificationModal 
         isOpen={pendingEmailVerification}
-        newEmail={newEmailAddress}
+        email={newEmailAddress}
+        resend={resendEmailChangeVerification}
         onVerified={handleEmailVerificationComplete}
         onCancel={handleCancelEmailChange}
       />
