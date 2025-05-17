@@ -11,8 +11,8 @@ import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { EmailVerificationModal } from '@/components/auth/EmailVerificationModal';
 
-/* Utility – log only in dev */
-const debug = (...args: any[]) => process.env.NODE_ENV !== 'production' && console.log(...args);
+/** Dev‑only logger */
+const debug = (...a: any[]) => process.env.NODE_ENV !== 'production' && console.log('[Login]', ...a);
 
 const Login = () => {
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ const Login = () => {
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
 
-  /* Redirect already-authenticated users */
+  // ───────────────── Redirect if already signed‑in
   if (user) {
     const from = (location.state as any)?.from?.pathname || '/';
     return <Navigate to={from} replace />;
@@ -51,17 +51,22 @@ const Login = () => {
       const { data, error } = await signIn(email, password);
 
       if (error) {
-        debug('signIn error:', error);
-        // SUPABASE returns 400 with generic message when email not confirmed
-        const unverified =
-          error.message.toLowerCase().includes('confirm') || error.message.toLowerCase().includes('verification');
-        if (unverified) return openVerificationModal();
+        debug('signIn error', error);
+
+        // Supabase masks unverified e‑mails with 400 / "Invalid login credentials".
+        // We treat ANY 400 as potentially unverified and display the modal.
+        const status = (error as any).status ?? (error as any).statusCode;
+        if (status === 400) return openVerificationModal();
+
+        // If status not present fallback to message heuristics
+        if (error.message.toLowerCase().includes('confirm') || error.message.toLowerCase().includes('verification'))
+          return openVerificationModal();
 
         setErrorMsg('Invalid email or password');
         return setLoading(false);
       }
 
-      // extra guard in case Supabase stopped throwing error
+      // Extra guard: data.user present but not confirmed (edge‑case when GoTrue behaviour changes)
       if (data?.user && !data.user.email_confirmed_at) return openVerificationModal();
 
       navigate((location.state as any)?.from?.pathname || '/', { replace: true });
@@ -79,7 +84,7 @@ const Login = () => {
     }
   };
 
-  /* called by modal when user says “I’ve verified” */
+  /* Callback from modal when user verified */
   const handleVerificationFinished = async () => {
     setShowVerificationModal(false);
     toast({ title: 'Email verified!', description: 'You can now sign in.' });
@@ -98,8 +103,6 @@ const Login = () => {
       setLoading(false);
     }
   };
-
-  const handleVerificationCancel = () => setShowVerificationModal(false);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -124,7 +127,7 @@ const Login = () => {
               />
             </div>
 
-            {errorMsg && <p className="text-sm text-red-600 font-medium text-center -mt-2">{errorMsg}</p>}
+            {errorMsg && <p className="text-center text-sm font-medium text-red-600 -mt-2">{errorMsg}</p>}
 
             <Button type="submit" className="w-full" disabled={loading || !emailValid || !passwordValid}>
               {loading ? 'Signing in…' : 'Sign in'}
@@ -149,7 +152,7 @@ const Login = () => {
         email={email}
         resend={resendVerificationEmail}
         onVerified={handleVerificationFinished}
-        onCancel={handleVerificationCancel}
+        onCancel={() => setShowVerificationModal(false)}
       />
     </div>
   );
