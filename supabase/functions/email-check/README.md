@@ -28,4 +28,5 @@ This Edge Function checks for pending email changes and can optionally resend ve
 
 ## Usage Notes
 
-This function requires setting up a database function `admin_get_user_by_email` since direct access to `auth.users` is not allowed through the Supabase client.
+This function requires the Supabase service role key to query internal auth.users data using the Supabase Admin API.
+It does not require any custom SQL or RPC functions
