@@ -27,6 +27,7 @@ const debug = (...a: any[]) => process.env.NODE_ENV !== 'production' && console.
 
 // Import the hardcoded URL directly
 const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
 /* Component ---------------------------------------------------------------*/
 export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCancel, newEmail }: Props) {
@@ -75,9 +76,14 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     
     try {
       // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
-      const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/email-check`, {
+      // Added /v1/ in the path and apikey header
+      console.log(`Calling edge function from modal: ${SUPABASE_URL}/functions/v1/email-check`);
+      const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY
+        },
         body: JSON.stringify({
           email: targetEmail,
           resend: true
