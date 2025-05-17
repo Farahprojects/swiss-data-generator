@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import {
   Dialog,
@@ -20,25 +19,19 @@ interface Props {
 }
 
 /**
- * Modal that handles email verification.
- * – Uses Supabase's built-in email verification flow.
- * – Sends a confirmation email via updateUser().
- * – Polls for completion via auth.getUser().
- * – Keeps UX feedback minimal but clear.
+ * Handles:
+ * - Triggering Supabase email verification
+ * - Polling + real-time auth listening
+ * - UX feedback with resend / cancel / manual verify
  */
 export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel }: Props) {
   const { toast } = useToast();
 
-  // UI state
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [checking, setChecking] = useState(false);
 
-  // keep a stable interval id without rerenders
   const intervalRef = useRef<number | null>(null);
 
-  /* ------------------------------------------------------------------ */
-  /* Helpers                                                            */
-  /* ------------------------------------------------------------------ */
   const clearPolling = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -48,8 +41,7 @@ export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel 
 
   const startPolling = () => {
     clearPolling();
-    const id = window.setInterval(checkVerified, 3000);
-    intervalRef.current = id;
+    intervalRef.current = window.setInterval(checkVerified, 3000);
   };
 
   const checkVerified = async () => {
@@ -58,7 +50,7 @@ export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel 
     try {
       await supabase.auth.refreshSession();
       const { data } = await supabase.auth.getUser();
-      if (data.user?.email === newEmail && data.user?.email_confirmed_at) {
+      if (data.user?.email === newEmail && data.user.email_confirmed_at) {
         clearPolling();
         onVerified();
       }
@@ -70,33 +62,41 @@ export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel 
   const sendVerification = async () => {
     setStatus("sending");
     try {
-      // We use updateUser to trigger the email verification flow
       const { error } = await supabase.auth.updateUser({ email: newEmail });
       if (error) throw error;
+
       setStatus("success");
-      toast({ title: "Email sent", description: "Check your inbox for the verification link." });
+      toast({
+        title: "Verification email sent",
+        description: `Please check your inbox for ${newEmail}`,
+      });
       startPolling();
     } catch (err: any) {
       setStatus("error");
-      toast({ variant: "destructive", title: "Error", description: err.message });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message ?? "Could not send verification email.",
+      });
     }
   };
 
-  /* ------------------------------------------------------------------ */
-  /* Lifecycle                                                          */
-  /* ------------------------------------------------------------------ */
   useEffect(() => {
     if (!isOpen) {
       clearPolling();
       return;
     }
 
-    // Fire once when modal opens
+    // Trigger email on open
     sendVerification();
 
-    // Listen for direct auth events (covers instant clicks)
+    // Listen for live auth state change
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "USER_UPDATED" && session?.user?.email === newEmail && session.user.email_confirmed_at) {
+      if (
+        event === "USER_UPDATED" &&
+        session?.user?.email === newEmail &&
+        session.user.email_confirmed_at
+      ) {
         clearPolling();
         onVerified();
       }
@@ -109,15 +109,12 @@ export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, newEmail]);
 
-  /* ------------------------------------------------------------------ */
-  /* Render                                                             */
-  /* ------------------------------------------------------------------ */
   const renderNotif = () => {
     if (status === "success")
       return (
         <div className="mt-4 flex items-center rounded-md bg-green-50 p-2 text-green-700">
           <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0" />
-          <p className="text-sm">Email sent to <strong>{newEmail}</strong></p>
+          <p className="text-sm">Verification sent to <strong>{newEmail}</strong></p>
         </div>
       );
     if (status === "error")
@@ -145,9 +142,14 @@ export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel 
         </DialogHeader>
 
         <div className="flex flex-col space-y-4 py-4 text-sm text-gray-600">
-          You won't be able to continue using the app until you verify your email address.
+          You won't be able to use the app until you verify your email.
           {renderNotif()}
-          <Button variant="outline" onClick={sendVerification} disabled={status === "sending"} className="w-full">
+          <Button
+            variant="outline"
+            onClick={sendVerification}
+            disabled={status === "sending"}
+            className="w-full"
+          >
             {status === "sending" ? (
               <>
                 <Loader className="mr-2 h-4 w-4 animate-spin" /> Sending…
@@ -160,8 +162,15 @@ export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel 
 
         <div className="flex items-center justify-between space-x-2">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={checkVerified} disabled={checking} className="flex items-center space-x-2">
-            {checking && <Loader className="mr-2 h-4 w-4 animate-spin" />} I've verified my email
+          <Button onClick={checkVerified} disabled={checking}>
+            {checking ? (
+              <span className="flex items-center">
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Checking…
+              </span>
+            ) : (
+              "I've verified my email"
+            )}
           </Button>
         </div>
       </DialogContent>
