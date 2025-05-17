@@ -50,14 +50,19 @@ serve(async (req) => {
       );
     }
 
-    let email: string | undefined;
-    let resend: boolean | undefined;
+    let email = '';
+    let resend = false;
 
     try {
-      const parsed = JSON.parse(rawBody);
-      console.log('[Parsed JSON]', parsed);
-      email = parsed.email;
-      resend = parsed.resend;
+      if (rawBody) {
+        const parsed = JSON.parse(rawBody);
+        console.log('[Parsed JSON]', parsed);
+        
+        if (parsed && typeof parsed === 'object') {
+          email = parsed.email || '';
+          resend = !!parsed.resend;
+        }
+      }
     } catch (parseError) {
       console.error('[JSON Parse Error]', parseError);
       return new Response(
@@ -95,15 +100,26 @@ serve(async (req) => {
     }
 
     const user = users[0];
+    
+    // Make sure user is defined before accessing properties
+    if (!user) {
+      console.log('[User Object Undefined] Cannot access user properties');
+      return new Response(
+        JSON.stringify({ status: 'no_pending_change' }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Safe logging with optional chaining
     console.log('[User Found]', {
-      email: user.email,
+      email: user.email || 'undefined',
       has_email_change: !!user.email_change,
       has_token: !!user.email_change_token_new
     });
     
-    // Fix: Check if email_change and token exist before accessing them
-    const pendingChange = user?.email_change;
-    const token = user?.email_change_token_new;
+    // Check if email_change and token exist before accessing them
+    const pendingChange = user.email_change;
+    const token = user.email_change_token_new;
 
     if (!pendingChange || !token) {
       console.log('[No Pending Email Change] Either email_change or token is missing.');
