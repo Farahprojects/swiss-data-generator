@@ -72,7 +72,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     
     try {
       // PART 2: Using the edge function to resend verification
-      const emailCheckRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/email-check`, {
+      const emailCheckRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/email-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
