@@ -60,8 +60,8 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
 
   /* send / resend link -----------------------------------------------------*/
   const sendLink = async () => {
-    if (!targetEmail || !resend) {
-      debug('No email or resend function provided');
+    if (!targetEmail) {
+      debug('No email provided');
       setStatus('error');
       toast({ title: 'Error', description: 'Unable to send verification email', variant: 'destructive' });
       return;
@@ -69,17 +69,76 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
 
     debug('Resending confirmation to', targetEmail);
     setStatus('sending');
-    const { error } = await resend(targetEmail);
-
-    if (error) {
-      debug('resend error', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    
+    try {
+      // PART 2: Using the edge function to resend verification
+      const emailCheckRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/email-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: targetEmail,
+          resend: true
+        }),
+      });
+      
+      const emailCheckData = await emailCheckRes.json();
+      
+      // If we get an error from the edge function
+      if (emailCheckData.error) {
+        debug('resend error', emailCheckData.error);
+        toast({ 
+          title: 'Error', 
+          description: emailCheckData.error, 
+          variant: 'destructive' 
+        });
+        setStatus('error');
+        return;
+      }
+      
+      // If we used the edge function successfully
+      if (emailCheckData.status === 'resent' || emailCheckData.status === 'pending') {
+        setStatus('success');
+        toast({ 
+          title: 'Verification email sent', 
+          description: `Check ${targetEmail}` 
+        });
+        stopPolling();
+        intervalRef.current = window.setInterval(poll, 3000);
+        return;
+      }
+      
+      // Fallback to the provided resend function if the edge function didn't handle it
+      if (resend) {
+        const { error } = await resend(targetEmail);
+        
+        if (error) {
+          debug('resend error', error);
+          toast({ title: 'Error', description: error.message, variant: 'destructive' });
+          setStatus('error');
+          return;
+        }
+        
+        setStatus('success');
+        toast({ title: 'Verification email sent', description: `Check ${targetEmail}` });
+      } else {
+        // No edge function result and no resend function
+        setStatus('error');
+        toast({ 
+          title: 'Error', 
+          description: 'No method available to resend verification email', 
+          variant: 'destructive' 
+        });
+      }
+    } catch (error: any) {
+      debug('resend exception', error);
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to send verification email', 
+        variant: 'destructive' 
+      });
       setStatus('error');
-      return;
     }
-
-    setStatus('success');
-    toast({ title: 'Verification email sent', description: `Check ${targetEmail}` });
+    
     stopPolling();
     intervalRef.current = window.setInterval(poll, 3000);
   };
@@ -157,20 +216,18 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
         <div className="flex flex-col space-y-4 py-4 text-sm text-gray-600">
           You won't be able to sign in until your email is verified.
           <Notice />
-          {resend && (
-            <Button
-              variant="outline"
-              onClick={sendLink}
-              disabled={status === 'sending'}
-              className="w-full"
-            >
-              {status === 'sending' ? (
-                <span className="flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" /> Sending…</span>
-              ) : (
-                'Resend verification email'
-              )}
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            onClick={sendLink}
+            disabled={status === 'sending'}
+            className="w-full"
+          >
+            {status === 'sending' ? (
+              <span className="flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" /> Sending…</span>
+            ) : (
+              'Resend verification email'
+            )}
+          </Button>
         </div>
 
         <div className="flex items-center justify-between space-x-2">

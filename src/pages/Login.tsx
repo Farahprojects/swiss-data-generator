@@ -49,6 +49,24 @@ const Login = () => {
     setErrorMsg('');
 
     try {
+      // PART 1: Pre-auth email change check (before any Supabase auth starts)
+      const emailCheckRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/email-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      
+      const emailCheckData = await emailCheckRes.json();
+      
+      // If there's a pending email change, show the verification modal
+      if (emailCheckData.status === 'pending') {
+        debug('Pending email change found, showing verification modal');
+        return openVerificationModal();
+      }
+
+      debug('No pending email change, proceeding with sign in');
+      
+      // No pending change, proceed with normal sign-in
       const { data, error } = await signIn(email, password);
 
       if (error) {
