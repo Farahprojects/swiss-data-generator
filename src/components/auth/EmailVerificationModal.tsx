@@ -1,170 +1,175 @@
-
-import { useEffect, useState, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useState } from "react";
+import { useNavigate, useLocation, Link, Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Loader, CheckCircle2, AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-
-interface Props {
-  isOpen: boolean;
-  newEmail: string;
-  onVerified: () => void;
-  onCancel: () => void;
-}
+import UnifiedNavigation from "@/components/UnifiedNavigation";
+import Footer from "@/components/Footer";
+import EmailInput from "@/components/auth/EmailInput";
+import PasswordInput from "@/components/auth/PasswordInput";
+import SocialLogin from "@/components/auth/SocialLogin";
+import { validateEmail } from "@/utils/authValidation";
+import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 /**
- * Modal that handles email verification.
- * – Uses Supabase's built-in email verification flow.
- * – Sends a confirmation email via updateUser().
- * – Polls for completion via auth.getUser().
- * – Keeps UX feedback minimal but clear.
+ * Login page — now **only** authenticates.
+ * ────────────────────────────────────────
+ * ▸ If credentials are wrong → inline error.
+ * ▸ If email isn’t confirmed → toast + optional resend via `auth.resend({ type: 'signup' })`.
+ *   (No more `resetPasswordForEmail` workaround here.)
  */
-export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel }: Props) {
+const Login = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const { signIn, signInWithGoogle, user } = useAuth();
 
-  // UI state
-  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
-  const [checking, setChecking] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resending, setResending] = useState(false);
 
-  // keep a stable interval id without rerenders
-  const intervalRef = useRef<number | null>(null);
+  const emailValid = validateEmail(email);
+  const passwordValid = password.length >= 6;
 
   /* ------------------------------------------------------------------ */
-  /* Helpers                                                            */
+  /* Authenticated? redirect                                             */
   /* ------------------------------------------------------------------ */
-  const clearPolling = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
+  if (user) {
+    const from = (location.state as any)?.from?.pathname || "/";
+    return <Navigate to={from} replace />;
+  }
 
-  const startPolling = () => {
-    clearPolling();
-    const id = window.setInterval(checkVerified, 3000);
-    intervalRef.current = id;
-  };
+  /* ------------------------------------------------------------------ */
+  /* Handlers                                                            */
+  /* ------------------------------------------------------------------ */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailValid || !passwordValid) return;
 
-  const checkVerified = async () => {
-    if (checking) return;
-    setChecking(true);
+    setLoading(true);
+    setErrorMsg("");
+    setNeedsVerification(false);
+
     try {
-      await supabase.auth.refreshSession();
-      const { data } = await supabase.auth.getUser();
-      if (data.user?.email === newEmail && data.user?.email_confirmed_at) {
-        clearPolling();
-        onVerified();
+      const { error } = await signIn(email, password);
+
+      if (error) {
+        if (/not confirmed|not verified/i.test(error.message)) {
+          setNeedsVerification(true);
+          toast({
+            variant: "destructive",
+            title: "Email not verified",
+            description: "Please verify your email before logging in.",
+          });
+        } else {
+          setErrorMsg("Invalid email or password");
+        }
+        setLoading(false);
+        return;
       }
-    } finally {
-      setChecking(false);
+
+      navigate((location.state as any)?.from?.pathname || "/", { replace: true });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message });
+      setLoading(false);
     }
   };
 
-  const sendVerification = async () => {
-    setStatus("sending");
+  const handleGoogleSignIn = async () => {
     try {
-      // We use updateUser to trigger the email verification flow
-      const { error } = await supabase.auth.updateUser({ email: newEmail });
-      if (error) throw error;
-      setStatus("success");
-      toast({ title: "Email sent", description: "Check your inbox for the verification link." });
-      startPolling();
+      await signInWithGoogle();
     } catch (err: any) {
-      setStatus("error");
       toast({ variant: "destructive", title: "Error", description: err.message });
     }
   };
 
-  /* ------------------------------------------------------------------ */
-  /* Lifecycle                                                          */
-  /* ------------------------------------------------------------------ */
-  useEffect(() => {
-    if (!isOpen) {
-      clearPolling();
-      return;
+  // Unified resend using Supabase v2 "resend" helper (Signup confirmation)
+  const handleResend = async () => {
+    if (!emailValid) return;
+    setResending(true);
+    try {
+      // ⬇️ 1‑liner — Supabase sends a fresh confirmation link
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore — type defs may lag behind SDK
+      const { error } = await supabase.auth.resend({ type: "signup", email });
+      if (error) throw error;
+      toast({ title: "Verification email sent", description: "Check your inbox." });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message });
+    } finally {
+      setResending(false);
     }
-
-    // Fire once when modal opens
-    sendVerification();
-
-    // Listen for direct auth events (covers instant clicks)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "USER_UPDATED" && session?.user?.email === newEmail && session.user.email_confirmed_at) {
-        clearPolling();
-        onVerified();
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-      clearPolling();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, newEmail]);
-
-  /* ------------------------------------------------------------------ */
-  /* Render                                                             */
-  /* ------------------------------------------------------------------ */
-  const renderNotif = () => {
-    if (status === "success")
-      return (
-        <div className="mt-4 flex items-center rounded-md bg-green-50 p-2 text-green-700">
-          <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0" />
-          <p className="text-sm">Email sent to <strong>{newEmail}</strong></p>
-        </div>
-      );
-    if (status === "error")
-      return (
-        <div className="mt-4 flex items-center rounded-md bg-red-50 p-2 text-red-700">
-          <AlertCircle className="mr-2 h-5 w-5 flex-shrink-0" />
-          <p className="text-sm">Failed to send email. Please try again.</p>
-        </div>
-      );
-    return null;
   };
 
+  const clearError = () => errorMsg && setErrorMsg("");
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                              */
+  /* ------------------------------------------------------------------ */
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent
-        className="sm:max-w-md"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle>Verify Your Email Address</DialogTitle>
-          <DialogDescription>
-            We've sent a verification link to <strong>{newEmail}</strong>. Please confirm to continue.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="flex min-h-screen flex-col">
+      <UnifiedNavigation />
 
-        <div className="flex flex-col space-y-4 py-4 text-sm text-gray-600">
-          You won't be able to continue using the app until you verify your email address.
-          {renderNotif()}
-          <Button variant="outline" onClick={sendVerification} disabled={status === "sending"} className="w-full">
-            {status === "sending" ? (
-              <>
-                <Loader className="mr-2 h-4 w-4 animate-spin" /> Sending…
-              </>
-            ) : (
-              "Resend verification email"
-            )}
-          </Button>
-        </div>
+      <div className="flex flex-grow items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md space-y-8">
+          {/* Header */}
+          <div className="text-center">
+            <h2 className="text-3xl font-bold">Welcome back</h2>
+            <p className="mt-2 text-gray-600">Sign in to your account</p>
+          </div>
 
-        <div className="flex items-center justify-between space-x-2">
-          <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={checkVerified} disabled={checking} className="flex items-center space-x-2">
-            {checking && <Loader className="mr-2 h-4 w-4 animate-spin" />} I've verified my email
-          </Button>
+          {/* Unverified notice */}
+          {needsVerification && (
+            <Alert variant="destructive" className="mb-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Your email isn’t verified yet. Didn’t get the link?{' '}
+                <Button variant="link" size="sm" onClick={handleResend} disabled={resending}>
+                  {resending ? "Sending…" : "Resend"}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <EmailInput email={email} isValid={emailValid} onChange={setEmail} onFocus={clearError} />
+              <PasswordInput
+                password={password}
+                isValid={passwordValid}
+                showRequirements={false}
+                onChange={setPassword}
+                onFocus={clearError}
+              />
+            </div>
+
+            {errorMsg && <p className="-mt-2 text-center text-sm font-medium text-red-600">{errorMsg}</p>}
+
+            <Button type="submit" className="w-full" disabled={loading || !emailValid || !passwordValid}>
+              {loading ? "Signing in…" : "Sign in"}
+            </Button>
+
+            <SocialLogin onGoogleSignIn={handleGoogleSignIn} />
+
+            <p className="text-center text-sm text-gray-600">
+              Don’t have an account?{' '}
+              <Link to="/signup" className="text-primary hover:underline">
+                Sign up
+              </Link>
+            </p>
+          </form>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <Footer />
+    </div>
   );
-}
+};
+
+export default Login;
