@@ -10,6 +10,7 @@ import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail } from "@/utils/authValidation";
+import { supabase } from "@/integrations/supabase/client";
 import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
 
 /**
@@ -46,7 +47,7 @@ const Login = () => {
     setErrorMsg("");
 
     try {
-      const { error } = await signIn(email, password);
+      const { data, error } = await signIn(email, password);
       
       if (error) {
         console.log("Login error:", error.message);
@@ -60,8 +61,41 @@ const Login = () => {
           return;
         }
         
-        // For invalid credentials, use a standard error message
+        // For invalid credentials, check if we need to handle unverified emails
+        if (error.message.includes("Invalid login credentials")) {
+          // We can try checking if the user exists but is unverified
+          try {
+            // First check if the user exists at all by using getUserByEmail (admin-only function)
+            const { data: userData } = await supabase.auth.admin.getUserByEmail(email);
+            
+            if (userData?.user && !userData.user.email_confirmed_at) {
+              // User exists but hasn't verified their email
+              setShowVerificationModal(true);
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            // Fallback: if we don't have admin access, we'll use a heuristic
+            // If the error specifically mentions wrong password (not "user not found"),
+            // it's likely the account exists but isn't verified
+            if (error.message.includes("password") && 
+                !error.message.includes("not found")) {
+              setShowVerificationModal(true);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+        
+        // For other errors, use a standard error message
         setErrorMsg("Invalid email or password");
+        setLoading(false);
+        return;
+      }
+      
+      // If we have user data but no email_confirmed_at, show verification modal
+      if (data?.user && !data.user.email_confirmed_at) {
+        setShowVerificationModal(true);
         setLoading(false);
         return;
       }

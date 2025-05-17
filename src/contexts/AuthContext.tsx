@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -9,7 +8,7 @@ type AuthContextType = {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null; user?: User | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -105,18 +104,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Sign in with email/password
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
         console.error("Sign in error:", error.message);
-        return { error };
+        return { error, data: null };
       }
       
       console.log("Sign in successful");
-      return { error: null };
+      return { error: null, data };
     } catch (error) {
       console.error("Unexpected sign in error:", error);
-      return { error: error instanceof Error ? error : new Error('An unexpected error occurred') };
+      return { error: error instanceof Error ? error : new Error('An unexpected error occurred'), data: null };
     } finally {
       setLoading(false);
     }
