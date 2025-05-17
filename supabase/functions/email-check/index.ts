@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -7,23 +8,54 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('[Request received]', {
+    method: req.method,
+    url: req.url,
+    hasAuthHeader: req.headers.has('authorization'),
+    hasApiKey: req.headers.has('apikey'),
+    contentType: req.headers.get('content-type')
+  });
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-  const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+  const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    console.error('[Environment Error] Missing required env variables:', {
+      hasSupabaseUrl: !!SUPABASE_URL,
+      hasServiceRoleKey: !!SERVICE_ROLE_KEY
+    });
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
+  }
+
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   try {
-    const rawBody = await req.text();
-    console.log('[Raw Request Body]', rawBody);
+    console.log('[Processing request body]');
+    let rawBody;
+    try {
+      rawBody = await req.text();
+      console.log('[Raw Request Body]', rawBody);
+    } catch (textError) {
+      console.error('[Request Text Error]', textError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to read request body', details: textError.message }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
 
     let email: string | undefined;
     let resend: boolean | undefined;
 
     try {
       const parsed = JSON.parse(rawBody);
+      console.log('[Parsed JSON]', parsed);
       email = parsed.email;
       resend = parsed.resend;
     } catch (parseError) {

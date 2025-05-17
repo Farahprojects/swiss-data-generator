@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
@@ -76,13 +75,13 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     
     try {
       // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
-      // Added /v1/ in the path and apikey header
       console.log(`Calling edge function from modal: ${SUPABASE_URL}/functions/v1/email-check`);
       const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'apikey': SUPABASE_PUBLISHABLE_KEY
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
         },
         body: JSON.stringify({
           email: targetEmail,
