@@ -95,14 +95,15 @@ serve(async (req) => {
     }
 
     const user = users[0];
-    const pendingChange = user.email_change;
-    const token = user.email_change_token_new;
-
     console.log('[User Found]', {
       email: user.email,
-      email_change: pendingChange,
-      has_token: !!token
+      has_email_change: !!user.email_change,
+      has_token: !!user.email_change_token_new
     });
+    
+    // Fix: Check if email_change and token exist before accessing them
+    const pendingChange = user?.email_change;
+    const token = user?.email_change_token_new;
 
     if (!pendingChange || !token) {
       console.log('[No Pending Email Change] Either email_change or token is missing.');
