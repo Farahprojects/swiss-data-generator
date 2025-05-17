@@ -10,7 +10,6 @@ import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail } from "@/utils/authValidation";
-import { supabase } from "@/integrations/supabase/client";
 import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
 
 /**
@@ -61,28 +60,7 @@ const Login = () => {
           return;
         }
         
-        // For invalid credentials, check if the account exists but is unverified
-        if (error.message.includes("Invalid login credentials")) {
-          // We can't directly check if an account exists due to security restrictions
-          // However, we can try a password reset to see if the email exists in the system
-          try {
-            const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-              email, 
-              { redirectTo: `${window.location.origin}/login` }
-            );
-            
-            // If there's no error with reset password, it likely means the account exists
-            // but we'll use a generic message for security reasons
-            if (!resetError) {
-              setShowVerificationModal(true);
-              setLoading(false);
-              return;
-            }
-          } catch (checkErr) {
-            console.error("Error checking email verification:", checkErr);
-          }
-        }
-        
+        // For invalid credentials, use a standard error message
         setErrorMsg("Invalid email or password");
         setLoading(false);
         return;
