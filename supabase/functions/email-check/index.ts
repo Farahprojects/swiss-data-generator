@@ -16,10 +16,23 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   try {
-    const body = await req.json();
-    const { email, resend } = body;
+    const rawBody = await req.text();
+    console.log('[Raw Request Body]', rawBody);
 
-    console.log('[Incoming Request]', JSON.stringify({ email, resend }));
+    let email: string | undefined;
+    let resend: boolean | undefined;
+
+    try {
+      const parsed = JSON.parse(rawBody);
+      email = parsed.email;
+      resend = parsed.resend;
+    } catch (parseError) {
+      console.error('[JSON Parse Error]', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON payload' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
 
     if (!email) {
       console.warn('[Validation Error] Missing email in payload');
