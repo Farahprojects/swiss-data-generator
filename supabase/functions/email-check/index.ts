@@ -117,12 +117,22 @@ serve(async (req) => {
       has_token: !!user.email_change_token_new
     });
     
-    // Check if email_change and token exist before accessing them
+    // Check email_change specifically before checking for token
+    // This is the key change - looking for email_change first
+    if (!user.email_change) {
+      console.log('[No Pending Email Change] User does not have an email_change value.');
+      return new Response(
+        JSON.stringify({ status: 'no_pending_change' }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+    
+    // If email_change exists, then check for the token
     const pendingChange = user.email_change;
     const token = user.email_change_token_new;
 
-    if (!pendingChange || !token) {
-      console.log('[No Pending Email Change] Either email_change or token is missing.');
+    if (!token) {
+      console.log('[Token Missing] Email change exists but no token found.');
       return new Response(
         JSON.stringify({ status: 'no_pending_change' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
