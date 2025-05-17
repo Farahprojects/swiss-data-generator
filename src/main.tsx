@@ -4,13 +4,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-// Use StrictMode only in development
-const StrictModeWrapper = import.meta.env.DEV
-  ? React.StrictMode
-  : React.Fragment;
-
+// StrictMode temporarily disabled for email verification debugging
 createRoot(document.getElementById("root")!).render(
-  <StrictModeWrapper>
-    <App />
-  </StrictModeWrapper>
+  <App />
 );
