@@ -50,7 +50,7 @@ const Login = () => {
 
     try {
       // PART 1: Pre-auth email change check (before any Supabase auth starts)
-      const emailCheckRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/email-check`, {
+      const emailCheckRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/email-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
