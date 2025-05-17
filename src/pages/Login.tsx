@@ -77,7 +77,7 @@ const Login = () => {
         // Continue with sign-in even if email check fails
       }
       
-      // If there's a pending email change, show the verification modal
+      // Only show verification modal if the edge function specifically indicates a pending email change
       if (emailCheckData && emailCheckData.status === 'pending') {
         debug('Pending email change found, showing verification modal');
         return openVerificationModal();
@@ -91,15 +91,19 @@ const Login = () => {
       if (error) {
         debug('signIn error', error);
 
-        // Supabase masks unverified e‑mails with 400 / "Invalid login credentials".
-        // We treat ANY 400 as potentially unverified and display the modal.
-        const status = (error as any).status ?? (error as any).statusCode;
-        if (status === 400) return openVerificationModal();
-
-        // If status not present fallback to message heuristics
-        if (error.message.toLowerCase().includes('confirm') || error.message.toLowerCase().includes('verification'))
+        // DON'T automatically show verification modal for any 400 error
+        // Instead, check if the error message specifically indicates verification needed
+        const errorMessage = error.message.toLowerCase();
+        if (
+          errorMessage.includes('confirm') || 
+          errorMessage.includes('verification') || 
+          errorMessage.includes('verify')
+        ) {
+          debug('Error indicates verification needed');
           return openVerificationModal();
+        }
 
+        // For all other errors, show the generic error message
         setErrorMsg('Invalid email or password');
         return setLoading(false);
       }
