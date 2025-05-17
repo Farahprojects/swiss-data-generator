@@ -91,6 +91,12 @@ serve(async (req) => {
       );
     }
 
+    // Log the users result to see what we're working with
+    console.log('[Supabase Users Result]', {
+      usersFound: users ? users.length : 0,
+      usersObject: users ? typeof users : 'undefined'
+    });
+
     if (!users || users.length === 0) {
       console.log('[User Not Found] No user matches email:', email);
       return new Response(
@@ -101,9 +107,10 @@ serve(async (req) => {
 
     const user = users[0];
     
+    console.log('[DEBUG Path 1] About to check if user is defined');
     // Make sure user is defined before accessing properties
     if (!user) {
-      console.log('[User Object Undefined] Cannot access user properties');
+      console.log('[DEBUG Path 1A] User object is undefined');
       return new Response(
         JSON.stringify({ status: 'no_pending_change' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -111,36 +118,39 @@ serve(async (req) => {
     }
 
     // Safe logging with optional chaining
-    console.log('[User Found]', {
+    console.log('[DEBUG Path 2] User found, checking properties', {
       email: user.email || 'undefined',
-      has_email_change: !!user.email_change,
-      has_token: !!user.email_change_token_new
+      has_email_change: user.email_change ? 'YES' : 'NO',
+      has_token: user.email_change_token_new ? 'YES' : 'NO',
+      user_keys: Object.keys(user)
     });
     
     // Check email_change specifically before checking for token
-    // This is the key change - looking for email_change first
+    console.log('[DEBUG Path 3] Checking for email_change property');
     if (!user.email_change) {
-      console.log('[No Pending Email Change] User does not have an email_change value.');
+      console.log('[DEBUG Path 3A] No Pending Email Change - email_change property missing');
       return new Response(
         JSON.stringify({ status: 'no_pending_change' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
     
+    console.log('[DEBUG Path 4] email_change exists, checking for token');
     // If email_change exists, then check for the token
     const pendingChange = user.email_change;
     const token = user.email_change_token_new;
 
     if (!token) {
-      console.log('[Token Missing] Email change exists but no token found.');
+      console.log('[DEBUG Path 4A] Token Missing - email_change exists but no token found');
       return new Response(
         JSON.stringify({ status: 'no_pending_change' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
+    console.log('[DEBUG Path 5] Both email_change and token exist, checking if resend requested');
     if (resend === true) {
-      console.log('[Resend Requested] Triggering Supabase verification to:', pendingChange);
+      console.log('[DEBUG Path 5A] Resend requested, triggering verification to:', pendingChange);
 
       const verifyRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
         method: 'POST',
@@ -163,14 +173,14 @@ serve(async (req) => {
         );
       }
 
-      console.log('[Verification Email Resent Successfully]');
+      console.log('[DEBUG Path 5B] Verification Email Resent Successfully');
       return new Response(
         JSON.stringify({ status: 'resent' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
-    console.log('[Pending Email Detected] Resend not triggered.');
+    console.log('[DEBUG Path 6] Pending Email Change Detected - both email_change and token exist, no resend requested');
     return new Response(
       JSON.stringify({ status: 'pending' }),
       { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
