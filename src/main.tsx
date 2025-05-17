@@ -4,7 +4,8 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-// StrictMode temporarily disabled for email verification debugging
 createRoot(document.getElementById("root")!).render(
-  <App />
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
 );

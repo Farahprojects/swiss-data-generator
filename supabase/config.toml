@@ -64,39 +64,9 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 
-[auth.sms]
-# Allow/disallow new user signups via SMS to your project.
-enable_signup = true
-# If enabled, users need to confirm their phone number before signing in.
-enable_confirmations = false
-
-# Configure one of the supported SMS providers: "twilio", "messaging_service", "vonage", "textlocal", "msg91".
-[auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-auth_token = ""
-
-[auth.sms.messaging_service]
-enabled = false
-# Any custom messaging service URL endpoint.
-endpoint = ""
-credentials = ""
-
-# Use an external OAuth provider. The full list of providers are: "apple", "azure", "bitbucket",
-# "discord", "facebook", "github", "gitlab", "google", "keycloak", "linkedin", "notion", "twitch",
-# "twitter", "slack", "spotify", "workos", "zoom".
-[auth.external.apple]
-enabled = false
-client_id = ""
-secret = ""
-# Overrides the default auth redirectUrl.
-redirect_uri = ""
-# Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
-# or any other third-party OIDC providers.
-url = ""
+# OAuth providers configuration sections intentionally removed, as they're not used
 
 [analytics]
 enabled = false

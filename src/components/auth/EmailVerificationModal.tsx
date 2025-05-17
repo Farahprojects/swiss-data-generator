@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import {
   Dialog,
@@ -19,9 +20,10 @@ interface Props {
 }
 
 /**
- * Modal that sends / tracks Supabase email‑change verification.
- * – Sends a confirmation email via `updateUser({ email })` when opened or on resend.
- * – Listens for `USER_UPDATED` events and polls every 3 s until the email is confirmed.
+ * Modal that handles email verification.
+ * – Uses Supabase's built-in email verification flow.
+ * – Sends a confirmation email via updateUser().
+ * – Polls for completion via auth.getUser().
  * – Keeps UX feedback minimal but clear.
  */
 export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel }: Props) {
@@ -68,9 +70,7 @@ export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel 
   const sendVerification = async () => {
     setStatus("sending");
     try {
-      /**
-       * Supabase will send a confirmation link automatically when we update the email.
-       */
+      // We use updateUser to trigger the email verification flow
       const { error } = await supabase.auth.updateUser({ email: newEmail });
       if (error) throw error;
       setStatus("success");
@@ -140,12 +140,12 @@ export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel 
         <DialogHeader>
           <DialogTitle>Verify Your Email Address</DialogTitle>
           <DialogDescription>
-            We’ve sent a verification link to <strong>{newEmail}</strong>. Please confirm to continue.
+            We've sent a verification link to <strong>{newEmail}</strong>. Please confirm to continue.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col space-y-4 py-4 text-sm text-gray-600">
-          You won’t be able to continue using the app until you verify your email address.
+          You won't be able to continue using the app until you verify your email address.
           {renderNotif()}
           <Button variant="outline" onClick={sendVerification} disabled={status === "sending"} className="w-full">
             {status === "sending" ? (
@@ -161,7 +161,7 @@ export function EmailVerificationModal({ isOpen, newEmail, onVerified, onCancel 
         <div className="flex items-center justify-between space-x-2">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
           <Button onClick={checkVerified} disabled={checking} className="flex items-center space-x-2">
-            {checking && <Loader className="mr-2 h-4 w-4 animate-spin" />} I’ve verified my email
+            {checking && <Loader className="mr-2 h-4 w-4 animate-spin" />} I've verified my email
           </Button>
         </div>
       </DialogContent>
