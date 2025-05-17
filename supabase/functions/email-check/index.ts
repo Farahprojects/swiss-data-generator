@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -8,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -23,48 +21,38 @@ serve(async (req) => {
     if (!email) {
       return new Response(
         JSON.stringify({ error: 'Email is required.' }),
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        }
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
     console.log(`Checking email status for: ${email}`);
-    
-    // We need to use raw query because auth.users is not accessible via the from() API
-    const { data: user, error } = await supabase
-      .rpc('admin_get_user_by_email', { email_input: email })
-      .maybeSingle();
 
-    if (error) {
-      console.error('Error querying user:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to query user.', details: error.message }),
-        { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        }
-      );
-    }
+    const { data: users, error } = await supabase.auth.admin.listUsers({ email });
 
-    if (!user || !user.email_change_token_new) {
-      console.log('No pending email change found for:', email);
+    if (error || !users || users.length === 0) {
+      console.error('Error querying user or user not found:', error);
       return new Response(
         JSON.stringify({ status: 'no_pending_change' }),
-        { 
-          status: 200,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        }
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
-    console.log('Found pending email change:', user.email_change);
+    const user = users[0];
 
-    // Only resend if requested
-    if (resend === true && user.email_change) {
-      console.log('Resending verification to:', user.email_change);
-      
+    // These fields are available only from the admin API
+    const pendingChange = user.email_change;
+    const token = user.email_change_token_new;
+
+    if (!pendingChange || !token) {
+      return new Response(
+        JSON.stringify({ status: 'no_pending_change' }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    if (resend === true) {
+      console.log('Resending email change verification to:', pendingChange);
+
       const verifyRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
         method: 'POST',
         headers: {
@@ -72,7 +60,7 @@ serve(async (req) => {
           'apikey': SERVICE_ROLE_KEY,
         },
         body: JSON.stringify({
-          email: user.email_change,
+          email: pendingChange,
           type: 'email_change',
         }),
       });
@@ -82,40 +70,25 @@ serve(async (req) => {
         console.error('Resend failed:', msg);
         return new Response(
           JSON.stringify({ error: 'Resend failed', details: msg }),
-          { 
-            status: 500,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          }
+          { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
 
-      console.log('Successfully resent verification email');
       return new Response(
         JSON.stringify({ status: 'resent' }),
-        { 
-          status: 200,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        }
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
-    // Just report that it's pending
-    console.log('Reporting pending status without resending');
     return new Response(
       JSON.stringify({ status: 'pending' }),
-      { 
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      }
+      { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   } catch (err) {
     console.error('Unexpected error:', err);
     return new Response(
       JSON.stringify({ error: 'Unexpected error', details: err.message }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      }
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
 });
