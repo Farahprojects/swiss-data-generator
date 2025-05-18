@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -29,6 +28,7 @@ import NavigationStateProvider from './contexts/NavigationStateContext';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
 import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
 import { supabase } from './integrations/supabase/client';
+import { InlineToast } from './components/ui/InlineToast';
 
 // Route debugging wrapper with phantom auth detection
 const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
@@ -128,6 +128,7 @@ function App() {
           </SidebarProvider>
         </AuthProvider>
         <Toaster />
+        <InlineToast />
       </NavigationStateProvider>
     </Router>
   );

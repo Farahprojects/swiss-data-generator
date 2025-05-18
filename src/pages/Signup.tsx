@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +10,9 @@ import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail, validatePassword, validatePasswordMatch } from "@/utils/authValidation";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
+import { Mail } from "lucide-react";
 
 const Signup = () => {
   const [loading, setLoading] = useState(false);
@@ -21,6 +23,7 @@ const Signup = () => {
   const [passwordValid, setPasswordValid] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const { signUp, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -77,22 +80,16 @@ const Signup = () => {
           description: getUserFriendlyError(error.message || ""),
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
       
       console.log("Signup successful, user created:", user?.id);
       
-      toast({
-        title: "Account Created",
-        description: "Your account has been created successfully. API key has been automatically generated.",
-        variant: "success",
-      });
+      // Show verification dialog instead of redirecting
+      setShowVerificationDialog(true);
+      setLoading(false);
       
-      // If email confirmation is disabled, we can redirect to dashboard
-      if (user) {
-        console.log("Redirecting to dashboard");
-        navigate("/dashboard");
-      }
     } catch (error: any) {
       console.error("Unexpected error during signup:", error);
       console.error("Error stack:", error.stack);
@@ -105,7 +102,6 @@ const Signup = () => {
         description: "We encountered an unexpected error. Please try again later.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -139,6 +135,11 @@ const Signup = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCloseVerificationDialog = () => {
+    setShowVerificationDialog(false);
+    navigate("/login");
   };
 
   return (
@@ -213,6 +214,37 @@ const Signup = () => {
         </div>
       </div>
       <Footer />
+
+      {/* Email Verification Dialog */}
+      <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Verification Email Sent</DialogTitle>
+            <DialogDescription className="text-center">
+              <div className="flex justify-center my-6">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Mail className="h-12 w-12 text-primary" />
+                </div>
+              </div>
+              <p className="text-lg font-medium">
+                We've sent a verification email to:
+              </p>
+              <p className="text-lg font-bold mt-2 text-primary">
+                {email}
+              </p>
+              <p className="mt-4">
+                Please check your inbox and click the verification link to activate your account. 
+                After verifying your email, you can log in to access your account.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center">
+            <Button onClick={handleCloseVerificationDialog} className="w-full sm:w-auto">
+              Go to Login
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
