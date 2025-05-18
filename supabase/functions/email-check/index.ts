@@ -81,7 +81,7 @@ serve(async (req) => {
 
     console.log(`[Supabase Lookup] Checking user with email: ${email}`);
 
-    const { data: users, error } = await supabase.auth.admin.listUsers({ email });
+    const { data: users, error } = await supabase.auth.admin.listUsers({ email_change });
 
     if (error) {
       console.error('[Supabase Admin API Error]', error.message);
