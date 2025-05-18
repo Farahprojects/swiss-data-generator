@@ -141,59 +141,22 @@ serve(async (req) => {
     
     // Handle resend if requested
     if (resend === true) {
-      console.log('[DEBUG Path 5A] Resend requested, triggering verification to:', pendingChange);
+      console.log('[DEBUG Path 5A] Resend requested, re-setting email to trigger new verification:', pendingChange);
 
-      // Prepare the request body - make sure it matches what Supabase expects
-      const verifyPayload = {
-        email: pendingChange,
-        type: 'email_change',
-      };
-      
-      console.log('[Verify Request Payload]', JSON.stringify(verifyPayload));
-
-      const verifyRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SERVICE_ROLE_KEY,
-        },
-        body: JSON.stringify(verifyPayload),
+      // IMPROVED APPROACH: Re-set the email to the same value to trigger a fresh verification email
+      const updatedUserRes = await supabase.auth.admin.updateUserById(user.id, {
+        email: pendingChange
       });
 
-      // Always log the full response for debugging
-      const responseStatus = verifyRes.status;
-      let responseBody = '';
-      try {
-        responseBody = await verifyRes.text();
-        console.log('[Resend Response]', responseStatus, responseBody);
-      } catch (error) {
-        console.error('[Error reading response]', error);
-      }
-
-      // Try to parse as JSON if it looks like JSON
-      let jsonResponse = null;
-      if (responseBody && (responseBody.startsWith('{') || responseBody.startsWith('['))) {
-        try {
-          jsonResponse = JSON.parse(responseBody);
-          console.log('[Parsed Resend Response]', jsonResponse);
-        } catch (e) {
-          console.log('[Response not valid JSON]');
-        }
-      }
-
-      if (!verifyRes.ok) {
-        console.error('[Verification Resend Failed]', responseBody);
+      if (updatedUserRes.error) {
+        console.error('[Admin Email Reset Failed]', updatedUserRes.error.message);
         return new Response(
-          JSON.stringify({ 
-            error: 'Resend failed', 
-            status: responseStatus,
-            details: responseBody 
-          }),
+          JSON.stringify({ error: 'Resend failed', details: updatedUserRes.error.message }),
           { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
 
-      console.log('[DEBUG Path 5B] Verification Email Resent Successfully');
+      console.log('[Verification Email Re-triggered by Re-setting Email]');
       return new Response(
         JSON.stringify({ status: 'resent' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
