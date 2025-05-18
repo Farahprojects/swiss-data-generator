@@ -120,22 +120,22 @@ serve(async (req) => {
     // Safe logging with optional chaining
     console.log('[DEBUG Path 2] User found, checking properties', {
       email: user.email || 'undefined',
-      has_email_change: user.email_change ? 'YES' : 'NO',
+      has_new_email: user.new_email ? 'YES' : 'NO',
       user_keys: Object.keys(user)
     });
     
-    // SIMPLIFIED: Only check for email_change
-    console.log('[DEBUG Path 3] Checking for email_change property');
-    if (!user.email_change) {
-      console.log('[DEBUG Path 3A] No Pending Email Change - email_change property missing');
+    // SIMPLIFIED: Check for new_email instead of email_change
+    console.log('[DEBUG Path 3] Checking for new_email property');
+    if (!user.new_email) {
+      console.log('[DEBUG Path 3A] No Pending Email Change - new_email property missing');
       return new Response(
         JSON.stringify({ status: 'no_pending_change' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
     
-    // We have an email_change, so there's a pending email verification
-    const pendingChange = user.email_change;
+    // We have a new_email, so there's a pending email verification
+    const pendingChange = user.new_email;
     
     // Handle resend if requested
     if (resend === true) {
@@ -169,7 +169,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[DEBUG Path 6] Pending Email Change Detected - email_change exists');
+    console.log('[DEBUG Path 6] Pending Email Change Detected - new_email exists');
     return new Response(
       JSON.stringify({ status: 'pending' }),
       { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
