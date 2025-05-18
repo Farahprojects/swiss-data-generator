@@ -121,6 +121,7 @@ serve(async (req) => {
     console.log('[DEBUG Path 2] User found, checking properties', {
       email: user.email || 'undefined',
       has_new_email: user.new_email ? 'YES' : 'NO',
+      new_email_value: user.new_email || 'not set',
       user_keys: Object.keys(user)
     });
     
@@ -136,10 +137,19 @@ serve(async (req) => {
     
     // We have a new_email, so there's a pending email verification
     const pendingChange = user.new_email;
+    console.log('[DEBUG] Pending email change found:', pendingChange);
     
     // Handle resend if requested
     if (resend === true) {
       console.log('[DEBUG Path 5A] Resend requested, triggering verification to:', pendingChange);
+
+      // Prepare the request body - make sure it matches what Supabase expects
+      const verifyPayload = {
+        email: pendingChange,
+        type: 'email_change',
+      };
+      
+      console.log('[Verify Request Payload]', JSON.stringify(verifyPayload));
 
       const verifyRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
         method: 'POST',
@@ -147,17 +157,38 @@ serve(async (req) => {
           'Content-Type': 'application/json',
           'apikey': SERVICE_ROLE_KEY,
         },
-        body: JSON.stringify({
-          email: pendingChange,
-          type: 'email_change',
-        }),
+        body: JSON.stringify(verifyPayload),
       });
 
+      // Always log the full response for debugging
+      const responseStatus = verifyRes.status;
+      let responseBody = '';
+      try {
+        responseBody = await verifyRes.text();
+        console.log('[Resend Response]', responseStatus, responseBody);
+      } catch (error) {
+        console.error('[Error reading response]', error);
+      }
+
+      // Try to parse as JSON if it looks like JSON
+      let jsonResponse = null;
+      if (responseBody && (responseBody.startsWith('{') || responseBody.startsWith('['))) {
+        try {
+          jsonResponse = JSON.parse(responseBody);
+          console.log('[Parsed Resend Response]', jsonResponse);
+        } catch (e) {
+          console.log('[Response not valid JSON]');
+        }
+      }
+
       if (!verifyRes.ok) {
-        const msg = await verifyRes.text();
-        console.error('[Verification Resend Failed]', msg);
+        console.error('[Verification Resend Failed]', responseBody);
         return new Response(
-          JSON.stringify({ error: 'Resend failed', details: msg }),
+          JSON.stringify({ 
+            error: 'Resend failed', 
+            status: responseStatus,
+            details: responseBody 
+          }),
           { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
