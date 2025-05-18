@@ -239,8 +239,8 @@ const Signup = () => {
                 {email}
               </p>
               <p className="mt-4">
-                Please check your inbox and click on the magic link in the email to 
-                verify your account. The link will automatically log you in.
+                Please check your inbox or spam and click on the link in the email to 
+                verify your account. The link will automatically log you in for the first time.
               </p>
             </DialogDescription>
           </DialogHeader>
