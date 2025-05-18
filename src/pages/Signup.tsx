@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -139,7 +140,7 @@ const Signup = () => {
 
   const handleCloseVerificationDialog = () => {
     setShowVerificationDialog(false);
-    navigate("/login");
+    navigate("/"); // Redirect to index page when dialog is closed
   };
 
   return (
@@ -216,7 +217,12 @@ const Signup = () => {
       <Footer />
 
       {/* Email Verification Dialog */}
-      <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
+      <Dialog open={showVerificationDialog} onOpenChange={(open) => {
+        if (!open) {
+          navigate("/"); // Redirect to index page when dialog is closed via the X button
+        }
+        setShowVerificationDialog(open);
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-center">Verification Email Sent</DialogTitle>
@@ -233,14 +239,14 @@ const Signup = () => {
                 {email}
               </p>
               <p className="mt-4">
-                Please check your inbox and click the verification link to activate your account. 
-                After verifying your email, you can log in to access your account.
+                Please check your inbox and click on the magic link in the email to 
+                verify your account. The link will automatically log you in.
               </p>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center">
             <Button onClick={handleCloseVerificationDialog} className="w-full sm:w-auto">
-              Go to Login
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
