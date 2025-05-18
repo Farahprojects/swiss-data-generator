@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
@@ -49,10 +50,13 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
   const poll = async () => {
     if (checking) return;
     setChecking(true);
+    debug('Polling for email verification status');
     try {
       await supabase.auth.refreshSession();
       const { data } = await supabase.auth.getUser();
+      debug('User data in poll:', data.user);
       if (data.user?.email_confirmed_at) {
+        debug('Email verification confirmed via polling');
         stopPolling();
         onVerified();
       }
@@ -74,7 +78,6 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     setStatus('sending');
     
     try {
-      // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
       console.log(`Calling edge function from modal: ${SUPABASE_URL}/functions/v1/email-check`);
       const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
         method: 'POST',
@@ -132,6 +135,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
       
       // Fallback to the provided resend function if the edge function didn't handle it
       if (resend) {
+        debug('Using provided resend function as fallback');
         const { error } = await resend(targetEmail);
         
         if (error) {
@@ -186,6 +190,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      debug('Auth state change event:', event);
       if (event === 'USER_UPDATED' && session?.user?.email_confirmed_at) {
         debug('Realtime confirmation detected');
         stopPolling();

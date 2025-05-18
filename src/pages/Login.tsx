@@ -42,6 +42,7 @@ const Login = () => {
   }
 
   const openVerificationModal = () => {
+    debug('Opening email verification modal for', email);
     setShowVerificationModal(true);
     setLoading(false);
   };
@@ -54,8 +55,10 @@ const Login = () => {
     setErrorMsg('');
 
     try {
+      debug(`Checking for pending email verification for: ${email}`);
+      
       // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
-      console.log(`Calling edge function: ${SUPABASE_URL}/functions/v1/email-check`);
+      console.log(`Calling email-check edge function: ${SUPABASE_URL}/functions/v1/email-check`);
       const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
         method: 'POST',
         headers: { 
@@ -109,7 +112,10 @@ const Login = () => {
       }
 
       // Extra guard: data.user present but not confirmed (edge‑case when GoTrue behaviour changes)
-      if (data?.user && !data.user.email_confirmed_at) return openVerificationModal();
+      if (data?.user && !data.user.email_confirmed_at) {
+        debug('User found but email not confirmed');
+        return openVerificationModal();
+      }
 
       navigate((location.state as any)?.from?.pathname || '/', { replace: true });
     } catch (err: any) {
