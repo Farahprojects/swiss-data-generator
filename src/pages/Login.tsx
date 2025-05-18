@@ -68,19 +68,26 @@ const Login = () => {
       
       console.log("Email check response status:", emailCheckRes.status);
       
-      let emailCheckData;
-      try {
-        emailCheckData = await emailCheckRes.json();
-        console.log("Email check data:", emailCheckData);
-      } catch (err) {
-        console.error("Failed to parse email-check response:", err);
-        // Continue with sign-in even if email check fails
-      }
-      
-      // Only show verification modal if the edge function specifically indicates a pending email change
-      if (emailCheckData && emailCheckData.status === 'pending') {
-        debug('Pending email change found, showing verification modal');
-        return openVerificationModal();
+      // More verbose error handling for the API call
+      if (!emailCheckRes.ok) {
+        console.error("Email check API error:", emailCheckRes.status, emailCheckRes.statusText);
+        // Continue with sign-in process despite API error (fallback behavior)
+        debug('Email check API failed, proceeding with normal sign-in');
+      } else {
+        let emailCheckData;
+        try {
+          emailCheckData = await emailCheckRes.json();
+          console.log("Email check data:", emailCheckData);
+          
+          // Only show verification modal if the edge function specifically indicates a pending email change
+          if (emailCheckData && emailCheckData.status === 'pending') {
+            debug('Pending email change found, showing verification modal');
+            return openVerificationModal();
+          }
+        } catch (err) {
+          console.error("Failed to parse email-check response:", err);
+          // Continue with sign-in even if email check parsing fails
+        }
       }
 
       debug('No pending email change, proceeding with sign in');

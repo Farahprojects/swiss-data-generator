@@ -52,6 +52,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     try {
       await supabase.auth.refreshSession();
       const { data } = await supabase.auth.getUser();
+      console.log("Polling for verification, user data:", data);
       if (data.user?.email_confirmed_at) {
         stopPolling();
         onVerified();
@@ -90,6 +91,36 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
       });
       
       console.log("Email check response status in modal:", emailCheckRes.status);
+      
+      if (!emailCheckRes.ok) {
+        console.error("Edge function error:", emailCheckRes.status, emailCheckRes.statusText);
+        // Try fallback to resend function if the edge function fails
+        if (resend) {
+          debug('Edge function failed, trying fallback resend method');
+          const { error } = await resend(targetEmail);
+          
+          if (error) {
+            debug('fallback resend error', error);
+            toast({ title: 'Error', description: error.message, variant: 'destructive' });
+            setStatus('error');
+            return;
+          }
+          
+          setStatus('success');
+          toast({ title: 'Verification email sent', description: `Check ${targetEmail}` });
+          stopPolling();
+          intervalRef.current = window.setInterval(poll, 3000);
+          return;
+        } else {
+          setStatus('error');
+          toast({ 
+            title: 'Error', 
+            description: 'Failed to send verification email', 
+            variant: 'destructive' 
+          });
+          return;
+        }
+      }
       
       let emailCheckData;
       try {
@@ -186,6 +217,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state change event:", event, "session:", session?.user?.email_confirmed_at ? "confirmed" : "not confirmed");
       if (event === 'USER_UPDATED' && session?.user?.email_confirmed_at) {
         debug('Realtime confirmation detected');
         stopPolling();
@@ -238,7 +270,20 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
 
         <div className="flex flex-col space-y-4 py-4 text-sm text-gray-600">
           You won't be able to sign in until your email is verified.
-          <Notice />
+          {status === 'success' && (
+            <div className="mt-4 flex items-center rounded-md bg-green-50 p-2 text-green-700">
+              <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0" />
+              <p className="text-sm">
+                Verification sent to <strong>{targetEmail}</strong>
+              </p>
+            </div>
+          )}
+          {status === 'error' && (
+            <div className="mt-4 flex items-center rounded-md bg-red-50 p-2 text-red-700">
+              <AlertCircle className="mr-2 h-5 w-5 flex-shrink-0" />
+              <p className="text-sm">Failed to send email. Please try again.</p>
+            </div>
+          )}
           <Button
             variant="outline"
             onClick={sendLink}
