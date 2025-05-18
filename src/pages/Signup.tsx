@@ -10,7 +10,6 @@ import EmailInput from "@/components/auth/EmailInput";
 import PasswordInput from "@/components/auth/PasswordInput";
 import SocialLogin from "@/components/auth/SocialLogin";
 import { validateEmail, validatePassword, validatePasswordMatch } from "@/utils/authValidation";
-import { toast as sonnerToast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const Signup = () => {
@@ -21,8 +20,7 @@ const Signup = () => {
   const [emailValid, setEmailValid] = useState(false);
   const [passwordValid, setPasswordValid] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(false);
-  const [errorDetails, setErrorDetails] = useState("");
-  const [dbError, setDbError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const { signUp, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -32,19 +30,38 @@ const Signup = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
+  // Helper function to get user-friendly error message
+  const getUserFriendlyError = (errorMsg: string) => {
+    if (errorMsg.includes("duplicate key") || errorMsg.includes("already registered")) {
+      return "This email is already registered. Please use a different email or try logging in.";
+    }
+    if (errorMsg.includes("database error") || errorMsg.includes("relation") || errorMsg.includes("violates unique constraint")) {
+      return "We're having technical issues creating your account. Please try again in a few moments.";
+    }
+    if (errorMsg.includes("password")) {
+      return "Please check your password meets the requirements.";
+    }
+    if (errorMsg.includes("invalid email")) {
+      return "Please enter a valid email address.";
+    }
+    // Default friendly message
+    return "Something went wrong. Please try again or contact support if the problem persists.";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailValid || !passwordValid || !passwordsMatch) return;
     
     setLoading(true);
-    setErrorDetails("");
-    setDbError(false);
+    setErrorMessage("");
     
     try {
       console.log("Starting signup process for:", email);
       
-      // Use direct sonner toast for immediate feedback
-      sonnerToast.loading("Creating your account...");
+      toast({
+        title: "Creating your account",
+        description: "Please wait a moment...",
+      });
       
       const { error, user } = await signUp(email, password);
       
@@ -52,30 +69,23 @@ const Signup = () => {
         console.error("Signup error:", error.message);
         console.error("Full error object:", JSON.stringify(error, null, 2));
         
-        // Check for database errors
-        if (error.message && (
-          error.message.includes("database error") || 
-          error.message.includes("relation") || 
-          error.message.includes("violates unique constraint") ||
-          error.message.includes("duplicate key")
-        )) {
-          setDbError(true);
-          console.error("Database error detected during signup");
-        }
+        // Set user-friendly error message
+        setErrorMessage(getUserFriendlyError(error.message || ""));
         
-        setErrorDetails(error.message || "Unknown error");
-        sonnerToast.dismiss();
-        sonnerToast.error("Signup Error", {
-          description: `Error: ${error.message || "Failed to create account"}. Check the console for more details.`
+        toast({
+          title: "Signup Error",
+          description: getUserFriendlyError(error.message || ""),
+          variant: "destructive",
         });
         return;
       }
       
       console.log("Signup successful, user created:", user?.id);
       
-      sonnerToast.dismiss();
-      sonnerToast.success("Account Created", {
-        description: "Your account has been created successfully. API key has been automatically generated."
+      toast({
+        title: "Account Created",
+        description: "Your account has been created successfully. API key has been automatically generated.",
+        variant: "success",
       });
       
       // If email confirmation is disabled, we can redirect to dashboard
@@ -86,10 +96,14 @@ const Signup = () => {
     } catch (error: any) {
       console.error("Unexpected error during signup:", error);
       console.error("Error stack:", error.stack);
-      setErrorDetails(error instanceof Error ? error.message : "An unexpected error occurred");
-      sonnerToast.dismiss();
-      sonnerToast.error("Error", {
-        description: error instanceof Error ? error.message : "An unexpected error occurred during signup"
+      
+      // Set user-friendly error message for unexpected errors
+      setErrorMessage("We encountered an unexpected error. Please try again later.");
+      
+      toast({
+        title: "Error",
+        description: "We encountered an unexpected error. Please try again later.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -98,22 +112,31 @@ const Signup = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      sonnerToast.loading("Connecting to Google...");
+      toast({
+        title: "Connecting to Google",
+        description: "Please wait while we connect you to Google...",
+      });
+      
       const { error } = await signInWithGoogle();
+      
       if (error) {
         console.error("Google sign-in error:", error.message);
         console.error("Full error object:", JSON.stringify(error, null, 2));
-        sonnerToast.dismiss();
-        sonnerToast.error("Google Sign-in Error", {
-          description: error.message || "Failed to sign in with Google"
+        
+        toast({
+          title: "Google Sign-in Error",
+          description: "Unable to sign in with Google. Please try again.",
+          variant: "destructive",
         });
       }
     } catch (error: any) {
       console.error("Unexpected error during Google sign-in:", error);
       console.error("Error stack:", error.stack);
-      sonnerToast.dismiss();
-      sonnerToast.error("Error", {
-        description: error instanceof Error ? error.message : "An unexpected error occurred"
+      
+      toast({
+        title: "Error",
+        description: "We encountered an unexpected error. Please try again later.",
+        variant: "destructive",
       });
     }
   };
@@ -136,6 +159,7 @@ const Signup = () => {
                 onChange={(value) => {
                   setEmail(value);
                   setEmailValid(validateEmail(value));
+                  setErrorMessage(""); // Clear error when input changes
                 }}
               />
 
@@ -146,6 +170,7 @@ const Signup = () => {
                   setPassword(value);
                   setPasswordValid(value.length >= 8);
                   setPasswordsMatch(value === confirmPassword);
+                  setErrorMessage(""); // Clear error when input changes
                 }}
               />
 
@@ -156,21 +181,16 @@ const Signup = () => {
                 onChange={(value) => {
                   setConfirmPassword(value);
                   setPasswordsMatch(value === password);
+                  setErrorMessage(""); // Clear error when input changes
                 }}
                 label="Confirm Password"
               />
             </div>
             
-            {errorDetails && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
-                <p className="font-semibold">Error details:</p>
-                <p className="whitespace-pre-wrap">{errorDetails}</p>
-                {dbError && (
-                  <p className="mt-2 font-medium">
-                    A database error occurred. This has been fixed and should work now. Please try again.
-                  </p>
-                )}
-              </div>
+            {errorMessage && (
+              <p className="text-sm text-red-600 font-medium">
+                {errorMessage}
+              </p>
             )}
 
             <Button
