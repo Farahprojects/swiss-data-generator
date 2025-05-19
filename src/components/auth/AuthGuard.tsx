@@ -1,6 +1,6 @@
 
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
@@ -14,11 +14,21 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const location = useLocation();
-
-  // Check if we're on the password reset route - using includes to match all password reset paths
-  const isPasswordResetRoute = location.pathname.includes('/auth/password');
+  const [searchParams] = useSearchParams();
   
-  console.log(`🛡️ AuthGuard: Checking route ${location.pathname}, isPasswordResetRoute: ${isPasswordResetRoute}`);
+  // Extract token and type from URL for password reset detection
+  const token = searchParams.get('token');
+  const type = searchParams.get('type');
+  
+  // Check if we're on the password reset route or have reset token parameters
+  const isPasswordResetRoute = location.pathname.includes('/auth/password');
+  const hasPasswordResetParams = token && type === 'recovery';
+  const passwordResetRequired = localStorage.getItem('password_reset_required') === 'true';
+  
+  // Combine conditions to determine if this is a password reset case
+  const isPasswordResetCase = isPasswordResetRoute || hasPasswordResetParams || passwordResetRequired;
+  
+  console.log(`🛡️ AuthGuard: Checking route ${location.pathname}, isPasswordResetRoute: ${isPasswordResetRoute}, hasPasswordResetParams: ${hasPasswordResetParams}, passwordResetRequired: ${passwordResetRequired}`);
 
   // First check for direct session from Supabase
   useEffect(() => {
@@ -27,8 +37,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     async function checkAuth() {
       try {
         // Always bypass auth check for password reset routes
-        if (isPasswordResetRoute) {
-          console.log("🛡️ AuthGuard: Bypassing auth check for password reset route");
+        if (isPasswordResetCase) {
+          console.log("🛡️ AuthGuard: Bypassing auth check for password reset case");
           setIsCheckingAuth(false);
           return;
         }
@@ -63,11 +73,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
     
     checkAuth();
-  }, [user, loading, location.pathname, isPasswordResetRoute]);
+  }, [user, loading, location.pathname, isPasswordResetCase]);
 
   // Show toast if not authenticated - but only once
   useEffect(() => {
-    if (!loading && !isCheckingAuth && !isAuthenticated && !hasShownToast && !isPasswordResetRoute) {
+    if (!loading && !isCheckingAuth && !isAuthenticated && !hasShownToast && !isPasswordResetCase) {
       console.log("🛡️ AuthGuard: Authentication required, showing toast");
       toast({
         variant: "destructive",
@@ -76,9 +86,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       });
       setHasShownToast(true);
     }
-  }, [loading, isCheckingAuth, isAuthenticated, toast, hasShownToast, isPasswordResetRoute]);
+  }, [loading, isCheckingAuth, isAuthenticated, toast, hasShownToast, isPasswordResetCase]);
 
-  console.log(`🛡️ AuthGuard: Current path: ${location.pathname}, isLoading: ${loading || isCheckingAuth}, isAuthenticated: ${isAuthenticated}, isPasswordResetRoute: ${isPasswordResetRoute}`);
+  console.log(`🛡️ AuthGuard: Current path: ${location.pathname}, isLoading: ${loading || isCheckingAuth}, isAuthenticated: ${isAuthenticated}, isPasswordResetCase: ${isPasswordResetCase}`);
 
   if (loading || isCheckingAuth) {
     console.log("🛡️ AuthGuard: Still loading, showing spinner");
@@ -92,9 +102,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If on password reset route, we'll always allow the route (no redirect)
-  if (isPasswordResetRoute) {
-    console.log("🛡️ AuthGuard: On password reset route - bypassing redirect");
+  // If on password reset route or has params, we'll always allow the route (no redirect)
+  if (isPasswordResetCase) {
+    console.log("🛡️ AuthGuard: Password reset case detected - bypassing redirect");
     return <>{children}</>;
   }
 
