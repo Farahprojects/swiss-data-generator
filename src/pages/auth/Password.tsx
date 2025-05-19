@@ -35,7 +35,8 @@ const Password = () => {
       }
 
       try {
-        // Validate token with Supabase
+        // Supabase verifyOtp is only to verify the token, not to update password
+        // This is a needed step to validate the token before allowing password update
         const { error } = await supabase.auth.verifyOtp({
           token_hash: token,
           type: 'recovery',
