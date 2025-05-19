@@ -1,8 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 // ────────────────────────────────────────────────────────────────────────────────
-// 📧  check-email-change.ts  – verbose version
-// Keeps your original step-by-step console.logs but filters the `listUsers`
-// result so we only inspect the row whose *primary* email matches the payload.
+//  check-email-change.ts   – full verbose version
 // ────────────────────────────────────────────────────────────────────────────────
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
@@ -14,6 +12,7 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type',
 };
 
+/* ──────────────────────────────────────────────────────────────────────────── */
 serve(async (req) => {
   console.log('[Request received]', {
     method: req.method,
@@ -23,19 +22,15 @@ serve(async (req) => {
     contentType: req.headers.get('content-type'),
   });
 
-  // ────── OPTIONS pre-flight ──────
+  /* OPTIONS pre-flight  */
   if (req.method === 'OPTIONS')
     return new Response(null, { headers: corsHeaders });
 
-  // ────── ENV guard ──────
+  /* ENV check */
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
   const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    console.error('[Environment Error] Missing required env variables:', {
-      hasSupabaseUrl: !!SUPABASE_URL,
-      hasServiceRoleKey: !!SERVICE_ROLE_KEY,
-    });
+    console.error('[Environment Error] Missing required env variables');
     return new Response(
       JSON.stringify({ error: 'Server configuration error' }),
       { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
@@ -44,17 +39,14 @@ serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  // ────── Parse JSON body ──────
+  /* Parse body */
   let email = '';
   let resend = false;
-
   try {
-    console.log('[Processing request body]');
-    const rawBody = await req.text();
-    console.log('[Raw Request Body]', rawBody);
-
-    if (rawBody) {
-      const parsed = JSON.parse(rawBody);
+    const raw = await req.text();
+    console.log('[Raw Request Body]', raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
       console.log('[Parsed JSON]', parsed);
       email = (parsed.email ?? '').toLowerCase();
       resend = !!parsed.resend;
@@ -75,7 +67,7 @@ serve(async (req) => {
     );
   }
 
-  // ────── Exact-match lookup ──────
+  /* Exact-match lookup */
   console.log(`[Supabase Lookup] Checking user with email: ${email}`);
   const { data: listRes, error: listErr } = await supabase.auth.admin.listUsers({
     email,
@@ -90,12 +82,12 @@ serve(async (req) => {
   }
 
   console.log('[Supabase Users Result]', {
-    usersReturned: listRes?.users?.length ?? 0,
-    userEmails: listRes?.users?.map((u: any) => u.email),
-    userNewEmails: listRes?.users?.map((u: any) => u.new_email),
+    usersFound: listRes?.users?.length ?? 0,
+    primaryEmails: listRes?.users?.map((u: any) => u.email),
+    emailChanges: listRes?.users?.map((u: any) => u.email_change),
   });
 
-  // filter to the *primary* email match
+  /* Filter: keep only the record whose PRIMARY e-mail matches */
   const user = listRes?.users.find(
     (u: any) => (u.email ?? '').toLowerCase() === email,
   );
@@ -113,28 +105,25 @@ serve(async (req) => {
     );
   }
 
-  // ────── Pending change? ──────
-  console.log('[DEBUG Path 3] Checking for new_email property');
-  if (!user.new_email) {
-    console.log('[DEBUG Path 3A] No Pending Email Change – new_email property missing');
+  /* Pending e-mail change?  ➜ use `email_change` */
+  console.log('[DEBUG] Checking user.email_change:', user.email_change);
+  if (!user.email_change) {
+    console.log('[No Pending Change] email_change is null/empty');
     return new Response(
       JSON.stringify({ status: 'no_pending_change' }),
       { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
     );
   }
 
-  console.log('[DEBUG] Pending email change found:', user.new_email);
+  const pendingTo = user.email_change;
+  console.log('[Pending Change Detected]', pendingTo);
 
-  // ────── Resend verification (optional) ──────
+  /* Optional: resend verification */
   if (resend) {
-    console.log(
-      '[DEBUG Path 5A] Resend requested – re-setting email to trigger new verification',
-      user.new_email,
-    );
+    console.log('[Resend requested] Re-setting email to trigger new verification');
     const { error: updErr } = await supabase.auth.admin.updateUserById(user.id, {
-      email: user.new_email,
+      email: pendingTo,
     });
-
     if (updErr) {
       console.error('[Admin Email Reset Failed]', updErr);
       return new Response(
@@ -142,19 +131,16 @@ serve(async (req) => {
         { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
       );
     }
-
-    console.log('[Verification Email Re-triggered by Re-setting Email]');
+    console.log('[Verification email re-triggered]');
     return new Response(
       JSON.stringify({ status: 'resent' }),
       { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
     );
   }
 
-  console.log('[DEBUG Path 6] Pending Email Change Detected – new_email exists');
-
-  // ────── Success ──────
+  /* Success */
   return new Response(
-    JSON.stringify({ status: 'pending', pending_to: user.new_email }),
+    JSON.stringify({ status: 'pending', pending_to: pendingTo }),
     { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
   );
 });
