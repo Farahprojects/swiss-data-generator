@@ -1,3 +1,4 @@
+
 // deno-lint-ignore-file
 // EmailVerificationModal.tsx – cleaned production‑ready version
 // -----------------------------------------------------------------------------
@@ -25,6 +26,8 @@ interface Props {
   onVerified: () => void;
   /** callback when user cancels */
   onCancel: () => void;
+  /** function to resend verification email */
+  resend?: (email: string) => Promise<{ error: Error | null }>;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -42,6 +45,7 @@ export function EmailVerificationModal({
   newEmail,
   onVerified,
   onCancel,
+  resend,
 }: Props) {
   const { toast } = useToast();
   const targetEmail = newEmail || email || "";
@@ -125,52 +129,75 @@ export function EmailVerificationModal({
     debug("Resending confirmation to", targetEmail);
 
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/resend-email-change`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-        },
-        body: JSON.stringify({ email: targetEmail }),
-      });
-      const data = (await res.json()) as { status: string };
-      debug("resend response", data);
+      // If custom resend function is provided, use it
+      if (resend) {
+        const { error } = await resend(targetEmail);
+        if (error) {
+          setStatus("error");
+          setStatusMsg(error.message || "Failed to send verification email.");
+          toast({
+            title: "Error",
+            description: error.message || "Failed to send verification email.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        setStatus("success");
+        setStatusMsg(`Verification email sent to ${targetEmail}`);
+        toast({
+          title: "Verification email sent",
+          description: `Check ${targetEmail}`,
+        });
+      } else {
+        // Default behavior using fetch
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/resend-email-change`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+          },
+          body: JSON.stringify({ email: targetEmail }),
+        });
+        const data = (await res.json()) as { status: string };
+        debug("resend response", data);
 
-      switch (data.status) {
-        case "resent":
-          setStatus("success");
-          setStatusMsg(`Verification email sent to ${targetEmail}`);
-          toast({
-            title: "Verification email sent",
-            description: `Check ${targetEmail}`,
-          });
-          break;
-        case "no_pending_change":
-          setStatus("error");
-          setStatusMsg("No pending email change to confirm.");
-          toast({
-            title: "Info",
-            description: "No pending email change found for this account.",
-          });
-          break;
-        case "no_user_found":
-          setStatus("error");
-          setStatusMsg("No account found with this email address.");
-          toast({
-            title: "Error",
-            description: "No account found with this email address.",
-            variant: "destructive",
-          });
-          break;
-        default:
-          setStatus("error");
-          setStatusMsg("Unable to send verification email.");
-          toast({
-            title: "Error",
-            description: "Unable to send verification email.",
-            variant: "destructive",
-          });
+        switch (data.status) {
+          case "resent":
+            setStatus("success");
+            setStatusMsg(`Verification email sent to ${targetEmail}`);
+            toast({
+              title: "Verification email sent",
+              description: `Check ${targetEmail}`,
+            });
+            break;
+          case "no_pending_change":
+            setStatus("error");
+            setStatusMsg("No pending email change to confirm.");
+            toast({
+              title: "Info",
+              description: "No pending email change found for this account.",
+            });
+            break;
+          case "no_user_found":
+            setStatus("error");
+            setStatusMsg("No account found with this email address.");
+            toast({
+              title: "Error",
+              description: "No account found with this email address.",
+              variant: "destructive",
+            });
+            break;
+          default:
+            setStatus("error");
+            setStatusMsg("Unable to send verification email.");
+            toast({
+              title: "Error",
+              description: "Unable to send verification email.",
+              variant: "destructive",
+            });
+        }
       }
     } catch (err: unknown) {
       console.error("resend exception", err);

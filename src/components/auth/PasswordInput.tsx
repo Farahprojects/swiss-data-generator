@@ -12,6 +12,8 @@ interface PasswordInputProps {
   onChange: (password: string) => void;
   label?: string;
   onFocus?: () => void;
+  placeholder?: string;  // Added the missing placeholder prop
+  id?: string;  // Added the missing id prop
 }
 
 const PasswordInput: React.FC<PasswordInputProps> = ({ 
@@ -20,20 +22,26 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   showRequirements = true, 
   onChange,
   label = "Password",
-  onFocus
+  onFocus,
+  placeholder = "Enter your password",  // Added default value
+  id
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
+  // If an id is provided, use that; otherwise, derive from label
+  const inputId = id || label.toLowerCase().replace(/\s/g, '-');
+
   return (
     <div className="space-y-2">
-      <Label htmlFor={label.toLowerCase().replace(/\s/g, '-')}>{label}</Label>
+      <Label htmlFor={inputId}>{label}</Label>
       <div className="relative">
         <Input
-          id={label.toLowerCase().replace(/\s/g, '-')}
+          id={inputId}
           type={showPassword ? "text" : "password"}
           value={password}
           onChange={(e) => onChange(e.target.value)}
           onFocus={onFocus}
+          placeholder={placeholder}
           className={`mt-1 pr-10 ${!isValid && password ? 'border-red-500' : ''}`}
           required
         />
