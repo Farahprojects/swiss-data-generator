@@ -1,18 +1,1 @@
-
-# This is auto-generated from the Supabase interface
 project_id = "wrvqqvqvwqmfdqvqmaar"
-
-[api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
-
-[db]
-port = 54322
-
-[storage]
-enabled = true
-
-[functions]
-[functions.email-check]
-verify_jwt = false
