@@ -5,6 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import EmailInput from '@/components/auth/EmailInput';
 import { validateEmail } from '@/utils/authValidation';
+import { ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface ForgotPasswordFormProps {
   onCancel: () => void;
@@ -53,9 +55,9 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
 
   if (emailSent) {
     return (
-      <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <h3 className="text-xl font-medium">Check your email</h3>
+      <div className="space-y-8 text-center">
+        <div>
+          <h3 className="text-2xl font-bold mb-1">Check your email</h3>
           <p className="text-gray-600">
             We sent a password reset link to <span className="font-medium">{email}</span>
           </p>
@@ -65,16 +67,15 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
           <p className="text-sm text-gray-500">
             Didn't receive the email? Check your spam folder or request another link.
           </p>
-          <div className="flex flex-col space-y-2">
+          <div className="flex flex-col space-y-3">
             <Button 
-              variant="outline" 
               onClick={() => setEmailSent(false)}
-              className="w-full"
+              className="w-full bg-primary text-white hover:bg-primary-hover"
             >
               Try again
             </Button>
             <Button 
-              variant="ghost" 
+              variant="outline" 
               onClick={onCancel}
               className="w-full"
             >
@@ -87,33 +88,42 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <EmailInput 
-          email={email} 
-          isValid={emailValid} 
-          onChange={setEmail} 
-        />
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold mb-1">Reset password</h3>
+        <p className="text-gray-600">
+          Enter your email and we'll send you a link to reset your password
+        </p>
       </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-4">
+          <EmailInput 
+            email={email} 
+            isValid={emailValid} 
+            onChange={setEmail} 
+          />
+        </div>
 
-      <div className="flex flex-col space-y-2">
-        <Button 
-          type="submit" 
-          className="w-full" 
-          disabled={loading || !emailValid}
-        >
-          {loading ? 'Sending...' : 'Send Reset Link'}
-        </Button>
-        <Button 
-          type="button" 
-          variant="ghost" 
-          onClick={onCancel}
-          className="w-full"
-        >
-          Back to Login
-        </Button>
-      </div>
-    </form>
+        <div className="flex flex-col space-y-3">
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loading || !emailValid}
+          >
+            {loading ? 'Sending...' : 'Send Reset Link'}
+          </Button>
+          <Button 
+            type="button" 
+            variant="outline"
+            onClick={onCancel}
+            className="w-full flex items-center justify-center gap-2"
+          >
+            <ArrowLeft size={16} /> Back to Login
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 };
 

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -153,15 +154,21 @@ const Login = () => {
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md space-y-8">
-          <header className="text-center">
-            <h1 className="text-3xl font-bold">Welcome back</h1>
-            <p className="mt-2 text-gray-600">Sign in to your account</p>
-          </header>
-
           {showForgotPassword ? (
-            <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
+            <>
+              <header className="text-center">
+                <h1 className="text-3xl font-bold">Welcome back</h1>
+                <p className="mt-2 text-gray-600">Reset your password</p>
+              </header>
+              <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
+            </>
           ) : (
             <>
+              <header className="text-center">
+                <h1 className="text-3xl font-bold">Welcome back</h1>
+                <p className="mt-2 text-gray-600">Sign in to your account</p>
+              </header>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-4">
                   <EmailInput 
@@ -178,7 +185,7 @@ const Login = () => {
                     onFocus={() => setErrorMsg('')}
                   />
                   
-                  {/* New layout: Links on the same line with space between */}
+                  {/* Links on the same line with space between */}
                   <div className="flex justify-between items-center">
                     <button 
                       type="button" 
