@@ -38,6 +38,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const [autoSigningIn, setAutoSigningIn] = useState(false);
 
   /** polling timer */
   const intervalRef = useRef<number | null>(null);
@@ -63,6 +64,43 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     }
   };
 
+  const handleVerificationButton = async () => {
+    setChecking(true);
+    setAutoSigningIn(true);
+    
+    try {
+      // First refresh the session to check if email is verified
+      await supabase.auth.refreshSession();
+      const { data } = await supabase.auth.getUser();
+      
+      if (data.user?.email_confirmed_at) {
+        // Email is verified, automatically proceed with verification flow
+        stopPolling();
+        toast({ 
+          title: 'Success', 
+          description: 'Email verified successfully', 
+        });
+        onVerified();
+      } else {
+        // Email still not verified
+        toast({ 
+          title: 'Not yet verified', 
+          description: 'Please check your email and click the verification link', 
+        });
+      }
+    } catch (error) {
+      console.error('Verification check failed:', error);
+      toast({ 
+        title: 'Verification check failed', 
+        description: 'Please try again', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setChecking(false);
+      setAutoSigningIn(false);
+    }
+  };
+
   /* send / resend link -----------------------------------------------------*/
   const sendLink = async () => {
     if (!targetEmail) {
@@ -78,7 +116,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     setStatusMessage(null);
     
     try {
-      // Use the new resend-email-change edge function
+      // Use the resend-email-change edge function
       console.log(`Calling resend-email-change function: ${SUPABASE_URL}/functions/v1/resend-email-change`);
       const response = await fetch(`${SUPABASE_URL}/functions/v1/resend-email-change`, {
         method: 'POST',
@@ -256,9 +294,9 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
 
         <div className="flex items-center justify-between space-x-2">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={poll} disabled={checking}>
-            {checking ? (
-              <span className="flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" /> Checking…</span>
+          <Button onClick={handleVerificationButton} disabled={checking || autoSigningIn}>
+            {checking || autoSigningIn ? (
+              <span className="flex items-center"><Loader className="mr-2 h-4 w-4 animate-spin" /> {autoSigningIn ? 'Signing in...' : 'Checking…'}</span>
             ) : (
               "I've verified my email"
             )}
