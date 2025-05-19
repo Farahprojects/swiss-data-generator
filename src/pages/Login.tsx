@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -178,7 +177,9 @@ const Login = () => {
                     onChange={setPassword}
                     onFocus={() => setErrorMsg('')}
                   />
-                  <div className="flex justify-end">
+                  
+                  {/* New layout: Links on the same line with space between */}
+                  <div className="flex justify-between items-center">
                     <button 
                       type="button" 
                       onClick={() => setShowForgotPassword(true)} 
@@ -186,6 +187,10 @@ const Login = () => {
                     >
                       Forgot password?
                     </button>
+                    
+                    <Link to="/signup" className="text-sm text-primary hover:underline">
+                      Don't have an account? Sign up
+                    </Link>
                   </div>
                 </div>
 
@@ -196,13 +201,6 @@ const Login = () => {
                 </Button>
 
                 <SocialLogin onGoogleSignIn={handleGoogleSignIn} />
-
-                <p className="text-center text-sm text-gray-600">
-                  Don't have an account?{' '}
-                  <Link to="/signup" className="text-primary hover:underline">
-                    Sign up
-                  </Link>
-                </p>
               </form>
             </>
           )}
