@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +7,7 @@ import UnifiedNavigation from '@/components/UnifiedNavigation';
 import Footer from '@/components/Footer';
 import PasswordInput from '@/components/auth/PasswordInput';
 
-const ResetPassword = () => {
+const Password = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -64,6 +63,9 @@ const ResetPassword = () => {
     verifyToken();
   }, [token, toast]);
 
+  /* ─────────────────────────────────────────────────────────────
+   * Update password reset flow
+   * ────────────────────────────────────────────────────────────*/
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -189,4 +191,4 @@ const ResetPassword = () => {
   );
 };
 
-export default ResetPassword;
+export default Password;

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -27,7 +26,7 @@ import { Toaster } from "./components/ui/toaster";
 import { SidebarProvider } from './components/ui/sidebar';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
-import ResetPassword from './pages/auth/ResetPassword';
+import Password from './pages/auth/Password';
 import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
 import { supabase } from './integrations/supabase/client';
 import { InlineToast } from './components/ui/InlineToast';
@@ -103,7 +102,9 @@ function App() {
                 
                 {/* Auth routes */}
                 <Route path="/auth/email" element={<ConfirmEmail />} />
-                <Route path="/auth/reset-password" element={<ResetPassword />} />
+                <Route path="/auth/password" element={<Password />} />
+                {/* Keep backward compatibility with old URL */}
+                <Route path="/auth/reset-password" element={<Navigate to="/auth/password" replace />} />
                 
                 {/* Protected dashboard routes with nested structure */}
                 <Route 
