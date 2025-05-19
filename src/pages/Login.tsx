@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import UnifiedNavigation from '@/components/UnifiedNavigation';
 import Footer from '@/components/Footer';
 import EmailInput from '@/components/auth/EmailInput';
@@ -12,6 +12,7 @@ import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { EmailVerificationModal } from '@/components/auth/EmailVerificationModal';
 import { supabase } from '@/integrations/supabase/client';
+import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 
 /** Dev‑only logger */
 const debug = (...a: any[]) => process.env.NODE_ENV !== 'production' && console.log('[Login]', ...a);
@@ -31,6 +32,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
@@ -157,33 +159,53 @@ const Login = () => {
             <p className="mt-2 text-gray-600">Sign in to your account</p>
           </header>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <EmailInput email={email} isValid={emailValid} onChange={setEmail} onFocus={() => setErrorMsg('')} />
-              <PasswordInput
-                password={password}
-                isValid={passwordValid}
-                showRequirements={false}
-                onChange={setPassword}
-                onFocus={() => setErrorMsg('')}
-              />
-            </div>
+          {showForgotPassword ? (
+            <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <EmailInput 
+                    email={email} 
+                    isValid={emailValid} 
+                    onChange={setEmail} 
+                    onFocus={() => setErrorMsg('')} 
+                  />
+                  <PasswordInput
+                    password={password}
+                    isValid={passwordValid}
+                    showRequirements={false}
+                    onChange={setPassword}
+                    onFocus={() => setErrorMsg('')}
+                  />
+                  <div className="flex justify-end">
+                    <button 
+                      type="button" 
+                      onClick={() => setShowForgotPassword(true)} 
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                </div>
 
-            {errorMsg && <p className="text-center text-sm font-medium text-red-600 -mt-2">{errorMsg}</p>}
+                {errorMsg && <p className="text-center text-sm font-medium text-red-600 -mt-2">{errorMsg}</p>}
 
-            <Button type="submit" className="w-full" disabled={loading || !emailValid || !passwordValid}>
-              {loading ? 'Signing in…' : 'Sign in'}
-            </Button>
+                <Button type="submit" className="w-full" disabled={loading || !emailValid || !passwordValid}>
+                  {loading ? 'Signing in…' : 'Sign in'}
+                </Button>
 
-            <SocialLogin onGoogleSignIn={handleGoogleSignIn} />
+                <SocialLogin onGoogleSignIn={handleGoogleSignIn} />
 
-            <p className="text-center text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-primary hover:underline">
-                Sign up
-              </Link>
-            </p>
-          </form>
+                <p className="text-center text-sm text-gray-600">
+                  Don't have an account?{' '}
+                  <Link to="/signup" className="text-primary hover:underline">
+                    Sign up
+                  </Link>
+                </p>
+              </form>
+            </>
+          )}
         </div>
       </main>
 
@@ -192,7 +214,6 @@ const Login = () => {
       <EmailVerificationModal
         isOpen={showVerificationModal}
         email={email}
-        resend={resendVerificationEmail}
         onVerified={handleVerificationFinished}
         onCancel={() => setShowVerificationModal(false)}
       />

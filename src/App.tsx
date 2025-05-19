@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -26,6 +27,7 @@ import { Toaster } from "./components/ui/toaster";
 import { SidebarProvider } from './components/ui/sidebar';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
+import ResetPassword from './pages/auth/ResetPassword';
 import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
 import { supabase } from './integrations/supabase/client';
 import { InlineToast } from './components/ui/InlineToast';
@@ -99,8 +101,9 @@ function App() {
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/payment-return" element={<PaymentReturn />} />
                 
-                {/* Auth redirect page - Accessible on www.theraiastro.com */}
+                {/* Auth routes */}
                 <Route path="/auth/email" element={<ConfirmEmail />} />
+                <Route path="/auth/reset-password" element={<ResetPassword />} />
                 
                 {/* Protected dashboard routes with nested structure */}
                 <Route 

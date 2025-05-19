@@ -23,6 +23,7 @@ export type AuthContextType = {
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
+  resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -180,6 +181,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  /**
+   * Trigger a password reset email for the given email address
+   */
+  const resetPasswordForEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+      return { error };
+    } catch (err: unknown) {
+      return { error: err instanceof Error ? err : new Error('Could not send password reset email') };
+    }
+  };
+
   /* ────────────────────────────────────────────────────────────────*/
   return (
     <AuthContext.Provider
@@ -192,6 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithGoogle,
         signOut,
         resendVerificationEmail,
+        resetPasswordForEmail,
       }}
     >
       {children}
