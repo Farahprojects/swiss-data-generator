@@ -105,18 +105,18 @@ serve(async (req) => {
     );
   }
 
-  /* Pending e-mail change?  ➜ use `email_change` */
-  console.log('[DEBUG] Checking user.email_change:', user.email_change);
-  if (!user.email_change) {
-    console.log('[No Pending Change] email_change is null/empty');
-    return new Response(
-      JSON.stringify({ status: 'no_pending_change' }),
-      { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
-    );
-  }
+  /* ────── Pending e-mail change? ────── */
+console.log('[DEBUG] Checking user.new_email:', user.new_email);
+if (!user.new_email) {
+  console.log('[No Pending Change] new_email is undefined');
+  return new Response(
+    JSON.stringify({ status: 'no_pending_change' }),
+    { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+  );
+}
 
-  const pendingTo = user.email_change;
-  console.log('[Pending Change Detected]', pendingTo);
+const pendingTo = user.new_email;
+console.log('[Pending Change Detected]', pendingTo);
 
   /* Optional: resend verification */
   if (resend) {
