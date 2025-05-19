@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import UnifiedNavigation from '@/components/UnifiedNavigation';
 import Footer from '@/components/Footer';
 import PasswordInput from '@/components/auth/PasswordInput';
+import { CheckCircle } from 'lucide-react';
 
 const Password = () => {
   const navigate = useNavigate();
@@ -15,6 +17,7 @@ const Password = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
 
   // Extract the token from the URL
   const token = searchParams.get('token');
@@ -99,12 +102,13 @@ const Password = () => {
           variant: "destructive"
         });
       } else {
-        toast({ 
-          title: "Password updated", 
-          description: "Your password has been reset successfully."
-        });
-        // Redirect to login page after successful reset
-        setTimeout(() => navigate('/login'), 2000);
+        // Show success state
+        setPasswordUpdated(true);
+        
+        // Redirect to dashboard after a short delay (3 seconds)
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 3000);
       }
     } catch (error: any) {
       toast({ 
@@ -117,8 +121,24 @@ const Password = () => {
     }
   };
 
+  // Show success state when password is updated
+  const renderSuccess = () => {
+    return (
+      <div className="text-center space-y-4">
+        <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
+        <h2 className="text-2xl font-semibold">Password Updated!</h2>
+        <p>Your password has been successfully reset.</p>
+        <p className="text-sm text-gray-500">Redirecting you to the dashboard...</p>
+      </div>
+    );
+  };
+
   // Function to render the appropriate content based on token validity
   const renderContent = () => {
+    if (passwordUpdated) {
+      return renderSuccess();
+    }
+    
     if (tokenValid === null) {
       return <div className="text-center">Verifying reset link...</div>;
     }
