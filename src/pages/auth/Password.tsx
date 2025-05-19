@@ -7,7 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 import UnifiedNavigation from '@/components/UnifiedNavigation';
 import Footer from '@/components/Footer';
 import PasswordInput from '@/components/auth/PasswordInput';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Loader2 } from 'lucide-react';
+import { cleanupAuthState } from '@/utils/authCleanup';
 
 const Password = () => {
   const navigate = useNavigate();
@@ -18,19 +19,38 @@ const Password = () => {
   const [loading, setLoading] = useState(false);
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const [automaticRedirect, setAutomaticRedirect] = useState(false);
+  const [secondsToRedirect, setSecondsToRedirect] = useState(10);
+  const [verifying, setVerifying] = useState(true);
+  const [tokenVerification, setTokenVerification] = useState({
+    attemptedVerification: false,
+    success: false,
+    error: ''
+  });
 
   // Extract the token from the URL
   const token = searchParams.get('token');
+  const type = searchParams.get('type');
 
-  // Log information about current session for debugging
   useEffect(() => {
+    console.log("Password reset component mounted, token:", token ? "exists" : "missing");
+    console.log("Type parameter:", type);
+
+    // Clean up any existing auth state to prevent interference
+    cleanupAuthState();
+    
+    // Log information about current session for debugging
     const checkSessionStatus = async () => {
       try {
-        // This is just informational for debugging
         const { data } = await supabase.auth.getSession();
         console.log("Password reset - current session status:", data.session ? "Has session" : "No session");
+        if (data.session) {
+          console.log("⚠️ Warning: Session exists but should not affect password reset flow");
+        }
       } catch (error) {
         console.error("Error checking session:", error);
+      } finally {
+        setVerifying(false);
       }
     };
     
@@ -40,7 +60,13 @@ const Password = () => {
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) {
+        console.error("No token provided in URL");
         setTokenValid(false);
+        setTokenVerification({
+          attemptedVerification: true,
+          success: false,
+          error: 'Missing token'
+        });
         toast({ 
           title: "Missing token", 
           description: "Password reset link is invalid or expired.",
@@ -50,11 +76,12 @@ const Password = () => {
       }
 
       try {
-        console.log("Verifying token:", token.substring(0, 10) + "...");
+        console.log(`Verifying password reset token: ${token.substring(0, 10)}...`);
+        setVerifying(true);
         
         // Supabase verifyOtp is only to verify the token, not to update password
         // This is a needed step to validate the token before allowing password update
-        const { error } = await supabase.auth.verifyOtp({
+        const { error, data } = await supabase.auth.verifyOtp({
           token_hash: token,
           type: 'recovery',
         });
@@ -62,28 +89,47 @@ const Password = () => {
         if (error) {
           console.error("Token verification failed:", error);
           setTokenValid(false);
+          setTokenVerification({
+            attemptedVerification: true,
+            success: false,
+            error: error.message
+          });
           toast({ 
             title: "Invalid token", 
             description: "Password reset link is invalid or expired.",
             variant: "destructive"
           });
         } else {
-          console.log("Token successfully verified");
+          console.log("Token successfully verified:", data);
           setTokenValid(true);
+          setTokenVerification({
+            attemptedVerification: true,
+            success: true,
+            error: ''
+          });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Token verification error:", error);
         setTokenValid(false);
+        setTokenVerification({
+          attemptedVerification: true,
+          success: false,
+          error: error.message
+        });
         toast({ 
           title: "Verification error", 
           description: "Failed to verify reset token. Please try again.",
           variant: "destructive"
         });
+      } finally {
+        setVerifying(false);
       }
     };
 
-    verifyToken();
-  }, [token, toast]);
+    if (!tokenVerification.attemptedVerification) {
+      verifyToken();
+    }
+  }, [token, toast, tokenVerification.attemptedVerification]);
 
   /* ─────────────────────────────────────────────────────────────
    * Update password reset flow
@@ -113,6 +159,9 @@ const Password = () => {
 
     try {
       console.log("Attempting to update password...");
+      // Ensure we clean up before updating password to prevent auth conflicts
+      cleanupAuthState();
+      
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
@@ -127,16 +176,28 @@ const Password = () => {
         // Show success state
         setPasswordUpdated(true);
         
-        // Redirect to dashboard after a short delay (5 seconds instead of 3 for better visibility)
+        // Start countdown for redirect
+        setAutomaticRedirect(true);
+        
         toast({ 
           title: "Password updated", 
           description: "Your password has been successfully reset. You'll be redirected to the dashboard shortly."
         });
         
-        setTimeout(() => {
-          console.log("Redirecting to dashboard after password update");
-          navigate('/dashboard');
-        }, 5000);
+        // Set up countdown timer
+        const countdownInterval = setInterval(() => {
+          setSecondsToRedirect(prev => {
+            if (prev <= 1) {
+              clearInterval(countdownInterval);
+              navigate('/dashboard');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        // Clear interval on component unmount
+        return () => clearInterval(countdownInterval);
       }
     } catch (error: any) {
       console.error("Password update error:", error);
@@ -157,16 +218,75 @@ const Password = () => {
         <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
         <h2 className="text-2xl font-semibold">Password Updated!</h2>
         <p>Your password has been successfully reset.</p>
-        <p className="text-sm text-gray-500">Redirecting you to the dashboard in a few seconds...</p>
-        <Button onClick={() => navigate('/dashboard')} className="mt-4">
-          Go to Dashboard Now
-        </Button>
+        
+        {automaticRedirect ? (
+          <p className="text-sm text-gray-500">
+            Redirecting you to the dashboard in {secondsToRedirect} seconds...
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">
+            You can now go to the dashboard or log in with your new password.
+          </p>
+        )}
+        
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+          <Button onClick={() => navigate('/dashboard')} className="w-full sm:w-auto">
+            Go to Dashboard Now
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/login')} 
+            className="w-full sm:w-auto"
+          >
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // Render verification state
+  const renderVerifying = () => {
+    return (
+      <div className="flex flex-col items-center justify-center space-y-4 py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p>Verifying your reset link...</p>
+      </div>
+    );
+  };
+  
+  // Error state when token is invalid
+  const renderInvalidToken = () => {
+    return (
+      <div className="text-center space-y-4">
+        <h2 className="text-xl font-semibold text-red-600">Invalid Reset Link</h2>
+        <p>This password reset link is invalid or has expired.</p>
+        <p className="text-sm text-gray-500">Error: {tokenVerification.error}</p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+          <Button 
+            onClick={() => navigate('/login')}
+            className="w-full sm:w-auto"
+          >
+            Back to Login
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => window.location.reload()}
+            className="w-full sm:w-auto"
+          >
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   };
 
   // Function to render the appropriate content based on token validity
   const renderContent = () => {
+    if (verifying) {
+      return renderVerifying();
+    }
+
     if (passwordUpdated) {
       return renderSuccess();
     }
@@ -176,15 +296,7 @@ const Password = () => {
     }
     
     if (tokenValid === false) {
-      return (
-        <div className="text-center space-y-4">
-          <h2 className="text-xl font-semibold text-red-600">Invalid Reset Link</h2>
-          <p>This password reset link is invalid or has expired.</p>
-          <Button asChild>
-            <Link to="/login">Back to Login</Link>
-          </Button>
-        </div>
-      );
+      return renderInvalidToken();
     }
 
     return (
@@ -228,7 +340,7 @@ const Password = () => {
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md space-y-8">
+        <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-md">
           <header className="text-center">
             <h1 className="text-3xl font-bold">Reset Password</h1>
             <p className="mt-2 text-gray-600">Enter your new password below</p>

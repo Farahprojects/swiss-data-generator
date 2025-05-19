@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -59,9 +58,8 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
       '/pricing', 
       '/documentation',
       '/about',
-      '/contact',
-      '/auth/password'  // Add password reset to public pages
-    ].includes(location.pathname);
+      '/contact'
+    ].includes(location.pathname) || location.pathname.includes('/auth/password');
     
     if (isPublicPage) {
       console.log("On public page, checking for phantom authentication");
@@ -102,7 +100,7 @@ function App() {
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/payment-return" element={<PaymentReturn />} />
                 
-                {/* Auth routes - note that Password route is now outside AuthGuard */}
+                {/* Auth routes - Password route is *explicitly* kept outside AuthGuard */}
                 <Route path="/auth/email" element={<ConfirmEmail />} />
                 <Route path="/auth/password" element={<Password />} />
                 {/* Keep backward compatibility with old URL */}

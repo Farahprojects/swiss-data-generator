@@ -25,17 +25,24 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
 
     setLoading(true);
     try {
+      console.log(`Sending password reset email to ${email} with redirectTo: ${window.location.origin}/auth/password`);
+      
+      // Make sure we're using the full URL for the redirectTo
+      const redirectUrl = new URL('/auth/password', window.location.origin).toString();
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/password`,
+        redirectTo: redirectUrl,
       });
 
       if (error) {
+        console.error("Password reset email error:", error);
         toast({ 
           title: 'Error', 
           description: error.message,
           variant: 'destructive'
         });
       } else {
+        console.log("Password reset email sent successfully");
         setEmailSent(true);
         toast({ 
           title: 'Email sent', 
@@ -43,6 +50,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
         });
       }
     } catch (err: any) {
+      console.error("Password reset email error:", err);
       toast({ 
         title: 'Error', 
         description: err.message || 'Failed to send reset email',

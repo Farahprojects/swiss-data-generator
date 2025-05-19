@@ -15,8 +15,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const location = useLocation();
 
-  // Check if we're on the password reset route
-  const isPasswordResetRoute = location.pathname === '/auth/password';
+  // Check if we're on the password reset route - using includes to match all password reset paths
+  const isPasswordResetRoute = location.pathname.includes('/auth/password');
+  
+  console.log(`🛡️ AuthGuard: Checking route ${location.pathname}, isPasswordResetRoute: ${isPasswordResetRoute}`);
 
   // First check for direct session from Supabase
   useEffect(() => {
@@ -24,6 +26,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     
     async function checkAuth() {
       try {
+        // Always bypass auth check for password reset routes
+        if (isPasswordResetRoute) {
+          console.log("🛡️ AuthGuard: Bypassing auth check for password reset route");
+          setIsCheckingAuth(false);
+          return;
+        }
+        
         // First check for auth remnants
         const hasRemnants = checkForAuthRemnants();
         console.log("🛡️ AuthGuard: Auth remnants detected:", hasRemnants);
@@ -54,11 +63,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
     
     checkAuth();
-  }, [user, loading, location.pathname]);
+  }, [user, loading, location.pathname, isPasswordResetRoute]);
 
   // Show toast if not authenticated - but only once
   useEffect(() => {
-    if (!loading && !isCheckingAuth && !isAuthenticated && !hasShownToast) {
+    if (!loading && !isCheckingAuth && !isAuthenticated && !hasShownToast && !isPasswordResetRoute) {
       console.log("🛡️ AuthGuard: Authentication required, showing toast");
       toast({
         variant: "destructive",
@@ -67,9 +76,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       });
       setHasShownToast(true);
     }
-  }, [loading, isCheckingAuth, isAuthenticated, toast, hasShownToast]);
+  }, [loading, isCheckingAuth, isAuthenticated, toast, hasShownToast, isPasswordResetRoute]);
 
-  console.log(`🛡️ AuthGuard: Current path: ${location.pathname}, isLoading: ${loading || isCheckingAuth}, isAuthenticated: ${isAuthenticated}`);
+  console.log(`🛡️ AuthGuard: Current path: ${location.pathname}, isLoading: ${loading || isCheckingAuth}, isAuthenticated: ${isAuthenticated}, isPasswordResetRoute: ${isPasswordResetRoute}`);
 
   if (loading || isCheckingAuth) {
     console.log("🛡️ AuthGuard: Still loading, showing spinner");
