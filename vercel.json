@@ -12,6 +12,12 @@
       "headers": [
         { "key": "Cache-Control", "value": "no-store, must-revalidate" }
       ]
+    },
+    {
+      "source": "/bimi-logo.svg",
+      "headers": [
+        { "key": "Content-Type", "value": "image/svg+xml" }
+      ]
     }
   ]
 }
