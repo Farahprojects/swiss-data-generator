@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 /** Dev‑only logger */
 const debug = (...a: any[]) => process.env.NODE_ENV !== 'production' && console.log('[Login]', ...a);
 
-// Import the hardcoded URL directly
+// Import the hardcoded URL directly from where it's defined
 const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
@@ -31,7 +31,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [pendingEmailChange, setPendingEmailChange] = useState<string | null>(null);
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
@@ -42,8 +41,7 @@ const Login = () => {
     return <Navigate to={from} replace />;
   }
 
-  const openVerificationModal = (pendingEmail?: string) => {
-    setPendingEmailChange(pendingEmail || null);
+  const openVerificationModal = () => {
     setShowVerificationModal(true);
     setLoading(false);
   };
@@ -56,37 +54,8 @@ const Login = () => {
     setErrorMsg('');
 
     try {
-      // First use the resend-email-change endpoint to check for pending email changes
-      console.log(`Calling resend-email-change function: ${SUPABASE_URL}/functions/v1/resend-email-change`);
-      const resendEmailRes = await fetch(`${SUPABASE_URL}/functions/v1/resend-email-change`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-        },
-        body: JSON.stringify({ email }),
-      });
-      
-      console.log("Resend email change response status:", resendEmailRes.status);
-      
-      let resendEmailData;
-      try {
-        resendEmailData = await resendEmailRes.json();
-        console.log("Resend email check data:", resendEmailData);
-        
-        // If we get a successful response with 'resent' status, show verification modal
-        if (resendEmailData.status === 'resent') {
-          debug('Email verification resent through resend-email-change endpoint');
-          return openVerificationModal();
-        }
-      } catch (err) {
-        console.error("Failed to parse resend-email-change response:", err);
-        // Fall through to the email-check endpoint
-      }
-
-      // Fallback to the email-check endpoint
-      console.log(`Calling email-check function: ${SUPABASE_URL}/functions/v1/email-check`);
+      // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
+      console.log(`Calling edge function: ${SUPABASE_URL}/functions/v1/email-check`);
       const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
         method: 'POST',
         headers: { 
@@ -111,7 +80,7 @@ const Login = () => {
       // Only show verification modal if the edge function specifically indicates a pending email change
       if (emailCheckData && emailCheckData.status === 'pending') {
         debug('Pending email change found, showing verification modal');
-        return openVerificationModal(emailCheckData.pending_to);
+        return openVerificationModal();
       }
 
       debug('No pending email change, proceeding with sign in');
@@ -223,7 +192,6 @@ const Login = () => {
       <EmailVerificationModal
         isOpen={showVerificationModal}
         email={email}
-        newEmail={pendingEmailChange || undefined}
         resend={resendVerificationEmail}
         onVerified={handleVerificationFinished}
         onCancel={() => setShowVerificationModal(false)}
