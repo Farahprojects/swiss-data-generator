@@ -71,23 +71,48 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     try {
       // First refresh the session to check if email is verified
       await supabase.auth.refreshSession();
-      const { data } = await supabase.auth.getUser();
       
-      if (data.user?.email_confirmed_at) {
-        // Email is verified, automatically proceed with verification flow
+      // Get the current session and user data
+      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: userData } = await supabase.auth.getUser();
+      
+      debug('Current session:', sessionData?.session ? 'exists' : 'none');
+      debug('User verification status:', userData?.user?.email_confirmed_at ? 'verified' : 'not verified');
+      
+      // Try a second refresh if the first one didn't work
+      if (!userData?.user?.email_confirmed_at) {
+        debug('First check failed, trying another refresh');
+        // Adding a small delay before the second attempt
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await supabase.auth.refreshSession();
+        const { data: retryData } = await supabase.auth.getUser();
+        
+        debug('Retry verification status:', retryData?.user?.email_confirmed_at ? 'verified' : 'still not verified');
+        
+        if (retryData?.user?.email_confirmed_at) {
+          // Email is verified on second attempt
+          stopPolling();
+          toast({ 
+            title: 'Success', 
+            description: 'Email verified successfully', 
+          });
+          return onVerified();
+        }
+      } else {
+        // Email was verified on first attempt
         stopPolling();
         toast({ 
           title: 'Success', 
           description: 'Email verified successfully', 
         });
-        onVerified();
-      } else {
-        // Email still not verified
-        toast({ 
-          title: 'Not yet verified', 
-          description: 'Please check your email and click the verification link', 
-        });
+        return onVerified();
       }
+      
+      // If we get here, the email is still not verified
+      toast({ 
+        title: 'Not yet verified', 
+        description: 'Please check your email and click the verification link first', 
+      });
     } catch (error) {
       console.error('Verification check failed:', error);
       toast({ 

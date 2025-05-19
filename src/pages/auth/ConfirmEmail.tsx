@@ -18,10 +18,68 @@ const ConfirmEmail = () => {
   useEffect(() => {
     const processEmailVerification = async () => {
       try {
-        // Get token and type from URL
+        // First, check if we have hash parameters in the URL (access_token, etc.)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
+
+        // If we have tokens in the URL hash, use them to set the session
+        if (accessToken && refreshToken) {
+          console.log('Found tokens in URL hash, setting session');
+          
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          if (sessionError) {
+            console.error('Error setting session:', sessionError);
+            setStatus('error');
+            setMessage('Failed to authenticate with the provided tokens.');
+            
+            toast({
+              variant: "destructive",
+              title: "Authentication failed",
+              description: "We couldn't authenticate you with the provided tokens."
+            });
+            return;
+          }
+          
+          // Verify the session was set correctly
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (!sessionData.session) {
+            console.error('No valid session after setSession');
+            setStatus('error');
+            setMessage('Failed to establish a valid session.');
+            return;
+          }
+          
+          // If we're here, we have a valid session
+          setStatus('success');
+          setMessage(type === 'signup' ? 
+            'Your email has been verified and you are now logged in!' : 
+            'Your email has been changed successfully and you are now logged in!'
+          );
+          
+          toast({
+            variant: "success",
+            title: type === 'signup' ? "Email verified!" : "Email changed!",
+            description: "You have been successfully authenticated."
+          });
+          
+          // Redirect to dashboard after 3 seconds
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 3000);
+          
+          return;
+        }
+        
+        // If no hash params, proceed with token from query params (old flow)
         const searchParams = new URLSearchParams(location.search);
         const token = searchParams.get('token');
-        const type = searchParams.get('type');
+        const queryType = searchParams.get('type');
         
         if (!token) {
           setStatus('error');
@@ -30,7 +88,7 @@ const ConfirmEmail = () => {
         }
 
         // Handle both email confirmation and email change
-        if (type !== 'signup' && type !== 'email_change') {
+        if (queryType !== 'signup' && queryType !== 'email_change') {
           setStatus('error');
           setMessage('Invalid verification link type.');
           return;
@@ -39,7 +97,7 @@ const ConfirmEmail = () => {
         // Attempt to verify the email based on the type
         const { error } = await supabase.auth.verifyOtp({
           token_hash: token,
-          type: type as 'signup' | 'email_change'
+          type: queryType as 'signup' | 'email_change'
         });
         
         if (error) {
@@ -53,28 +111,48 @@ const ConfirmEmail = () => {
             description: "We couldn't verify your email. Please try again or request a new link."
           });
         } else {
-          setStatus('success');
+          // Check if we got a session after verification
+          const { data: sessionData } = await supabase.auth.getSession();
           
-          if (type === 'signup') {
-            setMessage('Your email has been successfully confirmed! You can now access your account.');
+          if (sessionData.session) {
+            setStatus('success');
+            
+            if (queryType === 'signup') {
+              setMessage('Your email has been successfully confirmed! You are now logged in.');
+              toast({
+                variant: "success",
+                title: "Email verified!",
+                description: "Your account has been successfully activated and you are now logged in."
+              });
+            } else if (queryType === 'email_change') {
+              setMessage('Your email has been successfully changed! You are now logged in.');
+              toast({
+                variant: "success",
+                title: "Email updated!",
+                description: "Your email address has been successfully changed and you are now logged in."
+              });
+            }
+            
+            // Redirect to dashboard after 3 seconds
+            setTimeout(() => {
+              navigate('/dashboard');
+            }, 3000);
+          } else {
+            // If verification worked but we don't have a session, user needs to log in
+            setStatus('success');
+            setMessage('Your email has been verified. Please log in to continue.');
+            
             toast({
               variant: "success",
               title: "Email verified!",
-              description: "Your account has been successfully activated."
+              description: "Please log in to access your account."
             });
-          } else if (type === 'email_change') {
-            setMessage('Your email has been successfully changed!');
-            toast({
-              variant: "success",
-              title: "Email updated!",
-              description: "Your email address has been successfully changed."
-            });
+            
+            // Redirect to login after 3 seconds
+            setTimeout(() => {
+              navigate('/login');
+            }, 3000);
           }
-          
-          // Redirect to dashboard after 3 seconds
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 3000);
         }
       } catch (error) {
         console.error('Unexpected error during email verification:', error);
@@ -143,9 +221,15 @@ const ConfirmEmail = () => {
               
               <p className="text-center text-gray-700 mt-4 max-w-xs">{message}</p>
               
-              {status === 'success' && (
+              {status === 'success' && message.includes('logged in') && (
                 <p className="text-sm text-muted-foreground mt-3">
                   Redirecting you to the dashboard in a moment...
+                </p>
+              )}
+              
+              {status === 'success' && message.includes('Please log in') && (
+                <p className="text-sm text-muted-foreground mt-3">
+                  Redirecting you to the login page in a moment...
                 </p>
               )}
             </CardContent>
