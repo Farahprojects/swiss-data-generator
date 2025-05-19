@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
@@ -35,6 +36,7 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
 
   /** request state */
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
   /** polling timer */
@@ -66,17 +68,19 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
     if (!targetEmail) {
       debug('No email provided');
       setStatus('error');
+      setStatusMessage('Unable to send verification email: no email address provided');
       toast({ title: 'Error', description: 'Unable to send verification email', variant: 'destructive' });
       return;
     }
 
     debug('Resending confirmation to', targetEmail);
     setStatus('sending');
+    setStatusMessage(null);
     
     try {
-      // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
-      console.log(`Calling edge function from modal: ${SUPABASE_URL}/functions/v1/email-check`);
-      const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
+      // Use the new resend-email-change edge function
+      console.log(`Calling resend-email-change function: ${SUPABASE_URL}/functions/v1/resend-email-change`);
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/resend-email-change`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -85,19 +89,19 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
         },
         body: JSON.stringify({
           email: targetEmail,
-          resend: true
         }),
       });
       
-      console.log("Email check response status in modal:", emailCheckRes.status);
+      console.log("Resend email change response status:", response.status);
       
-      let emailCheckData;
+      let data;
       try {
-        emailCheckData = await emailCheckRes.json();
-        console.log("Email check data in modal:", emailCheckData);
+        data = await response.json();
+        console.log("Resend email change data:", data);
       } catch (err) {
-        console.error("Failed to parse email-check response in modal:", err);
+        console.error("Failed to parse resend-email-change response:", err);
         setStatus('error');
+        setStatusMessage('Failed to process server response');
         toast({ 
           title: 'Error', 
           description: 'Failed to process server response', 
@@ -106,60 +110,65 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
         return;
       }
       
-      // If we get an error from the edge function
-      if (emailCheckData.error) {
-        debug('resend error', emailCheckData.error);
-        toast({ 
-          title: 'Error', 
-          description: emailCheckData.error, 
-          variant: 'destructive' 
-        });
-        setStatus('error');
-        return;
-      }
-      
-      // If we used the edge function successfully
-      if (emailCheckData.status === 'resent' || emailCheckData.status === 'pending') {
+      // Handle the specific status responses from the edge function
+      if (data.status === 'resent') {
         setStatus('success');
+        setStatusMessage(`Verification email sent to ${targetEmail}`);
         toast({ 
           title: 'Verification email sent', 
           description: `Check ${targetEmail}` 
         });
-        stopPolling();
-        intervalRef.current = window.setInterval(poll, 3000);
-        return;
-      }
-      
-      // Fallback to the provided resend function if the edge function didn't handle it
-      if (resend) {
+      } else if (data.status === 'no_pending_change') {
+        // No pending change to confirm
+        setStatus('error');
+        setStatusMessage('No pending email change to confirm');
+        toast({ 
+          title: 'Info', 
+          description: 'No pending email change was found for this account' 
+        });
+      } else if (data.status === 'no_user_found') {
+        setStatus('error');
+        setStatusMessage('No account found with this email address');
+        toast({ 
+          title: 'Error', 
+          description: 'No account found with this email address', 
+          variant: 'destructive' 
+        });
+      } else if (resend) {
+        // Fall back to the provided resend function if the edge function didn't handle it
+        // and we have a resend function provided
         const { error } = await resend(targetEmail);
         
         if (error) {
           debug('resend error', error);
-          toast({ title: 'Error', description: error.message, variant: 'destructive' });
           setStatus('error');
+          setStatusMessage(`Failed to send verification email: ${error.message}`);
+          toast({ title: 'Error', description: error.message, variant: 'destructive' });
           return;
         }
         
         setStatus('success');
+        setStatusMessage(`Verification email sent to ${targetEmail}`);
         toast({ title: 'Verification email sent', description: `Check ${targetEmail}` });
       } else {
-        // No edge function result and no resend function
+        // Unexpected status response or error
         setStatus('error');
+        setStatusMessage('Unable to send verification email');
         toast({ 
           title: 'Error', 
-          description: 'No method available to resend verification email', 
+          description: 'Unable to send verification email', 
           variant: 'destructive' 
         });
       }
     } catch (error: any) {
       debug('resend exception', error);
+      setStatus('error');
+      setStatusMessage(`Failed to send verification email: ${error.message || 'Unknown error'}`);
       toast({ 
         title: 'Error', 
         description: error.message || 'Failed to send verification email', 
         variant: 'destructive' 
       });
-      setStatus('error');
     }
     
     stopPolling();
@@ -173,14 +182,8 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
       return;
     }
 
-    // auto‑trigger when modal opens and resend function is available
-    if (resend) {
-      sendLink();
-    } else {
-      // If no resend function, just set up polling
-      stopPolling();
-      intervalRef.current = window.setInterval(poll, 3000);
-    }
+    // auto‑trigger when modal opens
+    sendLink();
 
     // realtime listener (covers user clicking link in another tab)
     const {
@@ -202,20 +205,18 @@ export function EmailVerificationModal({ isOpen, email, resend, onVerified, onCa
 
   /* render helpers ---------------------------------------------------------*/
   const Notice = () => {
-    if (status === 'success')
+    if (status === 'success' && statusMessage)
       return (
         <div className="mt-4 flex items-center rounded-md bg-green-50 p-2 text-green-700">
           <CheckCircle2 className="mr-2 h-5 w-5 flex-shrink-0" />
-          <p className="text-sm">
-            Verification sent to <strong>{targetEmail}</strong>
-          </p>
+          <p className="text-sm">{statusMessage}</p>
         </div>
       );
-    if (status === 'error')
+    if (status === 'error' && statusMessage)
       return (
         <div className="mt-4 flex items-center rounded-md bg-red-50 p-2 text-red-700">
           <AlertCircle className="mr-2 h-5 w-5 flex-shrink-0" />
-          <p className="text-sm">Failed to send email. Please try again.</p>
+          <p className="text-sm">{statusMessage}</p>
         </div>
       );
     return null;

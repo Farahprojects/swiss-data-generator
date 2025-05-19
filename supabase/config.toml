@@ -1,1 +1,31 @@
+
 project_id = "wrvqqvqvwqmfdqvqmaar"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+
+[auth]
+enabled = true
+
+[db]
+port = 54322
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+# Add the email-check function without JWT verification
+[functions.email-check]
+verify_jwt = false
+
+# Add our new resend-email-change function without JWT verification
+[functions.resend-email-change]
+verify_jwt = false
