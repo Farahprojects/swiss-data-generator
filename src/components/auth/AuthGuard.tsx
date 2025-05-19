@@ -15,6 +15,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const location = useLocation();
 
+  // Check if we're on the password reset route
+  const isPasswordResetRoute = location.pathname === '/auth/password';
+
   // First check for direct session from Supabase
   useEffect(() => {
     console.log("🛡️ AuthGuard: Initial auth check for path:", location.pathname);
@@ -78,6 +81,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  // If on password reset route, we'll always allow the route (no redirect)
+  if (isPasswordResetRoute) {
+    console.log("🛡️ AuthGuard: On password reset route - bypassing redirect");
+    return <>{children}</>;
   }
 
   if (!isAuthenticated) {

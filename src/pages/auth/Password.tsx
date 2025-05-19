@@ -22,6 +22,21 @@ const Password = () => {
   // Extract the token from the URL
   const token = searchParams.get('token');
 
+  // Log information about current session for debugging
+  useEffect(() => {
+    const checkSessionStatus = async () => {
+      try {
+        // This is just informational for debugging
+        const { data } = await supabase.auth.getSession();
+        console.log("Password reset - current session status:", data.session ? "Has session" : "No session");
+      } catch (error) {
+        console.error("Error checking session:", error);
+      }
+    };
+    
+    checkSessionStatus();
+  }, []);
+
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) {
@@ -35,6 +50,8 @@ const Password = () => {
       }
 
       try {
+        console.log("Verifying token:", token.substring(0, 10) + "...");
+        
         // Supabase verifyOtp is only to verify the token, not to update password
         // This is a needed step to validate the token before allowing password update
         const { error } = await supabase.auth.verifyOtp({
@@ -51,6 +68,7 @@ const Password = () => {
             variant: "destructive"
           });
         } else {
+          console.log("Token successfully verified");
           setTokenValid(true);
         }
       } catch (error) {
@@ -94,24 +112,34 @@ const Password = () => {
     setLoading(true);
 
     try {
+      console.log("Attempting to update password...");
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
+        console.error("Password update failed:", error);
         toast({ 
           title: "Password reset failed", 
           description: error.message,
           variant: "destructive"
         });
       } else {
+        console.log("Password updated successfully");
         // Show success state
         setPasswordUpdated(true);
         
-        // Redirect to dashboard after a short delay (3 seconds)
+        // Redirect to dashboard after a short delay (5 seconds instead of 3 for better visibility)
+        toast({ 
+          title: "Password updated", 
+          description: "Your password has been successfully reset. You'll be redirected to the dashboard shortly."
+        });
+        
         setTimeout(() => {
+          console.log("Redirecting to dashboard after password update");
           navigate('/dashboard');
-        }, 3000);
+        }, 5000);
       }
     } catch (error: any) {
+      console.error("Password update error:", error);
       toast({ 
         title: "Error", 
         description: error.message || "Failed to reset password.",
@@ -129,7 +157,10 @@ const Password = () => {
         <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
         <h2 className="text-2xl font-semibold">Password Updated!</h2>
         <p>Your password has been successfully reset.</p>
-        <p className="text-sm text-gray-500">Redirecting you to the dashboard...</p>
+        <p className="text-sm text-gray-500">Redirecting you to the dashboard in a few seconds...</p>
+        <Button onClick={() => navigate('/dashboard')} className="mt-4">
+          Go to Dashboard Now
+        </Button>
       </div>
     );
   };
