@@ -14,12 +14,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-            - name: Download Supabase CLI
+      - name: Download Supabase CLI
         run: |
-          curl -L https://github.com/supabase/cli/releases/latest/download/supabase-cli-linux-x64 > supabase-cli
-          chmod +x supabase-cli
-          sudo mv supabase-cli /usr/local/bin/supabase
-
+          curl -L https://github.com/supabase/cli/releases/latest/download/supabase-cli-linux-x64 > supabase
+          chmod +x supabase
+          sudo mv supabase /usr/local/bin/supabase
 
       - name: Deploy Edge Functions
         env:
