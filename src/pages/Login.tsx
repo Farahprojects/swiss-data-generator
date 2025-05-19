@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -155,13 +154,7 @@ const Login = () => {
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md space-y-8">
           {showForgotPassword ? (
-            <>
-              <header className="text-center">
-                <h1 className="text-3xl font-bold">Welcome back</h1>
-                <p className="mt-2 text-gray-600">Reset your password</p>
-              </header>
-              <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
-            </>
+            <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
           ) : (
             <>
               <header className="text-center">
