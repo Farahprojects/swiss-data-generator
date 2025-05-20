@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { isPasswordResetUrl } from '@/utils/urlUtils';
-import { logNavigation } from '@/utils/logUtils';
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 type NavigationStateContextType = {
   lastRoute: string;
@@ -60,15 +61,25 @@ const cleanupPasswordResetURLs = () => {
     const storedParams = localStorage.getItem('last_route_params');
     
     if (storedRoute && storedRoute === '/auth/password') {
-      logNavigation('Clearing stored password reset route');
+      logToSupabase('Clearing stored password reset route', { 
+        level: 'info',
+        page: 'NavigationState' 
+      });
       localStorage.removeItem('last_route');
       localStorage.removeItem('last_route_params');
     } else if (storedParams && isPasswordResetUrl('', storedParams)) {
-      logNavigation('Clearing stored password reset params');
+      logToSupabase('Clearing stored password reset params', { 
+        level: 'info',
+        page: 'NavigationState' 
+      });
       localStorage.removeItem('last_route_params');
     }
   } catch (e) {
-    logNavigation('Error cleaning up password reset URLs', e);
+    logToSupabase('Error cleaning up password reset URLs', { 
+      level: 'error',
+      page: 'NavigationState',
+      data: { error: e instanceof Error ? e.message : String(e) }
+    });
   }
 };
 
@@ -77,10 +88,18 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   const [lastRoute, setLastRoute] = useState<string>(() => {
     try {
       const storedRoute = localStorage.getItem('last_route');
-      logNavigation("Initial lastRoute from localStorage:", storedRoute);
+      logToSupabase("Initial lastRoute from localStorage", { 
+        level: 'debug',
+        page: 'NavigationState',
+        data: { route: storedRoute }
+      });
       return storedRoute && typeof storedRoute === 'string' ? storedRoute : '/';
     } catch (e) {
-      logNavigation('Error reading last_route from localStorage', e);
+      logToSupabase('Error reading last_route from localStorage', { 
+        level: 'error',
+        page: 'NavigationState',
+        data: { error: e instanceof Error ? e.message : String(e) }
+      });
       return '/';
     }
   });
@@ -88,10 +107,18 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   const [lastRouteParams, setLastRouteParams] = useState<string>(() => {
     try {
       const storedParams = localStorage.getItem('last_route_params');
-      logNavigation("Initial lastRouteParams from localStorage:", storedParams);
+      logToSupabase("Initial lastRouteParams from localStorage", { 
+        level: 'debug',
+        page: 'NavigationState',
+        data: { params: storedParams }
+      });
       return storedParams && typeof storedParams === 'string' ? storedParams : '';
     } catch (e) {
-      logNavigation('Error reading last_route_params from localStorage', e);
+      logToSupabase('Error reading last_route_params from localStorage', { 
+        level: 'error',
+        page: 'NavigationState',
+        data: { error: e instanceof Error ? e.message : String(e) }
+      });
       return '';
     }
   });
@@ -109,7 +136,10 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
     const currentParams = location.search;
     
     // Only log in debug level since this happens frequently
-    logNavigation(`Current path: ${currentPath}, current params: ${currentParams}`);
+    logToSupabase(`Current path: ${currentPath}, current params: ${currentParams}`, {
+      level: 'debug',
+      page: 'NavigationState'
+    });
     
     // Check if the current path is restricted using the enhanced dashboard check
     if (!isDashboardPath(currentPath) && !isPasswordResetUrl(currentPath, currentParams)) {
@@ -124,26 +154,46 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
           localStorage.removeItem('last_route_params');
           setLastRouteParams('');
         }
-        logNavigation(`Saved route ${currentPath}${currentParams}`);
+        logToSupabase(`Saved route ${currentPath}${currentParams}`, {
+          level: 'debug',
+          page: 'NavigationState'
+        });
       } catch (e) {
-        logNavigation('Error saving route to localStorage', e);
+        logToSupabase('Error saving route to localStorage', { 
+          level: 'error',
+          page: 'NavigationState',
+          data: { error: e instanceof Error ? e.message : String(e) }
+        });
       }
     } else {
-      logNavigation(`Not saving restricted route: ${currentPath}`);
+      logToSupabase(`Not saving restricted route: ${currentPath}`, {
+        level: 'debug',
+        page: 'NavigationState'
+      });
     }
   }, [location.pathname, location.search]);
 
   // Clear navigation state (used on signout)
   const clearNavigationState = () => {
     try {
-      logNavigation('Clearing navigation state');
+      logToSupabase('Clearing navigation state', {
+        level: 'info',
+        page: 'NavigationState'
+      });
       localStorage.removeItem('last_route');
       localStorage.removeItem('last_route_params');
       setLastRoute('/');
       setLastRouteParams('');
-      logNavigation('Cleared navigation state - lastRoute=/, lastRouteParams=""');
+      logToSupabase('Cleared navigation state - lastRoute=/, lastRouteParams=""', {
+        level: 'info',
+        page: 'NavigationState'
+      });
     } catch (e) {
-      logNavigation('Error clearing navigation state', e);
+      logToSupabase('Error clearing navigation state', { 
+        level: 'error',
+        page: 'NavigationState',
+        data: { error: e instanceof Error ? e.message : String(e) }
+      });
     }
   };
 
@@ -170,11 +220,18 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
         }
       }
       
-      logNavigation(`NavigationStateContext: Safe redirect path: ${storedPath}${storedParams}`);
+      logToSupabase(`Safe redirect path: ${storedPath}${storedParams}`, {
+        level: 'debug',
+        page: 'NavigationState'
+      });
       // Return the safe path with params if available
       return `${storedPath}${storedParams}`;
     } catch (e) {
-      logNavigation('Error in getSafeRedirectPath:', e);
+      logToSupabase('Error in getSafeRedirectPath', { 
+        level: 'error',
+        page: 'NavigationState',
+        data: { error: e instanceof Error ? e.message : String(e) }
+      });
       return '/'; // Ultimate fallback to home instead of dashboard
     }
   };

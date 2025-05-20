@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home, Settings, LayoutDashboard } from "lucide-react";
 import { useNavigationState } from "@/contexts/NavigationStateContext";
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 const NotFound = () => {
   const location = useLocation();
@@ -13,10 +14,11 @@ const NotFound = () => {
   const { getSafeRedirectPath } = useNavigationState();
 
   useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
+    logToSupabase("404 Error: User attempted to access non-existent route", {
+      level: 'error',
+      page: 'NotFound',
+      data: { path: location.pathname }
+    });
   }, [location.pathname]);
 
   const handleGoBack = () => {
