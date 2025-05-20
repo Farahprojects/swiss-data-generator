@@ -2,14 +2,17 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 
-interface LogEntry {
+// Types for the batched logger
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+type LogEntry = {
   timestamp: string;
   message: string;
-  level: 'debug' | 'info' | 'warn' | 'error';
+  level: LogLevel;
   data?: any;
-}
+};
 
-interface BatchedLog {
+type LogBatch = {
   sessionId: string;
   page: string;
   logs: LogEntry[];
@@ -18,16 +21,23 @@ interface BatchedLog {
   userId?: string;
   userAgent?: string;
   meta: Record<string, any>;
-}
+};
+
+type LogContext = {
+  page?: string;
+  level?: LogLevel;
+  data?: any;
+  meta?: Record<string, any>;
+};
 
 class BatchedLogManager {
   private static instance: BatchedLogManager;
   
   // Current active batch
-  private currentBatch: BatchedLog | null = null;
+  private currentBatch: LogBatch | null = null;
   
   // Queue for retry
-  private queuedLogs: BatchedLog[] = [];
+  private queuedLogs: LogBatch[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private isFlushInProgress = false;
   private retryCount = 0;
@@ -60,7 +70,7 @@ class BatchedLogManager {
       page,
       logs: [],
       startTime: new Date().toISOString(),
-      meta: this.getSafeMeta(meta),
+      meta: this.getSafeMeta(meta)
     };
 
     // Enrich batch with user data
@@ -68,11 +78,7 @@ class BatchedLogManager {
   }
 
   // Add a log to the current batch
-  public addLog(
-    message: string,
-    level: 'debug' | 'info' | 'warn' | 'error' = 'info',
-    data?: any
-  ): void {
+  public addLog(message: string, level: LogLevel = 'info', data?: any): void {
     // Create a batch if it doesn't exist
     if (!this.currentBatch) {
       this.initBatch(this.getCurrentPage());
@@ -88,7 +94,7 @@ class BatchedLogManager {
       timestamp: new Date().toISOString(),
       message,
       level,
-      data: this.sanitizeData(data),
+      data: this.sanitizeData(data)
     });
 
     // Schedule flush if not already scheduled
@@ -110,19 +116,19 @@ class BatchedLogManager {
     batchToQueue.endTime = new Date().toISOString();
     this.queueBatchForFlush(batchToQueue);
     this.currentBatch = null;
-    
+
     // Clear any scheduled flushes
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
     }
-    
+
     // Process queue
     await this.processQueue();
   }
 
   // Queue batch for upload
-  private queueBatchForFlush(batch: BatchedLog): void {
+  private queueBatchForFlush(batch: LogBatch): void {
     this.queuedLogs.push({ ...batch });
     this.processQueue();
   }
@@ -130,10 +136,10 @@ class BatchedLogManager {
   // Process the queue with retry logic
   private async processQueue(): Promise<void> {
     if (this.isFlushInProgress || this.queuedLogs.length === 0) return;
-    
+
     this.isFlushInProgress = true;
     const batchToUpload = this.queuedLogs.shift()!;
-    
+
     try {
       await this.sendToSupabase(batchToUpload);
       // Success! Reset retry counter
@@ -165,11 +171,11 @@ class BatchedLogManager {
   }
 
   // Send logs to Supabase admin_logs table
-  private async sendToSupabase(batch: BatchedLog): Promise<void> {
+  private async sendToSupabase(batch: LogBatch): Promise<void> {
     // Prepare log data
-    const logText = batch.logs
-      .map(log => `[${log.level.toUpperCase()}] ${log.timestamp}: ${log.message}`)
-      .join('\n');
+    const logText = batch.logs.map(log => 
+      `[${log.level.toUpperCase()}] ${log.timestamp}: ${log.message}`
+    ).join('\n');
 
     // Prepare metadata with safe fields
     const metaData = {
@@ -206,7 +212,7 @@ class BatchedLogManager {
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
     }
-    
+
     // Flush after 5 seconds of inactivity
     this.flushTimer = setTimeout(() => this.flushNow(), 5000);
   }
@@ -214,7 +220,7 @@ class BatchedLogManager {
   // Enrich batch with user data
   private async enrichBatchWithUserData(): Promise<void> {
     if (!this.currentBatch) return;
-    
+
     try {
       // Add browser & environment info
       if (typeof window !== 'undefined') {
@@ -240,7 +246,7 @@ class BatchedLogManager {
   // Sanitize data to remove sensitive information
   private sanitizeData(data: any): any {
     if (!data) return undefined;
-    
+
     // Function to recursively sanitize objects
     const sanitizeObj = (obj: any): any => {
       if (!obj || typeof obj !== 'object') return obj;
@@ -249,10 +255,18 @@ class BatchedLogManager {
       
       // List of sensitive field patterns
       const sensitiveFields = [
-        'password', 'token', 'secret', 'key', 'authorization', 'auth', 
-        'credential', 'apiKey', 'access_token', 'refresh_token'
+        'password',
+        'token',
+        'secret',
+        'key',
+        'authorization',
+        'auth',
+        'credential',
+        'apiKey',
+        'access_token',
+        'refresh_token'
       ];
-      
+
       // Check each property
       for (const [key, value] of Object.entries(obj)) {
         const lowerKey = key.toLowerCase();
@@ -260,20 +274,16 @@ class BatchedLogManager {
         // Check if this is a sensitive field
         if (sensitiveFields.some(field => lowerKey.includes(field))) {
           result[key] = '[REDACTED]';
-        } 
-        // Recursively sanitize objects
-        else if (typeof value === 'object' && value !== null) {
+        } else if (typeof value === 'object' && value !== null) {
           result[key] = sanitizeObj(value);
-        } 
-        // Pass through non-sensitive values
-        else {
+        } else {
           result[key] = value;
         }
       }
       
       return result;
     };
-    
+
     // Clone and sanitize
     return sanitizeObj(typeof data === 'object' ? { ...data } : data);
   }
@@ -284,10 +294,18 @@ class BatchedLogManager {
     
     // Whitelist of allowed meta fields
     const allowedFields = [
-      'route', 'component', 'flowType', 'event', 'status', 'duration',
-      'referrer', 'viewportWidth', 'viewportHeight', 'userEmail'
+      'route',
+      'component',
+      'flowType',
+      'event',
+      'status',
+      'duration',
+      'referrer',
+      'viewportWidth',
+      'viewportHeight',
+      'userEmail'
     ];
-    
+
     // Copy allowed fields
     for (const field of allowedFields) {
       if (field in meta) {
@@ -313,15 +331,7 @@ class BatchedLogManager {
 export const batchedLogger = BatchedLogManager.getInstance();
 
 // Expose convenient API
-export function logToSupabase(
-  message: string, 
-  context?: { 
-    page?: string; 
-    level?: 'debug' | 'info' | 'warn' | 'error'; 
-    data?: any;
-    meta?: Record<string, any>;
-  }
-): void {
+export function logToSupabase(message: string, context?: LogContext): void {
   const ctx = context || {};
   const page = ctx.page || batchedLogger.getCurrentPage();
   
