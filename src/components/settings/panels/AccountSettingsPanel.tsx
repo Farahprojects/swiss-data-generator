@@ -13,7 +13,7 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, AlertCircle, Loader, Eye, EyeOff } from "lucide-react";
+import { Check, AlertCircle, Loader, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
