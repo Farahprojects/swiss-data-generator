@@ -14,19 +14,18 @@ export function getAbsoluteUrl(path: string): string {
 
 /**
  * Extracts the token from a URL parameter
- * Supabase sometimes sends just 'token' and sometimes uses a full OTP token format
+ * Prioritizes token_hash parameter (full hash for recovery)
+ * Falls back to token or otp parameters
  * 
  * @param searchParams - The URLSearchParams object from the URL
  * @returns The token string or null if not found
  */
 export function extractTokenFromUrl(searchParams: URLSearchParams): string | null {
-  // Try the simple token parameter first
-  const token = searchParams.get('token');
-  if (token) return token;
-  
-  // If no simple token exists, try the longer format
-  const otpToken = searchParams.get('otp');
-  return otpToken;
+  return (
+    searchParams.get('token_hash') ?? // Check for token_hash first (proper hash for recovery)
+    searchParams.get('token') ??      // Fallback for shorter tokens
+    searchParams.get('otp')           // Fallback for older format
+  );
 }
 
 /**
@@ -38,6 +37,6 @@ export function extractTokenFromUrl(searchParams: URLSearchParams): string | nul
  */
 export function isPasswordResetUrl(path: string, search: string): boolean {
   return path.includes('/auth/password') && 
-         (search.includes('token=') || search.includes('otp=')) &&
+         (search.includes('token=') || search.includes('otp=') || search.includes('token_hash=')) &&
          search.includes('type=recovery');
 }

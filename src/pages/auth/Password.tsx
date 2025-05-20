@@ -31,19 +31,20 @@ const Password = () => {
     console.log("Password reset component mounted");
     
     const recoveryFlow = searchParams.get('type') === 'recovery';
-    const token = searchParams.get('token');
+    const tokenParam = extractTokenFromUrl(searchParams);
     
     console.log("Password reset URL parameters:", { 
       recoveryFlow,
-      hasToken: !!token,
+      hasToken: !!tokenParam,
+      tokenType: tokenParam?.length > 10 ? 'hash' : 'short',
       fullUrl: window.location.href,
     });
     
     // Only attempt verification if we haven't tried yet
-    if (recoveryFlow && token && !tokenAttempted) {
+    if (recoveryFlow && tokenParam && !tokenAttempted) {
       console.log("Password recovery flow detected with token");
       setTokenAttempted(true);
-      verifyResetToken(token);
+      verifyResetToken(tokenParam);
     } else if (!tokenAttempted) {
       // No token or not a recovery flow
       console.log("⚠️ Warning: No valid token found for password reset");
@@ -61,13 +62,13 @@ const Password = () => {
   /**
    * Verify the reset token with Supabase
    */
-  const verifyResetToken = async (token: string) => {
+  const verifyResetToken = async (tokenParam: string) => {
     try {
       console.log("Verifying password reset token...");
       
       // For recovery flow, we need to use TokenHashParams
       const { data, error } = await supabase.auth.verifyOtp({
-        token_hash: token,
+        token_hash: tokenParam,
         type: 'recovery',
       });
       
