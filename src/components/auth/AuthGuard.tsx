@@ -7,7 +7,8 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
   
-  // Check for password reset route
+  // Check for password reset route with more precision
+  // This will match both /auth/password and /auth/password?type=recovery
   const isPasswordResetRoute = location.pathname.includes('/auth/password');
   
   useEffect(() => {

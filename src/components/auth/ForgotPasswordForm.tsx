@@ -25,10 +25,10 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
 
     setLoading(true);
     try {
-      console.log(`Sending password reset email to ${email} with redirectTo: ${window.location.origin}/auth/password`);
-      
-      // Make sure we're using the full URL for the redirectTo
+      // Use window.origin to guarantee we get the correct base URL in all environments
       const redirectUrl = new URL('/auth/password', window.location.origin).toString();
+      
+      console.log(`Sending password reset email to ${email} with redirectTo: ${redirectUrl}`);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
