@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +25,17 @@ const Password = () => {
 
   useEffect(() => {
     console.log("Password reset component mounted");
+    const [searchParams] = useSearchParams();
+    const recoveryToken = searchParams.get('type') === 'recovery';
+    const accessToken = searchParams.get('access_token');
+    const refreshToken = searchParams.get('refresh_token');
+    
+    console.log("Password reset URL parameters:", { 
+      recoveryFlow: recoveryToken,
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      fullUrl: window.location.href,
+    });
     
     // Check for an existing session
     const checkSessionStatus = async () => {

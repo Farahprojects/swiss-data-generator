@@ -1,9 +1,9 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { cleanupAuthState, checkForAuthRemnants } from '@/utils/authCleanup';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
+import { getAbsoluteUrl } from '@/utils/urlUtils';
 
 /**
  * Utility – only logs outside production builds.
@@ -196,8 +196,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const resetPasswordForEmail = async (email: string) => {
     try {
-      // Ensure we use a consistent approach to forming the redirect URL
-      const redirectUrl = new URL('/auth/password', window.location.origin).toString();
+      // Use the utility function for consistent absolute URL formatting
+      const redirectUrl = getAbsoluteUrl('auth/password');
       
       console.log(`AuthContext: Sending password reset email with redirectTo: ${redirectUrl}`);
       

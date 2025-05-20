@@ -7,6 +7,7 @@ import EmailInput from '@/components/auth/EmailInput';
 import { validateEmail } from '@/utils/authValidation';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getAbsoluteUrl } from '@/utils/urlUtils';
 
 interface ForgotPasswordFormProps {
   onCancel: () => void;
@@ -25,8 +26,8 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
 
     setLoading(true);
     try {
-      // Use window.origin to guarantee we get the correct base URL in all environments
-      const redirectUrl = new URL('/auth/password', window.location.origin).toString();
+      // Generate absolute URL for password reset
+      const redirectUrl = getAbsoluteUrl('auth/password');
       
       console.log(`Sending password reset email to ${email} with redirectTo: ${redirectUrl}`);
       

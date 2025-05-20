@@ -38,6 +38,14 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log(`Route changed: ${location.pathname}${location.search}`);
     
+    // Add more detailed logging for recovery tokens
+    const searchParams = new URLSearchParams(location.search);
+    const isRecoveryFlow = searchParams.get('type') === 'recovery';
+    
+    if (isRecoveryFlow) {
+      console.log("Password recovery flow detected with token");
+    }
+    
     // Check if there are any localStorage items with 'supabase' in their names
     const supabaseItems = Object.keys(localStorage).filter(key => 
       key.includes('supabase') || key.includes('sb-')
@@ -79,10 +87,11 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
     
     // Check for password reset flow - if user lands on the homepage with a recovery token in URL
     // This helps catch when Supabase redirects to home instead of /auth/password
-    const hasRecoveryToken = new URLSearchParams(location.search).get('type') === 'recovery';
-    if (location.pathname === '/' && hasRecoveryToken) {
-      console.log("Detected password recovery flow on homepage, redirecting to password reset page");
-      window.location.href = '/auth/password';
+    const hasRecoveryToken = searchParams.get('type') === 'recovery';
+    if ((location.pathname === '/' || location.pathname === '/login') && hasRecoveryToken) {
+      console.log("Detected password recovery flow on wrong page, redirecting to password reset page");
+      // Use replace instead of href to avoid creating a history entry
+      window.location.replace('/auth/password' + location.search);
     }
   }, [location]);
   
