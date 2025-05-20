@@ -1,5 +1,5 @@
 
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -13,11 +13,17 @@ import { useAuth } from "@/contexts/AuthContext";
  */
 const DashboardLayout = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  
+  // Check if this is a password reset flow
+  const isPasswordReset = location.pathname.includes('/auth/password');
   
   // Add a console log to track when DashboardLayout renders
   useEffect(() => {
     console.log("DashboardLayout mounted or updated, user:", user?.email);
-  }, [user]);
+    console.log("Current pathname:", location.pathname);
+    console.log("Is password reset route:", isPasswordReset);
+  }, [user, location.pathname, isPasswordReset]);
 
   return (
     <div className="flex flex-col min-h-screen w-full">

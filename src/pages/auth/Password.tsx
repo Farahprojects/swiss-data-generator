@@ -8,7 +8,6 @@ import UnifiedNavigation from '@/components/UnifiedNavigation';
 import Footer from '@/components/Footer';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { CheckCircle, Loader2 } from 'lucide-react';
-import { cleanupAuthState } from '@/utils/authCleanup';
 
 const Password = () => {
   const navigate = useNavigate();
@@ -17,119 +16,43 @@ const Password = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [tokenValid, setTokenValid] = useState<boolean | null>(null);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
   const [automaticRedirect, setAutomaticRedirect] = useState(false);
   const [secondsToRedirect, setSecondsToRedirect] = useState(10);
-  const [verifying, setVerifying] = useState(true);
-  const [tokenVerification, setTokenVerification] = useState({
-    attemptedVerification: false,
-    success: false,
-    error: ''
-  });
-
-  // Extract the token from the URL
-  const token = searchParams.get('token');
-  const type = searchParams.get('type');
+  
+  // Add new state for session checking
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [sessionValid, setSessionValid] = useState(false);
 
   useEffect(() => {
-    console.log("Password reset component mounted, token:", token ? "exists" : "missing");
-    console.log("Type parameter:", type);
-
-    // Clean up any existing auth state to prevent interference
-    cleanupAuthState();
+    console.log("Password reset component mounted");
     
-    // Log information about current session for debugging
+    // Check for an existing session
     const checkSessionStatus = async () => {
       try {
         const { data } = await supabase.auth.getSession();
         console.log("Password reset - current session status:", data.session ? "Has session" : "No session");
-        if (data.session) {
-          console.log("⚠️ Warning: Session exists but should not affect password reset flow");
+        
+        setSessionValid(!!data.session);
+        setSessionChecked(true);
+        
+        if (!data.session) {
+          console.log("⚠️ Warning: No valid session found for password reset");
+          toast({ 
+            title: "Invalid or expired link", 
+            description: "Please request a new password reset link.",
+            variant: "destructive"
+          });
         }
       } catch (error) {
         console.error("Error checking session:", error);
-      } finally {
-        setVerifying(false);
+        setSessionChecked(true);
+        setSessionValid(false);
       }
     };
     
     checkSessionStatus();
-  }, []);
-
-  useEffect(() => {
-    const verifyToken = async () => {
-      if (!token) {
-        console.error("No token provided in URL");
-        setTokenValid(false);
-        setTokenVerification({
-          attemptedVerification: true,
-          success: false,
-          error: 'Missing token'
-        });
-        toast({ 
-          title: "Missing token", 
-          description: "Password reset link is invalid or expired.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      try {
-        console.log(`Verifying password reset token: ${token.substring(0, 10)}...`);
-        setVerifying(true);
-        
-        // Supabase verifyOtp is only to verify the token, not to update password
-        // This is a needed step to validate the token before allowing password update
-        const { error, data } = await supabase.auth.verifyOtp({
-          token_hash: token,
-          type: 'recovery',
-        });
-
-        if (error) {
-          console.error("Token verification failed:", error);
-          setTokenValid(false);
-          setTokenVerification({
-            attemptedVerification: true,
-            success: false,
-            error: error.message
-          });
-          toast({ 
-            title: "Invalid token", 
-            description: "Password reset link is invalid or expired.",
-            variant: "destructive"
-          });
-        } else {
-          console.log("Token successfully verified:", data);
-          setTokenValid(true);
-          setTokenVerification({
-            attemptedVerification: true,
-            success: true,
-            error: ''
-          });
-        }
-      } catch (error: any) {
-        console.error("Token verification error:", error);
-        setTokenValid(false);
-        setTokenVerification({
-          attemptedVerification: true,
-          success: false,
-          error: error.message
-        });
-        toast({ 
-          title: "Verification error", 
-          description: "Failed to verify reset token. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setVerifying(false);
-      }
-    };
-
-    if (!tokenVerification.attemptedVerification) {
-      verifyToken();
-    }
-  }, [token, toast, tokenVerification.attemptedVerification]);
+  }, [toast]);
 
   /* ─────────────────────────────────────────────────────────────
    * Update password reset flow
@@ -159,9 +82,7 @@ const Password = () => {
 
     try {
       console.log("Attempting to update password...");
-      // Ensure we clean up before updating password to prevent auth conflicts
-      cleanupAuthState();
-      
+      // No longer clearing auth state before updating password
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
@@ -250,7 +171,7 @@ const Password = () => {
     return (
       <div className="flex flex-col items-center justify-center space-y-4 py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p>Verifying your reset link...</p>
+        <p>Checking your reset link...</p>
       </div>
     );
   };
@@ -261,7 +182,7 @@ const Password = () => {
       <div className="text-center space-y-4">
         <h2 className="text-xl font-semibold text-red-600">Invalid Reset Link</h2>
         <p>This password reset link is invalid or has expired.</p>
-        <p className="text-sm text-gray-500">Error: {tokenVerification.error}</p>
+        <p className="text-sm text-gray-500">Please request a new password reset link.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
           <Button 
             onClick={() => navigate('/login')}
@@ -281,22 +202,18 @@ const Password = () => {
     );
   };
 
-  // Function to render the appropriate content based on token validity
+  // Function to render the appropriate content based on session validity
   const renderContent = () => {
-    if (verifying) {
+    if (!sessionChecked) {
       return renderVerifying();
     }
-
+    
+    if (!sessionValid) {
+      return renderInvalidToken();
+    }
+    
     if (passwordUpdated) {
       return renderSuccess();
-    }
-    
-    if (tokenValid === null) {
-      return <div className="text-center">Verifying reset link...</div>;
-    }
-    
-    if (tokenValid === false) {
-      return renderInvalidToken();
     }
 
     return (
