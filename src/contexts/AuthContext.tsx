@@ -4,6 +4,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import { cleanupAuthState, checkForAuthRemnants } from '@/utils/authCleanup';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 /**
  * Utility – only logs outside production builds.
@@ -40,19 +41,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Initial mount – scan for dangling auth state (localStorage)
    * ────────────────────────────────────────────────────────────*/
   useEffect(() => {
-    debug('========== AUTH CONTEXT INITIALIZATION ==========', checkForAuthRemnants());
+    logToSupabase('Auth context initialization', {
+      page: 'AuthContext',
+      level: 'info',
+      data: {
+        authRemnantsCount: checkForAuthRemnants()
+      }
+    });
   }, []);
 
   /* ─────────────────────────────────────────────────────────────
    * Register Supabase auth listener *before* requesting session
    * ────────────────────────────────────────────────────────────*/
   useEffect(() => {
-    debug('AuthProvider: Setting up auth state listener');
+    logToSupabase('Setting up auth state listener', {
+      page: 'AuthContext', 
+      level: 'debug'
+    });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, supaSession) => {
-      debug('🔥 Auth state change:', event, 'session?', !!supaSession);
+      logToSupabase('Auth state change event', {
+        page: 'AuthContext',
+        level: 'info',
+        data: {
+          event,
+          hasSession: !!supaSession,
+          userId: supaSession?.user?.id,
+          eventTime: new Date().toISOString()
+        }
+      });
+      
       setSession(supaSession);
       setUser(supaSession?.user ?? null);
 
@@ -63,17 +83,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const onAuthPage = ['/login', '/signup'].includes(window.location.pathname);
           
           if (onAuthPage && !isOnPasswordResetRoute) {
-            debug('Signed‑in user still on auth page – consider redirect');
+            logToSupabase('Signed-in user still on auth page', {
+              page: 'AuthContext',
+              level: 'debug',
+              data: {
+                page: window.location.pathname,
+                shouldRedirect: true
+              }
+            });
           }
           
           if (isOnPasswordResetRoute) {
-            debug('On password reset route, NOT redirecting to dashboard');
+            logToSupabase('On password reset route, not redirecting', {
+              page: 'AuthContext',
+              level: 'debug'
+            });
           }
         }, 0);
       }
 
       if (event === 'SIGNED_OUT') {
-        setTimeout(() => debug('Auth remnants after SIGNED_OUT:', checkForAuthRemnants()), 100);
+        setTimeout(() => {
+          const remnantsCount = checkForAuthRemnants();
+          logToSupabase('Auth remnants after signout', {
+            page: 'AuthContext',
+            level: 'debug',
+            data: { remnantsCount }
+          });
+        }, 100);
       }
     });
 
@@ -81,7 +118,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      * Bootstrap existing session
      * ────────────────────────────*/
     supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
-      debug('Initial session check:', supaSession ? 'found' : 'none');
+      logToSupabase('Initial session check', {
+        page: 'AuthContext',
+        level: 'info',
+        data: {
+          hasSession: !!supaSession,
+          userId: supaSession?.user?.id
+        }
+      });
+      
       setSession(supaSession);
       setUser(supaSession?.user ?? null);
       setLoading(false);
@@ -96,7 +141,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * ─────────────────────────────────*/
   const signIn = async (email: string, password: string) => {
     try {
-      debug('Sign‑in attempt:', email);
+      logToSupabase('Sign-in attempt', {
+        page: 'AuthContext',
+        level: 'info',
+        data: { email }
+      });
+      
       setLoading(true);
       cleanupAuthState();
 
@@ -105,13 +155,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (_) {/* ignore */}
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { error, data: null };
+      
+      if (error) {
+        logToSupabase('Sign-in failed', {
+          page: 'AuthContext',
+          level: 'warn',
+          data: { 
+            email,
+            errorCode: error.name,
+            errorMessage: error.message
+          }
+        });
+        return { error, data: null };
+      }
+      
+      logToSupabase('Sign-in successful', {
+        page: 'AuthContext',
+        level: 'info',
+        data: { userId: data.user?.id }
+      });
+      
       return { error: null, data };
     } catch (err: unknown) {
-      return {
-        error: err instanceof Error ? err : new Error('Unexpected sign‑in error'),
-        data: null,
-      };
+      const error = err instanceof Error ? err : new Error('Unexpected sign-in error');
+      
+      logToSupabase('Sign-in exception', {
+        page: 'AuthContext',
+        level: 'error',
+        data: { 
+          email,
+          errorMessage: error.message,
+          stack: error.stack
+        }
+      });
+      
+      return { error, data: null };
     } finally {
       setLoading(false);
     }
@@ -119,7 +197,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      debug('Sign‑up attempt:', email);
+      logToSupabase('Sign-up attempt', {
+        page: 'AuthContext',
+        level: 'info',
+        data: { email }
+      });
+      
       setLoading(true);
       cleanupAuthState();
 
@@ -128,10 +211,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         options: { emailRedirectTo: `${window.location.origin}/dashboard` },
       });
-      if (error) return { error };
+      
+      if (error) {
+        logToSupabase('Sign-up failed', {
+          page: 'AuthContext',
+          level: 'warn',
+          data: { 
+            email,
+            errorCode: error.name,
+            errorMessage: error.message
+          }
+        });
+        return { error };
+      }
+      
+      logToSupabase('Sign-up successful', {
+        page: 'AuthContext',
+        level: 'info',
+        data: { userId: data.user?.id }
+      });
+      
       return { error: null, user: data.user };
     } catch (err: unknown) {
-      return { error: err instanceof Error ? err : new Error('Unexpected sign‑up error') };
+      const error = err instanceof Error ? err : new Error('Unexpected sign-up error');
+      
+      logToSupabase('Sign-up exception', {
+        page: 'AuthContext',
+        level: 'error',
+        data: { 
+          email,
+          errorMessage: error.message,
+          stack: error.stack
+        }
+      });
+      
+      return { error };
     } finally {
       setLoading(false);
     }
@@ -149,7 +263,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return { error };
     } catch (err: unknown) {
-      return { error: err instanceof Error ? err : new Error('Unexpected Google sign‑in error') };
+      return { error: err instanceof Error ? err : new Error('Unexpected Google sign-in error') };
     }
   };
 

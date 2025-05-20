@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          event_type: string | null
+          id: string
+          logs: string | null
+          meta: Json | null
+          page: string
+          timestamp: string
+          user_id: string | null
+        }
+        Insert: {
+          event_type?: string | null
+          id?: string
+          logs?: string | null
+          meta?: Json | null
+          page: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Update: {
+          event_type?: string | null
+          id?: string
+          logs?: string | null
+          meta?: Json | null
+          page?: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       api_keys: {
         Row: {
           api_key: string
@@ -680,6 +710,16 @@ export type Database = {
       increment_user_balance: {
         Args: { user_id_param: string; amount_param: number }
         Returns: undefined
+      }
+      log_admin_event: {
+        Args: {
+          _page: string
+          _event_type: string
+          _logs: string
+          _user_id?: string
+          _meta?: Json
+        }
+        Returns: string
       }
       record_api_usage: {
         Args: {

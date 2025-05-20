@@ -31,23 +31,31 @@ import Password from './pages/auth/Password';
 import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
 import { supabase } from './integrations/supabase/client';
 import { InlineToast } from './components/ui/InlineToast';
-import { log, logAuth } from './utils/logUtils';
+import { logToSupabase } from './utils/batchedLogManager';
+import { useBatchedLogging } from './hooks/use-batched-logging';
+import { checkForAuthRemnants } from './utils/authCleanup';
 
 // Route debugging wrapper with phantom auth detection
 const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const { logAction } = useBatchedLogging();
   
   // Use a reference to track initial load vs subsequent navigations
   const isInitialLoad = React.useRef(true);
   
   useEffect(() => {
-    // Only log detailed info on initial load or important routes
+    // Batch log route change
     const isAuthRoute = location.pathname.includes('/auth/') || 
                         location.pathname === '/login' || 
                         location.pathname === '/signup';
     
-    // Always log route changes but with simpler info for most routes
-    log('debug', `Route changed: ${location.pathname}${location.search}`);
+    // Log route info
+    logAction('Route change detected', 'info', {
+      path: location.pathname,
+      search: location.search,
+      isAuthRoute,
+      isInitialLoad: isInitialLoad.current
+    });
     
     // More detailed logging only for auth-related routes or initial load
     if (isAuthRoute || isInitialLoad.current) {
@@ -56,7 +64,7 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
       const isRecoveryFlow = searchParams.get('type') === 'recovery';
       
       if (isRecoveryFlow) {
-        logAuth("Password recovery flow detected");
+        logAction('Password recovery flow detected', 'info');
       }
       
       // Check localStorage items only on important routes
@@ -64,11 +72,10 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
         key.includes('supabase') || key.includes('sb-')
       );
       
-      if (supabaseItems.length > 0) {
-        log('debug', "Found Supabase items in localStorage:", { count: supabaseItems.length });
-      } else {
-        log('debug', "No Supabase items found in localStorage");
-      }
+      logAction('Auth state check', 'debug', { 
+        hasSupabaseItems: supabaseItems.length > 0,
+        itemCount: supabaseItems.length 
+      });
     }
     
     // Check if we're on a public page that needs phantom auth detection
@@ -84,19 +91,21 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
     ].includes(location.pathname) || location.pathname.includes('/auth/password');
     
     if (isPublicPage) {
-      log('debug', "🔍 Checking for phantom authentication state");
+      logAction('Checking for phantom authentication state', 'debug');
       detectAndCleanPhantomAuth(supabase).then(wasPhantom => {
         if (wasPhantom) {
-          logAuth("Phantom auth was detected and cleaned up");
+          logAction('Phantom auth detected and cleaned up', 'warn', {
+            path: location.pathname
+          });
         } else {
-          log('debug', "✅ No auth remnants found, clean state");
+          logAction('No auth remnants found, clean state', 'debug');
         }
       });
       
       // If user is stuck in login loop (e.g., coming back to login repeatedly),
       // perform a stronger reset
       if (location.pathname === '/login' && document.referrer.includes('/login')) {
-        logAuth("Possible login loop detected, performing stronger reset");
+        logAction('Possible login loop detected, performing stronger reset', 'warn');
         forceAuthReset(supabase);
       }
     }
@@ -106,14 +115,14 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
     const searchParams = new URLSearchParams(location.search);
     const hasRecoveryToken = searchParams.get('type') === 'recovery';
     if ((location.pathname === '/' || location.pathname === '/login') && hasRecoveryToken) {
-      logAuth("Detected password recovery flow on wrong page, redirecting to password reset page");
+      logAction('Detected password recovery flow on wrong page, redirecting to password reset page', 'warn');
       // Use replace instead of href to avoid creating a history entry
       window.location.replace('/auth/password' + location.search);
     }
     
     // After first render, set isInitialLoad to false
     isInitialLoad.current = false;
-  }, [location]);
+  }, [location, logAction]);
   
   return <>{children}</>;
 };
