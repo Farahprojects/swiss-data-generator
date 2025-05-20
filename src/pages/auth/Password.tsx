@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import UnifiedNavigation from '@/components/UnifiedNavigation';
 import Footer from '@/components/Footer';
 import PasswordInput from '@/components/auth/PasswordInput';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2, RefreshCw } from 'lucide-react';
 import { extractTokenFromUrl } from '@/utils/urlUtils';
 
 const Password = () => {
@@ -24,6 +24,8 @@ const Password = () => {
   // States for token verification
   const [verifyingToken, setVerifyingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
+  // Track whether we've already attempted token verification to prevent loops
+  const [tokenAttempted, setTokenAttempted] = useState(false);
   
   useEffect(() => {
     console.log("Password reset component mounted");
@@ -37,21 +39,24 @@ const Password = () => {
       fullUrl: window.location.href,
     });
     
-    // If we have a recovery token in the URL, we need to verify it
-    if (recoveryFlow && token) {
+    // Only attempt verification if we haven't tried yet
+    if (recoveryFlow && token && !tokenAttempted) {
+      console.log("Password recovery flow detected with token");
+      setTokenAttempted(true);
       verifyResetToken(token);
-    } else {
+    } else if (!tokenAttempted) {
       // No token or not a recovery flow
       console.log("⚠️ Warning: No valid token found for password reset");
       setVerifyingToken(false);
       setTokenValid(false);
+      setTokenAttempted(true);
       toast({ 
         title: "Invalid or expired link", 
         description: "Please request a new password reset link.",
         variant: "destructive"
       });
     }
-  }, [toast, searchParams]);
+  }, [toast, searchParams, tokenAttempted]);
 
   /**
    * Verify the reset token with Supabase
@@ -60,7 +65,6 @@ const Password = () => {
     try {
       console.log("Verifying password reset token...");
       
-      // Updated parameters for verifyOtp to match Supabase's expected format
       // For recovery flow, we need to use TokenHashParams
       const { data, error } = await supabase.auth.verifyOtp({
         token_hash: token,
@@ -181,6 +185,15 @@ const Password = () => {
     }
   };
 
+  // Function to request a new password reset link
+  const handleRequestNewLink = () => {
+    navigate('/login?requestPasswordReset=true');
+    toast({
+      title: "Password Reset",
+      description: "You'll be redirected to request a new password reset link."
+    });
+  };
+
   // Show success state when password is updated
   const renderSuccess = () => {
     return (
@@ -234,7 +247,15 @@ const Password = () => {
         <p className="text-sm text-gray-500">Please request a new password reset link.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
           <Button 
-            onClick={() => navigate('/login')}
+            onClick={handleRequestNewLink}
+            className="w-full sm:w-auto flex items-center gap-2"
+          >
+            <RefreshCw size={16} />
+            Request New Link
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/login')} 
             className="w-full sm:w-auto"
           >
             Back to Login

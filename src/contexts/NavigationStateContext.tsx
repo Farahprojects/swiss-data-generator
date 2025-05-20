@@ -26,12 +26,13 @@ interface NavigationStateProviderProps {
 }
 
 // List of routes that should not be stored as the last route
-// Added all dashboard routes to prevent dashboard redirect loops
+// Added auth/password to prevent password reset redirect loops
 const RESTRICTED_ROUTES = [
   '/login', 
   '/signup', 
   '/payment-return', 
   '/auth/email',
+  '/auth/password', // Added password reset page to restricted routes
   '/dashboard',
   '/dashboard/settings',
   '/dashboard/upgrade',
@@ -49,6 +50,20 @@ const isDashboardPath = (path: string): boolean => {
     // Check if the path matches a restricted route or is a sub-route with query params
     return path === route || path.startsWith(`${route}/`) || path.startsWith(`${route}?`);
   });
+};
+
+// Helper to clean up any stored password reset URLs
+const cleanupPasswordResetURLs = () => {
+  try {
+    const storedRoute = localStorage.getItem('last_route');
+    if (storedRoute && storedRoute === '/auth/password') {
+      console.log('NavigationState: Clearing stored password reset route');
+      localStorage.removeItem('last_route');
+      localStorage.removeItem('last_route_params');
+    }
+  } catch (e) {
+    console.error('Error cleaning up password reset URLs:', e);
+  }
 };
 
 const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ children }) => {
@@ -76,6 +91,11 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   });
 
   const location = useLocation();
+
+  // Clean up any password reset URLs on initial load
+  useEffect(() => {
+    cleanupPasswordResetURLs();
+  }, []);
 
   // Automatically track and save the current route when it changes
   useEffect(() => {
