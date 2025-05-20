@@ -38,6 +38,14 @@ const Login = () => {
 
   // ───────────────── Redirect if already signed‑in
   if (user) {
+    // Check if we're on password reset route - don't redirect in that case
+    const isPasswordResetRoute = window.location.pathname.includes('/auth/password');
+    
+    if (isPasswordResetRoute) {
+      debug('On password reset route, not redirecting despite having a user session');
+      return null; // Don't redirect, let the password reset component handle it
+    }
+    
     const from = (location.state as any)?.from?.pathname || '/';
     return <Navigate to={from} replace />;
   }

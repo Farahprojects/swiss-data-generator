@@ -76,6 +76,14 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
         forceAuthReset(supabase);
       }
     }
+    
+    // Check for password reset flow - if user lands on the homepage with a recovery token in URL
+    // This helps catch when Supabase redirects to home instead of /auth/password
+    const hasRecoveryToken = new URLSearchParams(location.search).get('type') === 'recovery';
+    if (location.pathname === '/' && hasRecoveryToken) {
+      console.log("Detected password recovery flow on homepage, redirecting to password reset page");
+      window.location.href = '/auth/password';
+    }
   }, [location]);
   
   return <>{children}</>;

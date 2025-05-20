@@ -58,8 +58,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === 'SIGNED_IN' && supaSession) {
         setTimeout(() => {
+          // Check if we're on password reset route before suggesting redirect
+          const isOnPasswordResetRoute = window.location.pathname.includes('/auth/password');
           const onAuthPage = ['/login', '/signup'].includes(window.location.pathname);
-          if (onAuthPage) debug('Signed‑in user still on auth page – consider redirect');
+          
+          if (onAuthPage && !isOnPasswordResetRoute) {
+            debug('Signed‑in user still on auth page – consider redirect');
+          }
+          
+          if (isOnPasswordResetRoute) {
+            debug('On password reset route, NOT redirecting to dashboard');
+          }
         }, 0);
       }
 
