@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,50 +20,86 @@ const Password = () => {
   const [automaticRedirect, setAutomaticRedirect] = useState(false);
   const [secondsToRedirect, setSecondsToRedirect] = useState(10);
   
-  // Add new state for session checking
-  const [sessionChecked, setSessionChecked] = useState(false);
-  const [sessionValid, setSessionValid] = useState(false);
-
+  // States for token verification
+  const [verifyingToken, setVerifyingToken] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
+  
   useEffect(() => {
     console.log("Password reset component mounted");
-    // Using the searchParams from component level, removed duplicate declaration
-    const recoveryToken = searchParams.get('type') === 'recovery';
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
+    
+    const recoveryFlow = searchParams.get('type') === 'recovery';
+    const token = searchParams.get('token');
     
     console.log("Password reset URL parameters:", { 
-      recoveryFlow: recoveryToken,
-      hasAccessToken: !!accessToken,
-      hasRefreshToken: !!refreshToken,
+      recoveryFlow,
+      hasToken: !!token,
       fullUrl: window.location.href,
     });
     
-    // Check for an existing session
-    const checkSessionStatus = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        console.log("Password reset - current session status:", data.session ? "Has session" : "No session");
-        
-        setSessionValid(!!data.session);
-        setSessionChecked(true);
-        
-        if (!data.session) {
-          console.log("⚠️ Warning: No valid session found for password reset");
-          toast({ 
-            title: "Invalid or expired link", 
-            description: "Please request a new password reset link.",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        console.error("Error checking session:", error);
-        setSessionChecked(true);
-        setSessionValid(false);
+    // If we have a recovery token in the URL, we need to verify it
+    if (recoveryFlow && token) {
+      verifyResetToken(token);
+    } else {
+      // No token or not a recovery flow
+      console.log("⚠️ Warning: No valid token found for password reset");
+      setVerifyingToken(false);
+      setTokenValid(false);
+      toast({ 
+        title: "Invalid or expired link", 
+        description: "Please request a new password reset link.",
+        variant: "destructive"
+      });
+    }
+  }, [toast, searchParams]);
+
+  /**
+   * Verify the reset token with Supabase
+   */
+  const verifyResetToken = async (token: string) => {
+    try {
+      console.log("Verifying password reset token...");
+      
+      const { data, error } = await supabase.auth.verifyOtp({
+        token,
+        type: 'recovery',
+      });
+      
+      setVerifyingToken(false);
+      
+      if (error) {
+        console.error("Token verification failed:", error);
+        setTokenValid(false);
+        toast({ 
+          title: "Invalid reset link", 
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
       }
-    };
-    
-    checkSessionStatus();
-  }, [toast, searchParams]); // Added searchParams to dependencies
+      
+      if (data && data.session) {
+        console.log("Token verified successfully, session created");
+        setTokenValid(true);
+      } else {
+        console.error("Token verification returned no session");
+        setTokenValid(false);
+        toast({ 
+          title: "Invalid reset link", 
+          description: "Please request a new password reset link.",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.error("Error verifying token:", error);
+      setVerifyingToken(false);
+      setTokenValid(false);
+      toast({ 
+        title: "Error", 
+        description: error.message || "An error occurred verifying your reset link.",
+        variant: "destructive"
+      });
+    }
+  };
 
   /* ─────────────────────────────────────────────────────────────
    * Update password reset flow
@@ -92,7 +129,6 @@ const Password = () => {
 
     try {
       console.log("Attempting to update password...");
-      // No longer clearing auth state before updating password
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
@@ -181,7 +217,7 @@ const Password = () => {
     return (
       <div className="flex flex-col items-center justify-center space-y-4 py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p>Checking your reset link...</p>
+        <p>Verifying your reset link...</p>
       </div>
     );
   };
@@ -200,25 +236,18 @@ const Password = () => {
           >
             Back to Login
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => window.location.reload()}
-            className="w-full sm:w-auto"
-          >
-            Try Again
-          </Button>
         </div>
       </div>
     );
   };
 
-  // Function to render the appropriate content based on session validity
+  // Function to render the appropriate content based on verification status
   const renderContent = () => {
-    if (!sessionChecked) {
+    if (verifyingToken) {
       return renderVerifying();
     }
     
-    if (!sessionValid) {
+    if (!tokenValid) {
       return renderInvalidToken();
     }
     

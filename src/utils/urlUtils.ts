@@ -11,3 +11,17 @@ export function getAbsoluteUrl(path: string): string {
   const cleanPath = path.replace(/^\/+/, '');
   return `${cleanBase}/${cleanPath}`;
 }
+
+/**
+ * Extracts the token from a URL parameter
+ * Supabase sometimes sends just 'token' and sometimes uses a full OTP token format
+ */
+export function extractTokenFromUrl(searchParams: URLSearchParams): string | null {
+  // Try the simple token parameter first
+  const token = searchParams.get('token');
+  if (token) return token;
+  
+  // If no simple token exists, try the longer format
+  const otpToken = searchParams.get('otp');
+  return otpToken;
+}
