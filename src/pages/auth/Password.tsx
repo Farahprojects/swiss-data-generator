@@ -8,6 +8,7 @@ import UnifiedNavigation from '@/components/UnifiedNavigation';
 import Footer from '@/components/Footer';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { extractTokenFromUrl } from '@/utils/urlUtils';
 
 const Password = () => {
   const navigate = useNavigate();
@@ -59,8 +60,10 @@ const Password = () => {
     try {
       console.log("Verifying password reset token...");
       
+      // Updated parameters for verifyOtp to match Supabase's expected format
+      // For recovery flow, we need to use TokenHashParams
       const { data, error } = await supabase.auth.verifyOtp({
-        token,
+        token_hash: token,
         type: 'recovery',
       });
       
