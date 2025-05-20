@@ -34,6 +34,7 @@ import { InlineToast } from './components/ui/InlineToast';
 import { logToSupabase } from './utils/batchedLogManager';
 import { useBatchedLogging } from './hooks/use-batched-logging';
 import { checkForAuthRemnants } from './utils/authCleanup';
+import Legal from './pages/Legal';
 
 // Route debugging wrapper with phantom auth detection
 const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
@@ -145,6 +146,7 @@ function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/payment-return" element={<PaymentReturn />} />
+                <Route path="/legal" element={<Legal />} />
                 
                 {/* Auth routes - Password route is *explicitly* kept outside AuthGuard */}
                 <Route path="/auth/email" element={<ConfirmEmail />} />
