@@ -74,8 +74,13 @@ export const forceAuthReset = async (supabase: SupabaseClient): Promise<void> =>
 /**
  * Alias for forceAuthReset for backward compatibility
  * This is the function imported in AuthContext.tsx
+ * Now requires a supabase client instance as parameter
  */
-export const cleanupAuthState = forceAuthReset;
+export const cleanupAuthState = (supabase: SupabaseClient): void => {
+  forceAuthReset(supabase).catch(error => {
+    console.error("Failed to clean up auth state:", error);
+  });
+};
 
 /**
  * Utility to check for any authentication remnants in storage

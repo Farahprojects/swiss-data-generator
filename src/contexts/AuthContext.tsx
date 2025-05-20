@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       setLoading(true);
-      cleanupAuthState();
+      cleanupAuthState(supabase);
 
       try {
         await supabase.auth.signOut({ scope: 'global' });
@@ -205,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       setLoading(true);
-      cleanupAuthState();
+      cleanupAuthState(supabase);
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -253,7 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    cleanupAuthState();
+    cleanupAuthState(supabase);
     const baseUrl = window.location.origin;
 
     try {
@@ -275,7 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       clearNavigationState();
-      cleanupAuthState();
+      cleanupAuthState(supabase);
 
       await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
       /* Clear any lingering sb‑ cookies */
