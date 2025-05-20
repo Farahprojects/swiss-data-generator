@@ -25,7 +25,7 @@ const Password = () => {
 
   useEffect(() => {
     console.log("Password reset component mounted");
-    const [searchParams] = useSearchParams();
+    // Using the searchParams from component level, removed duplicate declaration
     const recoveryToken = searchParams.get('type') === 'recovery';
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
@@ -62,7 +62,7 @@ const Password = () => {
     };
     
     checkSessionStatus();
-  }, [toast]);
+  }, [toast, searchParams]); // Added searchParams to dependencies
 
   /* ─────────────────────────────────────────────────────────────
    * Update password reset flow
