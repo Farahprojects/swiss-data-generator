@@ -6,48 +6,82 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import UnifiedNavigation from '@/components/UnifiedNavigation';
 import Footer from '@/components/Footer';
-import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import PasswordInput from '@/components/auth/PasswordInput';
+import { CheckCircle, Loader2 } from 'lucide-react';
 import { cleanupAuthState } from '@/utils/authCleanup';
 
 const Password = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [verifying, setVerifying] = useState(true);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
-  const [redirecting, setRedirecting] = useState(false);
-  
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const [automaticRedirect, setAutomaticRedirect] = useState(false);
+  const [secondsToRedirect, setSecondsToRedirect] = useState(10);
+  const [verifying, setVerifying] = useState(true);
+  const [tokenVerification, setTokenVerification] = useState({
+    attemptedVerification: false,
+    success: false,
+    error: ''
+  });
+
   // Extract the token from the URL
   const token = searchParams.get('token');
   const type = searchParams.get('type');
 
   useEffect(() => {
-    console.log("Password reset page mounted, token:", token ? "exists" : "missing");
+    console.log("Password reset component mounted, token:", token ? "exists" : "missing");
     console.log("Type parameter:", type);
 
     // Clean up any existing auth state to prevent interference
     cleanupAuthState();
     
-    if (!token) {
-      console.error("No token provided in URL");
-      setTokenValid(false);
-      setVerifying(false);
-      toast({ 
-        title: "Missing token", 
-        description: "Password reset link is invalid or expired.",
-        variant: "destructive"
-      });
-      return;
-    }
+    // Log information about current session for debugging
+    const checkSessionStatus = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        console.log("Password reset - current session status:", data.session ? "Has session" : "No session");
+        if (data.session) {
+          console.log("⚠️ Warning: Session exists but should not affect password reset flow");
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setVerifying(false);
+      }
+    };
+    
+    checkSessionStatus();
+  }, []);
 
-    // Verify the token but don't update the password yet
+  useEffect(() => {
     const verifyToken = async () => {
+      if (!token) {
+        console.error("No token provided in URL");
+        setTokenValid(false);
+        setTokenVerification({
+          attemptedVerification: true,
+          success: false,
+          error: 'Missing token'
+        });
+        toast({ 
+          title: "Missing token", 
+          description: "Password reset link is invalid or expired.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       try {
         console.log(`Verifying password reset token: ${token.substring(0, 10)}...`);
         setVerifying(true);
         
-        // Only verify the token, don't update password yet
-        const { error } = await supabase.auth.verifyOtp({
+        // Supabase verifyOtp is only to verify the token, not to update password
+        // This is a needed step to validate the token before allowing password update
+        const { error, data } = await supabase.auth.verifyOtp({
           token_hash: token,
           type: 'recovery',
         });
@@ -55,28 +89,36 @@ const Password = () => {
         if (error) {
           console.error("Token verification failed:", error);
           setTokenValid(false);
+          setTokenVerification({
+            attemptedVerification: true,
+            success: false,
+            error: error.message
+          });
           toast({ 
             title: "Invalid token", 
             description: "Password reset link is invalid or expired.",
             variant: "destructive"
           });
         } else {
-          console.log("Token successfully verified, setting flag and redirecting");
+          console.log("Token successfully verified:", data);
           setTokenValid(true);
-          
-          // Set flag in localStorage to indicate password reset is needed
-          localStorage.setItem('password_reset_required', 'true');
-          
-          // Redirect to dashboard with token in URL
-          setRedirecting(true);
-          navigate(`/dashboard?token=${token}&type=recovery`);
+          setTokenVerification({
+            attemptedVerification: true,
+            success: true,
+            error: ''
+          });
         }
       } catch (error: any) {
         console.error("Token verification error:", error);
         setTokenValid(false);
+        setTokenVerification({
+          attemptedVerification: true,
+          success: false,
+          error: error.message
+        });
         toast({ 
           title: "Verification error", 
-          description: error.message || "Failed to verify reset token.",
+          description: "Failed to verify reset token. Please try again.",
           variant: "destructive"
         });
       } finally {
@@ -84,20 +126,131 @@ const Password = () => {
       }
     };
 
-    verifyToken();
-  }, [token, toast, navigate, type]);
+    if (!tokenVerification.attemptedVerification) {
+      verifyToken();
+    }
+  }, [token, toast, tokenVerification.attemptedVerification]);
 
-  // Show verification state
+  /* ─────────────────────────────────────────────────────────────
+   * Update password reset flow
+   * ────────────────────────────────────────────────────────────*/
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      toast({ 
+        title: "Passwords don't match", 
+        description: "Please make sure both passwords are the same.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (password.length < 8) {
+      toast({ 
+        title: "Password too short", 
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      console.log("Attempting to update password...");
+      // Ensure we clean up before updating password to prevent auth conflicts
+      cleanupAuthState();
+      
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) {
+        console.error("Password update failed:", error);
+        toast({ 
+          title: "Password reset failed", 
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        console.log("Password updated successfully");
+        // Show success state
+        setPasswordUpdated(true);
+        
+        // Start countdown for redirect
+        setAutomaticRedirect(true);
+        
+        toast({ 
+          title: "Password updated", 
+          description: "Your password has been successfully reset. You'll be redirected to the dashboard shortly."
+        });
+        
+        // Set up countdown timer
+        const countdownInterval = setInterval(() => {
+          setSecondsToRedirect(prev => {
+            if (prev <= 1) {
+              clearInterval(countdownInterval);
+              navigate('/dashboard');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        // Clear interval on component unmount
+        return () => clearInterval(countdownInterval);
+      }
+    } catch (error: any) {
+      console.error("Password update error:", error);
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to reset password.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show success state when password is updated
+  const renderSuccess = () => {
+    return (
+      <div className="text-center space-y-4">
+        <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
+        <h2 className="text-2xl font-semibold">Password Updated!</h2>
+        <p>Your password has been successfully reset.</p>
+        
+        {automaticRedirect ? (
+          <p className="text-sm text-gray-500">
+            Redirecting you to the dashboard in {secondsToRedirect} seconds...
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">
+            You can now go to the dashboard or log in with your new password.
+          </p>
+        )}
+        
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+          <Button onClick={() => navigate('/dashboard')} className="w-full sm:w-auto">
+            Go to Dashboard Now
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/login')} 
+            className="w-full sm:w-auto"
+          >
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // Render verification state
   const renderVerifying = () => {
     return (
       <div className="flex flex-col items-center justify-center space-y-4 py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p>Verifying your reset link...</p>
-        {redirecting && (
-          <p className="text-sm text-gray-500">
-            Redirecting you to set your new password...
-          </p>
-        )}
       </div>
     );
   };
@@ -106,9 +259,9 @@ const Password = () => {
   const renderInvalidToken = () => {
     return (
       <div className="text-center space-y-4">
-        <AlertCircle className="h-16 w-16 text-red-500 mx-auto" />
         <h2 className="text-xl font-semibold text-red-600">Invalid Reset Link</h2>
         <p>This password reset link is invalid or has expired.</p>
+        <p className="text-sm text-gray-500">Error: {tokenVerification.error}</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
           <Button 
             onClick={() => navigate('/login')}
@@ -133,6 +286,10 @@ const Password = () => {
     if (verifying) {
       return renderVerifying();
     }
+
+    if (passwordUpdated) {
+      return renderSuccess();
+    }
     
     if (tokenValid === null) {
       return <div className="text-center">Verifying reset link...</div>;
@@ -142,11 +299,39 @@ const Password = () => {
       return renderInvalidToken();
     }
 
-    // If token is valid, we should never reach here as we'll redirect
     return (
-      <div className="text-center">
-        <p>Redirecting to password reset form...</p>
-      </div>
+      <form onSubmit={handlePasswordReset} className="space-y-6">
+        <div className="space-y-4">
+          <PasswordInput
+            password={password}
+            isValid={password.length >= 8}
+            showRequirements={true}
+            onChange={setPassword}
+          />
+          
+          <div className="space-y-1">
+            <PasswordInput
+              password={confirmPassword}
+              isValid={confirmPassword.length >= 8 && password === confirmPassword}
+              showRequirements={false}
+              onChange={setConfirmPassword}
+              placeholder="Confirm new password"
+              id="confirm-password"
+            />
+            {confirmPassword && password !== confirmPassword && (
+              <p className="text-xs text-red-600">Passwords do not match</p>
+            )}
+          </div>
+        </div>
+
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={loading || password.length < 8 || password !== confirmPassword}
+        >
+          {loading ? 'Updating Password...' : 'Reset Password'}
+        </Button>
+      </form>
     );
   };
 
@@ -158,7 +343,7 @@ const Password = () => {
         <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-md">
           <header className="text-center">
             <h1 className="text-3xl font-bold">Reset Password</h1>
-            <p className="mt-2 text-gray-600">We're verifying your reset link</p>
+            <p className="mt-2 text-gray-600">Enter your new password below</p>
           </header>
 
           {renderContent()}

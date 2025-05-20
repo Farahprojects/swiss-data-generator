@@ -1,12 +1,11 @@
 
-import { Outlet, useLocation, useSearchParams } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { SidebarInset } from "@/components/ui/sidebar";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { PasswordResetModal } from "@/components/auth/PasswordResetModal";
 
 /**
  * DashboardLayout serves as the outer shell for all dashboard pages
@@ -14,38 +13,11 @@ import { PasswordResetModal } from "@/components/auth/PasswordResetModal";
  */
 const DashboardLayout = () => {
   const { user } = useAuth();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordResetToken, setPasswordResetToken] = useState<string | null>(null);
   
-  // Check if we should show the password reset modal
+  // Add a console log to track when DashboardLayout renders
   useEffect(() => {
     console.log("DashboardLayout mounted or updated, user:", user?.email);
-    
-    // Check for password reset required flag in localStorage
-    const resetFlag = localStorage.getItem('password_reset_required');
-    
-    // Check for token in URL (direct from password reset email)
-    const token = searchParams.get('token');
-    const type = searchParams.get('type');
-    
-    // Show modal if we have either reset flag or valid token parameters
-    if (resetFlag === 'true' || (token && type === 'recovery')) {
-      console.log("Password reset required, showing modal");
-      setShowPasswordModal(true);
-      
-      if (token) {
-        setPasswordResetToken(token);
-      }
-    }
-  }, [user, location.pathname, searchParams]);
-
-  const handlePasswordResetComplete = () => {
-    console.log("Password reset completed, closing modal");
-    setShowPasswordModal(false);
-    localStorage.removeItem('password_reset_required');
-  };
+  }, [user]);
 
   return (
     <div className="flex flex-col min-h-screen w-full">
@@ -66,13 +38,6 @@ const DashboardLayout = () => {
           </SidebarInset>
         </div>
       </div>
-      
-      {/* Password reset modal that appears when needed */}
-      <PasswordResetModal
-        open={showPasswordModal}
-        token={passwordResetToken}
-        onComplete={handlePasswordResetComplete}
-      />
       
       <Footer />
     </div>
