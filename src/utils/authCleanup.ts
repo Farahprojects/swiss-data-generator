@@ -70,3 +70,27 @@ export const forceAuthReset = async (supabase: SupabaseClient): Promise<void> =>
     log('error', "Error during force auth reset", error);
   }
 };
+
+/**
+ * Alias for forceAuthReset for backward compatibility
+ * This is the function imported in AuthContext.tsx
+ */
+export const cleanupAuthState = forceAuthReset;
+
+/**
+ * Utility to check for any authentication remnants in storage
+ * Returns count of auth-related items found
+ */
+export const checkForAuthRemnants = (): number => {
+  try {
+    // Find all supabase-related items
+    const authItems = Object.keys(localStorage).filter(key => 
+      key.includes('supabase') || key.includes('sb-')
+    );
+    
+    return authItems.length;
+  } catch (error) {
+    log('error', "Error checking for auth remnants", error);
+    return 0;
+  }
+};
