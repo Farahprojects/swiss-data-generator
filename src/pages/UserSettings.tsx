@@ -3,11 +3,16 @@ import { UserSettingsLayout } from "@/components/settings/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 const UserSettings = () => {
   const navigate = useNavigate();
   
   const handleClose = () => {
+    logToSupabase("Closed settings page", {
+      level: 'info',
+      page: 'UserSettings'
+    });
     navigate('/dashboard');
   };
   

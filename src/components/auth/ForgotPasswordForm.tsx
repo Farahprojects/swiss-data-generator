@@ -5,9 +5,10 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import EmailInput from '@/components/auth/EmailInput';
 import { validateEmail } from '@/utils/authValidation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface ForgotPasswordFormProps {
   onCancel: () => void;
@@ -18,6 +19,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [resetLinkSent, setResetLinkSent] = useState(false);
   const emailValid = validateEmail(email);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,29 +31,42 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
       // Generate absolute URL for password reset
       const redirectUrl = getAbsoluteUrl('auth/password');
       
-      console.log(`Sending password reset email to ${email} with redirectTo: ${redirectUrl}`);
+      logToSupabase(`Sending password reset email to ${email} with redirectTo: ${redirectUrl}`, {
+        level: 'info',
+        page: 'ForgotPasswordForm',
+        data: { email, redirectUrl }
+      });
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });
 
       if (error) {
-        console.error("Password reset email error:", error);
+        logToSupabase("Password reset email error", {
+          level: 'error',
+          page: 'ForgotPasswordForm',
+          data: { error: error.message }
+        });
         toast({ 
           title: 'Error', 
           description: error.message,
           variant: 'destructive'
         });
       } else {
-        console.log("Password reset email sent successfully");
-        setEmailSent(true);
-        toast({ 
-          title: 'Email sent', 
-          description: 'Check your inbox for the password reset link'
+        logToSupabase("Password reset email sent successfully", {
+          level: 'info',
+          page: 'ForgotPasswordForm',
+          data: { email }
         });
+        setEmailSent(true);
+        setResetLinkSent(true);
       }
     } catch (err: any) {
-      console.error("Password reset email error:", err);
+      logToSupabase("Password reset email error", {
+        level: 'error',
+        page: 'ForgotPasswordForm',
+        data: { error: err.message || String(err) }
+      });
       toast({ 
         title: 'Error', 
         description: err.message || 'Failed to send reset email',
@@ -122,6 +137,14 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
           >
             {loading ? 'Sending...' : 'Send Reset Link'}
           </Button>
+          
+          {resetLinkSent && (
+            <div className="flex items-center justify-center text-sm text-green-600 py-2">
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Reset link sent! Check your email
+            </div>
+          )}
+          
           <Button 
             type="button" 
             variant="outline"

@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +13,12 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, AlertCircle, Loader } from "lucide-react";
+import { Check, AlertCircle, Loader, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
+import { logToSupabase } from "@/utils/batchedLogManager";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 type PasswordFormValues = {
   currentPassword: string;
@@ -39,6 +42,9 @@ export const AccountSettingsPanel = () => {
   });
   const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
   const [newEmailAddress, setNewEmailAddress] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showEmailPassword, setShowEmailPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   
   const passwordForm = useForm<PasswordFormValues>({
     defaultValues: {
@@ -61,26 +67,43 @@ export const AccountSettingsPanel = () => {
   
   // Set up auth state listener for email change events
   useEffect(() => {
-    console.log("Setting up AccountSettingsPanel auth state listener");
+    logToSupabase("Setting up AccountSettingsPanel auth state listener", {
+      level: 'debug',
+      page: 'AccountSettingsPanel'
+    });
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("AccountSettingsPanel: Auth state change event:", event);
+      logToSupabase("AccountSettingsPanel: Auth state change event", {
+        level: 'debug',
+        page: 'AccountSettingsPanel',
+        data: { event }
+      });
       
       if (event === 'USER_UPDATED' || event === 'SIGNED_IN') {
-        console.log("AccountSettingsPanel: Email change confirmed or user updated:", session?.user);
+        logToSupabase("AccountSettingsPanel: Email change confirmed or user updated", {
+          level: 'info',
+          page: 'AccountSettingsPanel',
+          data: { email: session?.user?.email, confirmed: session?.user?.email_confirmed_at }
+        });
         
         // If the user has confirmed their email, close the verification modal
         if (session?.user?.email_confirmed_at && 
             pendingEmailVerification && 
             session?.user?.email === newEmailAddress) {
-          console.log("AccountSettingsPanel: Email verified, closing modal");
+          logToSupabase("AccountSettingsPanel: Email verified, closing modal", {
+            level: 'info',
+            page: 'AccountSettingsPanel'
+          });
           handleEmailVerificationComplete();
         }
       }
     });
     
     return () => {
-      console.log("Cleaning up auth state listener in AccountSettingsPanel");
+      logToSupabase("Cleaning up auth state listener in AccountSettingsPanel", {
+        level: 'debug',
+        page: 'AccountSettingsPanel'
+      });
       subscription.unsubscribe();
     };
   }, [pendingEmailVerification, newEmailAddress]);
@@ -91,9 +114,17 @@ export const AccountSettingsPanel = () => {
       // If email is not confirmed, show the verification modal
       setPendingEmailVerification(true);
       setNewEmailAddress(user.email);
-      console.log("User has pending email verification:", user.email);
+      logToSupabase("User has pending email verification", {
+        level: 'info',
+        page: 'AccountSettingsPanel',
+        data: { email: user.email }
+      });
     } else {
-      console.log("User email status:", user?.email, "confirmed at:", user?.email_confirmed_at);
+      logToSupabase("User email status", {
+        level: 'debug',
+        page: 'AccountSettingsPanel',
+        data: { email: user?.email, confirmed_at: user?.email_confirmed_at }
+      });
       setPendingEmailVerification(false);
     }
   }, [user]);
@@ -117,6 +148,11 @@ export const AccountSettingsPanel = () => {
     clearToast();
     
     try {
+      logToSupabase("Verifying current password", {
+        level: 'info',
+        page: 'AccountSettingsPanel'
+      });
+      
       // Verify current password by attempting to sign in
       const { error } = await supabase.auth.signInWithPassword({
         email: user?.email || '',
@@ -124,6 +160,12 @@ export const AccountSettingsPanel = () => {
       });
 
       if (error) {
+        logToSupabase("Current password verification failed", {
+          level: 'error',
+          page: 'AccountSettingsPanel',
+          data: { error: error.message }
+        });
+        
         toast({
           variant: "destructive",
           title: "Error",
@@ -133,10 +175,21 @@ export const AccountSettingsPanel = () => {
         return;
       }
 
+      logToSupabase("Current password verified successfully", {
+        level: 'info',
+        page: 'AccountSettingsPanel'
+      });
+      
       // Password verified, move to next step
       setPasswordStep('create');
       setIsUpdatingPassword(false);
-    } catch (error) {
+    } catch (error: any) {
+      logToSupabase("Error verifying current password", {
+        level: 'error',
+        page: 'AccountSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
       toast({
         variant: "destructive",
         title: "Error",
@@ -158,12 +211,23 @@ export const AccountSettingsPanel = () => {
     clearToast();
     
     try {
+      logToSupabase("Updating password", {
+        level: 'info',
+        page: 'AccountSettingsPanel'
+      });
+      
       // Update the password
       const { error } = await supabase.auth.updateUser({ 
         password: data.newPassword 
       });
       
       if (error) {
+        logToSupabase("Password update failed", {
+          level: 'error',
+          page: 'AccountSettingsPanel',
+          data: { error: error.message }
+        });
+        
         toast({
           variant: "destructive",
           title: "Error",
@@ -172,6 +236,11 @@ export const AccountSettingsPanel = () => {
         return;
       }
       
+      logToSupabase("Password updated successfully", {
+        level: 'info',
+        page: 'AccountSettingsPanel'
+      });
+      
       toast({
         title: "Password updated",
         description: "Your password has been updated successfully."
@@ -179,7 +248,13 @@ export const AccountSettingsPanel = () => {
       
       passwordForm.reset();
       setPasswordStep('verify');
-    } catch (error) {
+    } catch (error: any) {
+      logToSupabase("Error updating password", {
+        level: 'error',
+        page: 'AccountSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
       toast({
         variant: "destructive",
         title: "Error",
@@ -210,6 +285,11 @@ export const AccountSettingsPanel = () => {
     clearToast();
     
     try {
+      logToSupabase("Verifying password for email change", {
+        level: 'info',
+        page: 'AccountSettingsPanel'
+      });
+      
       // Verify password first
       const { error: verifyError } = await supabase.auth.signInWithPassword({
         email: user?.email || '',
@@ -217,6 +297,12 @@ export const AccountSettingsPanel = () => {
       });
 
       if (verifyError) {
+        logToSupabase("Password verification failed for email change", {
+          level: 'error',
+          page: 'AccountSettingsPanel',
+          data: { error: verifyError.message }
+        });
+        
         toast({
           variant: "destructive",
           title: "Error",
@@ -226,7 +312,11 @@ export const AccountSettingsPanel = () => {
         return;
       }
 
-      console.log("Initiating email change from", user?.email, "to", data.newEmail);
+      logToSupabase("Initiating email change", {
+        level: 'info',
+        page: 'AccountSettingsPanel',
+        data: { from: user?.email, to: data.newEmail }
+      });
       
       // Store the new email before updating
       setNewEmailAddress(data.newEmail);
@@ -236,7 +326,11 @@ export const AccountSettingsPanel = () => {
         email: data.newEmail 
       });
       
-      console.log("Update user response:", updateData);
+      logToSupabase("Update user email response", {
+        level: 'debug',
+        page: 'AccountSettingsPanel',
+        data: { response: updateData, error: error?.message }
+      });
       
       if (error) {
         toast({
@@ -259,7 +353,13 @@ export const AccountSettingsPanel = () => {
       
       // Reset the form
       emailForm.reset();
-    } catch (error) {
+    } catch (error: any) {
+      logToSupabase("Error updating email address", {
+        level: 'error',
+        page: 'AccountSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
       toast({
         variant: "destructive",
         title: "Error",
@@ -276,17 +376,30 @@ export const AccountSettingsPanel = () => {
     
     // Force refresh the session to get the latest user data
     try {
+      logToSupabase("Refreshing session after email verification", {
+        level: 'info',
+        page: 'AccountSettingsPanel'
+      });
+      
       await supabase.auth.refreshSession();
       const { data } = await supabase.auth.getUser();
-      console.log("Session refreshed after email verification:", data?.user);
+      logToSupabase("Session refreshed after email verification", {
+        level: 'info',
+        page: 'AccountSettingsPanel',
+        data: { user_email: data?.user?.email, confirmed_at: data?.user?.email_confirmed_at }
+      });
       
       toast({
         variant: "success",
         title: "Email verified",
         description: "Your email address has been successfully verified."
       });
-    } catch (error) {
-      console.error("Error refreshing session:", error);
+    } catch (error: any) {
+      logToSupabase("Error refreshing session", {
+        level: 'error',
+        page: 'AccountSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
       
       toast({
         variant: "destructive",
@@ -300,6 +413,11 @@ export const AccountSettingsPanel = () => {
     // User wants to cancel the email change
     setPendingEmailVerification(false);
     
+    logToSupabase("Email change cancelled by user", {
+      level: 'info',
+      page: 'AccountSettingsPanel'
+    });
+    
     toast({
       title: "Email change cancelled",
       description: "Your email address change has been cancelled."
@@ -309,13 +427,26 @@ export const AccountSettingsPanel = () => {
   const resetPassword = async () => {
     if (!user?.email) return;
     clearToast();
+    setResetEmailSent(false);
     
     try {
+      logToSupabase("Sending password reset email", {
+        level: 'info',
+        page: 'AccountSettingsPanel',
+        data: { email: user.email }
+      });
+      
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
         redirectTo: `${window.location.origin}/dashboard/settings`,
       });
       
       if (error) {
+        logToSupabase("Failed to send reset password email", {
+          level: 'error',
+          page: 'AccountSettingsPanel',
+          data: { error: error.message }
+        });
+        
         toast({
           variant: "destructive",
           title: "Error",
@@ -324,11 +455,21 @@ export const AccountSettingsPanel = () => {
         return;
       }
       
-      toast({
-        title: "Reset email sent",
-        description: "Check your email for a password reset link."
+      logToSupabase("Password reset email sent successfully", {
+        level: 'info',
+        page: 'AccountSettingsPanel',
+        data: { email: user.email }
       });
-    } catch (error) {
+      
+      // Show inline success message instead of toast
+      setResetEmailSent(true);
+    } catch (error: any) {
+      logToSupabase("Error sending password reset email", {
+        level: 'error',
+        page: 'AccountSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
       toast({
         variant: "destructive",
         title: "Error",
@@ -338,12 +479,22 @@ export const AccountSettingsPanel = () => {
   };
 
   const resendEmailChangeVerification = async (email: string) => {
-    console.log("Resending email verification to", email);
+    logToSupabase("Resending email verification", {
+      level: 'info',
+      page: 'AccountSettingsPanel',
+      data: { email }
+    });
+    
     try {
       const { error } = await supabase.auth.updateUser({ email });
       return { error: error ? new Error(error.message) : null };
-    } catch (err) {
-      console.error("Error resending verification:", err);
+    } catch (err: any) {
+      logToSupabase("Error resending verification", {
+        level: 'error',
+        page: 'AccountSettingsPanel',
+        data: { error: err.message || String(err) }
+      });
+      
       return { error: err as Error };
     }
   };
@@ -420,7 +571,22 @@ export const AccountSettingsPanel = () => {
                 <FormItem>
                   <FormLabel>Current Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="Enter your current password" {...field} />
+                    <div className="relative">
+                      <Input 
+                        type={showEmailPassword ? "text" : "password"} 
+                        placeholder="Enter your current password" 
+                        {...field} 
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowEmailPassword(!showEmailPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                        tabIndex={-1}
+                      >
+                        {showEmailPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -461,11 +627,22 @@ export const AccountSettingsPanel = () => {
                     <FormItem>
                       <FormLabel>Current Password</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="password" 
-                          {...field} 
-                          placeholder="Enter your current password"
-                        />
+                        <div className="relative">
+                          <Input 
+                            type={showCurrentPassword ? "text" : "password"} 
+                            {...field} 
+                            placeholder="Enter your current password"
+                            className="pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                            tabIndex={-1}
+                          >
+                            {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -473,14 +650,23 @@ export const AccountSettingsPanel = () => {
                 />
                 
                 <div className="flex items-center justify-between mt-2">
-                  <Button 
-                    type="button"
-                    variant="link"
-                    className="text-sm p-0 h-auto"
-                    onClick={resetPassword}
-                  >
-                    Forgot password?
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      type="button"
+                      variant="link"
+                      className="text-sm p-0 h-auto"
+                      onClick={resetPassword}
+                    >
+                      Forgot password?
+                    </Button>
+                    
+                    {resetEmailSent && (
+                      <span className="text-xs text-green-600 flex items-center">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Reset link sent!
+                      </span>
+                    )}
+                  </div>
                   
                   <Button 
                     type="button" 
@@ -508,11 +694,13 @@ export const AccountSettingsPanel = () => {
                       <FormItem>
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="password"
+                          <PasswordInput
+                            password={field.value}
+                            isValid={passwordRequirementMet}
+                            onChange={handlePasswordChange}
+                            showRequirements={false}
                             placeholder="Enter your new password"
-                            value={field.value}
-                            onChange={(e) => handlePasswordChange(e.target.value)}
+                            id="newPassword"
                           />
                         </FormControl>
                         <FormMessage />
@@ -532,10 +720,13 @@ export const AccountSettingsPanel = () => {
                         <FormItem>
                           <FormLabel>Confirm New Password</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="password" 
-                              {...field} 
+                            <PasswordInput
+                              password={field.value}
+                              isValid={field.value === newPassword && field.value.length > 0}
+                              onChange={(value) => passwordForm.setValue("confirmPassword", value)}
+                              showRequirements={false}
                               placeholder="Confirm your new password"
+                              id="confirmPassword"
                             />
                           </FormControl>
                           <FormMessage />
