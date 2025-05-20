@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { isPasswordResetUrl } from '@/utils/urlUtils';
+import { logNavigation } from '@/utils/logUtils';
 
 type NavigationStateContextType = {
   lastRoute: string;
@@ -59,15 +60,15 @@ const cleanupPasswordResetURLs = () => {
     const storedParams = localStorage.getItem('last_route_params');
     
     if (storedRoute && storedRoute === '/auth/password') {
-      console.log('NavigationState: Clearing stored password reset route');
+      logNavigation('Clearing stored password reset route');
       localStorage.removeItem('last_route');
       localStorage.removeItem('last_route_params');
     } else if (storedParams && isPasswordResetUrl('', storedParams)) {
-      console.log('NavigationState: Clearing stored password reset params');
+      logNavigation('Clearing stored password reset params');
       localStorage.removeItem('last_route_params');
     }
   } catch (e) {
-    console.error('Error cleaning up password reset URLs:', e);
+    logNavigation('Error cleaning up password reset URLs', e);
   }
 };
 
@@ -76,10 +77,10 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   const [lastRoute, setLastRoute] = useState<string>(() => {
     try {
       const storedRoute = localStorage.getItem('last_route');
-      console.log("NavigationStateProvider: Initial lastRoute from localStorage:", storedRoute);
+      logNavigation("Initial lastRoute from localStorage:", storedRoute);
       return storedRoute && typeof storedRoute === 'string' ? storedRoute : '/';
     } catch (e) {
-      console.error('Error reading last_route from localStorage:', e);
+      logNavigation('Error reading last_route from localStorage', e);
       return '/';
     }
   });
@@ -87,10 +88,10 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   const [lastRouteParams, setLastRouteParams] = useState<string>(() => {
     try {
       const storedParams = localStorage.getItem('last_route_params');
-      console.log("NavigationStateProvider: Initial lastRouteParams from localStorage:", storedParams);
+      logNavigation("Initial lastRouteParams from localStorage:", storedParams);
       return storedParams && typeof storedParams === 'string' ? storedParams : '';
     } catch (e) {
-      console.error('Error reading last_route_params from localStorage:', e);
+      logNavigation('Error reading last_route_params from localStorage', e);
       return '';
     }
   });
@@ -107,10 +108,11 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
     const currentPath = location.pathname;
     const currentParams = location.search;
     
-    console.log(`NavigationState: Current path: ${currentPath}, current params: ${currentParams}`);
+    // Only log in debug level since this happens frequently
+    logNavigation(`Current path: ${currentPath}, current params: ${currentParams}`);
     
     // Check if the current path is restricted using the enhanced dashboard check
-    if (!isDashboardPath(currentPath)) {
+    if (!isDashboardPath(currentPath) && !isPasswordResetUrl(currentPath, currentParams)) {
       try {
         localStorage.setItem('last_route', currentPath);
         setLastRoute(currentPath);
@@ -122,26 +124,26 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
           localStorage.removeItem('last_route_params');
           setLastRouteParams('');
         }
-        console.log(`NavigationState: Saved route ${currentPath}${currentParams}`);
+        logNavigation(`Saved route ${currentPath}${currentParams}`);
       } catch (e) {
-        console.error('Error saving route to localStorage:', e);
+        logNavigation('Error saving route to localStorage', e);
       }
     } else {
-      console.log(`NavigationState: Not saving restricted route: ${currentPath}`);
+      logNavigation(`Not saving restricted route: ${currentPath}`);
     }
   }, [location.pathname, location.search]);
 
   // Clear navigation state (used on signout)
   const clearNavigationState = () => {
     try {
-      console.log('NavigationState: Clearing navigation state');
+      logNavigation('Clearing navigation state');
       localStorage.removeItem('last_route');
       localStorage.removeItem('last_route_params');
       setLastRoute('/');
       setLastRouteParams('');
-      console.log('NavigationState: Cleared navigation state - lastRoute=/, lastRouteParams=""');
+      logNavigation('Cleared navigation state - lastRoute=/, lastRouteParams=""');
     } catch (e) {
-      console.error('Error clearing navigation state:', e);
+      logNavigation('Error clearing navigation state', e);
     }
   };
 
@@ -168,11 +170,11 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
         }
       }
       
-      console.log(`NavigationStateContext: Safe redirect path: ${storedPath}${storedParams}`);
+      logNavigation(`NavigationStateContext: Safe redirect path: ${storedPath}${storedParams}`);
       // Return the safe path with params if available
       return `${storedPath}${storedParams}`;
     } catch (e) {
-      console.error('Error in getSafeRedirectPath:', e);
+      logNavigation('Error in getSafeRedirectPath:', e);
       return '/'; // Ultimate fallback to home instead of dashboard
     }
   };

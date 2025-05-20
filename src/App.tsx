@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -30,31 +31,44 @@ import Password from './pages/auth/Password';
 import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
 import { supabase } from './integrations/supabase/client';
 import { InlineToast } from './components/ui/InlineToast';
+import { log, logAuth } from './utils/logUtils';
 
 // Route debugging wrapper with phantom auth detection
 const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   
+  // Use a reference to track initial load vs subsequent navigations
+  const isInitialLoad = React.useRef(true);
+  
   useEffect(() => {
-    console.log(`Route changed: ${location.pathname}${location.search}`);
+    // Only log detailed info on initial load or important routes
+    const isAuthRoute = location.pathname.includes('/auth/') || 
+                        location.pathname === '/login' || 
+                        location.pathname === '/signup';
     
-    // Add more detailed logging for recovery tokens
-    const searchParams = new URLSearchParams(location.search);
-    const isRecoveryFlow = searchParams.get('type') === 'recovery';
+    // Always log route changes but with simpler info for most routes
+    log('debug', `Route changed: ${location.pathname}${location.search}`);
     
-    if (isRecoveryFlow) {
-      console.log("Password recovery flow detected with token");
-    }
-    
-    // Check if there are any localStorage items with 'supabase' in their names
-    const supabaseItems = Object.keys(localStorage).filter(key => 
-      key.includes('supabase') || key.includes('sb-')
-    );
-    
-    if (supabaseItems.length > 0) {
-      console.log("Found Supabase items in localStorage:", supabaseItems);
-    } else {
-      console.log("No Supabase items found in localStorage");
+    // More detailed logging only for auth-related routes or initial load
+    if (isAuthRoute || isInitialLoad.current) {
+      // Add more detailed logging for recovery tokens
+      const searchParams = new URLSearchParams(location.search);
+      const isRecoveryFlow = searchParams.get('type') === 'recovery';
+      
+      if (isRecoveryFlow) {
+        logAuth("Password recovery flow detected");
+      }
+      
+      // Check localStorage items only on important routes
+      const supabaseItems = Object.keys(localStorage).filter(key => 
+        key.includes('supabase') || key.includes('sb-')
+      );
+      
+      if (supabaseItems.length > 0) {
+        log('debug', "Found Supabase items in localStorage:", { count: supabaseItems.length });
+      } else {
+        log('debug', "No Supabase items found in localStorage");
+      }
     }
     
     // Check if we're on a public page that needs phantom auth detection
@@ -70,17 +84,19 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
     ].includes(location.pathname) || location.pathname.includes('/auth/password');
     
     if (isPublicPage) {
-      console.log("On public page, checking for phantom authentication");
+      log('debug', "🔍 Checking for phantom authentication state");
       detectAndCleanPhantomAuth(supabase).then(wasPhantom => {
         if (wasPhantom) {
-          console.log("Phantom auth was detected and cleaned up");
+          logAuth("Phantom auth was detected and cleaned up");
+        } else {
+          log('debug', "✅ No auth remnants found, clean state");
         }
       });
       
       // If user is stuck in login loop (e.g., coming back to login repeatedly),
       // perform a stronger reset
       if (location.pathname === '/login' && document.referrer.includes('/login')) {
-        console.log("Possible login loop detected, performing stronger reset");
+        logAuth("Possible login loop detected, performing stronger reset");
         forceAuthReset(supabase);
       }
     }
@@ -89,10 +105,13 @@ const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
     // This helps catch when Supabase redirects to home instead of /auth/password
     const hasRecoveryToken = searchParams.get('type') === 'recovery';
     if ((location.pathname === '/' || location.pathname === '/login') && hasRecoveryToken) {
-      console.log("Detected password recovery flow on wrong page, redirecting to password reset page");
+      logAuth("Detected password recovery flow on wrong page, redirecting to password reset page");
       // Use replace instead of href to avoid creating a history entry
       window.location.replace('/auth/password' + location.search);
     }
+    
+    // After first render, set isInitialLoad to false
+    isInitialLoad.current = false;
   }, [location]);
   
   return <>{children}</>;

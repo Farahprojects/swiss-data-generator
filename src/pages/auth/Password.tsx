@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import Footer from '@/components/Footer';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { CheckCircle, Loader2, RefreshCw } from 'lucide-react';
 import { extractTokenFromUrl } from '@/utils/urlUtils';
+import { log, logAuth } from '@/utils/logUtils';
 
 const Password = () => {
   const navigate = useNavigate();
@@ -27,44 +28,10 @@ const Password = () => {
   // Track whether we've already attempted token verification to prevent loops
   const [tokenAttempted, setTokenAttempted] = useState(false);
   
-  useEffect(() => {
-    console.log("Password reset component mounted");
-    
-    const recoveryFlow = searchParams.get('type') === 'recovery';
-    const tokenParam = extractTokenFromUrl(searchParams);
-    
-    console.log("Password reset URL parameters:", { 
-      recoveryFlow,
-      hasToken: !!tokenParam,
-      tokenType: tokenParam?.length > 10 ? 'hash' : 'short',
-      fullUrl: window.location.href,
-    });
-    
-    // Only attempt verification if we haven't tried yet
-    if (recoveryFlow && tokenParam && !tokenAttempted) {
-      console.log("Password recovery flow detected with token");
-      setTokenAttempted(true);
-      verifyResetToken(tokenParam);
-    } else if (!tokenAttempted) {
-      // No token or not a recovery flow
-      console.log("⚠️ Warning: No valid token found for password reset");
-      setVerifyingToken(false);
-      setTokenValid(false);
-      setTokenAttempted(true);
-      toast({ 
-        title: "Invalid or expired link", 
-        description: "Please request a new password reset link.",
-        variant: "destructive"
-      });
-    }
-  }, [toast, searchParams, tokenAttempted]);
-
-  /**
-   * Verify the reset token with Supabase
-   */
-  const verifyResetToken = async (tokenParam: string) => {
+  // Memoize verification function to prevent re-creation on each render
+  const verifyResetToken = useCallback(async (tokenParam: string) => {
     try {
-      console.log("Verifying password reset token...");
+      logAuth("Attempting to verify reset token");
       
       // For recovery flow, we need to use TokenHashParams
       const { data, error } = await supabase.auth.verifyOtp({
@@ -75,7 +42,7 @@ const Password = () => {
       setVerifyingToken(false);
       
       if (error) {
-        console.error("Token verification failed:", error);
+        log('error', "Token verification failed", { error: error.message });
         setTokenValid(false);
         toast({ 
           title: "Invalid reset link", 
@@ -86,10 +53,10 @@ const Password = () => {
       }
       
       if (data && data.session) {
-        console.log("Token verified successfully, session created");
+        logAuth("Token verified successfully, session created");
         setTokenValid(true);
       } else {
-        console.error("Token verification returned no session");
+        log('error', "Token verification returned no session");
         setTokenValid(false);
         toast({ 
           title: "Invalid reset link", 
@@ -98,7 +65,7 @@ const Password = () => {
         });
       }
     } catch (error: any) {
-      console.error("Error verifying token:", error);
+      log('error', "Error verifying token", { error: error.message });
       setVerifyingToken(false);
       setTokenValid(false);
       toast({ 
@@ -107,7 +74,41 @@ const Password = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [toast]);
+
+  // Single effect to handle token verification
+  useEffect(() => {
+    // Only log once when component mounts
+    logAuth("Password reset page loaded");
+    
+    const recoveryFlow = searchParams.get('type') === 'recovery';
+    const tokenParam = extractTokenFromUrl(searchParams);
+    
+    // Only log minimal info about the token
+    logAuth("Processing password reset request", { 
+      recoveryFlow,
+      hasToken: !!tokenParam,
+      tokenType: tokenParam?.length > 10 ? 'hash' : 'short'
+    });
+    
+    // Only attempt verification if we haven't tried yet
+    if (recoveryFlow && tokenParam && !tokenAttempted) {
+      logAuth("Starting token verification");
+      setTokenAttempted(true);
+      verifyResetToken(tokenParam);
+    } else if (!tokenAttempted) {
+      // No token or not a recovery flow
+      log('warn', "No valid token found for password reset");
+      setVerifyingToken(false);
+      setTokenValid(false);
+      setTokenAttempted(true);
+      toast({ 
+        title: "Invalid or expired link", 
+        description: "Please request a new password reset link.",
+        variant: "destructive"
+      });
+    }
+  }, [searchParams, toast, tokenAttempted, verifyResetToken]);
 
   /* ─────────────────────────────────────────────────────────────
    * Update password reset flow
@@ -136,18 +137,18 @@ const Password = () => {
     setLoading(true);
 
     try {
-      console.log("Attempting to update password...");
+      logAuth("Updating password");
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        console.error("Password update failed:", error);
+        log('error', "Password update failed", { error: error.message });
         toast({ 
           title: "Password reset failed", 
           description: error.message,
           variant: "destructive"
         });
       } else {
-        console.log("Password updated successfully");
+        logAuth("Password updated successfully");
         // Show success state
         setPasswordUpdated(true);
         
@@ -175,7 +176,7 @@ const Password = () => {
         return () => clearInterval(countdownInterval);
       }
     } catch (error: any) {
-      console.error("Password update error:", error);
+      log('error', "Password update error", { error: error.message });
       toast({ 
         title: "Error", 
         description: error.message || "Failed to reset password.",
