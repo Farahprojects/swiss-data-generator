@@ -1,7 +1,9 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Mail } from "lucide-react"; // Using Mail icon as Google isn't available in lucide-react
+import { FcGoogle } from "react-icons/fc";
+import { FaApple } from "react-icons/fa";
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface SocialLoginProps {
   onGoogleSignIn: () => void;
@@ -11,8 +13,27 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn }) => {
   const handleGoogleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Directly call the Google sign-in function without showing toast
+    logToSupabase('Google sign in attempt', {
+      page: 'SocialLogin',
+      level: 'info'
+    });
+    
+    // Call the Google sign-in function provided via props
     onGoogleSignIn();
+  };
+  
+  const handleAppleSignIn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    logToSupabase('Apple sign in attempt', {
+      page: 'SocialLogin',
+      level: 'info',
+      data: { feature: 'not-implemented' }
+    });
+    
+    // This functionality is not implemented yet
+    // For now, we'll just log that the user tried to use it
+    alert("Sign in with Apple coming soon!");
   };
 
   return (
@@ -26,19 +47,26 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn }) => {
         </div>
       </div>
       
-      <Button 
-        type="button" 
-        variant="outline" 
-        className="w-full" 
-        onClick={handleGoogleSignIn}
-      >
-        <Mail className="mr-2 h-4 w-4" />
-        Sign in with Google
-      </Button>
-      
-      {/* Hidden placeholders for future social logins */}
-      <div className="hidden">
-        {/* Apple & Facebook buttons will go here when needed */}
+      <div className="grid grid-cols-2 gap-3">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={handleGoogleSignIn}
+          className="flex items-center justify-center"
+        >
+          <FcGoogle className="mr-2 h-5 w-5" />
+          Google
+        </Button>
+        
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={handleAppleSignIn}
+          className="flex items-center justify-center"
+        >
+          <FaApple className="mr-2 h-5 w-5" />
+          Apple
+        </Button>
       </div>
     </div>
   );
