@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { logToSupabase } from '@/utils/batchedLogManager';
@@ -9,6 +9,77 @@ export function useEmailChange() {
   const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
   const [newEmailAddress, setNewEmailAddress] = useState("");
   const { toast, clearToast } = useToast();
+
+  // Set up auth state listener for email change events
+  useEffect(() => {
+    logToSupabase("Setting up email change auth state listener", {
+      level: 'debug',
+      page: 'useEmailChange'
+    });
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      logToSupabase("useEmailChange: Auth state change event", {
+        level: 'debug',
+        page: 'useEmailChange',
+        data: { event }
+      });
+      
+      if (event === 'USER_UPDATED' || event === 'SIGNED_IN') {
+        logToSupabase("useEmailChange: Email change confirmed or user updated", {
+          level: 'info',
+          page: 'useEmailChange',
+          data: { email: session?.user?.email, confirmed: session?.user?.email_confirmed_at }
+        });
+        
+        // If the user has confirmed their email, close the verification modal
+        if (session?.user?.email_confirmed_at && 
+            pendingEmailVerification && 
+            session?.user?.email === newEmailAddress) {
+          logToSupabase("useEmailChange: Email verified, closing modal", {
+            level: 'info',
+            page: 'useEmailChange'
+          });
+          handleVerificationComplete();
+        }
+      }
+    });
+    
+    return () => {
+      logToSupabase("Cleaning up auth state listener in useEmailChange", {
+        level: 'debug',
+        page: 'useEmailChange'
+      });
+      subscription.unsubscribe();
+    };
+  }, [pendingEmailVerification, newEmailAddress]);
+  
+  // Check if the user has a pending email verification
+  useEffect(() => {
+    const checkPendingEmailVerification = async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
+      
+      if (user && !user.email_confirmed_at && user.email) {
+        // If email is not confirmed, show the verification modal
+        setPendingEmailVerification(true);
+        setNewEmailAddress(user.email);
+        logToSupabase("User has pending email verification", {
+          level: 'info',
+          page: 'useEmailChange',
+          data: { email: user.email }
+        });
+      } else {
+        logToSupabase("User email status", {
+          level: 'debug',
+          page: 'useEmailChange',
+          data: { email: user?.email, confirmed_at: user?.email_confirmed_at }
+        });
+        setPendingEmailVerification(false);
+      }
+    };
+    
+    checkPendingEmailVerification();
+  }, []);
 
   const changeEmail = async (currentEmail: string, newEmail: string, password: string) => {
     if (!newEmail) {
