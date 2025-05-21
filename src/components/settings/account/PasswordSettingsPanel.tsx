@@ -33,6 +33,7 @@ export const PasswordSettingsPanel = () => {
   });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [invalidPasswordError, setInvalidPasswordError] = useState(false);
   const { verifyCurrentPassword, updatePassword, resetPassword, isUpdatingPassword: isPasswordUpdating, resetEmailSent: isResetEmailSent } = usePasswordManagement();
 
   const passwordForm = useForm<PasswordFormValues>({
@@ -67,6 +68,7 @@ export const PasswordSettingsPanel = () => {
     
     setIsUpdatingPassword(true);
     clearToast();
+    setInvalidPasswordError(false);
     
     try {
       // Get the current user's email
@@ -97,11 +99,7 @@ export const PasswordSettingsPanel = () => {
           data: { error }
         });
         
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error || "Current password is incorrect."
-        });
+        setInvalidPasswordError(true);
         setIsUpdatingPassword(false);
         return;
       }
@@ -238,13 +236,6 @@ export const PasswordSettingsPanel = () => {
     }
   };
 
-  const renderPasswordRequirement = (met: boolean, text: string) => (
-    <div className={`flex items-center text-sm ${met ? 'text-green-600' : 'text-gray-600'}`}>
-      {met && <Check size={16} className="mr-2 text-green-600" />}
-      <span className={met ? "ml-5" : "ml-7"}>{text}</span>
-    </div>
-  );
-
   return (
     <div>
       <h3 className="text-lg font-medium mb-4">Change Password</h3>
@@ -277,6 +268,9 @@ export const PasswordSettingsPanel = () => {
                         </button>
                       </div>
                     </FormControl>
+                    {invalidPasswordError && (
+                      <div className="text-red-500 text-xs mt-1">Invalid password</div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -342,8 +336,18 @@ export const PasswordSettingsPanel = () => {
                   )}
                 />
                 
-                <div className="mt-2 space-y-2 bg-gray-50 p-3 rounded-md">
-                  {renderPasswordRequirement(passwordValid.length, "At least 8 characters")}
+                <div className="mt-2">
+                  {!passwordValid.length && newPassword.length > 0 && (
+                    <div className="text-xs text-gray-600 flex items-center">
+                      <span className="ml-1">At least 8 characters</span>
+                    </div>
+                  )}
+                  {passwordValid.length && (
+                    <div className="text-xs text-green-600 flex items-center">
+                      <Check size={16} className="mr-1" />
+                      <span>At least 8 characters</span>
+                    </div>
+                  )}
                 </div>
                 
                 {passwordRequirementMet && (
