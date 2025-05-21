@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import PasswordInput from "@/components/auth/PasswordInput";
+import usePasswordManagement from "@/hooks/usePasswordManagement";
 
 type PasswordFormValues = {
   currentPassword: string;
@@ -32,6 +32,7 @@ export const PasswordSettingsPanel = () => {
   });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const { verifyCurrentPassword, updatePassword, resetPassword, isUpdatingPassword: isPasswordUpdating, resetEmailSent: isResetEmailSent } = usePasswordManagement();
 
   const passwordForm = useForm<PasswordFormValues>({
     defaultValues: {
@@ -64,28 +65,38 @@ export const PasswordSettingsPanel = () => {
     clearToast();
     
     try {
+      // Get the current user's email
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData.user?.email;
+      
+      if (!userEmail) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Unable to verify user information."
+        });
+        setIsUpdatingPassword(false);
+        return;
+      }
+      
       logToSupabase("Verifying current password", {
         level: 'info',
         page: 'PasswordSettingsPanel'
       });
       
-      // Verify current password by attempting to sign in
-      const { error } = await supabase.auth.signInWithPassword({
-        email: supabase.auth.getUser().then(({ data }) => data.user?.email || ''),
-        password: currentPassword
-      });
-
-      if (error) {
+      const { success, error } = await verifyCurrentPassword(userEmail, currentPassword);
+      
+      if (!success) {
         logToSupabase("Current password verification failed", {
           level: 'error',
           page: 'PasswordSettingsPanel',
-          data: { error: error.message }
+          data: { error }
         });
         
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Current password is incorrect."
+          description: error || "Current password is incorrect."
         });
         setIsUpdatingPassword(false);
         return;
@@ -132,22 +143,19 @@ export const PasswordSettingsPanel = () => {
         page: 'PasswordSettingsPanel'
       });
       
-      // Update the password
-      const { error } = await supabase.auth.updateUser({ 
-        password: data.newPassword 
-      });
+      const { success, error } = await updatePassword(data.newPassword);
       
-      if (error) {
+      if (!success) {
         logToSupabase("Password update failed", {
           level: 'error',
           page: 'PasswordSettingsPanel',
-          data: { error: error.message }
+          data: { error }
         });
         
         toast({
           variant: "destructive",
           title: "Error",
-          description: error.message || "There was an error updating your password."
+          description: error || "There was an error updating your password."
         });
         return;
       }
@@ -181,44 +189,33 @@ export const PasswordSettingsPanel = () => {
     }
   };
   
-  const resetPassword = async () => {
-    const userEmail = await supabase.auth.getUser().then(({ data }) => data.user?.email);
-    if (!userEmail) return;
-    
-    clearToast();
-    setResetEmailSent(false);
-    
+  const handleResetPassword = async () => {
     try {
-      logToSupabase("Sending password reset email", {
-        level: 'info',
-        page: 'PasswordSettingsPanel',
-        data: { email: userEmail }
-      });
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData.user?.email;
       
-      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: `${window.location.origin}/dashboard/settings`,
-      });
-      
-      if (error) {
-        logToSupabase("Failed to send reset password email", {
-          level: 'error',
-          page: 'PasswordSettingsPanel',
-          data: { error: error.message }
-        });
-        
+      if (!userEmail) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: error.message || "Failed to send reset password email."
+          description: "Unable to verify user information."
         });
         return;
       }
       
-      logToSupabase("Password reset email sent successfully", {
-        level: 'info',
-        page: 'PasswordSettingsPanel',
-        data: { email: userEmail }
-      });
+      clearToast();
+      setResetEmailSent(false);
+      
+      const { success, error } = await resetPassword(userEmail);
+      
+      if (!success) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error || "Failed to send reset password email."
+        });
+        return;
+      }
       
       // Show inline success message instead of toast
       setResetEmailSent(true);
@@ -287,7 +284,7 @@ export const PasswordSettingsPanel = () => {
                     type="button"
                     variant="link"
                     className="text-sm p-0 h-auto"
-                    onClick={resetPassword}
+                    onClick={handleResetPassword}
                   >
                     Forgot password?
                   </Button>
