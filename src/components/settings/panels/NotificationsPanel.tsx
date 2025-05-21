@@ -6,7 +6,6 @@ import { Loader } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface NotificationPreferences {
   email_notifications_enabled: boolean;
@@ -266,72 +265,57 @@ export const NotificationsPanel = () => {
             
             <div className="space-y-4">
               {/* Password Change Notifications */}
-              <div className="flex items-center space-x-3">
-                <Checkbox 
-                  id="password-change-notifications"
-                  checked={preferences.password_change_notifications}
-                  onCheckedChange={(checked) => 
-                    handleNotificationToggle('password_change_notifications', checked as boolean)
-                  }
-                  disabled={saving || loading || !preferences.email_notifications_enabled}
-                />
+              <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <Label 
-                    htmlFor="password-change-notifications"
-                    className="font-medium text-sm cursor-pointer"
-                  >
-                    Password Changes
-                  </Label>
+                  <p className="font-medium text-sm">Password Changes</p>
                   <p className="text-xs text-gray-500">
                     Get notified when your password is changed
                   </p>
                 </div>
-              </div>
-              
-              {/* Email Change Notifications */}
-              <div className="flex items-center space-x-3">
-                <Checkbox 
-                  id="email-change-notifications"
-                  checked={preferences.email_change_notifications}
+                <Switch 
+                  id="password-change-notifications"
+                  checked={preferences.password_change_notifications}
                   onCheckedChange={(checked) => 
-                    handleNotificationToggle('email_change_notifications', checked as boolean)
+                    handleNotificationToggle('password_change_notifications', checked)
                   }
                   disabled={saving || loading || !preferences.email_notifications_enabled}
                 />
+              </div>
+              
+              {/* Email Change Notifications */}
+              <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <Label 
-                    htmlFor="email-change-notifications"
-                    className="font-medium text-sm cursor-pointer"
-                  >
-                    Email Address Changes
-                  </Label>
+                  <p className="font-medium text-sm">Email Address Changes</p>
                   <p className="text-xs text-gray-500">
                     Get notified when your email address is changed
                   </p>
                 </div>
-              </div>
-              
-              {/* Security Alert Notifications */}
-              <div className="flex items-center space-x-3">
-                <Checkbox 
-                  id="security-alert-notifications"
-                  checked={preferences.security_alert_notifications}
+                <Switch 
+                  id="email-change-notifications"
+                  checked={preferences.email_change_notifications}
                   onCheckedChange={(checked) => 
-                    handleNotificationToggle('security_alert_notifications', checked as boolean)
+                    handleNotificationToggle('email_change_notifications', checked)
                   }
                   disabled={saving || loading || !preferences.email_notifications_enabled}
                 />
+              </div>
+              
+              {/* Security Alert Notifications */}
+              <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <Label 
-                    htmlFor="security-alert-notifications"
-                    className="font-medium text-sm cursor-pointer"
-                  >
-                    Security Alerts
-                  </Label>
+                  <p className="font-medium text-sm">Security Alerts</p>
                   <p className="text-xs text-gray-500">
                     Get notified about important security events
                   </p>
                 </div>
+                <Switch 
+                  id="security-alert-notifications"
+                  checked={preferences.security_alert_notifications}
+                  onCheckedChange={(checked) => 
+                    handleNotificationToggle('security_alert_notifications', checked)
+                  }
+                  disabled={saving || loading || !preferences.email_notifications_enabled}
+                />
               </div>
             </div>
           </div>
