@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,7 +41,10 @@ const Login = () => {
     const isPasswordResetRoute = window.location.pathname.includes('/auth/password');
     
     if (isPasswordResetRoute) {
-      debug('On password reset route, not redirecting despite having a user session');
+      logToSupabase('On password reset route, not redirecting despite having a user session', {
+        level: 'debug',
+        page: 'Login'
+      });
       return null; // Don't redirect, let the password reset component handle it
     }
     
@@ -62,7 +66,10 @@ const Login = () => {
 
     try {
       // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
-      console.log(`Calling edge function: ${SUPABASE_URL}/functions/v1/email-check`);
+      logToSupabase(`Calling edge function: ${SUPABASE_URL}/functions/v1/email-check`, {
+        level: 'debug',
+        page: 'Login'
+      });
       const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
         method: 'POST',
         headers: { 
@@ -86,17 +93,27 @@ const Login = () => {
       
       // Only show verification modal if the edge function specifically indicates a pending email change
       if (emailCheckData && emailCheckData.status === 'pending') {
-        debug('Pending email change found, showing verification modal');
+        logToSupabase('Pending email change found, showing verification modal', {
+          level: 'debug',
+          page: 'Login'
+        });
         return openVerificationModal();
       }
 
-      debug('No pending email change, proceeding with sign in');
+      logToSupabase('No pending email change, proceeding with sign in', {
+        level: 'debug',
+        page: 'Login'
+      });
       
       // No pending change, proceed with normal sign-in
       const { data, error } = await signIn(email, password);
 
       if (error) {
-        debug('signIn error', error);
+        logToSupabase('signIn error', {
+          level: 'error',
+          page: 'Login',
+          data: error
+        });
 
         // DON'T automatically show verification modal for any 400 error
         // Instead, check if the error message specifically indicates verification needed
@@ -106,7 +123,10 @@ const Login = () => {
           errorMessage.includes('verification') || 
           errorMessage.includes('verify')
         ) {
-          debug('Error indicates verification needed');
+          logToSupabase('Error indicates verification needed', {
+            level: 'debug',
+            page: 'Login'
+          });
           return openVerificationModal();
         }
 
