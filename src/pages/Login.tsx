@@ -253,6 +253,7 @@ const Login = () => {
         email={email}
         onVerified={handleVerificationFinished}
         onCancel={() => setShowVerificationModal(false)}
+        resend={resendVerificationEmail}
       />
     </div>
   );
