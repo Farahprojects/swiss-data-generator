@@ -14,14 +14,6 @@ export function InlineToast() {
   useEffect(() => {
     if (message) {
       setVisible(true);
-      logToSupabase('Toast displayed', {
-        level: 'debug',
-        page: 'InlineToast',
-        data: { 
-          title: message.title,
-          variant: message.variant
-        }
-      });
       
       // Auto-hide success and default messages after 5 seconds
       if (message.variant !== "destructive") {
