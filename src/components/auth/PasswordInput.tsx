@@ -15,7 +15,7 @@ interface PasswordInputProps {
   onFocus?: () => void;
   placeholder?: string;
   id?: string;
-  showMatchError?: boolean; // Added this property
+  showMatchError?: boolean;
 }
 
 const PasswordInput: React.FC<PasswordInputProps> = ({ 
@@ -23,11 +23,11 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   isValid, 
   showRequirements = true, 
   onChange,
-  label = "Password",
+  label = "",
   onFocus,
   placeholder = "Enter your password",
   id,
-  showMatchError = false // Added default value
+  showMatchError = false
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +46,9 @@ export const PasswordSettingsPanel = () => {
   const currentPassword = passwordForm.watch("currentPassword");
   const newPassword = passwordForm.watch("newPassword");
   const confirmPassword = passwordForm.watch("confirmPassword");
+  
+  // Check if passwords match
+  const passwordsMatch = newPassword === confirmPassword && confirmPassword.length > 0;
 
   // Check if password requirement is met
   const passwordRequirementMet = passwordValid.length;
@@ -330,6 +334,7 @@ export const PasswordSettingsPanel = () => {
                           showRequirements={false}
                           placeholder="Enter your new password"
                           id="newPassword"
+                          label=""
                         />
                       </FormControl>
                       <FormMessage />
@@ -356,8 +361,18 @@ export const PasswordSettingsPanel = () => {
                             showRequirements={false}
                             placeholder="Confirm your new password"
                             id="confirmPassword"
+                            label=""
                           />
                         </FormControl>
+                        {confirmPassword.length > 0 && (
+                          <div className="text-xs mt-1">
+                            {passwordsMatch ? (
+                              <span className="text-green-600">matching</span>
+                            ) : (
+                              <span className="text-red-500">not matching</span>
+                            )}
+                          </div>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -371,6 +386,7 @@ export const PasswordSettingsPanel = () => {
                       !newPassword || 
                       !passwordRequirementMet || 
                       (passwordRequirementMet && !confirmPassword) ||
+                      !passwordsMatch ||
                       isUpdatingPassword
                     }
                   >
