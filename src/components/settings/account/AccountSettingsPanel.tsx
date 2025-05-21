@@ -1,13 +1,11 @@
 
-import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { EmailSettingsPanel } from "../account/EmailSettingsPanel";
-import { PasswordSettingsPanel } from "../account/PasswordSettingsPanel";
+import { EmailSettingsPanel } from "./EmailSettingsPanel";
+import { PasswordSettingsPanel } from "./PasswordSettingsPanel";
 
 export const AccountSettingsPanel = () => {
-  const { user } = useAuth();
   const { message } = useToast();
 
   // Function to render inline toast message
