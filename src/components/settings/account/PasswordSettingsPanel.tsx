@@ -149,6 +149,7 @@ export const PasswordSettingsPanel = () => {
           data: { error }
         });
         
+        setIsUpdatingPassword(false);
         return;
       }
       
@@ -159,21 +160,21 @@ export const PasswordSettingsPanel = () => {
       
       // Show inline success message
       setUpdateSuccess(true);
+      setIsUpdatingPassword(false);
       
-      // Automatically hide success message after 3 seconds
+      // Delay form reset and transition back to verify step to allow user to see the success message
       setTimeout(() => {
         setUpdateSuccess(false);
+        passwordForm.reset();
+        setPasswordStep('verify');
       }, 3000);
       
-      passwordForm.reset();
-      setPasswordStep('verify');
     } catch (error: any) {
       logToSupabase("Error updating password", {
         level: 'error',
         page: 'PasswordSettingsPanel',
         data: { error: error.message || String(error) }
       });
-    } finally {
       setIsUpdatingPassword(false);
     }
   };
