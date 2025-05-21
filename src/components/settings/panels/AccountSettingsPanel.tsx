@@ -45,6 +45,8 @@ export const AccountSettingsPanel = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showEmailPassword, setShowEmailPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  // New state to track if user is typing a new email
+  const [isTypingNewEmail, setIsTypingNewEmail] = useState(false);
   
   const passwordForm = useForm<PasswordFormValues>({
     defaultValues: {
@@ -64,7 +66,17 @@ export const AccountSettingsPanel = () => {
   const currentPassword = passwordForm.watch("currentPassword");
   const newPassword = passwordForm.watch("newPassword");
   const confirmPassword = passwordForm.watch("confirmPassword");
+  const newEmailValue = emailForm.watch("newEmail");
   
+  // Watch for changes in the newEmail field to show/hide password field
+  useEffect(() => {
+    if (newEmailValue && newEmailValue.trim() !== '') {
+      setIsTypingNewEmail(true);
+    } else {
+      setIsTypingNewEmail(false);
+    }
+  }, [newEmailValue]);
+
   // Set up auth state listener for email change events
   useEffect(() => {
     logToSupabase("Setting up AccountSettingsPanel auth state listener", {
@@ -353,6 +365,7 @@ export const AccountSettingsPanel = () => {
       
       // Reset the form
       emailForm.reset();
+      setIsTypingNewEmail(false);
     } catch (error: any) {
       logToSupabase("Error updating email address", {
         level: 'error',
@@ -557,45 +570,51 @@ export const AccountSettingsPanel = () => {
                 <FormItem>
                   <FormLabel>New Email Address</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="Enter your new email" {...field} />
+                    <Input 
+                      type="email" 
+                      placeholder="Enter your new email" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             
-            <FormField
-              control={emailForm.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        type={showEmailPassword ? "text" : "password"} 
-                        placeholder="Enter your current password" 
-                        {...field} 
-                        className="pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowEmailPassword(!showEmailPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-                        tabIndex={-1}
-                      >
-                        {showEmailPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {isTypingNewEmail && (
+              <FormField
+                control={emailForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input 
+                          type={showEmailPassword ? "text" : "password"} 
+                          placeholder="Enter your current password" 
+                          {...field} 
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowEmailPassword(!showEmailPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                          tabIndex={-1}
+                        >
+                          {showEmailPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <Button 
               type="submit" 
-              disabled={isUpdatingEmail}
+              disabled={isUpdatingEmail || !isTypingNewEmail || !emailForm.watch("password")}
               className="mt-2"
             >
               {isUpdatingEmail ? (
@@ -608,9 +627,11 @@ export const AccountSettingsPanel = () => {
           </form>
         </Form>
 
-        <p className="text-sm text-gray-500 mt-2">
-          Note: You'll need to verify your new email address before the change takes effect.
-        </p>
+        {isTypingNewEmail && (
+          <p className="text-sm text-gray-500 mt-2">
+            Note: You'll need to verify your new email address before the change takes effect.
+          </p>
+        )}
       </div>
       
       <div>
