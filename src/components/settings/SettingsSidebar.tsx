@@ -7,7 +7,8 @@ import {
   LogOut, 
   Settings, 
   Trash2,
-  HelpCircle
+  HelpCircle,
+  Bell
 } from "lucide-react";
 
 type MenuItem = {
@@ -26,6 +27,7 @@ export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarPro
 
   const menuItems: MenuItem[] = [
     { id: 'account', label: 'Account Settings', icon: <Settings size={18} /> },
+    { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
     { id: 'support', label: 'Support', icon: <HelpCircle size={18} /> },
     { id: 'delete', label: 'Delete Account', icon: <Trash2 size={18} /> },
   ];

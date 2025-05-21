@@ -1,7 +1,7 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logToSupabase } from '@/utils/batchedLogManager';
+import { sendPasswordChangeNotification } from '@/utils/notificationService';
 
 export function usePasswordManagement() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
@@ -85,6 +85,27 @@ export function usePasswordManagement() {
         level: 'info',
         page: 'usePasswordManagement'
       });
+      
+      // Send notification if the user has them enabled
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user?.email) {
+          // Check if notifications are enabled
+          const { data: userPrefs } = await supabase.from('user_preferences').select('email_notifications_enabled').eq('user_id', userData.user.id).single();
+          
+          // If no preference found or notifications are enabled (default), send notification
+          if (!userPrefs || userPrefs.email_notifications_enabled !== false) {
+            await sendPasswordChangeNotification(userData.user.email);
+          }
+        }
+      } catch (notifError) {
+        // Log the error but don't fail the password change
+        logToSupabase("Failed to send password change notification", {
+          level: 'error',
+          page: 'usePasswordManagement',
+          data: { error: notifError }
+        });
+      }
       
       setIsUpdatingPassword(false);
       return { success: true };
