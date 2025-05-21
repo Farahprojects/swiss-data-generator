@@ -9,13 +9,10 @@ import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
-import { EmailVerificationModal } from '@/components/auth/EmailVerificationModal';
+import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
 import { supabase } from '@/integrations/supabase/client';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { logToSupabase } from '@/utils/batchedLogManager';
-
-/** Dev‑only logger */
-const debug = (...a: any[]) => process.env.NODE_ENV !== 'production' && console.log('[Login]', ...a);
 
 // Import the hardcoded URL directly from where it's defined
 const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
@@ -248,7 +245,7 @@ const Login = () => {
 
       <Footer />
 
-      <EmailVerificationModal
+      <LoginVerificationModal
         isOpen={showVerificationModal}
         email={email}
         onVerified={handleVerificationFinished}
