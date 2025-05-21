@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Bell
 } from "lucide-react";
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 type MenuItem = {
   id: string;
@@ -33,6 +34,11 @@ export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarPro
   ];
 
   const handleLogout = async () => {
+    logToSupabase("User logged out from settings", {
+      level: 'info',
+      page: 'SettingsSidebar'
+    });
+    
     await signOut();
     window.location.href = '/login';
   };
@@ -57,7 +63,14 @@ export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarPro
                     ? "bg-accent text-accent-foreground" 
                     : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                 }`}
-                onClick={() => onSelectItem(item.id)}
+                onClick={() => {
+                  logToSupabase("Settings menu item clicked", {
+                    level: 'info',
+                    page: 'SettingsSidebar',
+                    data: { item: item.id }
+                  });
+                  onSelectItem(item.id);
+                }}
               >
                 {item.icon}
                 <span className="ml-3">{item.label}</span>

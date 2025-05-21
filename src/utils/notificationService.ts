@@ -51,7 +51,7 @@ export const sendEmailNotification = async (
 
     // Call the edge function to send the notification
     const response = await fetch(
-      "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/send-notification-email", 
+      "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/send-notification-email", 
       {
         method: "POST",
         headers: {

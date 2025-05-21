@@ -6,6 +6,7 @@ import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { NotificationsPanel } from "./panels/NotificationsPanel";
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 export const UserSettingsLayout = () => {
   const [activePanel, setActivePanel] = useState("account");
@@ -18,6 +19,13 @@ export const UserSettingsLayout = () => {
     
     if (panel && ["account", "notifications", "delete", "support"].includes(panel)) {
       setActivePanel(panel);
+      
+      // Log the panel change for analytics
+      logToSupabase("Settings panel changed", {
+        level: 'info',
+        page: 'UserSettingsLayout',
+        data: { panel }
+      });
     } else if (panel === "billing" || panel === "apikeys") {
       // If 'billing' or 'apikeys' is requested but no longer available, default to account
       setActivePanel("account");

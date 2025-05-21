@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logToSupabase } from '@/utils/batchedLogManager';
@@ -91,7 +92,11 @@ export function usePasswordManagement() {
         const { data: userData } = await supabase.auth.getUser();
         if (userData?.user?.email) {
           // Check if notifications are enabled
-          const { data: userPrefs } = await supabase.from('user_preferences').select('email_notifications_enabled').eq('user_id', userData.user.id).single();
+          const { data: userPrefs } = await supabase
+            .from('user_preferences')
+            .select('email_notifications_enabled')
+            .eq('user_id', userData.user.id)
+            .single();
           
           // If no preference found or notifications are enabled (default), send notification
           if (!userPrefs || userPrefs.email_notifications_enabled !== false) {
