@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -359,8 +358,8 @@ export const AccountSettingsPanel = () => {
       
       toast({
         variant: "success",
-        title: "Verification email sent",
-        description: "Please check your inbox to verify your new email address."
+        title: "Email verification sent",
+        description: "We've sent a notification email to your current email address and a verification link to your new email address. Please check both inboxes."
       });
       
       // Reset the form
@@ -499,8 +498,19 @@ export const AccountSettingsPanel = () => {
     });
     
     try {
-      const { error } = await supabase.auth.updateUser({ email });
-      return { error: error ? new Error(error.message) : null };
+      // Instead of calling updateUser directly, use our custom edge function
+      // This will send a notification to the original email and a verification link to the new email
+      const response = await fetch(`https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/resend-email-change`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`
+        },
+        body: JSON.stringify({ email: user?.email })
+      });
+
+      const result = await response.json();
+      return { error: result.error ? new Error(result.error) : null };
     } catch (err: any) {
       logToSupabase("Error resending verification", {
         level: 'error',
@@ -628,9 +638,15 @@ export const AccountSettingsPanel = () => {
         </Form>
 
         {isTypingNewEmail && (
-          <p className="text-sm text-gray-500 mt-2">
-            Note: You'll need to verify your new email address before the change takes effect.
-          </p>
+          <div className="text-sm text-gray-500 mt-4 p-4 bg-blue-50 border border-blue-100 rounded-md">
+            <h4 className="font-medium text-blue-700 mb-2">What happens next?</h4>
+            <ol className="list-decimal ml-5 space-y-1">
+              <li>A notification email will be sent to your current email address.</li>
+              <li>A verification link will be sent to your new email address.</li>
+              <li>You must click the verification link in the new email to complete the change.</li>
+            </ol>
+            <p className="mt-2">Your email will not be changed until you verify the new address.</p>
+          </div>
         )}
       </div>
       

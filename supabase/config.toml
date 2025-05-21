@@ -26,6 +26,6 @@ port = 54323
 [functions.email-check]
 verify_jwt = false
 
-# Add our new resend-email-change function without JWT verification
+# Add our updated resend-email-change function without JWT verification
 [functions.resend-email-change]
 verify_jwt = false
