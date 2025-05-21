@@ -1,0 +1,148 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { logToSupabase } from "@/utils/batchedLogManager";
+
+/**
+ * Types of email notifications supported by the system
+ */
+export enum NotificationType {
+  PASSWORD_CHANGE = 'password_change',
+  EMAIL_CHANGE = 'email_change'
+}
+
+/**
+ * Interface for notification variables that can be passed to templates
+ */
+export interface NotificationVariables {
+  [key: string]: string | number | boolean | null;
+}
+
+/**
+ * Sends an email notification using the templates stored in Supabase
+ * 
+ * @param type The type of notification to send
+ * @param recipientEmail The email address to send the notification to
+ * @param variables Optional variables to include in the template
+ * @returns Promise resolving to a success status and optional error message
+ */
+export const sendEmailNotification = async (
+  type: NotificationType,
+  recipientEmail: string,
+  variables: NotificationVariables = {}
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    logToSupabase("Sending email notification", {
+      level: 'info',
+      page: 'notificationService',
+      data: { type, recipient: recipientEmail }
+    });
+
+    // Get the current session for auth token
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authToken = sessionData?.session?.access_token;
+
+    if (!authToken) {
+      logToSupabase("Unable to send notification - no auth token", {
+        level: 'error',
+        page: 'notificationService'
+      });
+      return { success: false, error: 'Authentication required' };
+    }
+
+    // Call the edge function to send the notification
+    const response = await fetch(
+      "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/send-notification-email", 
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          templateType: type,
+          recipientEmail,
+          variables
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      logToSupabase("Failed to send email notification", {
+        level: 'error',
+        page: 'notificationService',
+        data: { 
+          type, 
+          recipient: recipientEmail,
+          status: response.status,
+          error: errorData 
+        }
+      });
+      return { 
+        success: false, 
+        error: errorData.error || `Failed to send notification (${response.status})` 
+      };
+    }
+
+    const responseData = await response.json();
+    
+    logToSupabase("Email notification sent successfully", {
+      level: 'info',
+      page: 'notificationService',
+      data: { type, recipient: recipientEmail }
+    });
+    
+    return { success: true };
+  } catch (error: any) {
+    logToSupabase("Error sending email notification", {
+      level: 'error',
+      page: 'notificationService',
+      data: { 
+        type, 
+        recipient: recipientEmail,
+        error: error.message || String(error) 
+      }
+    });
+    return { 
+      success: false, 
+      error: error.message || 'An unexpected error occurred sending notification' 
+    };
+  }
+};
+
+/**
+ * Sends a password change notification email
+ * 
+ * @param email The recipient's email address
+ * @param variables Optional variables for the template
+ * @returns Promise resolving to a success status and optional error
+ */
+export const sendPasswordChangeNotification = async (
+  email: string,
+  variables: NotificationVariables = {}
+): Promise<{ success: boolean; error?: string }> => {
+  return sendEmailNotification(NotificationType.PASSWORD_CHANGE, email, variables);
+};
+
+/**
+ * Sends an email change notification to the previous email address
+ * 
+ * @param previousEmail The previous email address
+ * @param newEmail The new email address (will be added to variables)
+ * @param variables Additional variables for the template
+ * @returns Promise resolving to a success status and optional error
+ */
+export const sendEmailChangeNotification = async (
+  previousEmail: string,
+  newEmail: string,
+  variables: NotificationVariables = {}
+): Promise<{ success: boolean; error?: string }> => {
+  return sendEmailNotification(
+    NotificationType.EMAIL_CHANGE, 
+    previousEmail,
+    { 
+      ...variables,
+      newEmail 
+    }
+  );
+};

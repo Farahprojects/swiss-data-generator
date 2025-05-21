@@ -116,6 +116,36 @@ export type Database = {
           },
         ]
       }
+      email_notification_templates: {
+        Row: {
+          body_html: string
+          body_text: string
+          created_at: string
+          id: string
+          subject: string
+          template_type: string
+          updated_at: string
+        }
+        Insert: {
+          body_html: string
+          body_text: string
+          created_at?: string
+          id?: string
+          subject: string
+          template_type: string
+          updated_at?: string
+        }
+        Update: {
+          body_html?: string
+          body_text?: string
+          created_at?: string
+          id?: string
+          subject?: string
+          template_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       geo_cache: {
         Row: {
           lat: number
@@ -735,6 +765,14 @@ export type Database = {
       regenerate_api_key: {
         Args: { _user_id: string }
         Returns: string
+      }
+      send_notification_email: {
+        Args: {
+          template_type: string
+          recipient_email: string
+          variables?: Json
+        }
+        Returns: boolean
       }
       toggle_addon: {
         Args: { user_id_param: string; addon_name: string; enabled: boolean }
