@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +16,7 @@ import {
 import { logToSupabase } from "@/utils/batchedLogManager";
 import PasswordInput from "@/components/auth/PasswordInput";
 import usePasswordManagement from "@/hooks/usePasswordManagement";
+import { cn } from "@/lib/utils";
 
 type PasswordFormValues = {
   currentPassword: string;
@@ -35,6 +35,7 @@ export const PasswordSettingsPanel = () => {
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [invalidPasswordError, setInvalidPasswordError] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [showSuccessButton, setShowSuccessButton] = useState(false);
   const { verifyCurrentPassword, updatePassword, resetPassword } = usePasswordManagement();
 
   const passwordForm = useForm<PasswordFormValues>({
@@ -158,13 +159,13 @@ export const PasswordSettingsPanel = () => {
         page: 'PasswordSettingsPanel'
       });
       
-      // Show inline success message
-      setUpdateSuccess(true);
+      // Show success button animation
+      setShowSuccessButton(true);
       setIsUpdatingPassword(false);
       
-      // Delay form reset and transition back to verify step to allow user to see the success message
+      // Delay form reset and transition back to verify step after showing success animation
       setTimeout(() => {
-        setUpdateSuccess(false);
+        setShowSuccessButton(false);
         passwordForm.reset();
         setPasswordStep('verify');
       }, 3000);
@@ -319,13 +320,13 @@ export const PasswordSettingsPanel = () => {
                 <div className="mt-2">
                   {!passwordValid.length && newPassword.length > 0 && (
                     <div className="text-xs text-gray-600 flex items-center">
-                      <span className="ml-1">At least 8 characters</span>
+                      <span>At least 8 characters</span>
                     </div>
                   )}
                   {passwordValid.length && (
                     <div className="text-xs text-green-600 flex items-center">
-                      <Check size={16} className="mr-1" />
                       <span>At least 8 characters</span>
+                      <Check size={16} className="ml-1" />
                     </div>
                   )}
                 </div>
@@ -363,14 +364,7 @@ export const PasswordSettingsPanel = () => {
                   />
                 )}
                 
-                <div className="flex items-center justify-between">
-                  {updateSuccess && (
-                    <span className="text-sm text-green-600 flex items-center bg-green-50 px-3 py-2 rounded-md">
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Password has been updated
-                    </span>
-                  )}
-                  
+                <div className="flex items-center justify-end">
                   <div className="flex ml-auto space-x-2">
                     <Button 
                       type="button"
@@ -383,6 +377,9 @@ export const PasswordSettingsPanel = () => {
                     
                     <Button 
                       type="submit" 
+                      className={cn(
+                        showSuccessButton ? "bg-green-500 hover:bg-green-500" : ""
+                      )}
                       disabled={
                         !newPassword || 
                         !passwordRequirementMet || 
@@ -396,6 +393,8 @@ export const PasswordSettingsPanel = () => {
                           <Loader className="h-4 w-4 mr-2 animate-spin" />
                           Updating...
                         </>
+                      ) : showSuccessButton ? (
+                        <Check className="h-5 w-5 animate-pulse" />
                       ) : "Update Password"}
                     </Button>
                   </div>
