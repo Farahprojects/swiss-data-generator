@@ -6,6 +6,7 @@ import { Loader } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface NotificationPreferences {
   email_notifications_enabled: boolean;
@@ -32,9 +33,22 @@ export const NotificationsPanel = () => {
         setLoading(true);
         
         // Get current user
-        const { data: userData } = await supabase.auth.getUser();
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          throw new Error(`Auth error: ${userError.message}`);
+        }
+        
         if (!userData?.user) {
+          logToSupabase("No authenticated user found", {
+            level: 'error',
+            page: 'NotificationsPanel'
+          });
           setLoading(false);
+          toast({
+            title: "Authentication Error",
+            description: "Please sign in to manage your notification preferences",
+            variant: "destructive"
+          });
           return;
         }
         
@@ -45,18 +59,23 @@ export const NotificationsPanel = () => {
           .eq('user_id', userData.user.id)
           .single();
         
-        if (error && error.code !== 'PGRST116') { // Not Found error is ok here
-          logToSupabase("Error loading user preferences", {
-            level: 'error',
-            page: 'NotificationsPanel',
-            data: { error: error.message }
-          });
-          
-          toast({
-            title: "Error",
-            description: "Failed to load notification preferences",
-            variant: "destructive"
-          });
+        if (error) {
+          if (error.code === 'PGRST116') { // Not Found error
+            // Create default preferences if none exist
+            await createDefaultPreferences(userData.user.id);
+          } else {
+            logToSupabase("Error loading user preferences", {
+              level: 'error',
+              page: 'NotificationsPanel',
+              data: { error: error.message }
+            });
+            
+            toast({
+              title: "Error",
+              description: "Failed to load notification preferences",
+              variant: "destructive"
+            });
+          }
         } else if (data) {
           // If user has preferences set, use them
           setPreferences({
@@ -64,6 +83,11 @@ export const NotificationsPanel = () => {
             password_change_notifications: data.password_change_notifications !== false,
             email_change_notifications: data.email_change_notifications !== false,
             security_alert_notifications: data.security_alert_notifications !== false
+          });
+          
+          logToSupabase("User preferences loaded successfully", {
+            level: 'info',
+            page: 'NotificationsPanel'
           });
         }
         
@@ -76,16 +100,62 @@ export const NotificationsPanel = () => {
         });
         
         setLoading(false);
+        toast({
+          title: "Error Loading Preferences",
+          description: "There was a problem loading your notification settings",
+          variant: "destructive"
+        });
       }
     };
     
     loadUserPreferences();
   }, [toast]);
   
+  // Create default preferences if none exist
+  const createDefaultPreferences = async (userId: string) => {
+    try {
+      const defaultPrefs = {
+        user_id: userId,
+        email_notifications_enabled: true,
+        password_change_notifications: true,
+        email_change_notifications: true,
+        security_alert_notifications: true
+      };
+      
+      const { error } = await supabase
+        .from('user_preferences')
+        .insert(defaultPrefs);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setPreferences(defaultPrefs);
+      
+      logToSupabase("Created default user preferences", {
+        level: 'info',
+        page: 'NotificationsPanel'
+      });
+      
+    } catch (error: any) {
+      logToSupabase("Failed to create default preferences", {
+        level: 'error',
+        page: 'NotificationsPanel',
+        data: { error: error.message || String(error) }
+      });
+    }
+  };
+  
   // Handle main toggle change
   const handleMainToggleChange = async (checked: boolean) => {
     try {
       setSaving(true);
+      
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
+        throw new Error("User not authenticated");
+      }
       
       // Update all preferences based on the main toggle
       const newPreferences = {
@@ -96,7 +166,17 @@ export const NotificationsPanel = () => {
       setPreferences(newPreferences);
       
       // Save to database
-      await savePreferences(newPreferences);
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: userData.user.id,
+          ...newPreferences,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+      
+      if (error) throw error;
       
       logToSupabase("Main notification preferences saved", {
         level: 'info',
@@ -119,7 +199,7 @@ export const NotificationsPanel = () => {
       // Revert the UI state if save failed
       setPreferences(prev => ({
         ...prev,
-        email_notifications_enabled: !checked
+        email_notifications_enabled: !prev.email_notifications_enabled
       }));
       
       toast({
@@ -145,6 +225,12 @@ export const NotificationsPanel = () => {
     try {
       setSaving(true);
       
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
+        throw new Error("User not authenticated");
+      }
+      
       // Update the specific preference
       const newPreferences = {
         ...preferences,
@@ -154,7 +240,17 @@ export const NotificationsPanel = () => {
       setPreferences(newPreferences);
       
       // Save to database
-      await savePreferences(newPreferences);
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: userData.user.id,
+          ...newPreferences,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+      
+      if (error) throw error;
       
       logToSupabase(`${type} notification preference saved`, {
         level: 'info',
@@ -201,30 +297,6 @@ export const NotificationsPanel = () => {
         return 'Security alert notifications';
       default:
         return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    }
-  };
-  
-  // Save preferences to database
-  const savePreferences = async (prefsToSave: NotificationPreferences) => {
-    // Get current user
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) {
-      throw new Error("User not found");
-    }
-    
-    // Upsert user preferences
-    const { error } = await supabase
-      .from('user_preferences')
-      .upsert({
-        user_id: userData.user.id,
-        ...prefsToSave,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id'
-      });
-    
-    if (error) {
-      throw error;
     }
   };
 
