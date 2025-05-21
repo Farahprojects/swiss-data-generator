@@ -25,7 +25,7 @@ type PasswordFormValues = {
 };
 
 export const PasswordSettingsPanel = () => {
-  const { toast, clearToast } = useToast();
+  const { toast } = useToast();
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [passwordStep, setPasswordStep] = useState<'verify' | 'create' | 'confirm'>('verify');
   const [passwordValid, setPasswordValid] = useState({
@@ -34,7 +34,8 @@ export const PasswordSettingsPanel = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [invalidPasswordError, setInvalidPasswordError] = useState(false);
-  const { verifyCurrentPassword, updatePassword, resetPassword, isUpdatingPassword: isPasswordUpdating, resetEmailSent: isResetEmailSent } = usePasswordManagement();
+  const [updateSuccess, setUpdateSuccess] = useState(false);
+  const { verifyCurrentPassword, updatePassword, resetPassword } = usePasswordManagement();
 
   const passwordForm = useForm<PasswordFormValues>({
     defaultValues: {
@@ -67,8 +68,8 @@ export const PasswordSettingsPanel = () => {
     if (!currentPassword) return;
     
     setIsUpdatingPassword(true);
-    clearToast();
     setInvalidPasswordError(false);
+    setUpdateSuccess(false);
     
     try {
       // Get the current user's email
@@ -76,10 +77,9 @@ export const PasswordSettingsPanel = () => {
       const userEmail = userData.user?.email;
       
       if (!userEmail) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Unable to verify user information."
+        logToSupabase("Unable to verify user information", {
+          level: 'error',
+          page: 'PasswordSettingsPanel'
         });
         setIsUpdatingPassword(false);
         return;
@@ -119,11 +119,6 @@ export const PasswordSettingsPanel = () => {
         data: { error: error.message || String(error) }
       });
       
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "There was an error verifying your password."
-      });
       setIsUpdatingPassword(false);
     }
   };
@@ -137,7 +132,7 @@ export const PasswordSettingsPanel = () => {
     }
     
     setIsUpdatingPassword(true);
-    clearToast();
+    setUpdateSuccess(false);
     
     try {
       logToSupabase("Updating password", {
@@ -154,11 +149,6 @@ export const PasswordSettingsPanel = () => {
           data: { error }
         });
         
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error || "There was an error updating your password."
-        });
         return;
       }
       
@@ -167,10 +157,8 @@ export const PasswordSettingsPanel = () => {
         page: 'PasswordSettingsPanel'
       });
       
-      toast({
-        title: "Password updated",
-        description: "Your password has been updated successfully."
-      });
+      // Show inline success message
+      setUpdateSuccess(true);
       
       passwordForm.reset();
       setPasswordStep('verify');
@@ -179,12 +167,6 @@ export const PasswordSettingsPanel = () => {
         level: 'error',
         page: 'PasswordSettingsPanel',
         data: { error: error.message || String(error) }
-      });
-      
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "There was an error updating your password."
       });
     } finally {
       setIsUpdatingPassword(false);
@@ -197,24 +179,22 @@ export const PasswordSettingsPanel = () => {
       const userEmail = userData.user?.email;
       
       if (!userEmail) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Unable to verify user information."
+        logToSupabase("Unable to verify user information for password reset", {
+          level: 'error',
+          page: 'PasswordSettingsPanel'
         });
         return;
       }
       
-      clearToast();
       setResetEmailSent(false);
       
       const { success, error } = await resetPassword(userEmail);
       
       if (!success) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error || "Failed to send reset password email."
+        logToSupabase("Failed to send reset password email", {
+          level: 'error',
+          page: 'PasswordSettingsPanel',
+          data: { error }
         });
         return;
       }
@@ -226,12 +206,6 @@ export const PasswordSettingsPanel = () => {
         level: 'error',
         page: 'PasswordSettingsPanel',
         data: { error: error.message || String(error) }
-      });
-      
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to send reset password email."
       });
     }
   };
@@ -383,24 +357,42 @@ export const PasswordSettingsPanel = () => {
                   />
                 )}
                 
-                <div className="flex items-center justify-end">
-                  <Button 
-                    type="submit" 
-                    disabled={
-                      !newPassword || 
-                      !passwordRequirementMet || 
-                      (passwordRequirementMet && !confirmPassword) ||
-                      !passwordsMatch ||
-                      isUpdatingPassword
-                    }
-                  >
-                    {isUpdatingPassword ? (
-                      <>
-                        <Loader className="h-4 w-4 mr-2 animate-spin" />
-                        Updating...
-                      </>
-                    ) : "Update Password"}
-                  </Button>
+                <div className="flex items-center justify-between">
+                  {updateSuccess && (
+                    <span className="text-sm text-green-600 flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Password updated successfully!
+                    </span>
+                  )}
+                  
+                  <div className="flex ml-auto space-x-2">
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={() => setPasswordStep('verify')}
+                      disabled={isUpdatingPassword}
+                    >
+                      Cancel
+                    </Button>
+                    
+                    <Button 
+                      type="submit" 
+                      disabled={
+                        !newPassword || 
+                        !passwordRequirementMet || 
+                        (passwordRequirementMet && !confirmPassword) ||
+                        !passwordsMatch ||
+                        isUpdatingPassword
+                      }
+                    >
+                      {isUpdatingPassword ? (
+                        <>
+                          <Loader className="h-4 w-4 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : "Update Password"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </>

@@ -1,13 +1,11 @@
 
 import { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { logToSupabase } from '@/utils/batchedLogManager';
 
 export function usePasswordManagement() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
-  const { toast, clearToast } = useToast();
 
   const verifyCurrentPassword = async (email: string, currentPassword: string) => {
     if (!currentPassword) {
@@ -15,7 +13,6 @@ export function usePasswordManagement() {
     }
     
     setIsUpdatingPassword(true);
-    clearToast();
     
     try {
       logToSupabase("Verifying current password", {
@@ -36,11 +33,6 @@ export function usePasswordManagement() {
           data: { error: error.message }
         });
         
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Current password is incorrect."
-        });
         setIsUpdatingPassword(false);
         return { success: false, error: "Current password is incorrect." };
       }
@@ -59,11 +51,6 @@ export function usePasswordManagement() {
         data: { error: error.message || String(error) }
       });
       
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "There was an error verifying your password."
-      });
       setIsUpdatingPassword(false);
       return { success: false, error: error.message || "There was an error verifying your password." };
     }
@@ -71,7 +58,6 @@ export function usePasswordManagement() {
 
   const updatePassword = async (newPassword: string) => {
     setIsUpdatingPassword(true);
-    clearToast();
     
     try {
       logToSupabase("Updating password", {
@@ -91,11 +77,6 @@ export function usePasswordManagement() {
           data: { error: error.message }
         });
         
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message || "There was an error updating your password."
-        });
         setIsUpdatingPassword(false);
         return { success: false, error: error.message };
       }
@@ -103,11 +84,6 @@ export function usePasswordManagement() {
       logToSupabase("Password updated successfully", {
         level: 'info',
         page: 'usePasswordManagement'
-      });
-      
-      toast({
-        title: "Password updated",
-        description: "Your password has been updated successfully."
       });
       
       setIsUpdatingPassword(false);
@@ -119,12 +95,6 @@ export function usePasswordManagement() {
         data: { error: error.message || String(error) }
       });
       
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "There was an error updating your password."
-      });
-      
       setIsUpdatingPassword(false);
       return { success: false, error: error.message };
     }
@@ -133,7 +103,6 @@ export function usePasswordManagement() {
   const resetPassword = async (email: string) => {
     if (!email) return { success: false, error: "Email is required" };
     
-    clearToast();
     setResetEmailSent(false);
     
     try {
@@ -154,11 +123,6 @@ export function usePasswordManagement() {
           data: { error: error.message }
         });
         
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message || "Failed to send reset password email."
-        });
         return { success: false, error: error.message };
       }
       
@@ -176,12 +140,6 @@ export function usePasswordManagement() {
         level: 'error',
         page: 'usePasswordManagement',
         data: { error: error.message || String(error) }
-      });
-      
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to send reset password email."
       });
       
       return { success: false, error: error.message };

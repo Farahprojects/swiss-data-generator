@@ -29,7 +29,6 @@ import ConfirmEmail from './pages/auth/ConfirmEmail';
 import Password from './pages/auth/Password';
 import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
 import { supabase } from './integrations/supabase/client';
-import { InlineToast } from './components/ui/InlineToast';
 import { logToSupabase } from './utils/batchedLogManager';
 import { useBatchedLogging } from './hooks/use-batched-logging';
 import { checkForAuthRemnants } from './utils/authCleanup';
@@ -179,7 +178,6 @@ function App() {
           </SidebarProvider>
         </AuthProvider>
         <Toaster />
-        <InlineToast />
       </NavigationStateProvider>
     </Router>
   );
