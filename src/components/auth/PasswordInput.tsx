@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 import { passwordRequirements } from '@/utils/authValidation';
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface PasswordInputProps {
   password: string;
@@ -14,6 +15,7 @@ interface PasswordInputProps {
   onFocus?: () => void;
   placeholder?: string;
   id?: string;
+  showMatchError?: boolean; // Added this property
 }
 
 const PasswordInput: React.FC<PasswordInputProps> = ({ 
@@ -24,12 +26,22 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   label = "Password",
   onFocus,
   placeholder = "Enter your password",
-  id
+  id,
+  showMatchError = false // Added default value
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   // If an id is provided, use that; otherwise, derive from label
   const inputId = id || label.toLowerCase().replace(/\s/g, '-');
+
+  const togglePasswordVisibility = () => {
+    logToSupabase('Password visibility toggled', {
+      level: 'debug',
+      page: 'PasswordInput',
+      data: { visible: !showPassword }
+    });
+    setShowPassword(!showPassword);
+  };
 
   return (
     <div className="space-y-2">
@@ -42,12 +54,12 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           onChange={(e) => onChange(e.target.value)}
           onFocus={onFocus}
           placeholder={placeholder}
-          className={`mt-1 pr-10 ${!isValid && password ? 'border-red-500' : ''}`}
+          className={`mt-1 pr-10 ${(!isValid && password) || showMatchError ? 'border-red-500' : ''}`}
           required
         />
         <button
           type="button"
-          onClick={() => setShowPassword(!showPassword)}
+          onClick={togglePasswordVisibility}
           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
           tabIndex={-1}
         >
@@ -66,6 +78,10 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
             </div>
           ))}
         </div>
+      )}
+
+      {showMatchError && (
+        <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
       )}
     </div>
   );
