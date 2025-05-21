@@ -160,6 +160,11 @@ export const PasswordSettingsPanel = () => {
       // Show inline success message
       setUpdateSuccess(true);
       
+      // Automatically hide success message after 3 seconds
+      setTimeout(() => {
+        setUpdateSuccess(false);
+      }, 3000);
+      
       passwordForm.reset();
       setPasswordStep('verify');
     } catch (error: any) {
@@ -345,9 +350,9 @@ export const PasswordSettingsPanel = () => {
                         {confirmPassword.length > 0 && (
                           <div className="text-xs mt-1">
                             {passwordsMatch ? (
-                              <span className="text-green-600">matching</span>
+                              <span className="text-green-600">Matching</span>
                             ) : (
-                              <span className="text-red-500">not matching</span>
+                              <span className="text-red-500">Not matching</span>
                             )}
                           </div>
                         )}
@@ -359,9 +364,9 @@ export const PasswordSettingsPanel = () => {
                 
                 <div className="flex items-center justify-between">
                   {updateSuccess && (
-                    <span className="text-sm text-green-600 flex items-center">
+                    <span className="text-sm text-green-600 flex items-center bg-green-50 px-3 py-2 rounded-md">
                       <CheckCircle className="h-4 w-4 mr-1" />
-                      Password updated successfully!
+                      Password has been updated
                     </span>
                   )}
                   
