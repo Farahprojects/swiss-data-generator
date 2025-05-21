@@ -24,6 +24,7 @@ export type AuthContextType = {
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signUp: (email: string, password: string) => Promise<{ error: Error | null; user?: User | null }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithApple: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
   resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
@@ -268,6 +269,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithApple = async () => {
+    cleanupAuthState(supabase);
+    const baseUrl = window.location.origin;
+
+    try {
+      logToSupabase('Apple sign in attempt from context', {
+        page: 'AuthContext',
+        level: 'info',
+      });
+      
+      await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: { redirectTo: `${baseUrl}/dashboard` },
+      });
+      
+      if (error) {
+        logToSupabase('Apple sign in failed in context', {
+          page: 'AuthContext',
+          level: 'error',
+          data: { errorMessage: error.message }
+        });
+      }
+      
+      return { error };
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unexpected Apple sign-in error');
+      logToSupabase('Apple sign in exception', {
+        page: 'AuthContext',
+        level: 'error',
+        data: { errorMessage: error.message }
+      });
+      return { error };
+    }
+  };
+
   const signOut = async () => {
     try {
       debug('========== SIGN‑OUT ==========');
@@ -335,6 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         signInWithGoogle,
+        signInWithApple,
         signOut,
         resendVerificationEmail,
         resetPasswordForEmail,

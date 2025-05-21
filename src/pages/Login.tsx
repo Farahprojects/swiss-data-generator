@@ -12,6 +12,7 @@ import { validateEmail } from '@/utils/authValidation';
 import { EmailVerificationModal } from '@/components/auth/EmailVerificationModal';
 import { supabase } from '@/integrations/supabase/client';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 /** Dev‑only logger */
 const debug = (...a: any[]) => process.env.NODE_ENV !== 'production' && console.log('[Login]', ...a);
@@ -24,7 +25,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { signIn, signInWithGoogle, resendVerificationEmail, user } = useAuth();
+  const { signIn, signInWithGoogle, signInWithApple, resendVerificationEmail, user } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -135,6 +136,33 @@ const Login = () => {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    try {
+      logToSupabase('Apple sign in initiated', {
+        page: 'Login',
+        level: 'info'
+      });
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      
+      if (error) {
+        logToSupabase('Apple sign in failed', {
+          page: 'Login',
+          level: 'error',
+          data: { errorMessage: error.message }
+        });
+        throw error;
+      }
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message ?? 'Failed to sign in with Apple', variant: 'destructive' });
+    }
+  };
+
   /* Callback from modal when user verified */
   const handleVerificationFinished = async () => {
     setShowVerificationModal(false);
@@ -208,7 +236,10 @@ const Login = () => {
                   {loading ? 'Signing in…' : 'Sign in'}
                 </Button>
 
-                <SocialLogin onGoogleSignIn={handleGoogleSignIn} />
+                <SocialLogin 
+                  onGoogleSignIn={handleGoogleSignIn} 
+                  onAppleSignIn={handleAppleSignIn} 
+                />
               </form>
             </>
           )}

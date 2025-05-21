@@ -7,9 +7,10 @@ import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface SocialLoginProps {
   onGoogleSignIn: () => void;
+  onAppleSignIn: () => void; // Add Apple sign-in handler prop
 }
 
-const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn }) => {
+const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn }) => {
   const handleGoogleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
     
@@ -28,12 +29,11 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn }) => {
     logToSupabase('Apple sign in attempt', {
       page: 'SocialLogin',
       level: 'info',
-      data: { feature: 'not-implemented' }
+      data: { feature: 'implemented' }
     });
     
-    // This functionality is not implemented yet
-    // For now, we'll just log that the user tried to use it
-    alert("Sign in with Apple coming soon!");
+    // Call the Apple sign-in function provided via props
+    onAppleSignIn();
   };
 
   return (
