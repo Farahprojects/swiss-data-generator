@@ -10,7 +10,6 @@ import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle, Mail } from 'lucide-react';
 import { logToSupabase } from '@/utils/batchedLogManager';
 
@@ -237,14 +236,18 @@ const Signup = () => {
 
   const renderSuccessMessage = () => (
     <div className="space-y-6 animate-fade-in">
-      <Alert className="bg-green-50 border-green-200">
-        <CheckCircle className="h-5 w-5 text-green-500" />
-        <AlertTitle className="text-green-800">Account created successfully!</AlertTitle>
-        <AlertDescription className="text-green-700">
-          A verification email has been sent to <strong>{verificationEmail}</strong>. Please check your inbox
-          and click the link in the email to verify your account.
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-2">
+        <div className="flex items-start gap-3">
+          <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
+          <div>
+            <h3 className="font-medium text-lg">Account created successfully!</h3>
+            <p className="text-gray-700">
+              A verification email has been sent to <strong>{verificationEmail}</strong>. 
+              Please check your inbox and click the link in the email to verify your account.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-col space-y-4 items-center">
         <div className="rounded-full bg-primary/10 p-3">
@@ -270,8 +273,8 @@ const Signup = () => {
           
           <Link to="/login" className="w-full">
             <Button 
-              variant="secondary"
-              className="w-full"
+              variant="default"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Go to Login
             </Button>
