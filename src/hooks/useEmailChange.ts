@@ -155,10 +155,33 @@ export function useEmailChange() {
       // Show the verification modal
       setPendingEmailVerification(true);
       
-      toast({
-        title: "Email verification sent",
-        description: "We've sent a notification email to your current email address and a verification link to your new email address. Please check both inboxes."
-      });
+      // Check user preferences for notifications
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user?.id) {
+        const { data: userPrefs } = await supabase
+          .from('user_preferences')
+          .select('email_notifications_enabled, email_change_notifications')
+          .eq('user_id', userData.user.id)
+          .single();
+        
+        // Check both the master toggle and the specific notification toggle
+        const shouldShowNotification = 
+          !userPrefs || // Default is to show if no preferences found
+          (userPrefs.email_notifications_enabled !== false && 
+           userPrefs.email_change_notifications !== false);
+        
+        if (shouldShowNotification) {
+          toast({
+            title: "Email verification sent",
+            description: "We've sent a notification email to your current email address and a verification link to your new email address. Please check both inboxes."
+          });
+        } else {
+          toast({
+            title: "Email verification sent",
+            description: "We've sent a verification link to your new email address. Please check your inbox."
+          });
+        }
+      }
       
       setIsUpdatingEmail(false);
       return { success: true, pendingVerification: true };
