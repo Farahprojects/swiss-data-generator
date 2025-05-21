@@ -92,17 +92,18 @@ export function usePasswordManagement() {
         const { data: userData } = await supabase.auth.getUser();
         if (userData?.user?.email) {
           // Check if notifications are enabled
-          const { data: userPrefs } = await supabase
+          const { data, error: prefsError } = await supabase
             .from('user_preferences')
             .select('email_notifications_enabled, password_change_notifications')
             .eq('user_id', userData.user.id)
             .single();
           
-          // Check both the master toggle and the specific notification toggle
+          // Default to sending notification if we can't get preferences or if settings allow it
           const shouldSendNotification = 
-            !userPrefs || // Default is to send if no preferences found
-            (userPrefs.email_notifications_enabled !== false && 
-             userPrefs.password_change_notifications !== false);
+            prefsError || // Default is to send if error occurred
+            !data || // Default is to send if no preferences found
+            (data.email_notifications_enabled !== false && 
+             data.password_change_notifications !== false);
           
           if (shouldSendNotification) {
             await sendPasswordChangeNotification(userData.user.email);

@@ -40,7 +40,7 @@ export const NotificationsPanel = () => {
         }
         
         // Get user preferences
-        const { data: userPrefs, error } = await supabase
+        const { data, error } = await supabase
           .from('user_preferences')
           .select('email_notifications_enabled, password_change_notifications, email_change_notifications, security_alert_notifications')
           .eq('user_id', userData.user.id)
@@ -58,13 +58,13 @@ export const NotificationsPanel = () => {
             description: "Failed to load notification preferences",
             variant: "destructive"
           });
-        } else if (userPrefs) {
+        } else if (data) {
           // If user has preferences set, use them
           setPreferences({
-            email_notifications_enabled: userPrefs.email_notifications_enabled !== false,
-            password_change_notifications: userPrefs.password_change_notifications !== false,
-            email_change_notifications: userPrefs.email_change_notifications !== false,
-            security_alert_notifications: userPrefs.security_alert_notifications !== false
+            email_notifications_enabled: data.email_notifications_enabled !== false,
+            password_change_notifications: data.password_change_notifications !== false,
+            email_change_notifications: data.email_change_notifications !== false,
+            security_alert_notifications: data.security_alert_notifications !== false
           });
         }
         

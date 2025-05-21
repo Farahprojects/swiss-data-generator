@@ -647,22 +647,31 @@ export type Database = {
       user_preferences: {
         Row: {
           created_at: string
+          email_change_notifications: boolean | null
           email_notifications_enabled: boolean | null
           id: string
+          password_change_notifications: boolean | null
+          security_alert_notifications: boolean | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          email_change_notifications?: boolean | null
           email_notifications_enabled?: boolean | null
           id?: string
+          password_change_notifications?: boolean | null
+          security_alert_notifications?: boolean | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          email_change_notifications?: boolean | null
           email_notifications_enabled?: boolean | null
           id?: string
+          password_change_notifications?: boolean | null
+          security_alert_notifications?: boolean | null
           updated_at?: string
           user_id?: string
         }

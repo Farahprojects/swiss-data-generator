@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -158,17 +157,19 @@ export function useEmailChange() {
       // Check user preferences for notifications
       const { data: userData } = await supabase.auth.getUser();
       if (userData?.user?.id) {
-        const { data: userPrefs } = await supabase
+        const { data, error: prefsError } = await supabase
           .from('user_preferences')
           .select('email_notifications_enabled, email_change_notifications')
           .eq('user_id', userData.user.id)
           .single();
         
         // Check both the master toggle and the specific notification toggle
+        // Default to showing if there's an error or no preferences found
         const shouldShowNotification = 
-          !userPrefs || // Default is to show if no preferences found
-          (userPrefs.email_notifications_enabled !== false && 
-           userPrefs.email_change_notifications !== false);
+          prefsError || 
+          !data || 
+          (data.email_notifications_enabled !== false && 
+           data.email_change_notifications !== false);
         
         if (shouldShowNotification) {
           toast({
