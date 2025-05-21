@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { CheckCircle, XCircle, AlertCircle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 export function InlineToast() {
   const { message, clearToast } = useToast();
@@ -13,6 +14,14 @@ export function InlineToast() {
   useEffect(() => {
     if (message) {
       setVisible(true);
+      logToSupabase('Toast displayed', {
+        level: 'debug',
+        page: 'InlineToast',
+        data: { 
+          title: message.title,
+          variant: message.variant
+        }
+      });
       
       // Auto-hide success and default messages after 5 seconds
       if (message.variant !== "destructive") {

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +10,8 @@ import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
-import { EmailVerificationModal } from '@/components/auth/EmailVerificationModal';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CheckCircle, Mail } from 'lucide-react';
 import { logToSupabase } from '@/utils/batchedLogManager';
 
 // Debug utility
@@ -28,7 +30,8 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
@@ -47,6 +50,12 @@ const Signup = () => {
     setErrorMsg('');
 
     try {
+      logToSupabase('User signup attempt', {
+        level: 'info',
+        page: 'Signup',
+        data: { email: email }
+      });
+
       const { error } = await signUp(email, password);
       
       if (error) {
@@ -56,12 +65,26 @@ const Signup = () => {
         } else {
           setErrorMsg(error.message);
         }
+        
+        logToSupabase('User signup failed', {
+          level: 'error',
+          page: 'Signup',
+          data: { error: error.message }
+        });
+
         setLoading(false);
         return;
       }
       
-      // Show verification prompt
-      setShowVerificationModal(true);
+      // Show success message
+      logToSupabase('User signup successful - verification email sent', {
+        level: 'info',
+        page: 'Signup',
+        data: { email: email }
+      });
+
+      setVerificationEmail(email);
+      setSignupSuccess(true);
       setLoading(false);
     } catch (err: any) {
       toast({ title: 'Error', description: err.message ?? 'Failed to sign up', variant: 'destructive' });
@@ -119,6 +142,145 @@ const Signup = () => {
     }
   };
 
+  const handleResendVerification = async () => {
+    try {
+      setLoading(true);
+      const { error } = await signUp(verificationEmail, password);
+      
+      if (error) {
+        if (!error.message.includes('already registered')) {
+          toast({ 
+            title: 'Error', 
+            description: error.message ?? 'Failed to resend verification email', 
+            variant: 'destructive' 
+          });
+        } else {
+          toast({ 
+            title: 'Verification Email Sent', 
+            description: 'A new verification email has been sent to your inbox', 
+            variant: 'success' 
+          });
+          
+          logToSupabase('Verification email resent', {
+            level: 'info',
+            page: 'Signup',
+            data: { email: verificationEmail }
+          });
+        }
+      }
+    } catch (err: any) {
+      toast({ 
+        title: 'Error', 
+        description: err.message ?? 'Failed to resend verification email', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderSignupForm = () => (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
+        <EmailInput 
+          email={email}
+          isValid={emailValid}
+          onChange={setEmail}
+          onFocus={() => setErrorMsg('')}
+        />
+        
+        <PasswordInput
+          password={password}
+          isValid={passwordValid}
+          showRequirements={true}
+          onChange={setPassword}
+          onFocus={() => setErrorMsg('')}
+        />
+        
+        <PasswordInput
+          password={confirmPassword}
+          isValid={passwordValid && passwordsMatch}
+          showRequirements={false}
+          onChange={setConfirmPassword}
+          onFocus={() => setErrorMsg('')}
+          label="Confirm Password"
+          placeholder="Re-enter your password"
+          showMatchError={password.length > 0 && confirmPassword.length > 0 && !passwordsMatch}
+        />
+      </div>
+
+      {errorMsg && (
+        <p className="text-center text-sm font-medium text-red-600">{errorMsg}</p>
+      )}
+
+      <Button 
+        type="submit" 
+        className="w-full"
+        disabled={loading || !emailValid || !passwordValid || !passwordsMatch}
+      >
+        {loading ? 'Creating account…' : 'Sign up'}
+      </Button>
+
+      <SocialLogin 
+        onGoogleSignIn={handleGoogleSignIn} 
+        onAppleSignIn={handleAppleSignIn}
+      />
+
+      <p className="text-center text-sm">
+        Already have an account?{' '}
+        <Link to="/login" className="font-medium text-primary hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </form>
+  );
+
+  const renderSuccessMessage = () => (
+    <div className="space-y-6 animate-fade-in">
+      <Alert className="bg-green-50 border-green-200">
+        <CheckCircle className="h-5 w-5 text-green-500" />
+        <AlertTitle className="text-green-800">Account created successfully!</AlertTitle>
+        <AlertDescription className="text-green-700">
+          A verification email has been sent to <strong>{verificationEmail}</strong>. Please check your inbox
+          and click the link in the email to verify your account.
+        </AlertDescription>
+      </Alert>
+
+      <div className="flex flex-col space-y-4 items-center">
+        <div className="rounded-full bg-primary/10 p-3">
+          <Mail className="h-12 w-12 text-primary" />
+        </div>
+        
+        <div className="text-center">
+          <h3 className="text-lg font-medium">Check your email</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            After verification, you'll be able to sign in to your account.
+          </p>
+        </div>
+
+        <div className="flex flex-col space-y-3 w-full max-w-md mt-4">
+          <Button 
+            onClick={handleResendVerification} 
+            variant="outline" 
+            disabled={loading}
+            className="w-full"
+          >
+            {loading ? 'Sending...' : 'Resend verification email'}
+          </Button>
+          
+          <Link to="/login" className="w-full">
+            <Button 
+              variant="secondary"
+              className="w-full"
+            >
+              Go to Login
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col min-h-screen">
       <UnifiedNavigation />
@@ -126,74 +288,21 @@ const Signup = () => {
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md space-y-8">
           <header className="text-center">
-            <h1 className="text-3xl font-bold">Create an account</h1>
-            <p className="mt-2 text-gray-600">Get started with our application</p>
+            <h1 className="text-3xl font-bold">
+              {signupSuccess ? 'Email Verification' : 'Create an account'}
+            </h1>
+            <p className="mt-2 text-gray-600">
+              {signupSuccess 
+                ? 'One more step to complete your registration' 
+                : 'Get started with our application'}
+            </p>
           </header>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <EmailInput 
-                email={email}
-                isValid={emailValid}
-                onChange={setEmail}
-                onFocus={() => setErrorMsg('')}
-              />
-              
-              <PasswordInput
-                password={password}
-                isValid={passwordValid}
-                showRequirements={true}
-                onChange={setPassword}
-                onFocus={() => setErrorMsg('')}
-              />
-              
-              <PasswordInput
-                password={confirmPassword}
-                isValid={passwordValid && passwordsMatch}
-                showRequirements={false}
-                onChange={setConfirmPassword}
-                onFocus={() => setErrorMsg('')}
-                label="Confirm Password"
-                placeholder="Re-enter your password"
-                showMatchError={password.length > 0 && confirmPassword.length > 0 && !passwordsMatch}
-              />
-            </div>
-
-            {errorMsg && (
-              <p className="text-center text-sm font-medium text-red-600">{errorMsg}</p>
-            )}
-
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={loading || !emailValid || !passwordValid || !passwordsMatch}
-            >
-              {loading ? 'Creating account…' : 'Sign up'}
-            </Button>
-
-            <SocialLogin 
-              onGoogleSignIn={handleGoogleSignIn} 
-              onAppleSignIn={handleAppleSignIn}
-            />
-
-            <p className="text-center text-sm">
-              Already have an account?{' '}
-              <Link to="/login" className="font-medium text-primary hover:underline">
-                Sign in
-              </Link>
-            </p>
-          </form>
+          {signupSuccess ? renderSuccessMessage() : renderSignupForm()}
         </div>
       </main>
 
       <Footer />
-
-      <EmailVerificationModal
-        isOpen={showVerificationModal}
-        email={email}
-        onVerified={() => navigate('/login')}
-        onCancel={() => setShowVerificationModal(false)}
-      />
     </div>
   );
 };

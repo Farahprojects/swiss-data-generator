@@ -1,6 +1,7 @@
-
 // deno-lint-ignore-file
 // EmailVerificationModal.tsx – cleaned production‑ready version
+// EmailVerificationModal is primarily used for the email change flow,
+// not for the initial signup verification.
 // -----------------------------------------------------------------------------
 import { useEffect, useRef, useState } from "react";
 import {
