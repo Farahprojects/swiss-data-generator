@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +30,7 @@ export function useUserPreferences() {
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
+  const lastUpdatedFieldRef = useRef<string | null>(null);
   
   // Use a ref to track if component is mounted to avoid state updates after unmount
   const isMounted = useCallback(() => {
@@ -150,9 +151,21 @@ export function useUserPreferences() {
 
               // Only update if the change didn't come from this client to avoid UI bouncing
               if (!saving && isMounted()) {
+                const incoming = payload.new as UserPreferences;
+                
+                // Don't update if the incoming value equals the one we just updated
+                if (
+                  lastUpdatedFieldRef.current &&
+                  preferences &&
+                  incoming[lastUpdatedFieldRef.current as keyof UserPreferences] === 
+                  preferences[lastUpdatedFieldRef.current as keyof UserPreferences]
+                ) {
+                  return;
+                }
+                
                 // Update local state based on the database change
                 if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
-                  setPreferences(payload.new as UserPreferences);
+                  setPreferences(incoming);
                 } else if (payload.eventType === 'DELETE') {
                   setPreferences(null);
                 }
@@ -239,6 +252,9 @@ export function useUserPreferences() {
     
     const { showToast = true } = options;
     
+    // Track the field we're updating
+    lastUpdatedFieldRef.current = 'email_notifications_enabled';
+    
     // Optimistically update the UI state immediately for responsiveness
     setPreferences(prev => prev ? {
       ...prev,
@@ -310,6 +326,7 @@ export function useUserPreferences() {
       setTimeout(() => {
         if (isMounted()) {
           setSaving(false);
+          lastUpdatedFieldRef.current = null;
         }
       }, 500);
     }
@@ -323,6 +340,9 @@ export function useUserPreferences() {
   ) => {
     if (!user?.id || !preferences || !preferences.email_notifications_enabled) return false;
     const { showToast = true } = options;
+    
+    // Track the field we're updating
+    lastUpdatedFieldRef.current = type;
     
     // Optimistically update the UI immediately
     setPreferences(prev => prev ? {
@@ -398,6 +418,7 @@ export function useUserPreferences() {
       setTimeout(() => {
         if (isMounted()) {
           setSaving(false);
+          lastUpdatedFieldRef.current = null;
         }
       }, 500);
     }
