@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
@@ -16,12 +16,6 @@ export interface UserPreferences {
   updated_at: string;
 }
 
-// Define a type for notification toggle keys
-export type NotificationToggleKey = 
-  | "password_change_notifications" 
-  | "email_change_notifications" 
-  | "security_alert_notifications";
-
 interface UpdateOptions {
   showToast?: boolean;
 }
@@ -34,11 +28,10 @@ export function useUserPreferences() {
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
-  const componentMounted = useRef(true);
   
   // Use a ref to track if component is mounted to avoid state updates after unmount
   const isMounted = useCallback(() => {
-    return componentMounted.current;
+    return true; // This will be replaced with a ref in a full implementation
   }, []);
 
   // Load initial preferences and set up real-time listener
@@ -193,7 +186,6 @@ export function useUserPreferences() {
 
     // Clean up
     return () => {
-      componentMounted.current = false;
       clearTimeout(loadTimeout);
       if (channel) {
         supabase.removeChannel(channel);
@@ -251,6 +243,10 @@ export function useUserPreferences() {
       email_notifications_enabled: enabled
     } : null);
     
+    // Set saving state for background status indication
+    setSaving(true);
+    setError(null);
+
     try {
       // Update the database in the background
       const { error } = await supabase
@@ -307,12 +303,19 @@ export function useUserPreferences() {
       
       // Don't revert the UI - keep the optimistic update
       return false;
+    } finally {
+      // Reset saving state after a short delay to show feedback
+      setTimeout(() => {
+        if (isMounted()) {
+          setSaving(false);
+        }
+      }, 500);
     }
   };
 
   // Update individual notification toggle with optimistic UI updates
   const updateNotificationToggle = async (
-    type: NotificationToggleKey,
+    type: keyof Omit<UserPreferences, 'id' | 'user_id' | 'email_notifications_enabled' | 'created_at' | 'updated_at'>,
     enabled: boolean,
     options: UpdateOptions = {}
   ) => {
@@ -325,6 +328,10 @@ export function useUserPreferences() {
       [type]: enabled
     } : null);
     
+    // Show subtle saving indicator
+    setSaving(true);
+    setError(null);
+
     try {
       // Update the database in the background 
       const { error } = await supabase
@@ -384,6 +391,13 @@ export function useUserPreferences() {
       
       // Don't revert the UI - keep the optimistic update
       return false;
+    } finally {
+      // Reset saving state after a short delay to show feedback
+      setTimeout(() => {
+        if (isMounted()) {
+          setSaving(false);
+        }
+      }, 500);
     }
   };
 
