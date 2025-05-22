@@ -120,3 +120,9 @@ verify_jwt = true
 
 [functions.resend-email-change]
 verify_jwt = true
+
+[functions.refresh-zoho-token]
+verify_jwt = false
+
+[functions.refresh-zoho-token.schedule]
+cron = "*/55 * * * *"
