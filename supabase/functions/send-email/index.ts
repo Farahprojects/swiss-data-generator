@@ -1,7 +1,5 @@
 
-// deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,34 +42,48 @@ serve(async (req) => {
       );
     }
 
-    // Create SMTP client
-    const client = new SmtpClient();
-    
     // Get sender email from environment or use fallback
     const defaultSenderEmail = Deno.env.get("SENDER_EMAIL") || "no-reply@theraiastro.com";
     
-    // Connect to Zoho SMTP
-    await client.connectTLS({
-      hostname: "smtp.zoho.com",
-      port: 465,
-      username: defaultSenderEmail, // Use sender email as SMTP username
-      password: Deno.env.get("ZOHO_SMTP_PASSWORD") || "",
-    });
-
-    // Send email
+    // Get zoho credentials
+    const zohoPassword = Deno.env.get("ZOHO_SMTP_PASSWORD") || "";
+    if (!zohoPassword) {
+      console.error("Missing Zoho SMTP password in environment");
+      return new Response(
+        JSON.stringify({ error: 'Missing email configuration' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const senderEmail = from || defaultSenderEmail;
     
-    await client.send({
-      from: senderEmail,
-      to: to,
-      subject: subject,
-      content: text || "",
-      html: html,
-      replyTo: replyTo || senderEmail
+    // Use Zoho's API endpoint directly instead of SMTP
+    const response = await fetch('https://mail.zoho.com/api/accounts/emails/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Zoho-oauthtoken ${zohoPassword}`
+      },
+      body: JSON.stringify({
+        fromAddress: senderEmail,
+        toAddress: to,
+        subject: subject,
+        content: html,
+        mailFormat: 'html'
+      })
     });
-
-    // Close connection
-    await client.close();
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Error from Zoho API:', errorData);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to send email through Zoho API', 
+          details: errorData 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     console.log(`Email sent successfully to ${to}`);
     
