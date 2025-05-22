@@ -2,9 +2,10 @@
 import { useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader } from "lucide-react";
+import { Loader, RefreshCw } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { Button } from "@/components/ui/button";
 
 export const NotificationsPanel = () => {
   const {
@@ -19,7 +20,7 @@ export const NotificationsPanel = () => {
 
   // Debug log for panel rendering
   useEffect(() => {
-    logToSupabase("NotificationsPanel component rendered with Realtime support", {
+    logToSupabase("NotificationsPanel component rendered", {
       level: 'debug',
       page: 'NotificationsPanel',
       data: { status: loading ? 'loading' : 'loaded', error }
@@ -31,6 +32,11 @@ export const NotificationsPanel = () => {
     if (!preferences) return true; // Default to true
     return preferences[type as keyof typeof preferences] === true;
   };
+  
+  // Handle refresh on timeout errors
+  const handleRefresh = () => {
+    window.location.reload();
+  };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow">
@@ -40,7 +46,17 @@ export const NotificationsPanel = () => {
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
           <p className="font-medium">Error loading preferences</p>
           <p className="text-sm">{error}</p>
-          <p className="text-sm mt-2">Please reload the page to try again.</p>
+          <div className="flex items-center mt-3 space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center space-x-1"
+              onClick={handleRefresh}
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              <span>Reload</span>
+            </Button>
+          </div>
         </div>
       )}
       
@@ -60,11 +76,11 @@ export const NotificationsPanel = () => {
               <Switch 
                 checked={preferences?.email_notifications_enabled ?? false}
                 onCheckedChange={(checked) => updateMainNotificationsToggle(checked)}
-                disabled={saving}
+                disabled={saving || loading}
                 id="email-notifications"
-                className="focus:ring-2 focus:ring-primary"
+                className={`focus:ring-2 focus:ring-primary ${saving ? 'opacity-70' : ''}`}
               />
-              <Label htmlFor="email-notifications">
+              <Label htmlFor="email-notifications" className={saving ? 'text-gray-500' : ''}>
                 {preferences?.email_notifications_enabled ? 'Enabled' : 'Disabled'}
               </Label>
               {saving && <Loader className="h-3 w-3 animate-spin text-gray-400 ml-2" />}
@@ -92,7 +108,7 @@ export const NotificationsPanel = () => {
                     updateNotificationToggle('password_change_notifications', checked)
                   }
                   disabled={saving || loading || !preferences?.email_notifications_enabled}
-                  className="focus:ring-2 focus:ring-primary"
+                  className={`focus:ring-2 focus:ring-primary ${saving ? 'opacity-70' : ''}`}
                 />
               </div>
               
@@ -111,7 +127,7 @@ export const NotificationsPanel = () => {
                     updateNotificationToggle('email_change_notifications', checked)
                   }
                   disabled={saving || loading || !preferences?.email_notifications_enabled}
-                  className="focus:ring-2 focus:ring-primary"
+                  className={`focus:ring-2 focus:ring-primary ${saving ? 'opacity-70' : ''}`}
                 />
               </div>
               
@@ -130,7 +146,7 @@ export const NotificationsPanel = () => {
                     updateNotificationToggle('security_alert_notifications', checked)
                   }
                   disabled={saving || loading || !preferences?.email_notifications_enabled}
-                  className="focus:ring-2 focus:ring-primary"
+                  className={`focus:ring-2 focus:ring-primary ${saving ? 'opacity-70' : ''}`}
                 />
               </div>
             </div>
@@ -140,6 +156,16 @@ export const NotificationsPanel = () => {
         {preferences && !preferences.email_notifications_enabled && (
           <div className="bg-gray-50 p-4 rounded-md text-gray-500 text-sm">
             Email notifications are currently disabled. Enable the master switch to manage individual notification settings.
+          </div>
+        )}
+        
+        {/* Loading indicator for initial load */}
+        {loading && !error && (
+          <div className="flex justify-center py-8">
+            <div className="flex flex-col items-center space-y-2">
+              <Loader className="h-6 w-6 animate-spin text-primary" />
+              <p className="text-sm text-gray-500">Loading preferences...</p>
+            </div>
           </div>
         )}
       </div>
