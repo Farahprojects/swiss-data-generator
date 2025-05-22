@@ -1,5 +1,5 @@
-// UserSettingsLayout.tsx  (drop-in replacement)
-import { useMemo, useEffect } from "react";
+
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SettingsSidebar } from "./SettingsSidebar";
 import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
@@ -8,46 +8,84 @@ import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { logToSupabase } from "@/utils/batchedLogManager";
 
-type Panel = "account" | "notifications" | "delete" | "support";
-
-const ALLOWED: Panel[] = ["account", "notifications", "delete", "support"];
-
 export const UserSettingsLayout = () => {
-  const location  = useLocation();
-  const navigate  = useNavigate();
-
-  // 1️⃣ read it **once** per render
-  const panelFromURL = useMemo<Panel>(() => {
-    const p = new URLSearchParams(location.search).get("panel") as Panel | null;
-    return ALLOWED.includes(p as Panel) ? (p as Panel) : "account";
-  }, [location.search]);
-
-  // 2️⃣ only *correct* the URL if it’s invalid
+  const [activePanel, setActivePanel] = useState("account");
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Effect to sync URL parameters with the active panel
   useEffect(() => {
-    if (!location.search.includes("panel=")) {
-      navigate(`/dashboard/settings?panel=${panelFromURL}`, { replace: true });
+    // Get panel from URL query parameter
+    const searchParams = new URLSearchParams(location.search);
+    const panel = searchParams.get("panel");
+    
+    if (panel && ["account", "notifications", "delete", "support"].includes(panel)) {
+      setActivePanel(panel);
+      
+      // Log the panel change for analytics
+      logToSupabase("Settings panel changed from URL", {
+        level: 'info',
+        page: 'UserSettingsLayout',
+        data: { panel }
+      });
+    } else if (panel === "billing" || panel === "apikeys") {
+      // If 'billing' or 'apikeys' is requested but no longer available, default to account
+      setActivePanel("account");
+      // Update URL to match
+      navigate("/dashboard/settings?panel=account", { replace: true });
+    } else if (!panel) {
+      // If no panel is specified in URL, default to account and update URL
+      navigate("/dashboard/settings?panel=account", { replace: true });
     }
-  }, [location.search, navigate, panelFromURL]);
-
+  }, [location.search, navigate]);
+  
+  // Handle panel changes from sidebar and update URL
+  const handlePanelChange = (panelId: string) => {
+    logToSupabase("Settings panel change requested", {
+      level: 'info',
+      page: 'UserSettingsLayout',
+      data: { panel: panelId }
+    });
+    
+    setActivePanel(panelId);
+    
+    // Update URL to reflect panel change (if not already matching)
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("panel") !== panelId) {
+      navigate(`/dashboard/settings?panel=${panelId}`, { replace: true });
+      
+      logToSupabase("Settings panel changed from sidebar", {
+        level: 'info',
+        page: 'UserSettingsLayout',
+        data: { panel: panelId }
+      });
+    }
+  };
+  
   const renderPanel = () => {
-    switch (panelFromURL) {
-      case "account":       return <AccountSettingsPanel />;
-      case "notifications": return <NotificationsPanel   />;
-      case "delete":        return <DeleteAccountPanel   />;
-      case "support":       return <ContactSupportPanel  />;
-      default:              return <AccountSettingsPanel />;
+    switch (activePanel) {
+      case "account":
+        return <AccountSettingsPanel />;
+      case "notifications":
+        return <NotificationsPanel />;
+      case "delete":
+        return <DeleteAccountPanel />;
+      case "support":
+        return <ContactSupportPanel />;
+      default:
+        return <AccountSettingsPanel />;
     }
   };
 
   return (
     <div className="flex">
-      <SettingsSidebar
-        activeItem={panelFromURL}
-        onSelectItem={(p: Panel) =>
-          navigate(`/dashboard/settings?panel=${p}`, { replace: true })
-        }
+      <SettingsSidebar 
+        activeItem={activePanel} 
+        onSelectItem={handlePanelChange} 
       />
-      <div className="flex-1 p-6">{renderPanel()}</div>
+      <div className="flex-1 p-6">
+        {renderPanel()}
+      </div>
     </div>
   );
 };

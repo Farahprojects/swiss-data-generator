@@ -1,13 +1,16 @@
 
-import React, { memo, useCallback } from "react";
-import { Card } from "@/components/ui/card";
+import { useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { useUserPreferences } from "@/hooks/useUserPreferences";
-import { AlertTriangle, Info } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Loader, RefreshCw } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
+import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { Button } from "@/components/ui/button";
 
-export const NotificationsPanel = memo(function NotificationsPanel() {
+// Define the specific notification toggle keys type
+type NotificationToggleKey = 'password_change_notifications' | 'email_change_notifications' | 'security_alert_notifications';
+
+export const NotificationsPanel = () => {
   const {
     preferences,
     loading,
@@ -15,130 +18,190 @@ export const NotificationsPanel = memo(function NotificationsPanel() {
     error,
     updateMainNotificationsToggle,
     updateNotificationToggle,
-    formatNotificationTypeName,
+    formatNotificationTypeName
   } = useUserPreferences();
 
-  const handleMainToggleChange = useCallback(
-    (checked: boolean) => {
-      logToSupabase("Main notifications toggle changed", {
-        level: "info",
-        page: "NotificationsPanel",
-        data: { enabled: checked }
-      });
-      updateMainNotificationsToggle(checked);
-    },
-    [updateMainNotificationsToggle]
-  );
+  // Debug log for panel rendering
+  useEffect(() => {
+    logToSupabase("NotificationsPanel component rendered", {
+      level: 'debug',
+      page: 'NotificationsPanel',
+      data: { status: loading ? 'loading' : 'loaded', error }
+    });
+  }, [loading, error]);
 
-  const handleToggleChange = useCallback(
-    (type: any, checked: boolean) => {
-      logToSupabase("Individual notification toggle changed", {
-        level: "info",
-        page: "NotificationsPanel",
-        data: { type, enabled: checked }
-      });
-      updateNotificationToggle(type, checked);
-    },
-    [updateNotificationToggle]
-  );
+  // Helper function to determine if individual notification is enabled
+  const isNotificationEnabled = (type: string): boolean => {
+    if (!preferences) return true; // Default to true
+    return preferences[type as keyof typeof preferences] === true;
+  };
+  
+  // Handle refresh on timeout errors
+  const handleRefresh = () => {
+    window.location.reload();
+  };
 
-  if (loading) {
-    return (
-      <Card className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-24 bg-gray-200 rounded"></div>
-          <div className="h-24 bg-gray-200 rounded"></div>
-        </div>
-      </Card>
+  // Optimistically handle toggle changes without waiting for backend response
+  const handleMainToggleChange = (checked: boolean) => {
+    updateMainNotificationsToggle(checked, { showToast: false });
+    
+    // Log action for analytics
+    logToSupabase("Main notification toggle changed", {
+      level: 'info',
+      page: 'NotificationsPanel',
+      data: { enabled: checked }
+    });
+  };
+
+  // Optimistically handle individual notification toggle changes
+  const handleNotificationToggleChange = (type: NotificationToggleKey, checked: boolean) => {
+    updateNotificationToggle(
+      type,
+      checked,
+      { showToast: false }
     );
-  }
-
-  if (error) {
-    return (
-      <Card className="p-6">
-        <div className="flex items-start gap-3 text-amber-600">
-          <AlertTriangle className="w-5 h-5 mt-0.5" />
-          <div>
-            <h3 className="font-medium">Could not load notification settings</h3>
-            <p className="text-sm text-gray-600 mt-1">{error}</p>
-            <p className="text-sm text-gray-500 mt-3">
-              Please try refreshing the page. If the problem persists, contact
-              support.
-            </p>
-          </div>
-        </div>
-      </Card>
-    );
-  }
+    
+    // Log action for analytics
+    logToSupabase(`${type} notification toggle changed`, {
+      level: 'info',
+      page: 'NotificationsPanel',
+      data: { type, enabled: checked }
+    });
+  };
 
   return (
-    <Card className="p-6">
+    <div className="p-6 bg-white rounded-lg shadow">
+      <h2 className="text-2xl font-semibold mb-6">Notification Settings</h2>
+      
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+          <p className="font-medium">Error loading preferences</p>
+          <p className="text-sm">{error}</p>
+          <div className="flex items-center mt-3 space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center space-x-1"
+              onClick={handleRefresh}
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              <span>Reload</span>
+            </Button>
+          </div>
+        </div>
+      )}
+      
       <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium">Email Notifications</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Configure which emails you receive from the system.
-          </p>
-        </div>
-
-        {/* Main notifications toggle */}
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between border-b pb-4">
           <div>
-            <h4 className="font-medium">Email Notifications</h4>
+            <h3 className="text-lg font-medium">Email Notifications</h3>
             <p className="text-sm text-gray-500">
-              Enable or disable all email notifications
+              Turn off all notifications
             </p>
           </div>
-          <Switch
-            checked={preferences?.email_notifications_enabled || false}
-            onCheckedChange={handleMainToggleChange}
-            disabled={saving}
-          />
+          
+          {loading ? (
+            <Loader className="h-4 w-4 animate-spin text-gray-400" />
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Switch 
+                checked={preferences?.email_notifications_enabled ?? false}
+                onCheckedChange={handleMainToggleChange}
+                disabled={loading}
+                id="email-notifications"
+                className="focus:ring-2 focus:ring-primary"
+              />
+              <Label htmlFor="email-notifications">
+                {preferences?.email_notifications_enabled ? 'Enabled' : 'Disabled'}
+              </Label>
+              {/* Removed the saving spinner here to prevent UI flicker */}
+            </div>
+          )}
         </div>
-
-        <Separator />
-
-        {/* Individual notification settings */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Info size={16} className="text-blue-500" />
-            <p className="text-sm text-gray-500">
-              Individual settings below are only applied when email
-              notifications are enabled.
-            </p>
-          </div>
-
-          {preferences &&
-            [
-              "password_change_notifications",
-              "email_change_notifications",
-              "security_alert_notifications",
-            ].map((type) => (
-              <div
-                key={type}
-                className="flex justify-between items-center py-2"
-              >
-                <div>
-                  <h4 className="font-medium">
-                    {formatNotificationTypeName(type)}
-                  </h4>
+        
+        {preferences?.email_notifications_enabled && (
+          <div className="space-y-4 pt-2">
+            <h4 className="font-medium text-gray-700">Notification Types</h4>
+            
+            <div className="space-y-4">
+              {/* Password Change Notifications */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium text-sm">Password Changes</p>
+                  <p className="text-xs text-gray-500">
+                    Get notified when your password is changed
+                  </p>
                 </div>
-                <Switch
-                  checked={(preferences as any)[type] || false}
-                  onCheckedChange={(checked) =>
-                    handleToggleChange(type, checked)
+                <Switch 
+                  id="password-change-notifications"
+                  checked={isNotificationEnabled('password_change_notifications')}
+                  onCheckedChange={(checked) => 
+                    handleNotificationToggleChange('password_change_notifications', checked)
                   }
-                  disabled={
-                    saving || !preferences.email_notifications_enabled
-                  }
+                  disabled={loading || !preferences?.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
-            ))}
-        </div>
+              
+              {/* Email Change Notifications */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium text-sm">Email Address Changes</p>
+                  <p className="text-xs text-gray-500">
+                    Get notified when your email address is changed
+                  </p>
+                </div>
+                <Switch 
+                  id="email-change-notifications"
+                  checked={isNotificationEnabled('email_change_notifications')}
+                  onCheckedChange={(checked) => 
+                    handleNotificationToggleChange('email_change_notifications', checked)
+                  }
+                  disabled={loading || !preferences?.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              
+              {/* Security Alert Notifications */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium text-sm">Security Alerts</p>
+                  <p className="text-xs text-gray-500">
+                    Get notified about important security events
+                  </p>
+                </div>
+                <Switch 
+                  id="security-alert-notifications"
+                  checked={isNotificationEnabled('security_alert_notifications')}
+                  onCheckedChange={(checked) => 
+                    handleNotificationToggleChange('security_alert_notifications', checked)
+                  }
+                  disabled={loading || !preferences?.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {preferences && !preferences.email_notifications_enabled && (
+          <div className="bg-gray-50 p-4 rounded-md text-gray-500 text-sm">
+            Email notifications are currently disabled. Enable the master switch to manage individual notification settings.
+          </div>
+        )}
+        
+        {/* Loading indicator for initial load */}
+        {loading && !error && (
+          <div className="flex justify-center py-8">
+            <div className="flex flex-col items-center space-y-2">
+              <Loader className="h-6 w-6 animate-spin text-primary" />
+              <p className="text-sm text-gray-500">Loading preferences...</p>
+            </div>
+          </div>
+        )}
       </div>
-    </Card>
+    </div>
   );
-});
+};
 
 export default NotificationsPanel;

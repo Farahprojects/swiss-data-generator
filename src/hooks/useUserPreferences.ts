@@ -4,9 +4,6 @@ import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-// --------------------------------------------------
-// Types
-// --------------------------------------------------
 export interface UserPreferences {
   id: string;
   user_id: string;
@@ -27,179 +24,374 @@ interface UpdateOptions {
   showToast?: boolean;
 }
 
-// --------------------------------------------------
-// Hook
-// --------------------------------------------------
 export function useUserPreferences() {
-  // ----- state -----
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [saving,  setSaving]    = useState(false);
-  const [error,   setError]     = useState<string | null>(null);
-
-  // ----- context -----
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
-  const { user }  = useAuth();
+  const { user } = useAuth();
+  const lastUpdateRef = useRef<{ field: string; value: any } | null>(null);
 
-  // keep track of which fields are mid‑flight so we can ignore server echoes
-  const pendingRef = useRef<Set<keyof UserPreferences>>(new Set());
-
-  // --------------------------------------------------
-  // Fetch helpers
-  // --------------------------------------------------
+  /**
+   * Utility: keep a ref to the current mounted state so we never try to mutate state on an un‑mounted component.
+   */
+  const mountedRef = useRef(true);
   useEffect(() => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-    let cancel = false;               // local flag
-    let interval: NodeJS.Timeout;     // background refetch timer
+  const isMounted = () => mountedRef.current;
 
-    const fetchPrefs = async () => {
+  useEffect(() => {
+    let loadTimeout: NodeJS.Timeout;
+    let channel: ReturnType<typeof supabase.channel> | undefined;
+
+    /**
+     * Load (or create) the current user's preferences.
+     */
+    const loadUserPreferences = async () => {
+      if (!user?.id) {
+        if (isMounted()) {
+          setLoading(false);
+          setError("Authentication required");
+        }
+        return;
+      }
+
       try {
+        // fail‑safe timeout so the UI doesn't hang forever
+        loadTimeout = setTimeout(() => {
+          if (loading && isMounted()) {
+            setLoading(false);
+            setError("Request timed out. Please try again.");
+            logToSupabase("Loading user preferences timed out", {
+              level: "error",
+              page: "useUserPreferences",
+            });
+          }
+        }, 8000);
+
         const { data, error: fetchError } = await supabase
           .from("user_preferences")
           .select("*")
           .eq("user_id", user.id)
           .single();
 
-        if (cancel) return; // component unmounted
+        clearTimeout(loadTimeout);
 
         if (fetchError) {
           if (fetchError.code === "PGRST116") {
+            // no record yet → create defaults
             await createDefaultPreferences(user.id);
           } else {
             throw fetchError;
           }
-        } else if (data) {
-          setPreferences((prev) => {
-            // Ignore if every pending field matches (optimistic echo)
-            const isEcho = [...pendingRef.current].every(
-              (k) => (data as any)[k] === (prev as any)?.[k]
-            );
-            return isEcho ? prev : (data as UserPreferences);
+        } else if (data && isMounted()) {
+          setPreferences(data as UserPreferences);
+          logToSupabase("User preferences loaded successfully", {
+            level: "info",
+            page: "useUserPreferences",
           });
         }
       } catch (err: any) {
-        if (cancel) return;
-        logToSupabase("useUserPreferences fetch error", {
-          level: "warn",
-          page: "useUserPreferences",
-          data: { message: err.message || String(err) },
-        });
-        // surface once
-        setError("Failed to load preferences – trying again soon.");
+        clearTimeout(loadTimeout);
+        const errorMessage = err.message || "Failed to load preferences";
+
+        if (isMounted()) {
+          setError(errorMessage);
+          logToSupabase("Error loading user preferences", {
+            level: "error",
+            page: "useUserPreferences",
+            data: { error: errorMessage },
+          });
+
+          if (!errorMessage.includes("timed out")) {
+            toast({
+              title: "Error Loading Preferences",
+              description: "There was a problem loading your notification settings",
+              variant: "destructive",
+            });
+          }
+
+          if (retryCount < 3) {
+            const retryDelay = Math.min(2000 * (retryCount + 1), 6000);
+            setTimeout(() => {
+              setRetryCount((prev) => prev + 1);
+              loadUserPreferences();
+            }, retryDelay);
+          }
+        }
+      } finally {
+        if (isMounted()) {
+          setLoading(false);
+        }
       }
     };
 
-    // initial fetch
-    (async () => {
-      setLoading(true);
-      await fetchPrefs();
-      if (!cancel) setLoading(false);
-    })();
+    /**
+     * Subscribe to real‑time changes for this user's record.
+     * We use a functional setState inside the handler so we always reference the **latest** state,
+     * removing the need to include `preferences` in the effect deps (which would resubscribe on every change).
+     */
+    const setupRealtimeListener = () => {
+      if (!user?.id) return;
 
-    // background refresh every 30 s
-    interval = setInterval(fetchPrefs, 30000);
+      try {
+        channel = supabase
+          .channel("user_preferences_changes")
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "user_preferences",
+              filter: `user_id=eq.${user.id}`,
+            },
+            (payload) => {
+              logToSupabase("Received real‑time update for user preferences", {
+                level: "debug",
+                page: "useUserPreferences",
+                data: { event: payload.eventType },
+              });
 
-    // cleanup
-    return () => {
-      cancel = true;
-      clearInterval(interval);
+              const incoming = payload.new as UserPreferences;
+
+              setPreferences((prev) => {
+                const lastField = lastUpdateRef.current?.field;
+                const lastValue = lastUpdateRef.current?.value;
+
+                // Skip if the change we receive is the same optimistic value we just set.
+                const isRedundantUpdate =
+                  lastField &&
+                  incoming[lastField as keyof UserPreferences] === lastValue &&
+                  prev &&
+                  Object.keys(incoming).every((key) =>
+                    key === "updated_at"
+                      ? true
+                      : incoming[key as keyof UserPreferences] ===
+                        prev[key as keyof UserPreferences]
+                  );
+
+                if (isRedundantUpdate) return prev;
+
+                if (payload.eventType === "DELETE") return null;
+                return incoming;
+              });
+            }
+          )
+          .subscribe((status) => {
+            if (status !== "SUBSCRIBED") {
+              logToSupabase("Failed to subscribe to real‑time updates", {
+                level: "error",
+                page: "useUserPreferences",
+                data: { status },
+              });
+            }
+          });
+      } catch (err: any) {
+        logToSupabase("Error setting up real‑time listener", {
+          level: "error",
+          page: "useUserPreferences",
+          data: { error: err.message || String(err) },
+        });
+      }
     };
-  }, [user]);
 
-  // --------------------------------------------------
-  // Create defaults if none exist
-  // --------------------------------------------------
+    loadUserPreferences();
+    setupRealtimeListener();
+
+    return () => {
+      clearTimeout(loadTimeout);
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [user, toast, retryCount]);
+
+  /** --------------------------------------------
+   * Helpers
+   * ------------------------------------------ */
   const createDefaultPreferences = async (userId: string) => {
     try {
+      const defaultPrefs = {
+        user_id: userId,
+        email_notifications_enabled: true,
+        password_change_notifications: true,
+        email_change_notifications: true,
+        security_alert_notifications: true,
+      };
+
       const { data, error } = await supabase
         .from("user_preferences")
-        .insert({
-          user_id: userId,
-          email_notifications_enabled: true,
-          password_change_notifications: true,
-          email_change_notifications: true,
-          security_alert_notifications: true,
-        })
+        .insert(defaultPrefs)
         .select()
         .single();
 
       if (error) throw error;
-      setPreferences(data as UserPreferences);
+      if (isMounted()) setPreferences(data as UserPreferences);
+
+      logToSupabase("Created default user preferences", {
+        level: "info",
+        page: "useUserPreferences",
+      });
     } catch (err: any) {
-      logToSupabase("createDefaultPreferences failed", {
+      logToSupabase("Failed to create default preferences", {
         level: "error",
         page: "useUserPreferences",
-        data: { message: err.message || String(err) },
+        data: { error: err.message || String(err) },
       });
     }
   };
 
-  // --------------------------------------------------
-  // Persist helpers (optimistic)
-  // --------------------------------------------------
-  const persist = async (
-    patch: Partial<UserPreferences>,
-    toastMsg?: string
+  /**
+   * Update helpers – main toggle & individual toggles
+   */
+  const updateMainNotificationsToggle = async (
+    enabled: boolean,
+    options: UpdateOptions = {}
   ) => {
-    if (!user?.id) return false;
+    if (!user?.id || !preferences) return false;
 
-    Object.keys(patch).forEach((k) => pendingRef.current.add(k as any));
-    setPreferences((prev) => (prev ? { ...prev, ...patch } : prev));
+    const { showToast = true } = options;
+    lastUpdateRef.current = { field: "email_notifications_enabled", value: enabled };
+
+    // optimistic UI
+    setPreferences((prev) =>
+      prev ? { ...prev, email_notifications_enabled: enabled } : null
+    );
+
     setSaving(true);
+    setError(null);
 
     try {
-      const { error: upError } = await supabase
-        .from("user_preferences")
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq("user_id", user.id);
+      const { error } = await supabase.from("user_preferences").upsert(
+        {
+          user_id: user.id,
+          email_notifications_enabled: enabled,
+          password_change_notifications: preferences.password_change_notifications,
+          email_change_notifications: preferences.email_change_notifications,
+          security_alert_notifications: preferences.security_alert_notifications,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
 
-      if (upError) throw upError;
-      if (toastMsg) toast({ title: "Preferences", description: toastMsg });
+      if (error) throw error;
+
+      if (showToast) {
+        toast({
+          title: "Preferences Saved",
+          description: `Email notifications ${enabled ? "enabled" : "disabled"}`,
+        });
+      }
+
       return true;
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: "Could not save preference.",
-        variant: "destructive",
-      });
+      console.error("Error updating main toggle:", err);
+      if (showToast) {
+        toast({
+          title: "Error",
+          description: "There was an issue saving your preference.",
+          variant: "destructive",
+        });
+      }
       return false;
     } finally {
-      setSaving(false);
-      Object.keys(patch).forEach((k) => pendingRef.current.delete(k as any));
+      setTimeout(() => {
+        if (isMounted()) {
+          setSaving(false);
+          lastUpdateRef.current = null;
+        }
+      }, 500);
     }
   };
 
-  // --------------------------------------------------
-  // Public API
-  // --------------------------------------------------
-  const updateMainNotificationsToggle = (
-    enabled: boolean,
-    opts: UpdateOptions = {}
-  ) =>
-    persist(
-      { email_notifications_enabled: enabled },
-      opts.showToast === false ? undefined : `Email notifications ${enabled ? "enabled" : "disabled"}`
-    );
-
-  const updateNotificationToggle = (
+  const updateNotificationToggle = async (
     type: NotificationToggleType,
     enabled: boolean,
-    opts: UpdateOptions = {}
-  ) =>
-    persist(
-      { [type]: enabled } as Partial<UserPreferences>,
-      opts.showToast === false ? undefined : `${formatNotificationTypeName(type)} ${enabled ? "enabled" : "disabled"}`
-    );
+    options: UpdateOptions = {}
+  ) => {
+    if (!user?.id || !preferences || !preferences.email_notifications_enabled)
+      return false;
 
-  const formatNotificationTypeName = (type: string) =>
-    type
-      .split("_")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
+    const { showToast = true } = options;
+    lastUpdateRef.current = { field: type, value: enabled };
+
+    // optimistic UI
+    setPreferences((prev) => (prev ? { ...prev, [type]: enabled } : null));
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase.from("user_preferences").upsert(
+        {
+          user_id: user.id,
+          email_notifications_enabled: preferences.email_notifications_enabled,
+          password_change_notifications:
+            type === "password_change_notifications"
+              ? enabled
+              : preferences.password_change_notifications,
+          email_change_notifications:
+            type === "email_change_notifications"
+              ? enabled
+              : preferences.email_change_notifications,
+          security_alert_notifications:
+            type === "security_alert_notifications"
+              ? enabled
+              : preferences.security_alert_notifications,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
+
+      if (error) throw error;
+
+      if (showToast) {
+        toast({
+          title: "Preference Saved",
+          description: `${formatNotificationTypeName(type)} ${enabled ? "enabled" : "disabled"}`,
+        });
+      }
+
+      return true;
+    } catch (err: any) {
+      console.error("Error updating notification toggle:", err);
+      if (showToast) {
+        toast({
+          title: "Error",
+          description: "There was an issue saving your preference.",
+          variant: "destructive",
+        });
+      }
+      return false;
+    } finally {
+      setTimeout(() => {
+        if (isMounted()) {
+          setSaving(false);
+          lastUpdateRef.current = null;
+        }
+      }, 500);
+    }
+  };
+
+  const formatNotificationTypeName = (type: string): string => {
+    switch (type) {
+      case "password_change_notifications":
+        return "Password change notifications";
+      case "email_change_notifications":
+        return "Email change notifications";
+      case "security_alert_notifications":
+        return "Security alert notifications";
+      default:
+        return type
+          .split("_")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+    }
+  };
 
   return {
     preferences,
