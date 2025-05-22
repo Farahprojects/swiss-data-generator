@@ -7,6 +7,9 @@ import { logToSupabase } from "@/utils/batchedLogManager";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { Button } from "@/components/ui/button";
 
+// Define the specific notification toggle keys type
+type NotificationToggleKey = 'password_change_notifications' | 'email_change_notifications' | 'security_alert_notifications';
+
 export const NotificationsPanel = () => {
   const {
     preferences,
@@ -51,9 +54,9 @@ export const NotificationsPanel = () => {
   };
 
   // Optimistically handle individual notification toggle changes
-  const handleNotificationToggleChange = (type: string, checked: boolean) => {
+  const handleNotificationToggleChange = (type: NotificationToggleKey, checked: boolean) => {
     updateNotificationToggle(
-      type as keyof typeof preferences,
+      type,
       checked,
       { showToast: false }
     );

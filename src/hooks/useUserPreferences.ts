@@ -16,6 +16,8 @@ export interface UserPreferences {
   updated_at: string;
 }
 
+export type NotificationToggleType = 'password_change_notifications' | 'email_change_notifications' | 'security_alert_notifications';
+
 interface UpdateOptions {
   showToast?: boolean;
 }
@@ -315,7 +317,7 @@ export function useUserPreferences() {
 
   // Update individual notification toggle with optimistic UI updates
   const updateNotificationToggle = async (
-    type: keyof Omit<UserPreferences, 'id' | 'user_id' | 'email_notifications_enabled' | 'created_at' | 'updated_at'>,
+    type: NotificationToggleType,
     enabled: boolean,
     options: UpdateOptions = {}
   ) => {
