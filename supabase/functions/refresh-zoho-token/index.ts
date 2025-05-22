@@ -34,7 +34,7 @@ serve(async (req) => {
     console.log("=== ZOHO TOKEN REFRESH STARTED ===");
     await logToAdminTable(supabase, "Zoho token refresh process started", 'info');
 
-    const ZOHO_CLIENT_ID = "1000.4EOF0Y4Q4OMBYTX8JSQHU2KTZW2JJY";
+    const ZOHO_CLIENT_ID = "1000.R14Q1X8904D8KOT7INJRMUWSZQ9S5K";
     const ZOHO_CLIENT_SECRET = Deno.env.get("ZOHO_PASSWORD");
 
     if (!ZOHO_CLIENT_SECRET) {
