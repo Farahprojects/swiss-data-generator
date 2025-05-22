@@ -114,7 +114,7 @@ export const NotificationsPanel = () => {
               <Label htmlFor="email-notifications">
                 {preferences?.email_notifications_enabled ? 'Enabled' : 'Disabled'}
               </Label>
-              {saving && <Loader className="h-3 w-3 animate-spin text-gray-400 ml-2" />}
+              {/* Removed the saving spinner here to prevent UI flicker */}
             </div>
           )}
         </div>
