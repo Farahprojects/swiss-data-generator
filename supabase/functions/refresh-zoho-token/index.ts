@@ -80,7 +80,7 @@ serve(async (req) => {
     console.log("Refreshing Zoho token...");
     await logToAdminTable(supabase, "Requesting new access token from Zoho", 'info');
     
-    const zohoRes = await fetch("https://accounts.zoho.com/oauth/v2/token", {
+    const zohoRes = await fetch("https://accounts.zoho.com.au/oauth/v2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params
