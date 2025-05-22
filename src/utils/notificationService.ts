@@ -7,7 +7,8 @@ import { logToSupabase } from "@/utils/batchedLogManager";
  */
 export enum NotificationType {
   PASSWORD_CHANGE = 'password_change',
-  EMAIL_CHANGE = 'email_change'
+  EMAIL_CHANGE = 'email_change',
+  SECURITY_ALERT = 'security_alert'
 }
 
 /**
@@ -51,7 +52,7 @@ export const sendEmailNotification = async (
 
     // Call the edge function to send the notification
     const response = await fetch(
-      "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/send-notification-email", 
+      "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/send-notification-email", 
       {
         method: "POST",
         headers: {
@@ -143,6 +144,29 @@ export const sendEmailChangeNotification = async (
     { 
       ...variables,
       newEmail 
+    }
+  );
+};
+
+/**
+ * Sends a security alert notification email
+ * 
+ * @param email The recipient's email address
+ * @param alertType The type of security alert
+ * @param variables Optional variables for the template
+ * @returns Promise resolving to a success status and optional error
+ */
+export const sendSecurityAlertNotification = async (
+  email: string,
+  alertType: string,
+  variables: NotificationVariables = {}
+): Promise<{ success: boolean; error?: string }> => {
+  return sendEmailNotification(
+    NotificationType.SECURITY_ALERT,
+    email,
+    {
+      ...variables,
+      alertType
     }
   );
 };

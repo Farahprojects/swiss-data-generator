@@ -56,21 +56,58 @@ serve(async (req) => {
     // Initialize Supabase admin client with service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Call the database function to send email notification
-    const { data, error } = await supabaseAdmin.rpc(
-      'send_notification_email',
+    // Fetch email template
+    const { data: template, error: templateError } = await supabaseAdmin
+      .from('email_notification_templates')
+      .select('subject, html_template, text_template')
+      .eq('template_type', templateType)
+      .single();
+
+    if (templateError || !template) {
+      console.error('Error fetching email template:', templateError || 'Template not found');
+      return new Response(
+        JSON.stringify({ error: templateError?.message || 'Email template not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Process the template with variables
+    let htmlContent = template.html_template;
+    let textContent = template.text_template || '';
+    let subject = template.subject;
+
+    // Replace variables in the templates
+    Object.entries(variables).forEach(([key, value]) => {
+      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+      htmlContent = htmlContent.replace(regex, String(value));
+      textContent = textContent.replace(regex, String(value));
+      subject = subject.replace(regex, String(value));
+    });
+
+    // Call the send-email function to send the email
+    const emailResponse = await fetch(
+      `${supabaseUrl}/functions/v1/send-email`,
       {
-        template_type: templateType,
-        recipient_email: recipientEmail,
-        variables: variables || {}
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": authHeader
+        },
+        body: JSON.stringify({
+          to: recipientEmail,
+          subject: subject,
+          html: htmlContent,
+          text: textContent
+        })
       }
     );
 
-    if (error) {
-      console.error('Error calling send_notification_email function:', error);
+    if (!emailResponse.ok) {
+      const errorData = await emailResponse.json();
+      console.error('Error from email service:', errorData);
       return new Response(
-        JSON.stringify({ error: error.message || 'Failed to send email notification' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: errorData.error || 'Failed to send email' }),
+        { status: emailResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
