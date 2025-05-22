@@ -1,5 +1,6 @@
-
+// File: supabase/functions/send-email/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,19 +23,13 @@ serve(async (req) => {
   }
 
   try {
-    // Extract authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authorization header is required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    // Parse request body
     const { to, subject, html, text, from, replyTo } = await req.json() as EmailRequest;
-    
-    // Validate required fields
+
     if (!to || !subject || !html) {
       return new Response(
         JSON.stringify({ error: 'To, subject, and html are required' }),
@@ -42,27 +37,30 @@ serve(async (req) => {
       );
     }
 
-    // Get sender email from environment or use fallback
     const defaultSenderEmail = Deno.env.get("SENDER_EMAIL") || "no-reply@theraiastro.com";
-    
-    // Get zoho credentials
-    const zohoPassword = Deno.env.get("ZOHO_SMTP_PASSWORD") || "";
-    if (!zohoPassword) {
-      console.error("Missing Zoho SMTP password in environment");
+    const senderEmail = from || defaultSenderEmail;
+
+    // Fetch latest Zoho access token from DB
+    const { data: tokenRow, error: tokenError } = await supabase
+      .from("zoho_tokens")
+      .select("access_token")
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (tokenError || !tokenRow?.access_token) {
       return new Response(
-        JSON.stringify({ error: 'Missing email configuration' }),
+        JSON.stringify({ error: 'Unable to retrieve Zoho access token' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    const senderEmail = from || defaultSenderEmail;
-    
-    // Use Zoho's API endpoint directly instead of SMTP
+
+    // Send email via Zoho API
     const response = await fetch('https://mail.zoho.com/api/accounts/emails/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Zoho-oauthtoken ${zohoPassword}`
+        'Authorization': `Zoho-oauthtoken ${tokenRow.access_token}`
       },
       body: JSON.stringify({
         fromAddress: senderEmail,
@@ -72,7 +70,7 @@ serve(async (req) => {
         mailFormat: 'html'
       })
     });
-    
+
     if (!response.ok) {
       const errorData = await response.text();
       console.error('Error from Zoho API:', errorData);
@@ -84,17 +82,16 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     console.log(`Email sent successfully to ${to}`);
-    
-    // Return success response
+
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
     console.error('Error in send-email function:', err);
-    
+
     return new Response(
       JSON.stringify({ 
         error: 'Failed to send email',
