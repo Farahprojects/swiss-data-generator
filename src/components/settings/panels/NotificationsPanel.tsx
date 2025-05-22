@@ -4,14 +4,13 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader, RefreshCw } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
-import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { useUserPreferences, NotificationToggleKey } from "@/hooks/useUserPreferences";
 import { Button } from "@/components/ui/button";
 
 export const NotificationsPanel = () => {
   const {
     preferences,
     loading,
-    saving,
     error,
     updateMainNotificationsToggle,
     updateNotificationToggle,
@@ -28,9 +27,9 @@ export const NotificationsPanel = () => {
   }, [loading, error]);
 
   // Helper function to determine if individual notification is enabled
-  const isNotificationEnabled = (type: string): boolean => {
+  const isNotificationEnabled = (type: NotificationToggleKey): boolean => {
     if (!preferences) return true; // Default to true
-    return preferences[type as keyof typeof preferences] === true;
+    return preferences[type] === true;
   };
   
   // Handle refresh on timeout errors
@@ -51,9 +50,9 @@ export const NotificationsPanel = () => {
   };
 
   // Optimistically handle individual notification toggle changes
-  const handleNotificationToggleChange = (type: string, checked: boolean) => {
+  const handleNotificationToggleChange = (type: NotificationToggleKey, checked: boolean) => {
     updateNotificationToggle(
-      type as keyof typeof preferences,
+      type,
       checked,
       { showToast: false }
     );
@@ -111,7 +110,6 @@ export const NotificationsPanel = () => {
               <Label htmlFor="email-notifications">
                 {preferences?.email_notifications_enabled ? 'Enabled' : 'Disabled'}
               </Label>
-              {saving && <Loader className="h-3 w-3 animate-spin text-gray-400 ml-2" />}
             </div>
           )}
         </div>
@@ -131,9 +129,9 @@ export const NotificationsPanel = () => {
                 </div>
                 <Switch 
                   id="password-change-notifications"
-                  checked={isNotificationEnabled('password_change_notifications')}
+                  checked={isNotificationEnabled("password_change_notifications")}
                   onCheckedChange={(checked) => 
-                    handleNotificationToggleChange('password_change_notifications', checked)
+                    handleNotificationToggleChange("password_change_notifications", checked)
                   }
                   disabled={loading || !preferences?.email_notifications_enabled}
                   className="focus:ring-2 focus:ring-primary"
@@ -150,9 +148,9 @@ export const NotificationsPanel = () => {
                 </div>
                 <Switch 
                   id="email-change-notifications"
-                  checked={isNotificationEnabled('email_change_notifications')}
+                  checked={isNotificationEnabled("email_change_notifications")}
                   onCheckedChange={(checked) => 
-                    handleNotificationToggleChange('email_change_notifications', checked)
+                    handleNotificationToggleChange("email_change_notifications", checked)
                   }
                   disabled={loading || !preferences?.email_notifications_enabled}
                   className="focus:ring-2 focus:ring-primary"
@@ -169,9 +167,9 @@ export const NotificationsPanel = () => {
                 </div>
                 <Switch 
                   id="security-alert-notifications"
-                  checked={isNotificationEnabled('security_alert_notifications')}
+                  checked={isNotificationEnabled("security_alert_notifications")}
                   onCheckedChange={(checked) => 
-                    handleNotificationToggleChange('security_alert_notifications', checked)
+                    handleNotificationToggleChange("security_alert_notifications", checked)
                   }
                   disabled={loading || !preferences?.email_notifications_enabled}
                   className="focus:ring-2 focus:ring-primary"
