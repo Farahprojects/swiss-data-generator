@@ -701,30 +701,6 @@ export type Database = {
         }
         Relationships: []
       }
-      zoho_tokens: {
-        Row: {
-          access_token: string | null
-          created_at: string | null
-          expires_at: string | null
-          id: string
-          refresh_token: string | null
-        }
-        Insert: {
-          access_token?: string | null
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          refresh_token?: string | null
-        }
-        Update: {
-          access_token?: string | null
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          refresh_token?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       v_api_key_balance: {

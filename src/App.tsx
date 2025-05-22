@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -150,8 +149,6 @@ function App() {
                 {/* Auth routes - Password route is *explicitly* kept outside AuthGuard */}
                 <Route path="/auth/email" element={<ConfirmEmail />} />
                 <Route path="/auth/password" element={<Password />} />
-                {/* New Zoho Auth route */}
-                <Route path="/auth/zoho" element={<ZohoAuth />} />
                 {/* Keep backward compatibility with old URL */}
                 <Route path="/auth/reset-password" element={<Navigate to="/auth/password" replace />} />
                 
