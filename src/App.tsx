@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -135,7 +136,7 @@ function App() {
             <RouteDebugger>
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/api-products" element={<ApiProducts />} />

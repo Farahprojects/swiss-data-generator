@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader } from "lucide-react";
@@ -26,22 +26,36 @@ export const NotificationsPanel = () => {
   });
   const { toast } = useToast();
   const location = useLocation();
-
-  // Debug log for panel rendering - only log once on mount
+  
+  // Refs to track component mount state and loading timeouts
+  const isMounted = useRef(true);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Load user preferences - with proper cleanup
   useEffect(() => {
-    logToSupabase("NotificationsPanel component rendered", {
-      level: 'debug',
-      page: 'NotificationsPanel',
-      data: { currentURL: location.pathname + location.search }
-    });
-  }, []); // Empty dependency array = only run once on mount
-
-  // Load user preferences
-  useEffect(() => {
+    // Reset loading state
+    setLoading(true);
+    
+    // Set a safety timeout to prevent infinite loading
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (isMounted.current) {
+        setLoading(false);
+        logToSupabase("Loading preferences timed out", {
+          level: 'error',
+          page: 'NotificationsPanel'
+        });
+        
+        toast({
+          title: "Loading Error",
+          description: "Failed to load preferences within the expected time",
+          variant: "destructive"
+        });
+      }
+    }, 7000); // 7 second safety timeout
+    
     const loadUserPreferences = async () => {
       try {
-        setLoading(true);
-        
         // Get current user
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError) {
@@ -53,12 +67,15 @@ export const NotificationsPanel = () => {
             level: 'error',
             page: 'NotificationsPanel'
           });
-          setLoading(false);
-          toast({
-            title: "Authentication Error",
-            description: "Please sign in to manage your notification preferences",
-            variant: "destructive"
-          });
+          
+          if (isMounted.current) {
+            setLoading(false);
+            toast({
+              title: "Authentication Error",
+              description: "Please sign in to manage your notification preferences",
+              variant: "destructive"
+            });
+          }
           return;
         }
         
@@ -86,25 +103,29 @@ export const NotificationsPanel = () => {
               data: { error: error.message }
             });
             
-            toast({
-              title: "Error",
-              description: "Failed to load notification preferences",
-              variant: "destructive"
-            });
+            if (isMounted.current) {
+              toast({
+                title: "Error",
+                description: "Failed to load notification preferences",
+                variant: "destructive"
+              });
+            }
           }
         } else if (data) {
           // If user has preferences set, use them
-          setPreferences({
-            email_notifications_enabled: data.email_notifications_enabled !== false,
-            password_change_notifications: data.password_change_notifications !== false,
-            email_change_notifications: data.email_change_notifications !== false,
-            security_alert_notifications: data.security_alert_notifications !== false
-          });
-          
-          logToSupabase("User preferences loaded successfully", {
-            level: 'info',
-            page: 'NotificationsPanel'
-          });
+          if (isMounted.current) {
+            setPreferences({
+              email_notifications_enabled: data.email_notifications_enabled !== false,
+              password_change_notifications: data.password_change_notifications !== false,
+              email_change_notifications: data.email_change_notifications !== false,
+              security_alert_notifications: data.security_alert_notifications !== false
+            });
+            
+            logToSupabase("User preferences loaded successfully", {
+              level: 'info',
+              page: 'NotificationsPanel'
+            });
+          }
         } else {
           // Handle case when data is null or undefined but no error
           logToSupabase("No preferences data returned but no error", {
@@ -122,18 +143,43 @@ export const NotificationsPanel = () => {
           data: { error: error.message || String(error) }
         });
         
-        toast({
-          title: "Error Loading Preferences",
-          description: "There was a problem loading your notification settings",
-          variant: "destructive"
-        });
+        if (isMounted.current) {
+          toast({
+            title: "Error Loading Preferences",
+            description: "There was a problem loading your notification settings",
+            variant: "destructive"
+          });
+        }
       } finally {
-        setLoading(false);
+        // Clear the safety timeout
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+        
+        if (isMounted.current) {
+          setLoading(false);
+        }
       }
     };
     
     loadUserPreferences();
-  }, [toast]); // Only depend on toast
+    
+    // Cleanup function to handle component unmount
+    return () => {
+      isMounted.current = false;
+      
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+      
+      if (savingTimeoutRef.current) {
+        clearTimeout(savingTimeoutRef.current);
+        savingTimeoutRef.current = null;
+      }
+    };
+  }, []); // No dependencies - only run once on mount
   
   // Create default preferences if none exist
   const createDefaultPreferences = async (userId: string) => {
@@ -155,13 +201,14 @@ export const NotificationsPanel = () => {
         throw error;
       }
       
-      setPreferences(defaultPrefs);
-      
-      logToSupabase("Created default user preferences", {
-        level: 'info',
-        page: 'NotificationsPanel'
-      });
-      
+      if (isMounted.current) {
+        setPreferences(defaultPrefs);
+        
+        logToSupabase("Created default user preferences", {
+          level: 'info',
+          page: 'NotificationsPanel'
+        });
+      }
     } catch (error: any) {
       logToSupabase("Failed to create default preferences", {
         level: 'error',
@@ -171,16 +218,24 @@ export const NotificationsPanel = () => {
     }
   };
   
-  // Handle notification toggle change with timeout
+  // Handle notification toggle change with robust error handling
   const handleNotificationToggle = async (type: keyof NotificationPreferences, checked: boolean) => {
-    const timeoutId = setTimeout(() => {
-      if (saving) {
+    // Clear any existing saving timeout
+    if (savingTimeoutRef.current) {
+      clearTimeout(savingTimeoutRef.current);
+      savingTimeoutRef.current = null;
+    }
+    
+    // Set new saving timeout
+    savingTimeoutRef.current = setTimeout(() => {
+      if (isMounted.current && saving) {
         setSaving(false);
         logToSupabase(`Individual toggle operation timed out: ${type}`, {
           level: 'error',
           page: 'NotificationsPanel',
           data: { operation: 'toggle', type, newState: checked }
         });
+        
         toast({
           title: "Operation Timed Out",
           description: "The request took too long. Please try again.",
@@ -197,13 +252,6 @@ export const NotificationsPanel = () => {
       if (authError || !userData?.user) {
         throw new Error("User not authenticated");
       }
-      
-      // Log toggle attempt
-      logToSupabase(`Notification toggle attempted: ${type}`, {
-        level: 'debug',
-        page: 'NotificationsPanel',
-        data: { type, newValue: checked, userId: userData.user.id }
-      });
       
       // Update UI state optimistically
       const newPreferences = {
@@ -227,7 +275,10 @@ export const NotificationsPanel = () => {
       if (error) throw error;
       
       // Clear the timeout since operation completed successfully
-      clearTimeout(timeoutId);
+      if (savingTimeoutRef.current) {
+        clearTimeout(savingTimeoutRef.current);
+        savingTimeoutRef.current = null;
+      }
       
       logToSupabase(`${type} notification preference saved`, {
         level: 'info',
@@ -242,7 +293,10 @@ export const NotificationsPanel = () => {
       
     } catch (error: any) {
       // Clear the timeout since operation completed (with error)
-      clearTimeout(timeoutId);
+      if (savingTimeoutRef.current) {
+        clearTimeout(savingTimeoutRef.current);
+        savingTimeoutRef.current = null;
+      }
       
       logToSupabase(`Error saving ${type} notification preference`, {
         level: 'error',

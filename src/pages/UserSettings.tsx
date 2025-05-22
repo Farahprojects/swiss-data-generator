@@ -4,10 +4,28 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { logToSupabase } from "@/utils/batchedLogManager";
+import { useEffect } from "react";
 
 const UserSettings = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Ensure we have the proper query parameter on initial render
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const panel = searchParams.get("panel");
+    
+    if (!panel) {
+      // If there's no panel parameter, add it and redirect
+      navigate("/dashboard/settings?panel=account", { replace: true });
+      
+      logToSupabase("Redirected to settings with default panel", {
+        level: 'debug',
+        page: 'UserSettings',
+        data: { originalUrl: location.pathname + location.search }
+      });
+    }
+  }, [location.pathname, location.search, navigate]);
   
   const handleClose = () => {
     logToSupabase("Closed settings page", {
@@ -17,12 +35,14 @@ const UserSettings = () => {
     navigate('/dashboard');
   };
   
-  // Log the current settings URL for debugging
-  logToSupabase("Settings page rendered", {
-    level: 'debug',
-    page: 'UserSettings',
-    data: { url: location.pathname + location.search }
-  });
+  // Log current route for debugging
+  useEffect(() => {
+    logToSupabase("Settings page rendered", {
+      level: 'debug',
+      page: 'UserSettings',
+      data: { url: location.pathname + location.search }
+    });
+  }, [location]);
   
   return (
     <div className="w-full">

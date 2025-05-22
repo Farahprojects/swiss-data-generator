@@ -22,11 +22,10 @@ export const UserSettingsLayout = () => {
     if (panel && ["account", "notifications", "delete", "support"].includes(panel)) {
       setActivePanel(panel);
       
-      // Log the panel change for analytics
       logToSupabase("Settings panel changed from URL", {
         level: 'info',
         page: 'UserSettingsLayout',
-        data: { panel }
+        data: { panel, pathname: location.pathname }
       });
     } else if (panel === "billing" || panel === "apikeys") {
       // If 'billing' or 'apikeys' is requested but no longer available, default to account
@@ -35,6 +34,7 @@ export const UserSettingsLayout = () => {
       navigate("/dashboard/settings?panel=account", { replace: true });
     } else if (!panel) {
       // If no panel is specified in URL, default to account and update URL
+      setActivePanel("account");
       navigate("/dashboard/settings?panel=account", { replace: true });
     }
   }, [location.search, navigate]);
@@ -70,6 +70,13 @@ export const UserSettingsLayout = () => {
         return <AccountSettingsPanel />;
     }
   };
+
+  // If we're on the root path without /dashboard/settings, redirect to the settings page
+  useEffect(() => {
+    if (location.pathname === "/") {
+      navigate("/dashboard/settings?panel=account", { replace: true });
+    }
+  }, [location.pathname, navigate]);
 
   return (
     <div className="flex">
