@@ -41,6 +41,12 @@ export const UserSettingsLayout = () => {
   
   // Handle panel changes from sidebar and update URL
   const handlePanelChange = (panelId: string) => {
+    logToSupabase("Settings panel change requested", {
+      level: 'info',
+      page: 'UserSettingsLayout',
+      data: { panel: panelId }
+    });
+    
     setActivePanel(panelId);
     
     // Update URL to reflect panel change (if not already matching)

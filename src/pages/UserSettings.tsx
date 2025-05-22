@@ -2,12 +2,11 @@
 import { UserSettingsLayout } from "@/components/settings/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { logToSupabase } from "@/utils/batchedLogManager";
 
 const UserSettings = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   
   const handleClose = () => {
     logToSupabase("Closed settings page", {
@@ -16,13 +15,6 @@ const UserSettings = () => {
     });
     navigate('/dashboard');
   };
-  
-  // Log the current settings URL for debugging
-  logToSupabase("Settings page rendered", {
-    level: 'debug',
-    page: 'UserSettings',
-    data: { url: location.pathname + location.search }
-  });
   
   return (
     <div className="w-full">
