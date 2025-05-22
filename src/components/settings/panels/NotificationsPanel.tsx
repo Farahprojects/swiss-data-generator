@@ -157,8 +157,25 @@ export const NotificationsPanel = () => {
     }
   };
   
-  // Handle main toggle change
+  // Handle main toggle change with timeout and better error handling
   const handleMainToggleChange = async (checked: boolean) => {
+    // Add a timeout to prevent infinite spinner
+    const timeoutId = setTimeout(() => {
+      if (saving) {
+        setSaving(false);
+        logToSupabase("Main toggle operation timed out", {
+          level: 'error',
+          page: 'NotificationsPanel',
+          data: { operation: 'toggle', newState: checked }
+        });
+        toast({
+          title: "Operation Timed Out",
+          description: "The request took too long. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }, 5000); // 5 second timeout
+    
     try {
       setSaving(true);
       
@@ -196,6 +213,9 @@ export const NotificationsPanel = () => {
       
       if (error) throw error;
       
+      // Clear the timeout since operation completed successfully
+      clearTimeout(timeoutId);
+      
       logToSupabase("Main notification preferences saved", {
         level: 'info',
         page: 'NotificationsPanel',
@@ -208,6 +228,9 @@ export const NotificationsPanel = () => {
       });
       
     } catch (error: any) {
+      // Clear the timeout since operation completed (with error)
+      clearTimeout(timeoutId);
+      
       logToSupabase("Error in handleMainToggleChange", {
         level: 'error',
         page: 'NotificationsPanel',
@@ -226,11 +249,12 @@ export const NotificationsPanel = () => {
         variant: "destructive"
       });
     } finally {
+      // Ensure saving state is always turned off
       setSaving(false);
     }
   };
   
-  // Handle individual notification toggle change
+  // Handle individual notification toggle change with timeout
   const handleNotificationToggle = async (type: keyof Omit<NotificationPreferences, 'email_notifications_enabled'>, checked: boolean) => {
     if (!preferences.email_notifications_enabled) {
       toast({
@@ -239,6 +263,23 @@ export const NotificationsPanel = () => {
       });
       return;
     }
+    
+    // Add a timeout to prevent infinite spinner
+    const timeoutId = setTimeout(() => {
+      if (saving) {
+        setSaving(false);
+        logToSupabase(`Individual toggle operation timed out: ${type}`, {
+          level: 'error',
+          page: 'NotificationsPanel',
+          data: { operation: 'toggle', type, newState: checked }
+        });
+        toast({
+          title: "Operation Timed Out",
+          description: "The request took too long. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }, 5000); // 5 second timeout
     
     try {
       setSaving(true);
@@ -277,6 +318,9 @@ export const NotificationsPanel = () => {
       
       if (error) throw error;
       
+      // Clear the timeout since operation completed successfully
+      clearTimeout(timeoutId);
+      
       logToSupabase(`${type} notification preference saved`, {
         level: 'info',
         page: 'NotificationsPanel',
@@ -289,6 +333,9 @@ export const NotificationsPanel = () => {
       });
       
     } catch (error: any) {
+      // Clear the timeout since operation completed (with error)
+      clearTimeout(timeoutId);
+      
       logToSupabase(`Error saving ${type} notification preference`, {
         level: 'error',
         page: 'NotificationsPanel',
@@ -307,6 +354,7 @@ export const NotificationsPanel = () => {
         variant: "destructive"
       });
     } finally {
+      // Ensure saving state is always turned off
       setSaving(false);
     }
   };
@@ -334,7 +382,7 @@ export const NotificationsPanel = () => {
           <div>
             <h3 className="text-lg font-medium">Email Notifications</h3>
             <p className="text-sm text-gray-500">
-              Master switch for all email notifications
+              Turn off all notifications
             </p>
           </div>
           
