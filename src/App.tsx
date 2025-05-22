@@ -27,6 +27,7 @@ import { SidebarProvider } from './components/ui/sidebar';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
 import Password from './pages/auth/Password';
+import ZohoAuth from './pages/auth/Zoho';
 import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
 import { supabase } from './integrations/supabase/client';
 import { logToSupabase } from './utils/batchedLogManager';
@@ -149,6 +150,7 @@ function App() {
                 {/* Auth routes - Password route is *explicitly* kept outside AuthGuard */}
                 <Route path="/auth/email" element={<ConfirmEmail />} />
                 <Route path="/auth/password" element={<Password />} />
+                <Route path="/auth/zoho" element={<ZohoAuth />} />
                 {/* Keep backward compatibility with old URL */}
                 <Route path="/auth/reset-password" element={<Navigate to="/auth/password" replace />} />
                 
