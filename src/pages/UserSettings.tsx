@@ -1,5 +1,4 @@
 
-import { useEffect, useRef } from "react";
 import { UserSettingsLayout } from "@/components/settings/UserSettingsLayout";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -9,36 +8,6 @@ import { logToSupabase } from "@/utils/batchedLogManager";
 const UserSettings = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const initialRenderComplete = useRef(false);
-  
-  // Ensure we have the proper query parameter on initial render
-  // Use a ref to prevent this from running more than once
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const panel = searchParams.get("panel");
-    
-    // Only redirect if we haven't already set the panel parameter
-    if (!panel && !initialRenderComplete.current) {
-      // If there's no panel parameter, add it and redirect
-      navigate("/dashboard/settings?panel=account", { replace: true });
-      
-      logToSupabase("Redirected to settings with default panel", {
-        level: 'debug',
-        page: 'UserSettings',
-        data: { originalUrl: location.pathname + location.search }
-      });
-    }
-    
-    // Mark initial render as complete to prevent repeated redirects
-    initialRenderComplete.current = true;
-    
-    // Log current route for debugging (only once)
-    logToSupabase("Settings page rendered", {
-      level: 'debug',
-      page: 'UserSettings',
-      data: { url: location.pathname + location.search }
-    });
-  }, []);
   
   const handleClose = () => {
     logToSupabase("Closed settings page", {
@@ -47,6 +16,13 @@ const UserSettings = () => {
     });
     navigate('/dashboard');
   };
+  
+  // Log the current settings URL for debugging
+  logToSupabase("Settings page rendered", {
+    level: 'debug',
+    page: 'UserSettings',
+    data: { url: location.pathname + location.search }
+  });
   
   return (
     <div className="w-full">

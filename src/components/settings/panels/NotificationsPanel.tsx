@@ -1,11 +1,13 @@
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useLocation } from "react-router-dom";
 
 interface NotificationPreferences {
   email_notifications_enabled: boolean;
@@ -14,134 +16,79 @@ interface NotificationPreferences {
   security_alert_notifications: boolean;
 }
 
-const DEFAULT_PREFERENCES: NotificationPreferences = {
-  email_notifications_enabled: true,
-  password_change_notifications: true,
-  email_change_notifications: true,
-  security_alert_notifications: true
-};
-
 export const NotificationsPanel = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFERENCES);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<NotificationPreferences>({
+    email_notifications_enabled: true,
+    password_change_notifications: true,
+    email_change_notifications: true,
+    security_alert_notifications: true
+  });
   const { toast } = useToast();
-  
-  // Refs to track component mount state and loading timeouts
-  const isMounted = useRef(true);
-  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Create default preferences function
-  const createDefaultPreferences = useCallback(async (userId: string) => {
-    try {
-      const defaultPrefs = {
-        user_id: userId,
-        ...DEFAULT_PREFERENCES
-      };
-      
-      const { error } = await supabase
-        .from('user_preferences')
-        .insert(defaultPrefs)
-        .select();
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (isMounted.current) {
-        setPreferences(DEFAULT_PREFERENCES);
-        
-        logToSupabase("Created default user preferences", {
-          level: 'info',
-          page: 'NotificationsPanel'
-        });
-      }
-    } catch (error: any) {
-      logToSupabase("Failed to create default preferences", {
-        level: 'error',
-        page: 'NotificationsPanel',
-        data: { error: error.message || String(error) }
-      });
-      
-      if (isMounted.current) {
-        setLoadError("Failed to create default preferences.");
-      }
-    }
-  }, []);
+  const location = useLocation();
 
-  // Load user preferences - with proper cleanup
-  const loadUserPreferences = useCallback(async () => {
-    // Only attempt to load if component is still mounted
-    if (!isMounted.current) return;
-    
-    try {
-      setLoading(true);
-      
-      // Reset any previous error
-      setLoadError(null);
-      
-      // Get current user
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        throw new Error(`Auth error: ${userError.message}`);
-      }
-      
-      if (!userData?.user) {
-        logToSupabase("No authenticated user found", {
-          level: 'error',
-          page: 'NotificationsPanel'
-        });
+  // Debug log for panel rendering
+  useEffect(() => {
+    logToSupabase("NotificationsPanel component rendered", {
+      level: 'debug',
+      page: 'NotificationsPanel',
+      data: { currentURL: location.pathname + location.search }
+    });
+  }, [location]);
+
+  // Load user preferences
+  useEffect(() => {
+    const loadUserPreferences = async () => {
+      try {
+        setLoading(true);
         
-        if (isMounted.current) {
-          setLoadError("Please sign in to manage your notification preferences");
+        // Get current user
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          throw new Error(`Auth error: ${userError.message}`);
+        }
+        
+        if (!userData?.user) {
+          logToSupabase("No authenticated user found", {
+            level: 'error',
+            page: 'NotificationsPanel'
+          });
           setLoading(false);
           toast({
             title: "Authentication Error",
             description: "Please sign in to manage your notification preferences",
             variant: "destructive"
           });
+          return;
         }
-        return;
-      }
-      
-      // Get user preferences
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .select('email_notifications_enabled, password_change_notifications, email_change_notifications, security_alert_notifications')
-        .eq('user_id', userData.user.id)
-        .single();
-      
-      logToSupabase("Loaded preferences response", {
-        level: 'debug',
-        page: 'NotificationsPanel',
-        data: { hasData: !!data, hasError: !!error, dataType: typeof data }
-      });
-      
-      if (error) {
-        if (error.code === 'PGRST116') { // Not Found error
-          // Create default preferences if none exist
-          await createDefaultPreferences(userData.user.id);
-        } else {
-          logToSupabase("Error loading user preferences", {
-            level: 'error',
-            page: 'NotificationsPanel',
-            data: { error: error.message }
-          });
-          
-          if (isMounted.current) {
-            setLoadError("Failed to load notification preferences");
+        
+        // Get user preferences
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .select('email_notifications_enabled, password_change_notifications, email_change_notifications, security_alert_notifications')
+          .eq('user_id', userData.user.id)
+          .single();
+        
+        if (error) {
+          if (error.code === 'PGRST116') { // Not Found error
+            // Create default preferences if none exist
+            await createDefaultPreferences(userData.user.id);
+          } else {
+            logToSupabase("Error loading user preferences", {
+              level: 'error',
+              page: 'NotificationsPanel',
+              data: { error: error.message }
+            });
+            
             toast({
               title: "Error",
               description: "Failed to load notification preferences",
               variant: "destructive"
             });
           }
-        }
-      } else if (data) {
-        // If user has preferences set, use them
-        if (isMounted.current) {
+        } else if (data) {
+          // If user has preferences set, use them
           setPreferences({
             email_notifications_enabled: data.email_notifications_enabled !== false,
             password_change_notifications: data.password_change_notifications !== false,
@@ -154,94 +101,73 @@ export const NotificationsPanel = () => {
             page: 'NotificationsPanel'
           });
         }
-      } else {
-        // Handle case when data is null or undefined but no error
-        logToSupabase("No preferences data returned but no error", {
-          level: 'warn',
-          page: 'NotificationsPanel'
+        
+        setLoading(false);
+      } catch (error: any) {
+        logToSupabase("Error in loadUserPreferences", {
+          level: 'error',
+          page: 'NotificationsPanel',
+          data: { error: error.message || String(error) }
         });
         
-        // Create default preferences as fallback
-        await createDefaultPreferences(userData.user.id);
-      }
-    } catch (error: any) {
-      logToSupabase("Error in loadUserPreferences", {
-        level: 'error',
-        page: 'NotificationsPanel',
-        data: { error: error.message || String(error) }
-      });
-      
-      if (isMounted.current) {
-        setLoadError("There was a problem loading your notification settings");
+        setLoading(false);
         toast({
           title: "Error Loading Preferences",
           description: "There was a problem loading your notification settings",
           variant: "destructive"
         });
       }
-    } finally {
-      // Always clear loading state if component is still mounted
-      if (isMounted.current) {
-        setLoading(false);
-      }
-    }
-  }, [createDefaultPreferences, toast]);
-  
-  // Load data on mount with timeout protection
-  useEffect(() => {
-    // Set a safety timeout to prevent infinite loading
-    loadingTimeoutRef.current = setTimeout(() => {
-      if (isMounted.current && loading) {
-        setLoading(false);
-        setLoadError("Loading preferences timed out. Please try again.");
-        
-        logToSupabase("Loading preferences timed out", {
-          level: 'error',
-          page: 'NotificationsPanel'
-        });
-        
-        toast({
-          title: "Loading Error",
-          description: "Failed to load preferences within the expected time",
-          variant: "destructive"
-        });
-      }
-    }, 7000); // 7 second safety timeout
-    
-    // Load the user preferences
-    loadUserPreferences();
-    
-    // Cleanup function to handle component unmount
-    return () => {
-      isMounted.current = false;
-      
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-      
-      if (savingTimeoutRef.current) {
-        clearTimeout(savingTimeoutRef.current);
-      }
     };
-  }, []); // Empty dependency array - only run once
-  
-  // Handle notification toggle change with robust error handling
-  const handleNotificationToggle = async (type: keyof NotificationPreferences, checked: boolean) => {
-    // Clear any existing saving timeout
-    if (savingTimeoutRef.current) {
-      clearTimeout(savingTimeoutRef.current);
-    }
     
-    // Set new saving timeout to prevent infinite saving state
-    savingTimeoutRef.current = setTimeout(() => {
-      if (isMounted.current && saving) {
+    loadUserPreferences();
+  }, [toast]);
+  
+  // Create default preferences if none exist
+  const createDefaultPreferences = async (userId: string) => {
+    try {
+      const defaultPrefs = {
+        user_id: userId,
+        email_notifications_enabled: true,
+        password_change_notifications: true,
+        email_change_notifications: true,
+        security_alert_notifications: true
+      };
+      
+      const { error } = await supabase
+        .from('user_preferences')
+        .insert(defaultPrefs);
+      
+      if (error) {
+        throw error;
+      }
+      
+      setPreferences(defaultPrefs);
+      
+      logToSupabase("Created default user preferences", {
+        level: 'info',
+        page: 'NotificationsPanel'
+      });
+      
+    } catch (error: any) {
+      logToSupabase("Failed to create default preferences", {
+        level: 'error',
+        page: 'NotificationsPanel',
+        data: { error: error.message || String(error) }
+      });
+    }
+  };
+  
+  // Handle main toggle change with timeout and better error handling
+  const handleMainToggleChange = async (checked: boolean) => {
+    // Add a timeout to prevent infinite spinner
+    const timeoutId = setTimeout(() => {
+      if (saving) {
         setSaving(false);
-        logToSupabase(`Individual toggle operation timed out: ${type}`, {
+        logToSupabase("Main toggle operation timed out", {
           level: 'error',
           page: 'NotificationsPanel',
-          data: { operation: 'toggle', type, newState: checked }
+          data: { operation: 'toggle', newState: checked }
         });
-        
         toast({
           title: "Operation Timed Out",
           description: "The request took too long. Please try again.",
@@ -254,10 +180,122 @@ export const NotificationsPanel = () => {
       setSaving(true);
       
       // Get current user
-      const { data: userData, error: authError } = await supabase.auth.getUser();
-      if (authError || !userData?.user) {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
         throw new Error("User not authenticated");
       }
+      
+      // Log toggle attempt
+      logToSupabase("Main notification toggle attempted", {
+        level: 'debug',
+        page: 'NotificationsPanel',
+        data: { newValue: checked }
+      });
+      
+      // Update UI state optimistically for better UX
+      const newPreferences = {
+        ...preferences,
+        email_notifications_enabled: checked,
+      };
+      
+      setPreferences(newPreferences);
+      
+      // Save to database
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: userData.user.id,
+          ...newPreferences,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+      
+      if (error) throw error;
+      
+      // Clear the timeout since operation completed successfully
+      clearTimeout(timeoutId);
+      
+      logToSupabase("Main notification preferences saved", {
+        level: 'info',
+        page: 'NotificationsPanel',
+        data: { enabled: checked }
+      });
+      
+      toast({
+        title: "Preferences Saved",
+        description: `Email notifications ${checked ? 'enabled' : 'disabled'}`
+      });
+      
+    } catch (error: any) {
+      // Clear the timeout since operation completed (with error)
+      clearTimeout(timeoutId);
+      
+      logToSupabase("Error in handleMainToggleChange", {
+        level: 'error',
+        page: 'NotificationsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
+      // Revert the UI state if save failed
+      setPreferences(prev => ({
+        ...prev,
+        email_notifications_enabled: !prev.email_notifications_enabled
+      }));
+      
+      toast({
+        title: "Error",
+        description: "Failed to save notification preferences",
+        variant: "destructive"
+      });
+    } finally {
+      // Ensure saving state is always turned off
+      setSaving(false);
+    }
+  };
+  
+  // Handle individual notification toggle change with timeout
+  const handleNotificationToggle = async (type: keyof Omit<NotificationPreferences, 'email_notifications_enabled'>, checked: boolean) => {
+    if (!preferences.email_notifications_enabled) {
+      toast({
+        title: "Notifications Disabled",
+        description: "Enable email notifications first to manage individual settings",
+      });
+      return;
+    }
+    
+    // Add a timeout to prevent infinite spinner
+    const timeoutId = setTimeout(() => {
+      if (saving) {
+        setSaving(false);
+        logToSupabase(`Individual toggle operation timed out: ${type}`, {
+          level: 'error',
+          page: 'NotificationsPanel',
+          data: { operation: 'toggle', type, newState: checked }
+        });
+        toast({
+          title: "Operation Timed Out",
+          description: "The request took too long. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }, 5000); // 5 second timeout
+    
+    try {
+      setSaving(true);
+      
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
+        throw new Error("User not authenticated");
+      }
+      
+      // Log toggle attempt
+      logToSupabase(`Individual notification toggle attempted: ${type}`, {
+        level: 'debug',
+        page: 'NotificationsPanel',
+        data: { type, newValue: checked }
+      });
       
       // Update UI state optimistically
       const newPreferences = {
@@ -280,6 +318,9 @@ export const NotificationsPanel = () => {
       
       if (error) throw error;
       
+      // Clear the timeout since operation completed successfully
+      clearTimeout(timeoutId);
+      
       logToSupabase(`${type} notification preference saved`, {
         level: 'info',
         page: 'NotificationsPanel',
@@ -292,11 +333,8 @@ export const NotificationsPanel = () => {
       });
       
     } catch (error: any) {
-      // Revert the UI state if save failed
-      setPreferences(prev => ({
-        ...prev,
-        [type]: !checked
-      }));
+      // Clear the timeout since operation completed (with error)
+      clearTimeout(timeoutId);
       
       logToSupabase(`Error saving ${type} notification preference`, {
         level: 'error',
@@ -304,26 +342,20 @@ export const NotificationsPanel = () => {
         data: { type, error: error.message || String(error) }
       });
       
+      // Revert the UI state if save failed
+      setPreferences(prev => ({
+        ...prev,
+        [type]: !checked
+      }));
+      
       toast({
         title: "Error",
         description: "Failed to save notification preference",
         variant: "destructive"
       });
     } finally {
-      // Ensure saving state is always turned off and timeout is cleared
-      if (savingTimeoutRef.current) {
-        clearTimeout(savingTimeoutRef.current);
-        savingTimeoutRef.current = null;
-      }
-      
+      // Ensure saving state is always turned off
       setSaving(false);
-    }
-  };
-  
-  // Retry loading if there was an error
-  const handleRetryLoad = () => {
-    if (!loading) {
-      loadUserPreferences();
     }
   };
   
@@ -346,113 +378,101 @@ export const NotificationsPanel = () => {
       <h2 className="text-2xl font-semibold mb-6">Notification Settings</h2>
       
       <div className="space-y-6">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center p-8 space-y-4">
-            <Loader className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-gray-500">Loading your notification preferences...</p>
+        <div className="flex items-center justify-between border-b pb-4">
+          <div>
+            <h3 className="text-lg font-medium">Email Notifications</h3>
+            <p className="text-sm text-gray-500">
+              Turn off all notifications
+            </p>
           </div>
-        ) : loadError ? (
-          <div className="flex flex-col items-center justify-center p-8 space-y-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-red-500">{loadError}</p>
-            <Button onClick={handleRetryLoad} variant="outline">Retry</Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
+          
+          {loading ? (
+            <Loader className="h-4 w-4 animate-spin text-gray-400" />
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Switch 
+                checked={preferences.email_notifications_enabled}
+                onCheckedChange={handleMainToggleChange}
+                disabled={saving}
+                id="email-notifications"
+                className="focus:ring-2 focus:ring-primary"
+              />
+              <Label htmlFor="email-notifications">
+                {preferences.email_notifications_enabled ? 'Enabled' : 'Disabled'}
+              </Label>
+              {saving && <Loader className="h-3 w-3 animate-spin text-gray-400 ml-2" />}
+            </div>
+          )}
+        </div>
+        
+        {preferences.email_notifications_enabled && (
+          <div className="space-y-4 pt-2">
             <h4 className="font-medium text-gray-700">Notification Types</h4>
             
             <div className="space-y-4">
-              {/* Email Notifications */}
+              {/* Password Change Notifications */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="font-medium text-sm">Email Notifications</p>
+                  <p className="font-medium text-sm">Password Changes</p>
                   <p className="text-xs text-gray-500">
-                    Master toggle for all email notifications
+                    Get notified when your password is changed
                   </p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="email-notifications"
-                    checked={preferences.email_notifications_enabled}
-                    onCheckedChange={(checked) => 
-                      handleNotificationToggle('email_notifications_enabled', checked)
-                    }
-                    disabled={saving}
-                    className="focus:ring-2 focus:ring-primary"
-                  />
-                  <Label htmlFor="email-notifications">
-                    {preferences.email_notifications_enabled ? 'Enabled' : 'Disabled'}
-                  </Label>
-                  {saving && <Loader className="h-3 w-3 animate-spin text-gray-400 ml-2" />}
-                </div>
+                <Switch 
+                  id="password-change-notifications"
+                  checked={preferences.password_change_notifications}
+                  onCheckedChange={(checked) => 
+                    handleNotificationToggle('password_change_notifications', checked)
+                  }
+                  disabled={saving || loading || !preferences.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
+                />
               </div>
               
-              {preferences.email_notifications_enabled && (
-                <>
-                  {/* Password Change Notifications */}
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="font-medium text-sm">Password Changes</p>
-                      <p className="text-xs text-gray-500">
-                        Get notified when your password is changed
-                      </p>
-                    </div>
-                    <Switch 
-                      id="password-change-notifications"
-                      checked={preferences.password_change_notifications}
-                      onCheckedChange={(checked) => 
-                        handleNotificationToggle('password_change_notifications', checked)
-                      }
-                      disabled={saving || !preferences.email_notifications_enabled}
-                      className="focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  
-                  {/* Email Change Notifications */}
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="font-medium text-sm">Email Address Changes</p>
-                      <p className="text-xs text-gray-500">
-                        Get notified when your email address is changed
-                      </p>
-                    </div>
-                    <Switch 
-                      id="email-change-notifications"
-                      checked={preferences.email_change_notifications}
-                      onCheckedChange={(checked) => 
-                        handleNotificationToggle('email_change_notifications', checked)
-                      }
-                      disabled={saving || !preferences.email_notifications_enabled}
-                      className="focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  
-                  {/* Security Alert Notifications */}
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="font-medium text-sm">Security Alerts</p>
-                      <p className="text-xs text-gray-500">
-                        Get notified about important security events
-                      </p>
-                    </div>
-                    <Switch 
-                      id="security-alert-notifications"
-                      checked={preferences.security_alert_notifications}
-                      onCheckedChange={(checked) => 
-                        handleNotificationToggle('security_alert_notifications', checked)
-                      }
-                      disabled={saving || !preferences.email_notifications_enabled}
-                      className="focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                </>
-              )}
-              
-              {!preferences.email_notifications_enabled && (
-                <div className="bg-gray-50 p-4 rounded-md text-gray-500 text-sm">
-                  Email notifications are currently disabled. Enable email notifications to manage individual notification settings.
+              {/* Email Change Notifications */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium text-sm">Email Address Changes</p>
+                  <p className="text-xs text-gray-500">
+                    Get notified when your email address is changed
+                  </p>
                 </div>
-              )}
+                <Switch 
+                  id="email-change-notifications"
+                  checked={preferences.email_change_notifications}
+                  onCheckedChange={(checked) => 
+                    handleNotificationToggle('email_change_notifications', checked)
+                  }
+                  disabled={saving || loading || !preferences.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              
+              {/* Security Alert Notifications */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium text-sm">Security Alerts</p>
+                  <p className="text-xs text-gray-500">
+                    Get notified about important security events
+                  </p>
+                </div>
+                <Switch 
+                  id="security-alert-notifications"
+                  checked={preferences.security_alert_notifications}
+                  onCheckedChange={(checked) => 
+                    handleNotificationToggle('security_alert_notifications', checked)
+                  }
+                  disabled={saving || loading || !preferences.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
+                />
+              </div>
             </div>
+          </div>
+        )}
+        
+        {!preferences.email_notifications_enabled && (
+          <div className="bg-gray-50 p-4 rounded-md text-gray-500 text-sm">
+            Email notifications are currently disabled. Enable the master switch to manage individual notification settings.
           </div>
         )}
       </div>

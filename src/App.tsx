@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -136,7 +135,7 @@ function App() {
             <RouteDebugger>
               <Routes>
                 {/* Public routes */}
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/api-products" element={<ApiProducts />} />
@@ -163,10 +162,7 @@ function App() {
                   }
                 >
                   <Route index element={<DashboardHome />} />
-                  <Route path="settings" element={<UserSettings />}>
-                    {/* Add explicit index route for settings to automatically redirect to account */}
-                    <Route index element={<Navigate to="/dashboard/settings?panel=account" replace />} />
-                  </Route>
+                  <Route path="settings" element={<UserSettings />} />
                   <Route path="upgrade" element={<UpgradePlan />} />
                   <Route path="activity-logs" element={<ActivityLogs />} />
                   <Route path="api-keys" element={<ApiKeys />} />

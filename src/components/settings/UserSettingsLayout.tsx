@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SettingsSidebar } from "./SettingsSidebar";
 import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
@@ -12,61 +12,40 @@ export const UserSettingsLayout = () => {
   const [activePanel, setActivePanel] = useState("account");
   const location = useLocation();
   const navigate = useNavigate();
-  const isInitialMount = useRef(true);
-  const validPanels = ["account", "notifications", "delete", "support"];
   
-  // Effect to sync URL parameters with the active panel once on initial mount
+  // Effect to sync URL parameters with the active panel
   useEffect(() => {
     // Get panel from URL query parameter
     const searchParams = new URLSearchParams(location.search);
     const panel = searchParams.get("panel");
     
-    // Initial mount - set panel from URL or default to account
-    if (isInitialMount.current) {
-      if (panel && validPanels.includes(panel)) {
-        setActivePanel(panel);
-        
-        logToSupabase("Settings panel initialized from URL", {
-          level: 'info',
-          page: 'UserSettingsLayout',
-          data: { panel, pathname: location.pathname }
-        });
-      } else {
-        // If invalid or missing panel parameter, set to account and update URL
-        setActivePanel("account");
-        
-        // Only navigate if we need to change the URL
-        if (panel !== "account") {
-          navigate("/dashboard/settings?panel=account", { replace: true });
-          
-          logToSupabase("Initialized settings with default panel", {
-            level: 'info',
-            page: 'UserSettingsLayout',
-            data: { originalPanel: panel }
-          });
-        }
-      }
-      
-      isInitialMount.current = false;
-    }
-    // After initial mount - respond to URL changes
-    else if (panel && validPanels.includes(panel) && panel !== activePanel) {
+    if (panel && ["account", "notifications", "delete", "support"].includes(panel)) {
       setActivePanel(panel);
       
+      // Log the panel change for analytics
       logToSupabase("Settings panel changed from URL", {
         level: 'info',
         page: 'UserSettingsLayout',
-        data: { panel, pathname: location.pathname }
+        data: { panel }
       });
+    } else if (panel === "billing" || panel === "apikeys") {
+      // If 'billing' or 'apikeys' is requested but no longer available, default to account
+      setActivePanel("account");
+      // Update URL to match
+      navigate("/dashboard/settings?panel=account", { replace: true });
+    } else if (!panel) {
+      // If no panel is specified in URL, default to account and update URL
+      navigate("/dashboard/settings?panel=account", { replace: true });
     }
   }, [location.search, navigate]);
   
   // Handle panel changes from sidebar and update URL
   const handlePanelChange = (panelId: string) => {
-    if (panelId !== activePanel) {
-      setActivePanel(panelId);
+    setActivePanel(panelId);
     
-      // Update URL to reflect panel change
+    // Update URL to reflect panel change (if not already matching)
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("panel") !== panelId) {
       navigate(`/dashboard/settings?panel=${panelId}`, { replace: true });
       
       logToSupabase("Settings panel changed from sidebar", {
