@@ -5,7 +5,7 @@ import { SettingsSidebar } from "./SettingsSidebar";
 import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
-import { NotificationsPanel } from "./panels/NotificationsPanel";
+import NotificationsPanel from "./panels/NotificationsPanel";
 import { logToSupabase } from "@/utils/batchedLogManager";
 
 export const UserSettingsLayout = () => {
