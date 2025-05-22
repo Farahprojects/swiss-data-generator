@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -27,7 +28,6 @@ import { SidebarProvider } from './components/ui/sidebar';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
 import Password from './pages/auth/Password';
-import ZohoAuth from './pages/auth/ZohoAuth';
 import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
 import { supabase } from './integrations/supabase/client';
 import { logToSupabase } from './utils/batchedLogManager';
