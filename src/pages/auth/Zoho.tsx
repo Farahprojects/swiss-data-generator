@@ -23,16 +23,19 @@ const ZohoAuth: React.FC = () => {
     
     setAuthCode(code);
     
-    // Log to console for manual copying
+    // Log the full token to console for manual copying
     if (code) {
-      console.log('Zoho Authorization Code:', code);
-      console.log('Copy this code for manual token exchange');
+      // Ensure the full code is logged, not truncated
+      console.log(`Zoho Authorization Code (FULL): ${code}`);
+      console.log('Copy the COMPLETE code above for manual token exchange');
       
-      // Also log to Supabase for tracking
+      // Also log to Supabase for tracking (but don't include the full token in logs)
       logAction('Zoho authorization code received', 'info', {
         hasCode: !!code,
         codeLength: code?.length || 0,
-        path: location.pathname
+        path: location.pathname,
+        // Only log first few characters for identification purposes
+        codeSample: code ? `${code.substring(0, 10)}...` : null
       });
     } else {
       logAction('Zoho authorization callback with no code', 'warn', {
@@ -47,7 +50,10 @@ const ZohoAuth: React.FC = () => {
       navigator.clipboard.writeText(authCode)
         .then(() => {
           setCopied(true);
-          logAction('Zoho auth code copied to clipboard', 'info');
+          logAction('Zoho auth code copied to clipboard', 'info', {
+            success: true,
+            codeLength: authCode.length
+          });
           setTimeout(() => setCopied(false), 2000);
         })
         .catch(err => {
@@ -68,12 +74,12 @@ const ZohoAuth: React.FC = () => {
                 Authorization code received successfully!
               </p>
               <p className="text-gray-600 mb-4">
-                You can copy the code below or from the browser console.
+                You can copy the complete code below or from the browser console.
               </p>
             </div>
             
             <div className="bg-gray-100 rounded p-4 mb-4 overflow-x-auto relative">
-              <code className="text-sm break-all">{authCode}</code>
+              <pre className="text-sm break-all whitespace-pre-wrap">{authCode}</pre>
               <Button 
                 onClick={copyToClipboard}
                 className="absolute top-2 right-2 h-8 w-8 p-0"
@@ -90,7 +96,7 @@ const ZohoAuth: React.FC = () => {
                 className="mt-2"
                 variant="outline"
               >
-                {copied ? 'Copied to clipboard!' : 'Copy to clipboard'}
+                {copied ? 'Copied to clipboard!' : 'Copy full code to clipboard'}
               </Button>
             </div>
             
