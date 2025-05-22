@@ -11,7 +11,6 @@ export const NotificationsPanel = () => {
   const {
     preferences,
     loading,
-    saving,
     error,
     updateMainNotificationsToggle,
     updateNotificationToggle,
@@ -52,18 +51,22 @@ export const NotificationsPanel = () => {
 
   // Optimistically handle individual notification toggle changes
   const handleNotificationToggleChange = (type: string, checked: boolean) => {
-    updateNotificationToggle(
-      type as keyof typeof preferences,
-      checked,
-      { showToast: false }
-    );
-    
-    // Log action for analytics
-    logToSupabase(`${type} notification toggle changed`, {
-      level: 'info',
-      page: 'NotificationsPanel',
-      data: { type, enabled: checked }
-    });
+    // Only handle types that are valid for updates
+    if (type === "password_change_notifications" || 
+        type === "email_change_notifications" || 
+        type === "security_alert_notifications") {
+      
+      updateNotificationToggle(type, checked, { showToast: false });
+      
+      // Log action for analytics
+      logToSupabase(`${type} notification toggle changed`, {
+        level: 'info',
+        page: 'NotificationsPanel',
+        data: { type, enabled: checked }
+      });
+    } else {
+      console.error(`Invalid notification type: ${type}`);
+    }
   };
 
   return (
@@ -111,7 +114,7 @@ export const NotificationsPanel = () => {
               <Label htmlFor="email-notifications">
                 {preferences?.email_notifications_enabled ? 'Enabled' : 'Disabled'}
               </Label>
-              {saving && <Loader className="h-3 w-3 animate-spin text-gray-400 ml-2" />}
+              {/* Removed the spinner that was here */}
             </div>
           )}
         </div>

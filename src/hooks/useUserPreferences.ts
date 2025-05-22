@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
@@ -30,8 +30,18 @@ export function useUserPreferences() {
   const { user } = useAuth();
   
   // Use a ref to track if component is mounted to avoid state updates after unmount
+  const isMountedRef = useRef(true);
+  
+  // Function to safely check if component is still mounted
   const isMounted = useCallback(() => {
-    return true; // This will be replaced with a ref in a full implementation
+    return isMountedRef.current;
+  }, []);
+  
+  // Cleanup function to set isMountedRef to false when component unmounts
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   // Load initial preferences and set up real-time listener
@@ -146,11 +156,24 @@ export function useUserPreferences() {
                 data: { event: payload.eventType }
               });
 
-              // Only update if the change didn't come from this client to avoid UI bouncing
-              if (!saving && isMounted()) {
+              // Skip updates during optimistic UI updates to prevent flicker
+              if (isMounted()) {
                 // Update local state based on the database change
                 if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
-                  setPreferences(payload.new as UserPreferences);
+                  // Avoid unnecessary re-renders by checking if data has actually changed
+                  const newPrefs = payload.new as UserPreferences;
+                  setPreferences(prev => {
+                    if (!prev) return newPrefs;
+                    
+                    // Only update if there's an actual change
+                    const hasChanged = Object.keys(newPrefs).some(key => {
+                      // Skip id and timestamps in comparison
+                      if (['id', 'created_at', 'updated_at'].includes(key)) return false;
+                      return prev[key as keyof UserPreferences] !== newPrefs[key as keyof UserPreferences];
+                    });
+                    
+                    return hasChanged ? newPrefs : prev;
+                  });
                 } else if (payload.eventType === 'DELETE') {
                   setPreferences(null);
                 }
@@ -243,10 +266,6 @@ export function useUserPreferences() {
       email_notifications_enabled: enabled
     } : null);
     
-    // Set saving state for background status indication
-    setSaving(true);
-    setError(null);
-
     try {
       // Update the database in the background
       const { error } = await supabase
@@ -303,19 +322,12 @@ export function useUserPreferences() {
       
       // Don't revert the UI - keep the optimistic update
       return false;
-    } finally {
-      // Reset saving state after a short delay to show feedback
-      setTimeout(() => {
-        if (isMounted()) {
-          setSaving(false);
-        }
-      }, 500);
     }
   };
 
   // Update individual notification toggle with optimistic UI updates
   const updateNotificationToggle = async (
-    type: keyof Omit<UserPreferences, 'id' | 'user_id' | 'email_notifications_enabled' | 'created_at' | 'updated_at'>,
+    type: "password_change_notifications" | "email_change_notifications" | "security_alert_notifications",
     enabled: boolean,
     options: UpdateOptions = {}
   ) => {
@@ -328,25 +340,26 @@ export function useUserPreferences() {
       [type]: enabled
     } : null);
     
-    // Show subtle saving indicator
-    setSaving(true);
-    setError(null);
-
     try {
+      // Prepare update data - only include the specific field being updated
+      // and the required fields for the upsert
+      const updateData: any = {
+        user_id: user.id,
+        email_notifications_enabled: preferences.email_notifications_enabled,
+        [type]: enabled,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Add the other notification settings to maintain their values
+      const otherTypes = ["password_change_notifications", "email_change_notifications", "security_alert_notifications"].filter(t => t !== type);
+      otherTypes.forEach(t => {
+        updateData[t] = preferences[t as keyof UserPreferences];
+      });
+      
       // Update the database in the background 
       const { error } = await supabase
         .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          email_notifications_enabled: preferences.email_notifications_enabled,
-          password_change_notifications: type === 'password_change_notifications' 
-            ? enabled : preferences.password_change_notifications,
-          email_change_notifications: type === 'email_change_notifications' 
-            ? enabled : preferences.email_change_notifications,
-          security_alert_notifications: type === 'security_alert_notifications' 
-            ? enabled : preferences.security_alert_notifications,
-          updated_at: new Date().toISOString()
-        }, {
+        .upsert(updateData, {
           onConflict: 'user_id'
         });
       
@@ -391,13 +404,6 @@ export function useUserPreferences() {
       
       // Don't revert the UI - keep the optimistic update
       return false;
-    } finally {
-      // Reset saving state after a short delay to show feedback
-      setTimeout(() => {
-        if (isMounted()) {
-          setSaving(false);
-        }
-      }, 500);
     }
   };
 
