@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { logToSupabase } from '@/utils/batchedLogManager';
@@ -6,10 +5,6 @@ import { useBatchedLogging } from '@/hooks/use-batched-logging';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Copy } from 'lucide-react';
 
-/**
- * Zoho authorization callback page
- * Displays the authorization code from Zoho for manual copying
- */
 const ZohoAuth: React.FC = () => {
   const location = useLocation();
   const [authCode, setAuthCode] = useState<string | null>(null);
@@ -17,24 +12,18 @@ const ZohoAuth: React.FC = () => {
   const [copied, setCopied] = useState(false);
   
   useEffect(() => {
-    // Extract the code parameter from the URL
     const searchParams = new URLSearchParams(location.search);
     const code = searchParams.get('code');
-    
     setAuthCode(code);
-    
-    // Log the full token to console for manual copying
+
     if (code) {
-      // Ensure the full code is logged, not truncated
-      console.log(`Zoho Authorization Code (FULL): ${code}`);
-      console.log('Copy the COMPLETE code above for manual token exchange');
-      
-      // Also log to Supabase for tracking (but don't include the full token in logs)
+      console.log('%cZoho Authorization Code (FULL):', 'color: green; font-weight: bold;', code);
+      console.log('%cCopy this value exactly to use in your token exchange.', 'color: gray;');
+
       logAction('Zoho authorization code received', 'info', {
         hasCode: !!code,
         codeLength: code?.length || 0,
         path: location.pathname,
-        // Only log first few characters for identification purposes
         codeSample: code ? `${code.substring(0, 10)}...` : null
       });
     } else {
@@ -74,12 +63,14 @@ const ZohoAuth: React.FC = () => {
                 Authorization code received successfully!
               </p>
               <p className="text-gray-600 mb-4">
-                You can copy the complete code below or from the browser console.
+                Copy the complete code below or from the browser console.
               </p>
             </div>
             
-            <div className="bg-gray-100 rounded p-4 mb-4 overflow-x-auto relative">
-              <pre className="text-sm break-all whitespace-pre-wrap">{authCode}</pre>
+            <div className="bg-gray-100 rounded p-4 mb-4 overflow-x-auto relative max-h-40 overflow-y-auto border border-gray-300">
+              <pre className="text-xs break-all whitespace-pre-wrap text-gray-800">
+                {authCode}
+              </pre>
               <Button 
                 onClick={copyToClipboard}
                 className="absolute top-2 right-2 h-8 w-8 p-0"
@@ -101,14 +92,14 @@ const ZohoAuth: React.FC = () => {
             </div>
             
             <p className="text-sm text-gray-500 mt-4 text-center">
-              This code can be used to generate an access token for the Zoho API.
+              This code can now be exchanged for an access and refresh token using the Zoho API.
             </p>
           </>
         ) : (
           <div className="text-center text-red-500">
             <p>No authorization code found in the URL.</p>
             <p className="text-sm text-gray-500 mt-2">
-              Make sure the URL includes a code parameter.
+              Make sure the URL includes a <code>?code=...</code> parameter from Zoho.
             </p>
           </div>
         )}
