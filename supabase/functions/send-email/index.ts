@@ -48,7 +48,7 @@ serve(async (req) => {
     const client = new SmtpClient();
     
     // Get sender email from environment or use fallback
-    const defaultSenderEmail = Deno.env.get("SENDER_EMAIL") || "notifications@theraiapi.com";
+    const defaultSenderEmail = Deno.env.get("SENDER_EMAIL") || "no-reply@theraiapi.com";
     
     // Connect to Zoho SMTP
     await client.connectTLS({
