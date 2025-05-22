@@ -25,4 +25,3 @@ jobs:
 
       - name: Deploy Edge Functions
         run: supabase functions deploy --project-ref wrvqqvqvwqmfdqvqmaar
-
