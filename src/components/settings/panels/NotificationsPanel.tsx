@@ -7,7 +7,7 @@ import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { Button } from "@/components/ui/button";
 import type { UserPreferences } from "@/hooks/useUserPreferences";
 
-// Define the specific notification toggle keys type
+// Dedicated keys for individual notification types
 export type NotificationToggleKey =
   | "password_change_notifications"
   | "email_change_notifications"
@@ -17,49 +17,42 @@ export const NotificationsPanel = () => {
   const {
     preferences,
     loading,
-    saving,
+    saving, // may still be useful for showing a subtle spinner, but we no longer disable controls with it
     error,
     updateMainNotificationsToggle,
     updateNotificationToggle,
   } = useUserPreferences();
 
   /**
-   * Local optimistic copy so the UI never "bounces" between the internal
-   * uncontrolled state of <Switch /> and the (lagging) remote preferences.
+   * Local optimistic state so the UI stays buttery‑smooth.
+   * We intentionally *don’t* gate user interactions behind `saving` – that is the root cause of the visual
+   * bounce: Radix <Switch> visually resets when its `disabled` prop toggles while an animation is in flight.
    */
   const [localPrefs, setLocalPrefs] = useState<UserPreferences | null>(null);
 
-  // Keep local state in sync with canonical data from the hook
+  // Keep our local cache in sync with canonical data from the hook (server)
   useEffect(() => {
     if (preferences) setLocalPrefs(preferences);
   }, [preferences]);
 
-  // Debug log for panel rendering
+  // Debug
   useEffect(() => {
-    logToSupabase("NotificationsPanel component rendered", {
+    logToSupabase("NotificationsPanel rendered", {
       level: "debug",
       page: "NotificationsPanel",
-      data: { status: loading ? "loading" : "loaded", error },
+      data: { status: loading ? "loading" : "ready", error },
     });
   }, [loading, error]);
 
-  // Helper function to check an individual notification flag
+  /** Helpers */
   const isNotificationEnabled = (type: NotificationToggleKey): boolean => {
-    if (!localPrefs) return true; // default → enabled (safe choice)
-    return localPrefs[type] === true;
+    return localPrefs ? localPrefs[type] === true : true; // default true
   };
 
-  // Handle refresh on timeout errors
-  const handleRefresh = () => {
-    window.location.reload();
-  };
+  const handleRefresh = () => window.location.reload();
 
-  // MAIN TOGGLE – optimistic update then persist
   const handleMainToggleChange = (checked: boolean) => {
-    setLocalPrefs((prev) =>
-      prev ? { ...prev, email_notifications_enabled: checked } : prev
-    );
-
+    setLocalPrefs((prev) => (prev ? { ...prev, email_notifications_enabled: checked } : prev));
     updateMainNotificationsToggle(checked, { showToast: false });
 
     logToSupabase("Main notification toggle changed", {
@@ -69,13 +62,8 @@ export const NotificationsPanel = () => {
     });
   };
 
-  // INDIVIDUAL TOGGLES – optimistic update then persist
-  const handleNotificationToggleChange = (
-    type: NotificationToggleKey,
-    checked: boolean
-  ) => {
+  const handleNotificationToggleChange = (type: NotificationToggleKey, checked: boolean) => {
     setLocalPrefs((prev) => (prev ? { ...prev, [type]: checked } : prev));
-
     updateNotificationToggle(type, checked, { showToast: false });
 
     logToSupabase(`${type} notification toggle changed`, {
@@ -94,12 +82,7 @@ export const NotificationsPanel = () => {
           <p className="font-medium">Error loading preferences</p>
           <p className="text-sm">{error}</p>
           <div className="flex items-center mt-3 space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center space-x-1"
-              onClick={handleRefresh}
-            >
+            <Button variant="outline" size="sm" onClick={handleRefresh} className="flex items-center space-x-1">
               <RefreshCw className="h-4 w-4 mr-1" />
               <span>Reload</span>
             </Button>
@@ -108,6 +91,7 @@ export const NotificationsPanel = () => {
       )}
 
       <div className="space-y-6">
+        {/* Master toggle */}
         <div className="flex items-center justify-between border-b pb-4">
           <div>
             <h3 className="text-lg font-medium">Email Notifications</h3>
@@ -121,7 +105,7 @@ export const NotificationsPanel = () => {
               <Switch
                 checked={localPrefs?.email_notifications_enabled ?? false}
                 onCheckedChange={handleMainToggleChange}
-                disabled={loading || saving}
+                disabled={loading} // NOTE: no longer disabled while saving – fixes visual bounce
                 id="email-notifications"
                 className="focus:ring-2 focus:ring-primary"
               />
@@ -132,61 +116,48 @@ export const NotificationsPanel = () => {
           )}
         </div>
 
+        {/* Individual toggles */}
         {localPrefs?.email_notifications_enabled && (
           <div className="space-y-4 pt-2">
             <h4 className="font-medium text-gray-700">Notification Types</h4>
 
             <div className="space-y-4">
-              {/* Password Change */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">Password Changes</p>
-                  <p className="text-xs text-gray-500">Get notified when your password is changed</p>
-                </div>
-                <Switch
-                  id="password-change-notifications"
-                  checked={isNotificationEnabled("password_change_notifications")}
-                  onCheckedChange={(checked) =>
-                    handleNotificationToggleChange("password_change_notifications", checked)
-                  }
-                  disabled={loading || saving}
-                  className="focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              {/* Email Change */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">Email Address Changes</p>
-                  <p className="text-xs text-gray-500">Get notified when your email address is changed</p>
-                </div>
-                <Switch
-                  id="email-change-notifications"
-                  checked={isNotificationEnabled("email_change_notifications")}
-                  onCheckedChange={(checked) =>
-                    handleNotificationToggleChange("email_change_notifications", checked)
-                  }
-                  disabled={loading || saving}
-                  className="focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              {/* Security Alerts */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">Security Alerts</p>
-                  <p className="text-xs text-gray-500">Get notified about important security events</p>
-                </div>
-                <Switch
-                  id="security-alert-notifications"
-                  checked={isNotificationEnabled("security_alert_notifications")}
-                  onCheckedChange={(checked) =>
-                    handleNotificationToggleChange("security_alert_notifications", checked)
-                  }
-                  disabled={loading || saving}
-                  className="focus:ring-2 focus:ring-primary"
-                />
-              </div>
+              {([
+                {
+                  id: "password-change-notifications",
+                  type: "password_change_notifications",
+                  label: "Password Changes",
+                  desc: "Get notified when your password is changed",
+                },
+                {
+                  id: "email-change-notifications",
+                  type: "email_change_notifications",
+                  label: "Email Address Changes",
+                  desc: "Get notified when your email address is changed",
+                },
+                {
+                  id: "security-alert-notifications",
+                  type: "security_alert_notifications",
+                  label: "Security Alerts",
+                  desc: "Get notified about important security events",
+                },
+              ] as { id: string; type: NotificationToggleKey; label: string; desc: string }[]).map(
+                ({ id, type, label, desc }) => (
+                  <div key={type} className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm">{label}</p>
+                      <p className="text-xs text-gray-500">{desc}</p>
+                    </div>
+                    <Switch
+                      id={id}
+                      checked={isNotificationEnabled(type)}
+                      onCheckedChange={(checked) => handleNotificationToggleChange(type, checked)}
+                      disabled={loading}
+                      className="focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                )
+              )}
             </div>
           </div>
         )}
@@ -197,7 +168,6 @@ export const NotificationsPanel = () => {
           </div>
         )}
 
-        {/* Loading indicator for initial load */}
         {loading && !error && (
           <div className="flex justify-center py-8">
             <div className="flex flex-col items-center space-y-2">
