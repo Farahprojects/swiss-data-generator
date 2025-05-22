@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { AlertTriangle, Info } from "lucide-react";
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 export const NotificationsPanel = memo(function NotificationsPanel() {
   const {
@@ -19,6 +20,11 @@ export const NotificationsPanel = memo(function NotificationsPanel() {
 
   const handleMainToggleChange = useCallback(
     (checked: boolean) => {
+      logToSupabase("Main notifications toggle changed", {
+        level: "info",
+        page: "NotificationsPanel",
+        data: { enabled: checked }
+      });
       updateMainNotificationsToggle(checked);
     },
     [updateMainNotificationsToggle]
@@ -26,6 +32,11 @@ export const NotificationsPanel = memo(function NotificationsPanel() {
 
   const handleToggleChange = useCallback(
     (type: any, checked: boolean) => {
+      logToSupabase("Individual notification toggle changed", {
+        level: "info",
+        page: "NotificationsPanel",
+        data: { type, enabled: checked }
+      });
       updateNotificationToggle(type, checked);
     },
     [updateNotificationToggle]
@@ -129,3 +140,5 @@ export const NotificationsPanel = memo(function NotificationsPanel() {
     </Card>
   );
 });
+
+export default NotificationsPanel;
