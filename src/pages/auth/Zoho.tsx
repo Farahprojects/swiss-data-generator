@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { logToSupabase } from '@/utils/batchedLogManager';
 import { useBatchedLogging } from '@/hooks/use-batched-logging';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, Copy } from 'lucide-react';
 
 /**
  * Zoho authorization callback page
@@ -12,6 +14,7 @@ const ZohoAuth: React.FC = () => {
   const location = useLocation();
   const [authCode, setAuthCode] = useState<string | null>(null);
   const { logAction } = useBatchedLogging();
+  const [copied, setCopied] = useState(false);
   
   useEffect(() => {
     // Extract the code parameter from the URL
@@ -39,6 +42,20 @@ const ZohoAuth: React.FC = () => {
     }
   }, [location.search, logAction, location.pathname]);
   
+  const copyToClipboard = () => {
+    if (authCode) {
+      navigator.clipboard.writeText(authCode)
+        .then(() => {
+          setCopied(true);
+          logAction('Zoho auth code copied to clipboard', 'info');
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch(err => {
+          logAction('Failed to copy auth code to clipboard', 'error', { error: err.message });
+        });
+    }
+  };
+  
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
       <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full">
@@ -51,16 +68,34 @@ const ZohoAuth: React.FC = () => {
                 Authorization code received successfully!
               </p>
               <p className="text-gray-600 mb-4">
-                The code has been logged to the browser console.
+                You can copy the code below or from the browser console.
               </p>
             </div>
             
-            <div className="bg-gray-100 rounded p-4 mb-4 overflow-x-auto">
+            <div className="bg-gray-100 rounded p-4 mb-4 overflow-x-auto relative">
               <code className="text-sm break-all">{authCode}</code>
+              <Button 
+                onClick={copyToClipboard}
+                className="absolute top-2 right-2 h-8 w-8 p-0"
+                size="sm"
+                variant="ghost"
+              >
+                {copied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              </Button>
             </div>
             
-            <p className="text-sm text-gray-500">
-              Open your browser console (F12 or right-click → Inspect → Console) to copy the code.
+            <div className="flex justify-center">
+              <Button 
+                onClick={copyToClipboard}
+                className="mt-2"
+                variant="outline"
+              >
+                {copied ? 'Copied to clipboard!' : 'Copy to clipboard'}
+              </Button>
+            </div>
+            
+            <p className="text-sm text-gray-500 mt-4 text-center">
+              This code can be used to generate an access token for the Zoho API.
             </p>
           </>
         ) : (
