@@ -59,7 +59,7 @@ serve(async (req) => {
     // Fetch email template
     const { data: template, error: templateError } = await supabaseAdmin
       .from('email_notification_templates')
-      .select('subject, html_template, text_template')
+      .select('subject, body_html, body_text')
       .eq('template_type', templateType)
       .single();
 
@@ -72,8 +72,8 @@ serve(async (req) => {
     }
 
     // Process the template with variables
-    let htmlContent = template.html_template;
-    let textContent = template.text_template || '';
+    let htmlContent = template.body_html;
+    let textContent = template.body_text || '';
     let subject = template.subject;
 
     // Replace variables in the templates

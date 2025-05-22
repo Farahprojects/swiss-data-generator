@@ -4,14 +4,14 @@ CREATE TABLE IF NOT EXISTS public.email_notification_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_type VARCHAR NOT NULL UNIQUE,
   subject VARCHAR NOT NULL,
-  html_template TEXT NOT NULL,
-  text_template TEXT,
+  body_html TEXT NOT NULL,
+  body_text TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Insert or update password change template
-INSERT INTO public.email_notification_templates (template_type, subject, html_template, text_template)
+INSERT INTO public.email_notification_templates (template_type, subject, body_html, body_text)
 VALUES (
   'password_change',
   'Your password has been changed',
@@ -34,12 +34,12 @@ VALUES (
 ON CONFLICT (template_type) 
 DO UPDATE SET 
   subject = EXCLUDED.subject,
-  html_template = EXCLUDED.html_template,
-  text_template = EXCLUDED.text_template,
+  body_html = EXCLUDED.body_html,
+  body_text = EXCLUDED.body_text,
   updated_at = now();
 
 -- Insert or update email change template
-INSERT INTO public.email_notification_templates (template_type, subject, html_template, text_template)
+INSERT INTO public.email_notification_templates (template_type, subject, body_html, body_text)
 VALUES (
   'email_change',
   'Your email address has been changed',
@@ -62,12 +62,12 @@ VALUES (
 ON CONFLICT (template_type) 
 DO UPDATE SET 
   subject = EXCLUDED.subject,
-  html_template = EXCLUDED.html_template,
-  text_template = EXCLUDED.text_template,
+  body_html = EXCLUDED.body_html,
+  body_text = EXCLUDED.body_text,
   updated_at = now();
 
 -- Insert or update security alert template
-INSERT INTO public.email_notification_templates (template_type, subject, html_template, text_template)
+INSERT INTO public.email_notification_templates (template_type, subject, body_html, body_text)
 VALUES (
   'security_alert',
   'Security Alert: {{alertType}}',
@@ -90,8 +90,8 @@ VALUES (
 ON CONFLICT (template_type) 
 DO UPDATE SET 
   subject = EXCLUDED.subject,
-  html_template = EXCLUDED.html_template,
-  text_template = EXCLUDED.text_template,
+  body_html = EXCLUDED.body_html,
+  body_text = EXCLUDED.body_text,
   updated_at = now();
 
 -- Create or replace function to update the timestamps

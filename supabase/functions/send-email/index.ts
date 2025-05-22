@@ -47,16 +47,19 @@ serve(async (req) => {
     // Create SMTP client
     const client = new SmtpClient();
     
+    // Get sender email from environment or use fallback
+    const defaultSenderEmail = Deno.env.get("SENDER_EMAIL") || "notifications@theraiapi.com";
+    
     // Connect to Zoho SMTP
     await client.connectTLS({
       hostname: "smtp.zoho.com",
       port: 465,
-      username: "notifications@yourcompany.com", // Replace with your actual Zoho email
+      username: defaultSenderEmail, // Use sender email as SMTP username
       password: Deno.env.get("ZOHO_SMTP_PASSWORD") || "",
     });
 
     // Send email
-    const senderEmail = from || "notifications@yourcompany.com"; // Replace with your actual Zoho email
+    const senderEmail = from || defaultSenderEmail;
     
     await client.send({
       from: senderEmail,
