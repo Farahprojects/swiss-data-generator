@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
@@ -25,34 +25,47 @@ interface UpdateOptions {
 }
 
 export function useUserPreferences() {
-  // State management
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  
-  // Context and refs
   const { toast } = useToast();
   const { user } = useAuth();
-  const pendingUpdates = useRef<Record<string, any>>({});
-  
-  // Flag to track component mount status
-  const isMounted = useRef(true);
+  const lastUpdateRef = useRef<{ field: string; value: any } | null>(null);
 
-  // Initial data loading
+  /**
+   * Utility: keep a ref to the current mounted state so we never try to mutate state on an un‑mounted component.
+   */
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const isMounted = () => mountedRef.current;
+
   useEffect(() => {
     let loadTimeout: NodeJS.Timeout;
-    let channel: any;
+    let channel: ReturnType<typeof supabase.channel> | undefined;
 
+    /**
+     * Load (or create) the current user's preferences.
+     */
     const loadUserPreferences = async () => {
-      if (!user?.id || !isMounted.current) {
+      if (!user?.id) {
+        if (isMounted()) {
+          setLoading(false);
+          setError("Authentication required");
+        }
         return;
       }
 
       try {
+        // fail‑safe timeout so the UI doesn't hang forever
         loadTimeout = setTimeout(() => {
-          if (loading && isMounted.current) {
+          if (loading && isMounted()) {
             setLoading(false);
             setError("Request timed out. Please try again.");
             logToSupabase("Loading user preferences timed out", {
@@ -72,26 +85,13 @@ export function useUserPreferences() {
 
         if (fetchError) {
           if (fetchError.code === "PGRST116") {
+            // no record yet → create defaults
             await createDefaultPreferences(user.id);
           } else {
             throw fetchError;
           }
-        } else if (data && isMounted.current) {
-          // Only update non-pending fields
-          setPreferences((prev) => {
-            if (!prev) return data as UserPreferences;
-            
-            // Create a copy of the incoming data
-            const updatedData = { ...data } as UserPreferences;
-            
-            // For each pending update, keep our optimistic value
-            Object.keys(pendingUpdates.current).forEach(key => {
-              (updatedData as any)[key] = (prev as any)[key];
-            });
-            
-            return updatedData;
-          });
-          
+        } else if (data && isMounted()) {
+          setPreferences(data as UserPreferences);
           logToSupabase("User preferences loaded successfully", {
             level: "info",
             page: "useUserPreferences",
@@ -101,7 +101,7 @@ export function useUserPreferences() {
         clearTimeout(loadTimeout);
         const errorMessage = err.message || "Failed to load preferences";
 
-        if (isMounted.current) {
+        if (isMounted()) {
           setError(errorMessage);
           logToSupabase("Error loading user preferences", {
             level: "error",
@@ -112,8 +112,7 @@ export function useUserPreferences() {
           if (!errorMessage.includes("timed out")) {
             toast({
               title: "Error Loading Preferences",
-              description:
-                "There was a problem loading your notification settings",
+              description: "There was a problem loading your notification settings",
               variant: "destructive",
             });
           }
@@ -127,17 +126,21 @@ export function useUserPreferences() {
           }
         }
       } finally {
-        if (isMounted.current) {
+        if (isMounted()) {
           setLoading(false);
         }
       }
     };
 
+    /**
+     * Subscribe to real‑time changes for this user's record.
+     * We use a functional setState inside the handler so we always reference the **latest** state,
+     * removing the need to include `preferences` in the effect deps (which would resubscribe on every change).
+     */
     const setupRealtimeListener = () => {
       if (!user?.id) return;
 
       try {
-        // Listen for changes, but ignore our own changes
         channel = supabase
           .channel("user_preferences_changes")
           .on(
@@ -149,33 +152,40 @@ export function useUserPreferences() {
               filter: `user_id=eq.${user.id}`,
             },
             (payload) => {
-              // Only process server updates if not in the middle of optimistic update
-              const incomingData = payload.new as UserPreferences;
-              const pendingKeys = Object.keys(pendingUpdates.current);
-              
-              // Log real-time update for debugging
-              logToSupabase("Received real-time update for user preferences", {
+              logToSupabase("Received real‑time update for user preferences", {
                 level: "debug",
                 page: "useUserPreferences",
-                data: { 
-                  event: payload.eventType,
-                  hasPendingUpdates: pendingKeys.length > 0
-                },
+                data: { event: payload.eventType },
               });
-              
-              // If no pending updates, or if changes to fields we're not updating
-              if (pendingKeys.length === 0) {
-                if (isMounted.current && (payload.eventType === "UPDATE" || payload.eventType === "INSERT")) {
-                  setPreferences(incomingData);
-                } else if (isMounted.current && payload.eventType === "DELETE") {
-                  setPreferences(null);
-                }
-              }
+
+              const incoming = payload.new as UserPreferences;
+
+              setPreferences((prev) => {
+                const lastField = lastUpdateRef.current?.field;
+                const lastValue = lastUpdateRef.current?.value;
+
+                // Skip if the change we receive is the same optimistic value we just set.
+                const isRedundantUpdate =
+                  lastField &&
+                  incoming[lastField as keyof UserPreferences] === lastValue &&
+                  prev &&
+                  Object.keys(incoming).every((key) =>
+                    key === "updated_at"
+                      ? true
+                      : incoming[key as keyof UserPreferences] ===
+                        prev[key as keyof UserPreferences]
+                  );
+
+                if (isRedundantUpdate) return prev;
+
+                if (payload.eventType === "DELETE") return null;
+                return incoming;
+              });
             }
           )
           .subscribe((status) => {
             if (status !== "SUBSCRIBED") {
-              logToSupabase("Failed to subscribe to real-time updates", {
+              logToSupabase("Failed to subscribe to real‑time updates", {
                 level: "error",
                 page: "useUserPreferences",
                 data: { status },
@@ -183,7 +193,7 @@ export function useUserPreferences() {
             }
           });
       } catch (err: any) {
-        logToSupabase("Error setting up real-time listener", {
+        logToSupabase("Error setting up real‑time listener", {
           level: "error",
           page: "useUserPreferences",
           data: { error: err.message || String(err) },
@@ -195,15 +205,14 @@ export function useUserPreferences() {
     setupRealtimeListener();
 
     return () => {
-      isMounted.current = false;
       clearTimeout(loadTimeout);
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      if (channel) supabase.removeChannel(channel);
     };
   }, [user, toast, retryCount]);
 
-  // Create default preferences if none exist
+  /** --------------------------------------------
+   * Helpers
+   * ------------------------------------------ */
   const createDefaultPreferences = async (userId: string) => {
     try {
       const defaultPrefs = {
@@ -221,7 +230,7 @@ export function useUserPreferences() {
         .single();
 
       if (error) throw error;
-      if (isMounted.current) setPreferences(data as UserPreferences);
+      if (isMounted()) setPreferences(data as UserPreferences);
 
       logToSupabase("Created default user preferences", {
         level: "info",
@@ -236,7 +245,9 @@ export function useUserPreferences() {
     }
   };
 
-  // Optimistic update for main notifications toggle
+  /**
+   * Update helpers – main toggle & individual toggles
+   */
   const updateMainNotificationsToggle = async (
     enabled: boolean,
     options: UpdateOptions = {}
@@ -244,19 +255,11 @@ export function useUserPreferences() {
     if (!user?.id || !preferences) return false;
 
     const { showToast = true } = options;
-    const fieldName = "email_notifications_enabled";
-    
-    // Track this update as pending
-    pendingUpdates.current[fieldName] = enabled;
-    
-    // Optimistically update UI immediately
+    lastUpdateRef.current = { field: "email_notifications_enabled", value: enabled };
+
+    // optimistic UI
     setPreferences((prev) =>
-      prev
-        ? {
-            ...prev,
-            email_notifications_enabled: enabled,
-          }
-        : null
+      prev ? { ...prev, email_notifications_enabled: enabled } : null
     );
 
     setSaving(true);
@@ -267,6 +270,9 @@ export function useUserPreferences() {
         {
           user_id: user.id,
           email_notifications_enabled: enabled,
+          password_change_notifications: preferences.password_change_notifications,
+          email_change_notifications: preferences.email_change_notifications,
+          security_alert_notifications: preferences.security_alert_notifications,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -277,32 +283,13 @@ export function useUserPreferences() {
       if (showToast) {
         toast({
           title: "Preferences Saved",
-          description: `Email notifications ${
-            enabled ? "enabled" : "disabled"
-          }`,
+          description: `Email notifications ${enabled ? "enabled" : "disabled"}`,
         });
       }
 
-      logToSupabase("Main notification toggle updated", {
-        level: "info",
-        page: "useUserPreferences",
-        data: { enabled }
-      });
-      
       return true;
     } catch (err: any) {
       console.error("Error updating main toggle:", err);
-      
-      // Revert optimistic update on error
-      setPreferences((prev) =>
-        prev
-          ? {
-              ...prev,
-              email_notifications_enabled: !enabled,
-            }
-          : null
-      );
-      
       if (showToast) {
         toast({
           title: "Error",
@@ -310,25 +297,17 @@ export function useUserPreferences() {
           variant: "destructive",
         });
       }
-      
-      logToSupabase("Error updating main notification toggle", {
-        level: "error",
-        page: "useUserPreferences",
-        data: { error: err.message || String(err) }
-      });
-      
       return false;
     } finally {
-      // Remove from pending updates
-      delete pendingUpdates.current[fieldName];
-      
-      if (isMounted.current) {
-        setSaving(false);
-      }
+      setTimeout(() => {
+        if (isMounted()) {
+          setSaving(false);
+          lastUpdateRef.current = null;
+        }
+      }, 500);
     }
   };
 
-  // Optimistic update for individual notification toggles
   const updateNotificationToggle = async (
     type: NotificationToggleType,
     enabled: boolean,
@@ -338,67 +317,48 @@ export function useUserPreferences() {
       return false;
 
     const { showToast = true } = options;
-    
-    // Track this update as pending
-    pendingUpdates.current[type] = enabled;
+    lastUpdateRef.current = { field: type, value: enabled };
 
-    // Optimistically update UI immediately
-    setPreferences((prev) =>
-      prev
-        ? {
-            ...prev,
-            [type]: enabled,
-          }
-        : null
-    );
+    // optimistic UI
+    setPreferences((prev) => (prev ? { ...prev, [type]: enabled } : null));
 
     setSaving(true);
     setError(null);
 
     try {
-      // Create update object with just the changed field
-      const updateData: Record<string, any> = {
-        user_id: user.id,
-        [type]: enabled,
-        updated_at: new Date().toISOString()
-      };
-      
-      const { error } = await supabase
-        .from("user_preferences")
-        .update(updateData)
-        .eq("user_id", user.id);
+      const { error } = await supabase.from("user_preferences").upsert(
+        {
+          user_id: user.id,
+          email_notifications_enabled: preferences.email_notifications_enabled,
+          password_change_notifications:
+            type === "password_change_notifications"
+              ? enabled
+              : preferences.password_change_notifications,
+          email_change_notifications:
+            type === "email_change_notifications"
+              ? enabled
+              : preferences.email_change_notifications,
+          security_alert_notifications:
+            type === "security_alert_notifications"
+              ? enabled
+              : preferences.security_alert_notifications,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
 
       if (error) throw error;
 
       if (showToast) {
         toast({
           title: "Preference Saved",
-          description: `${formatNotificationTypeName(type)} ${
-            enabled ? "enabled" : "disabled"
-          }`,
+          description: `${formatNotificationTypeName(type)} ${enabled ? "enabled" : "disabled"}`,
         });
       }
-      
-      logToSupabase("Notification toggle updated", {
-        level: "info",
-        page: "useUserPreferences",
-        data: { type, enabled }
-      });
 
       return true;
     } catch (err: any) {
       console.error("Error updating notification toggle:", err);
-      
-      // Revert optimistic update on error
-      setPreferences((prev) =>
-        prev
-          ? {
-              ...prev,
-              [type]: !enabled,
-            }
-          : null
-      );
-      
       if (showToast) {
         toast({
           title: "Error",
@@ -406,25 +366,17 @@ export function useUserPreferences() {
           variant: "destructive",
         });
       }
-      
-      logToSupabase("Error updating notification toggle", {
-        level: "error",
-        page: "useUserPreferences",
-        data: { type, error: err.message || String(err) }
-      });
-      
       return false;
     } finally {
-      // Remove from pending updates
-      delete pendingUpdates.current[type];
-      
-      if (isMounted.current) {
-        setSaving(false);
-      }
+      setTimeout(() => {
+        if (isMounted()) {
+          setSaving(false);
+          lastUpdateRef.current = null;
+        }
+      }, 500);
     }
   };
 
-  // Helper to format notification type names
   const formatNotificationTypeName = (type: string): string => {
     switch (type) {
       case "password_change_notifications":
@@ -436,7 +388,7 @@ export function useUserPreferences() {
       default:
         return type
           .split("_")
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
           .join(" ");
     }
   };
