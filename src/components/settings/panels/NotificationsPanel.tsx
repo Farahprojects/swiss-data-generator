@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, memo } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader, RefreshCw } from "lucide-react";
@@ -10,11 +10,10 @@ import { Button } from "@/components/ui/button";
 // Define the specific notification toggle keys type
 type NotificationToggleKey = 'password_change_notifications' | 'email_change_notifications' | 'security_alert_notifications';
 
-export const NotificationsPanel = () => {
+const NotificationsPanel = () => {
   const {
     preferences,
     loading,
-    saving,
     error,
     updateMainNotificationsToggle,
     updateNotificationToggle,
@@ -114,7 +113,6 @@ export const NotificationsPanel = () => {
               <Label htmlFor="email-notifications">
                 {preferences?.email_notifications_enabled ? 'Enabled' : 'Disabled'}
               </Label>
-              {/* Removed the saving spinner here to prevent UI flicker */}
             </div>
           )}
         </div>
@@ -204,4 +202,5 @@ export const NotificationsPanel = () => {
   );
 };
 
-export default NotificationsPanel;
+// Memoize the component to reduce unnecessary re-renders
+export default memo(NotificationsPanel);
