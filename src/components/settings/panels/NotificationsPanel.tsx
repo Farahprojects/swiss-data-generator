@@ -70,6 +70,14 @@ export const NotificationsPanel = () => {
           .eq('user_id', userData.user.id)
           .single();
         
+        // DEBUG: Log what's coming back from Supabase
+        logToSupabase("Loaded preferences response", {
+          level: 'debug',
+          page: 'NotificationsPanel',
+          data: { data, error, hasError: !!error, dataType: typeof data }
+        });
+        console.log("Loaded preferences", { data, error });
+        
         if (error) {
           if (error.code === 'PGRST116') { // Not Found error
             // Create default preferences if none exist
@@ -88,6 +96,9 @@ export const NotificationsPanel = () => {
             });
           }
         } else if (data) {
+          // DEBUG: Log the data before setting preferences
+          console.log("Setting preferences", data);
+          
           // If user has preferences set, use them
           setPreferences({
             email_notifications_enabled: data.email_notifications_enabled !== false,
@@ -100,6 +111,16 @@ export const NotificationsPanel = () => {
             level: 'info',
             page: 'NotificationsPanel'
           });
+        } else {
+          // DEBUG: Handle case when data is null or undefined but no error
+          logToSupabase("No preferences data returned but no error", {
+            level: 'warn',
+            page: 'NotificationsPanel'
+          });
+          console.log("No preferences data returned", { data });
+          
+          // Create default preferences as fallback
+          await createDefaultPreferences(userData.user.id);
         }
         
         setLoading(false);
@@ -110,6 +131,7 @@ export const NotificationsPanel = () => {
           data: { error: error.message || String(error) }
         });
         
+        console.error("Error in loadUserPreferences:", error);
         setLoading(false);
         toast({
           title: "Error Loading Preferences",
@@ -133,9 +155,16 @@ export const NotificationsPanel = () => {
         security_alert_notifications: true
       };
       
-      const { error } = await supabase
+      // DEBUG: Log the user ID being used
+      console.log("Creating default preferences for user", { userId });
+      
+      const { error, data } = await supabase
         .from('user_preferences')
-        .insert(defaultPrefs);
+        .insert(defaultPrefs)
+        .select();
+      
+      // DEBUG: Log the result of the insert operation  
+      console.log("Default preferences creation result", { error, data });
       
       if (error) {
         throw error;
@@ -149,6 +178,7 @@ export const NotificationsPanel = () => {
       });
       
     } catch (error: any) {
+      console.error("Failed to create default preferences:", error);
       logToSupabase("Failed to create default preferences", {
         level: 'error',
         page: 'NotificationsPanel',
@@ -180,8 +210,8 @@ export const NotificationsPanel = () => {
       setSaving(true);
       
       // Get current user
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData?.user) {
         throw new Error("User not authenticated");
       }
       
@@ -189,7 +219,7 @@ export const NotificationsPanel = () => {
       logToSupabase("Main notification toggle attempted", {
         level: 'debug',
         page: 'NotificationsPanel',
-        data: { newValue: checked }
+        data: { newValue: checked, userId: userData.user.id }
       });
       
       // Update UI state optimistically for better UX
@@ -200,8 +230,14 @@ export const NotificationsPanel = () => {
       
       setPreferences(newPreferences);
       
+      // DEBUG: Log the data being sent to Supabase
+      console.log("Upserting user preferences", {
+        userId: userData.user.id,
+        preferences: newPreferences
+      });
+      
       // Save to database
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('user_preferences')
         .upsert({
           user_id: userData.user.id,
@@ -209,7 +245,11 @@ export const NotificationsPanel = () => {
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
-        });
+        })
+        .select();
+      
+      // DEBUG: Log the response from the upsert
+      console.log("Upsert response", { error, data });
       
       if (error) throw error;
       
@@ -231,6 +271,7 @@ export const NotificationsPanel = () => {
       // Clear the timeout since operation completed (with error)
       clearTimeout(timeoutId);
       
+      console.error("Error in handleMainToggleChange:", error);
       logToSupabase("Error in handleMainToggleChange", {
         level: 'error',
         page: 'NotificationsPanel',
@@ -240,7 +281,7 @@ export const NotificationsPanel = () => {
       // Revert the UI state if save failed
       setPreferences(prev => ({
         ...prev,
-        email_notifications_enabled: !prev.email_notifications_enabled
+        email_notifications_enabled: !checked
       }));
       
       toast({
@@ -285,8 +326,8 @@ export const NotificationsPanel = () => {
       setSaving(true);
       
       // Get current user
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData?.user) {
         throw new Error("User not authenticated");
       }
       
@@ -294,7 +335,7 @@ export const NotificationsPanel = () => {
       logToSupabase(`Individual notification toggle attempted: ${type}`, {
         level: 'debug',
         page: 'NotificationsPanel',
-        data: { type, newValue: checked }
+        data: { type, newValue: checked, userId: userData.user.id }
       });
       
       // Update UI state optimistically
@@ -305,8 +346,16 @@ export const NotificationsPanel = () => {
       
       setPreferences(newPreferences);
       
+      // DEBUG: Log the data being sent to Supabase
+      console.log(`Upserting ${type} preference`, {
+        userId: userData.user.id,
+        type,
+        checked,
+        allPreferences: newPreferences
+      });
+      
       // Save to database
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('user_preferences')
         .upsert({
           user_id: userData.user.id,
@@ -314,7 +363,11 @@ export const NotificationsPanel = () => {
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
-        });
+        })
+        .select();
+      
+      // DEBUG: Log the response from the upsert
+      console.log(`Upsert response for ${type}`, { error, data });
       
       if (error) throw error;
       
@@ -336,6 +389,7 @@ export const NotificationsPanel = () => {
       // Clear the timeout since operation completed (with error)
       clearTimeout(timeoutId);
       
+      console.error(`Error saving ${type} notification preference:`, error);
       logToSupabase(`Error saving ${type} notification preference`, {
         level: 'error',
         page: 'NotificationsPanel',
