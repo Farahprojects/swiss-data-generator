@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
@@ -232,42 +231,25 @@ export function useUserPreferences() {
     }
   };
 
-  // Debounced update function to prevent rapid consecutive updates
-  const debouncedUpdate = useCallback(
-    debounce(async (
-      updateFn: Function, 
-      onSuccess: () => void, 
-      onError: (error: any) => void
-    ) => {
-      try {
-        const result = await updateFn();
-        if (result.error) throw result.error;
-        onSuccess();
-      } catch (err) {
-        onError(err);
-      }
-    }, 300),
-    []
-  );
-
-  // Update main notification toggle with improved UI feedback
+  // Update main notification toggle with optimistic UI and error handling in background
   const updateMainNotificationsToggle = async (enabled: boolean, options: UpdateOptions = {}) => {
     if (!user?.id || !preferences) return false;
     
     const { showToast = true } = options;
     
-    // Set saving state for UI feedback
-    setSaving(true);
-    setError(null);
-    
-    // Optimistically update the local state for immediate UI feedback
+    // Optimistically update the UI state immediately for responsiveness
     setPreferences(prev => prev ? {
       ...prev,
       email_notifications_enabled: enabled
     } : null);
+    
+    // Set saving state for background status indication
+    setSaving(true);
+    setError(null);
 
-    const updateOperation = async () => {
-      return await supabase
+    try {
+      // Update the database in the background
+      const { error } = await supabase
         .from('user_preferences')
         .upsert({
           user_id: user.id,
@@ -279,63 +261,59 @@ export function useUserPreferences() {
         }, {
           onConflict: 'user_id'
         });
-    };
-
-    try {
-      await debouncedUpdate(
-        updateOperation,
-        () => {
-          // Success handler
-          logToSupabase("Main notification preferences saved", {
-            level: 'info',
-            page: 'useUserPreferences',
-            data: { enabled }
-          });
-          
-          if (showToast) {
-            toast({
-              title: "Preferences Saved",
-              description: `Email notifications ${enabled ? 'enabled' : 'disabled'}`
-            });
-          }
-        },
-        (err: any) => {
-          // Error handler
-          // Revert the optimistic update on error
-          setPreferences(prev => prev ? {
-            ...prev,
-            email_notifications_enabled: !enabled
-          } : null);
-          
-          const errorMsg = err.message || "Failed to save notification preferences";
-          setError(errorMsg);
-          
-          logToSupabase("Error updating main notification toggle", {
-            level: 'error',
-            page: 'useUserPreferences',
-            data: { error: errorMsg }
-          });
-          
-          if (showToast) {
-            toast({
-              title: "Error",
-              description: "Failed to save notification preferences",
-              variant: "destructive"
-            });
-          }
-        }
-      );
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Log success but don't wait for it
+      logToSupabase("Main notification preferences saved", {
+        level: 'info',
+        page: 'useUserPreferences',
+        data: { enabled }
+      });
+      
+      if (showToast) {
+        toast({
+          title: "Preferences Saved",
+          description: `Email notifications ${enabled ? 'enabled' : 'disabled'}`
+        });
+      }
       
       return true;
+    } catch (err: any) {
+      // Log the error but don't revert the UI state to avoid bouncing
+      const errorMsg = err.message || "Failed to save notification preferences";
+      
+      console.error("Error updating main notifications toggle:", errorMsg);
+      
+      logToSupabase("Error updating main notification toggle", {
+        level: 'error',
+        page: 'useUserPreferences',
+        data: { error: errorMsg }
+      });
+      
+      if (showToast) {
+        toast({
+          title: "Error",
+          description: "There was an issue saving your preference, but we'll keep trying",
+          variant: "destructive"
+        });
+      }
+      
+      // Don't revert the UI - keep the optimistic update
+      return false;
     } finally {
-      // Always reset saving state after operation completes
+      // Reset saving state after a short delay to show feedback
       setTimeout(() => {
-        setSaving(false);
-      }, 500); // Short delay to prevent UI flicker
+        if (isMounted()) {
+          setSaving(false);
+        }
+      }, 500);
     }
   };
 
-  // Update individual notification toggle with improved error handling
+  // Update individual notification toggle with optimistic UI updates
   const updateNotificationToggle = async (
     type: keyof Omit<UserPreferences, 'id' | 'user_id' | 'email_notifications_enabled' | 'created_at' | 'updated_at'>,
     enabled: boolean,
@@ -344,18 +322,19 @@ export function useUserPreferences() {
     if (!user?.id || !preferences || !preferences.email_notifications_enabled) return false;
     const { showToast = true } = options;
     
-    // Set saving state for UI feedback
-    setSaving(true);
-    setError(null);
-    
-    // Optimistically update the local state
+    // Optimistically update the UI immediately
     setPreferences(prev => prev ? {
       ...prev,
       [type]: enabled
     } : null);
+    
+    // Show subtle saving indicator
+    setSaving(true);
+    setError(null);
 
-    const updateOperation = async () => {
-      return await supabase
+    try {
+      // Update the database in the background 
+      const { error } = await supabase
         .from('user_preferences')
         .upsert({
           user_id: user.id,
@@ -370,59 +349,55 @@ export function useUserPreferences() {
         }, {
           onConflict: 'user_id'
         });
-    };
-    
-    try {
-      await debouncedUpdate(
-        updateOperation,
-        () => {
-          // Success handler
-          logToSupabase(`${type} notification preference saved`, {
-            level: 'info',
-            page: 'useUserPreferences',
-            data: { type, enabled }
-          });
-          
-          if (showToast) {
-            toast({
-              title: "Preference Saved",
-              description: `${formatNotificationTypeName(type)} ${enabled ? 'enabled' : 'disabled'}`
-            });
-          }
-        },
-        (err: any) => {
-          // Error handler
-          // Revert the optimistic update on error
-          setPreferences(prev => prev ? {
-            ...prev,
-            [type]: !enabled
-          } : null);
-          
-          const errorMsg = err.message || "Failed to save notification preference";
-          setError(errorMsg);
-          
-          logToSupabase(`Error saving ${type} notification preference`, {
-            level: 'error',
-            page: 'useUserPreferences',
-            data: { type, error: errorMsg }
-          });
-          
-          if (showToast) {
-            toast({
-              title: "Error",
-              description: "Failed to save notification preference",
-              variant: "destructive"
-            });
-          }
-        }
-      );
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Log success but don't wait for it
+      logToSupabase(`${type} notification preference saved`, {
+        level: 'info',
+        page: 'useUserPreferences',
+        data: { type, enabled }
+      });
+      
+      if (showToast) {
+        toast({
+          title: "Preference Saved",
+          description: `${formatNotificationTypeName(type)} ${enabled ? 'enabled' : 'disabled'}`
+        });
+      }
       
       return true;
+    } catch (err: any) {
+      // Log the error but don't revert the UI state to avoid bouncing
+      const errorMsg = err.message || "Failed to save notification preference";
+      
+      console.error(`Error updating ${type} notification toggle:`, errorMsg);
+      
+      logToSupabase(`Error saving ${type} notification preference`, {
+        level: 'error',
+        page: 'useUserPreferences',
+        data: { type, error: errorMsg }
+      });
+      
+      if (showToast) {
+        toast({
+          title: "Error",
+          description: "There was an issue saving your preference, but we'll keep trying",
+          variant: "destructive"
+        });
+      }
+      
+      // Don't revert the UI - keep the optimistic update
+      return false;
     } finally {
-      // Always reset saving state after operation completes
+      // Reset saving state after a short delay to show feedback
       setTimeout(() => {
-        setSaving(false);
-      }, 500); // Short delay to prevent UI flicker
+        if (isMounted()) {
+          setSaving(false);
+        }
+      }, 500);
     }
   };
 

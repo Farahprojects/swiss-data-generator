@@ -38,6 +38,34 @@ export const NotificationsPanel = () => {
     window.location.reload();
   };
 
+  // Optimistically handle toggle changes without waiting for backend response
+  const handleMainToggleChange = (checked: boolean) => {
+    updateMainNotificationsToggle(checked, { showToast: false });
+    
+    // Log action for analytics
+    logToSupabase("Main notification toggle changed", {
+      level: 'info',
+      page: 'NotificationsPanel',
+      data: { enabled: checked }
+    });
+  };
+
+  // Optimistically handle individual notification toggle changes
+  const handleNotificationToggleChange = (type: string, checked: boolean) => {
+    updateNotificationToggle(
+      type as keyof typeof preferences,
+      checked,
+      { showToast: false }
+    );
+    
+    // Log action for analytics
+    logToSupabase(`${type} notification toggle changed`, {
+      level: 'info',
+      page: 'NotificationsPanel',
+      data: { type, enabled: checked }
+    });
+  };
+
   return (
     <div className="p-6 bg-white rounded-lg shadow">
       <h2 className="text-2xl font-semibold mb-6">Notification Settings</h2>
@@ -75,12 +103,12 @@ export const NotificationsPanel = () => {
             <div className="flex items-center space-x-2">
               <Switch 
                 checked={preferences?.email_notifications_enabled ?? false}
-                onCheckedChange={(checked) => updateMainNotificationsToggle(checked)}
-                disabled={saving || loading}
+                onCheckedChange={handleMainToggleChange}
+                disabled={loading}
                 id="email-notifications"
-                className={`focus:ring-2 focus:ring-primary ${saving ? 'opacity-70' : ''}`}
+                className="focus:ring-2 focus:ring-primary"
               />
-              <Label htmlFor="email-notifications" className={saving ? 'text-gray-500' : ''}>
+              <Label htmlFor="email-notifications">
                 {preferences?.email_notifications_enabled ? 'Enabled' : 'Disabled'}
               </Label>
               {saving && <Loader className="h-3 w-3 animate-spin text-gray-400 ml-2" />}
@@ -105,10 +133,10 @@ export const NotificationsPanel = () => {
                   id="password-change-notifications"
                   checked={isNotificationEnabled('password_change_notifications')}
                   onCheckedChange={(checked) => 
-                    updateNotificationToggle('password_change_notifications', checked)
+                    handleNotificationToggleChange('password_change_notifications', checked)
                   }
-                  disabled={saving || loading || !preferences?.email_notifications_enabled}
-                  className={`focus:ring-2 focus:ring-primary ${saving ? 'opacity-70' : ''}`}
+                  disabled={loading || !preferences?.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
               
@@ -124,10 +152,10 @@ export const NotificationsPanel = () => {
                   id="email-change-notifications"
                   checked={isNotificationEnabled('email_change_notifications')}
                   onCheckedChange={(checked) => 
-                    updateNotificationToggle('email_change_notifications', checked)
+                    handleNotificationToggleChange('email_change_notifications', checked)
                   }
-                  disabled={saving || loading || !preferences?.email_notifications_enabled}
-                  className={`focus:ring-2 focus:ring-primary ${saving ? 'opacity-70' : ''}`}
+                  disabled={loading || !preferences?.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
               
@@ -143,10 +171,10 @@ export const NotificationsPanel = () => {
                   id="security-alert-notifications"
                   checked={isNotificationEnabled('security_alert_notifications')}
                   onCheckedChange={(checked) => 
-                    updateNotificationToggle('security_alert_notifications', checked)
+                    handleNotificationToggleChange('security_alert_notifications', checked)
                   }
-                  disabled={saving || loading || !preferences?.email_notifications_enabled}
-                  className={`focus:ring-2 focus:ring-primary ${saving ? 'opacity-70' : ''}`}
+                  disabled={loading || !preferences?.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
