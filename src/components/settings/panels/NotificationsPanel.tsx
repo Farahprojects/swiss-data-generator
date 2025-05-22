@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Switch } from "@/components/ui/switch";
+import { memo, useEffect, useState } from "react";
+import { Switch as RadixSwitch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader, RefreshCw } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
@@ -7,30 +7,47 @@ import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { Button } from "@/components/ui/button";
 import type { UserPreferences } from "@/hooks/useUserPreferences";
 
-// Dedicated keys for individual notification types
 export type NotificationToggleKey =
   | "password_change_notifications"
   | "email_change_notifications"
   | "security_alert_notifications";
 
+/**
+ * Memo‑wrapped Switch so re‑renders triggered by unrelated state (e.g. `saving`)
+ * do **not** cause Radix to momentarily reset its animation position.
+ */
+interface SwitchProps {
+  id: string;
+  checked: boolean;
+  disabled?: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}
+const Switch = memo<SwitchProps>(
+  ({ id, checked, disabled, onCheckedChange }) => (
+    <RadixSwitch
+      id={id}
+      checked={checked}
+      disabled={disabled}
+      onCheckedChange={onCheckedChange}
+      className="focus:ring-2 focus:ring-primary"
+    />
+  ),
+  (prev, next) =>
+    prev.checked === next.checked &&
+    prev.disabled === next.disabled // ignore other props
+);
+
 export const NotificationsPanel = () => {
   const {
     preferences,
     loading,
-    saving, // may still be useful for showing a subtle spinner, but we no longer disable controls with it
     error,
     updateMainNotificationsToggle,
     updateNotificationToggle,
   } = useUserPreferences();
 
-  /**
-   * Local optimistic state so the UI stays buttery‑smooth.
-   * We intentionally *don’t* gate user interactions behind `saving` – that is the root cause of the visual
-   * bounce: Radix <Switch> visually resets when its `disabled` prop toggles while an animation is in flight.
-   */
+  /** Optimistic local cache */
   const [localPrefs, setLocalPrefs] = useState<UserPreferences | null>(null);
-
-  // Keep our local cache in sync with canonical data from the hook (server)
   useEffect(() => {
     if (preferences) setLocalPrefs(preferences);
   }, [preferences]);
@@ -44,34 +61,23 @@ export const NotificationsPanel = () => {
     });
   }, [loading, error]);
 
-  /** Helpers */
-  const isNotificationEnabled = (type: NotificationToggleKey): boolean => {
-    return localPrefs ? localPrefs[type] === true : true; // default true
-  };
-
   const handleRefresh = () => window.location.reload();
 
   const handleMainToggleChange = (checked: boolean) => {
-    setLocalPrefs((prev) => (prev ? { ...prev, email_notifications_enabled: checked } : prev));
+    setLocalPrefs((p) => (p ? { ...p, email_notifications_enabled: checked } : p));
     updateMainNotificationsToggle(checked, { showToast: false });
-
-    logToSupabase("Main notification toggle changed", {
-      level: "info",
-      page: "NotificationsPanel",
-      data: { enabled: checked },
-    });
   };
 
-  const handleNotificationToggleChange = (type: NotificationToggleKey, checked: boolean) => {
-    setLocalPrefs((prev) => (prev ? { ...prev, [type]: checked } : prev));
+  const handleNotificationToggleChange = (
+    type: NotificationToggleKey,
+    checked: boolean
+  ) => {
+    setLocalPrefs((p) => (p ? { ...p, [type]: checked } : p));
     updateNotificationToggle(type, checked, { showToast: false });
-
-    logToSupabase(`${type} notification toggle changed`, {
-      level: "info",
-      page: "NotificationsPanel",
-      data: { type, enabled: checked },
-    });
   };
+
+  const isNotificationEnabled = (type: NotificationToggleKey) =>
+    localPrefs ? localPrefs[type] === true : true;
 
   return (
     <div className="p-6 bg-white rounded-lg shadow">
@@ -103,11 +109,10 @@ export const NotificationsPanel = () => {
           ) : (
             <div className="flex items-center space-x-2">
               <Switch
-                checked={localPrefs?.email_notifications_enabled ?? false}
-                onCheckedChange={handleMainToggleChange}
-                disabled={loading} // NOTE: no longer disabled while saving – fixes visual bounce
                 id="email-notifications"
-                className="focus:ring-2 focus:ring-primary"
+                checked={localPrefs?.email_notifications_enabled ?? false}
+                disabled={loading}
+                onCheckedChange={handleMainToggleChange}
               />
               <Label htmlFor="email-notifications">
                 {localPrefs?.email_notifications_enabled ? "Enabled" : "Disabled"}
@@ -116,49 +121,43 @@ export const NotificationsPanel = () => {
           )}
         </div>
 
-        {/* Individual toggles */}
         {localPrefs?.email_notifications_enabled && (
           <div className="space-y-4 pt-2">
             <h4 className="font-medium text-gray-700">Notification Types</h4>
 
-            <div className="space-y-4">
-              {([
-                {
-                  id: "password-change-notifications",
-                  type: "password_change_notifications",
-                  label: "Password Changes",
-                  desc: "Get notified when your password is changed",
-                },
-                {
-                  id: "email-change-notifications",
-                  type: "email_change_notifications",
-                  label: "Email Address Changes",
-                  desc: "Get notified when your email address is changed",
-                },
-                {
-                  id: "security-alert-notifications",
-                  type: "security_alert_notifications",
-                  label: "Security Alerts",
-                  desc: "Get notified about important security events",
-                },
-              ] as { id: string; type: NotificationToggleKey; label: string; desc: string }[]).map(
-                ({ id, type, label, desc }) => (
-                  <div key={type} className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="font-medium text-sm">{label}</p>
-                      <p className="text-xs text-gray-500">{desc}</p>
-                    </div>
-                    <Switch
-                      id={id}
-                      checked={isNotificationEnabled(type)}
-                      onCheckedChange={(checked) => handleNotificationToggleChange(type, checked)}
-                      disabled={loading}
-                      className="focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                )
-              )}
-            </div>
+            {([
+              {
+                id: "password-change-notifications",
+                type: "password_change_notifications",
+                label: "Password Changes",
+                desc: "Get notified when your password is changed",
+              },
+              {
+                id: "email-change-notifications",
+                type: "email_change_notifications",
+                label: "Email Address Changes",
+                desc: "Get notified when your email address is changed",
+              },
+              {
+                id: "security-alert-notifications",
+                type: "security_alert_notifications",
+                label: "Security Alerts",
+                desc: "Get notified about important security events",
+              },
+            ] as const).map(({ id, type, label, desc }) => (
+              <div key={type} className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="font-medium text-sm">{label}</p>
+                  <p className="text-xs text-gray-500">{desc}</p>
+                </div>
+                <Switch
+                  id={id}
+                  checked={isNotificationEnabled(type)}
+                  disabled={loading}
+                  onCheckedChange={(checked) => handleNotificationToggleChange(type, checked)}
+                />
+              </div>
+            ))}
           </div>
         )}
 
