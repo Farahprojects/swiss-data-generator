@@ -11,6 +11,7 @@ import {
   Bell
 } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
+import { useNavigate, useLocation } from "react-router-dom";
 
 type MenuItem = {
   id: string;
@@ -25,6 +26,8 @@ type SettingsSidebarProps = {
 
 export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarProps) => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const menuItems: MenuItem[] = [
     { id: 'account', label: 'Account Settings', icon: <Settings size={18} /> },
@@ -41,6 +44,20 @@ export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarPro
     
     await signOut();
     window.location.href = '/login';
+  };
+
+  const handleMenuItemClick = (id: string) => {
+    logToSupabase("Settings menu item clicked", {
+      level: 'info',
+      page: 'SettingsSidebar',
+      data: { item: id }
+    });
+    
+    // Update URL with the panel parameter
+    navigate(`/dashboard/settings?panel=${id}`);
+    
+    // Also update the local state for immediate UI feedback
+    onSelectItem(id);
   };
 
   return (
@@ -63,14 +80,7 @@ export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarPro
                     ? "bg-accent text-accent-foreground" 
                     : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                 }`}
-                onClick={() => {
-                  logToSupabase("Settings menu item clicked", {
-                    level: 'info',
-                    page: 'SettingsSidebar',
-                    data: { item: item.id }
-                  });
-                  onSelectItem(item.id);
-                }}
+                onClick={() => handleMenuItemClick(item.id)}
               >
                 {item.icon}
                 <span className="ml-3">{item.label}</span>

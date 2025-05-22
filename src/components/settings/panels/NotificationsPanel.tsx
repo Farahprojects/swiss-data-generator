@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useLocation } from "react-router-dom";
 
 interface NotificationPreferences {
   email_notifications_enabled: boolean;
@@ -25,6 +26,16 @@ export const NotificationsPanel = () => {
     security_alert_notifications: true
   });
   const { toast } = useToast();
+  const location = useLocation();
+
+  // Debug log for panel rendering
+  useEffect(() => {
+    logToSupabase("NotificationsPanel component rendered", {
+      level: 'debug',
+      page: 'NotificationsPanel',
+      data: { currentURL: location.pathname + location.search }
+    });
+  }, [location]);
 
   // Load user preferences
   useEffect(() => {
@@ -157,7 +168,14 @@ export const NotificationsPanel = () => {
         throw new Error("User not authenticated");
       }
       
-      // Update all preferences based on the main toggle
+      // Log toggle attempt
+      logToSupabase("Main notification toggle attempted", {
+        level: 'debug',
+        page: 'NotificationsPanel',
+        data: { newValue: checked }
+      });
+      
+      // Update UI state optimistically for better UX
       const newPreferences = {
         ...preferences,
         email_notifications_enabled: checked,
@@ -231,7 +249,14 @@ export const NotificationsPanel = () => {
         throw new Error("User not authenticated");
       }
       
-      // Update the specific preference
+      // Log toggle attempt
+      logToSupabase(`Individual notification toggle attempted: ${type}`, {
+        level: 'debug',
+        page: 'NotificationsPanel',
+        data: { type, newValue: checked }
+      });
+      
+      // Update UI state optimistically
       const newPreferences = {
         ...preferences,
         [type]: checked
@@ -322,6 +347,7 @@ export const NotificationsPanel = () => {
                 onCheckedChange={handleMainToggleChange}
                 disabled={saving}
                 id="email-notifications"
+                className="focus:ring-2 focus:ring-primary"
               />
               <Label htmlFor="email-notifications">
                 {preferences.email_notifications_enabled ? 'Enabled' : 'Disabled'}
@@ -351,6 +377,7 @@ export const NotificationsPanel = () => {
                     handleNotificationToggle('password_change_notifications', checked)
                   }
                   disabled={saving || loading || !preferences.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
               
@@ -369,6 +396,7 @@ export const NotificationsPanel = () => {
                     handleNotificationToggle('email_change_notifications', checked)
                   }
                   disabled={saving || loading || !preferences.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
               
@@ -387,6 +415,7 @@ export const NotificationsPanel = () => {
                     handleNotificationToggle('security_alert_notifications', checked)
                   }
                   disabled={saving || loading || !preferences.email_notifications_enabled}
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
