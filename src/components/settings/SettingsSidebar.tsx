@@ -11,7 +11,7 @@ import {
   Bell
 } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 type MenuItem = {
   id: string;
@@ -27,7 +27,6 @@ type SettingsSidebarProps = {
 export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarProps) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const menuItems: MenuItem[] = [
     { id: 'account', label: 'Account Settings', icon: <Settings size={18} /> },
@@ -50,13 +49,15 @@ export const SettingsSidebar = ({ activeItem, onSelectItem }: SettingsSidebarPro
     logToSupabase("Settings menu item clicked", {
       level: 'info',
       page: 'SettingsSidebar',
-      data: { item: id }
+      data: { item: id, previousItem: activeItem }
     });
     
-    // Update URL with the panel parameter
-    navigate(`/dashboard/settings?panel=${id}`);
+    if (id === activeItem) {
+      // If already on this panel, do nothing to prevent unnecessary navigation
+      return;
+    }
     
-    // Also update the local state for immediate UI feedback
+    // Call the onSelectItem callback which handles the navigation
     onSelectItem(id);
   };
 

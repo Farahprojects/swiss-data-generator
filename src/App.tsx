@@ -163,7 +163,10 @@ function App() {
                   }
                 >
                   <Route index element={<DashboardHome />} />
-                  <Route path="settings" element={<UserSettings />} />
+                  <Route path="settings" element={<UserSettings />}>
+                    {/* Add explicit index route for settings to automatically redirect to account */}
+                    <Route index element={<Navigate to="/dashboard/settings?panel=account" replace />} />
+                  </Route>
                   <Route path="upgrade" element={<UpgradePlan />} />
                   <Route path="activity-logs" element={<ActivityLogs />} />
                   <Route path="api-keys" element={<ApiKeys />} />

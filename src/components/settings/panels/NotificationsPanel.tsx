@@ -1,12 +1,11 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "react-router-dom";
 
 interface NotificationPreferences {
   email_notifications_enabled: boolean;
@@ -15,32 +14,187 @@ interface NotificationPreferences {
   security_alert_notifications: boolean;
 }
 
+const DEFAULT_PREFERENCES: NotificationPreferences = {
+  email_notifications_enabled: true,
+  password_change_notifications: true,
+  email_change_notifications: true,
+  security_alert_notifications: true
+};
+
 export const NotificationsPanel = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [preferences, setPreferences] = useState<NotificationPreferences>({
-    email_notifications_enabled: true,
-    password_change_notifications: true,
-    email_change_notifications: true,
-    security_alert_notifications: true
-  });
+  const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFERENCES);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { toast } = useToast();
-  const location = useLocation();
   
   // Refs to track component mount state and loading timeouts
   const isMounted = useRef(true);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const savingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Create default preferences function
+  const createDefaultPreferences = useCallback(async (userId: string) => {
+    try {
+      const defaultPrefs = {
+        user_id: userId,
+        ...DEFAULT_PREFERENCES
+      };
+      
+      const { error } = await supabase
+        .from('user_preferences')
+        .insert(defaultPrefs)
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (isMounted.current) {
+        setPreferences(DEFAULT_PREFERENCES);
+        
+        logToSupabase("Created default user preferences", {
+          level: 'info',
+          page: 'NotificationsPanel'
+        });
+      }
+    } catch (error: any) {
+      logToSupabase("Failed to create default preferences", {
+        level: 'error',
+        page: 'NotificationsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
+      if (isMounted.current) {
+        setLoadError("Failed to create default preferences.");
+      }
+    }
+  }, []);
+
   // Load user preferences - with proper cleanup
-  useEffect(() => {
-    // Reset loading state
-    setLoading(true);
+  const loadUserPreferences = useCallback(async () => {
+    // Only attempt to load if component is still mounted
+    if (!isMounted.current) return;
     
-    // Set a safety timeout to prevent infinite loading
-    loadingTimeoutRef.current = setTimeout(() => {
+    try {
+      setLoading(true);
+      
+      // Reset any previous error
+      setLoadError(null);
+      
+      // Get current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        throw new Error(`Auth error: ${userError.message}`);
+      }
+      
+      if (!userData?.user) {
+        logToSupabase("No authenticated user found", {
+          level: 'error',
+          page: 'NotificationsPanel'
+        });
+        
+        if (isMounted.current) {
+          setLoadError("Please sign in to manage your notification preferences");
+          setLoading(false);
+          toast({
+            title: "Authentication Error",
+            description: "Please sign in to manage your notification preferences",
+            variant: "destructive"
+          });
+        }
+        return;
+      }
+      
+      // Get user preferences
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('email_notifications_enabled, password_change_notifications, email_change_notifications, security_alert_notifications')
+        .eq('user_id', userData.user.id)
+        .single();
+      
+      logToSupabase("Loaded preferences response", {
+        level: 'debug',
+        page: 'NotificationsPanel',
+        data: { hasData: !!data, hasError: !!error, dataType: typeof data }
+      });
+      
+      if (error) {
+        if (error.code === 'PGRST116') { // Not Found error
+          // Create default preferences if none exist
+          await createDefaultPreferences(userData.user.id);
+        } else {
+          logToSupabase("Error loading user preferences", {
+            level: 'error',
+            page: 'NotificationsPanel',
+            data: { error: error.message }
+          });
+          
+          if (isMounted.current) {
+            setLoadError("Failed to load notification preferences");
+            toast({
+              title: "Error",
+              description: "Failed to load notification preferences",
+              variant: "destructive"
+            });
+          }
+        }
+      } else if (data) {
+        // If user has preferences set, use them
+        if (isMounted.current) {
+          setPreferences({
+            email_notifications_enabled: data.email_notifications_enabled !== false,
+            password_change_notifications: data.password_change_notifications !== false,
+            email_change_notifications: data.email_change_notifications !== false,
+            security_alert_notifications: data.security_alert_notifications !== false
+          });
+          
+          logToSupabase("User preferences loaded successfully", {
+            level: 'info',
+            page: 'NotificationsPanel'
+          });
+        }
+      } else {
+        // Handle case when data is null or undefined but no error
+        logToSupabase("No preferences data returned but no error", {
+          level: 'warn',
+          page: 'NotificationsPanel'
+        });
+        
+        // Create default preferences as fallback
+        await createDefaultPreferences(userData.user.id);
+      }
+    } catch (error: any) {
+      logToSupabase("Error in loadUserPreferences", {
+        level: 'error',
+        page: 'NotificationsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
+      if (isMounted.current) {
+        setLoadError("There was a problem loading your notification settings");
+        toast({
+          title: "Error Loading Preferences",
+          description: "There was a problem loading your notification settings",
+          variant: "destructive"
+        });
+      }
+    } finally {
+      // Always clear loading state if component is still mounted
       if (isMounted.current) {
         setLoading(false);
+      }
+    }
+  }, [createDefaultPreferences, toast]);
+  
+  // Load data on mount with timeout protection
+  useEffect(() => {
+    // Set a safety timeout to prevent infinite loading
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (isMounted.current && loading) {
+        setLoading(false);
+        setLoadError("Loading preferences timed out. Please try again.");
+        
         logToSupabase("Loading preferences timed out", {
           level: 'error',
           page: 'NotificationsPanel'
@@ -54,115 +208,7 @@ export const NotificationsPanel = () => {
       }
     }, 7000); // 7 second safety timeout
     
-    const loadUserPreferences = async () => {
-      try {
-        // Get current user
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError) {
-          throw new Error(`Auth error: ${userError.message}`);
-        }
-        
-        if (!userData?.user) {
-          logToSupabase("No authenticated user found", {
-            level: 'error',
-            page: 'NotificationsPanel'
-          });
-          
-          if (isMounted.current) {
-            setLoading(false);
-            toast({
-              title: "Authentication Error",
-              description: "Please sign in to manage your notification preferences",
-              variant: "destructive"
-            });
-          }
-          return;
-        }
-        
-        // Get user preferences
-        const { data, error } = await supabase
-          .from('user_preferences')
-          .select('email_notifications_enabled, password_change_notifications, email_change_notifications, security_alert_notifications')
-          .eq('user_id', userData.user.id)
-          .single();
-        
-        logToSupabase("Loaded preferences response", {
-          level: 'debug',
-          page: 'NotificationsPanel',
-          data: { hasData: !!data, hasError: !!error, dataType: typeof data }
-        });
-        
-        if (error) {
-          if (error.code === 'PGRST116') { // Not Found error
-            // Create default preferences if none exist
-            await createDefaultPreferences(userData.user.id);
-          } else {
-            logToSupabase("Error loading user preferences", {
-              level: 'error',
-              page: 'NotificationsPanel',
-              data: { error: error.message }
-            });
-            
-            if (isMounted.current) {
-              toast({
-                title: "Error",
-                description: "Failed to load notification preferences",
-                variant: "destructive"
-              });
-            }
-          }
-        } else if (data) {
-          // If user has preferences set, use them
-          if (isMounted.current) {
-            setPreferences({
-              email_notifications_enabled: data.email_notifications_enabled !== false,
-              password_change_notifications: data.password_change_notifications !== false,
-              email_change_notifications: data.email_change_notifications !== false,
-              security_alert_notifications: data.security_alert_notifications !== false
-            });
-            
-            logToSupabase("User preferences loaded successfully", {
-              level: 'info',
-              page: 'NotificationsPanel'
-            });
-          }
-        } else {
-          // Handle case when data is null or undefined but no error
-          logToSupabase("No preferences data returned but no error", {
-            level: 'warn',
-            page: 'NotificationsPanel'
-          });
-          
-          // Create default preferences as fallback
-          await createDefaultPreferences(userData.user.id);
-        }
-      } catch (error: any) {
-        logToSupabase("Error in loadUserPreferences", {
-          level: 'error',
-          page: 'NotificationsPanel',
-          data: { error: error.message || String(error) }
-        });
-        
-        if (isMounted.current) {
-          toast({
-            title: "Error Loading Preferences",
-            description: "There was a problem loading your notification settings",
-            variant: "destructive"
-          });
-        }
-      } finally {
-        // Clear the safety timeout
-        if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current);
-          loadingTimeoutRef.current = null;
-        }
-        
-        if (isMounted.current) {
-          setLoading(false);
-        }
-      }
-    };
-    
+    // Load the user preferences
     loadUserPreferences();
     
     // Cleanup function to handle component unmount
@@ -171,62 +217,22 @@ export const NotificationsPanel = () => {
       
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
       }
       
       if (savingTimeoutRef.current) {
         clearTimeout(savingTimeoutRef.current);
-        savingTimeoutRef.current = null;
       }
     };
-  }, []); // No dependencies - only run once on mount
-  
-  // Create default preferences if none exist
-  const createDefaultPreferences = async (userId: string) => {
-    try {
-      const defaultPrefs = {
-        user_id: userId,
-        email_notifications_enabled: true,
-        password_change_notifications: true,
-        email_change_notifications: true,
-        security_alert_notifications: true
-      };
-      
-      const { error } = await supabase
-        .from('user_preferences')
-        .insert(defaultPrefs)
-        .select();
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (isMounted.current) {
-        setPreferences(defaultPrefs);
-        
-        logToSupabase("Created default user preferences", {
-          level: 'info',
-          page: 'NotificationsPanel'
-        });
-      }
-    } catch (error: any) {
-      logToSupabase("Failed to create default preferences", {
-        level: 'error',
-        page: 'NotificationsPanel',
-        data: { error: error.message || String(error) }
-      });
-    }
-  };
+  }, []); // Empty dependency array - only run once
   
   // Handle notification toggle change with robust error handling
   const handleNotificationToggle = async (type: keyof NotificationPreferences, checked: boolean) => {
     // Clear any existing saving timeout
     if (savingTimeoutRef.current) {
       clearTimeout(savingTimeoutRef.current);
-      savingTimeoutRef.current = null;
     }
     
-    // Set new saving timeout
+    // Set new saving timeout to prevent infinite saving state
     savingTimeoutRef.current = setTimeout(() => {
       if (isMounted.current && saving) {
         setSaving(false);
@@ -274,12 +280,6 @@ export const NotificationsPanel = () => {
       
       if (error) throw error;
       
-      // Clear the timeout since operation completed successfully
-      if (savingTimeoutRef.current) {
-        clearTimeout(savingTimeoutRef.current);
-        savingTimeoutRef.current = null;
-      }
-      
       logToSupabase(`${type} notification preference saved`, {
         level: 'info',
         page: 'NotificationsPanel',
@@ -292,11 +292,11 @@ export const NotificationsPanel = () => {
       });
       
     } catch (error: any) {
-      // Clear the timeout since operation completed (with error)
-      if (savingTimeoutRef.current) {
-        clearTimeout(savingTimeoutRef.current);
-        savingTimeoutRef.current = null;
-      }
+      // Revert the UI state if save failed
+      setPreferences(prev => ({
+        ...prev,
+        [type]: !checked
+      }));
       
       logToSupabase(`Error saving ${type} notification preference`, {
         level: 'error',
@@ -304,20 +304,26 @@ export const NotificationsPanel = () => {
         data: { type, error: error.message || String(error) }
       });
       
-      // Revert the UI state if save failed
-      setPreferences(prev => ({
-        ...prev,
-        [type]: !checked
-      }));
-      
       toast({
         title: "Error",
         description: "Failed to save notification preference",
         variant: "destructive"
       });
     } finally {
-      // Ensure saving state is always turned off
+      // Ensure saving state is always turned off and timeout is cleared
+      if (savingTimeoutRef.current) {
+        clearTimeout(savingTimeoutRef.current);
+        savingTimeoutRef.current = null;
+      }
+      
       setSaving(false);
+    }
+  };
+  
+  // Retry loading if there was an error
+  const handleRetryLoad = () => {
+    if (!loading) {
+      loadUserPreferences();
     }
   };
   
@@ -341,8 +347,14 @@ export const NotificationsPanel = () => {
       
       <div className="space-y-6">
         {loading ? (
-          <div className="flex justify-center p-4">
-            <Loader className="h-6 w-6 animate-spin text-gray-400" />
+          <div className="flex flex-col items-center justify-center p-8 space-y-4">
+            <Loader className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-gray-500">Loading your notification preferences...</p>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center p-8 space-y-4 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-red-500">{loadError}</p>
+            <Button onClick={handleRetryLoad} variant="outline">Retry</Button>
           </div>
         ) : (
           <div className="space-y-4">
