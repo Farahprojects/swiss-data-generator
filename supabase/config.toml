@@ -119,6 +119,3 @@ verify_jwt = true
 
 [functions.send-email]
 verify_jwt = true
-
-[functions.upload-logo]
-verify_jwt = true
