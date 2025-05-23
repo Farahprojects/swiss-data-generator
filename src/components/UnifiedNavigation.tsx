@@ -15,6 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { useSettingsModal } from '@/contexts/SettingsModalContext';
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 const UnifiedNavigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,6 +24,7 @@ const UnifiedNavigation = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { toggleSidebar } = useSidebar();
+  const { openSettings } = useSettingsModal();
   
   const isLoggedIn = !!user;
 
@@ -35,7 +38,13 @@ const UnifiedNavigation = () => {
   };
 
   const handleViewSettings = (section: string) => {
-    navigate(`/dashboard/settings?panel=${section}`);
+    logToSupabase("Opening settings from navigation", {
+      level: 'info',
+      page: 'UnifiedNavigation',
+      data: { panel: section }
+    });
+    
+    openSettings(section as "account" | "notifications" | "support" | "delete");
   };
 
   return (
@@ -97,7 +106,7 @@ const UnifiedNavigation = () => {
                   <DropdownMenuItem onClick={() => handleViewSettings('account')}>
                     Account Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleViewSettings('apikeys')}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard/api-keys')}>
                     API Keys
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleViewSettings('support')}>

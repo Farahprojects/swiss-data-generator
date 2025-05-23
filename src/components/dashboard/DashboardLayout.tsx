@@ -1,11 +1,13 @@
 
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSettingsModal } from "@/contexts/SettingsModalContext";
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 /**
  * DashboardLayout serves as the outer shell for all dashboard pages
@@ -14,16 +16,40 @@ import { useAuth } from "@/contexts/AuthContext";
 const DashboardLayout = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { openSettings } = useSettingsModal();
   
-  // Check if this is a password reset flow
-  const isPasswordReset = location.pathname.includes('/auth/password');
+  // Check if this is a settings route
+  const isSettingsRoute = location.pathname.includes('/dashboard/settings');
+  
+  // Get panel from query params
+  const searchParams = new URLSearchParams(location.search);
+  const panelParam = searchParams.get('panel');
+  
+  // Handle any redirects to settings
+  useEffect(() => {
+    if (isSettingsRoute) {
+      const panel = panelParam || 'account';
+      
+      logToSupabase("Redirecting from settings route to modal", {
+        level: 'info',
+        page: 'DashboardLayout',
+        data: { panel }
+      });
+      
+      // Open the settings modal with the specified panel
+      openSettings(panel as "account" | "notifications" | "delete" | "support");
+      
+      // Redirect to dashboard
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isSettingsRoute, panelParam, openSettings, navigate]);
   
   // Add a console log to track when DashboardLayout renders
   useEffect(() => {
     console.log("DashboardLayout mounted or updated, user:", user?.email);
     console.log("Current pathname:", location.pathname);
-    console.log("Is password reset route:", isPasswordReset);
-  }, [user, location.pathname, isPasswordReset]);
+  }, [user, location.pathname]);
 
   return (
     <div className="flex flex-col min-h-screen w-full">

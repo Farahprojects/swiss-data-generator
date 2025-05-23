@@ -33,6 +33,8 @@ import { logToSupabase } from './utils/batchedLogManager';
 import { useBatchedLogging } from './hooks/use-batched-logging';
 import { checkForAuthRemnants } from './utils/authCleanup';
 import Legal from './pages/Legal';
+import { SettingsModalProvider } from './contexts/SettingsModalContext';
+import { SettingsModal } from './components/settings/SettingsModal';
 
 // Route debugging wrapper with phantom auth detection
 const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
@@ -132,49 +134,53 @@ function App() {
       <NavigationStateProvider>
         <AuthProvider>
           <SidebarProvider>
-            <RouteDebugger>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/api-products" element={<ApiProducts />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/documentation" element={<Documentation />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/payment-return" element={<PaymentReturn />} />
-                <Route path="/legal" element={<Legal />} />
-                
-                {/* Auth routes - Password route is *explicitly* kept outside AuthGuard */}
-                <Route path="/auth/email" element={<ConfirmEmail />} />
-                <Route path="/auth/password" element={<Password />} />
-                {/* Keep backward compatibility with old URL */}
-                <Route path="/auth/reset-password" element={<Navigate to="/auth/password" replace />} />
-                
-                {/* Protected dashboard routes with nested structure */}
-                <Route 
-                  path="/dashboard" 
-                  element={
-                    <AuthGuard>
-                      <DashboardLayout />
-                    </AuthGuard>
-                  }
-                >
-                  <Route index element={<DashboardHome />} />
-                  <Route path="settings" element={<UserSettings />} />
-                  <Route path="upgrade" element={<UpgradePlan />} />
-                  <Route path="activity-logs" element={<ActivityLogs />} />
-                  <Route path="api-keys" element={<ApiKeys />} />
-                  <Route path="docs" element={<ApiDocs />} />
-                  <Route path="usage" element={<UsagePage />} />
-                  <Route path="billing" element={<BillingPage />} />
-                  <Route path="pricing" element={<PricingPage />} />
-                </Route>
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </RouteDebugger>
+            <SettingsModalProvider>
+              <RouteDebugger>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/api-products" element={<ApiProducts />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/documentation" element={<Documentation />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/payment-return" element={<PaymentReturn />} />
+                  <Route path="/legal" element={<Legal />} />
+                  
+                  {/* Auth routes - Password route is *explicitly* kept outside AuthGuard */}
+                  <Route path="/auth/email" element={<ConfirmEmail />} />
+                  <Route path="/auth/password" element={<Password />} />
+                  {/* Keep backward compatibility with old URL */}
+                  <Route path="/auth/reset-password" element={<Navigate to="/auth/password" replace />} />
+                  
+                  {/* Protected dashboard routes with nested structure */}
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <AuthGuard>
+                        <DashboardLayout />
+                      </AuthGuard>
+                    }
+                  >
+                    <Route index element={<DashboardHome />} />
+                    {/* Redirect old settings route to dashboard */}
+                    <Route path="settings" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="upgrade" element={<UpgradePlan />} />
+                    <Route path="activity-logs" element={<ActivityLogs />} />
+                    <Route path="api-keys" element={<ApiKeys />} />
+                    <Route path="docs" element={<ApiDocs />} />
+                    <Route path="usage" element={<UsagePage />} />
+                    <Route path="billing" element={<BillingPage />} />
+                    <Route path="pricing" element={<PricingPage />} />
+                  </Route>
+                  
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <SettingsModal />
+              </RouteDebugger>
+            </SettingsModalProvider>
           </SidebarProvider>
         </AuthProvider>
         <Toaster />

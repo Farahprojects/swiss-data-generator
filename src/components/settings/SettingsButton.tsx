@@ -1,0 +1,51 @@
+
+import React from 'react';
+import { Button, ButtonProps } from '@/components/ui/button';
+import { Settings } from 'lucide-react';
+import { useSettingsModal } from '@/contexts/SettingsModalContext';
+import { logToSupabase } from '@/utils/batchedLogManager';
+
+interface SettingsButtonProps extends ButtonProps {
+  panel?: "account" | "notifications" | "delete" | "support";
+  showIcon?: boolean;
+  label?: string;
+}
+
+export const SettingsButton: React.FC<SettingsButtonProps> = ({
+  panel = "account",
+  showIcon = true,
+  label = "Settings",
+  className,
+  variant = "outline",
+  size,
+  ...props
+}) => {
+  const { openSettings } = useSettingsModal();
+  
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    logToSupabase("Settings button clicked", {
+      level: 'info',
+      page: 'SettingsButton',
+      data: { panel }
+    });
+    
+    openSettings(panel);
+  };
+  
+  return (
+    <Button
+      variant={variant}
+      size={size}
+      className={className}
+      onClick={handleClick}
+      {...props}
+    >
+      {showIcon && <Settings className="h-4 w-4 mr-2" />}
+      {label}
+    </Button>
+  );
+};
+
+export default SettingsButton;
