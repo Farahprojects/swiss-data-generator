@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +22,12 @@ const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Check if the form was previously submitted successfully
+  // Clear "thank you" state when component mounts (on page refresh)
   useEffect(() => {
+    // Remove submitted state from localStorage on refresh
+    localStorage.removeItem("contactFormSubmitted");
+    
+    // Get the submitted status value only after the component mounts
     const hasSubmitted = localStorage.getItem("contactFormSubmitted");
     if (hasSubmitted === "true") {
       setSubmitted(true);
