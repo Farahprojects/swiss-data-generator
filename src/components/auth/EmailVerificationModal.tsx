@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Loader, Mail } from 'lucide-react';
@@ -30,21 +29,21 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
-  
+
   const handleResend = async () => {
     setIsResending(true);
     setResendSuccess(false);
     setResendError(null);
-    
+
     try {
       logToSupabase("Resending verification email", {
         level: 'info',
         page: 'EmailVerificationModal',
         data: { email }
       });
-      
+
       const { error } = await resend(email);
-      
+
       if (error) {
         setResendError(error.message);
         logToSupabase("Error resending verification", {
@@ -70,77 +69,74 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
       setIsResending(false);
     }
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-sm rounded-xl border bg-white p-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-blue-500" />
+          <DialogTitle className="flex items-center gap-2 text-base text-gray-900">
+            <Mail className="h-5 w-5 text-gray-500" />
             Verify Your New Email Address
           </DialogTitle>
-          <DialogDescription>
-            We've sent verification instructions to <strong>{email}</strong>
+          <DialogDescription className="text-sm text-gray-600 mt-1">
+            We've sent instructions to <span className="font-medium text-gray-800">{email}</span>
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="p-4 bg-blue-50 rounded-md text-sm">
-          <h4 className="font-medium text-blue-700 mb-2">Important:</h4>
-          <ul className="space-y-2 text-blue-700">
-            <li>• Check your <strong>{email}</strong> inbox for a verification email</li>
-            <li>• Click the verification link in that email to confirm your new address</li>
-            <li>• Also check your spam/junk folder if you don't see it</li>
-            <li>• Your original email address has received a notification about this change</li>
-          </ul>
-        </div>
-        
+
+        <ul className="mt-4 space-y-3 text-sm text-gray-700">
+          <li>Check your <strong>{email}</strong> inbox for a verification email</li>
+          <li>Click the link in that email to confirm your address</li>
+          <li>Check your spam/junk folder if it’s not in your inbox</li>
+          <li>Your old email has also been notified of this change</li>
+        </ul>
+
         {resendSuccess && (
-          <div className="flex items-start gap-2 p-3 bg-green-50 text-green-700 rounded-md">
-            <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+          <div className="mt-4 flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+            <CheckCircle className="h-5 w-5 mt-0.5 text-green-600" />
             <div>
-              <p className="font-medium">Verification email resent</p>
-              <p className="text-sm">A new verification link has been sent to {email}</p>
+              <p className="font-medium">Email resent</p>
+              <p className="text-xs text-gray-600">A new verification link has been sent to {email}</p>
             </div>
           </div>
         )}
-        
+
         {resendError && (
-          <div className="flex items-start gap-2 p-3 bg-red-50 text-red-700 rounded-md">
-            <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+          <div className="mt-4 flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+            <AlertCircle className="h-5 w-5 mt-0.5 text-red-500" />
             <div>
-              <p className="font-medium">Failed to resend</p>
-              <p className="text-sm">{resendError}</p>
+              <p className="font-medium">Resend failed</p>
+              <p className="text-xs text-gray-600">{resendError}</p>
             </div>
           </div>
         )}
-        
-        <DialogFooter className="flex sm:justify-between gap-4">
+
+        <DialogFooter className="mt-6 flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
+            className="text-sm border-gray-200 text-gray-700 hover:bg-gray-50"
           >
-            Cancel Email Change
+            Cancel
           </Button>
-          
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              onClick={handleResend}
-              disabled={isResending}
-              variant="secondary"
-            >
-              {isResending && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-              Resend Email
-            </Button>
-            
-            <Button
-              type="button"
-              onClick={onVerified}
-            >
-              I've Verified
-            </Button>
-          </div>
+
+          <Button
+            type="button"
+            onClick={handleResend}
+            disabled={isResending}
+            variant="outline"
+            className="text-sm border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            {isResending && <Loader className="mr-2 h-4 w-4 animate-spin" />} Resend Email
+          </Button>
+
+          <Button
+            type="button"
+            onClick={onVerified}
+            className="text-sm bg-gray-900 text-white hover:bg-gray-800"
+          >
+            I've Verified
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
