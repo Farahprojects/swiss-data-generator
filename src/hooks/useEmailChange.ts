@@ -182,33 +182,153 @@ export function useEmailChange() {
   };
 
   const resendVerificationEmail = async (email: string) => {
-    logToSupabase("Resending email verification", {
+    logToSupabase("Starting email verification resend process", {
       level: 'info',
       page: 'useEmailChange',
       data: { email }
     });
     
     try {
-      // Use our custom edge function to resend verification
-      const response = await fetch(`https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/resend-email-change`, {
+      // Check if we have a valid session first
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        logToSupabase("Session error when trying to resend verification", {
+          level: 'error',
+          page: 'useEmailChange',
+          data: { error: sessionError.message }
+        });
+        return { error: new Error(`Session error: ${sessionError.message}`) };
+      }
+      
+      if (!sessionData?.session?.access_token) {
+        logToSupabase("No valid access token found for resend request", {
+          level: 'error',
+          page: 'useEmailChange',
+          data: { hasSession: !!sessionData?.session, hasToken: !!sessionData?.session?.access_token }
+        });
+        return { error: new Error('No valid authentication token available') };
+      }
+
+      const functionUrl = `https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/resend-email-change`;
+      const requestBody = JSON.stringify({ email });
+      const authToken = sessionData.session.access_token;
+
+      logToSupabase("About to make fetch request to resend-email-change", {
+        level: 'info',
+        page: 'useEmailChange',
+        data: { 
+          url: functionUrl,
+          hasAuthToken: !!authToken,
+          tokenLength: authToken?.length || 0,
+          requestBodyLength: requestBody.length
+        }
+      });
+
+      // Make the fetch request with detailed logging
+      const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`
+          'Authorization': `Bearer ${authToken}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0'
         },
-        body: JSON.stringify({ email })
+        body: requestBody
       });
 
-      const result = await response.json();
-      return { error: result.error ? new Error(result.error) : null };
-    } catch (err: any) {
-      logToSupabase("Error resending verification", {
+      logToSupabase("Fetch request completed", {
+        level: 'info',
+        page: 'useEmailChange',
+        data: { 
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          headers: {
+            contentType: response.headers.get('content-type'),
+            contentLength: response.headers.get('content-length')
+          }
+        }
+      });
+
+      // Check if the response is ok before trying to parse JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        logToSupabase("HTTP error response from resend-email-change", {
+          level: 'error',
+          page: 'useEmailChange',
+          data: { 
+            status: response.status,
+            statusText: response.statusText,
+            errorBody: errorText
+          }
+        });
+        
+        // Handle specific HTTP status codes
+        switch (response.status) {
+          case 401:
+            return { error: new Error('Authentication failed. Please log in again.') };
+          case 404:
+            return { error: new Error('Email resend service not found. Please contact support.') };
+          case 500:
+            return { error: new Error('Server error. Please try again later.') };
+          default:
+            return { error: new Error(`Request failed with status ${response.status}: ${errorText}`) };
+        }
+      }
+
+      // Try to parse the JSON response
+      let result;
+      try {
+        result = await response.json();
+        logToSupabase("Successfully parsed JSON response", {
+          level: 'info',
+          page: 'useEmailChange',
+          data: { result }
+        });
+      } catch (parseError: any) {
+        logToSupabase("Failed to parse JSON response", {
+          level: 'error',
+          page: 'useEmailChange',
+          data: { parseError: parseError.message }
+        });
+        return { error: new Error('Invalid response format from server') };
+      }
+
+      // Check if the result indicates an error
+      if (result.error) {
+        logToSupabase("Edge function returned an error", {
+          level: 'error',
+          page: 'useEmailChange',
+          data: { error: result.error, details: result.details }
+        });
+        return { error: new Error(result.error) };
+      }
+
+      logToSupabase("Email verification resend completed successfully", {
+        level: 'info',
+        page: 'useEmailChange',
+        data: { status: result.status }
+      });
+
+      return { error: null };
+
+    } catch (fetchError: any) {
+      // This catches network errors, timeouts, etc.
+      logToSupabase("Network error during resend verification", {
         level: 'error',
         page: 'useEmailChange',
-        data: { error: err.message || String(err) }
+        data: { 
+          error: fetchError.message || String(fetchError),
+          name: fetchError.name,
+          stack: fetchError.stack
+        }
       });
       
-      return { error: err as Error };
+      if (fetchError.name === 'TypeError' && fetchError.message.includes('fetch')) {
+        return { error: new Error('Network error. Please check your connection and try again.') };
+      }
+      
+      return { error: new Error(fetchError.message || 'An unexpected error occurred') };
     }
   };
 

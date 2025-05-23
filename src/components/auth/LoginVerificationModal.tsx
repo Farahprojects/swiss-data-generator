@@ -38,39 +38,66 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   const isEmailChange = !!pendingEmail;
 
   const handleResend = async () => {
+    logToSupabase("Resend button clicked in LoginVerificationModal", {
+      level: 'info',
+      page: 'LoginVerificationModal',
+      data: { 
+        email, 
+        verificationEmail, 
+        isEmailChange,
+        resendFunctionType: typeof resend
+      }
+    });
+
     setIsResending(true);
     setResendSuccess(false);
     setResendError(null);
 
     try {
-      logToSupabase("Resending login verification email", {
+      logToSupabase("Calling resend function", {
         level: 'info',
         page: 'LoginVerificationModal',
-        data: { email: verificationEmail, isEmailChange }
+        data: { emailToResend: email }
       });
 
       const { error } = await resend(email); // Always use original email for resend logic
 
+      logToSupabase("Resend function returned", {
+        level: 'info',
+        page: 'LoginVerificationModal',
+        data: { 
+          hasError: !!error,
+          errorMessage: error?.message,
+          errorName: error?.name
+        }
+      });
+
       if (error) {
         setResendError(error.message);
-        logToSupabase("Error resending login verification", {
+        logToSupabase("Error from resend function", {
           level: 'error',
           page: 'LoginVerificationModal',
           data: { error: error.message }
         });
       } else {
         setResendSuccess(true);
-        logToSupabase("Login verification email resent successfully", {
+        logToSupabase("Resend function completed successfully", {
           level: 'info',
           page: 'LoginVerificationModal'
         });
       }
     } catch (error: any) {
-      setResendError(error.message || 'Failed to resend verification email');
-      logToSupabase("Exception resending login verification", {
+      const errorMessage = error.message || 'Failed to resend verification email';
+      setResendError(errorMessage);
+      logToSupabase("Exception in handleResend", {
         level: 'error',
         page: 'LoginVerificationModal',
-        data: { error: error.message || String(error) }
+        data: { 
+          error: errorMessage,
+          errorType: typeof error,
+          errorName: error?.name,
+          errorStack: error?.stack
+        }
       });
     } finally {
       setIsResending(false);
