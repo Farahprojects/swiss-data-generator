@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,7 +80,7 @@ export function useEmailChange() {
     checkPendingEmailVerification();
   }, []);
 
-  const changeEmail = async (currentEmail: string, newEmail: string, password: string) => {
+  const changeEmail = async (currentEmail: string, newEmail: string) => {
     if (!newEmail) {
       return { success: false, error: "Email is required" };
     }
@@ -95,35 +94,6 @@ export function useEmailChange() {
     clearToast();
     
     try {
-      logToSupabase("Verifying password for email change", {
-        level: 'info',
-        page: 'useEmailChange'
-      });
-      
-      // Verify password first
-      const { error: verifyError } = await supabase.auth.signInWithPassword({
-        email: currentEmail || '',
-        password: password
-      });
-
-      if (verifyError) {
-        logToSupabase("Password verification failed for email change", {
-          level: 'error',
-          page: 'useEmailChange',
-          data: { error: verifyError.message }
-        });
-        
-        console.log("Password verification failed:", verifyError.message);
-        
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Password is incorrect."
-        });
-        setIsUpdatingEmail(false);
-        return { success: false, error: "Password is incorrect." };
-      }
-
       logToSupabase("Initiating email change", {
         level: 'info',
         page: 'useEmailChange',
@@ -133,7 +103,7 @@ export function useEmailChange() {
       // Store the new email before updating
       setNewEmailAddress(newEmail);
 
-      // Update the email
+      // Update the email - no password verification needed
       const { error, data: updateData } = await supabase.auth.updateUser({ 
         email: newEmail 
       });
