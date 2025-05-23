@@ -9,7 +9,6 @@ import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { logToSupabase } from '@/utils/batchedLogManager';
-import Logo from '@/components/Logo';
 
 interface ForgotPasswordFormProps {
   onCancel: () => void;
@@ -81,9 +80,6 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
   if (emailSent) {
     return (
       <div className="space-y-8 text-center">
-        <div className="mb-6">
-          <Logo size="md" className="mx-auto mb-3" />
-        </div>
         <div>
           <h3 className="text-2xl font-bold mb-1">Check your email</h3>
           <p className="text-gray-600">
@@ -118,7 +114,6 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <Logo size="md" className="mx-auto mb-3" />
         <h3 className="text-2xl font-bold mb-1">Reset password</h3>
         <p className="text-gray-600">
           Enter your email and we'll send you a link to reset your password
