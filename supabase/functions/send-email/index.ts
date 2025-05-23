@@ -23,6 +23,7 @@ serve(async (req) => {
     const { to, subject, html, text, from } = await req.json() as EmailPayload;
 
     if (!to || !subject || !html) {
+      console.error("Missing required fields in email request:", { to, subject, hasHtml: !!html });
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -31,12 +32,15 @@ serve(async (req) => {
 
     const smtpEndpoint = Deno.env.get("THERIA_SMTP_ENDPOINT");
     if (!smtpEndpoint) {
+      console.error("SMTP endpoint not configured - THERIA_SMTP_ENDPOINT is missing");
       return new Response(JSON.stringify({ error: "SMTP endpoint not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
+    console.log(`Attempting to send email to ${to} via SMTP endpoint ${smtpEndpoint.substring(0, 20)}...`);
+    
     const response = await fetch(smtpEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -52,6 +56,7 @@ serve(async (req) => {
     if (!response.ok) {
       const error = await response.text();
       console.error("SMTP service error:", error);
+      console.error("SMTP response status:", response.status);
       return new Response(JSON.stringify({ error: "Failed to send", details: error }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }

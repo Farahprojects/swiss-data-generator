@@ -24,6 +24,7 @@ serve(async (req) => {
     // Extract authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('Missing Authorization header in notification request');
       return new Response(
         JSON.stringify({ error: 'Authorization header is required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -33,8 +34,11 @@ serve(async (req) => {
     // Parse request body
     const { templateType, recipientEmail, variables = {} } = await req.json() as EmailNotificationRequest;
     
+    console.log(`Processing notification request of type "${templateType}" for ${recipientEmail}`);
+    
     // Validate required fields
     if (!templateType || !recipientEmail) {
+      console.error('Missing required fields in notification request:', { templateType, recipientEmail });
       return new Response(
         JSON.stringify({ error: 'Template type and recipient email are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -57,6 +61,7 @@ serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch email template
+    console.log(`Fetching email template for "${templateType}"`);
     const { data: template, error: templateError } = await supabaseAdmin
       .from('email_notification_templates')
       .select('subject, body_html, body_text')
@@ -70,6 +75,8 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Template found for "${templateType}"`);
 
     // Process the template with variables
     let htmlContent = template.body_html;
@@ -85,6 +92,7 @@ serve(async (req) => {
     });
 
     // Call our new send-email function to send the email
+    console.log(`Calling send-email function for ${recipientEmail}`);
     const emailResponse = await fetch(
       `${supabaseUrl}/functions/v1/send-email`,
       {
