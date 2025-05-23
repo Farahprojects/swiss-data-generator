@@ -1,3 +1,4 @@
+
 // deno-lint-ignore-file no-explicit-any
 // ────────────────────────────────────────────────────────────────────────────────
 //  check-email-change.ts   – full verbose version
@@ -133,14 +134,22 @@ console.log('[Pending Change Detected]', pendingTo);
     }
     console.log('[Verification email re-triggered]');
     return new Response(
-      JSON.stringify({ status: 'resent' }),
+      JSON.stringify({ 
+        status: 'resent',
+        current_email: user.email,
+        pending_to: pendingTo
+      }),
       { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
     );
   }
 
   /* Success */
   return new Response(
-    JSON.stringify({ status: 'pending', pending_to: pendingTo }),
+    JSON.stringify({ 
+      status: 'pending', 
+      current_email: user.email,
+      pending_to: pendingTo 
+    }),
     { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
   );
 });

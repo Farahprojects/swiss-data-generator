@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Loader, Mail } from 'lucide-react';
@@ -14,6 +15,7 @@ import { logToSupabase } from '@/utils/batchedLogManager';
 interface LoginVerificationModalProps {
   isOpen: boolean;
   email: string;
+  pendingEmail?: string; // The new email address where verification was sent
   resend: (email: string) => Promise<{ error: Error | null }>;
   onVerified: () => void;
   onCancel: () => void;
@@ -22,6 +24,7 @@ interface LoginVerificationModalProps {
 export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   isOpen,
   email,
+  pendingEmail,
   resend,
   onVerified,
   onCancel
@@ -29,6 +32,10 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
+
+  // Use pendingEmail if available, otherwise fall back to email
+  const verificationEmail = pendingEmail || email;
+  const isEmailChange = !!pendingEmail;
 
   const handleResend = async () => {
     setIsResending(true);
@@ -39,10 +46,10 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
       logToSupabase("Resending login verification email", {
         level: 'info',
         page: 'LoginVerificationModal',
-        data: { email }
+        data: { email: verificationEmail, isEmailChange }
       });
 
-      const { error } = await resend(email);
+      const { error } = await resend(email); // Always use original email for resend logic
 
       if (error) {
         setResendError(error.message);
@@ -76,17 +83,25 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base text-gray-900 font-medium">
             <Mail className="h-5 w-5 text-[#7C3AED]" />
-            Verify Your Email Address
+            {isEmailChange ? 'Verify Your New Email Address' : 'Verify Your Email Address'}
           </DialogTitle>
           <DialogDescription className="text-sm text-gray-600 mt-1">
-            We've sent instructions to <span className="font-medium text-gray-800">{email}</span>
+            We've sent instructions to <span className="font-medium text-gray-800">{verificationEmail}</span>
+            {isEmailChange && (
+              <span className="block mt-1 text-xs text-gray-500">
+                (This is your new email address)
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <ul className="mt-4 space-y-3 text-sm text-gray-700 leading-relaxed">
-          <li>Check your <strong>{email}</strong> inbox for a verification email</li>
+          <li>Check your <strong>{verificationEmail}</strong> inbox for a verification email</li>
           <li>Click the link in that email to confirm your address</li>
-          <li>Didn’t get it? Check your spam or junk folder</li>
+          <li>Didn't get it? Check your spam or junk folder</li>
+          {isEmailChange && (
+            <li className="text-xs text-gray-500">Your previous email ({email}) has also been notified of this change</li>
+          )}
         </ul>
 
         {resendSuccess && (
@@ -94,7 +109,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
             <CheckCircle className="h-5 w-5 mt-0.5 text-[#7C3AED]" />
             <div>
               <p className="font-medium">Email resent</p>
-              <p className="text-xs text-gray-600">A new verification link has been sent to {email}</p>
+              <p className="text-xs text-gray-600">A new verification link has been sent to {verificationEmail}</p>
             </div>
           </div>
         )}

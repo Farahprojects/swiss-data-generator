@@ -30,6 +30,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [pendingEmailAddress, setPendingEmailAddress] = useState<string | undefined>(undefined);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const emailValid = validateEmail(email);
@@ -52,7 +53,8 @@ const Login = () => {
     return <Navigate to={from} replace />;
   }
 
-  const openVerificationModal = () => {
+  const openVerificationModal = (pendingTo?: string) => {
+    setPendingEmailAddress(pendingTo);
     setShowVerificationModal(true);
     setLoading(false);
   };
@@ -95,9 +97,10 @@ const Login = () => {
       if (emailCheckData && emailCheckData.status === 'pending') {
         logToSupabase('Pending email change found, showing verification modal', {
           level: 'debug',
-          page: 'Login'
+          page: 'Login',
+          data: { currentEmail: emailCheckData.current_email, pendingTo: emailCheckData.pending_to }
         });
-        return openVerificationModal();
+        return openVerificationModal(emailCheckData.pending_to);
       }
 
       logToSupabase('No pending email change, proceeding with sign in', {
@@ -183,6 +186,7 @@ const Login = () => {
   /* Callback from modal when user verified */
   const handleVerificationFinished = async () => {
     setShowVerificationModal(false);
+    setPendingEmailAddress(undefined);
     toast({ title: 'Email verified!', description: 'You can now sign in.' });
 
     setLoading(true);
@@ -268,8 +272,12 @@ const Login = () => {
       <LoginVerificationModal
         isOpen={showVerificationModal}
         email={email}
+        pendingEmail={pendingEmailAddress}
         onVerified={handleVerificationFinished}
-        onCancel={() => setShowVerificationModal(false)}
+        onCancel={() => {
+          setShowVerificationModal(false);
+          setPendingEmailAddress(undefined);
+        }}
         resend={resendVerificationEmail}
       />
     </div>
