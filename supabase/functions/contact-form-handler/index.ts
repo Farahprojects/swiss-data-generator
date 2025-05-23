@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const corsHeaders = {
@@ -141,8 +142,9 @@ serve(async (req) => {
       `
     };
     
-    // Supabase anon key for authorization
-    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+    // Get the Supabase anon key for authorization
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || 
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
     
     logMessage("Forwarding to send-email function", "info", { 
       to: emailPayload.to,
@@ -150,13 +152,18 @@ serve(async (req) => {
       subject: emailPayload.subject
     });
     
+    // Get the Supabase URL
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+    
     // Forward to the send-email function
     const response = await fetch(
-      "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/send-email",
+      `${supabaseUrl}/functions/v1/send-email`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // Important: Include the authorization header with the Bearer token format
+          "Authorization": `Bearer ${supabaseAnonKey}`,
           "apikey": supabaseAnonKey
         },
         body: JSON.stringify(emailPayload),
