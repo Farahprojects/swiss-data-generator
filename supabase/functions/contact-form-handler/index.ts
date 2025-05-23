@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -199,12 +198,65 @@ serve(async (req) => {
       logMessage("Error fetching email template", "error", { 
         error: templateError?.message || "Template not found"
       });
-      // Fall back to hardcoded template if database fetch fails
-      sendAutoReplyWithHardcodedTemplate(supabaseUrl, supabaseAnonKey, payload);
-    } else {
-      logMessage("Successfully fetched email template", "info");
-      // Send auto-reply with the fetched template
-      sendAutoReplyWithTemplate(supabaseUrl, supabaseAnonKey, payload, template);
+      
+      // Return an error response if template not found or cannot be fetched
+      return new Response(JSON.stringify({ 
+        error: "Unable to send auto-reply. Please try again later."
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    } 
+    
+    logMessage("Successfully fetched email template", "info");
+    
+    // Send auto-reply with the fetched template
+    try {
+      logMessage("Sending auto-reply email using database template", "info", { 
+        recipientEmail: payload.email
+      });
+      
+      // Replace {{name}} placeholder in template with actual name
+      let htmlContent = template.body_html.replace(/{{name}}/g, payload.name);
+      let textContent = template.body_text.replace(/{{name}}/g, payload.name);
+      
+      const autoReplyPayload = {
+        to: payload.email,
+        from: "Theria Astro <no-reply@theraiastro.com>",
+        subject: template.subject,
+        html: htmlContent,
+        text: textContent
+      };
+      
+      const autoReplyResponse = await fetch(
+        `${supabaseUrl}/functions/v1/send-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseAnonKey}`,
+            "apikey": supabaseAnonKey
+          },
+          body: JSON.stringify(autoReplyPayload),
+        }
+      );
+      
+      if (!autoReplyResponse.ok) {
+        const errorData = await autoReplyResponse.text();
+        logMessage("Error sending auto-reply email", "error", { 
+          status: autoReplyResponse.status,
+          errorData,
+          recipientEmail: autoReplyPayload.to
+        });
+      } else {
+        logMessage("Auto-reply email sent successfully", "info", {
+          recipientEmail: autoReplyPayload.to
+        });
+      }
+    } catch (error) {
+      logMessage("Error in sending auto-reply", "error", { 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
     
     // Return success response
@@ -226,89 +278,3 @@ serve(async (req) => {
     });
   }
 });
-
-// Helper function to send auto-reply using template from database
-async function sendAutoReplyWithTemplate(
-  supabaseUrl: string, 
-  supabaseAnonKey: string, 
-  payload: ContactFormPayload, 
-  template: { subject: string, body_html: string, body_text: string }
-) {
-  try {
-    logMessage("Sending auto-reply email using database template", "info", { 
-      recipientEmail: payload.email
-    });
-    
-    // Replace {{name}} placeholder in template with actual name
-    let htmlContent = template.body_html.replace(/{{name}}/g, payload.name);
-    let textContent = template.body_text.replace(/{{name}}/g, payload.name);
-    
-    const autoReplyPayload = {
-      to: payload.email,
-      from: "Theria Astro <no-reply@theraiastro.com>",
-      subject: template.subject,
-      html: htmlContent,
-      text: textContent
-    };
-    
-    await sendEmail(supabaseUrl, supabaseAnonKey, autoReplyPayload);
-  } catch (error) {
-    logMessage("Error in sendAutoReplyWithTemplate", "error", { 
-      error: error instanceof Error ? error.message : String(error)
-    });
-  }
-}
-
-// Fallback function if database fetch fails
-async function sendAutoReplyWithHardcodedTemplate(
-  supabaseUrl: string, 
-  supabaseAnonKey: string, 
-  payload: ContactFormPayload
-) {
-  try {
-    logMessage("Using hardcoded template as fallback", "info");
-    
-    const autoReplyPayload = {
-      to: payload.email,
-      from: "Theria Astro <no-reply@theraiastro.com>",
-      subject: "Your Therai Astro email inquiry has been received",
-      html: `<div style="font-family: sans-serif; font-size: 16px; color: #333;"><p>Hi ${payload.name},</p><p>Thanks for reaching out to <strong>Theria Astro</strong>. We've received your message and our team will get back to you within 24 hours.</p><p>Talk soon,<br/>The Theria Astro Team</p></div>`,
-      text: `Hi ${payload.name},\n\nThanks for reaching out to Theria Astro. We've received your message and our team will get back to you within 24 hours.\n\nTalk soon,\nThe Theria Astro Team`
-    };
-    
-    await sendEmail(supabaseUrl, supabaseAnonKey, autoReplyPayload);
-  } catch (error) {
-    logMessage("Error in sendAutoReplyWithHardcodedTemplate", "error", { 
-      error: error instanceof Error ? error.message : String(error)
-    });
-  }
-}
-
-// Helper function to send email
-async function sendEmail(supabaseUrl: string, supabaseAnonKey: string, emailPayload: any) {
-  const autoReplyResponse = await fetch(
-    `${supabaseUrl}/functions/v1/send-email`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${supabaseAnonKey}`,
-        "apikey": supabaseAnonKey
-      },
-      body: JSON.stringify(emailPayload),
-    }
-  );
-  
-  if (!autoReplyResponse.ok) {
-    const errorData = await autoReplyResponse.text();
-    logMessage("Error sending auto-reply email", "error", { 
-      status: autoReplyResponse.status,
-      errorData,
-      recipientEmail: emailPayload.to
-    });
-  } else {
-    logMessage("Auto-reply email sent successfully", "info", {
-      recipientEmail: emailPayload.to
-    });
-  }
-}
