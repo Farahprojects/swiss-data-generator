@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -46,7 +46,10 @@ export const SettingsModal = () => {
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) closeSettings();
     }}>
-      <DialogContent className="sm:max-w-[800px] h-[80vh] p-0 flex flex-col">
+      <DialogContent className="sm:max-w-[800px] h-[80vh] p-0 flex flex-col" aria-describedby="settings-description">
+        <DialogTitle className="sr-only">Settings</DialogTitle>
+        <div id="settings-description" className="sr-only">Manage your account settings, notifications, and other preferences</div>
+        
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-2xl font-semibold">Settings</h2>
           <DialogClose asChild>

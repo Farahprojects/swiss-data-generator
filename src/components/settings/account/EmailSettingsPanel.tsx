@@ -150,7 +150,7 @@ export const EmailSettingsPanel = () => {
                         type={showEmailPassword ? "text" : "password"} 
                         placeholder="Enter your current password" 
                         {...field} 
-                        className={`pr-10 ${passwordError ? 'border-red-500' : ''}`}
+                        className={passwordError ? 'border-red-500' : ''}
                       />
                       <button
                         type="button"
@@ -162,9 +162,9 @@ export const EmailSettingsPanel = () => {
                       </button>
                     </div>
                   </FormControl>
-                  {/* Simple inline error message */}
+                  {/* Explicitly render error message outside of FormMessage */}
                   {passwordError && (
-                    <p className="text-sm font-medium text-red-500 mt-1">{passwordError}</p>
+                    <p className="text-sm font-medium text-destructive mt-2">{passwordError}</p>
                   )}
                 </FormItem>
               )}
