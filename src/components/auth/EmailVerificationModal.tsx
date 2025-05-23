@@ -73,10 +73,10 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-md bg-white border-gray-200">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
+            <Mail className="h-5 w-5 text-blue-500" />
             Verify Your New Email Address
           </DialogTitle>
           <DialogDescription>
@@ -84,30 +84,18 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="p-4 bg-gray-50 rounded-md text-sm">
-          <h4 className="font-medium mb-2">Important:</h4>
-          <ul className="space-y-2 text-gray-700">
-            <li className="flex items-start gap-2">
-              <span>•</span>
-              <span>Check your <strong>{email}</strong> inbox for a verification email</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span>•</span>
-              <span>Click the verification link in that email to confirm your new address</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span>•</span>
-              <span>Also check your spam/junk folder if you don't see it</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span>•</span>
-              <span>Your original email address has received a notification about this change</span>
-            </li>
+        <div className="p-4 bg-blue-50 rounded-md text-sm">
+          <h4 className="font-medium text-blue-700 mb-2">Important:</h4>
+          <ul className="space-y-2 text-blue-700">
+            <li>• Check your <strong>{email}</strong> inbox for a verification email</li>
+            <li>• Click the verification link in that email to confirm your new address</li>
+            <li>• Also check your spam/junk folder if you don't see it</li>
+            <li>• Your original email address has received a notification about this change</li>
           </ul>
         </div>
         
         {resendSuccess && (
-          <div className="flex items-start gap-2 p-3 bg-gray-50 text-gray-700 rounded-md border border-gray-200">
+          <div className="flex items-start gap-2 p-3 bg-green-50 text-green-700 rounded-md">
             <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-medium">Verification email resent</p>
@@ -117,7 +105,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         )}
         
         {resendError && (
-          <div className="flex items-start gap-2 p-3 bg-gray-50 text-red-700 rounded-md border border-gray-200">
+          <div className="flex items-start gap-2 p-3 bg-red-50 text-red-700 rounded-md">
             <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-medium">Failed to resend</p>
@@ -140,7 +128,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
               type="button"
               onClick={handleResend}
               disabled={isResending}
-              variant="outline"
+              variant="secondary"
             >
               {isResending && <Loader className="mr-2 h-4 w-4 animate-spin" />}
               Resend Email
@@ -158,4 +146,3 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     </Dialog>
   );
 };
-
