@@ -20,7 +20,22 @@ serve(async (req) => {
   }
 
   try {
-    const { to, subject, html, text, from } = await req.json() as EmailPayload;
+    console.log("📧 Email request received");
+    
+    // Log raw request data for debugging
+    const rawBody = await req.text();
+    console.log(`Raw request body: ${rawBody.substring(0, 200)}${rawBody.length > 200 ? '...' : ''}`);
+    
+    // Parse the body again since we consumed it
+    const { to, subject, html, text, from } = JSON.parse(rawBody) as EmailPayload;
+    
+    console.log("📧 Email payload:", { 
+      to, 
+      subject, 
+      htmlLength: html?.length || 0,
+      textLength: text?.length || 0,
+      from: from || "default" 
+    });
 
     if (!to || !subject || !html) {
       console.error("Missing required fields in email request:", { to, subject, hasHtml: !!html });
@@ -41,16 +56,21 @@ serve(async (req) => {
 
     console.log(`Attempting to send email to ${to} via SMTP endpoint ${smtpEndpoint.substring(0, 20)}...`);
     
+    // Build the exact payload to send to the SMTP endpoint
+    const smtpPayload = {
+      to,
+      subject,
+      html,
+      text: text || "",
+      from: from || "Theria Astro <no-reply@theraiastro.com>"
+    };
+    
+    console.log("Sending payload to SMTP endpoint:", JSON.stringify(smtpPayload).substring(0, 200));
+    
     const response = await fetch(smtpEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to,
-        subject,
-        html,
-        text: text || "",
-        from: from || "Theria Astro <no-reply@theraiastro.com>"
-      })
+      body: JSON.stringify(smtpPayload)
     });
 
     if (!response.ok) {
@@ -63,7 +83,9 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Email sent successfully to ${to}`);
+    const responseData = await response.text();
+    console.log(`Email sent successfully to ${to} with SMTP response:`, responseData);
+    
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }

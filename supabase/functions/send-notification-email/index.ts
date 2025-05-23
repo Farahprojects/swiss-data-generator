@@ -21,6 +21,12 @@ serve(async (req) => {
   }
 
   try {
+    console.log("🔔 Notification request received");
+    
+    // Log the raw request for debugging
+    const rawBody = await req.text();
+    console.log(`Raw notification request body: ${rawBody.substring(0, 200)}${rawBody.length > 200 ? '...' : ''}`);
+    
     // Extract authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -31,10 +37,11 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const { templateType, recipientEmail, variables = {} } = await req.json() as EmailNotificationRequest;
+    // Parse request body (already consumed text above, so parse it)
+    const { templateType, recipientEmail, variables = {} } = JSON.parse(rawBody) as EmailNotificationRequest;
     
     console.log(`Processing notification request of type "${templateType}" for ${recipientEmail}`);
+    console.log("Variables provided:", JSON.stringify(variables));
     
     // Validate required fields
     if (!templateType || !recipientEmail) {
@@ -76,7 +83,10 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Template found for "${templateType}"`);
+    console.log(`Template found for "${templateType}":`);
+    console.log(`Subject: ${template.subject}`);
+    console.log(`HTML Length: ${template.body_html?.length || 0}`);
+    console.log(`Text Length: ${template.body_text?.length || 0}`);
 
     // Process the template with variables
     let htmlContent = template.body_html;
@@ -90,6 +100,9 @@ serve(async (req) => {
       textContent = textContent.replace(regex, String(value));
       subject = subject.replace(regex, String(value));
     });
+    
+    console.log("Variables replaced in template");
+    console.log(`Final Subject: ${subject}`);
 
     // Call our new send-email function to send the email
     console.log(`Calling send-email function for ${recipientEmail}`);
@@ -119,8 +132,8 @@ serve(async (req) => {
       );
     }
 
-    // Log success for debugging
-    console.log(`Email notification sent (${templateType}) to ${recipientEmail}`);
+    const responseData = await emailResponse.json();
+    console.log(`Email notification sent (${templateType}) to ${recipientEmail}:`, responseData);
     
     // Return success response
     return new Response(
