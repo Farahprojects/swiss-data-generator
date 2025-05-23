@@ -45,6 +45,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          pending_email_change: boolean
           updated_at: string | null
           user_id: string | null
         }
@@ -53,6 +54,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          pending_email_change?: boolean
           updated_at?: string | null
           user_id?: string | null
         }
@@ -61,6 +63,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          pending_email_change?: boolean
           updated_at?: string | null
           user_id?: string | null
         }

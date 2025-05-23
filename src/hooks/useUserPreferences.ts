@@ -24,14 +24,28 @@ interface UpdateOptions {
   showToast?: boolean;
 }
 
+// Default preferences for optimistic loading
+const getDefaultPreferences = (userId: string): UserPreferences => ({
+  id: '',
+  user_id: userId,
+  email_notifications_enabled: true,
+  password_change_notifications: true,
+  email_change_notifications: true,
+  security_alert_notifications: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+
 export function useUserPreferences() {
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [preferences, setPreferences] = useState<UserPreferences | null>(
+    user ? getDefaultPreferences(user.id) : null
+  );
+  const [loading, setLoading] = useState(false); // Start with false for optimistic loading
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
-  const { user } = useAuth();
   
   // Track user initiated changes to prevent real-time updates from overriding them
   const pendingChangesRef = useRef<Map<string, boolean>>(new Map());
@@ -59,7 +73,6 @@ export function useUserPreferences() {
     const loadUserPreferences = async () => {
       if (!user?.id) {
         if (isMounted()) {
-          setLoading(false);
           setError("Authentication required");
         }
         return;
@@ -67,8 +80,7 @@ export function useUserPreferences() {
 
       try {
         loadTimeout = setTimeout(() => {
-          if (loading && isMounted()) {
-            setLoading(false);
+          if (isMounted()) {
             setError("Request timed out. Please try again.");
             logToSupabase("Loading user preferences timed out", {
               level: "error",
@@ -126,10 +138,6 @@ export function useUserPreferences() {
               loadUserPreferences();
             }, retryDelay);
           }
-        }
-      } finally {
-        if (isMounted()) {
-          setLoading(false);
         }
       }
     };

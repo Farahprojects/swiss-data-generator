@@ -13,7 +13,7 @@ type NotificationToggleKey = 'password_change_notifications' | 'email_change_not
 export const NotificationsPanel = () => {
   const {
     preferences,
-    loading,
+    saving,
     error,
     updateMainNotificationsToggle,
     updateNotificationToggle,
@@ -25,9 +25,9 @@ export const NotificationsPanel = () => {
     logToSupabase("NotificationsPanel component rendered", {
       level: 'debug',
       page: 'NotificationsPanel',
-      data: { status: loading ? 'loading' : 'loaded', error }
+      data: { status: 'loaded', error }
     });
-  }, [loading, error]);
+  }, [error]);
 
   // Helper function to determine if individual notification is enabled
   const isNotificationEnabled = (type: string): boolean => {
@@ -99,14 +99,14 @@ export const NotificationsPanel = () => {
             </p>
           </div>
           
-          {loading ? (
+          {saving ? (
             <Loader className="h-4 w-4 animate-spin text-gray-400" />
           ) : (
             <div className="flex items-center space-x-2">
               <Switch 
                 checked={preferences?.email_notifications_enabled ?? false}
                 onCheckedChange={handleMainToggleChange}
-                disabled={loading}
+                disabled={saving}
                 id="email-notifications"
                 className="focus:ring-2 focus:ring-primary"
               />
@@ -136,7 +136,7 @@ export const NotificationsPanel = () => {
                   onCheckedChange={(checked) => 
                     handleNotificationToggleChange('password_change_notifications', checked)
                   }
-                  disabled={loading || !preferences?.email_notifications_enabled}
+                  disabled={saving || !preferences?.email_notifications_enabled}
                   className="focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -155,7 +155,7 @@ export const NotificationsPanel = () => {
                   onCheckedChange={(checked) => 
                     handleNotificationToggleChange('email_change_notifications', checked)
                   }
-                  disabled={loading || !preferences?.email_notifications_enabled}
+                  disabled={saving || !preferences?.email_notifications_enabled}
                   className="focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -174,7 +174,7 @@ export const NotificationsPanel = () => {
                   onCheckedChange={(checked) => 
                     handleNotificationToggleChange('security_alert_notifications', checked)
                   }
-                  disabled={loading || !preferences?.email_notifications_enabled}
+                  disabled={saving || !preferences?.email_notifications_enabled}
                   className="focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -185,16 +185,6 @@ export const NotificationsPanel = () => {
         {preferences && !preferences.email_notifications_enabled && (
           <div className="bg-gray-50 p-4 rounded-md text-gray-500 text-sm">
             Email notifications are currently disabled. Enable the master switch to manage individual notification settings.
-          </div>
-        )}
-        
-        {/* Loading indicator for initial load */}
-        {loading && !error && (
-          <div className="flex justify-center py-8">
-            <div className="flex flex-col items-center space-y-2">
-              <Loader className="h-6 w-6 animate-spin text-primary" />
-              <p className="text-sm text-gray-500">Loading preferences...</p>
-            </div>
           </div>
         )}
       </div>
