@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -5,7 +6,6 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 import DashboardHome from './pages/dashboard/DashboardHome';
-import UserSettings from './pages/UserSettings';
 import UpgradePlan from './pages/UpgradePlan';
 import ApiProducts from './pages/ApiProducts';
 import Pricing from './pages/Pricing';
@@ -149,10 +149,9 @@ function App() {
                   <Route path="/payment-return" element={<PaymentReturn />} />
                   <Route path="/legal" element={<Legal />} />
                   
-                  {/* Auth routes - Password route is *explicitly* kept outside AuthGuard */}
+                  {/* Auth routes */}
                   <Route path="/auth/email" element={<ConfirmEmail />} />
                   <Route path="/auth/password" element={<Password />} />
-                  {/* Keep backward compatibility with old URL */}
                   <Route path="/auth/reset-password" element={<Navigate to="/auth/password" replace />} />
                   
                   {/* Protected dashboard routes with nested structure */}
@@ -165,7 +164,7 @@ function App() {
                     }
                   >
                     <Route index element={<DashboardHome />} />
-                    {/* Redirect old settings route to dashboard */}
+                    {/* Redirect all settings routes to dashboard */}
                     <Route path="settings" element={<Navigate to="/dashboard" replace />} />
                     <Route path="upgrade" element={<UpgradePlan />} />
                     <Route path="activity-logs" element={<ActivityLogs />} />
@@ -175,6 +174,9 @@ function App() {
                     <Route path="billing" element={<BillingPage />} />
                     <Route path="pricing" element={<PricingPage />} />
                   </Route>
+                  
+                  {/* Legacy routes redirect */}
+                  <Route path="/settings" element={<Navigate to="/dashboard" replace />} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>

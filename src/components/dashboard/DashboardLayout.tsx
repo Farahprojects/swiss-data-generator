@@ -19,8 +19,8 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const { openSettings } = useSettingsModal();
   
-  // Check if this is a settings route
-  const isSettingsRoute = location.pathname.includes('/dashboard/settings');
+  // Check if this is a settings route - handle both new and legacy paths
+  const isSettingsRoute = location.pathname.includes('/dashboard/settings') || location.pathname.includes('/settings');
   
   // Get panel from query params
   const searchParams = new URLSearchParams(location.search);
@@ -45,10 +45,12 @@ const DashboardLayout = () => {
     }
   }, [isSettingsRoute, panelParam, openSettings, navigate]);
   
-  // Add a console log to track when DashboardLayout renders
   useEffect(() => {
-    console.log("DashboardLayout mounted or updated, user:", user?.email);
-    console.log("Current pathname:", location.pathname);
+    logToSupabase("DashboardLayout mounted or updated", {
+      level: 'info',
+      page: 'DashboardLayout',
+      data: { user: user?.email, path: location.pathname }
+    });
   }, [user, location.pathname]);
 
   return (

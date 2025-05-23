@@ -13,7 +13,7 @@ const UserSettings = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const panel = urlParams.get('panel') as "account" | "notifications" | "delete" | "support" || "account";
     
-    logToSupabase("UserSettings page accessed, redirecting to modal", {
+    logToSupabase("UserSettings legacy page accessed, redirecting to modal", {
       level: 'info',
       page: 'UserSettings',
       data: { panel }

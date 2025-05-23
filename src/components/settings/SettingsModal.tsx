@@ -27,6 +27,12 @@ export const SettingsModal = () => {
 
   const handleTabChange = (value: "account" | "notifications" | "delete" | "support") => {
     setActivePanel(value);
+    
+    logToSupabase("Settings tab changed via sidebar", {
+      level: 'info',
+      page: 'SettingsModal',
+      data: { panel: value }
+    });
   };
 
   const tabs = [
@@ -56,7 +62,7 @@ export const SettingsModal = () => {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* Left sidebar - removed box styling */}
+          {/* Left sidebar */}
           <div className="w-[200px] border-r p-4">
             <nav>
               <ul className="space-y-1">
