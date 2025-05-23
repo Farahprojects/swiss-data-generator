@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,6 @@ const Contact = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [userIp, setUserIp] = useState<string | null>(null);
 
   // Check if the form was previously submitted successfully
   useEffect(() => {
@@ -30,6 +28,13 @@ const Contact = () => {
       setSubmitted(true);
     }
   }, []);
+
+  // Scroll to top when showing the thank you message
+  useEffect(() => {
+    if (submitted) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [submitted]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -65,19 +70,6 @@ const Contact = () => {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Server responded with ${response.status}`);
-      }
-      
-      // Attempt to get client IP from the headers (this will be approximate)
-      const ipResponse = await fetch("https://api.ipify.org?format=json");
-      if (ipResponse.ok) {
-        const ipData = await ipResponse.json();
-        setUserIp(ipData.ip);
-        
-        logToSupabase("User IP captured", {
-          level: 'debug',
-          page: 'Contact',
-          data: { ip: ipData.ip }
-        });
       }
       
       logToSupabase("Contact form submission successful", {
@@ -118,9 +110,6 @@ const Contact = () => {
       <p className="text-lg text-gray-600 max-w-lg mb-6">
         Your message has been successfully received. We appreciate your inquiry and will respond to you within 24 hours.
       </p>
-      <div className="text-sm text-gray-500">
-        Reference ID: {userIp ? `${userIp.substring(0, 5)}...` : 'Generated'}
-      </div>
     </div>
   );
 
