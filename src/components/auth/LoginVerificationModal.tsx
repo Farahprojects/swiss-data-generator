@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Loader, Mail } from 'lucide-react';
@@ -72,7 +73,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-sm rounded-2xl border bg-white p-6">
+      <DialogContent className="sm:max-w-sm rounded-2xl border bg-white px-8 py-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base text-gray-900 font-medium">
             <Mail className="h-5 w-5 text-[#7C3AED]" />
@@ -86,7 +87,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         <ul className="mt-4 space-y-3 text-sm text-gray-700 leading-relaxed">
           <li>Check your <strong>{email}</strong> inbox for a verification email</li>
           <li>Click the link in that email to confirm your address</li>
-          <li>Didn’t get it? Check your spam or junk folder</li>
+          <li>Didn't get it? Check your spam or junk folder</li>
         </ul>
 
         {resendSuccess && (
