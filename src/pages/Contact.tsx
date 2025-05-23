@@ -1,13 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, CheckCircle, Loader2 } from "lucide-react";
+import { Mail, CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { logToSupabase } from "@/utils/batchedLogManager";
+import { validateEmail } from "@/utils/authValidation";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -18,8 +20,15 @@ const Contact = () => {
     message: "",
     honeypot: "" // Invisible field to catch bots
   });
+  const [formErrors, setFormErrors] = useState({
+    name: false,
+    email: false,
+    subject: false,
+    message: false,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   // Clear "thank you" state when component mounts (on page refresh)
   useEffect(() => {
@@ -40,13 +49,45 @@ const Contact = () => {
     }
   }, [submitted]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error when user starts typing
+    if (attemptedSubmit) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: false
+      }));
+    }
   };
 
-  const handleSubmit = async (e) => {
+  const validateForm = (): boolean => {
+    const errors = {
+      name: !formData.name.trim(),
+      email: !formData.email.trim() || !validateEmail(formData.email),
+      subject: !formData.subject,
+      message: !formData.message.trim(),
+    };
+    
+    setFormErrors(errors);
+    return !Object.values(errors).some(error => error);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAttemptedSubmit(true);
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      toast({
+        title: "Please check your form",
+        description: "All fields are required and email must be valid.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     logToSupabase("Contact form submission started", {
@@ -91,7 +132,7 @@ const Contact = () => {
 
       // Race between timeout and actual fetch
       try {
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
         clearTimeout(toastTimeoutId);
         
         if (!response.ok) {
@@ -113,7 +154,7 @@ const Contact = () => {
 
       } catch (timeoutError) {
         // If it was our timeout error, show a non-destructive toast but don't treat it as a failure yet
-        if (timeoutError.message.includes('taking longer than expected')) {
+        if (timeoutError instanceof Error && timeoutError.message.includes('taking longer than expected')) {
           toast({
             title: "Please wait",
             description: "We're still processing your message. You'll see confirmation soon."
@@ -134,7 +175,7 @@ const Contact = () => {
             setIsSubmitting(false);
             toast({
               title: "Something went wrong",
-              description: actualError.message || "We couldn't send your message. Please try again later.",
+              description: actualError instanceof Error ? actualError.message : "We couldn't send your message. Please try again later.",
               variant: "destructive"
             });
           });
@@ -147,12 +188,12 @@ const Contact = () => {
       logToSupabase("Contact form submission failed", {
         level: 'error',
         page: 'Contact',
-        data: { error: error.message }
+        data: { error: error instanceof Error ? error.message : String(error) }
       });
       
       toast({
         title: "Something went wrong",
-        description: error.message || "We couldn't send your message. Please try again later.",
+        description: error instanceof Error ? error.message : "We couldn't send your message. Please try again later.",
         variant: "destructive"
       });
       
@@ -214,24 +255,55 @@ const Contact = () => {
 
                     <div className="grid gap-6 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
+                        <Label htmlFor="name" className="flex items-center">
+                          Name <span className="text-red-500 ml-1">*</span>
+                        </Label>
+                        <Input 
+                          id="name" 
+                          name="name" 
+                          value={formData.name} 
+                          onChange={handleChange} 
+                          required 
+                          className={formErrors.name ? "border-red-500" : ""}
+                        />
+                        {formErrors.name && (
+                          <p className="text-xs text-red-500 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" /> Name is required
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required />
+                        <Label htmlFor="email" className="flex items-center">
+                          Email <span className="text-red-500 ml-1">*</span>
+                        </Label>
+                        <Input 
+                          type="email" 
+                          id="email" 
+                          name="email" 
+                          value={formData.email} 
+                          onChange={handleChange} 
+                          required 
+                          className={formErrors.email ? "border-red-500" : ""}
+                        />
+                        {formErrors.email && (
+                          <p className="text-xs text-red-500 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" /> Valid email address is required
+                          </p>
+                        )}
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="subject">Subject</Label>
+                      <Label htmlFor="subject" className="flex items-center">
+                        Subject <span className="text-red-500 ml-1">*</span>
+                      </Label>
                       <select
                         id="subject"
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
                         required
-                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        className={`w-full rounded-md border px-3 py-2 text-sm ${formErrors.subject ? "border-red-500" : ""}`}
                       >
                         <option value="">Select</option>
                         <option value="General Inquiry">General Inquiry</option>
@@ -239,10 +311,17 @@ const Contact = () => {
                         <option value="Partnership">Partnership</option>
                         <option value="Billing">Billing</option>
                       </select>
+                      {formErrors.subject && (
+                        <p className="text-xs text-red-500 flex items-center">
+                          <AlertCircle className="h-3 w-3 mr-1" /> Subject is required
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="message">Message</Label>
+                      <Label htmlFor="message" className="flex items-center">
+                        Message <span className="text-red-500 ml-1">*</span>
+                      </Label>
                       <Textarea
                         id="message"
                         name="message"
@@ -250,7 +329,13 @@ const Contact = () => {
                         onChange={handleChange}
                         required
                         rows={5}
+                        className={formErrors.message ? "border-red-500" : ""}
                       />
+                      {formErrors.message && (
+                        <p className="text-xs text-red-500 flex items-center">
+                          <AlertCircle className="h-3 w-3 mr-1" /> Message is required
+                        </p>
+                      )}
                     </div>
 
                     <Button type="submit" disabled={isSubmitting} className="w-full py-6">
