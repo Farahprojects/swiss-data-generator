@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
@@ -34,17 +34,16 @@ const UnifiedNavigation = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    // Removed navigate('/login') as signOut already handles redirection
   };
 
-  const handleViewSettings = (section: string) => {
-    logToSupabase("Opening settings from navigation", {
+  const handleOpenSettings = (panel: string) => {
+    logToSupabase("Opening settings from navigation dropdown", {
       level: 'info',
       page: 'UnifiedNavigation',
-      data: { panel: section }
+      data: { panel }
     });
     
-    openSettings(section as "account" | "notifications" | "support" | "delete");
+    openSettings(panel as "general" | "account" | "notifications" | "support");
   };
 
   return (
@@ -103,17 +102,34 @@ const UnifiedNavigation = () => {
                     <p className="font-medium">{user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleViewSettings('account')}>
+                  
+                  <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    General
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
+                    <User className="mr-2 h-4 w-4" />
                     Account Settings
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
+                    <Bell className="mr-2 h-4 w-4" />
+                    Notifications
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenSettings('support')}>
+                    <LifeBuoy className="mr-2 h-4 w-4" />
+                    Support
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  
                   <DropdownMenuItem onClick={() => navigate('/dashboard/api-keys')}>
                     API Keys
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleViewSettings('support')}>
-                    Support
-                  </DropdownMenuItem>
+                  
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
+                  
+                  <DropdownMenuItem onClick={handleSignOut} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                    <LogOut className="mr-2 h-4 w-4" />
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
