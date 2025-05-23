@@ -78,7 +78,13 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Only call onCancel when the dialog is being closed (open = false)
+      // This handles ESC key and overlay clicks
+      if (!open) {
+        onCancel();
+      }
+    }}>
       <DialogContent className="sm:max-w-[400px] rounded-2xl border bg-white p-6 relative">
         {/* X button in top right corner */}
         <button
