@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -7,9 +8,8 @@ const corsHeaders = {
 };
 
 // Rate limiting using a simple in-memory store
-// In a production environment, consider using Redis or a database for distributed rate limiting
 const ipLimiter = new Map<string, { count: number, resetTime: number }>();
-const MAX_REQUESTS_PER_HOUR = 3; // Updated to 3 emails per hour per IP
+const MAX_REQUESTS_PER_HOUR = 3; // 3 emails per hour per IP
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 interface ContactFormPayload {
@@ -118,7 +118,15 @@ serve(async (req) => {
       });
     }
     
-    // Prepare data for the send-email function
+    // Get the Supabase URL and anon key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || 
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+    
+    // Create Supabase client to fetch the email template
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    
+    // Prepare data for the support email
     const emailPayload = {
       to: "support@theraiastro.com",
       from: "Theria Contact <no-reply@theraiastro.com>",
@@ -142,9 +150,12 @@ serve(async (req) => {
       `
     };
     
-    // Get the Supabase anon key for authorization
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || 
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+    // Performance Optimization: Fetch the template in parallel with sending the support email
+    const templatePromise = supabase
+      .from('email_notification_templates')
+      .select('subject, body_html, body_text')
+      .eq('template_type', 'support_email')
+      .single();
     
     logMessage("Forwarding to send-email function", "info", { 
       to: emailPayload.to,
@@ -152,23 +163,27 @@ serve(async (req) => {
       subject: emailPayload.subject
     });
     
-    // Get the Supabase URL
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-    
-    // Forward to the send-email function
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/send-email`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Important: Include the authorization header with the Bearer token format
-          "Authorization": `Bearer ${supabaseAnonKey}`,
-          "apikey": supabaseAnonKey
-        },
-        body: JSON.stringify(emailPayload),
-      }
-    );
+    // Forward to the send-email function with a timeout of 10 seconds
+    const supportEmailPromise = Promise.race([
+      fetch(
+        `${supabaseUrl}/functions/v1/send-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseAnonKey}`,
+            "apikey": supabaseAnonKey
+          },
+          body: JSON.stringify(emailPayload),
+        }
+      ),
+      new Promise<Response>((_, reject) => 
+        setTimeout(() => reject(new Error('Support email timeout')), 10000)
+      )
+    ]);
+
+    // Wait for the support email to be sent
+    const response = await supportEmailPromise;
     
     if (!response.ok) {
       const errorData = await response.text();
@@ -182,84 +197,85 @@ serve(async (req) => {
     
     logMessage("Email sent successfully", "info");
     
-    // Create Supabase client to fetch the email template
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    
-    // Fetch the support_email template from database
-    logMessage("Fetching support_email template from database", "info");
-    
-    const { data: template, error: templateError } = await supabase
-      .from('email_notification_templates')
-      .select('subject, body_html, body_text')
-      .eq('template_type', 'support_email')
-      .single();
-    
-    if (templateError || !template) {
-      logMessage("Error fetching email template", "error", { 
-        error: templateError?.message || "Template not found"
-      });
-      
-      // Return an error response if template not found or cannot be fetched
-      return new Response(JSON.stringify({ 
-        error: "Unable to send auto-reply. Please try again later."
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    } 
-    
-    logMessage("Successfully fetched email template", "info");
-    
-    // Send auto-reply with the fetched template
-    try {
-      logMessage("Sending auto-reply email using database template", "info", { 
-        recipientEmail: payload.email
-      });
-      
-      // Replace {{name}} placeholder in template with actual name
-      let htmlContent = template.body_html.replace(/{{name}}/g, payload.name);
-      let textContent = template.body_text.replace(/{{name}}/g, payload.name);
-      
-      const autoReplyPayload = {
-        to: payload.email,
-        from: "Theria Astro <no-reply@theraiastro.com>",
-        subject: template.subject,
-        html: htmlContent,
-        text: textContent
-      };
-      
-      const autoReplyResponse = await fetch(
-        `${supabaseUrl}/functions/v1/send-email`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseAnonKey}`,
-            "apikey": supabaseAnonKey
-          },
-          body: JSON.stringify(autoReplyPayload),
-        }
-      );
-      
-      if (!autoReplyResponse.ok) {
-        const errorData = await autoReplyResponse.text();
-        logMessage("Error sending auto-reply email", "error", { 
-          status: autoReplyResponse.status,
-          errorData,
-          recipientEmail: autoReplyPayload.to
+    // Create a background task for sending the auto-reply email
+    // This allows us to return a response to the user immediately
+    const sendAutoReplyAsync = async () => {
+      try {
+        // Get the template result (which was being fetched in parallel)
+        const { data: template, error: templateError } = await templatePromise;
+        
+        if (templateError || !template) {
+          logMessage("Error fetching email template", "error", { 
+            error: templateError?.message || "Template not found"
+          });
+          return;
+        } 
+        
+        logMessage("Successfully fetched email template", "info");
+        
+        // Send auto-reply with the fetched template
+        logMessage("Sending auto-reply email using database template", "info", { 
+          recipientEmail: payload.email
         });
-      } else {
-        logMessage("Auto-reply email sent successfully", "info", {
-          recipientEmail: autoReplyPayload.to
+        
+        // Replace {{name}} placeholder in template with actual name
+        let htmlContent = template.body_html.replace(/{{name}}/g, payload.name);
+        let textContent = template.body_text.replace(/{{name}}/g, payload.name);
+        
+        const autoReplyPayload = {
+          to: payload.email,
+          from: "Theria Astro <no-reply@theraiastro.com>",
+          subject: template.subject,
+          html: htmlContent,
+          text: textContent
+        };
+        
+        const autoReplyResponse = await fetch(
+          `${supabaseUrl}/functions/v1/send-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseAnonKey}`,
+              "apikey": supabaseAnonKey
+            },
+            body: JSON.stringify(autoReplyPayload),
+          }
+        );
+        
+        if (!autoReplyResponse.ok) {
+          const errorData = await autoReplyResponse.text();
+          logMessage("Error sending auto-reply email", "error", { 
+            status: autoReplyResponse.status,
+            errorData,
+            recipientEmail: autoReplyPayload.to
+          });
+        } else {
+          logMessage("Auto-reply email sent successfully", "info", {
+            recipientEmail: autoReplyPayload.to
+          });
+        }
+      } catch (error) {
+        logMessage("Error in sending auto-reply", "error", { 
+          error: error instanceof Error ? error.message : String(error)
         });
       }
-    } catch (error) {
-      logMessage("Error in sending auto-reply", "error", { 
-        error: error instanceof Error ? error.message : String(error)
+    };
+    
+    // Use Deno's waitUntil to handle the background task
+    if (typeof EdgeRuntime !== 'undefined') {
+      // @ts-ignore - EdgeRuntime is available in Deno Deploy
+      EdgeRuntime.waitUntil(sendAutoReplyAsync());
+    } else {
+      // For local development, just execute in the background
+      sendAutoReplyAsync().catch(err => {
+        logMessage("Background auto-reply task error", "error", { 
+          error: err instanceof Error ? err.message : String(err)
+        });
       });
     }
     
-    // Return success response
+    // Return success response immediately after the support email is sent
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }

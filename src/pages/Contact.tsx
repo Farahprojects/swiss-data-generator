@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, CheckCircle } from "lucide-react";
+import { Mail, CheckCircle, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
@@ -61,7 +61,15 @@ const Contact = () => {
     });
 
     try {
-      const response = await fetch(
+      // Set a timeout to detect slow responses
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Request is taking longer than expected, but we\'re still processing it.'));
+        }, 5000); // 5 second timeout
+      });
+
+      // The actual fetch request
+      const fetchPromise = fetch(
         "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/contact-form-handler",
         {
           method: "POST",
@@ -72,22 +80,72 @@ const Contact = () => {
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Server responded with ${response.status}`);
+      // Show a processing toast after 3 seconds if still submitting
+      const toastTimeoutId = setTimeout(() => {
+        if (isSubmitting) {
+          toast({
+            title: "Processing your message",
+            description: "This is taking a bit longer than usual. Please wait...",
+            duration: 5000
+          });
+        }
+      }, 3000);
+
+      // Race between timeout and actual fetch
+      try {
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        clearTimeout(toastTimeoutId);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Server responded with ${response.status}`);
+        }
+        
+        logToSupabase("Contact form submission successful", {
+          level: 'info',
+          page: 'Contact'
+        });
+        
+        // Set submitted state and store in localStorage
+        setSubmitted(true);
+        localStorage.setItem("contactFormSubmitted", "true");
+        
+        // Reset form after successful submission
+        setFormData({ name: "", email: "", subject: "", message: "", honeypot: "" });
+
+      } catch (timeoutError) {
+        // If it was our timeout error, show a non-destructive toast but don't treat it as a failure yet
+        if (timeoutError.message.includes('taking longer than expected')) {
+          toast({
+            title: "Please wait",
+            description: "We're still processing your message. You'll see confirmation soon.",
+            duration: 10000
+          });
+
+          // Continue with the fetch in the background
+          fetchPromise.then(response => {
+            clearTimeout(toastTimeoutId);
+            if (!response.ok) {
+              throw new Error(`Server responded with ${response.status}`);
+            }
+            // Set submitted state and store in localStorage
+            setSubmitted(true);
+            localStorage.setItem("contactFormSubmitted", "true");
+            // Reset form after successful submission
+            setFormData({ name: "", email: "", subject: "", message: "", honeypot: "" });
+          }).catch(actualError => {
+            setIsSubmitting(false);
+            toast({
+              title: "Something went wrong",
+              description: actualError.message || "We couldn't send your message. Please try again later.",
+              variant: "destructive"
+            });
+          });
+        } else {
+          // Handle other errors
+          throw timeoutError;
+        }
       }
-      
-      logToSupabase("Contact form submission successful", {
-        level: 'info',
-        page: 'Contact'
-      });
-      
-      // Set submitted state and store in localStorage
-      setSubmitted(true);
-      localStorage.setItem("contactFormSubmitted", "true");
-      
-      // Reset form after successful submission
-      setFormData({ name: "", email: "", subject: "", message: "", honeypot: "" });
     } catch (error) {
       logToSupabase("Contact form submission failed", {
         level: 'error',
@@ -102,8 +160,12 @@ const Contact = () => {
       });
       
       console.error("Error sending contact form:", error);
-    } finally {
       setIsSubmitting(false);
+    } finally {
+      // Only set isSubmitting to false if we're not still waiting for the background fetch
+      if (!isSubmitting || submitted) {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -195,7 +257,12 @@ const Contact = () => {
                     </div>
 
                     <Button type="submit" disabled={isSubmitting} className="w-full py-6">
-                      {isSubmitting ? "Sending..." : "Send Message"}
+                      {isSubmitting ? (
+                        <span className="flex items-center">
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </span>
+                      ) : "Send Message"}
                     </Button>
                   </form>
                 </div>
