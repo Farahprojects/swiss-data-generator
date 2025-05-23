@@ -64,6 +64,10 @@ export const EmailSettingsPanel = () => {
   // Clear password error when user types
   useEffect(() => {
     if (passwordError && passwordValue) {
+      logToSupabase("Clearing password error as user is typing", {
+        level: 'debug',
+        page: 'EmailSettingsPanel'
+      });
       setPasswordError(null);
     }
   }, [passwordValue, passwordError]);
@@ -91,6 +95,12 @@ export const EmailSettingsPanel = () => {
     // Use the hook's changeEmail function
     const result = await changeEmail(user?.email || '', data.newEmail, data.password);
     
+    logToSupabase("Email change attempt result", {
+      level: 'info',
+      page: 'EmailSettingsPanel',
+      data: { success: result.success, hasError: !!result.error }
+    });
+    
     if (result.success) {
       // Reset the form on success
       emailForm.reset();
@@ -98,15 +108,25 @@ export const EmailSettingsPanel = () => {
     } else if (result.error) {
       // Check if it's a password error
       if (result.error.includes("Password is incorrect")) {
-        logToSupabase("Incorrect password during email change", {
+        logToSupabase("Setting password error state", {
           level: 'info',
-          page: 'EmailSettingsPanel'
+          page: 'EmailSettingsPanel',
+          data: { error: result.error }
         });
-        // Set password error state
-        setPasswordError("Invalid password");
+        
+        // Set password error state with a more explicit error
+        setPasswordError("Invalid password - please try again");
+        
+        // Log the state change
+        console.log("Password error set:", "Invalid password - please try again");
       }
     }
   };
+
+  // Debug effect to monitor passwordError state changes
+  useEffect(() => {
+    console.log("Password error state changed:", passwordError);
+  }, [passwordError]);
 
   return (
     <div>
@@ -163,7 +183,9 @@ export const EmailSettingsPanel = () => {
                     </div>
                   </FormControl>
                   {passwordError && (
-                    <p className="text-sm font-medium text-red-500 mt-2">{passwordError}</p>
+                    <div className="flex items-center mt-2">
+                      <p className="text-sm font-semibold text-red-600">{passwordError}</p>
+                    </div>
                   )}
                 </FormItem>
               )}

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,6 +113,8 @@ export function useEmailChange() {
           data: { error: verifyError.message }
         });
         
+        console.log("Password verification failed:", verifyError.message);
+        
         toast({
           variant: "destructive",
           title: "Error",
@@ -142,6 +145,8 @@ export function useEmailChange() {
       });
       
       if (error) {
+        console.log("Email update error:", error.message);
+        
         toast({
           variant: "destructive",
           title: "Error",
@@ -174,7 +179,7 @@ export function useEmailChange() {
         if (shouldShowNotification) {
           toast({
             title: "Email verification sent",
-            description: "We've sent a notification email to your current email address and a verification link to your new email address. Please check both inboxes."
+            description: "We've sent a verification link to your new email address. Please check your inbox."
           });
         } else {
           toast({
@@ -192,6 +197,8 @@ export function useEmailChange() {
         page: 'useEmailChange',
         data: { error: error.message || String(error) }
       });
+      
+      console.log("Email change error:", error.message || String(error));
       
       toast({
         variant: "destructive",
