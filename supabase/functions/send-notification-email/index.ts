@@ -84,7 +84,7 @@ serve(async (req) => {
       subject = subject.replace(regex, String(value));
     });
 
-    // Call the send-email function to send the email
+    // Call our new send-email function to send the email
     const emailResponse = await fetch(
       `${supabaseUrl}/functions/v1/send-email`,
       {
