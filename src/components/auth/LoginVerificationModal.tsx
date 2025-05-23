@@ -73,37 +73,37 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-md bg-gradient-to-br from-white to-blue-50 border-primary/20">
+      <DialogContent className="sm:max-w-md bg-white border-gray-200">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-primary">
-            <Mail className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
             Verify Your Email Address
           </DialogTitle>
-          <DialogDescription className="text-gray-600">
+          <DialogDescription>
             We've sent verification instructions to <strong>{email}</strong>
           </DialogDescription>
         </DialogHeader>
         
-        <div className="p-4 bg-primary/5 rounded-md text-sm border border-primary/10">
-          <h4 className="font-medium text-primary mb-2">Important:</h4>
+        <div className="p-4 bg-gray-50 rounded-md text-sm">
+          <h4 className="font-medium mb-2">Important:</h4>
           <ul className="space-y-2 text-gray-700">
             <li className="flex items-start gap-2">
-              <span className="text-primary">•</span>
+              <span>•</span>
               <span>Check your <strong>{email}</strong> inbox for a verification email</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-primary">•</span>
+              <span>•</span>
               <span>Click the verification link in that email to confirm your address</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-primary">•</span>
+              <span>•</span>
               <span>Also check your spam/junk folder if you don't see it</span>
             </li>
           </ul>
         </div>
         
         {resendSuccess && (
-          <div className="flex items-start gap-2 p-3 bg-green-50 text-green-700 rounded-md border border-green-100">
+          <div className="flex items-start gap-2 p-3 bg-gray-50 text-gray-700 rounded-md border border-gray-200">
             <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-medium">Verification email resent</p>
@@ -113,7 +113,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         )}
         
         {resendError && (
-          <div className="flex items-start gap-2 p-3 bg-red-50 text-red-700 rounded-md border border-red-100">
+          <div className="flex items-start gap-2 p-3 bg-gray-50 text-red-700 rounded-md border border-gray-200">
             <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-medium">Failed to resend</p>
@@ -127,7 +127,6 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
             type="button"
             variant="outline"
             onClick={onCancel}
-            className="border-primary/20 text-gray-700 hover:bg-primary/5"
           >
             Cancel Verification
           </Button>
@@ -137,8 +136,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
               type="button"
               onClick={handleResend}
               disabled={isResending}
-              variant="secondary"
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              variant="outline"
             >
               {isResending && <Loader className="mr-2 h-4 w-4 animate-spin" />}
               Resend Email
@@ -147,7 +145,6 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
             <Button
               type="button"
               onClick={onVerified}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               I've Verified
             </Button>
@@ -157,3 +154,4 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
     </Dialog>
   );
 };
+
