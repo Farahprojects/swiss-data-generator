@@ -72,10 +72,10 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-sm rounded-xl border bg-white p-6">
+      <DialogContent className="sm:max-w-sm rounded-2xl border bg-white p-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base text-gray-900">
-            <Mail className="h-5 w-5 text-gray-500" />
+          <DialogTitle className="flex items-center gap-2 text-base text-gray-900 font-medium">
+            <Mail className="h-5 w-5 text-[#7C3AED]" />
             Verify Your Email Address
           </DialogTitle>
           <DialogDescription className="text-sm text-gray-600 mt-1">
@@ -83,15 +83,15 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <ul className="mt-4 space-y-3 text-sm text-gray-700">
+        <ul className="mt-4 space-y-3 text-sm text-gray-700 leading-relaxed">
           <li>Check your <strong>{email}</strong> inbox for a verification email</li>
           <li>Click the link in that email to confirm your address</li>
-          <li>Check your spam/junk folder if it’s not in your inbox</li>
+          <li>Didn’t get it? Check your spam or junk folder</li>
         </ul>
 
         {resendSuccess && (
           <div className="mt-4 flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
-            <CheckCircle className="h-5 w-5 mt-0.5 text-gray-600" />
+            <CheckCircle className="h-5 w-5 mt-0.5 text-[#7C3AED]" />
             <div>
               <p className="font-medium">Email resent</p>
               <p className="text-xs text-gray-600">A new verification link has been sent to {email}</p>
@@ -109,7 +109,9 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
           </div>
         )}
 
-        <DialogFooter className="mt-6 flex justify-end gap-3">
+        <hr className="my-5 border-gray-100" />
+
+        <DialogFooter className="flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"
@@ -132,7 +134,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
           <Button
             type="button"
             onClick={onVerified}
-            className="text-sm bg-gray-900 text-white hover:bg-gray-800"
+            className="text-sm bg-[#7C3AED] text-white hover:bg-[#6B2FC9]"
           >
             I've Verified
           </Button>
