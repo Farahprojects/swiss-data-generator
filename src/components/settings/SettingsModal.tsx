@@ -96,18 +96,6 @@ export const SettingsModal = () => {
                     </Button>
                   </li>
                 ))}
-                
-                {/* Logout button at bottom of sidebar */}
-                <li className="mt-6">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-gray-700 hover:bg-gray-200 hover:text-gray-900 rounded-full border-gray-300"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Logout</span>
-                  </Button>
-                </li>
               </ul>
             </nav>
           </div>
@@ -117,24 +105,37 @@ export const SettingsModal = () => {
             <Tabs value={activePanel} className="h-full">
               <TabsContent value="general" className="mt-0 h-full">
                 <div className="p-6 bg-white rounded-lg shadow">
-                  <h2 className="text-2xl font-semibold mb-6">General Settings</h2>
-                  
-                  {/* Delete Account Section */}
-                  <div className="mt-12 pt-6 border-t">
-                    <h3 className="text-lg font-medium text-red-600 mb-2 flex items-center">
-                      <Trash2 className="h-5 w-5 mr-2" />
-                      Danger Zone
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      Permanently delete your account and all of your data.
-                    </p>
-                    <Button 
-                      variant="destructive" 
-                      onClick={() => handleTabChange("delete")}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      Delete Account
-                    </Button>
+                  <div className="space-y-4">
+                    {/* Logout Button */}
+                    <div>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleLogout}
+                        className="w-full justify-start text-gray-700 hover:bg-gray-200 hover:text-gray-900 rounded-full border-gray-300"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Logout</span>
+                      </Button>
+                    </div>
+                    
+                    {/* Delete Account Section */}
+                    <div className="pt-6 border-t">
+                      <h3 className="text-lg font-medium text-red-600 mb-2 flex items-center">
+                        <Trash2 className="h-5 w-5 mr-2" />
+                        Danger Zone
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        Permanently delete your account and all of your data.
+                      </p>
+                      <Button 
+                        variant="destructive" 
+                        onClick={() => handleTabChange("delete")}
+                        className="bg-red-600 hover:bg-red-700 rounded-full w-full justify-start"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Account
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </TabsContent>
