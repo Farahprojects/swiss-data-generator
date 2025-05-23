@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle, Loader, Mail } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader, Mail, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -79,7 +79,15 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-[400px] rounded-2xl border bg-white p-6">
+      <DialogContent className="sm:max-w-[400px] rounded-2xl border bg-white p-6 relative">
+        {/* X button in top right corner */}
+        <button
+          onClick={onCancel}
+          className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 transition-colors"
+        >
+          <X className="h-4 w-4 text-gray-400" />
+        </button>
+
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base text-gray-900 font-medium">
             <Mail className="h-5 w-5 text-[#7C3AED]" />
@@ -127,15 +135,6 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         <hr className="my-5 border-gray-100" />
 
         <DialogFooter className="flex justify-end gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="text-sm border-gray-200 text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </Button>
-
           <Button
             type="button"
             onClick={handleResend}
