@@ -11,7 +11,7 @@ const UserSettings = () => {
   useEffect(() => {
     // Extract panel from URL if present
     const urlParams = new URLSearchParams(window.location.search);
-    const panel = urlParams.get('panel') as "account" | "notifications" | "delete" | "support" || "account";
+    const panel = urlParams.get('panel') as "general" | "account" | "notifications" | "delete" | "support" || "general";
     
     logToSupabase("UserSettings legacy page accessed, redirecting to modal", {
       level: 'info',
@@ -19,7 +19,7 @@ const UserSettings = () => {
       data: { panel }
     });
     
-    // Open the settings modal with the panel from URL or default to account
+    // Open the settings modal with the panel from URL or default to general
     openSettings(panel);
     
     // Redirect to dashboard

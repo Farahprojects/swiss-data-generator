@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { logToSupabase } from "@/utils/batchedLogManager";
 
-type SettingsPanelType = "account" | "notifications" | "delete" | "support";
+type SettingsPanelType = "general" | "account" | "notifications" | "delete" | "support";
 
 interface SettingsModalContextProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ const SettingsModalContext = createContext<SettingsModalContextProps | undefined
 
 export const SettingsModalProvider = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState<SettingsPanelType>("account");
+  const [activePanel, setActivePanel] = useState<SettingsPanelType>("general");
 
   const openSettings = (panel?: SettingsPanelType) => {
     if (panel) {

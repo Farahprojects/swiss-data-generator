@@ -3,16 +3,18 @@ import { useEffect } from "react";
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, User, Bell, LifeBuoy, Settings as SettingsIcon, LogOut, Trash2 } from "lucide-react";
 import { useSettingsModal } from "@/contexts/SettingsModalContext";
 import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
 import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { logToSupabase } from "@/utils/batchedLogManager";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const SettingsModal = () => {
   const { isOpen, closeSettings, activePanel, setActivePanel } = useSettingsModal();
+  const { signOut } = useAuth();
 
   // Log when the active panel changes
   useEffect(() => {
@@ -25,7 +27,7 @@ export const SettingsModal = () => {
     }
   }, [activePanel, isOpen]);
 
-  const handleTabChange = (value: "account" | "notifications" | "delete" | "support") => {
+  const handleTabChange = (value: "general" | "account" | "notifications" | "delete" | "support") => {
     setActivePanel(value);
     
     logToSupabase("Settings tab changed via sidebar", {
@@ -35,11 +37,21 @@ export const SettingsModal = () => {
     });
   };
 
+  const handleLogout = () => {
+    logToSupabase("User logged out from settings modal", {
+      level: 'info',
+      page: 'SettingsModal'
+    });
+    
+    signOut();
+    closeSettings();
+  };
+
   const tabs = [
-    { id: "account", label: "Account" },
-    { id: "notifications", label: "Notifications" },
-    { id: "support", label: "Support" },
-    { id: "delete", label: "Delete Account" },
+    { id: "general", label: "General", icon: SettingsIcon },
+    { id: "account", label: "Account", icon: User },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "support", label: "Support", icon: LifeBuoy },
   ];
 
   return (
@@ -54,10 +66,9 @@ export const SettingsModal = () => {
           <h2 className="text-2xl font-semibold">Settings</h2>
           <DialogClose asChild>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon" 
-              onClick={closeSettings} 
-              className="rounded-full hover:bg-gray-300 border-2 border-gray-400 transition-all duration-300"
+              onClick={closeSettings}
             >
               <X size={20} className="text-gray-800 hover:text-gray-900" />
             </Button>
@@ -78,12 +89,25 @@ export const SettingsModal = () => {
                           ? "bg-accent text-accent-foreground" 
                           : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
                       }`}
-                      onClick={() => handleTabChange(tab.id as "account" | "notifications" | "delete" | "support")}
+                      onClick={() => handleTabChange(tab.id as "general" | "account" | "notifications" | "support")}
                     >
+                      <tab.icon className="mr-2 h-4 w-4" />
                       <span>{tab.label}</span>
                     </Button>
                   </li>
                 ))}
+                
+                {/* Logout button at bottom of sidebar */}
+                <li className="mt-6">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-gray-700 hover:bg-gray-200 hover:text-gray-900 rounded-full border-gray-300"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </Button>
+                </li>
               </ul>
             </nav>
           </div>
@@ -91,15 +115,42 @@ export const SettingsModal = () => {
           {/* Main content area */}
           <div className="flex-1 overflow-y-auto p-6">
             <Tabs value={activePanel} className="h-full">
+              <TabsContent value="general" className="mt-0 h-full">
+                <div className="p-6 bg-white rounded-lg shadow">
+                  <h2 className="text-2xl font-semibold mb-6">General Settings</h2>
+                  
+                  {/* Delete Account Section */}
+                  <div className="mt-12 pt-6 border-t">
+                    <h3 className="text-lg font-medium text-red-600 mb-2 flex items-center">
+                      <Trash2 className="h-5 w-5 mr-2" />
+                      Danger Zone
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      Permanently delete your account and all of your data.
+                    </p>
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => handleTabChange("delete")}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete Account
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+              
               <TabsContent value="account" className="mt-0 h-full">
                 <AccountSettingsPanel />
               </TabsContent>
+              
               <TabsContent value="notifications" className="mt-0 h-full">
                 <NotificationsPanel />
               </TabsContent>
+              
               <TabsContent value="support" className="mt-0 h-full">
                 <ContactSupportPanel />
               </TabsContent>
+              
               <TabsContent value="delete" className="mt-0 h-full">
                 <DeleteAccountPanel />
               </TabsContent>

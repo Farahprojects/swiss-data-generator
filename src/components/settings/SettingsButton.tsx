@@ -6,13 +6,13 @@ import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface SettingsButtonProps extends ButtonProps {
-  panel?: "account" | "notifications" | "delete" | "support";
+  panel?: "general" | "account" | "notifications" | "delete" | "support";
   showIcon?: boolean;
   label?: string;
 }
 
 export const SettingsButton: React.FC<SettingsButtonProps> = ({
-  panel = "account",
+  panel = "general",
   showIcon = true,
   label = "Settings",
   className,
