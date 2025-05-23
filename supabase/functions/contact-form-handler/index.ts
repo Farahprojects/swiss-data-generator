@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -123,10 +122,19 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || 
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
     
-    // Create Supabase client to fetch the email template
+    // Start both operations in parallel for better performance
+    
+    // 1. Create Supabase client and start fetching the template in parallel with other operations
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     
-    // Prepare data for the support email
+    // Fetch support_email template - we'll need this later
+    const templatePromise = supabase
+      .from('email_notification_templates')
+      .select('subject, body_html, body_text')
+      .eq('template_type', 'support_email')
+      .single();
+    
+    // 2. Prepare data for the support email
     const emailPayload = {
       to: "support@theraiastro.com",
       from: "Theria Contact <no-reply@theraiastro.com>",
@@ -150,20 +158,13 @@ serve(async (req) => {
       `
     };
     
-    // Performance Optimization: Fetch the template in parallel with sending the support email
-    const templatePromise = supabase
-      .from('email_notification_templates')
-      .select('subject, body_html, body_text')
-      .eq('template_type', 'support_email')
-      .single();
-    
     logMessage("Forwarding to send-email function", "info", { 
       to: emailPayload.to,
       from: emailPayload.from,
       subject: emailPayload.subject
     });
     
-    // Forward to the send-email function with a timeout of 10 seconds
+    // 3. Send the support email - this is our primary task
     const supportEmailPromise = Promise.race([
       fetch(
         `${supabaseUrl}/functions/v1/send-email`,
@@ -182,7 +183,7 @@ serve(async (req) => {
       )
     ]);
 
-    // Wait for the support email to be sent
+    // 4. Wait for the support email to be sent
     const response = await supportEmailPromise;
     
     if (!response.ok) {
@@ -195,43 +196,18 @@ serve(async (req) => {
       throw new Error(`Email service error: ${response.status}`);
     }
     
-    logMessage("Email sent successfully", "info");
-    
-    // Create a background task for sending the auto-reply email
+    logMessage("Support email sent successfully", "info");
+
+    // 5. Create a background task for sending the auto-reply email
     // This allows us to return a response to the user immediately
     const sendAutoReplyAsync = async () => {
       try {
-        // Get the template result (which was being fetched in parallel)
-        const { data: template, error: templateError } = await templatePromise;
+        logMessage("Starting auto-reply email sending process", "info");
         
-        if (templateError || !template) {
-          logMessage("Error fetching email template", "error", { 
-            error: templateError?.message || "Template not found"
-          });
-          return;
-        } 
-        
-        logMessage("Successfully fetched email template", "info");
-        
-        // Send auto-reply with the fetched template
-        logMessage("Sending auto-reply email using database template", "info", { 
-          recipientEmail: payload.email
-        });
-        
-        // Replace {{name}} placeholder in template with actual name
-        let htmlContent = template.body_html.replace(/{{name}}/g, payload.name);
-        let textContent = template.body_text.replace(/{{name}}/g, payload.name);
-        
-        const autoReplyPayload = {
-          to: payload.email,
-          from: "Theria Astro <no-reply@theraiastro.com>",
-          subject: template.subject,
-          html: htmlContent,
-          text: textContent
-        };
-        
+        // Send the auto-reply email using the send-notification-email function
+        // which will properly handle template fetching from the database
         const autoReplyResponse = await fetch(
-          `${supabaseUrl}/functions/v1/send-email`,
+          `${supabaseUrl}/functions/v1/send-notification-email`,
           {
             method: "POST",
             headers: {
@@ -239,20 +215,26 @@ serve(async (req) => {
               "Authorization": `Bearer ${supabaseAnonKey}`,
               "apikey": supabaseAnonKey
             },
-            body: JSON.stringify(autoReplyPayload),
+            body: JSON.stringify({
+              templateType: "support_email",
+              recipientEmail: payload.email,
+              variables: {
+                name: payload.name
+              }
+            }),
           }
         );
-        
+
         if (!autoReplyResponse.ok) {
           const errorData = await autoReplyResponse.text();
-          logMessage("Error sending auto-reply email", "error", { 
+          logMessage("Error sending auto-reply via send-notification-email", "error", { 
             status: autoReplyResponse.status,
             errorData,
-            recipientEmail: autoReplyPayload.to
+            recipientEmail: payload.email
           });
         } else {
-          logMessage("Auto-reply email sent successfully", "info", {
-            recipientEmail: autoReplyPayload.to
+          logMessage("Auto-reply email sent successfully via send-notification-email", "info", {
+            recipientEmail: payload.email
           });
         }
       } catch (error) {
@@ -266,6 +248,7 @@ serve(async (req) => {
     if (typeof EdgeRuntime !== 'undefined') {
       // @ts-ignore - EdgeRuntime is available in Deno Deploy
       EdgeRuntime.waitUntil(sendAutoReplyAsync());
+      logMessage("Auto-reply email queued as background task", "info");
     } else {
       // For local development, just execute in the background
       sendAutoReplyAsync().catch(err => {

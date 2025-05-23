@@ -66,7 +66,12 @@ serve(async (req) => {
     
     logMessage("Processing notification request", { 
       level: 'info', 
-      data: { templateType, recipientEmail, variablesCount: Object.keys(variables).length }
+      data: { 
+        templateType, 
+        recipientEmail, 
+        variablesCount: Object.keys(variables).length,
+        variables: JSON.stringify(variables).substring(0, 100) // Log the first 100 chars of variables
+      }
     });
     
     // Validate required fields
@@ -127,6 +132,16 @@ serve(async (req) => {
         textLength: template.body_text?.length || 0
       }
     });
+    
+    // Log a snippet of the template content for debugging
+    logMessage("Template content sample", {
+      level: 'debug',
+      data: {
+        subject: template.subject,
+        htmlSample: template.body_html?.substring(0, 200) + '...',
+        textSample: template.body_text?.substring(0, 200) + '...'
+      }
+    });
 
     // Process the template with variables
     let htmlContent = template.body_html;
@@ -141,11 +156,18 @@ serve(async (req) => {
       subject = subject.replace(regex, String(value));
     });
     
-    logMessage("Template variables replaced", { level: 'info', data: { subject } });
+    logMessage("Template variables replaced", { 
+      level: 'info', 
+      data: { 
+        subject,
+        variables: JSON.stringify(variables)
+      }
+    });
 
-    // Call our send-email function to send the email
+    // Call our send-email function to send the email with a timeout
     logMessage("Calling send-email function", { level: 'info', data: { recipientEmail } });
-    const emailResponse = await fetch(
+    
+    const emailPromise = fetch(
       `${supabaseUrl}/functions/v1/send-email`,
       {
         method: "POST",
@@ -161,6 +183,13 @@ serve(async (req) => {
         })
       }
     );
+    
+    // Set a 10-second timeout for the email sending
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Email sending timed out after 10 seconds")), 10000);
+    });
+    
+    const emailResponse = await Promise.race([emailPromise, timeoutPromise]) as Response;
 
     if (!emailResponse.ok) {
       const errorData = await emailResponse.json();
@@ -178,7 +207,6 @@ serve(async (req) => {
       );
     }
 
-    const responseData = await emailResponse.json();
     logMessage("Email notification sent successfully", { 
       level: 'info', 
       data: { 

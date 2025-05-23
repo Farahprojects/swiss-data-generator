@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,8 +84,7 @@ const Contact = () => {
         if (isSubmitting) {
           toast({
             title: "Processing your message",
-            description: "This is taking a bit longer than usual. Please wait...",
-            duration: 5000
+            description: "This is taking a bit longer than usual. Please wait..."
           });
         }
       }, 3000);
@@ -118,8 +116,7 @@ const Contact = () => {
         if (timeoutError.message.includes('taking longer than expected')) {
           toast({
             title: "Please wait",
-            description: "We're still processing your message. You'll see confirmation soon.",
-            duration: 10000
+            description: "We're still processing your message. You'll see confirmation soon."
           });
 
           // Continue with the fetch in the background
