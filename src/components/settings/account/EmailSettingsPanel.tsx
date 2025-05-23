@@ -29,6 +29,7 @@ export const EmailSettingsPanel = () => {
   const { clearToast } = useToast();
   const [showEmailPassword, setShowEmailPassword] = useState(false);
   const [isTypingNewEmail, setIsTypingNewEmail] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   
   // Use the hook for all email change related state and functions
   const {
@@ -49,6 +50,7 @@ export const EmailSettingsPanel = () => {
   });
 
   const newEmailValue = emailForm.watch("newEmail");
+  const passwordValue = emailForm.watch("password");
   
   // Watch for changes in the newEmail field to show/hide password field
   useEffect(() => {
@@ -58,6 +60,13 @@ export const EmailSettingsPanel = () => {
       setIsTypingNewEmail(false);
     }
   }, [newEmailValue]);
+
+  // Clear password error when user types
+  useEffect(() => {
+    if (passwordError && passwordValue) {
+      setPasswordError(null);
+    }
+  }, [passwordValue, passwordError]);
 
   const onEmailSubmit = async (data: EmailFormValues) => {
     if (!data.newEmail) {
@@ -75,6 +84,8 @@ export const EmailSettingsPanel = () => {
       return;
     }
     
+    // Clear any existing errors
+    setPasswordError(null);
     clearToast();
     
     // Use the hook's changeEmail function
@@ -84,6 +95,16 @@ export const EmailSettingsPanel = () => {
       // Reset the form on success
       emailForm.reset();
       setIsTypingNewEmail(false);
+    } else if (result.error) {
+      // Check if it's a password error
+      if (result.error.includes("Password is incorrect")) {
+        logToSupabase("Incorrect password during email change", {
+          level: 'info',
+          page: 'EmailSettingsPanel'
+        });
+        // Set password error state
+        setPasswordError("Invalid password");
+      }
     }
   };
 
@@ -129,7 +150,7 @@ export const EmailSettingsPanel = () => {
                         type={showEmailPassword ? "text" : "password"} 
                         placeholder="Enter your current password" 
                         {...field} 
-                        className="pr-10"
+                        className={`pr-10 ${passwordError ? 'border-red-500' : ''}`}
                       />
                       <button
                         type="button"
@@ -141,7 +162,10 @@ export const EmailSettingsPanel = () => {
                       </button>
                     </div>
                   </FormControl>
-                  <FormMessage />
+                  {/* Simple inline error message */}
+                  {passwordError && (
+                    <p className="text-sm font-medium text-red-500 mt-1">{passwordError}</p>
+                  )}
                 </FormItem>
               )}
             />
