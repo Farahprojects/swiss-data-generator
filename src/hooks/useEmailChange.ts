@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -210,7 +211,7 @@ export function useEmailChange() {
         return { error: new Error('No valid authentication token available') };
       }
 
-      const functionUrl = `https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/resend-email-change`;
+      const functionUrl = `https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/resend-email-change`;
       const requestBody = JSON.stringify({ email });
       const authToken = sessionData.session.access_token;
 
