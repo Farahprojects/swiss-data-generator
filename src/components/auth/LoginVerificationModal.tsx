@@ -82,7 +82,10 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
       <DialogContent className="sm:max-w-[400px] rounded-2xl border bg-white p-6 relative">
         {/* X button in top right corner */}
         <button
-          onClick={onCancel}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCancel();
+          }}
           className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 transition-colors"
         >
           <X className="h-4 w-4 text-gray-400" />
