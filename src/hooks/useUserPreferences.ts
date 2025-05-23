@@ -1,8 +1,10 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { debounce } from "@/lib/utils";
 
 export interface UserPreferences {
   id: string;
@@ -32,9 +34,27 @@ export function useUserPreferences() {
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
-  const lastUpdateRef = useRef<{ field: string; value: any } | null>(null);
+  
+  // Track client-initiated updates to prevent redundant UI updates from real-time subscription
+  const lastUpdateRef = useRef<{ field: string; value: any; timestamp: number } | null>(null);
+  
+  // Track component mount state
+  const isMounted = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
-  const isMounted = useCallback(() => true, []);
+  // Debounced version of setSaving to prevent UI flickering
+  const debouncedSetSaving = useCallback(
+    debounce((value: boolean) => {
+      if (isMounted.current) {
+        setSaving(value);
+      }
+    }, 300),
+    []
+  );
 
   useEffect(() => {
     let loadTimeout: NodeJS.Timeout;
@@ -42,7 +62,7 @@ export function useUserPreferences() {
 
     const loadUserPreferences = async () => {
       if (!user?.id) {
-        if (isMounted()) {
+        if (isMounted.current) {
           setLoading(false);
           setError("Authentication required");
         }
@@ -51,7 +71,7 @@ export function useUserPreferences() {
 
       try {
         loadTimeout = setTimeout(() => {
-          if (loading && isMounted()) {
+          if (loading && isMounted.current) {
             setLoading(false);
             setError("Request timed out. Please try again.");
             logToSupabase("Loading user preferences timed out", {
@@ -75,7 +95,7 @@ export function useUserPreferences() {
           } else {
             throw fetchError;
           }
-        } else if (data && isMounted()) {
+        } else if (data && isMounted.current) {
           setPreferences(data as UserPreferences);
           logToSupabase("User preferences loaded successfully", {
             level: "info",
@@ -86,7 +106,7 @@ export function useUserPreferences() {
         clearTimeout(loadTimeout);
         const errorMessage = err.message || "Failed to load preferences";
 
-        if (isMounted()) {
+        if (isMounted.current) {
           setError(errorMessage);
           logToSupabase("Error loading user preferences", {
             level: "error",
@@ -106,13 +126,15 @@ export function useUserPreferences() {
           if (retryCount < 3) {
             const retryDelay = Math.min(2000 * (retryCount + 1), 6000);
             setTimeout(() => {
-              setRetryCount((prev) => prev + 1);
-              loadUserPreferences();
+              if (isMounted.current) {
+                setRetryCount((prev) => prev + 1);
+                loadUserPreferences();
+              }
             }, retryDelay);
           }
         }
       } finally {
-        if (isMounted()) {
+        if (isMounted.current) {
           setLoading(false);
         }
       }
@@ -139,28 +161,28 @@ export function useUserPreferences() {
                 data: { event: payload.eventType },
               });
 
-              if (!saving && isMounted()) {
+              // Only process if we're not currently saving (to avoid UI flicker)
+              if (isMounted.current) {
                 const incoming = payload.new as UserPreferences;
-
-                const lastField = lastUpdateRef.current?.field;
-                const lastValue = lastUpdateRef.current?.value;
-
-                const isRedundantUpdate =
-                  lastField &&
-                  incoming[lastField as keyof UserPreferences] === lastValue &&
-                  preferences &&
-                  Object.keys(incoming).every((key) => {
-                    return (
-                      key === "updated_at" ||
-                      incoming[key as keyof UserPreferences] ===
-                        preferences[key as keyof UserPreferences]
-                    );
-                  });
-
+                
+                // Check if this update was triggered by our own code
+                const lastUpdate = lastUpdateRef.current;
+                
+                // Determine if this is a redundant update (one we just made ourselves)
+                const isRedundantUpdate = lastUpdate && (
+                  // Update is less than 2 seconds old
+                  Date.now() - lastUpdate.timestamp < 2000 && 
+                  // The specific field we updated matches what came back
+                  lastUpdate.field && 
+                  incoming[lastUpdate.field as keyof UserPreferences] === lastUpdate.value
+                );
+                
                 if (isRedundantUpdate) {
-                  return; // skip
+                  // Skip processing this update to prevent UI bounce
+                  return;
                 }
-
+                
+                // Not a redundant update, so update the local state
                 if (
                   payload.eventType === "UPDATE" ||
                   payload.eventType === "INSERT"
@@ -199,7 +221,7 @@ export function useUserPreferences() {
         supabase.removeChannel(channel);
       }
     };
-  }, [user, toast, isMounted, retryCount]);
+  }, [user, toast, retryCount]);
 
   const createDefaultPreferences = async (userId: string) => {
     try {
@@ -218,7 +240,7 @@ export function useUserPreferences() {
         .single();
 
       if (error) throw error;
-      if (isMounted()) setPreferences(data as UserPreferences);
+      if (isMounted.current) setPreferences(data as UserPreferences);
 
       logToSupabase("Created default user preferences", {
         level: "info",
@@ -240,11 +262,15 @@ export function useUserPreferences() {
     if (!user?.id || !preferences) return false;
 
     const { showToast = true } = options;
+    
+    // Record this update so we can identify it in the real-time feed
     lastUpdateRef.current = {
       field: "email_notifications_enabled",
       value: enabled,
+      timestamp: Date.now()
     };
 
+    // Apply optimistic update
     setPreferences((prev) =>
       prev
         ? {
@@ -254,6 +280,7 @@ export function useUserPreferences() {
         : null
     );
 
+    // Show saving indicator
     setSaving(true);
     setError(null);
 
@@ -285,7 +312,12 @@ export function useUserPreferences() {
 
       return true;
     } catch (err: any) {
-      console.error("Error updating main toggle:", err);
+      logToSupabase("Error updating main toggle", {
+        level: "error",
+        page: "useUserPreferences",
+        data: { error: err.message || String(err) }
+      });
+      
       if (showToast) {
         toast({
           title: "Error",
@@ -295,12 +327,13 @@ export function useUserPreferences() {
       }
       return false;
     } finally {
+      // Use debounced version to prevent UI flicker
+      debouncedSetSaving(false);
+      
+      // Clear the last update reference after a delay
       setTimeout(() => {
-        if (isMounted()) {
-          setSaving(false);
-          lastUpdateRef.current = null;
-        }
-      }, 500);
+        lastUpdateRef.current = null;
+      }, 2000);
     }
   };
 
@@ -314,8 +347,14 @@ export function useUserPreferences() {
 
     const { showToast = true } = options;
 
-    lastUpdateRef.current = { field: type, value: enabled };
+    // Record this update so we can identify it in the real-time feed
+    lastUpdateRef.current = { 
+      field: type, 
+      value: enabled,
+      timestamp: Date.now()
+    };
 
+    // Apply optimistic update
     setPreferences((prev) =>
       prev
         ? {
@@ -325,6 +364,7 @@ export function useUserPreferences() {
         : null
     );
 
+    // Show saving indicator
     setSaving(true);
     setError(null);
 
@@ -363,7 +403,12 @@ export function useUserPreferences() {
 
       return true;
     } catch (err: any) {
-      console.error("Error updating notification toggle:", err);
+      logToSupabase("Error updating notification toggle", {
+        level: "error",
+        page: "useUserPreferences",
+        data: { error: err.message || String(err) }
+      });
+      
       if (showToast) {
         toast({
           title: "Error",
@@ -373,12 +418,13 @@ export function useUserPreferences() {
       }
       return false;
     } finally {
+      // Use debounced version to prevent UI flicker
+      debouncedSetSaving(false);
+      
+      // Clear the last update reference after a delay
       setTimeout(() => {
-        if (isMounted()) {
-          setSaving(false);
-          lastUpdateRef.current = null;
-        }
-      }, 500);
+        lastUpdateRef.current = null;
+      }, 2000);
     }
   };
 
