@@ -1,4 +1,4 @@
-
+// SMTP based edge function via api point 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const corsHeaders = {
