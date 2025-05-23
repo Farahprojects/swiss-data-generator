@@ -145,12 +145,13 @@ const Contact = () => {
           page: 'Contact'
         });
         
-        // Set submitted state and store in localStorage
+        // IMPROVED: Immediately show success state without waiting for background operations
         setSubmitted(true);
         localStorage.setItem("contactFormSubmitted", "true");
         
         // Reset form after successful submission
         setFormData({ name: "", email: "", subject: "", message: "", honeypot: "" });
+        setIsSubmitting(false);
 
       } catch (timeoutError) {
         // If it was our timeout error, show a non-destructive toast but don't treat it as a failure yet
@@ -166,11 +167,12 @@ const Contact = () => {
             if (!response.ok) {
               throw new Error(`Server responded with ${response.status}`);
             }
-            // Set submitted state and store in localStorage
+            // IMPROVED: Set submitted state immediately when we get a response
             setSubmitted(true);
             localStorage.setItem("contactFormSubmitted", "true");
             // Reset form after successful submission
             setFormData({ name: "", email: "", subject: "", message: "", honeypot: "" });
+            setIsSubmitting(false);
           }).catch(actualError => {
             setIsSubmitting(false);
             toast({
@@ -199,11 +201,6 @@ const Contact = () => {
       
       console.error("Error sending contact form:", error);
       setIsSubmitting(false);
-    } finally {
-      // Only set isSubmitting to false if we're not still waiting for the background fetch
-      if (!isSubmitting || submitted) {
-        setIsSubmitting(false);
-      }
     }
   };
 
