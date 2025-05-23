@@ -72,7 +72,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-sm rounded-2xl border bg-white px-6 py-6">
+      <DialogContent className="sm:max-w-sm rounded-2xl border bg-white p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base text-gray-900 font-medium">
             <Mail className="h-5 w-5 text-[#7C3AED]" />
@@ -111,7 +111,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
 
         <hr className="my-5 border-gray-100" />
 
-        <DialogFooter className="flex justify-end gap-3 px-1">
+        <DialogFooter className="flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"
@@ -134,7 +134,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
           <Button
             type="button"
             onClick={onVerified}
-            className="text-sm bg-[#7C3AED] text-white hover:bg-[#6B2FC9] px-5"
+            className="text-sm bg-[#7C3AED] text-white hover:bg-[#6B2FC9]"
           >
             I've Verified
           </Button>
