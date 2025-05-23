@@ -78,7 +78,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+    <Dialog open={isOpen}>
       <DialogContent className="sm:max-w-[400px] rounded-2xl border bg-white p-6 relative">
         {/* X button in top right corner */}
         <button
