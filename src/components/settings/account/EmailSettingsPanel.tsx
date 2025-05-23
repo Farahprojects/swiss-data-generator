@@ -162,9 +162,8 @@ export const EmailSettingsPanel = () => {
                       </button>
                     </div>
                   </FormControl>
-                  {/* Explicitly render error message outside of FormMessage */}
                   {passwordError && (
-                    <p className="text-sm font-medium text-destructive mt-2">{passwordError}</p>
+                    <p className="text-sm font-medium text-red-500 mt-2">{passwordError}</p>
                   )}
                 </FormItem>
               )}
@@ -185,18 +184,6 @@ export const EmailSettingsPanel = () => {
           </Button>
         </form>
       </Form>
-
-      {isTypingNewEmail && (
-        <div className="text-sm text-gray-500 mt-4 p-4 bg-blue-50 border border-blue-100 rounded-md">
-          <h4 className="font-medium text-blue-700 mb-2">What happens next?</h4>
-          <ol className="list-decimal ml-5 space-y-1">
-            <li>A notification email will be sent to your current email address.</li>
-            <li>A verification link will be sent to your new email address.</li>
-            <li>You must click the verification link in the new email to complete the change.</li>
-          </ol>
-          <p className="mt-2">Your email will not be changed until you verify the new address.</p>
-        </div>
-      )}
 
       {/* Email Verification Modal */}
       <EmailVerificationModal 
