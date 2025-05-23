@@ -182,6 +182,48 @@ serve(async (req) => {
     
     logMessage("Email sent successfully", "info");
     
+    // Send auto-reply email using the support_email template
+    logMessage("Sending auto-reply email to user", "info", { 
+      recipientEmail: payload.email
+    });
+    
+    // Prepare auto-reply email payload using the support_email template
+    const autoReplyPayload = {
+      to: payload.email,
+      from: "Theria Astro <no-reply@theraiastro.com>",
+      subject: "Your Therai Astro email inquiry has been received",
+      html: `<div style="font-family: sans-serif; font-size: 16px; color: #333;"><p>Hi ${payload.name},</p><p>Thanks for reaching out to <strong>Theria Astro</strong>. We've received your message and our team will get back to you within 24 hours.</p><p>Talk soon,<br/>The Theria Astro Team</p></div>`,
+      text: `Hi ${payload.name},\n\nThanks for reaching out to Theria Astro. We've received your message and our team will get back to you within 24 hours.\n\nTalk soon,\nThe Theria Astro Team`
+    };
+    
+    // Send the auto-reply email
+    const autoReplyResponse = await fetch(
+      `${supabaseUrl}/functions/v1/send-email`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+          "apikey": supabaseAnonKey
+        },
+        body: JSON.stringify(autoReplyPayload),
+      }
+    );
+    
+    if (!autoReplyResponse.ok) {
+      const errorData = await autoReplyResponse.text();
+      logMessage("Error sending auto-reply email", "error", { 
+        status: autoReplyResponse.status,
+        errorData,
+        recipientEmail: payload.email
+      });
+      // We don't throw here as the main submission was successful
+    } else {
+      logMessage("Auto-reply email sent successfully", "info", {
+        recipientEmail: payload.email
+      });
+    }
+    
     // Return success response
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
