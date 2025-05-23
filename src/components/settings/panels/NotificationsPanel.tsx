@@ -14,7 +14,6 @@ export const NotificationsPanel = () => {
   const {
     preferences,
     loading,
-    saving,
     error,
     updateMainNotificationsToggle,
     updateNotificationToggle,
@@ -114,7 +113,6 @@ export const NotificationsPanel = () => {
               <Label htmlFor="email-notifications">
                 {preferences?.email_notifications_enabled ? 'Enabled' : 'Disabled'}
               </Label>
-              {/* Removed the saving spinner here to prevent UI flicker */}
             </div>
           )}
         </div>

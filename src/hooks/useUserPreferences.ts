@@ -32,9 +32,25 @@ export function useUserPreferences() {
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
-  const lastUpdateRef = useRef<{ field: string; value: any } | null>(null);
+  
+  // Track user initiated changes to prevent real-time updates from overriding them
+  const pendingChangesRef = useRef<Map<string, boolean>>(new Map());
+  // Track the timestamp of the last user update to ignore real-time events too close to it
+  const lastUpdateTimestampRef = useRef<number>(0);
+  // Track if component is mounted
+  const isMountedRef = useRef(true);
 
-  const isMounted = useCallback(() => true, []);
+  // Function to check if a component is still mounted
+  const isMounted = useCallback(() => {
+    return isMountedRef.current;
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let loadTimeout: NodeJS.Timeout;
@@ -139,36 +155,48 @@ export function useUserPreferences() {
                 data: { event: payload.eventType },
               });
 
-              if (!saving && isMounted()) {
-                const incoming = payload.new as UserPreferences;
+              // Skip real-time updates if we're in the middle of saving or if the component is unmounted
+              if (!isMounted() || saving) {
+                return;
+              }
+              
+              // Skip real-time updates that arrive within 2 seconds of a user change
+              const now = Date.now();
+              if (now - lastUpdateTimestampRef.current < 2000) {
+                logToSupabase("Ignoring real-time update - too close to user update", {
+                  level: "debug",
+                  page: "useUserPreferences",
+                });
+                return;
+              }
 
-                const lastField = lastUpdateRef.current?.field;
-                const lastValue = lastUpdateRef.current?.value;
-
-                const isRedundantUpdate =
-                  lastField &&
-                  incoming[lastField as keyof UserPreferences] === lastValue &&
-                  preferences &&
-                  Object.keys(incoming).every((key) => {
-                    return (
-                      key === "updated_at" ||
-                      incoming[key as keyof UserPreferences] ===
-                        preferences[key as keyof UserPreferences]
-                    );
+              const incoming = payload.new as UserPreferences;
+              
+              // Check if the update matches any of our pending changes
+              let isRedundantUpdate = false;
+              pendingChangesRef.current.forEach((value, key) => {
+                if (incoming[key as keyof UserPreferences] === value) {
+                  isRedundantUpdate = true;
+                  pendingChangesRef.current.delete(key);
+                  logToSupabase(`Ignored redundant update for ${key}`, {
+                    level: "debug",
+                    page: "useUserPreferences",
                   });
-
-                if (isRedundantUpdate) {
-                  return; // skip
                 }
+              });
+              
+              // Skip if this update is redundant (matches our pending change)
+              if (isRedundantUpdate) {
+                return;
+              }
 
-                if (
-                  payload.eventType === "UPDATE" ||
-                  payload.eventType === "INSERT"
-                ) {
-                  setPreferences(incoming);
-                } else if (payload.eventType === "DELETE") {
-                  setPreferences(null);
-                }
+              if (
+                payload.eventType === "UPDATE" ||
+                payload.eventType === "INSERT"
+              ) {
+                setPreferences(incoming);
+              } else if (payload.eventType === "DELETE") {
+                setPreferences(null);
               }
             }
           )
@@ -194,6 +222,7 @@ export function useUserPreferences() {
     setupRealtimeListener();
 
     return () => {
+      isMountedRef.current = false;
       clearTimeout(loadTimeout);
       if (channel) {
         supabase.removeChannel(channel);
@@ -240,11 +269,13 @@ export function useUserPreferences() {
     if (!user?.id || !preferences) return false;
 
     const { showToast = true } = options;
-    lastUpdateRef.current = {
-      field: "email_notifications_enabled",
-      value: enabled,
-    };
+    
+    // Record this change as pending
+    pendingChangesRef.current.set("email_notifications_enabled", enabled);
+    // Record the timestamp of this update
+    lastUpdateTimestampRef.current = Date.now();
 
+    // Optimistically update UI
     setPreferences((prev) =>
       prev
         ? {
@@ -283,24 +314,40 @@ export function useUserPreferences() {
         });
       }
 
+      // After successful update, we can remove this change from pending changes
+      pendingChangesRef.current.delete("email_notifications_enabled");
+      
       return true;
     } catch (err: any) {
       console.error("Error updating main toggle:", err);
-      if (showToast) {
-        toast({
-          title: "Error",
-          description: "There was an issue saving your preference.",
-          variant: "destructive",
+      
+      // Revert optimistic update on error
+      if (isMounted()) {
+        setPreferences((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev, 
+            email_notifications_enabled: !enabled
+          };
         });
+        
+        if (showToast) {
+          toast({
+            title: "Error",
+            description: "There was an issue saving your preference.",
+            variant: "destructive",
+          });
+        }
       }
+      
+      // Remove from pending changes on error
+      pendingChangesRef.current.delete("email_notifications_enabled");
+      
       return false;
     } finally {
-      setTimeout(() => {
-        if (isMounted()) {
-          setSaving(false);
-          lastUpdateRef.current = null;
-        }
-      }, 500);
+      if (isMounted()) {
+        setSaving(false);
+      }
     }
   };
 
@@ -314,8 +361,12 @@ export function useUserPreferences() {
 
     const { showToast = true } = options;
 
-    lastUpdateRef.current = { field: type, value: enabled };
+    // Record this change as pending
+    pendingChangesRef.current.set(type, enabled);
+    // Record the timestamp of this update
+    lastUpdateTimestampRef.current = Date.now();
 
+    // Optimistically update UI
     setPreferences((prev) =>
       prev
         ? {
@@ -360,25 +411,41 @@ export function useUserPreferences() {
           }`,
         });
       }
-
+      
+      // After successful update, we can remove this change from pending
+      pendingChangesRef.current.delete(type);
+      
       return true;
     } catch (err: any) {
       console.error("Error updating notification toggle:", err);
-      if (showToast) {
-        toast({
-          title: "Error",
-          description: "There was an issue saving your preference.",
-          variant: "destructive",
+      
+      // Revert optimistic update on error
+      if (isMounted()) {
+        setPreferences((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev, 
+            [type]: !enabled
+          };
         });
+        
+        if (showToast) {
+          toast({
+            title: "Error",
+            description: "There was an issue saving your preference.",
+            variant: "destructive",
+          });
+        }
       }
+      
+      // Remove from pending changes on error
+      pendingChangesRef.current.delete(type);
+      
       return false;
     } finally {
-      setTimeout(() => {
-        if (isMounted()) {
-          setSaving(false);
-          lastUpdateRef.current = null;
-        }
-      }, 500);
+      if (isMounted()) {
+        setSaving(false);
+      }
     }
   };
 
