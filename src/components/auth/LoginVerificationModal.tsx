@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle, Loader, Mail } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader, Mail, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +14,7 @@ import { logToSupabase } from '@/utils/batchedLogManager';
 interface LoginVerificationModalProps {
   isOpen: boolean;
   email: string;
-  pendingEmail?: string; // The new email address where verification was sent
+  pendingEmail?: string;
   resend: (email: string) => Promise<{ error: Error | null }>;
   onVerified: () => void;
   onCancel: () => void;
@@ -33,7 +32,6 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
 
-  // Use pendingEmail if available, otherwise fall back to email
   const verificationEmail = pendingEmail || email;
   const isEmailChange = !!pendingEmail;
 
@@ -49,7 +47,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         data: { email: verificationEmail, isEmailChange }
       });
 
-      const { error } = await resend(email); // Always use original email for resend logic
+      const { error } = await resend(email);
 
       if (error) {
         setResendError(error.message);
@@ -79,7 +77,15 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-[400px] rounded-2xl border bg-white p-6">
+      <DialogContent className="relative sm:max-w-[400px] rounded-2xl border bg-white p-6">
+        <button
+          onClick={onCancel}
+          className="absolute right-4 top-4 rounded-full p-1 text-gray-400 hover:bg-purple-100 hover:text-[#7C3AED] transition"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base text-gray-900 font-medium">
             <Mail className="h-5 w-5 text-[#7C3AED]" />
@@ -127,15 +133,6 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         <hr className="my-5 border-gray-100" />
 
         <DialogFooter className="flex justify-end gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="text-sm border-gray-200 text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </Button>
-
           <Button
             type="button"
             onClick={handleResend}
