@@ -14,6 +14,27 @@ interface EmailNotificationRequest {
   variables?: Record<string, any>;
 }
 
+interface LogData {
+  level: 'debug' | 'info' | 'warn' | 'error';
+  message: string;
+  data?: Record<string, any>;
+  page?: string;
+}
+
+// Structured logging function
+function logMessage(message: string, logData: Omit<LogData, 'message'>) {
+  const { level, data = {}, page = 'send-notification-email' } = logData;
+  const logObject = {
+    level,
+    message,
+    page,
+    data: { ...data, timestamp: new Date().toISOString() }
+  };
+
+  // Log in a format that will be easy to parse
+  console[level === 'error' ? 'error' : 'log'](JSON.stringify(logObject));
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -21,16 +42,19 @@ serve(async (req) => {
   }
 
   try {
-    console.log("🔔 Notification request received");
+    logMessage("Notification request received", { level: 'info', data: { method: req.method } });
     
-    // Log the raw request for debugging
+    // Log the raw request for debugging (with limited length to avoid sensitive data)
     const rawBody = await req.text();
-    console.log(`Raw notification request body: ${rawBody.substring(0, 200)}${rawBody.length > 200 ? '...' : ''}`);
+    logMessage("Raw notification request received", { 
+      level: 'debug', 
+      data: { bodyLength: rawBody.length }
+    });
     
     // Extract authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('Missing Authorization header in notification request');
+      logMessage("Missing Authorization header", { level: 'error' });
       return new Response(
         JSON.stringify({ error: 'Authorization header is required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -40,12 +64,17 @@ serve(async (req) => {
     // Parse request body (already consumed text above, so parse it)
     const { templateType, recipientEmail, variables = {} } = JSON.parse(rawBody) as EmailNotificationRequest;
     
-    console.log(`Processing notification request of type "${templateType}" for ${recipientEmail}`);
-    console.log("Variables provided:", JSON.stringify(variables));
+    logMessage("Processing notification request", { 
+      level: 'info', 
+      data: { templateType, recipientEmail, variablesCount: Object.keys(variables).length }
+    });
     
     // Validate required fields
     if (!templateType || !recipientEmail) {
-      console.error('Missing required fields in notification request:', { templateType, recipientEmail });
+      logMessage("Missing required fields", { 
+        level: 'error', 
+        data: { hasTemplateType: !!templateType, hasRecipientEmail: !!recipientEmail }
+      });
       return new Response(
         JSON.stringify({ error: 'Template type and recipient email are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -57,7 +86,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing Supabase credentials in environment");
+      logMessage("Missing Supabase credentials", { level: 'error' });
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -68,7 +97,7 @@ serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch email template
-    console.log(`Fetching email template for "${templateType}"`);
+    logMessage("Fetching email template", { level: 'info', data: { templateType } });
     const { data: template, error: templateError } = await supabaseAdmin
       .from('email_notification_templates')
       .select('subject, body_html, body_text')
@@ -76,17 +105,28 @@ serve(async (req) => {
       .single();
 
     if (templateError || !template) {
-      console.error('Error fetching email template:', templateError || 'Template not found');
+      logMessage("Error fetching template", { 
+        level: 'error', 
+        data: { 
+          templateType,
+          error: templateError?.message || 'Template not found'
+        }
+      });
       return new Response(
         JSON.stringify({ error: templateError?.message || 'Email template not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Template found for "${templateType}":`);
-    console.log(`Subject: ${template.subject}`);
-    console.log(`HTML Length: ${template.body_html?.length || 0}`);
-    console.log(`Text Length: ${template.body_text?.length || 0}`);
+    logMessage("Template found", { 
+      level: 'info', 
+      data: { 
+        templateType, 
+        subject: template.subject,
+        htmlLength: template.body_html?.length || 0,
+        textLength: template.body_text?.length || 0
+      }
+    });
 
     // Process the template with variables
     let htmlContent = template.body_html;
@@ -101,11 +141,10 @@ serve(async (req) => {
       subject = subject.replace(regex, String(value));
     });
     
-    console.log("Variables replaced in template");
-    console.log(`Final Subject: ${subject}`);
+    logMessage("Template variables replaced", { level: 'info', data: { subject } });
 
-    // Call our new send-email function to send the email
-    console.log(`Calling send-email function for ${recipientEmail}`);
+    // Call our send-email function to send the email
+    logMessage("Calling send-email function", { level: 'info', data: { recipientEmail } });
     const emailResponse = await fetch(
       `${supabaseUrl}/functions/v1/send-email`,
       {
@@ -125,7 +164,14 @@ serve(async (req) => {
 
     if (!emailResponse.ok) {
       const errorData = await emailResponse.json();
-      console.error('Error from email service:', errorData);
+      logMessage("Error from email service", {
+        level: 'error',
+        data: {
+          status: emailResponse.status,
+          error: errorData.error || 'Unknown error',
+          recipientEmail
+        }
+      });
       return new Response(
         JSON.stringify({ error: errorData.error || 'Failed to send email' }),
         { status: emailResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -133,7 +179,13 @@ serve(async (req) => {
     }
 
     const responseData = await emailResponse.json();
-    console.log(`Email notification sent (${templateType}) to ${recipientEmail}:`, responseData);
+    logMessage("Email notification sent successfully", { 
+      level: 'info', 
+      data: { 
+        templateType, 
+        recipientEmail 
+      }
+    });
     
     // Return success response
     return new Response(
@@ -142,7 +194,13 @@ serve(async (req) => {
     );
   } catch (err) {
     // Log and return any unexpected errors
-    console.error('Unexpected error in send-notification-email:', err);
+    logMessage("Unexpected error", { 
+      level: 'error',
+      data: { 
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined
+      }
+    });
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
