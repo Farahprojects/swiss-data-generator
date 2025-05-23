@@ -25,7 +25,7 @@ export const SettingsModal = () => {
     }
   }, [activePanel, isOpen]);
 
-  const handleTabChange = (value: "general" | "account" | "notifications" | "delete" | "support") => {
+  const handleTabChange = (value) => {
     setActivePanel(value);
     logToSupabase("Settings tab changed via sidebar", {
       level: 'info',
@@ -64,82 +64,42 @@ export const SettingsModal = () => {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <div className="w-[200px] border-r p-4">
-            <nav>
-              <ul className="space-y-1">
-                {tabs.map((tab) => (
-                  <li key={tab.id}>
-                    <Button
-                      variant={activePanel === tab.id ? "secondary" : "ghost"}
-                      className={`w-full justify-start ${
-                        activePanel === tab.id 
-                          ? "bg-accent text-accent-foreground" 
-                          : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
-                      }`}
-                      onClick={() => handleTabChange(tab.id as typeof activePanel)}
-                    >
-                      <tab.icon className="mr-2 h-4 w-4" />
-                      {tab.label}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+          <div className="w-[220px] border-r p-4">
+            <nav className="space-y-1">
+              {tabs.map((tab) => (
+                <Button
+                  key={tab.id}
+                  variant="ghost"
+                  className={`w-full justify-start ${
+                    activePanel === tab.id ? "bg-muted font-semibold" : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  onClick={() => handleTabChange(tab.id)}
+                >
+                  <tab.icon className="mr-2 h-4 w-4" />
+                  {tab.label}
+                </Button>
+              ))}
             </nav>
           </div>
 
-          {/* Main Panel */}
           <div className="flex-1 overflow-y-auto p-6">
-            <Tabs value={activePanel}>
-              <TabsContent value="general" className="mt-0 space-y-6">
-                {/* Logout */}
-                <div className="border rounded-lg p-5 shadow-sm bg-white">
-                  <h3 className="text-base font-medium mb-2">Session</h3>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleLogout}
-                    className="w-full justify-start text-gray-700 hover:bg-gray-100 border-gray-300 rounded-md"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </Button>
-                </div>
-
-                {/* Danger Zone */}
-                <div className="border rounded-lg p-5 shadow-sm bg-white">
-                  <h3 className="text-base font-semibold text-red-600 mb-2 flex items-center">
-                    <Trash2 className="mr-2 h-5 w-5" />
-                    Danger Zone
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Permanently delete your account and all of your data. This action is irreversible.
-                  </p>
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => handleTabChange("delete")}
-                    className="w-full justify-start rounded-md"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Account
-                  </Button>
+            <Tabs value={activePanel} className="space-y-4">
+              <TabsContent value="general">
+                <div className="space-y-4 divide-y">
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-gray-800">Log out on this device</span>
+                    <Button variant="outline" className="text-sm" onClick={handleLogout}>Log out</Button>
+                  </div>
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-red-600">Delete all account data</span>
+                    <Button variant="destructive" className="text-sm" onClick={() => handleTabChange("delete")}>Delete account</Button>
+                  </div>
                 </div>
               </TabsContent>
-
-              <TabsContent value="account" className="mt-0 h-full">
-                <AccountSettingsPanel />
-              </TabsContent>
-
-              <TabsContent value="notifications" className="mt-0 h-full">
-                <NotificationsPanel />
-              </TabsContent>
-
-              <TabsContent value="support" className="mt-0 h-full">
-                <ContactSupportPanel />
-              </TabsContent>
-
-              <TabsContent value="delete" className="mt-0 h-full">
-                <DeleteAccountPanel />
-              </TabsContent>
+              <TabsContent value="account"><AccountSettingsPanel /></TabsContent>
+              <TabsContent value="notifications"><NotificationsPanel /></TabsContent>
+              <TabsContent value="support"><ContactSupportPanel /></TabsContent>
+              <TabsContent value="delete"><DeleteAccountPanel /></TabsContent>
             </Tabs>
           </div>
         </div>
