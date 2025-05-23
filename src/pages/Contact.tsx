@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Mail } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -26,16 +28,84 @@ const Contact = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
+    logToSupabase("Contact form submission started", {
+      level: 'info',
+      page: 'Contact',
+      data: { 
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject
+      }
+    });
 
-    // Add fetch/POST logic here later to integrate SMTP
-    setTimeout(() => {
+    try {
+      const response = await fetch(
+        "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/send-email",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            to: "support@theraiastro.com",
+            from: "Theria Contact <no-reply@theraiastro.com>",
+            subject: `Contact Form: ${formData.subject}`,
+            html: `
+              <h2>New Contact Message</h2>
+              <p><strong>From:</strong> ${formData.name} (${formData.email})</p>
+              <p><strong>Subject:</strong> ${formData.subject}</p>
+              <hr />
+              <p><strong>Message:</strong></p>
+              <p>${formData.message.replace(/\n/g, '<br>')}</p>
+            `,
+            text: `
+              New Contact Message
+              
+              From: ${formData.name} (${formData.email})
+              Subject: ${formData.subject}
+              
+              Message:
+              ${formData.message}
+            `
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Server responded with ${response.status}: ${errorData}`);
+      }
+      
+      logToSupabase("Contact form submission successful", {
+        level: 'info',
+        page: 'Contact'
+      });
+      
       toast({
         title: "Message sent!",
         description: "Thanks for reaching out. We'll respond soon."
       });
+      
+      // Reset form after successful submission
       setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (error) {
+      logToSupabase("Contact form submission failed", {
+        level: 'error',
+        page: 'Contact',
+        data: { error: error.message }
+      });
+      
+      toast({
+        title: "Something went wrong",
+        description: "We couldn't send your message. Please try again later.",
+        variant: "destructive"
+      });
+      
+      console.error("Error sending contact form:", error);
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (
