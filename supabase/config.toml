@@ -119,3 +119,6 @@ verify_jwt = true
 
 [functions.send-email]
 verify_jwt = true
+
+[functions.contact-form-handler]
+verify_jwt = false

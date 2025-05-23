@@ -16,7 +16,8 @@ const Contact = () => {
     name: "",
     email: "",
     subject: "",
-    message: ""
+    message: "",
+    honeypot: "" // Invisible field to catch bots
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,40 +42,19 @@ const Contact = () => {
 
     try {
       const response = await fetch(
-        "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/send-email",
+        "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/contact-form-handler",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            to: "support@theraiastro.com",
-            from: "Theria Contact <no-reply@theraiastro.com>",
-            subject: `Contact Form: ${formData.subject}`,
-            html: `
-              <h2>New Contact Message</h2>
-              <p><strong>From:</strong> ${formData.name} (${formData.email})</p>
-              <p><strong>Subject:</strong> ${formData.subject}</p>
-              <hr />
-              <p><strong>Message:</strong></p>
-              <p>${formData.message.replace(/\n/g, '<br>')}</p>
-            `,
-            text: `
-              New Contact Message
-              
-              From: ${formData.name} (${formData.email})
-              Subject: ${formData.subject}
-              
-              Message:
-              ${formData.message}
-            `
-          }),
+          body: JSON.stringify(formData),
         }
       );
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Server responded with ${response.status}: ${errorData}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Server responded with ${response.status}`);
       }
       
       logToSupabase("Contact form submission successful", {
@@ -88,7 +68,7 @@ const Contact = () => {
       });
       
       // Reset form after successful submission
-      setFormData({ name: "", email: "", subject: "", message: "" });
+      setFormData({ name: "", email: "", subject: "", message: "", honeypot: "" });
     } catch (error) {
       logToSupabase("Contact form submission failed", {
         level: 'error',
@@ -98,7 +78,7 @@ const Contact = () => {
       
       toast({
         title: "Something went wrong",
-        description: "We couldn't send your message. Please try again later.",
+        description: error.message || "We couldn't send your message. Please try again later.",
         variant: "destructive"
       });
       
@@ -126,6 +106,19 @@ const Contact = () => {
             <div className="rounded-xl border p-8 shadow-sm">
               <h2 className="mb-6 text-2xl font-semibold text-primary">Send a Message</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Honeypot field - invisible to humans but bots will fill it */}
+                <div className="absolute opacity-0 pointer-events-none">
+                  <Label htmlFor="honeypot">Leave this empty</Label>
+                  <Input 
+                    id="honeypot" 
+                    name="honeypot" 
+                    value={formData.honeypot} 
+                    onChange={handleChange} 
+                    tabIndex={-1} 
+                    autoComplete="off"
+                  />
+                </div>
+
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
