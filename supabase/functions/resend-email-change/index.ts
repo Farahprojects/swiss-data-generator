@@ -10,7 +10,7 @@ const CORS = {
 };
 
 serve(async (req) => {
-  console.log('[Edge version] 2025-05-21-notification-and-resend');
+  console.log('[Edge version] 2025-05-24-fixed-notification');
 
   if (req.method === 'OPTIONS')
     return new Response(null, { headers: CORS });
@@ -54,8 +54,33 @@ serve(async (req) => {
 
   /* ─ Two separate email handling processes ─ */
   try {
-    // 1. Send notification to original email (without verification token)
-    await sendNotificationEmail(supabase, user.email, user.new_email);
+    // 1. Send notification to original email using our notification service
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      const notificationResponse = await fetch(`${url}/functions/v1/send-notification-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader
+        },
+        body: JSON.stringify({
+          templateType: 'email_change',
+          recipientEmail: user.email,
+          variables: {
+            newEmail: user.new_email,
+            oldEmail: user.email,
+            date: new Date().toLocaleDateString()
+          }
+        })
+      });
+
+      if (!notificationResponse.ok) {
+        console.error('Failed to send notification email:', await notificationResponse.text());
+        // Don't fail the whole operation if notification fails
+      } else {
+        console.log('Notification email sent successfully to:', user.email);
+      }
+    }
     
     // 2. Resend verification email to new email address
     const { error: resendErr } = await supabase.auth.resend({
@@ -92,41 +117,3 @@ serve(async (req) => {
     );
   }
 });
-
-/**
- * Send a simple notification email to the original email address without verification tokens
- */
-async function sendNotificationEmail(supabase: any, originalEmail: string, newEmail: string) {
-  try {
-    // For simplicity, using built-in email functionality
-    // We could use a third-party service like Resend here for more customization
-    const { error } = await supabase.auth.admin.updateUserById(
-      'not-a-real-user-id', // We don't want to update any user, just send an email
-      {
-        email_confirm: true, // Flag to send email without requiring confirmation
-        app_metadata: {
-          custom_email_template: {
-            subject: "Email Address Change Notification",
-            content: `
-              <h2>Email Change Notification</h2>
-              <p>We wanted to let you know that a request has been made to change your email address from <strong>${originalEmail}</strong> to <strong>${newEmail}</strong>.</p>
-              <p>If you did not request this change, please log in to your account immediately and secure your account, or contact support.</p>
-              <p>No action is required if you requested this change. The new email address will need to be verified before the change takes effect.</p>
-              <p>Thank you,<br>The TheRAI API Team</p>
-            `
-          }
-        }
-      }
-    );
-    
-    if (error) {
-      console.error('Error sending notification email:', error);
-      return { error };
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to send notification email:', error);
-    return { error };
-  }
-}
