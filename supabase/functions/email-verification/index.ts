@@ -68,7 +68,7 @@ serve(async (req) => {
     return respond(200, { status: 'no_user_found' });
   }
 
-  console.log(`[EMAIL-VERIFICATION:${requestId}] Found user:`, { id: user.id, email: user.email });
+  console.log(`[EMAIL-VERIFICATION:${requestId}] Found user:`, { id: user.id, email: user.email, new_email: user.new_email });
 
   // Generate appropriate verification link based on template type
   let tokenLink = '';
@@ -77,14 +77,15 @@ serve(async (req) => {
   try {
     if (templateType === 'email_change') {
       if (!user.new_email) {
+        console.log(`[EMAIL-VERIFICATION:${requestId}] No pending email change found for user`);
         return respond(200, { status: 'no_pending_change' });
       }
       targetEmail = user.new_email;
       
+      // Use the correct type for email change confirmation
       const { data: linkData, error: tokenError } = await supabase.auth.admin.generateLink({
-        type: 'email_change',
-        email: user.email,
-        newEmail: user.new_email
+        type: 'email_change_confirm_new',
+        email: user.new_email
       });
 
       if (tokenError) {
@@ -122,7 +123,7 @@ serve(async (req) => {
       return respond(500, { error: 'Failed to generate verification link' });
     }
 
-    console.log(`[EMAIL-VERIFICATION:${requestId}] Generated ${templateType} link for:`, targetEmail);
+    console.log(`[EMAIL-VERIFICATION:${requestId}] Generated ${templateType} token successfully for:`, targetEmail);
 
   } catch (tokenError: any) {
     console.error(`[EMAIL-VERIFICATION:${requestId}] Token generation error:`, tokenError.message);
