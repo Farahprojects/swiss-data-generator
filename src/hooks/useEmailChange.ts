@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -189,15 +190,27 @@ export function useEmailChange() {
     });
     
     try {
-      // Use our custom edge function to resend verification
-      const response = await fetch(`https://auth.theraiastro.com/functions/v1/resend-email-change`, {
+      // Use the new email-verification edge function
+      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({
+          email: email,
+          template_type: 'email_change'
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
+      }
 
       const result = await response.json();
       return { error: result.error ? new Error(result.error) : null };

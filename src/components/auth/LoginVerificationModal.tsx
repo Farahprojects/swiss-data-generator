@@ -49,22 +49,40 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         data: { email: verificationEmail, isEmailChange }
       });
 
-      const { error } = await resend(email); // Always use original email for resend logic
+      // Call the new email-verification edge function with proper payload
+      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
-      if (error) {
-        setResendError(error.message);
-        logToSupabase("Error resending login verification", {
-          level: 'error',
-          page: 'LoginVerificationModal',
-          data: { error: error.message }
-        });
-      } else {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({
+          email: email, // Always use original email for lookup
+          template_type: isEmailChange ? 'email_change' : 'signup_confirmation'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
+      }
+
+      const result = await response.json();
+      
+      if (result.status === 'sent') {
         setResendSuccess(true);
         logToSupabase("Login verification email resent successfully", {
           level: 'info',
           page: 'LoginVerificationModal'
         });
+      } else {
+        throw new Error(result.error || 'Unexpected response from server');
       }
+
     } catch (error: any) {
       setResendError(error.message || 'Failed to resend verification email');
       logToSupabase("Exception resending login verification", {
