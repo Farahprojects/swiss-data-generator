@@ -488,6 +488,36 @@ export type Database = {
         }
         Relationships: []
       }
+      token_emails: {
+        Row: {
+          body_html: string
+          body_text: string
+          created_at: string | null
+          id: string
+          subject: string
+          template_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          body_html: string
+          body_text: string
+          created_at?: string | null
+          id?: string
+          subject: string
+          template_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          body_html?: string
+          body_text?: string
+          created_at?: string | null
+          id?: string
+          subject?: string
+          template_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       topup_logs: {
         Row: {
           amount_cents: number
