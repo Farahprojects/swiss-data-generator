@@ -68,7 +68,13 @@ serve(async (req) => {
     return respond(200, { status: 'no_user_found' });
   }
 
-  console.log(`[EMAIL-VERIFICATION:${requestId}] Found user:`, { id: user.id, email: user.email, new_email: user.new_email });
+  console.log(`[EMAIL-VERIFICATION:${requestId}] Found user:`, { 
+    id: user.id, 
+    email: user.email, 
+    new_email: user.new_email,
+    emailCasing: user.email,
+    newEmailCasing: user.new_email
+  });
 
   // Generate appropriate verification link based on template type
   let tokenLink = '';
@@ -82,10 +88,17 @@ serve(async (req) => {
       }
       targetEmail = user.new_email;
       
-      // Use the correct type for email change confirmation
+      // Use the correct parameters: email = primary email, newEmail = pending email
+      console.log(`[EMAIL-VERIFICATION:${requestId}] Generating email change token with:`, {
+        type: 'email_change',
+        email: user.email,
+        newEmail: user.new_email
+      });
+      
       const { data: linkData, error: tokenError } = await supabase.auth.admin.generateLink({
-        type: 'email_change_confirm_new',
-        email: user.new_email
+        type: 'email_change',
+        email: user.email,           // primary email
+        newEmail: user.new_email     // pending email
       });
 
       if (tokenError) {
