@@ -190,7 +190,7 @@ export function useEmailChange() {
     
     try {
       // Use our custom edge function to resend verification
-      const response = await fetch(`https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/resend-email-change`, {
+      const response = await fetch(`https://auth.theraiastro.com/functions/v1/resend-email-change`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
