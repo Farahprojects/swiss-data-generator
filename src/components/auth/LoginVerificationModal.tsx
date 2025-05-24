@@ -141,9 +141,16 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
             onClick={handleResend}
             disabled={isResending}
             variant="outline"
-            className="text-sm border-gray-200 text-gray-700 hover:bg-gray-50"
+            className="text-sm border-gray-200 text-gray-700 hover:bg-gray-50 min-w-[120px]"
           >
-            {isResending && <Loader className="mr-2 h-4 w-4 animate-spin" />} Resend Email
+            {isResending ? (
+              <>
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              'Resend Email'
+            )}
           </Button>
 
           <Button

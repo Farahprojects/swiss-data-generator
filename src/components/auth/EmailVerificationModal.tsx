@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Loader, Mail } from 'lucide-react';
@@ -86,7 +87,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         <ul className="mt-4 space-y-3 text-sm text-gray-700">
           <li>Check your <strong>{email}</strong> inbox for a verification email</li>
           <li>Click the link in that email to confirm your address</li>
-          <li>Check your spam/junk folder if it’s not in your inbox</li>
+          <li>Check your spam/junk folder if it's not in your inbox</li>
           <li>Your old email has also been notified of this change</li>
         </ul>
 
@@ -125,9 +126,16 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
             onClick={handleResend}
             disabled={isResending}
             variant="outline"
-            className="text-sm border-gray-200 text-gray-700 hover:bg-gray-50"
+            className="text-sm border-gray-200 text-gray-700 hover:bg-gray-50 min-w-[120px]"
           >
-            {isResending && <Loader className="mr-2 h-4 w-4 animate-spin" />} Resend Email
+            {isResending ? (
+              <>
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              'Resend Email'
+            )}
           </Button>
 
           <Button
