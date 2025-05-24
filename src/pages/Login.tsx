@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +13,7 @@ import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal
 import { supabase } from '@/integrations/supabase/client';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { logToSupabase } from '@/utils/batchedLogManager';
+import { useEmailChange } from '@/hooks/useEmailChange';
 
 // Import the hardcoded URL directly from where it's defined
 const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
@@ -23,7 +23,8 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { signIn, signInWithGoogle, signInWithApple, resendVerificationEmail, user } = useAuth();
+  const { signIn, signInWithGoogle, signInWithApple, user } = useAuth();
+  const { resendVerificationEmail } = useEmailChange();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
