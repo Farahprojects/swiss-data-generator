@@ -212,6 +212,7 @@ const Login = () => {
                   <PasswordInput
                     password={password}
                     isValid={passwordValid}
+                    showRequirements={false}
                     onChange={setPassword}
                     onFocus={() => setErrorMsg('')}
                   />
