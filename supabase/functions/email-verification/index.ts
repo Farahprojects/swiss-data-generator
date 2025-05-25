@@ -121,19 +121,27 @@ serve(async (req) => {
 
     log("linkData >>>", JSON.stringify(linkData, null, 2));
 
-    tokenLink = linkData?.action_link ?? "";
+    // Fix: read action_link from either top-level or properties
+    log("Top-level action_link:", linkData?.action_link);
+    log("Nested properties.action_link:", linkData?.properties?.action_link);
+
+    tokenLink = linkData?.action_link || linkData?.properties?.action_link || "";
 
     const props = (linkData as any)?.properties ?? {};
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
-    if (tokenLink) {
-      const encodedEmail = encodeURIComponent(templateType === "email_change_new" ? (user.new_email || email) : user.email);
-      tokenLink += `&email=${encodedEmail}`;
-      log("Using raw action_link for tokenLink with email param");
-    } else {
-      log("Error: Missing action_link in Supabase response");
-      return respond(500, { error: "Missing action_link in token generation" });
+    if (!tokenLink) {
+      log("Missing action_link in Supabase response. Full linkData:", linkData);
+      return respond(500, {
+        error: "Missing action_link in token generation",
+        details: linkData
+      });
     }
+
+    const encodedEmail = encodeURIComponent(templateType === "email_change_new" ? (user.new_email || email) : user.email);
+    tokenLink += `&email=${encodedEmail}`;
+    log("Using raw action_link for tokenLink with email param");
+
   } catch (err: any) {
     log("Link generation error:", err.message);
     return respond(500, { error: "Link generation failed", details: err.message });
