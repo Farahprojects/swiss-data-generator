@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
@@ -89,7 +90,7 @@ const ConfirmEmail: React.FC = () => {
         // Use whatever token type Supabase sent without validation
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: queryType,
+          type: queryType as any,
         })
         if (error) throw error
 
