@@ -130,19 +130,21 @@ serve(async (req) => {
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
     /* ---- Build application link with fragment instead of query params ---- */
-    if (tokenHash) {
-      // Use the actual token_type from linkData instead of our simplified names
-      const actualTokenType = (linkData as any)?.token_type || linkData?.type || templateType;
-      tokenLink = `https://www.theraiapi.com/auth/email#token_hash=${tokenHash}&type=${actualTokenType}`;
-    }
 
-    if (!tokenLink) return respond(500, { error: "Failed to generate verification link" });
+if (tokenHash) {
+  // supabase v2.40+ returns the canonical enum here:
+  // signup • email_change_token_new • email_change_token_current • recovery …
+  const actualTokenType =
+    (linkData as any).token_type   // preferred (present on ≥2.40)
+    ?? (linkData as any).type      // fallback (older SDK shape)
+    ?? templateType;               // final fallback – what you asked for
 
-    log(`Generated ${templateType} token`);
-  } catch (e: any) {
-    log("Token generation error:", e.message);
-    return respond(500, { error: "Token generation failed", details: e.message });
-  }
+  tokenLink =
+    `https://www.theraiapi.com/auth/email` +
+    `#token_hash=${tokenHash}` +
+    `&type=${actualTokenType}`;
+}
+
 
   /* ---------- 5 · fetch template ---------- */
   const { data: templateData, error: templateErr } = await supabase
