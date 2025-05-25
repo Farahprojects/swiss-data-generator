@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
@@ -18,14 +16,12 @@ import Logo from '@/components/Logo'
 import { useToast } from '@/hooks/use-toast'
 import { logToSupabase } from '@/utils/batchedLogManager'
 
-/**
- * Elegant confirmation page for magic‑link & email‑change flows.
- */
+// ---------------------------------------------------------------------------------------------------------------------
+//  Confirmation page – handles magic‑link, signup & both sides of email‑change.
+//  Token + type are accepted from the URL fragment (preferred) or query‑string (legacy).
+// ---------------------------------------------------------------------------------------------------------------------
 
 const ConfirmEmail: React.FC = () => {
-  // ---------------------------------------------------------------------------
-  // state
-  // ---------------------------------------------------------------------------
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('Verifying your email…')
 
@@ -34,9 +30,7 @@ const ConfirmEmail: React.FC = () => {
   const { toast } = useToast()
   const processedRef = useRef(false)
 
-  // ---------------------------------------------------------------------------
-  // helpers
-  // ---------------------------------------------------------------------------
+  // ---------------- helpers ------------------------------------------------------------------------------------------
   const finishSuccess = (kind: string) => {
     setStatus('success')
     const msg =
@@ -45,115 +39,106 @@ const ConfirmEmail: React.FC = () => {
         : 'Your email has been updated – you are now logged in!'
     setMessage(msg)
     toast({ variant: 'success', title: 'Success', description: msg })
-    // strip tokens so refreshes don't re‑trigger verification
+
+    // strip tokens so refresh / back‑button can’t re‑fire verifyOtp()
     window.history.replaceState({}, '', '/auth/email')
+
     setTimeout(() => navigate('/dashboard'), 2800)
   }
 
-  // ---------------------------------------------------------------------------
-  // verification effect
-  // ---------------------------------------------------------------------------
+  // ---------------- verification effect -----------------------------------------------------------------------------
   useEffect(() => {
     const verify = async () => {
       if (processedRef.current) return
       processedRef.current = true
+
       try {
-        const hash = new URLSearchParams(window.location.hash.substring(1))
-        const accessToken = hash.get('access_token')
-        const refreshToken = hash.get('refresh_token')
-        const code = hash.get('code')
-        const hashType = hash.get('type')
+        // 1️⃣  check for hash‑style access / refresh tokens (magic‑link login)
+        const hashParams   = new URLSearchParams(location.hash.slice(1))
+        const accessToken  = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+        const pkceCode     = hashParams.get('code')
+        const hashType     = hashParams.get('type')
 
         if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          })
+          const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
           if (error) throw error
           finishSuccess(hashType === 'signup' ? 'signup' : 'email_change')
           return
         }
 
-        if (code) {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-          if (error || !data.session) throw error ?? new Error('No session returned')
+        if (pkceCode) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(pkceCode)
+          if (error || !data.session) throw error ?? new Error('Failed PKCE exchange')
           finishSuccess(hashType === 'signup' ? 'signup' : 'email_change')
           return
         }
 
-        const query = new URLSearchParams(location.search)
-        const tokenHash = query.get('token_hash') || query.get('token')
-        const queryType = query.get('type') ?? 'email'
+        // 2️⃣  token_hash for signup / email‑change -------------------------------------------------------------------
+        const searchParams = new URLSearchParams(location.search)
+        const tokenHash =
+          hashParams.get('token_hash') ??
+          searchParams.get('token_hash') ??
+          searchParams.get('token')
+        const tokenType =
+          hashParams.get('type') ??
+          searchParams.get('type') ??
+          'email'
 
         if (!tokenHash) throw new Error('Invalid link – missing token.')
 
-        // Use whatever token type Supabase sent without validation
+        logToSupabase('verifyOtp()', { level: 'info', page: 'ConfirmEmail', data: { tokenType } })
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: queryType as any,
+          type: tokenType as any, // use literal Supabase sent (signup, email_change_new, etc.)
         })
         if (error) throw error
 
-        // Determine success message based on token type
-        const isSignup = queryType === 'signup'
-        finishSuccess(isSignup ? 'signup' : 'email_change')
+        finishSuccess(tokenType === 'signup' ? 'signup' : 'email_change')
       } catch (err: any) {
-        logToSupabase('verification failed', {
-          level: 'error',
-          page: 'ConfirmEmail',
-          data: { error: err?.message ?? String(err) },
-        })
+        logToSupabase('verification failed', { level: 'error', page: 'ConfirmEmail', data: { error: err?.message } })
         setStatus('error')
         const msg = err?.message ?? 'Verification failed – link may have expired.'
         setMessage(msg)
         toast({ variant: 'destructive', title: 'Verification failed', description: msg })
       }
     }
-    verify()
-  }, [location.search])
 
-  // ---------------------------------------------------------------------------
-  // presentational bits
-  // ---------------------------------------------------------------------------
-  const Icon =
-    status === 'loading' ? Loader : status === 'success' ? CheckCircle : XCircle
-  const heading =
-    status === 'loading' ? 'Email Verification' : status === 'success' ? 'All Set!' : 'Uh‑oh…'
+    verify()
+  }, [location.hash, location.search])
+
+  // ---------------- presentation -------------------------------------------------------------------------------------
+  const Icon = status === 'loading' ? Loader : status === 'success' ? CheckCircle : XCircle
+  const heading = status === 'loading' ? 'Email Verification' : status === 'success' ? 'All Set!' : 'Uh‑oh…'
   const bgGradient =
     status === 'success'
-      ? 'from-green-400/10 via-emerald-100 to-white'
+      ? 'from-emerald-50 via-white to-white' // subtle green tint on success
       : status === 'error'
-      ? 'from-red-400/10 via-rose-100 to-white'
-      : 'from-indigo-400/10 via-sky-100 to-white'
+      ? 'from-red-50 via-white to-white'     // red tint on failure
+      : 'from-indigo-50 via-white to-white'  // brand purple tint while loading
+
+  const brandPurple = '#7C3AED'
 
   return (
-    <div
-      className={
-        'min-h-screen flex flex-col overflow-x-hidden bg-gradient-to-br ' + bgGradient
-      }
-    >
-      {/* ------------------------------------------------------------------ */}
+    <div className={`min-h-screen w-full flex flex-col bg-gradient-to-br ${bgGradient}`}>      
       {/* top bar */}
-      {/* ------------------------------------------------------------------ */}
-      <header className="w-full py-4 px-6 flex justify-center bg-white/70 backdrop-blur-lg shadow-sm">
+      <header className="w-full py-5 flex justify-center bg-white/80 backdrop-blur-md shadow-sm">
         <Logo size="md" />
       </header>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* main card */}
-      {/* ------------------------------------------------------------------ */}
-      <main className="flex-grow grid place-items-center p-6 lg:p-10">
+      {/* main */}
+      <main className="flex-grow flex items-center justify-center p-6 lg:p-12">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="w-full max-w-md"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="w-full max-w-lg"
         >
-          <Card className="relative overflow-hidden border border-gray-200/80 shadow-xl rounded-3xl bg-white">
-            {/* subtle gradient ring */}
-            <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-[radial-gradient(circle_at_top_left,theme(colors.indigo.400)_0%,transparent_70%)]" />
+          <Card className="relative overflow-hidden border border-gray-200 shadow-xl rounded-3xl bg-white">
+            {/* accent ring */}
+            <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-[radial-gradient(circle_at_top_left,theme(colors.indigo.300)_0%,transparent_70%)]" />
 
-            <CardHeader className="text-center pb-1 relative z-10 bg-white/70 backdrop-blur-sm rounded-t-3xl">
+            <CardHeader className="text-center pb-1 relative z-10 bg-white/80 backdrop-blur-sm rounded-t-3xl">
               <CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900">
                 {heading}
               </CardTitle>
@@ -172,10 +157,10 @@ const ConfirmEmail: React.FC = () => {
                 transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
                 className={`flex items-center justify-center h-20 w-20 rounded-full ${
                   status === 'loading'
-                    ? 'bg-indigo-50'
+                    ? 'bg-indigo-100'
                     : status === 'success'
-                    ? 'bg-emerald-50'
-                    : 'bg-rose-50'
+                    ? 'bg-emerald-100'
+                    : 'bg-red-100'
                 }`}
               >
                 <Icon
@@ -184,28 +169,24 @@ const ConfirmEmail: React.FC = () => {
                       ? 'text-indigo-600'
                       : status === 'success'
                       ? 'text-emerald-600'
-                      : 'text-rose-600'
+                      : 'text-red-600'
                   } ${status === 'loading' ? 'animate-none' : ''}`}
                 />
               </motion.div>
 
-              <p className="text-center text-lg text-gray-700 max-w-xs leading-relaxed">
+              <p className="text-center text-lg text-gray-700 max-w-sm leading-relaxed">
                 {message}
               </p>
             </CardContent>
 
             <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center bg-gray-50 rounded-b-3xl relative z-10 p-6">
               {status === 'success' ? (
-                <Button onClick={() => navigate('/dashboard')} className="w-full sm:w-auto">
+                <Button style={{ background: brandPurple }} onClick={() => navigate('/dashboard')} className="w-full sm:w-auto text-white hover:opacity-90">
                   Go to Dashboard
                 </Button>
               ) : (
                 <>
-                  <Button
-                    onClick={() => navigate('/login')}
-                    className="w-full sm:w-auto"
-                    variant="outline"
-                  >
+                  <Button onClick={() => navigate('/login')} className="w-full sm:w-auto" variant="outline">
                     Return to Login
                   </Button>
                   {status === 'error' && (
@@ -220,9 +201,7 @@ const ConfirmEmail: React.FC = () => {
         </motion.div>
       </main>
 
-      {/* ------------------------------------------------------------------ */}
       {/* footer */}
-      {/* ------------------------------------------------------------------ */}
       <footer className="py-6 text-center text-xs text-gray-500">
         © {new Date().getFullYear()} Theraiapi. All rights reserved.
       </footer>
