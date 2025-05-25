@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +34,6 @@ const EmailInput: React.FC<Props> = ({
       onChange={(e) => onChange(e.target.value)}
       onFocus={onFocus}
       disabled={disabled}
-      placeholder="you@example.com"
       className={!isValid && email ? "border-red-500" : ""}
       required
     />
