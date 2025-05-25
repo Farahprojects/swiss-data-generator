@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -14,6 +13,13 @@ const debug = (...args: any[]) => {
   if (process.env.NODE_ENV !== 'production') console.log(...args);
 };
 
+// ──────────────────────────────────────────
+// env / constants
+// ──────────────────────────────────────────
+const SUPABASE_URL = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
+
 /**
  * Typed shape for the Auth context.
  */
@@ -21,6 +27,8 @@ export type AuthContextType = {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  pendingEmailAddress: string | null;
+  isPendingEmailCheck: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signUp: (email: string, password: string) => Promise<{ error: Error | null; user?: User | null }>; // eslint-disable-line @typescript-eslint/no-explicit-any
   signInWithGoogle: () => Promise<{ error: Error | null }>;
@@ -28,15 +36,46 @@ export type AuthContextType = {
   signOut: () => Promise<void>;
   resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
   resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
+  clearPendingEmail: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/**
+ * Edge function: /functions/v1/email-check
+ *   Expects bearer SESSION token so it can check RLS against the current user.
+ */
+const checkForPendingEmailChange = async (sessionToken: string, userEmail: string) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${sessionToken}`,
+      },
+      body: JSON.stringify({ email: userEmail }),
+    });
+
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    logToSupabase('email-check failed', {
+      level: 'warn',
+      page: 'AuthContext',
+      data: { error: err instanceof Error ? err.message : String(err) },
+    });
+    return null;
+  }
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [pendingEmailAddress, setPendingEmailAddress] = useState<string | null>(null);
+  const [isPendingEmailCheck, setIsPendingEmailCheck] = useState(false);
   const { clearNavigationState } = useNavigationState();
 
   /* ─────────────────────────────────────────────────────────────
@@ -63,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, supaSession) => {
+    } = supabase.auth.onAuthStateChange(async (event, supaSession) => {
       logToSupabase('Auth state change event', {
         page: 'AuthContext',
         level: 'info',
@@ -79,6 +118,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(supaSession?.user ?? null);
 
       if (event === 'SIGNED_IN' && supaSession) {
+        // Check for pending email change after successful sign-in
+        setIsPendingEmailCheck(true);
+        
+        try {
+          const emailCheckData = await checkForPendingEmailChange(
+            supaSession.access_token, 
+            supaSession.user.email || ''
+          );
+          
+          logToSupabase('email-check response in AuthContext', {
+            level: 'debug',
+            page: 'AuthContext',
+            data: emailCheckData,
+          });
+
+          if (emailCheckData?.status === 'pending') {
+            setPendingEmailAddress(emailCheckData.pending_to);
+            logToSupabase('Pending email change detected, setting pendingEmailAddress', {
+              level: 'info',
+              page: 'AuthContext',
+              data: { pendingTo: emailCheckData.pending_to }
+            });
+          } else {
+            setPendingEmailAddress(null);
+          }
+        } catch (error) {
+          logToSupabase('Error checking for pending email change', {
+            level: 'error',
+            page: 'AuthContext',
+            data: { error: error instanceof Error ? error.message : String(error) }
+          });
+          setPendingEmailAddress(null);
+        } finally {
+          setIsPendingEmailCheck(false);
+        }
+
         setTimeout(() => {
           // Check if we're on password reset route before suggesting redirect
           const isOnPasswordResetRoute = window.location.pathname.includes('/auth/password');
@@ -105,6 +180,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (event === 'SIGNED_OUT') {
+        setPendingEmailAddress(null);
+        setIsPendingEmailCheck(false);
         setTimeout(() => {
           const remnantsCount = checkForAuthRemnants();
           logToSupabase('Auth remnants after signout', {
@@ -137,6 +214,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const clearPendingEmail = () => {
+    setPendingEmailAddress(null);
+  };
 
   /* ──────────────────────────────────
    * Helpers exposed through context
@@ -311,6 +392,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setUser(null);
       setSession(null);
+      setPendingEmailAddress(null);
+      setIsPendingEmailCheck(false);
       clearNavigationState();
       cleanupAuthState(supabase);
 
@@ -369,6 +452,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         session,
         loading,
+        pendingEmailAddress,
+        isPendingEmailCheck,
         signIn,
         signUp,
         signInWithGoogle,
@@ -376,6 +461,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         resendVerificationEmail,
         resetPasswordForEmail,
+        clearPendingEmail,
       }}
     >
       {children}

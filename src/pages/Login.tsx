@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -15,21 +16,19 @@ import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { logToSupabase } from '@/utils/batchedLogManager';
 import { useEmailChange } from '@/hooks/useEmailChange';
 
-// ──────────────────────────────────────────
-// env / constants
-// ──────────────────────────────────────────
-const SUPABASE_URL = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
-
-// ──────────────────────────────────────────
-// component
-// ──────────────────────────────────────────
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { signIn, signInWithGoogle, signInWithApple, user } = useAuth();
+  const { 
+    signIn, 
+    signInWithGoogle, 
+    signInWithApple, 
+    user, 
+    pendingEmailAddress, 
+    isPendingEmailCheck,
+    clearPendingEmail 
+  } = useAuth();
   const { resendVerificationEmail } = useEmailChange();
 
   const [email, setEmail] = useState('');
@@ -37,57 +36,53 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [pendingEmailAddress, setPendingEmailAddress] = useState<string | undefined>(undefined);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [loginAttempted, setLoginAttempted] = useState(false); // prevent early redirect after submit
+  const [loginAttempted, setLoginAttempted] = useState(false);
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
 
-  // ── Redirect user ONLY when arriving on /login while already authenticated
+  // Check if we need to show verification modal based on AuthContext state
+  useEffect(() => {
+    if (pendingEmailAddress && !isPendingEmailCheck) {
+      setShowVerificationModal(true);
+      logToSupabase('Showing verification modal from AuthContext state', {
+        level: 'info',
+        page: 'Login',
+        data: { pendingTo: pendingEmailAddress }
+      });
+    }
+  }, [pendingEmailAddress, isPendingEmailCheck]);
+
+  // Check for state passed from AuthGuard
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.showVerification && state?.pendingEmail) {
+      setShowVerificationModal(true);
+      logToSupabase('Showing verification modal from location state', {
+        level: 'info',
+        page: 'Login',
+        data: { pendingEmail: state.pendingEmail }
+      });
+    }
+  }, [location.state]);
+
+  // Redirect user ONLY when arriving on /login while already authenticated and no pending verification
   if (
     user &&
     !loginAttempted &&
     !showVerificationModal &&
     !pendingEmailAddress &&
+    !isPendingEmailCheck &&
     !window.location.pathname.includes('/auth/password')
   ) {
     const from = (location.state as any)?.from?.pathname || '/';
     return <Navigate to={from} replace />;
   }
 
-  const openVerificationModal = (pendingTo?: string) => {
-    setPendingEmailAddress(pendingTo);
+  const openVerificationModal = () => {
     setShowVerificationModal(true);
     setLoading(false);
-  };
-
-  /**
-   * Edge function: /functions/v1/email-check
-   *   Expects bearer SESSION token so it can check RLS against the current user.
-   */
-  const checkForPendingEmailChange = async (sessionToken: string, userEmail: string) => {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({ email: userEmail }),
-      });
-
-      if (!res.ok) return null;
-      return await res.json();
-    } catch (err) {
-      logToSupabase('email-check failed', {
-        level: 'warn',
-        page: 'Login',
-        data: { error: err instanceof Error ? err.message : String(err) },
-      });
-      return null;
-    }
   };
 
   // ──────────────────────────────────────────
@@ -97,7 +92,7 @@ const Login = () => {
     e.preventDefault();
     if (!emailValid || !passwordValid || loading) return;
 
-    setLoginAttempted(true); // block auto-redirect until flow finishes
+    setLoginAttempted(true);
     setLoading(true);
     setErrorMsg('');
 
@@ -116,29 +111,21 @@ const Login = () => {
       }
 
       const authedUser = data?.user;
-      const session = data?.session;
 
       // STEP 2: email not confirmed
       if (authedUser && !authedUser.email_confirmed_at) {
         return openVerificationModal();
       }
 
-      // STEP 3: pending email change?
-      if (session) {
-        const emailCheckData = await checkForPendingEmailChange(session.access_token, email);
-        console.log('emailCheckData', emailCheckData);
-        logToSupabase('email-check response', {
-          level: 'debug',
-          page: 'Login',
-          data: emailCheckData,
-        });
-        if (emailCheckData?.status === 'pending') {
-          return openVerificationModal(emailCheckData.pending_to);
-        }
-      }
+      // STEP 3: The AuthContext will handle pending email checks via onAuthStateChange
+      // If there's a pending email change, the AuthGuard will redirect back here
+      // with the verification modal shown
 
-      // STEP 4: good to go
-      navigate((location.state as any)?.from?.pathname || '/', { replace: true });
+      logToSupabase('Login successful, waiting for AuthContext to handle navigation', {
+        level: 'info',
+        page: 'Login'
+      });
+
     } catch (err: any) {
       toast({
         title: 'Error',
@@ -152,7 +139,7 @@ const Login = () => {
   };
 
   // ──────────────────────────────────────────
-  // OAuth helpers (unchanged)
+  // OAuth helpers
   // ──────────────────────────────────────────
   const handleGoogleSignIn = async () => {
     try {
@@ -184,12 +171,17 @@ const Login = () => {
 
   const handleVerificationFinished = () => {
     setShowVerificationModal(false);
-    setPendingEmailAddress(undefined);
+    clearPendingEmail();
     toast({
       title: 'Email verified!',
       description: 'You can now continue to your dashboard.',
     });
     navigate((location.state as any)?.from?.pathname || '/', { replace: true });
+  };
+
+  const handleVerificationCancelled = () => {
+    setShowVerificationModal(false);
+    clearPendingEmail();
   };
 
   // ──────────────────────────────────────────
@@ -218,4 +210,67 @@ const Login = () => {
                     onChange={setEmail}
                     onFocus={() => setErrorMsg('')}
                   />
-                  <Password
+                  <PasswordInput
+                    password={password}
+                    isValid={passwordValid}
+                    onChange={setPassword}
+                    onFocus={() => setErrorMsg('')}
+                  />
+                </div>
+
+                {errorMsg && (
+                  <div className="text-red-600 text-sm text-center">{errorMsg}</div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!emailValid || !passwordValid || loading}
+                >
+                  {loading ? 'Signing in...' : 'Sign in'}
+                </Button>
+              </form>
+
+              <div className="text-center space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm text-blue-600 hover:text-blue-500"
+                >
+                  Forgot your password?
+                </button>
+
+                <SocialLogin
+                  onGoogleSignIn={handleGoogleSignIn}
+                  onAppleSignIn={handleAppleSignIn}
+                />
+
+                <p className="text-sm text-gray-600">
+                  Don't have an account?{' '}
+                  <Link to="/signup" className="text-blue-600 hover:text-blue-500">
+                    Sign up
+                  </Link>
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      </main>
+
+      <Footer />
+
+      {showVerificationModal && (
+        <LoginVerificationModal
+          isOpen={showVerificationModal}
+          email={email || pendingEmailAddress || ''}
+          pendingEmailAddress={pendingEmailAddress}
+          resendVerificationEmail={resendVerificationEmail}
+          onVerified={handleVerificationFinished}
+          onCancel={handleVerificationCancelled}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Login;

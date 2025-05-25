@@ -4,7 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, pendingEmailAddress, isPendingEmailCheck } = useAuth();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   
@@ -23,9 +23,11 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
       hasUser: !!user,
       loading,
       isPasswordReset: isPasswordResetRoute,
-      hasRecoveryToken
+      hasRecoveryToken,
+      pendingEmailAddress,
+      isPendingEmailCheck
     });
-  }, [location.pathname, location.search, user, loading, isPasswordResetRoute, hasRecoveryToken]);
+  }, [location.pathname, location.search, user, loading, isPasswordResetRoute, hasRecoveryToken, pendingEmailAddress, isPendingEmailCheck]);
   
   // If user is on password reset route, don't apply auth guard
   if (isPasswordResetRoute) {
@@ -39,8 +41,8 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to={`/auth/password${location.search}`} replace />;
   }
   
-  if (loading) {
-    // Still loading auth state, don't redirect yet
+  if (loading || isPendingEmailCheck) {
+    // Still loading auth state or checking for pending email, don't redirect yet
     return <div>Loading authentication...</div>;
   }
   
@@ -48,7 +50,13 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+
+  // If user has pending email verification, redirect to login to show verification modal
+  if (pendingEmailAddress) {
+    console.log('User has pending email verification, redirecting to login');
+    return <Navigate to="/login" state={{ from: location, showVerification: true, pendingEmail: pendingEmailAddress }} replace />;
+  }
   
-  // User is logged in, render protected component
+  // User is logged in and verified, render protected component
   return <>{children}</>;
 };
