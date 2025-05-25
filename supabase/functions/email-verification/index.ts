@@ -1,5 +1,4 @@
-
-// deno-lint-ignore-file no-explicit-any10
+// deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -14,7 +13,6 @@ serve(async (req) => {
   const log = (msg: string, ...args: any[]) =>
     console.log(`[EMAIL-VERIFICATION:${requestId}] ${msg}`, ...args);
 
-  /* ---------- helper ---------- */
   function respond(status: number, body: Record<string, any>) {
     log("Responding:", status, body);
     return new Response(JSON.stringify(body), {
@@ -27,7 +25,6 @@ serve(async (req) => {
     return new Response(null, { headers: CORS });
   }
 
-  /* ---------- 1 · parse body ---------- */
   let email = "";
   let templateType = "";
   try {
@@ -51,7 +48,6 @@ serve(async (req) => {
     return respond(400, { error: "Invalid template_type" });
   }
 
-  /* ---------- 2 · supabase admin ---------- */
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const smtpEndpoint = Deno.env.get("THERIA_SMTP_ENDPOINT");
@@ -60,15 +56,13 @@ serve(async (req) => {
   }
   const supabase = createClient(url, key);
 
-  /* ---------- 3 · fetch user ---------- */
   let user: any = null;
   let error: any = null;
 
   try {
-    // works in every 2.x release
     const { data, error: listErr } = await supabase.auth.admin.listUsers({ email });
     error = listErr;
-    user  = data?.users?.[0] ?? null;
+    user = data?.users?.[0] ?? null;
   } catch (e) {
     error = e as Error;
   }
@@ -79,7 +73,6 @@ serve(async (req) => {
   }
   if (!user) return respond(200, { status: "no_user_found" });
 
-  /* ---------- 4 · generate link ---------- */
   let tokenLink = "";
   let emailOtp = "";
   const redirectTo = "https://www.theraiapi.com/auth/email";
@@ -90,14 +83,11 @@ serve(async (req) => {
     let linkData, tokenErr;
 
     if (needsChange) {
-      // For email_change_new, use the new_email if available, otherwise use the email from request
-      const targetEmail = templateType === "email_change_new" 
+      const targetEmail = templateType === "email_change_new"
         ? (user.new_email || email)
         : user.email;
 
       if (templateType === "email_change_new" && !user.new_email) {
-        // If no pending email change but we're asked for new email verification,
-        // this might be a direct verification request
         log("No pending email change found, treating as direct verification");
       }
 
@@ -133,20 +123,21 @@ serve(async (req) => {
 
     tokenLink = linkData?.action_link ?? "";
 
-    // SDK ≥2.39 puts everything under `properties`
     const props = (linkData as any)?.properties ?? {};
     const tokenHash = props.hashed_token ?? (linkData as any)?.hashed_token;
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
-    /* ---- Build application link with fragment instead of query params ---- */
-    if (tokenHash) {
-      // supabase v2.40+ returns the canonical enum here:
-      // signup • email_change_token_new • email_change_token_current • recovery …
+    // ✱ FIX: USE RAW ACTION LINK ✱
+    if (tokenLink) {
+      // Do not override tokenLink — it already includes raw token
+      log("Using raw action_link for tokenLink");
+    } else if (tokenHash) {
       const actualTokenType =
-        (linkData as any).token_type   // preferred (present on ≥2.40)
-        ?? (linkData as any).type      // fallback (older SDK shape)
-        ?? templateType;               // final fallback – what you asked for
+        (linkData as any).token_type
+        ?? (linkData as any).type
+        ?? templateType;
 
+      // fallback only if action_link is somehow missing
       tokenLink =
         `https://www.theraiapi.com/auth/email` +
         `#token_hash=${tokenHash}` +
@@ -157,7 +148,6 @@ serve(async (req) => {
     return respond(500, { error: "Link generation failed", details: err.message });
   }
 
-  /* ---------- 5 · fetch template ---------- */
   const { data: templateData, error: templateErr } = await supabase
     .from("token_emails")
     .select("subject, body_html")
@@ -172,10 +162,9 @@ serve(async (req) => {
     return respond(500, { error: "Template fetch failed", details: templateErr?.message });
   }
 
-  /* ---------- 6 · send mail ---------- */
   const targetEmail = templateType === "email_change_new" 
-    ? (user.new_email || email)  // Send to new email for verification
-    : user.email;                 // Send to current email for notifications
+    ? (user.new_email || email)
+    : user.email;
 
   const html = templateData.body_html
     .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
@@ -200,6 +189,6 @@ serve(async (req) => {
     return respond(500, { error: "Email sending failed", details: errTxt });
   }
 
-  log(`✔ Sent ${templateType} e-mail to`, targetEmail);
+  log(`\u2713 Sent ${templateType} e-mail to`, targetEmail);
   return respond(200, { status: "sent", template_type: templateType });
 });
