@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useToast } from "@/hooks/use-toast";
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 const ConfirmEmail = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -24,9 +25,22 @@ const ConfirmEmail = () => {
         const refreshToken = hashParams.get('refresh_token');
         const type = hashParams.get('type');
 
+        logToSupabase("Processing email verification", {
+          level: 'debug',
+          page: 'ConfirmEmail',
+          data: { 
+            hasHashParams: !!(accessToken && refreshToken),
+            type,
+            url: window.location.href
+          }
+        });
+
         // If we have tokens in the URL hash, use them to set the session
         if (accessToken && refreshToken) {
-          console.log('Found tokens in URL hash, setting session');
+          logToSupabase('Found tokens in URL hash, setting session', {
+            level: 'info',
+            page: 'ConfirmEmail'
+          });
           
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -34,7 +48,12 @@ const ConfirmEmail = () => {
           });
           
           if (sessionError) {
-            console.error('Error setting session:', sessionError);
+            logToSupabase('Error setting session', {
+              level: 'error',
+              page: 'ConfirmEmail',
+              data: { error: sessionError.message }
+            });
+            
             setStatus('error');
             setMessage('Failed to authenticate with the provided tokens.');
             
@@ -49,7 +68,11 @@ const ConfirmEmail = () => {
           // Verify the session was set correctly
           const { data: sessionData } = await supabase.auth.getSession();
           if (!sessionData.session) {
-            console.error('No valid session after setSession');
+            logToSupabase('No valid session after setSession', {
+              level: 'error',
+              page: 'ConfirmEmail'
+            });
+            
             setStatus('error');
             setMessage('Failed to establish a valid session.');
             return;
@@ -76,32 +99,65 @@ const ConfirmEmail = () => {
           return;
         }
         
-        // If no hash params, proceed with token from query params (old flow)
+        // If no hash params, proceed with token_hash from query params
         const searchParams = new URLSearchParams(location.search);
-        const token = searchParams.get('token');
+        const tokenHash = searchParams.get('token_hash') || searchParams.get('token'); // Fallback to 'token' for backward compatibility
         const queryType = searchParams.get('type');
         
-        if (!token) {
+        logToSupabase("Checking query parameters", {
+          level: 'debug',
+          page: 'ConfirmEmail',
+          data: { 
+            tokenHash: tokenHash ? '[REDACTED]' : null,
+            queryType,
+            searchParams: location.search
+          }
+        });
+        
+        if (!tokenHash) {
+          logToSupabase('No token_hash or token found in URL', {
+            level: 'error',
+            page: 'ConfirmEmail',
+            data: { searchParams: location.search }
+          });
+          
           setStatus('error');
-          setMessage('Invalid verification link. No token provided.');
+          setMessage('Invalid verification link. No token_hash provided.');
           return;
         }
 
         // Handle both email confirmation and email change
         if (queryType !== 'signup' && queryType !== 'email_change') {
+          logToSupabase('Invalid verification link type', {
+            level: 'error',
+            page: 'ConfirmEmail',
+            data: { queryType }
+          });
+          
           setStatus('error');
           setMessage('Invalid verification link type.');
           return;
         }
         
+        logToSupabase('Attempting to verify OTP', {
+          level: 'info',
+          page: 'ConfirmEmail',
+          data: { queryType }
+        });
+        
         // Attempt to verify the email based on the type
         const { error } = await supabase.auth.verifyOtp({
-          token_hash: token,
+          token_hash: tokenHash,
           type: queryType as 'signup' | 'email_change'
         });
         
         if (error) {
-          console.error('Error verifying email:', error);
+          logToSupabase('Error verifying email', {
+            level: 'error',
+            page: 'ConfirmEmail',
+            data: { error: error.message }
+          });
+          
           setStatus('error');
           setMessage(error.message || 'Failed to verify email. The link may have expired.');
           
@@ -113,6 +169,15 @@ const ConfirmEmail = () => {
         } else {
           // Check if we got a session after verification
           const { data: sessionData } = await supabase.auth.getSession();
+          
+          logToSupabase('Email verification successful', {
+            level: 'info',
+            page: 'ConfirmEmail',
+            data: { 
+              hasSession: !!sessionData.session,
+              queryType
+            }
+          });
           
           if (sessionData.session) {
             setStatus('success');
@@ -155,7 +220,12 @@ const ConfirmEmail = () => {
           }
         }
       } catch (error) {
-        console.error('Unexpected error during email verification:', error);
+        logToSupabase('Unexpected error during email verification', {
+          level: 'error',
+          page: 'ConfirmEmail',
+          data: { error: error instanceof Error ? error.message : String(error) }
+        });
+        
         setStatus('error');
         setMessage('An unexpected error occurred. Please try again later.');
         
