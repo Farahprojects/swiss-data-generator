@@ -1,4 +1,4 @@
-// deno-lint-ignore-file no-explicit-any
+// deno-lint-ignore-file no-explicit-any10
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -26,15 +26,17 @@ serve(async (req) => {
   }
 
   let newEmail = "";
+  let currentUserId = "";
   try {
     const body = await req.json();
     newEmail = (body.email ?? "").toLowerCase();
-    log("Parsed request:", { newEmail });
+    currentUserId = body.user_id ?? "";
+    log("Parsed request:", { newEmail, currentUserId });
   } catch {
     return respond(400, { error: "Invalid JSON" });
   }
 
-  if (!newEmail) return respond(400, { error: "Email required" });
+  if (!newEmail || !currentUserId) return respond(400, { error: "Email and user_id required" });
 
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -44,23 +46,16 @@ serve(async (req) => {
   }
   const supabase = createClient(url, key);
 
-  let user: any = null;
-  let error: any = null;
-
+  let foundUser: any = null;
   try {
     const { data, error: listErr } = await supabase.auth.admin.listUsers({ email: newEmail });
-    error = listErr;
-    user = data?.users?.[0] ?? null;
+    if (listErr) throw listErr;
+    foundUser = data?.users?.[0] ?? null;
   } catch (e) {
-    error = e as Error;
+    return respond(500, { error: "User lookup failed", details: (e as Error).message });
   }
 
-  if (error) {
-    log("User lookup failed:", error.message);
-    return respond(500, { error: "User lookup failed", details: error.message });
-  }
-
-  if (user) {
+  if (foundUser && foundUser.id !== currentUserId) {
     return respond(200, { status: "user_exists", message: "Email already in use" });
   }
 
