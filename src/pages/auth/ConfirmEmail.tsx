@@ -46,6 +46,8 @@ const ConfirmEmail: React.FC = () => {
       if (processedRef.current) return;
       processedRef.current = true;
 
+      console.log('Hash:', location.hash);
+
       try {
         const hash = new URLSearchParams(location.hash.slice(1));
         const search = new URLSearchParams(location.search);
@@ -72,16 +74,13 @@ const ConfirmEmail: React.FC = () => {
           return;
         }
 
-        const token =
-          hash.get('token') ||
-          search.get('token') ||
-          hash.get('token_hash') ||
-          search.get('token_hash');
+        const token = hash.get('token') || search.get('token');
         const tokenType = hash.get('type') || search.get('type');
+        const email = hash.get('email') || search.get('email');
 
-        if (!token || !tokenType) throw new Error('Invalid link – missing token.');
+        if (!token || !tokenType || !email) throw new Error('Invalid link – missing token.');
 
-        const { error } = await supabase.auth.verifyOtp({ token, type: tokenType as any });
+        const { error } = await supabase.auth.verifyOtp({ token, type: tokenType as any, email });
         if (error) throw error;
 
         finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change');
