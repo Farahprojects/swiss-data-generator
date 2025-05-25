@@ -144,10 +144,15 @@ const ConfirmEmail = () => {
           data: { queryType }
         });
         
+        // Get current user to get email for verification
+        const { data: userData } = await supabase.auth.getUser();
+        const currentUserEmail = userData?.user?.email;
+        
         // Attempt to verify the email using the actual token
         const { error } = await supabase.auth.verifyOtp({
-          token: token, // Use the actual token
-          type: queryType as 'signup' | 'email_change'
+          token: token,
+          type: queryType as 'signup' | 'email_change',
+          email: currentUserEmail || '', // Required for verifyOtp
         });
         
         if (error) {
