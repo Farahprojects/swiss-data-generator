@@ -1,5 +1,5 @@
 
-// deno-lint-ignore-file no-explicit-anyupdate 
+// deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -13,6 +13,15 @@ serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8);
   const log = (msg: string, ...args: any[]) =>
     console.log(`[EMAIL-VERIFICATION:${requestId}] ${msg}`, ...args);
+
+  /* ---------- helper ---------- */
+  function respond(status: number, body: Record<string, any>) {
+    log("Responding:", status, body);
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json", ...CORS },
+    });
+  }
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS });
@@ -130,21 +139,23 @@ serve(async (req) => {
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
     /* ---- Build application link with fragment instead of query params ---- */
+    if (tokenHash) {
+      // supabase v2.40+ returns the canonical enum here:
+      // signup • email_change_token_new • email_change_token_current • recovery …
+      const actualTokenType =
+        (linkData as any).token_type   // preferred (present on ≥2.40)
+        ?? (linkData as any).type      // fallback (older SDK shape)
+        ?? templateType;               // final fallback – what you asked for
 
-if (tokenHash) {
-  // supabase v2.40+ returns the canonical enum here:
-  // signup • email_change_token_new • email_change_token_current • recovery …
-  const actualTokenType =
-    (linkData as any).token_type   // preferred (present on ≥2.40)
-    ?? (linkData as any).type      // fallback (older SDK shape)
-    ?? templateType;               // final fallback – what you asked for
-
-  tokenLink =
-    `https://www.theraiapi.com/auth/email` +
-    `#token_hash=${tokenHash}` +
-    `&type=${actualTokenType}`;
-}
-
+      tokenLink =
+        `https://www.theraiapi.com/auth/email` +
+        `#token_hash=${tokenHash}` +
+        `&type=${actualTokenType}`;
+    }
+  } catch (err: any) {
+    log("Link generation error:", err.message);
+    return respond(500, { error: "Link generation failed", details: err.message });
+  }
 
   /* ---------- 5 · fetch template ---------- */
   const { data: templateData, error: templateErr } = await supabase
@@ -191,13 +202,4 @@ if (tokenHash) {
 
   log(`✔ Sent ${templateType} e-mail to`, targetEmail);
   return respond(200, { status: "sent", template_type: templateType });
-
-  /* ---------- helper ---------- */
-  function respond(status: number, body: Record<string, any>) {
-    log("Responding:", status, body);
-    return new Response(JSON.stringify(body), {
-      status,
-      headers: { "Content-Type": "application/json", ...CORS },
-    });
-  }
 });
