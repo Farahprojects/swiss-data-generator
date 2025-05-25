@@ -1,224 +1,188 @@
-
-
 // deno-lint-ignore-file no-explicit-any
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8);
-  console.log(`[EMAIL-VERIFICATION:${requestId}] Function invoked with method:`, req.method);
+  const log = (msg: string, ...args: any[]) =>
+    console.log(`[EMAIL-VERIFICATION:${requestId}] ${msg}`, ...args);
 
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS });
   }
 
-  // Parse JSON body
-  let email = '';
-  let templateType = '';
+  /* ---------- 1 · parse body ---------- */
+  let email = "";
+  let templateType = "";
   try {
     const body = await req.json();
-    email = (body.email ?? '').toLowerCase();
-    templateType = body.template_type ?? 'email_change_new';
-    console.log(`[EMAIL-VERIFICATION:${requestId}] Parsed request:`, { email, templateType });
+    email = (body.email ?? "").toLowerCase();
+    templateType = body.template_type ?? "email_change_new";
+    log("Parsed request:", { email, templateType });
   } catch {
-    return respond(400, { error: 'Invalid JSON' });
+    return respond(400, { error: "Invalid JSON" });
   }
 
-  if (!email) return respond(400, { error: 'Email required' });
-  if (!['email_change_new', 'email_change_current', 'password_reset', 'signup_confirmation'].includes(templateType)) {
-    return respond(400, { error: 'Invalid template_type' });
+  if (!email) return respond(400, { error: "Email required" });
+  if (
+    ![
+      "email_change_new",
+      "email_change_current",
+      "password_reset",
+      "signup_confirmation",
+    ].includes(templateType)
+  ) {
+    return respond(400, { error: "Invalid template_type" });
   }
 
-  // Supabase Admin Client
-  const url = Deno.env.get('SUPABASE_URL');
-  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const smtpEndpoint = Deno.env.get('THERIA_SMTP_ENDPOINT');
-  
+  /* ---------- 2 · supabase admin ---------- */
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const smtpEndpoint = Deno.env.get("THERIA_SMTP_ENDPOINT");
   if (!url || !key || !smtpEndpoint) {
-    return respond(500, { error: 'Missing environment variables' });
+    return respond(500, { error: "Missing environment variables" });
   }
-
   const supabase = createClient(url, key);
 
-  // Look up user by email
-  let user: any = null;
-  let error: any = null;
-  
-  console.log(`[EMAIL-VERIFICATION:${requestId}] Looking up user with email:`, email);
-
-  if (typeof supabase.auth.admin.getUserByEmail === 'function') {
-    ({ data: user, error } = await supabase.auth.admin.getUserByEmail(email));
-  } else {
-    const res = await supabase.auth.admin.listUsers({ email });
-    error = res.error;
-    user = res.data?.users?.find((u: any) => (u.email ?? '').toLowerCase() === email) ?? null;
-  }
-
+  /* ---------- 3 · fetch user ---------- */
+  let { data: user, error } = await supabase.auth.admin.getUserByEmail(email);
   if (error) {
-    console.error(`[EMAIL-VERIFICATION:${requestId}] User lookup failed:`, error.message);
-    return respond(500, { error: 'User lookup failed', details: error.message });
+    log("User lookup failed:", error.message);
+    return respond(500, { error: "User lookup failed", details: error.message });
   }
-  
-  if (!user) {
-    console.log(`[EMAIL-VERIFICATION:${requestId}] No user found with email:`, email);
-    return respond(200, { status: 'no_user_found' });
-  }
+  if (!user) return respond(200, { status: "no_user_found" });
 
-  console.log(`[EMAIL-VERIFICATION:${requestId}] Found user:`, { 
-    id: user.id, 
-    email: user.email, 
+  log("Found user:", {
+    id: user.id,
+    email: user.email,
     new_email: user.new_email,
-    emailCasing: user.email,
-    newEmailCasing: user.new_email
   });
 
-  // Generate appropriate verification link based on template type
-  let tokenLink = '';
-  let targetEmail = email;
+  /* ---------- 4 · generate link ---------- */
+  let tokenLink = "";
+  let emailOtp = "";
+  const redirectTo = "https://www.theraiapi.com/auth/email"; // <— in Auth → URL Configuration
+  const needsChange =
+    templateType === "email_change_new" || templateType === "email_change_current";
 
   try {
-    if (templateType === 'email_change_new' || templateType === 'email_change_current') {
-      if (!user.new_email) {
-        console.log(`[EMAIL-VERIFICATION:${requestId}] No pending email change found for user`);
-        return respond(200, { status: 'no_pending_change' });
-      }
-      
-      // For email_change_new, send to the new email address
-      // For email_change_current, send to the current email address
-      targetEmail = templateType === 'email_change_new' ? user.new_email : user.email;
-      
-      console.log(`[EMAIL-VERIFICATION:${requestId}] Generating ${templateType} token with:`, {
-        type: templateType,
-        email: user.email,
-        newEmail: user.new_email,
-        targetEmail
-      });
-      
-      const { data: linkData, error: tokenError } = await supabase.auth.admin.generateLink({
-        type: templateType,
-        email: user.email,           // primary email
-        newEmail: user.new_email,    // pending email
-        options: {
-          redirectTo: 'https://www.theraiapi.com/auth/email'  // whitelisted URL
-        }
-      });
+    let linkData, tokenErr;
 
-      if (tokenError) {
-        console.error(`[EMAIL-VERIFICATION:${requestId}] ${templateType} token generation failed:`, tokenError.message);
-        return respond(500, { error: 'Token generation failed', details: tokenError.message });
-      }
-      tokenLink = linkData?.action_link || '';
+    if (needsChange) {
+      if (!user.new_email)
+        return respond(200, { status: "no_pending_change" });
 
-    } else if (templateType === 'password_reset') {
-      const { data: linkData, error: tokenError } = await supabase.auth.admin.generateLink({
-        type: 'recovery',
-        email: user.email,
-        options: {
-          redirectTo: 'https://www.theraiapi.com/auth/password'  // whitelisted URL for password reset
-        }
-      });
-
-      if (tokenError) {
-        console.error(`[EMAIL-VERIFICATION:${requestId}] Password reset token generation failed:`, tokenError.message);
-        return respond(500, { error: 'Token generation failed', details: tokenError.message });
-      }
-      tokenLink = linkData?.action_link || '';
-
-    } else if (templateType === 'signup_confirmation') {
-      const { data: linkData, error: tokenError } = await supabase.auth.admin.generateLink({
-        type: 'signup',
-        email: user.email,
-        options: {
-          redirectTo: 'https://www.theraiapi.com/auth/email'  // whitelisted URL
-        }
-      });
-
-      if (tokenError) {
-        console.error(`[EMAIL-VERIFICATION:${requestId}] Signup confirmation token generation failed:`, tokenError.message);
-        return respond(500, { error: 'Token generation failed', details: tokenError.message });
-      }
-      tokenLink = linkData?.action_link || '';
+      ({ data: linkData, error: tokenErr } =
+        await supabase.auth.admin.generateLink({
+          type: templateType as "email_change_new",
+          email: user.email,
+          newEmail: user.new_email,
+          options: { redirectTo },
+        }));
+    } else if (templateType === "password_reset") {
+      ({ data: linkData, error: tokenErr } =
+        await supabase.auth.admin.generateLink({
+          type: "recovery",
+          email: user.email,
+          options: { redirectTo: "https://www.theraiapi.com/auth/password" },
+        }));
+    } else {
+      ({ data: linkData, error: tokenErr } =
+        await supabase.auth.admin.generateLink({
+          type: "signup",
+          email: user.email,
+          options: { redirectTo },
+        }));
     }
 
-    if (!tokenLink) {
-      return respond(500, { error: 'Failed to generate verification link' });
+    if (tokenErr) {
+      log("Token generation failed:", tokenErr.message);
+      return respond(500, { error: "Token generation failed", details: tokenErr.message });
     }
 
-    console.log(`[EMAIL-VERIFICATION:${requestId}] Generated ${templateType} token successfully for:`, targetEmail);
+    tokenLink = linkData?.action_link ?? "";
+    emailOtp = linkData?.email_otp ?? "";
 
-  } catch (tokenError: any) {
-    console.error(`[EMAIL-VERIFICATION:${requestId}] Token generation error:`, tokenError.message);
-    return respond(500, { error: 'Token generation failed', details: tokenError.message });
+    /* ---- fallback: craft action_link ourselves ---- */
+    if (!tokenLink && linkData?.hashed_token) {
+      const params = new URLSearchParams({
+        token_hash: linkData.hashed_token,
+        type: needsChange ? "email_change" : templateType, // GoTrue expects 'email_change'
+        redirect_to: redirectTo,
+      }).toString();
+      tokenLink = `${url}/auth/v1/verify?${params}`;
+    }
+
+    if (!tokenLink) return respond(500, { error: "Failed to generate verification link" });
+
+    log(`Generated ${templateType} token`);
+  } catch (e: any) {
+    log("Token generation error:", e.message);
+    return respond(500, { error: "Token generation failed", details: e.message });
   }
 
-  // Fetch email template from token_emails table - map the new types to existing templates
-  let dbTemplateType = templateType;
-  if (templateType === 'email_change_new' || templateType === 'email_change_current') {
-    dbTemplateType = 'email_change'; // Use existing template for both email change types
-  }
-
-  const { data: templateData, error: templateError } = await supabase
-    .from('token_emails')
-    .select('subject, body_html, body_text')
-    .eq('template_type', dbTemplateType)
+  /* ---------- 5 · fetch template ---------- */
+  const { data: templateData, error: templateErr } = await supabase
+    .from("token_emails")
+    .select("subject, body_html, body_text")
+    .eq(
+      "template_type",
+      needsChange ? "email_change" : templateType,
+    )
     .single();
 
-  if (templateError || !templateData) {
-    console.error(`[EMAIL-VERIFICATION:${requestId}] Template fetch failed:`, templateError?.message);
-    return respond(500, { error: 'Template fetch failed', details: templateError?.message });
+  if (templateErr || !templateData) {
+    log("Template fetch failed:", templateErr?.message);
+    return respond(500, { error: "Template fetch failed", details: templateErr?.message });
   }
 
-  console.log(`[EMAIL-VERIFICATION:${requestId}] Retrieved ${dbTemplateType} template`);
+  /* ---------- 6 · send mail ---------- */
+  const targetEmail =
+    needsChange && templateType === "email_change_new" ? user.new_email : user.email;
 
-  // Replace placeholders in template
-  const html = templateData.body_html.replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink);
-  const text = templateData.body_text.replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink);
+  const html = templateData.body_html
+    .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
+    .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
 
-  // Send email via custom SMTP endpoint
-  console.log(`[EMAIL-VERIFICATION:${requestId}] Sending ${templateType} email to:`, targetEmail);
-  
-  const sendResponse = await fetch(smtpEndpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const text = templateData.body_text
+    .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
+    .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
+
+  log(`Sending ${templateType} e-mail to:`, targetEmail);
+
+  const send = await fetch(smtpEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       to: targetEmail,
       subject: templateData.subject,
       html,
       text,
-      from: "Theria Astro <no-reply@theraiastro.com>"
-    })
+      from: "Theria Astro <no-reply@theraiastro.com>",
+    }),
   });
 
-  if (!sendResponse.ok) {
-    const errorText = await sendResponse.text();
-    console.error(`[EMAIL-VERIFICATION:${requestId}] Email sending failed:`, errorText);
-    return respond(500, {
-      error: 'Email sending failed',
-      details: errorText
-    });
+  if (!send.ok) {
+    const errTxt = await send.text();
+    log("SMTP error:", errTxt);
+    return respond(500, { error: "Email sending failed", details: errTxt });
   }
 
-  console.log(`[EMAIL-VERIFICATION:${requestId}] Successfully sent ${templateType} email to:`, targetEmail);
-  return respond(200, { 
-    status: 'sent',
-    template_type: templateType,
-    target_email: targetEmail
-  });
+  log(`✔ Sent ${templateType} e-mail to`, targetEmail);
+  return respond(200, { status: "sent", template_type: templateType });
 
+  /* ---------- helper ---------- */
   function respond(status: number, body: Record<string, any>) {
-    console.log(`[EMAIL-VERIFICATION:${requestId}] Responding with status:`, status, 'body:', body);
+    log("Responding:", status, body);
     return new Response(JSON.stringify(body), {
       status,
-      headers: {
-        'Content-Type': 'application/json',
-        ...CORS
-      }
+      headers: { "Content-Type": "application/json", ...CORS },
     });
   }
 });
-
