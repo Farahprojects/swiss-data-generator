@@ -122,34 +122,20 @@ serve(async (req) => {
 
     log("linkData >>>", JSON.stringify(linkData, null, 2));
 
-    // Use the action_link directly - this contains the real token, not just the hash
     tokenLink = linkData?.action_link ?? "";
-    
+
     // SDK ≥2.39 puts everything under `properties`
     const props = (linkData as any)?.properties ?? {};
+    const tokenHash = props.hashed_token ?? (linkData as any)?.hashed_token;
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
-    // For email change, we want to redirect to our custom page, so modify the action_link
-    if (needsChange && tokenLink) {
-      try {
-        const actionUrl = new URL(tokenLink);
-        const token = actionUrl.searchParams.get('token');
-        const type = actionUrl.searchParams.get('type');
-        
-        if (token && type) {
-          // Build our custom redirect URL with the actual token
-          const params = new URLSearchParams({
-            token: token, // Use the actual token, not token_hash
-            type: 'email_change' // Use consistent type
-          }).toString();
-          tokenLink = `https://www.theraiapi.com/auth/email?${params}`;
-          
-          log("Built custom email change link with actual token");
-        }
-      } catch (urlError) {
-        log("Error parsing action_link, using original:", urlError);
-        // Fall back to original action_link if parsing fails
-      }
+    /* ---- Build application link instead of direct Supabase link ---- */
+    if (tokenHash) {
+      const params = new URLSearchParams({
+        token_hash: tokenHash,
+        type: needsChange ? "email_change" : templateType, // GoTrue expects 'email_change'
+      }).toString();
+      tokenLink = `https://www.theraiapi.com/auth/email?${params}`;
     }
 
     if (!tokenLink) return respond(500, { error: "Failed to generate verification link" });
