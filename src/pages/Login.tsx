@@ -64,16 +64,16 @@ const Login = () => {
 
   /**
    * Edge function: /functions/v1/email-check
-   *   Expects `{ email }` in body and ONLY the anon key in Authorization.
+   *   Expects bearer SESSION token so it can check RLS against the current user.
    */
-  const checkForPendingEmailChange = async (userEmail: string) => {
+  const checkForPendingEmailChange = async (sessionToken: string, userEmail: string) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           apikey: SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${sessionToken}`,
         },
         body: JSON.stringify({ email: userEmail }),
       });
@@ -97,7 +97,7 @@ const Login = () => {
     e.preventDefault();
     if (!emailValid || !passwordValid || loading) return;
 
-    setLoginAttempted(true); // block auto‑redirect until flow finishes
+    setLoginAttempted(true); // block auto-redirect until flow finishes
     setLoading(true);
     setErrorMsg('');
 
@@ -116,6 +116,7 @@ const Login = () => {
       }
 
       const authedUser = data?.user;
+      const session = data?.session;
 
       // STEP 2: email not confirmed
       if (authedUser && !authedUser.email_confirmed_at) {
@@ -123,9 +124,17 @@ const Login = () => {
       }
 
       // STEP 3: pending email change?
-      const emailCheckData = await checkForPendingEmailChange(email);
-      if (emailCheckData?.status === 'pending') {
-        return openVerificationModal(emailCheckData.pending_to);
+      if (session) {
+        const emailCheckData = await checkForPendingEmailChange(session.access_token, email);
+        console.log('emailCheckData', emailCheckData);
+        logToSupabase('email-check response', {
+          level: 'debug',
+          page: 'Login',
+          data: emailCheckData,
+        });
+        if (emailCheckData?.status === 'pending') {
+          return openVerificationModal(emailCheckData.pending_to);
+        }
       }
 
       // STEP 4: good to go
@@ -209,8 +218,4 @@ const Login = () => {
                     onChange={setEmail}
                     onFocus={() => setErrorMsg('')}
                   />
-                  <PasswordInput
-                    password={password}
-                    isValid={passwordValid}
-                    showRequirements={false}
-                    onChange
+                  <Password
