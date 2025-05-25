@@ -1,4 +1,5 @@
 
+
 // deno-lint-ignore-file no-explicit-any
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -101,7 +102,10 @@ serve(async (req) => {
       const { data: linkData, error: tokenError } = await supabase.auth.admin.generateLink({
         type: templateType,
         email: user.email,           // primary email
-        newEmail: user.new_email     // pending email
+        newEmail: user.new_email,    // pending email
+        options: {
+          redirectTo: 'https://theraiastro.com/auth/verify'  // whitelisted URL
+        }
       });
 
       if (tokenError) {
@@ -113,7 +117,10 @@ serve(async (req) => {
     } else if (templateType === 'password_reset') {
       const { data: linkData, error: tokenError } = await supabase.auth.admin.generateLink({
         type: 'recovery',
-        email: user.email
+        email: user.email,
+        options: {
+          redirectTo: 'https://theraiastro.com/auth/password'  // whitelisted URL for password reset
+        }
       });
 
       if (tokenError) {
@@ -125,7 +132,10 @@ serve(async (req) => {
     } else if (templateType === 'signup_confirmation') {
       const { data: linkData, error: tokenError } = await supabase.auth.admin.generateLink({
         type: 'signup',
-        email: user.email
+        email: user.email,
+        options: {
+          redirectTo: 'https://theraiastro.com/auth/verify'  // whitelisted URL
+        }
       });
 
       if (tokenError) {
@@ -211,3 +221,4 @@ serve(async (req) => {
     });
   }
 });
+
