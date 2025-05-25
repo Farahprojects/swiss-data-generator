@@ -1,3 +1,4 @@
+
 // deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -107,12 +108,16 @@ serve(async (req) => {
     }
 
     tokenLink = linkData?.action_link ?? "";
-    emailOtp = linkData?.email_otp ?? "";
+
+    // SDK ≥2.39 puts everything under `properties`
+    const props = (linkData as any)?.properties ?? {};
+    const tokenHash = props.hashed_token ?? (linkData as any)?.hashed_token;
+    emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
     /* ---- fallback: craft action_link ourselves ---- */
-    if (!tokenLink && linkData?.hashed_token) {
+    if (!tokenLink && tokenHash) {
       const params = new URLSearchParams({
-        token_hash: linkData.hashed_token,
+        token_hash: tokenHash,
         type: needsChange ? "email_change" : templateType, // GoTrue expects 'email_change'
         redirect_to: redirectTo,
       }).toString();
