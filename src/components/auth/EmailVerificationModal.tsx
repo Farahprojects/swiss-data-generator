@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { logToSupabase } from '@/utils/batchedLogManager';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EmailVerificationModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
   onVerified,
   onCancel
 }) => {
+  const { user } = useAuth();
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
@@ -43,22 +45,41 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         data: { email }
       });
 
-      const { error } = await resend(email);
+      // Call the email-verification edge function directly with user_id
+      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
-      if (error) {
-        setResendError(error.message);
-        logToSupabase("Error resending verification", {
-          level: 'error',
-          page: 'EmailVerificationModal',
-          data: { error: error.message }
-        });
-      } else {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({
+          email: email,
+          user_id: user?.id || '',
+          template_type: 'email_change_new'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
+      }
+
+      const result = await response.json();
+      
+      if (result.status === 'sent') {
         setResendSuccess(true);
         logToSupabase("Verification email resent successfully", {
           level: 'info',
           page: 'EmailVerificationModal'
         });
+      } else {
+        throw new Error(result.error || 'Unexpected response from server');
       }
+
     } catch (error: any) {
       setResendError(error.message || 'Failed to resend verification email');
       logToSupabase("Exception resending verification", {

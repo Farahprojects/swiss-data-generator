@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { logToSupabase } from '@/utils/batchedLogManager';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginVerificationModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   onVerified,
   onCancel
 }) => {
+  const { user } = useAuth();
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
@@ -61,8 +63,9 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
           'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
         },
         body: JSON.stringify({
-          email: email, // Always use original email for lookup
-          template_type: isEmailChange ? 'email_change_new' : 'signup_confirmation' // Use new correct types
+          email: verificationEmail,
+          user_id: user?.id || '',
+          template_type: isEmailChange ? 'email_change_new' : 'signup_confirmation'
         })
       });
 
