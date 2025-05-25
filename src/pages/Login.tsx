@@ -37,23 +37,21 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [pendingEmailAddress, setPendingEmailAddress] = useState<
-    string | undefined
-  >(undefined);
+  const [pendingEmailAddress, setPendingEmailAddress] = useState<string | undefined>(undefined);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
 
   // ── Redirect only if there is NO modal / pending state
-  if (user && !(showVerificationModal || pendingEmailAddress)) {
-    const isPasswordResetRoute =
-      window.location.pathname.includes('/auth/password');
-
-    if (!isPasswordResetRoute) {
-      const from = (location.state as any)?.from?.pathname || '/';
-      return <Navigate to={from} replace />;
-    }
+  if (
+    user &&
+    !showVerificationModal &&
+    !pendingEmailAddress &&
+    !window.location.pathname.includes('/auth/password')
+  ) {
+    const from = (location.state as any)?.from?.pathname || '/';
+    return <Navigate to={from} replace />;
   }
 
   const openVerificationModal = (pendingTo?: string) => {
@@ -66,10 +64,7 @@ const Login = () => {
    * POST /functions/v1/email-check
    * Needs:  Authorization: Bearer <session_token>
    */
-  const checkForPendingEmailChange = async (
-    sessionToken: string,
-    userEmail: string,
-  ) => {
+  const checkForPendingEmailChange = async (sessionToken: string, userEmail: string) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
         method: 'POST',
@@ -105,24 +100,20 @@ const Login = () => {
 
     try {
       // STEP 1: password validation
-      const {
-        data: { user: authedUser, session },
-        error,
-      } = await signIn(email, password);
+      const { data, error } = await signIn(email, password);
 
       if (error) {
         const msg = error.message.toLowerCase();
-        if (
-          msg.includes('confirm') ||
-          msg.includes('verification') ||
-          msg.includes('verify')
-        ) {
-          return openVerificationModal();
+        if (msg.includes('confirm') || msg.includes('verification') || msg.includes('verify')) {
+          openVerificationModal();
+        } else {
+          setErrorMsg('Invalid email or password');
         }
-
-        setErrorMsg('Invalid email or password');
         return setLoading(false);
       }
+
+      const authedUser = data?.user;
+      const session = data?.session;
 
       // STEP 2: email not confirmed
       if (authedUser && !authedUser.email_confirmed_at) {
@@ -130,19 +121,15 @@ const Login = () => {
       }
 
       // STEP 3: pending email change?
-      const emailCheckData = await checkForPendingEmailChange(
-        session!.access_token,
-        email,
-      );
-
-      if (emailCheckData?.status === 'pending') {
-        return openVerificationModal(emailCheckData.pending_to);
+      if (session) {
+        const emailCheckData = await checkForPendingEmailChange(session.access_token, email);
+        if (emailCheckData?.status === 'pending') {
+          return openVerificationModal(emailCheckData.pending_to);
+        }
       }
 
       // STEP 4: good to go
-      navigate((location.state as any)?.from?.pathname || '/', {
-        replace: true,
-      });
+      navigate((location.state as any)?.from?.pathname || '/', { replace: true });
     } catch (err: any) {
       toast({
         title: 'Error',
@@ -198,22 +185,22 @@ const Login = () => {
   // render
   // ──────────────────────────────────────────
   return (
-    <div className='flex flex-col min-h-screen'>
+    <div className="flex flex-col min-h-screen">
       <UnifiedNavigation />
 
-      <main className='flex-grow flex items-center justify-center px-4 py-12'>
-        <div className='w-full max-w-md space-y-8'>
+      <main className="flex-grow flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md space-y-8">
           {showForgotPassword ? (
             <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
           ) : (
             <>
-              <header className='text-center'>
-                <h1 className='text-3xl font-bold'>Welcome back</h1>
-                <p className='mt-2 text-gray-600'>Sign in to your account</p>
+              <header className="text-center">
+                <h1 className="text-3xl font-bold">Welcome back</h1>
+                <p className="mt-2 text-gray-600">Sign in to your account</p>
               </header>
 
-              <form onSubmit={handleSubmit} className='space-y-6'>
-                <div className='space-y-4'>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
                   <EmailInput
                     email={email}
                     isValid={emailValid}
@@ -228,42 +215,32 @@ const Login = () => {
                     onFocus={() => setErrorMsg('')}
                   />
 
-                  <div className='flex justify-between items-center'>
+                  <div className="flex justify-between items-center">
                     <button
-                      type='button'
+                      type="button"
                       onClick={() => setShowForgotPassword(true)}
-                      className='text-sm text-primary hover:underline'
+                      className="text-sm text-primary hover:underline"
                     >
                       Forgot password?
                     </button>
 
-                    <Link
-                      to='/signup'
-                      className='text-sm text-primary hover:underline'
-                    >
-                      Don&apos;t have an account? Sign up
+                    <Link to="/signup" className="text-sm text-primary hover:underline">
+                      Don't have an account? Sign up
                     </Link>
                   </div>
                 </div>
 
                 {errorMsg && (
-                  <p className='text-center text-sm font-medium text-red-600 -mt-2'>
+                  <p className="text-center text-sm font-medium text-red-600 -mt-2">
                     {errorMsg}
                   </p>
                 )}
 
-                <Button
-                  type='submit'
-                  className='w-full'
-                  disabled={loading || !emailValid || !passwordValid}
-                >
+                <Button type="submit" className="w-full" disabled={loading || !emailValid || !passwordValid}>
                   {loading ? 'Signing in…' : 'Sign in'}
                 </Button>
 
-                <SocialLogin
-                  onGoogleSignIn={handleGoogleSignIn}
-                  onAppleSignIn={handleAppleSignIn}
-                />
+                <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
               </form>
             </>
           )}
