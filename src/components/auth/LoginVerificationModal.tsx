@@ -16,7 +16,7 @@ interface LoginVerificationModalProps {
   isOpen: boolean;
   email: string;
   pendingEmail?: string; // The new email address where verification was sent
-  resend: (email: string) => Promise<{ error: Error | null }>;
+  resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
   onVerified: () => void;
   onCancel: () => void;
 }
@@ -25,7 +25,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   isOpen,
   email,
   pendingEmail,
-  resend,
+  resendVerificationEmail,
   onVerified,
   onCancel
 }) => {

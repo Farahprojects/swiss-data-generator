@@ -263,8 +263,8 @@ const Login = () => {
         <LoginVerificationModal
           isOpen={showVerificationModal}
           email={email || pendingEmailAddress || ''}
-          pendingEmailAddress={pendingEmailAddress}
-          resendVerificationEmail={resendVerificationEmail}
+          pendingEmail={pendingEmailAddress}
+          resend={resendVerificationEmail}
           onVerified={handleVerificationFinished}
           onCancel={handleVerificationCancelled}
         />
