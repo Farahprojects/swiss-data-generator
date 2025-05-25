@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,6 +61,50 @@ const Login = () => {
     setLoading(false);
   };
 
+  const checkForPendingEmailChange = async (userEmail: string) => {
+    try {
+      logToSupabase(`Checking for pending email change after successful login: ${SUPABASE_URL}/functions/v1/email-check`, {
+        level: 'debug',
+        page: 'Login'
+      });
+      
+      const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({ email: userEmail }),
+      });
+      
+      if (!emailCheckRes.ok) {
+        logToSupabase('Email check failed after login, proceeding normally', {
+          level: 'warn',
+          page: 'Login',
+          data: { status: emailCheckRes.status }
+        });
+        return null;
+      }
+
+      const emailCheckData = await emailCheckRes.json();
+      logToSupabase('Post-login email check result', {
+        level: 'debug',
+        page: 'Login',
+        data: { status: emailCheckData?.status }
+      });
+      
+      return emailCheckData;
+    } catch (err) {
+      logToSupabase('Exception during post-login email check', {
+        level: 'warn',
+        page: 'Login',
+        data: { error: err instanceof Error ? err.message : String(err) }
+      });
+      return null;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailValid || !passwordValid || loading) return;
@@ -68,66 +113,34 @@ const Login = () => {
     setErrorMsg('');
 
     try {
-      // Use the hardcoded SUPABASE_URL instead of import.meta.env.VITE_SUPABASE_URL
-      logToSupabase(`Calling edge function: ${SUPABASE_URL}/functions/v1/email-check`, {
-        level: 'debug',
-        page: 'Login'
+      logToSupabase('Starting secure login flow - password validation first', {
+        level: 'info',
+        page: 'Login',
+        data: { email }
       });
-      const emailCheckRes = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-        },
-        body: JSON.stringify({ email }),
-      });
-      
-      console.log("Email check response status:", emailCheckRes.status);
-      
-      let emailCheckData;
-      try {
-        emailCheckData = await emailCheckRes.json();
-        console.log("Email check data:", emailCheckData);
-      } catch (err) {
-        console.error("Failed to parse email-check response:", err);
-        // Continue with sign-in even if email check fails
-      }
-      
-      // Only show verification modal if the edge function specifically indicates a pending email change
-      if (emailCheckData && emailCheckData.status === 'pending') {
-        logToSupabase('Pending email change found, showing verification modal', {
-          level: 'debug',
-          page: 'Login',
-          data: { currentEmail: emailCheckData.current_email, pendingTo: emailCheckData.pending_to }
-        });
-        return openVerificationModal(emailCheckData.pending_to);
-      }
 
-      logToSupabase('No pending email change, proceeding with sign in', {
-        level: 'debug',
-        page: 'Login'
-      });
-      
-      // No pending change, proceed with normal sign-in
+      // STEP 1: ALWAYS validate password first - this is the security fix
       const { data, error } = await signIn(email, password);
 
       if (error) {
-        logToSupabase('signIn error', {
-          level: 'error',
+        logToSupabase('Password validation failed', {
+          level: 'warn',
           page: 'Login',
-          data: error
+          data: { 
+            email,
+            errorCode: error.name,
+            errorMessage: error.message
+          }
         });
 
-        // DON'T automatically show verification modal for any 400 error
-        // Instead, check if the error message specifically indicates verification needed
+        // Check if the error message specifically indicates verification needed
         const errorMessage = error.message.toLowerCase();
         if (
           errorMessage.includes('confirm') || 
           errorMessage.includes('verification') || 
           errorMessage.includes('verify')
         ) {
-          logToSupabase('Error indicates verification needed', {
+          logToSupabase('Error indicates email verification needed', {
             level: 'debug',
             page: 'Login'
           });
@@ -139,12 +152,56 @@ const Login = () => {
         return setLoading(false);
       }
 
-      // Extra guard: data.user present but not confirmed (edge‑case when GoTrue behaviour changes)
-      if (data?.user && !data.user.email_confirmed_at) return openVerificationModal();
+      // STEP 2: Password was valid! Now check if user has confirmed email
+      if (data?.user && !data.user.email_confirmed_at) {
+        logToSupabase('User authenticated but email not confirmed', {
+          level: 'debug',
+          page: 'Login'
+        });
+        return openVerificationModal();
+      }
 
+      // STEP 3: User is fully authenticated, now check for pending email changes
+      logToSupabase('User successfully authenticated, checking for pending email changes', {
+        level: 'info',
+        page: 'Login',
+        data: { userId: data.user?.id }
+      });
+
+      const emailCheckData = await checkForPendingEmailChange(email);
+      
+      if (emailCheckData && emailCheckData.status === 'pending') {
+        logToSupabase('Pending email change found after successful login', {
+          level: 'info',
+          page: 'Login',
+          data: { 
+            currentEmail: emailCheckData.current_email, 
+            pendingTo: emailCheckData.pending_to 
+          }
+        });
+        return openVerificationModal(emailCheckData.pending_to);
+      }
+
+      // STEP 4: All good, proceed to dashboard
+      logToSupabase('Login completed successfully, redirecting to dashboard', {
+        level: 'info',
+        page: 'Login'
+      });
+      
       navigate((location.state as any)?.from?.pathname || '/', { replace: true });
+
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message ?? 'Failed to sign in', variant: 'destructive' });
+      logToSupabase('Unexpected error during login', {
+        level: 'error',
+        page: 'Login',
+        data: { error: err.message || String(err) }
+      });
+      
+      toast({ 
+        title: 'Error', 
+        description: err.message ?? 'Failed to sign in', 
+        variant: 'destructive' 
+      });
       setLoading(false);
     }
   };
@@ -188,21 +245,10 @@ const Login = () => {
   const handleVerificationFinished = async () => {
     setShowVerificationModal(false);
     setPendingEmailAddress(undefined);
-    toast({ title: 'Email verified!', description: 'You can now sign in.' });
+    toast({ title: 'Email verified!', description: 'You can now continue to your dashboard.' });
 
-    setLoading(true);
-    try {
-      const { error } = await signIn(email, password);
-      if (error) {
-        setErrorMsg('Login failed after verification. Please try again.');
-      } else {
-        navigate((location.state as any)?.from?.pathname || '/', { replace: true });
-      }
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message ?? 'Login retry failed', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    // User is already authenticated at this point, just redirect
+    navigate((location.state as any)?.from?.pathname || '/', { replace: true });
   };
 
   return (
