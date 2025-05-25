@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -171,7 +170,7 @@ const Login = () => {
       const emailCheckData = await checkForPendingEmailChange(email);
       
       if (emailCheckData && emailCheckData.status === 'pending') {
-        logToSupabase('Pending email change found after successful login', {
+        logToSupabase('Pending email change found after successful login - BLOCKING dashboard redirect', {
           level: 'info',
           page: 'Login',
           data: { 
@@ -179,6 +178,7 @@ const Login = () => {
             pendingTo: emailCheckData.pending_to 
           }
         });
+        // IMPORTANT: Return here to prevent dashboard redirect
         return openVerificationModal(emailCheckData.pending_to);
       }
 
