@@ -1,4 +1,4 @@
-// Updated ConfirmEmail Page with full-page layout and correct token usage
+// Updated ConfirmEmail Page to support magiclink login and email update
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -46,8 +46,6 @@ const ConfirmEmail: React.FC = () => {
       if (processedRef.current) return;
       processedRef.current = true;
 
-      console.log('Hash:', location.hash);
-
       try {
         const hash = new URLSearchParams(location.hash.slice(1));
         const search = new URLSearchParams(location.search);
@@ -55,6 +53,7 @@ const ConfirmEmail: React.FC = () => {
         const accessToken = hash.get('access_token');
         const refreshToken = hash.get('refresh_token');
         const pkceCode = hash.get('code');
+        const newEmail = hash.get('email') || search.get('email');
         const hashType = hash.get('type');
 
         if (accessToken && refreshToken) {
@@ -63,14 +62,26 @@ const ConfirmEmail: React.FC = () => {
             refresh_token: refreshToken,
           });
           if (error) throw error;
-          finishSuccess(hashType?.startsWith('sign') ? 'signup' : 'email_change');
+
+          if (newEmail) {
+            const { error: updateErr } = await supabase.auth.updateUser({ email: newEmail });
+            if (updateErr) throw updateErr;
+          }
+
+          finishSuccess('email_change');
           return;
         }
 
         if (pkceCode) {
           const { data, error } = await supabase.auth.exchangeCodeForSession(pkceCode);
           if (error || !data.session) throw error ?? new Error('No session returned');
-          finishSuccess(hashType?.startsWith('sign') ? 'signup' : 'email_change');
+
+          if (newEmail) {
+            const { error: updateErr } = await supabase.auth.updateUser({ email: newEmail });
+            if (updateErr) throw updateErr;
+          }
+
+          finishSuccess('email_change');
           return;
         }
 
