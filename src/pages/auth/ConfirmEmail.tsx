@@ -100,7 +100,7 @@ const ConfirmEmail = () => {
         
         // If no hash params, proceed with token from query params
         const searchParams = new URLSearchParams(location.search);
-        const token = searchParams.get('token'); // Use the actual token, not token_hash
+        const token = searchParams.get('token');
         const queryType = searchParams.get('type');
         
         logToSupabase("Checking query parameters", {
@@ -138,25 +138,17 @@ const ConfirmEmail = () => {
           return;
         }
         
-        logToSupabase('Attempting to verify OTP with token', {
+        logToSupabase('Attempting to exchange code for session with token', {
           level: 'info',
           page: 'ConfirmEmail',
           data: { queryType }
         });
         
-        // Get current user to get email for verification
-        const { data: userData } = await supabase.auth.getUser();
-        const currentUserEmail = userData?.user?.email;
-        
-        // Attempt to verify the email using the actual token
-        const { error } = await supabase.auth.verifyOtp({
-          token: token,
-          type: queryType as 'signup' | 'email_change',
-          email: currentUserEmail || '', // Required for verifyOtp
-        });
+        // Use exchangeCodeForSession for JWT tokens from email links
+        const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(token);
         
         if (error) {
-          logToSupabase('Error verifying email', {
+          logToSupabase('Error exchanging code for session', {
             level: 'error',
             page: 'ConfirmEmail',
             data: { error: error.message }
@@ -171,9 +163,6 @@ const ConfirmEmail = () => {
             description: "We couldn't verify your email. Please try again or request a new link."
           });
         } else {
-          // Check if we got a session after verification
-          const { data: sessionData } = await supabase.auth.getSession();
-          
           logToSupabase('Email verification successful', {
             level: 'info',
             page: 'ConfirmEmail',
