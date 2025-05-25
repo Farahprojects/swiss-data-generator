@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,30 +98,30 @@ const ConfirmEmail = () => {
           return;
         }
         
-        // If no hash params, proceed with token_hash from query params
+        // If no hash params, proceed with token from query params
         const searchParams = new URLSearchParams(location.search);
-        const tokenHash = searchParams.get('token_hash') || searchParams.get('token'); // Fallback to 'token' for backward compatibility
+        const token = searchParams.get('token'); // Use the actual token, not token_hash
         const queryType = searchParams.get('type');
         
         logToSupabase("Checking query parameters", {
           level: 'debug',
           page: 'ConfirmEmail',
           data: { 
-            tokenHash: tokenHash ? '[REDACTED]' : null,
+            hasToken: !!token,
             queryType,
             searchParams: location.search
           }
         });
         
-        if (!tokenHash) {
-          logToSupabase('No token_hash or token found in URL', {
+        if (!token) {
+          logToSupabase('No token found in URL', {
             level: 'error',
             page: 'ConfirmEmail',
             data: { searchParams: location.search }
           });
           
           setStatus('error');
-          setMessage('Invalid verification link. No token_hash provided.');
+          setMessage('Invalid verification link. No token provided.');
           return;
         }
 
@@ -139,15 +138,15 @@ const ConfirmEmail = () => {
           return;
         }
         
-        logToSupabase('Attempting to verify OTP', {
+        logToSupabase('Attempting to verify OTP with token', {
           level: 'info',
           page: 'ConfirmEmail',
           data: { queryType }
         });
         
-        // Attempt to verify the email based on the type
+        // Attempt to verify the email using the actual token
         const { error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
+          token: token, // Use the actual token
           type: queryType as 'signup' | 'email_change'
         });
         
