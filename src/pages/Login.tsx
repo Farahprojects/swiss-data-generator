@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -264,7 +263,7 @@ const Login = () => {
           isOpen={showVerificationModal}
           email={email || pendingEmailAddress || ''}
           pendingEmail={pendingEmailAddress}
-          resend={resendVerificationEmail}
+          resendVerificationEmail={resendVerificationEmail}
           onVerified={handleVerificationFinished}
           onCancel={handleVerificationCancelled}
         />
