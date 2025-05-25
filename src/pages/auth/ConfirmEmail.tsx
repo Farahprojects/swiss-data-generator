@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -138,13 +139,39 @@ const ConfirmEmail = () => {
           return;
         }
         
+        // Handle email change separately since exchangeCodeForSession doesn't work for it
+        if (queryType === 'email_change') {
+          logToSupabase('Handling email change verification', {
+            level: 'info',
+            page: 'ConfirmEmail'
+          });
+          
+          // For email change, the token is processed by Supabase internally
+          // We just need to show success and redirect to login
+          setStatus('success');
+          setMessage('Your email has been successfully changed! Please log in with your new email address.');
+          
+          toast({
+            variant: "success",
+            title: "Email updated!",
+            description: "Your email address has been successfully changed. Please log in again to continue."
+          });
+          
+          // Redirect to login after 3 seconds
+          setTimeout(() => {
+            navigate('/login');
+          }, 3000);
+          
+          return;
+        }
+        
         logToSupabase('Attempting to exchange code for session with token', {
           level: 'info',
           page: 'ConfirmEmail',
           data: { queryType }
         });
         
-        // Use exchangeCodeForSession for JWT tokens from email links
+        // Use exchangeCodeForSession for JWT tokens from email links (only for signup)
         const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(token);
         
         if (error) {
@@ -174,22 +201,13 @@ const ConfirmEmail = () => {
           
           if (sessionData.session) {
             setStatus('success');
+            setMessage('Your email has been successfully confirmed! You are now logged in.');
             
-            if (queryType === 'signup') {
-              setMessage('Your email has been successfully confirmed! You are now logged in.');
-              toast({
-                variant: "success",
-                title: "Email verified!",
-                description: "Your account has been successfully activated and you are now logged in."
-              });
-            } else if (queryType === 'email_change') {
-              setMessage('Your email has been successfully changed! You are now logged in.');
-              toast({
-                variant: "success",
-                title: "Email updated!",
-                description: "Your email address has been successfully changed and you are now logged in."
-              });
-            }
+            toast({
+              variant: "success",
+              title: "Email verified!",
+              description: "Your account has been successfully activated and you are now logged in."
+            });
             
             // Redirect to dashboard after 3 seconds
             setTimeout(() => {
