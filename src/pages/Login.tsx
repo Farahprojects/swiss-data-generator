@@ -39,13 +39,15 @@ const Login = () => {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [pendingEmailAddress, setPendingEmailAddress] = useState<string | undefined>(undefined);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [loginAttempted, setLoginAttempted] = useState(false); // prevent early redirect after submit
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
 
-  // ── Redirect only if there is NO modal / pending state
+  // ── Redirect user ONLY when arriving on /login while already authenticated
   if (
     user &&
+    !loginAttempted &&
     !showVerificationModal &&
     !pendingEmailAddress &&
     !window.location.pathname.includes('/auth/password')
@@ -61,17 +63,17 @@ const Login = () => {
   };
 
   /**
-   * POST /functions/v1/email-check
-   * Needs:  Authorization: Bearer <session_token>
+   * Edge function: /functions/v1/email-check
+   *   Expects `{ email }` in body and ONLY the anon key in Authorization.
    */
-  const checkForPendingEmailChange = async (sessionToken: string, userEmail: string) => {
+  const checkForPendingEmailChange = async (userEmail: string) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           apikey: SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${sessionToken}`,
+          Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({ email: userEmail }),
       });
@@ -95,6 +97,7 @@ const Login = () => {
     e.preventDefault();
     if (!emailValid || !passwordValid || loading) return;
 
+    setLoginAttempted(true); // block auto‑redirect until flow finishes
     setLoading(true);
     setErrorMsg('');
 
@@ -113,7 +116,6 @@ const Login = () => {
       }
 
       const authedUser = data?.user;
-      const session = data?.session;
 
       // STEP 2: email not confirmed
       if (authedUser && !authedUser.email_confirmed_at) {
@@ -121,11 +123,9 @@ const Login = () => {
       }
 
       // STEP 3: pending email change?
-      if (session) {
-        const emailCheckData = await checkForPendingEmailChange(session.access_token, email);
-        if (emailCheckData?.status === 'pending') {
-          return openVerificationModal(emailCheckData.pending_to);
-        }
+      const emailCheckData = await checkForPendingEmailChange(email);
+      if (emailCheckData?.status === 'pending') {
+        return openVerificationModal(emailCheckData.pending_to);
       }
 
       // STEP 4: good to go
@@ -137,6 +137,8 @@ const Login = () => {
         variant: 'destructive',
       });
       setLoading(false);
+    } finally {
+      setLoginAttempted(false);
     }
   };
 
@@ -211,57 +213,4 @@ const Login = () => {
                     password={password}
                     isValid={passwordValid}
                     showRequirements={false}
-                    onChange={setPassword}
-                    onFocus={() => setErrorMsg('')}
-                  />
-
-                  <div className="flex justify-between items-center">
-                    <button
-                      type="button"
-                      onClick={() => setShowForgotPassword(true)}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Forgot password?
-                    </button>
-
-                    <Link to="/signup" className="text-sm text-primary hover:underline">
-                      Don't have an account? Sign up
-                    </Link>
-                  </div>
-                </div>
-
-                {errorMsg && (
-                  <p className="text-center text-sm font-medium text-red-600 -mt-2">
-                    {errorMsg}
-                  </p>
-                )}
-
-                <Button type="submit" className="w-full" disabled={loading || !emailValid || !passwordValid}>
-                  {loading ? 'Signing in…' : 'Sign in'}
-                </Button>
-
-                <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
-              </form>
-            </>
-          )}
-        </div>
-      </main>
-
-      <Footer />
-
-      <LoginVerificationModal
-        isOpen={showVerificationModal}
-        email={email}
-        pendingEmail={pendingEmailAddress}
-        onVerified={handleVerificationFinished}
-        onCancel={() => {
-          setShowVerificationModal(false);
-          setPendingEmailAddress(undefined);
-        }}
-        resend={resendVerificationEmail}
-      />
-    </div>
-  );
-};
-
-export default Login;
+                    onChange
