@@ -1,4 +1,5 @@
 
+
 // deno-lint-ignore-file no-explicit-any1
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -51,24 +52,24 @@ serve(async (req) => {
   }
   const supabase = createClient(url, key);
 
-    /* ---------- 3 · fetch user ---------- */
-let user: any = null;
-let error: any = null;
+  /* ---------- 3 · fetch user ---------- */
+  let user: any = null;
+  let error: any = null;
 
-try {
-  // works in every 2.x release
-  const { data, error: listErr } = await supabase.auth.admin.listUsers({ email });
-  error = listErr;
-  user  = data?.users?.[0] ?? null;
-} catch (e) {
-  error = e as Error;
-}
+  try {
+    // works in every 2.x release
+    const { data, error: listErr } = await supabase.auth.admin.listUsers({ email });
+    error = listErr;
+    user  = data?.users?.[0] ?? null;
+  } catch (e) {
+    error = e as Error;
+  }
 
-if (error) {
-  log("User lookup failed:", error.message);
-  return respond(500, { error: "User lookup failed", details: error.message });
-}
-if (!user) return respond(200, { status: "no_user_found" });
+  if (error) {
+    log("User lookup failed:", error.message);
+    return respond(500, { error: "User lookup failed", details: error.message });
+  }
+  if (!user) return respond(200, { status: "no_user_found" });
 
   /* ---------- 4 · generate link ---------- */
   let tokenLink = "";
@@ -112,6 +113,8 @@ if (!user) return respond(200, { status: "no_user_found" });
       return respond(500, { error: "Token generation failed", details: tokenErr.message });
     }
 
+    log("linkData >>>", JSON.stringify(linkData, null, 2));
+
     tokenLink = linkData?.action_link ?? "";
 
     // SDK ≥2.39 puts everything under `properties`
@@ -119,14 +122,13 @@ if (!user) return respond(200, { status: "no_user_found" });
     const tokenHash = props.hashed_token ?? (linkData as any)?.hashed_token;
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
-    /* ---- fallback: craft action_link ourselves ---- */
-    if (!tokenLink && tokenHash) {
+    /* ---- Build application link instead of direct Supabase link ---- */
+    if (tokenHash) {
       const params = new URLSearchParams({
         token_hash: tokenHash,
         type: needsChange ? "email_change" : templateType, // GoTrue expects 'email_change'
-        redirect_to: redirectTo,
       }).toString();
-      tokenLink = `${url}/auth/v1/verify?${params}`;
+      tokenLink = `https://www.theraiapi.com/auth/email?${params}`;
     }
 
     if (!tokenLink) return respond(500, { error: "Failed to generate verification link" });
@@ -196,3 +198,4 @@ if (!user) return respond(200, { status: "no_user_found" });
     });
   }
 });
+
