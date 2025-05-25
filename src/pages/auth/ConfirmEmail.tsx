@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
@@ -43,7 +44,7 @@ const ConfirmEmail: React.FC = () => {
         : 'Your email has been updated – you are now logged in!'
     setMessage(msg)
     toast({ variant: 'success', title: 'Success', description: msg })
-    // strip tokens so refreshes don’t re‑trigger verification
+    // strip tokens so refreshes don't re‑trigger verification
     window.history.replaceState({}, '', '/auth/email')
     setTimeout(() => navigate('/dashboard'), 2800)
   }
@@ -81,23 +82,20 @@ const ConfirmEmail: React.FC = () => {
 
         const query = new URLSearchParams(location.search)
         const tokenHash = query.get('token_hash') || query.get('token')
-        const queryType =
-          (query.get('type') ?? 'email') as
-            | 'signup'
-            | 'email_change'
-            | 'email_change_new'
-            | 'email_change_current'
-            | 'email'
+        const queryType = query.get('type') ?? 'email'
 
         if (!tokenHash) throw new Error('Invalid link – missing token.')
 
+        // Use whatever token type Supabase sent without validation
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: queryType as any,
+          type: queryType,
         })
         if (error) throw error
 
-        finishSuccess(queryType)
+        // Determine success message based on token type
+        const isSignup = queryType === 'signup'
+        finishSuccess(isSignup ? 'signup' : 'email_change')
       } catch (err: any) {
         logToSupabase('verification failed', {
           level: 'error',

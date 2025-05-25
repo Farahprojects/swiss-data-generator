@@ -1,5 +1,4 @@
 
-
 // deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -132,8 +131,9 @@ serve(async (req) => {
 
     /* ---- Build application link with fragment instead of query params ---- */
     if (tokenHash) {
-      const linkType = needsChange ? "email_change" : templateType;          // GoTrue still needs the type
-      tokenLink = `https://www.theraiapi.com/auth/email#token_hash=${tokenHash}&type=${linkType}`;
+      // Use the actual token_type from linkData instead of our simplified names
+      const actualTokenType = (linkData as any)?.token_type || linkData?.type || templateType;
+      tokenLink = `https://www.theraiapi.com/auth/email#token_hash=${tokenHash}&type=${actualTokenType}`;
     }
 
     if (!tokenLink) return respond(500, { error: "Failed to generate verification link" });
@@ -199,4 +199,3 @@ serve(async (req) => {
     });
   }
 });
-
