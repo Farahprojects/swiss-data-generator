@@ -104,7 +104,7 @@ serve(async (req) => {
         email: user.email,           // primary email
         newEmail: user.new_email,    // pending email
         options: {
-          redirectTo: 'https://theraiastro.com/auth/verify'  // whitelisted URL
+          redirectTo: 'https://www.theraiapi.com/auth/email'  // whitelisted URL
         }
       });
 
@@ -119,7 +119,7 @@ serve(async (req) => {
         type: 'recovery',
         email: user.email,
         options: {
-          redirectTo: 'https://theraiastro.com/auth/password'  // whitelisted URL for password reset
+          redirectTo: 'https://www.theraiapi.com/auth/password'  // whitelisted URL for password reset
         }
       });
 
@@ -134,7 +134,7 @@ serve(async (req) => {
         type: 'signup',
         email: user.email,
         options: {
-          redirectTo: 'https://theraiastro.com/auth/verify'  // whitelisted URL
+          redirectTo: 'https://www.theraiapi.com/auth/email'  // whitelisted URL
         }
       });
 
