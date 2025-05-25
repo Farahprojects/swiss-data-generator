@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { logToSupabase } from '@/utils/batchedLogManager';
+import { sendEmailChangeNotification } from '@/utils/notificationService';
 
 export function useEmailChange() {
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
@@ -104,9 +105,11 @@ export function useEmailChange() {
       // Store the new email before updating
       setNewEmailAddress(newEmail);
 
-      // Update the email - no password verification needed
+      // Update the email without triggering automatic Supabase emails
       const { error, data: updateData } = await supabase.auth.updateUser({ 
         email: newEmail 
+      }, {
+        emailRedirectTo: undefined // Disable automatic email sending
       });
       
       logToSupabase("Update user email response", {
@@ -116,7 +119,11 @@ export function useEmailChange() {
       });
       
       if (error) {
-        console.log("Email update error:", error.message);
+        logToSupabase("Email update error", {
+          level: 'error',
+          page: 'useEmailChange',
+          data: { error: error.message }
+        });
         
         toast({
           variant: "destructive",
@@ -127,38 +134,19 @@ export function useEmailChange() {
         return { success: false, error: error.message };
       }
       
+      // Send verification email to NEW email address
+      await sendVerificationEmail(newEmail, 'email_change_new');
+      
+      // Send notification email to OLD email address
+      await sendEmailChangeNotification(currentEmail, newEmail);
+      
       // Show the verification modal
       setPendingEmailVerification(true);
       
-      // Check user preferences for notifications
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData?.user?.id) {
-        const { data, error: prefsError } = await supabase
-          .from('user_preferences')
-          .select('email_notifications_enabled, email_change_notifications')
-          .eq('user_id', userData.user.id)
-          .single();
-        
-        // Check both the master toggle and the specific notification toggle
-        // Default to showing if there's an error or no preferences found
-        const shouldShowNotification = 
-          prefsError || 
-          !data || 
-          (data.email_notifications_enabled !== false && 
-           data.email_change_notifications !== false);
-        
-        if (shouldShowNotification) {
-          toast({
-            title: "Email verification sent",
-            description: "We've sent a verification link to your new email address. Please check your inbox."
-          });
-        } else {
-          toast({
-            title: "Email verification sent",
-            description: "We've sent a verification link to your new email address. Please check your inbox."
-          });
-        }
-      }
+      toast({
+        title: "Email verification sent",
+        description: `We've sent a verification link to ${newEmail}. Please check your inbox. A notification has also been sent to your current email.`
+      });
       
       setIsUpdatingEmail(false);
       return { success: true, pendingVerification: true };
@@ -168,8 +156,6 @@ export function useEmailChange() {
         page: 'useEmailChange',
         data: { error: error.message || String(error) }
       });
-      
-      console.log("Email change error:", error.message || String(error));
       
       toast({
         variant: "destructive",
@@ -182,15 +168,14 @@ export function useEmailChange() {
     }
   };
 
-  const resendVerificationEmail = async (email: string) => {
-    logToSupabase("Resending email verification", {
+  const sendVerificationEmail = async (email: string, templateType: string) => {
+    logToSupabase("Sending verification email", {
       level: 'info',
       page: 'useEmailChange',
-      data: { email }
+      data: { email, templateType }
     });
     
     try {
-      // Use the new email-verification edge function with updated template type
       const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
@@ -203,17 +188,45 @@ export function useEmailChange() {
         },
         body: JSON.stringify({
           email: email,
-          template_type: 'email_change_new' // Use the new correct type
+          template_type: templateType
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
+        throw new Error(errorData.error || `Failed to send verification email (${response.status})`);
       }
 
       const result = await response.json();
-      return { error: result.error ? new Error(result.error) : null };
+      
+      logToSupabase("Verification email sent successfully", {
+        level: 'info',
+        page: 'useEmailChange',
+        data: { email, templateType }
+      });
+      
+      return result;
+    } catch (err: any) {
+      logToSupabase("Error sending verification email", {
+        level: 'error',
+        page: 'useEmailChange',
+        data: { error: err.message || String(err), email, templateType }
+      });
+      
+      throw err;
+    }
+  };
+
+  const resendVerificationEmail = async (email: string) => {
+    logToSupabase("Resending email verification", {
+      level: 'info',
+      page: 'useEmailChange',
+      data: { email }
+    });
+    
+    try {
+      await sendVerificationEmail(email, 'email_change_new');
+      return { error: null };
     } catch (err: any) {
       logToSupabase("Error resending verification", {
         level: 'error',

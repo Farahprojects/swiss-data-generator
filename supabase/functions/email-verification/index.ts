@@ -1,5 +1,4 @@
 
-
 // deno-lint-ignore-file no-explicit-any1
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -74,7 +73,7 @@ serve(async (req) => {
   /* ---------- 4 · generate link ---------- */
   let tokenLink = "";
   let emailOtp = "";
-  const redirectTo = "https://www.theraiapi.com/auth/email"; // <— in Auth → URL Configuration
+  const redirectTo = "https://www.theraiapi.com/auth/email";
   const needsChange =
     templateType === "email_change_new" || templateType === "email_change_current";
 
@@ -82,14 +81,22 @@ serve(async (req) => {
     let linkData, tokenErr;
 
     if (needsChange) {
-      if (!user.new_email)
-        return respond(200, { status: "no_pending_change" });
+      // For email_change_new, use the new_email if available, otherwise use the email from request
+      const targetEmail = templateType === "email_change_new" 
+        ? (user.new_email || email)
+        : user.email;
+
+      if (templateType === "email_change_new" && !user.new_email) {
+        // If no pending email change but we're asked for new email verification,
+        // this might be a direct verification request
+        log("No pending email change found, treating as direct verification");
+      }
 
       ({ data: linkData, error: tokenErr } =
         await supabase.auth.admin.generateLink({
           type: templateType as "email_change_new",
           email: user.email,
-          newEmail: user.new_email,
+          newEmail: templateType === "email_change_new" ? (user.new_email || email) : undefined,
           options: { redirectTo },
         }));
     } else if (templateType === "password_reset") {
@@ -155,8 +162,9 @@ serve(async (req) => {
   }
 
   /* ---------- 6 · send mail ---------- */
-  const targetEmail =
-    needsChange && templateType === "email_change_new" ? user.new_email : user.email;
+  const targetEmail = templateType === "email_change_new" 
+    ? (user.new_email || email)  // Send to new email for verification
+    : user.email;                 // Send to current email for notifications
 
   const html = templateData.body_html
     .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
@@ -198,4 +206,3 @@ serve(async (req) => {
     });
   }
 });
-
