@@ -51,16 +51,6 @@ serve(async (req) => {
       data: { bodyLength: rawBody.length }
     });
     
-    // Extract authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      logMessage("Missing Authorization header", { level: 'error' });
-      return new Response(
-        JSON.stringify({ error: 'Authorization header is required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Parse request body (already consumed text above, so parse it)
     const { templateType, recipientEmail, variables = {} } = JSON.parse(rawBody) as EmailNotificationRequest;
     
@@ -173,7 +163,8 @@ serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": authHeader
+          "apikey": Deno.env.get("SUPABASE_ANON_KEY") || "",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || ""}`
         },
         body: JSON.stringify({
           to: recipientEmail,

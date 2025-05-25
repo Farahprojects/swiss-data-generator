@@ -1,5 +1,4 @@
 
-import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
 
 /**
@@ -38,26 +37,13 @@ export const sendEmailNotification = async (
       data: { type, recipient: recipientEmail }
     });
 
-    // Get the current session for auth token
-    const { data: sessionData } = await supabase.auth.getSession();
-    const authToken = sessionData?.session?.access_token;
-
-    if (!authToken) {
-      logToSupabase("Unable to send notification - no auth token", {
-        level: 'error',
-        page: 'notificationService'
-      });
-      return { success: false, error: 'Authentication required' };
-    }
-
-    // Call the edge function to send the notification
+    // Call the edge function to send the notification (no auth token required)
     const response = await fetch(
-      "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/send-notification-email", 
+      "https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/send-notification-email", 
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${authToken}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           templateType: type,
