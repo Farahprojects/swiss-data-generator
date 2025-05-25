@@ -1,4 +1,4 @@
-// deno-lint-ignore-file no-explicit-any
+// deno-lint-ignore-file no-explicit-any10
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -25,28 +25,16 @@ serve(async (req) => {
     return new Response(null, { headers: CORS });
   }
 
-  let email = "";
-  let templateType = "";
+  let newEmail = "";
   try {
     const body = await req.json();
-    email = (body.email ?? "").toLowerCase();
-    templateType = body.template_type ?? "email_change_new";
-    log("Parsed request:", { email, templateType });
+    newEmail = (body.email ?? "").toLowerCase();
+    log("Parsed request:", { newEmail });
   } catch {
     return respond(400, { error: "Invalid JSON" });
   }
 
-  if (!email) return respond(400, { error: "Email required" });
-  if (
-    ![
-      "email_change_new",
-      "email_change_current",
-      "password_reset",
-      "signup_confirmation",
-    ].includes(templateType)
-  ) {
-    return respond(400, { error: "Invalid template_type" });
-  }
+  if (!newEmail) return respond(400, { error: "Email required" });
 
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -60,7 +48,7 @@ serve(async (req) => {
   let error: any = null;
 
   try {
-    const { data, error: listErr } = await supabase.auth.admin.listUsers({ email });
+    const { data, error: listErr } = await supabase.auth.admin.listUsers({ email: newEmail });
     error = listErr;
     user = data?.users?.[0] ?? null;
   } catch (e) {
@@ -71,48 +59,21 @@ serve(async (req) => {
     log("User lookup failed:", error.message);
     return respond(500, { error: "User lookup failed", details: error.message });
   }
-  if (!user) return respond(200, { status: "no_user_found" });
+
+  if (user) {
+    return respond(200, { status: "user_exists", message: "Email already in use" });
+  }
 
   let tokenLink = "";
   let emailOtp = "";
   const redirectTo = "https://www.theraiapi.com/auth/email";
-  const needsChange =
-    templateType === "email_change_new" || templateType === "email_change_current";
 
   try {
-    let linkData, tokenErr;
-
-    if (needsChange) {
-      const targetEmail = templateType === "email_change_new"
-        ? (user.new_email || email)
-        : user.email;
-
-      if (templateType === "email_change_new" && !user.new_email) {
-        log("No pending email change found, treating as direct verification");
-      }
-
-      ({ data: linkData, error: tokenErr } =
-        await supabase.auth.admin.generateLink({
-          type: templateType as "email_change_new",
-          email: user.email,
-          newEmail: templateType === "email_change_new" ? (user.new_email || email) : undefined,
-          options: { redirectTo },
-        }));
-    } else if (templateType === "password_reset") {
-      ({ data: linkData, error: tokenErr } =
-        await supabase.auth.admin.generateLink({
-          type: "recovery",
-          email: user.email,
-          options: { redirectTo: "https://www.theraiapi.com/auth/password" },
-        }));
-    } else {
-      ({ data: linkData, error: tokenErr } =
-        await supabase.auth.admin.generateLink({
-          type: "signup",
-          email: user.email,
-          options: { redirectTo },
-        }));
-    }
+    const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
+      type: "magiclink",
+      email: newEmail,
+      options: { redirectTo },
+    });
 
     if (tokenErr) {
       log("Token generation failed:", tokenErr.message);
@@ -120,13 +81,10 @@ serve(async (req) => {
     }
 
     log("linkData >>>", JSON.stringify(linkData, null, 2));
-
-    // Fix: read action_link from either top-level or properties
     log("Top-level action_link:", linkData?.action_link);
     log("Nested properties.action_link:", linkData?.properties?.action_link);
 
     tokenLink = linkData?.action_link || linkData?.properties?.action_link || "";
-
     const props = (linkData as any)?.properties ?? {};
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
@@ -138,10 +96,8 @@ serve(async (req) => {
       });
     }
 
-    const encodedEmail = encodeURIComponent(templateType === "email_change_new" ? (user.new_email || email) : user.email);
-    tokenLink += `&email=${encodedEmail}`;
+    tokenLink += `&email=${encodeURIComponent(newEmail)}`;
     log("Using raw action_link for tokenLink with email param");
-
   } catch (err: any) {
     log("Link generation error:", err.message);
     return respond(500, { error: "Link generation failed", details: err.message });
@@ -150,10 +106,7 @@ serve(async (req) => {
   const { data: templateData, error: templateErr } = await supabase
     .from("token_emails")
     .select("subject, body_html")
-    .eq(
-      "template_type",
-      needsChange ? "email_change" : templateType,
-    )
+    .eq("template_type", "magiclink")
     .single();
 
   if (templateErr || !templateData) {
@@ -161,21 +114,17 @@ serve(async (req) => {
     return respond(500, { error: "Template fetch failed", details: templateErr?.message });
   }
 
-  const targetEmail = templateType === "email_change_new" 
-    ? (user.new_email || email)
-    : user.email;
-
   const html = templateData.body_html
     .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
     .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
 
-  log(`Sending ${templateType} e-mail to:`, targetEmail);
+  log("Sending magiclink e-mail to:", newEmail);
 
   const send = await fetch(smtpEndpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      to: targetEmail,
+      to: newEmail,
       subject: templateData.subject,
       html,
       from: "Theria Astro <no-reply@theraiastro.com>",
@@ -188,6 +137,6 @@ serve(async (req) => {
     return respond(500, { error: "Email sending failed", details: errTxt });
   }
 
-  log(`\u2713 Sent ${templateType} e-mail to`, targetEmail);
-  return respond(200, { status: "sent", template_type: templateType });
+  log("✔ Sent magiclink e-mail to", newEmail);
+  return respond(200, { status: "sent", template_type: "magiclink" });
 });
