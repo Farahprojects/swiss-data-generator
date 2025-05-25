@@ -1,4 +1,4 @@
-// deno-lint-ignore-file no-explicit-any10
+// deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -124,24 +124,15 @@ serve(async (req) => {
     tokenLink = linkData?.action_link ?? "";
 
     const props = (linkData as any)?.properties ?? {};
-    const tokenHash = props.hashed_token ?? (linkData as any)?.hashed_token;
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
     if (tokenLink) {
       const encodedEmail = encodeURIComponent(templateType === "email_change_new" ? (user.new_email || email) : user.email);
       tokenLink += `&email=${encodedEmail}`;
       log("Using raw action_link for tokenLink with email param");
-    } else if (tokenHash) {
-      const actualTokenType =
-        (linkData as any).token_type
-        ?? (linkData as any).type
-        ?? templateType;
-
-      tokenLink =
-        `https://www.theraiapi.com/auth/email` +
-        `#token_hash=${tokenHash}` +
-        `&type=${actualTokenType}` +
-        `&email=${encodeURIComponent(user.email)}`;
+    } else {
+      log("Error: Missing action_link in Supabase response");
+      return respond(500, { error: "Missing action_link in token generation" });
     }
   } catch (err: any) {
     log("Link generation error:", err.message);
