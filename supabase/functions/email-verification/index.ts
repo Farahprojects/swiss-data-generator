@@ -130,13 +130,10 @@ serve(async (req) => {
     const tokenHash = props.hashed_token ?? (linkData as any)?.hashed_token;
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
-    /* ---- Build application link instead of direct Supabase link ---- */
+    /* ---- Build application link with fragment instead of query params ---- */
     if (tokenHash) {
-      const params = new URLSearchParams({
-        token_hash: tokenHash,
-        type: needsChange ? "email_change" : templateType, // GoTrue expects 'email_change'
-      }).toString();
-      tokenLink = `https://www.theraiapi.com/auth/email?${params}`;
+      const linkType = needsChange ? "email_change" : templateType;          // GoTrue still needs the type
+      tokenLink = `https://www.theraiapi.com/auth/email#token_hash=${tokenHash}&type=${linkType}`;
     }
 
     if (!tokenLink) return respond(500, { error: "Failed to generate verification link" });
