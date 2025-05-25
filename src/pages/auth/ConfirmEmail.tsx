@@ -1,359 +1,234 @@
+import React, { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { supabase } from '@/integrations/supabase/client'
+import { Loader, CheckCircle, XCircle, ArrowLeft } from 'lucide-react'
+import Logo from '@/components/Logo'
+import { useToast } from '@/hooks/use-toast'
+import { logToSupabase } from '@/utils/batchedLogManager'
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { supabase } from "@/integrations/supabase/client";
-import { Loader, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
-import Logo from '@/components/Logo';
-import { useToast } from "@/hooks/use-toast";
-import { logToSupabase } from "@/utils/batchedLogManager";
+/**
+ * Elegant confirmation page for magic‑link & email‑change flows.
+ */
 
-const ConfirmEmail = () => {
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState<string>('Verifying your email...');
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { toast } = useToast();
-  
+const ConfirmEmail: React.FC = () => {
+  // ---------------------------------------------------------------------------
+  // state
+  // ---------------------------------------------------------------------------
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [message, setMessage] = useState('Verifying your email…')
+
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { toast } = useToast()
+  const processedRef = useRef(false)
+
+  // ---------------------------------------------------------------------------
+  // helpers
+  // ---------------------------------------------------------------------------
+  const finishSuccess = (kind: string) => {
+    setStatus('success')
+    const msg =
+      kind === 'signup'
+        ? 'Your email has been verified – you are now logged in!'
+        : 'Your email has been updated – you are now logged in!'
+    setMessage(msg)
+    toast({ variant: 'success', title: 'Success', description: msg })
+    // strip tokens so refreshes don’t re‑trigger verification
+    window.history.replaceState({}, '', '/auth/email')
+    setTimeout(() => navigate('/dashboard'), 2800)
+  }
+
+  // ---------------------------------------------------------------------------
+  // verification effect
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    const processEmailVerification = async () => {
+    const verify = async () => {
+      if (processedRef.current) return
+      processedRef.current = true
       try {
-        // First, check if we have hash parameters in the URL (access_token, etc.)
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        const type = hashParams.get('type');
+        const hash = new URLSearchParams(window.location.hash.substring(1))
+        const accessToken = hash.get('access_token')
+        const refreshToken = hash.get('refresh_token')
+        const code = hash.get('code')
+        const hashType = hash.get('type')
 
-        logToSupabase("Processing email verification", {
-          level: 'debug',
-          page: 'ConfirmEmail',
-          data: { 
-            hasHashParams: !!(accessToken && refreshToken),
-            type,
-            url: window.location.href
-          }
-        });
-
-        // If we have tokens in the URL hash, use them to set the session
         if (accessToken && refreshToken) {
-          logToSupabase('Found tokens in URL hash, setting session', {
-            level: 'info',
-            page: 'ConfirmEmail'
-          });
-          
-          const { error: sessionError } = await supabase.auth.setSession({
+          const { error } = await supabase.auth.setSession({
             access_token: accessToken,
-            refresh_token: refreshToken
-          });
-          
-          if (sessionError) {
-            logToSupabase('Error setting session', {
-              level: 'error',
-              page: 'ConfirmEmail',
-              data: { error: sessionError.message }
-            });
-            
-            setStatus('error');
-            setMessage('Failed to authenticate with the provided tokens.');
-            
-            toast({
-              variant: "destructive",
-              title: "Authentication failed",
-              description: "We couldn't authenticate you with the provided tokens."
-            });
-            return;
-          }
-          
-          // Verify the session was set correctly
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (!sessionData.session) {
-            logToSupabase('No valid session after setSession', {
-              level: 'error',
-              page: 'ConfirmEmail'
-            });
-            
-            setStatus('error');
-            setMessage('Failed to establish a valid session.');
-            return;
-          }
-          
-          // If we're here, we have a valid session
-          setStatus('success');
-          setMessage(type === 'signup' ? 
-            'Your email has been verified and you are now logged in!' : 
-            'Your email has been changed successfully and you are now logged in!'
-          );
-          
-          toast({
-            variant: "success",
-            title: type === 'signup' ? "Email verified!" : "Email changed!",
-            description: "You have been successfully authenticated."
-          });
-          
-          // Redirect to dashboard after 3 seconds
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 3000);
-          
-          return;
-        }
-        
-        // If no hash params, proceed with token_hash from query params
-        const searchParams = new URLSearchParams(location.search);
-        const tokenHash = searchParams.get('token_hash') || searchParams.get('token'); // Fallback to 'token' for backward compatibility
-        const queryType = searchParams.get('type');
-        
-        logToSupabase("Checking query parameters", {
-          level: 'debug',
-          page: 'ConfirmEmail',
-          data: { 
-            tokenHash: tokenHash ? '[REDACTED]' : null,
-            queryType,
-            searchParams: location.search
-          }
-        });
-        
-        if (!tokenHash) {
-          logToSupabase('No token_hash or token found in URL', {
-            level: 'error',
-            page: 'ConfirmEmail',
-            data: { searchParams: location.search }
-          });
-          
-          setStatus('error');
-          setMessage('Invalid verification link. No token_hash provided.');
-          return;
+            refresh_token: refreshToken,
+          })
+          if (error) throw error
+          finishSuccess(hashType === 'signup' ? 'signup' : 'email_change')
+          return
         }
 
-        // Handle both email confirmation and email change
-        if (queryType !== 'signup' && queryType !== 'email_change') {
-          logToSupabase('Invalid verification link type', {
-            level: 'error',
-            page: 'ConfirmEmail',
-            data: { queryType }
-          });
-          
-          setStatus('error');
-          setMessage('Invalid verification link type.');
-          return;
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error || !data.session) throw error ?? new Error('No session returned')
+          finishSuccess(hashType === 'signup' ? 'signup' : 'email_change')
+          return
         }
-        
-        logToSupabase('Attempting to verify OTP', {
-          level: 'info',
-          page: 'ConfirmEmail',
-          data: { queryType }
-        });
-        
-        // Attempt to verify the email based on the type
+
+        const query = new URLSearchParams(location.search)
+        const tokenHash = query.get('token_hash') || query.get('token')
+        const queryType =
+          (query.get('type') ?? 'email') as
+            | 'signup'
+            | 'email_change'
+            | 'email_change_new'
+            | 'email_change_current'
+            | 'email'
+
+        if (!tokenHash) throw new Error('Invalid link – missing token.')
+
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: queryType as 'signup' | 'email_change'
-        });
-        
-        if (error) {
-          logToSupabase('Error verifying email', {
-            level: 'error',
-            page: 'ConfirmEmail',
-            data: { error: error.message }
-          });
-          
-          setStatus('error');
-          setMessage(error.message || 'Failed to verify email. The link may have expired.');
-          
-          toast({
-            variant: "destructive",
-            title: "Verification failed",
-            description: "We couldn't verify your email. Please try again or request a new link."
-          });
-        } else {
-          // Check if we got a session after verification
-          const { data: sessionData } = await supabase.auth.getSession();
-          
-          logToSupabase('Email verification successful', {
-            level: 'info',
-            page: 'ConfirmEmail',
-            data: { 
-              hasSession: !!sessionData.session,
-              queryType
-            }
-          });
-          
-          if (sessionData.session) {
-            setStatus('success');
-            
-            if (queryType === 'signup') {
-              setMessage('Your email has been successfully confirmed! You are now logged in.');
-              toast({
-                variant: "success",
-                title: "Email verified!",
-                description: "Your account has been successfully activated and you are now logged in."
-              });
-            } else if (queryType === 'email_change') {
-              setMessage('Your email has been successfully changed! You are now logged in.');
-              toast({
-                variant: "success",
-                title: "Email updated!",
-                description: "Your email address has been successfully changed and you are now logged in."
-              });
-            }
-            
-            // Redirect to dashboard after 3 seconds
-            setTimeout(() => {
-              navigate('/dashboard');
-            }, 3000);
-          } else {
-            // If verification worked but we don't have a session, user needs to log in
-            setStatus('success');
-            setMessage('Your email has been verified. Please log in to continue.');
-            
-            toast({
-              variant: "success",
-              title: "Email verified!",
-              description: "Please log in to access your account."
-            });
-            
-            // Redirect to login after 3 seconds
-            setTimeout(() => {
-              navigate('/login');
-            }, 3000);
-          }
-        }
-      } catch (error) {
-        logToSupabase('Unexpected error during email verification', {
+          type: queryType as any,
+        })
+        if (error) throw error
+
+        finishSuccess(queryType)
+      } catch (err: any) {
+        logToSupabase('verification failed', {
           level: 'error',
           page: 'ConfirmEmail',
-          data: { error: error instanceof Error ? error.message : String(error) }
-        });
-        
-        setStatus('error');
-        setMessage('An unexpected error occurred. Please try again later.');
-        
-        toast({
-          variant: "destructive",
-          title: "Verification error",
-          description: "An unexpected error occurred during verification."
-        });
+          data: { error: err?.message ?? String(err) },
+        })
+        setStatus('error')
+        const msg = err?.message ?? 'Verification failed – link may have expired.'
+        setMessage(msg)
+        toast({ variant: 'destructive', title: 'Verification failed', description: msg })
       }
-    };
-    
-    processEmailVerification();
-  }, [location.search, navigate, toast]);
-  
-  const handleReturnToDashboard = () => {
-    navigate('/dashboard');
-  };
-  
-  const handleGoToLogin = () => {
-    navigate('/login');
-  };
-  
+    }
+    verify()
+  }, [location.search])
+
+  // ---------------------------------------------------------------------------
+  // presentational bits
+  // ---------------------------------------------------------------------------
+  const Icon =
+    status === 'loading' ? Loader : status === 'success' ? CheckCircle : XCircle
+  const heading =
+    status === 'loading' ? 'Email Verification' : status === 'success' ? 'All Set!' : 'Uh‑oh…'
+  const bgGradient =
+    status === 'success'
+      ? 'from-green-400/10 via-emerald-100 to-white'
+      : status === 'error'
+      ? 'from-red-400/10 via-rose-100 to-white'
+      : 'from-indigo-400/10 via-sky-100 to-white'
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <header className="w-full py-4 px-6 flex justify-center border-b bg-white shadow-sm">
+    <div
+      className={
+        'min-h-screen flex flex-col overflow-x-hidden bg-gradient-to-br ' + bgGradient
+      }
+    >
+      {/* ------------------------------------------------------------------ */}
+      {/* top bar */}
+      {/* ------------------------------------------------------------------ */}
+      <header className="w-full py-4 px-6 flex justify-center bg-white/70 backdrop-blur-lg shadow-sm">
         <Logo size="md" />
       </header>
-      
-      <main className="flex-grow flex items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-md animate-fade-in">
-          <Card className="shadow-lg border-gray-200">
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="text-2xl font-bold">
-                {status === 'loading' ? 'Email Verification' : 
-                 status === 'success' ? 'Verification Successful' : 'Verification Failed'}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* main card */}
+      {/* ------------------------------------------------------------------ */}
+      <main className="flex-grow grid place-items-center p-6 lg:p-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="w-full max-w-md"
+        >
+          <Card className="relative overflow-hidden border border-gray-200/80 shadow-xl rounded-3xl bg-white">
+            {/* subtle gradient ring */}
+            <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-[radial-gradient(circle_at_top_left,theme(colors.indigo.400)_0%,transparent_70%)]" />
+
+            <CardHeader className="text-center pb-1 relative z-10 bg-white/70 backdrop-blur-sm rounded-t-3xl">
+              <CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900">
+                {heading}
               </CardTitle>
-              <CardDescription>
-                {status === 'loading' ? 'Processing your verification...' : 
-                 status === 'success' ? 'Your email has been verified' : 'We encountered an issue'}
+              <CardDescription className="text-gray-600">
+                {status === 'loading'
+                  ? 'Hold tight while we confirm…'
+                  : status === 'success'
+                  ? 'You are verified.'
+                  : 'We encountered a problem.'}
               </CardDescription>
             </CardHeader>
-            
-            <CardContent className="flex flex-col items-center py-8">
-              <div className="mb-4">
-                {status === 'loading' && (
-                  <div className="rounded-full bg-primary/10 p-3">
-                    <Loader className="h-14 w-14 text-primary animate-spin" />
-                  </div>
-                )}
-                
-                {status === 'success' && (
-                  <div className="rounded-full bg-green-50 p-3">
-                    <CheckCircle className="h-14 w-14 text-green-500" />
-                  </div>
-                )}
-                
-                {status === 'error' && (
-                  <div className="rounded-full bg-red-50 p-3">
-                    <XCircle className="h-14 w-14 text-red-500" />
-                  </div>
-                )}
-              </div>
-              
-              <p className="text-center text-gray-700 mt-4 max-w-xs">{message}</p>
-              
-              {status === 'success' && message.includes('logged in') && (
-                <p className="text-sm text-muted-foreground mt-3">
-                  Redirecting you to the dashboard in a moment...
-                </p>
-              )}
-              
-              {status === 'success' && message.includes('Please log in') && (
-                <p className="text-sm text-muted-foreground mt-3">
-                  Redirecting you to the login page in a moment...
-                </p>
-              )}
+
+            <CardContent className="flex flex-col items-center gap-6 p-10 relative z-10">
+              <motion.div
+                animate={{ rotate: status === 'loading' ? 360 : 0 }}
+                transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
+                className={`flex items-center justify-center h-20 w-20 rounded-full ${
+                  status === 'loading'
+                    ? 'bg-indigo-50'
+                    : status === 'success'
+                    ? 'bg-emerald-50'
+                    : 'bg-rose-50'
+                }`}
+              >
+                <Icon
+                  className={`h-12 w-12 ${
+                    status === 'loading'
+                      ? 'text-indigo-600'
+                      : status === 'success'
+                      ? 'text-emerald-600'
+                      : 'text-rose-600'
+                  } ${status === 'loading' ? 'animate-none' : ''}`}
+                />
+              </motion.div>
+
+              <p className="text-center text-lg text-gray-700 max-w-xs leading-relaxed">
+                {message}
+              </p>
             </CardContent>
-            
-            <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center">
+
+            <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center bg-gray-50 rounded-b-3xl relative z-10 p-6">
               {status === 'success' ? (
-                <Button 
-                  onClick={handleReturnToDashboard} 
-                  className="w-full"
-                >
+                <Button onClick={() => navigate('/dashboard')} className="w-full sm:w-auto">
                   Go to Dashboard
                 </Button>
               ) : (
                 <>
-                  <Button 
-                    onClick={handleGoToLogin} 
-                    className="w-full"
-                    variant={status === 'error' ? "default" : "outline"}
+                  <Button
+                    onClick={() => navigate('/login')}
+                    className="w-full sm:w-auto"
+                    variant="outline"
                   >
                     Return to Login
                   </Button>
-                  
                   {status === 'error' && (
-                    <Button 
-                      asChild
-                      variant="outline" 
-                      className="w-full"
-                    >
-                      <Link to="/signup">Create New Account</Link>
+                    <Button asChild variant="outline" className="w-full sm:w-auto">
+                      <Link to="/signup">Create Account</Link>
                     </Button>
                   )}
                 </>
               )}
             </CardFooter>
           </Card>
-          
-          <div className="mt-6 text-center">
-            <Button 
-              variant="ghost" 
-              className="text-gray-500 hover:text-gray-800" 
-              onClick={handleGoToLogin}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Login
-            </Button>
-          </div>
-        </div>
+        </motion.div>
       </main>
-      
-      <footer className="py-4 text-center text-sm text-gray-500 bg-white border-t">
-        <p>© {new Date().getFullYear()} Theraiapi. All rights reserved.</p>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* footer */}
+      {/* ------------------------------------------------------------------ */}
+      <footer className="py-6 text-center text-xs text-gray-500">
+        © {new Date().getFullYear()} Theraiapi. All rights reserved.
       </footer>
     </div>
-  );
-};
+  )
+}
 
-export default ConfirmEmail;
+export default ConfirmEmail
