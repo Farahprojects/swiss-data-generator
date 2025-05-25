@@ -22,14 +22,14 @@ serve(async (req) => {
   try {
     const body = await req.json();
     email = (body.email ?? '').toLowerCase();
-    templateType = body.template_type ?? 'email_change';
+    templateType = body.template_type ?? 'email_change_new';
     console.log(`[EMAIL-VERIFICATION:${requestId}] Parsed request:`, { email, templateType });
   } catch {
     return respond(400, { error: 'Invalid JSON' });
   }
 
   if (!email) return respond(400, { error: 'Email required' });
-  if (!['email_change', 'password_reset', 'signup_confirmation'].includes(templateType)) {
+  if (!['email_change_new', 'email_change_current', 'password_reset', 'signup_confirmation'].includes(templateType)) {
     return respond(400, { error: 'Invalid template_type' });
   }
 
@@ -81,28 +81,31 @@ serve(async (req) => {
   let targetEmail = email;
 
   try {
-    if (templateType === 'email_change') {
+    if (templateType === 'email_change_new' || templateType === 'email_change_current') {
       if (!user.new_email) {
         console.log(`[EMAIL-VERIFICATION:${requestId}] No pending email change found for user`);
         return respond(200, { status: 'no_pending_change' });
       }
-      targetEmail = user.new_email;
       
-      // Use the correct parameters: email = primary email, newEmail = pending email
-      console.log(`[EMAIL-VERIFICATION:${requestId}] Generating email change token with:`, {
-        type: 'email_change',
+      // For email_change_new, send to the new email address
+      // For email_change_current, send to the current email address
+      targetEmail = templateType === 'email_change_new' ? user.new_email : user.email;
+      
+      console.log(`[EMAIL-VERIFICATION:${requestId}] Generating ${templateType} token with:`, {
+        type: templateType,
         email: user.email,
-        newEmail: user.new_email
+        newEmail: user.new_email,
+        targetEmail
       });
       
       const { data: linkData, error: tokenError } = await supabase.auth.admin.generateLink({
-        type: 'email_change',
+        type: templateType,
         email: user.email,           // primary email
         newEmail: user.new_email     // pending email
       });
 
       if (tokenError) {
-        console.error(`[EMAIL-VERIFICATION:${requestId}] Email change token generation failed:`, tokenError.message);
+        console.error(`[EMAIL-VERIFICATION:${requestId}] ${templateType} token generation failed:`, tokenError.message);
         return respond(500, { error: 'Token generation failed', details: tokenError.message });
       }
       tokenLink = linkData?.action_link || '';
@@ -143,11 +146,16 @@ serve(async (req) => {
     return respond(500, { error: 'Token generation failed', details: tokenError.message });
   }
 
-  // Fetch email template from token_emails table
+  // Fetch email template from token_emails table - map the new types to existing templates
+  let dbTemplateType = templateType;
+  if (templateType === 'email_change_new' || templateType === 'email_change_current') {
+    dbTemplateType = 'email_change'; // Use existing template for both email change types
+  }
+
   const { data: templateData, error: templateError } = await supabase
     .from('token_emails')
     .select('subject, body_html, body_text')
-    .eq('template_type', templateType)
+    .eq('template_type', dbTemplateType)
     .single();
 
   if (templateError || !templateData) {
@@ -155,7 +163,7 @@ serve(async (req) => {
     return respond(500, { error: 'Template fetch failed', details: templateError?.message });
   }
 
-  console.log(`[EMAIL-VERIFICATION:${requestId}] Retrieved ${templateType} template`);
+  console.log(`[EMAIL-VERIFICATION:${requestId}] Retrieved ${dbTemplateType} template`);
 
   // Replace placeholders in template
   const html = templateData.body_html.replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink);

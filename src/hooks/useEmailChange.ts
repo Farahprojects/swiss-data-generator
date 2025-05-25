@@ -190,7 +190,7 @@ export function useEmailChange() {
     });
     
     try {
-      // Use the new email-verification edge function
+      // Use the new email-verification edge function with updated template type
       const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
@@ -203,7 +203,7 @@ export function useEmailChange() {
         },
         body: JSON.stringify({
           email: email,
-          template_type: 'email_change'
+          template_type: 'email_change_new' // Use the new correct type
         })
       });
 

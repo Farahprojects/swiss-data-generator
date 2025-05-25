@@ -62,7 +62,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         },
         body: JSON.stringify({
           email: email, // Always use original email for lookup
-          template_type: isEmailChange ? 'email_change' : 'signup_confirmation'
+          template_type: isEmailChange ? 'email_change_new' : 'signup_confirmation' // Use new correct types
         })
       });
 
