@@ -149,7 +149,7 @@ serve(async (req) => {
   /* ---------- 5 · fetch template ---------- */
   const { data: templateData, error: templateErr } = await supabase
     .from("token_emails")
-    .select("subject, body_html, body_text")
+    .select("subject, body_html")
     .eq(
       "template_type",
       needsChange ? "email_change" : templateType,
