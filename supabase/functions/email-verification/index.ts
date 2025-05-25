@@ -51,19 +51,24 @@ serve(async (req) => {
   }
   const supabase = createClient(url, key);
 
-  /* ---------- 3 · fetch user ---------- */
-  let { data: user, error } = await supabase.auth.admin.getUserByEmail(email);
-  if (error) {
-    log("User lookup failed:", error.message);
-    return respond(500, { error: "User lookup failed", details: error.message });
-  }
-  if (!user) return respond(200, { status: "no_user_found" });
+    /* ---------- 3 · fetch user ---------- */
+let user: any = null;
+let error: any = null;
 
-  log("Found user:", {
-    id: user.id,
-    email: user.email,
-    new_email: user.new_email,
-  });
+try {
+  // works in every 2.x release
+  const { data, error: listErr } = await supabase.auth.admin.listUsers({ email });
+  error = listErr;
+  user  = data?.users?.[0] ?? null;
+} catch (e) {
+  error = e as Error;
+}
+
+if (error) {
+  log("User lookup failed:", error.message);
+  return respond(500, { error: "User lookup failed", details: error.message });
+}
+if (!user) return respond(200, { status: "no_user_found" });
 
   /* ---------- 4 · generate link ---------- */
   let tokenLink = "";
