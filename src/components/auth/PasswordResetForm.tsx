@@ -29,6 +29,12 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    logToSupabase('Password reset form submitted', {
+      level: 'debug',
+      page: 'PasswordResetForm',
+      data: { passwordValid, passwordsMatch }
+    });
+    
     if (!passwordValid) {
       toast({
         variant: 'destructive',
@@ -69,8 +75,8 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
       setShowSuccess(true);
       toast({
         variant: 'success',
-        title: 'Password Updated',
-        description: 'Your password has been successfully updated.'
+        title: 'Password Updated Successfully!',
+        description: 'Your password has been updated. Redirecting to dashboard...'
       });
 
       // Show success for a moment, then call onSuccess
@@ -140,12 +146,18 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
             ) : showSuccess ? (
               <>
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Password Updated!
+                Password Updated Successfully!
               </>
             ) : (
               'Update Password'
             )}
           </Button>
+
+          {showSuccess && (
+            <div className="text-center text-sm text-green-600 mt-2">
+              Success! Redirecting to dashboard...
+            </div>
+          )}
         </form>
       </CardContent>
     </Card>

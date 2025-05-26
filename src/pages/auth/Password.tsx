@@ -36,7 +36,6 @@ const ResetPassword: React.FC = () => {
 
       try {
         const hash = new URLSearchParams(location.hash.slice(1));
-        const search = new URLSearchParams(location.search);
 
         const accessToken = hash.get('access_token');
         const refreshToken = hash.get('refresh_token');
@@ -72,15 +71,24 @@ const ResetPassword: React.FC = () => {
   }, [location.hash, location.search, toast]);
 
   const handlePasswordUpdateSuccess = () => {
+    logToSupabase('Password update completed, redirecting to dashboard', {
+      level: 'info',
+      page: 'ResetPassword'
+    });
+    
     setStatus('success');
     setMessage('Your password has been updated successfully!');
+    
     toast({ 
       variant: 'success', 
-      title: 'Password Updated', 
+      title: 'Password Updated Successfully!', 
       description: 'You can now access your account with your new password.' 
     });
     
-    setTimeout(() => navigate('/dashboard'), 2000);
+    // Redirect to dashboard after a short delay
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 1500);
   };
 
   const heading =
@@ -180,7 +188,7 @@ const ResetPassword: React.FC = () => {
               {status === 'success' ? (
                 <Button
                   style={{ background: BRAND_PURPLE }}
-                  onClick={() => navigate('/dashboard')}
+                  onClick={() => window.location.href = '/dashboard'}
                   className="w-full sm:w-auto text-white hover:opacity-90"
                 >
                   Go to Dashboard
