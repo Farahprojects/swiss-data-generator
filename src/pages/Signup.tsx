@@ -18,7 +18,6 @@ const debug = (...args: any[]) => {
 };
 
 const Signup = () => {
-  // Rest of component implementation
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signUp, signInWithGoogle, signInWithApple, user } = useAuth();
@@ -235,17 +234,12 @@ const Signup = () => {
 
   const renderSuccessMessage = () => (
     <div className="space-y-6 animate-fade-in">
-      <div className="space-y-2">
-        <div className="flex items-start gap-3">
-          <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
-          <div className="text-center flex-1">
-            <h3 className="font-medium text-lg">Account created successfully!</h3>
-            <p className="text-gray-700">
-              A verification email has been sent to <strong>{verificationEmail}</strong>. 
-              Please check your inbox and click the link in the email to verify your account.
-            </p>
-          </div>
-        </div>
+      <div className="text-center">
+        <h3 className="font-medium text-lg">Account created successfully!</h3>
+        <p className="text-gray-700">
+          A verification email has been sent to <strong>{verificationEmail}</strong>. 
+          Please check your inbox and click the link in the email to verify your account.
+        </p>
       </div>
 
       <div className="flex flex-col space-y-4 items-center">
