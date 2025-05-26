@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -239,7 +238,7 @@ const Signup = () => {
       <div className="space-y-2">
         <div className="flex items-start gap-3">
           <CheckCircle className="h-6 w-6 text-green-500 mt-0.5 flex-shrink-0" />
-          <div>
+          <div className="text-center flex-1">
             <h3 className="font-medium text-lg">Account created successfully!</h3>
             <p className="text-gray-700">
               A verification email has been sent to <strong>{verificationEmail}</strong>. 
