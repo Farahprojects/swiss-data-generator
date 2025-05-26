@@ -23,21 +23,16 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
   let userId = "";
-  let currentEmail = "";
-  let newEmail = "";
-
   try {
     const body = await req.json();
     userId = body.user_id ?? "";
-    currentEmail = (body.current_email ?? "").toLowerCase();
-    newEmail = (body.new_email ?? "").toLowerCase();
-    log("Parsed request:", { userId, currentEmail, newEmail });
+    log("Parsed request:", { userId });
   } catch {
     return respond(400, { error: "Invalid JSON" });
   }
 
-  if (!userId || !currentEmail || !newEmail) {
-    return respond(400, { error: "user_id, current_email, and new_email are required" });
+  if (!userId) {
+    return respond(400, { error: "user_id is required" });
   }
 
   const url = Deno.env.get("SUPABASE_URL");
@@ -50,21 +45,32 @@ serve(async (req) => {
 
   const supabase = createClient(url, key);
   const redirectTo = "https://www.theraiapi.com/auth/email";
+  let currentEmail = "";
+  let newEmail = "";
   let tokenLink = "";
   let emailOtp = "";
 
   try {
-    // Ensure new_email is explicitly set before requesting the token
-    const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
-      new_email: newEmail,
-    });
+    const { data: userData, error: fetchErr } = await supabase.auth.admin.getUserById(userId);
 
-    if (updateErr) {
-      log("Update failed:", updateErr.message);
-      return respond(500, { error: "Failed to re-set pending email", details: updateErr.message });
+    if (fetchErr || !userData) {
+      return respond(500, { error: "Failed to fetch user", details: fetchErr?.message });
+    }
+
+    log("Full user object:", JSON.stringify(userData, null, 2));
+    currentEmail = userData.email;
+    newEmail = userData.new_email;
+
+    if (!currentEmail || !newEmail) {
+      return respond(400, {
+        error: "User does not have a pending email change",
+        currentEmail,
+        newEmail,
+        user: userData,
+      });
     }
   } catch (e: any) {
-    return respond(500, { error: "Error updating user", details: e.message });
+    return respond(500, { error: "Error fetching user data", details: e.message });
   }
 
   try {
@@ -127,6 +133,6 @@ serve(async (req) => {
     return respond(500, { error: "Email sending failed", details: errTxt });
   }
 
-  log(`✔ Resent email_change_new link to ${newEmail}`);
+  log(`✔ Sent email_change_new link to ${newEmail}`);
   return respond(200, { status: "sent", template_type: "email_change_new" });
 });
