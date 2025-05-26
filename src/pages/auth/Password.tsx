@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Logo from '@/components/Logo';
 import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -74,75 +73,100 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
-      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-bl-md shadow-sm">
+      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
         <Logo size="md" />
       </header>
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md sm:max-w-lg md:max-w-xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-extrabold text-gray-900">
+        <div className="w-full max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-extrabold text-gray-900 mb-4">
               {status === 'verifying'
-                ? 'Verifying...'
+                ? 'Verifying Reset Link'
                 : status === 'valid'
-                ? 'Reset Password'
+                ? 'Create New Password'
                 : status === 'success'
-                ? 'Success'
-                : 'Error'}
-            </CardTitle>
-            <CardDescription>{message}</CardDescription>
-          </CardHeader>
+                ? 'Password Updated Successfully'
+                : 'Reset Link Error'}
+            </h1>
+            <p className="text-lg text-gray-600">{message}</p>
+          </div>
 
-          <CardContent>
+          <div className="bg-white rounded-lg shadow-sm border p-8 md:p-12">
             {status === 'valid' && (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <Input
-                  type="password"
-                  placeholder="New password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <Input
-                  type="password"
-                  placeholder="Confirm password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? 'Updating...' : 'Reset Password'}
+              <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-6">
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                    New Password
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your new password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm Password
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
+
+                <Button type="submit" className="w-full text-base py-3" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                      Updating Password...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
                 </Button>
               </form>
             )}
 
             {status === 'verifying' && (
-              <div className="flex justify-center items-center py-8">
-                <Loader2 className="animate-spin h-6 w-6 text-gray-600" />
+              <div className="flex justify-center items-center py-12">
+                <div className="text-center">
+                  <Loader2 className="animate-spin h-8 w-8 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Verifying your reset link...</p>
+                </div>
               </div>
             )}
 
             {status === 'error' && (
-              <div className="text-center text-red-600 py-8">
-                <XCircle className="w-10 h-10 mx-auto mb-2" />
-                <p>{message}</p>
+              <div className="text-center text-red-600 py-12">
+                <XCircle className="w-12 h-12 mx-auto mb-4" />
+                <p className="text-lg mb-6">{message}</p>
+                <Button variant="outline" onClick={() => navigate('/login')} className="text-base">
+                  Back to Login
+                </Button>
               </div>
             )}
 
             {status === 'success' && (
-              <div className="text-center text-emerald-600 py-8">
-                <CheckCircle className="w-10 h-10 mx-auto mb-2" />
-                <p>{message}</p>
+              <div className="text-center text-emerald-600 py-12">
+                <CheckCircle className="w-12 h-12 mx-auto mb-4" />
+                <p className="text-lg mb-6">{message}</p>
+                <p className="text-gray-600 mb-6">Redirecting to dashboard...</p>
+                <Button onClick={() => navigate('/dashboard')} className="text-base">
+                  Go to Dashboard
+                </Button>
               </div>
             )}
-          </CardContent>
-
-          <CardFooter className="flex justify-center bg-gray-50">
-            {(status === 'error' || status === 'success') && (
-              <Button variant="outline" onClick={() => navigate('/login')}>
-                Back to Login
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
       </main>
 
       <footer className="py-6 text-center text-xs text-gray-500">
