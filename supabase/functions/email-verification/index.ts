@@ -3,18 +3,13 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /*
-  Edge Function · resend-email-change (secure‑email‑change = OFF)
+  Edge Function · resend-email-change (secure-email-change = OFF)
   --------------------------------------------------------------
-  1. Accepts `{ user_id }` (old/new emails optional but ignored).
-  2. Loads the user row to discover:
-       • current primary email  (auth.users.email)
-       • pending email change   (auth.users.email_change)
-  3. Validates:
-       • a pending email exists
-       • no other account currently uses that address (primary or pending)
-  4. Calls `generateLink('email_change_new')` with those exact addresses.
-  5. Builds HTML from the `token_emails` table and POSTs it to your SMTP endpoint.
-  6. Emits verbose logs so you can trace every step.
+  ➤ Accepts `{ user_id }` (ignore emails from payload).
+  ➤ Pulls current & pending emails from auth.users.
+  ➤ If a pending email exists, mint a fresh `email_change_new` link
+    and send it via your SMTP handler.
+  ➤ Full verbose logs at every stage.
 */
 
 const corsHeaders = {
@@ -26,8 +21,8 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const reqId = crypto.randomUUID().slice(0, 8);
-  const log = (...a: unknown[]) => console.log(`[EMAIL-CHANGE:${reqId}]`, ...a);
+  const id = crypto.randomUUID().slice(0, 8);
+  const log = (...a: unknown[]) => console.log(`[EMAIL-CHANGE:${id}]`, ...a);
 
   /* ---------- 1 · Parse body ---------- */
   let userId = "";
@@ -36,7 +31,6 @@ serve(async (req) => {
   } catch {
     return json({ error: "Invalid JSON payload" }, 400);
   }
-
   if (!userId) return json({ error: "user_id is required" }, 400);
 
   /* ---------- 2 · Init admin client ---------- */
@@ -55,40 +49,26 @@ serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  /* ---------- 3 · Load user & verify pending change ---------- */
-  const { data: userData, error: userErr } = await admin.auth.admin.getUserById(userId);
-  if (userErr || !userData?.user) {
+  /* ---------- 3 · Load user ---------- */
+  const { data: user, error: userErr } = await admin.auth.admin.getUserById(userId);
+  if (userErr || !user) {
     log("getUserById failed", userErr?.message);
     return json({ error: "User not found", details: userErr?.message }, 404);
   }
 
-  const u = userData.user as any; // meta fields live on the root for GoTrue <2.0
-  const currentEmail = u.email?.toLowerCase();
-  const pendingEmail = u.email_change?.toLowerCase();
+  const currentEmail = user.email?.toLowerCase();
+  const pendingEmail = (user as any).email_change?.toLowerCase(); // GoTrue stores it at root
 
   log("DB snapshot", {
     currentEmail,
     pendingEmail,
-    email_change_token_new: u.email_change_token_new,
-    email_change_sent_at: u.email_change_sent_at,
+    email_change_token_new: (user as any).email_change_token_new,
+    email_change_sent_at: (user as any).email_change_sent_at,
   });
 
   if (!pendingEmail) return json({ error: "No pending email change" }, 400);
 
-  /* ---------- 4 · Ensure pendingEmail is unique ---------- */
-  const { data: dup } = await admin
-    .from("auth.users")
-    .select("id")
-    .or(`email.eq.${pendingEmail},email_change.eq.${pendingEmail}`)
-    .neq("id", u.id)
-    .limit(1)
-    .maybeSingle();
-
-  if (dup) return json({ error: "Address already used by another account" }, 409);
-
-  /* ---------- 5 · Generate fresh token ---------- */
-  log("Calling generateLink", { type: "email_change_new", currentEmail, pendingEmail });
-
+  /* ---------- 4 · Mint fresh token ---------- */
   const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
     type: "email_change_new",
     email: currentEmail,
@@ -107,7 +87,7 @@ serve(async (req) => {
   log("New token", { tokenLink, emailOtp });
   if (!tokenLink) return json({ error: "No action_link returned" }, 500);
 
-  /* ---------- 6 · Prepare email body ---------- */
+  /* ---------- 5 · Build email from template ---------- */
   const { data: tpl, error: tplErr } = await admin
     .from("token_emails")
     .select("subject, body_html")
@@ -120,7 +100,7 @@ serve(async (req) => {
     .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
     .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
 
-  /* ---------- 7 · Send email via SMTP handler ---------- */
+  /* ---------- 6 · Send via SMTP handler ---------- */
   const smtpRes = await fetch(SMTP_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
