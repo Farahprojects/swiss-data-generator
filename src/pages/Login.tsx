@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,7 +14,6 @@ import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal
 import { supabase } from '@/integrations/supabase/client';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { logToSupabase } from '@/utils/batchedLogManager';
-import { useEmailChange } from '@/hooks/useEmailChange';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,7 +28,6 @@ const Login = () => {
     isPendingEmailCheck,
     clearPendingEmail 
   } = useAuth();
-  const { resendVerificationEmail } = useEmailChange();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -82,6 +81,53 @@ const Login = () => {
   const openVerificationModal = () => {
     setShowVerificationModal(true);
     setLoading(false);
+  };
+
+  // Create a wrapper function that matches LoginVerificationModal's expected signature
+  const handleResendVerification = async (emailToVerify: string) => {
+    try {
+      logToSupabase("Resending login verification email", {
+        level: 'info',
+        page: 'Login',
+        data: { email: emailToVerify }
+      });
+
+      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({
+          user_id: user?.id || '',
+          current_email: email || '',
+          new_email: emailToVerify
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
+      }
+
+      logToSupabase("Login verification email resent successfully", {
+        level: 'info',
+        page: 'Login'
+      });
+
+      return { error: null };
+    } catch (error: any) {
+      logToSupabase("Exception resending login verification", {
+        level: 'error',
+        page: 'Login',
+        data: { error: error.message || String(error) }
+      });
+      return { error: error as Error };
+    }
   };
 
   // ──────────────────────────────────────────
@@ -264,7 +310,7 @@ const Login = () => {
           isOpen={showVerificationModal}
           email={email || pendingEmailAddress || ''}
           pendingEmail={pendingEmailAddress}
-          resendVerificationEmail={resendVerificationEmail}
+          resendVerificationEmail={handleResendVerification}
           onVerified={handleVerificationFinished}
           onCancel={handleVerificationCancelled}
         />
