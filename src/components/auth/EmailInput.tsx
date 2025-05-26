@@ -9,6 +9,7 @@ interface Props {
   onChange: (value: string) => void;
   onFocus?: () => void;
   disabled?: boolean;
+  placeholder?: string;
 }
 
 /**
@@ -23,6 +24,7 @@ const EmailInput: React.FC<Props> = ({
   onChange,
   onFocus,
   disabled = false,
+  placeholder = "Enter your email",
 }) => (
   <div className="space-y-1">
     <Label htmlFor="email">Email</Label>
@@ -34,6 +36,7 @@ const EmailInput: React.FC<Props> = ({
       onChange={(e) => onChange(e.target.value)}
       onFocus={onFocus}
       disabled={disabled}
+      placeholder={placeholder}
       className={!isValid && email ? "border-red-500" : ""}
       required
     />

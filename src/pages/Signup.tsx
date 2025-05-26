@@ -33,8 +33,9 @@ const Signup = () => {
   const [verificationEmail, setVerificationEmail] = useState('');
 
   const emailValid = validateEmail(email);
-  const passwordValid = password.length >= 6;
+  const passwordValid = password.length >= 8;
   const passwordsMatch = password === confirmPassword;
+  const showConfirmPassword = password.length > 0;
 
   // Redirect if already logged in
   if (user) {
@@ -261,26 +262,33 @@ const Signup = () => {
           isValid={emailValid}
           onChange={setEmail}
           onFocus={() => setErrorMsg('')}
+          placeholder="Enter your email"
         />
         
         <PasswordInput
           password={password}
           isValid={passwordValid}
-          showRequirements={true}
+          showRequirements={false}
           onChange={setPassword}
           onFocus={() => setErrorMsg('')}
         />
         
-        <PasswordInput
-          password={confirmPassword}
-          isValid={passwordValid && passwordsMatch}
-          showRequirements={false}
-          onChange={setConfirmPassword}
-          onFocus={() => setErrorMsg('')}
-          label="Confirm Password"
-          placeholder="Re-enter your password"
-          showMatchError={password.length > 0 && confirmPassword.length > 0 && !passwordsMatch}
-        />
+        {passwordValid && (
+          <p className="text-sm text-green-600">✓ Password meets requirements (8+ characters)</p>
+        )}
+        
+        {showConfirmPassword && (
+          <PasswordInput
+            password={confirmPassword}
+            isValid={passwordValid && passwordsMatch}
+            showRequirements={false}
+            onChange={setConfirmPassword}
+            onFocus={() => setErrorMsg('')}
+            label="Confirm Password"
+            placeholder="Re-enter your password"
+            showMatchError={password.length > 0 && confirmPassword.length > 0 && !passwordsMatch}
+          />
+        )}
       </div>
 
       {errorMsg && (
@@ -290,7 +298,7 @@ const Signup = () => {
       <Button 
         type="submit" 
         className="w-full"
-        disabled={loading || !emailValid || !passwordValid || !passwordsMatch}
+        disabled={loading || !emailValid || !passwordValid || (showConfirmPassword && !passwordsMatch)}
       >
         {loading ? 'Creating account…' : 'Sign up'}
       </Button>
@@ -362,12 +370,12 @@ const Signup = () => {
         <div className="w-full max-w-md space-y-8">
           <header className="text-center">
             <h1 className="text-3xl font-bold">
-              {signupSuccess ? 'Email Verification' : 'Create an account'}
+              {signupSuccess ? 'Email Verification' : 'Welcome to Astro by Therai'}
             </h1>
             <p className="mt-2 text-gray-600">
               {signupSuccess 
                 ? 'One more step to complete your registration' 
-                : 'Get started with our application'}
+                : 'Create an Account'}
             </p>
           </header>
 
