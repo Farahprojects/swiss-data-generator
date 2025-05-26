@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +30,7 @@ const Signup = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
+  const [currentUserId, setCurrentUserId] = useState('');
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 8;
@@ -102,6 +102,7 @@ const Signup = () => {
           });
 
           setVerificationEmail(email);
+          setCurrentUserId(data.user.id);
           setSignupSuccess(true);
         } catch (emailError) {
           toast({ 
@@ -173,23 +174,19 @@ const Signup = () => {
     try {
       setLoading(true);
       
-      // Get the current user to resend verification
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use the same signup_token edge function with the current user ID
+      const { error: functionError } = await supabase.functions.invoke('signup_token', {
+        body: { user_id: currentUserId }
+      });
       
-      if (user) {
-        const { error: functionError } = await supabase.functions.invoke('signup_token', {
-          body: { user_id: user.id }
-        });
-        
-        if (functionError) {
-          throw new Error(functionError.message);
-        }
+      if (functionError) {
+        throw new Error(functionError.message);
       }
       
       toast({ 
         title: 'Verification Email Sent', 
         description: 'A new verification email has been sent to your inbox', 
-        variant: 'success' 
+        variant: 'default' 
       });
       
       logToSupabase('Verification email resent', {
