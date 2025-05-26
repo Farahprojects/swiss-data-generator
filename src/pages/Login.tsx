@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -83,27 +82,17 @@ const Login = () => {
     setLoading(false);
   };
 
-  // Fixed resend verification function with correct email sources
+  // Updated resend verification function to send only user_id
   const handleResendVerification = async (emailToVerify: string) => {
     try {
       logToSupabase("Resending login verification email", {
         level: 'info',
         page: 'Login',
-        data: { emailToVerify, userEmail: user?.email }
+        data: { emailToVerify, userEmail: user?.email, userId: user?.id }
       });
 
       const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
-
-      // Use the user's confirmed email as current_email and the target email as new_email
-      const currentEmail = user?.email || email;
-      const newEmail = emailToVerify;
-
-      logToSupabase("Email verification payload details", {
-        level: 'debug',
-        page: 'Login',
-        data: { currentEmail, newEmail, userId: user?.id }
-      });
 
       const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
         method: 'POST',
@@ -113,9 +102,7 @@ const Login = () => {
           'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
         },
         body: JSON.stringify({
-          user_id: user?.id || '',
-          current_email: currentEmail,
-          new_email: newEmail
+          user_id: user?.id || ''
         })
       });
 

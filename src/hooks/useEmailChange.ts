@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,6 +81,76 @@ export function useEmailChange() {
     
     checkPendingEmailVerification();
   }, []);
+
+  const sendVerificationEmail = async (currentEmail: string, newEmail: string) => {
+    logToSupabase("Sending verification email", {
+      level: 'info',
+      page: 'useEmailChange',
+      data: { currentEmail, newEmail }
+    });
+    
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({
+          user_id: userData?.user?.id || ''
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to send verification email (${response.status})`);
+      }
+
+      const result = await response.json();
+      
+      logToSupabase("Verification email sent successfully", {
+        level: 'info',
+        page: 'useEmailChange',
+        data: { currentEmail, newEmail }
+      });
+      
+      return result;
+    } catch (err: any) {
+      logToSupabase("Error sending verification email", {
+        level: 'error',
+        page: 'useEmailChange',
+        data: { error: err.message || String(err), currentEmail, newEmail }
+      });
+      
+      throw err;
+    }
+  };
+
+  const resendVerificationEmail = async (currentEmail: string, newEmail: string) => {
+    logToSupabase("Resending email verification", {
+      level: 'info',
+      page: 'useEmailChange',
+      data: { currentEmail, newEmail }
+    });
+    
+    try {
+      await sendVerificationEmail(currentEmail, newEmail);
+      return { error: null };
+    } catch (err: any) {
+      logToSupabase("Error resending verification", {
+        level: 'error',
+        page: 'useEmailChange',
+        data: { error: err.message || String(err) }
+      });
+      
+      return { error: err as Error };
+    }
+  };
 
   const changeEmail = async (currentEmail: string, newEmail: string) => {
     if (!newEmail) {
@@ -167,78 +236,6 @@ export function useEmailChange() {
       
       setIsUpdatingEmail(false);
       return { success: false, error: error.message || "There was an error updating your email address." };
-    }
-  };
-
-  const sendVerificationEmail = async (currentEmail: string, newEmail: string) => {
-    logToSupabase("Sending verification email", {
-      level: 'info',
-      page: 'useEmailChange',
-      data: { currentEmail, newEmail }
-    });
-    
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
-
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-        },
-        body: JSON.stringify({
-          user_id: userData?.user?.id || '',
-          current_email: currentEmail,
-          new_email: newEmail
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to send verification email (${response.status})`);
-      }
-
-      const result = await response.json();
-      
-      logToSupabase("Verification email sent successfully", {
-        level: 'info',
-        page: 'useEmailChange',
-        data: { currentEmail, newEmail }
-      });
-      
-      return result;
-    } catch (err: any) {
-      logToSupabase("Error sending verification email", {
-        level: 'error',
-        page: 'useEmailChange',
-        data: { error: err.message || String(err), currentEmail, newEmail }
-      });
-      
-      throw err;
-    }
-  };
-
-  const resendVerificationEmail = async (currentEmail: string, newEmail: string) => {
-    logToSupabase("Resending email verification", {
-      level: 'info',
-      page: 'useEmailChange',
-      data: { currentEmail, newEmail }
-    });
-    
-    try {
-      await sendVerificationEmail(currentEmail, newEmail);
-      return { error: null };
-    } catch (err: any) {
-      logToSupabase("Error resending verification", {
-        level: 'error',
-        page: 'useEmailChange',
-        data: { error: err.message || String(err) }
-      });
-      
-      return { error: err as Error };
     }
   };
 

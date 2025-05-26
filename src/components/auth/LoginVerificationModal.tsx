@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Loader, Mail } from 'lucide-react';
@@ -56,15 +55,29 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         data: { 
           verificationEmail, 
           currentEmail: displayCurrentEmail,
-          isEmailChange 
+          isEmailChange,
+          userId: user?.id
         }
       });
 
-      // Call the resend function with the verification email
-      const result = await resendVerificationEmail(verificationEmail);
-      
-      if (result.error) {
-        throw result.error;
+      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({
+          user_id: user?.id || ''
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
       }
 
       setResendSuccess(true);

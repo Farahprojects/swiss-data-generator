@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Loader, Mail } from 'lucide-react';
@@ -44,10 +43,9 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
       logToSupabase("Resending verification email", {
         level: 'info',
         page: 'EmailVerificationModal',
-        data: { currentEmail, newEmail }
+        data: { currentEmail, newEmail, userId: user?.id }
       });
 
-      // Call the email-verification edge function with exact payload format
       const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
@@ -59,9 +57,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
           'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
         },
         body: JSON.stringify({
-          user_id: user?.id || '',
-          current_email: currentEmail,
-          new_email: newEmail
+          user_id: user?.id || ''
         })
       });
 
