@@ -1,340 +1,159 @@
-
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader, CheckCircle, XCircle } from 'lucide-react';
+import Logo from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
-import UnifiedNavigation from '@/components/UnifiedNavigation';
-import Footer from '@/components/Footer';
-import PasswordInput from '@/components/auth/PasswordInput';
-import { CheckCircle, Loader2, RefreshCw } from 'lucide-react';
-import { extractTokenFromUrl } from '@/utils/urlUtils';
-import { log, logAuth } from '@/utils/logUtils';
+import { logToSupabase } from '@/utils/batchedLogManager';
 
-const Password = () => {
+const BRAND_PURPLE = '#7C3AED';
+
+const ResetPassword: React.FC = () => {
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState('Resetting your password…');
+
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { toast } = useToast();
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [passwordUpdated, setPasswordUpdated] = useState(false);
-  const [automaticRedirect, setAutomaticRedirect] = useState(false);
-  const [secondsToRedirect, setSecondsToRedirect] = useState(10);
-  
-  // States for token verification
-  const [verifyingToken, setVerifyingToken] = useState(true);
-  const [tokenValid, setTokenValid] = useState(false);
-  // Track whether we've already attempted token verification to prevent loops
-  const [tokenAttempted, setTokenAttempted] = useState(false);
-  
-  // Memoize verification function to prevent re-creation on each render
-  const verifyResetToken = useCallback(async (tokenParam: string) => {
-    try {
-      logAuth("Attempting to verify reset token");
-      
-      // For recovery flow, we need to use TokenHashParams
-      const { data, error } = await supabase.auth.verifyOtp({
-        token_hash: tokenParam,
-        type: 'recovery',
-      });
-      
-      setVerifyingToken(false);
-      
-      if (error) {
-        log('error', "Token verification failed", { error: error.message });
-        setTokenValid(false);
-        toast({ 
-          title: "Invalid reset link", 
-          description: error.message,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (data && data.session) {
-        logAuth("Token verified successfully, session created");
-        setTokenValid(true);
-      } else {
-        log('error', "Token verification returned no session");
-        setTokenValid(false);
-        toast({ 
-          title: "Invalid reset link", 
-          description: "Please request a new password reset link.",
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      log('error', "Error verifying token", { error: error.message });
-      setVerifyingToken(false);
-      setTokenValid(false);
-      toast({ 
-        title: "Error", 
-        description: error.message || "An error occurred verifying your reset link.",
-        variant: "destructive"
-      });
-    }
-  }, [toast]);
+  const processedRef = useRef(false);
 
-  // Single effect to handle token verification
   useEffect(() => {
-    // Only log once when component mounts
-    logAuth("Password reset page loaded");
-    
-    const recoveryFlow = searchParams.get('type') === 'recovery';
-    const tokenParam = extractTokenFromUrl(searchParams);
-    
-    // Only log minimal info about the token
-    logAuth("Processing password reset request", { 
-      recoveryFlow,
-      hasToken: !!tokenParam,
-      tokenType: tokenParam?.length > 10 ? 'hash' : 'short'
-    });
-    
-    // Only attempt verification if we haven't tried yet
-    if (recoveryFlow && tokenParam && !tokenAttempted) {
-      logAuth("Starting token verification");
-      setTokenAttempted(true);
-      verifyResetToken(tokenParam);
-    } else if (!tokenAttempted) {
-      // No token or not a recovery flow
-      log('warn', "No valid token found for password reset");
-      setVerifyingToken(false);
-      setTokenValid(false);
-      setTokenAttempted(true);
-      toast({ 
-        title: "Invalid or expired link", 
-        description: "Please request a new password reset link.",
-        variant: "destructive"
-      });
-    }
-  }, [searchParams, toast, tokenAttempted, verifyResetToken]);
+    const verify = async () => {
+      if (processedRef.current) return;
+      processedRef.current = true;
 
-  /* ─────────────────────────────────────────────────────────────
-   * Update password reset flow
-   * ────────────────────────────────────────────────────────────*/
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (password !== confirmPassword) {
-      toast({ 
-        title: "Passwords don't match", 
-        description: "Please make sure both passwords are the same.",
-        variant: "destructive"
-      });
-      return;
-    }
+      try {
+        const hash = new URLSearchParams(location.hash.slice(1));
+        const search = new URLSearchParams(location.search);
 
-    if (password.length < 8) {
-      toast({ 
-        title: "Password too short", 
-        description: "Password must be at least 8 characters long.",
-        variant: "destructive"
-      });
-      return;
-    }
+        const accessToken = hash.get('access_token');
+        const refreshToken = hash.get('refresh_token');
 
-    setLoading(true);
+        if (!accessToken || !refreshToken) throw new Error('Missing access credentials');
 
-    try {
-      logAuth("Updating password");
-      const { error } = await supabase.auth.updateUser({ password });
+        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        if (error) throw error;
 
-      if (error) {
-        log('error', "Password update failed", { error: error.message });
-        toast({ 
-          title: "Password reset failed", 
-          description: error.message,
-          variant: "destructive"
+        setStatus('success');
+        setMessage('Your password has been reset – you are now logged in!');
+        toast({ variant: 'success', title: 'Password Reset', description: 'You are now logged in!' });
+
+        window.history.replaceState({}, '', '/auth/password');
+        setTimeout(() => navigate('/dashboard'), 2800);
+      } catch (err: any) {
+        logToSupabase('password reset failed', {
+          level: 'error',
+          page: 'ResetPassword',
+          data: { error: err?.message },
         });
-      } else {
-        logAuth("Password updated successfully");
-        // Show success state
-        setPasswordUpdated(true);
-        
-        // Start countdown for redirect
-        setAutomaticRedirect(true);
-        
-        toast({ 
-          title: "Password updated", 
-          description: "Your password has been successfully reset. You'll be redirected to the dashboard shortly."
-        });
-        
-        // Set up countdown timer
-        const countdownInterval = setInterval(() => {
-          setSecondsToRedirect(prev => {
-            if (prev <= 1) {
-              clearInterval(countdownInterval);
-              navigate('/dashboard');
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        
-        // Clear interval on component unmount
-        return () => clearInterval(countdownInterval);
+        setStatus('error');
+        const msg = err?.message ?? 'Password reset failed – link may have expired.';
+        setMessage(msg);
+        toast({ variant: 'destructive', title: 'Password reset failed', description: msg });
       }
-    } catch (error: any) {
-      log('error', "Password update error", { error: error.message });
-      toast({ 
-        title: "Error", 
-        description: error.message || "Failed to reset password.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+    };
+    verify();
+  }, [location.hash, location.search]);
+
+  const heading =
+    status === 'loading' ? 'Password Reset' : status === 'success' ? 'All Set!' : 'Uh‑oh…';
+
+  const iconVariants = {
+    loading: {
+      rotate: 360,
+      transition: { repeat: Infinity, duration: 1.2, ease: 'linear' },
+    },
+    error: {
+      scale: [1, 1.1, 1],
+      rotate: [0, -10, 10, -10, 10, 0],
+      transition: { duration: 0.8, ease: 'easeInOut' },
+    },
+    success: {},
   };
 
-  // Function to request a new password reset link
-  const handleRequestNewLink = () => {
-    navigate('/login?requestPasswordReset=true');
-    toast({
-      title: "Password Reset",
-      description: "You'll be redirected to request a new password reset link."
-    });
-  };
+  const Icon = status === 'loading' ? Loader : status === 'success' ? CheckCircle : XCircle;
 
-  // Show success state when password is updated
-  const renderSuccess = () => {
-    return (
-      <div className="text-center space-y-4">
-        <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-        <h2 className="text-2xl font-semibold">Password Updated!</h2>
-        <p>Your password has been successfully reset.</p>
-        
-        {automaticRedirect ? (
-          <p className="text-sm text-gray-500">
-            Redirecting you to the dashboard in {secondsToRedirect} seconds...
-          </p>
-        ) : (
-          <p className="text-sm text-gray-500">
-            You can now go to the dashboard or log in with your new password.
-          </p>
-        )}
-        
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
-          <Button onClick={() => navigate('/dashboard')} className="w-full sm:w-auto">
-            Go to Dashboard Now
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/login')} 
-            className="w-full sm:w-auto"
-          >
-            Go to Login
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // Render verification state
-  const renderVerifying = () => {
-    return (
-      <div className="flex flex-col items-center justify-center space-y-4 py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p>Verifying your reset link...</p>
-      </div>
-    );
-  };
-  
-  // Error state when token is invalid
-  const renderInvalidToken = () => {
-    return (
-      <div className="text-center space-y-4">
-        <h2 className="text-xl font-semibold text-red-600">Invalid Reset Link</h2>
-        <p>This password reset link is invalid or has expired.</p>
-        <p className="text-sm text-gray-500">Please request a new password reset link.</p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
-          <Button 
-            onClick={handleRequestNewLink}
-            className="w-full sm:w-auto flex items-center gap-2"
-          >
-            <RefreshCw size={16} />
-            Request New Link
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/login')} 
-            className="w-full sm:w-auto"
-          >
-            Back to Login
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // Function to render the appropriate content based on verification status
-  const renderContent = () => {
-    if (verifyingToken) {
-      return renderVerifying();
-    }
-    
-    if (!tokenValid) {
-      return renderInvalidToken();
-    }
-    
-    if (passwordUpdated) {
-      return renderSuccess();
-    }
-
-    return (
-      <form onSubmit={handlePasswordReset} className="space-y-6">
-        <div className="space-y-4">
-          <PasswordInput
-            password={password}
-            isValid={password.length >= 8}
-            showRequirements={true}
-            onChange={setPassword}
-          />
-          
-          <div className="space-y-1">
-            <PasswordInput
-              password={confirmPassword}
-              isValid={confirmPassword.length >= 8 && password === confirmPassword}
-              showRequirements={false}
-              onChange={setConfirmPassword}
-              placeholder="Confirm new password"
-              id="confirm-password"
-            />
-            {confirmPassword && password !== confirmPassword && (
-              <p className="text-xs text-red-600">Passwords do not match</p>
-            )}
-          </div>
-        </div>
-
-        <Button 
-          type="submit" 
-          className="w-full" 
-          disabled={loading || password.length < 8 || password !== confirmPassword}
-        >
-          {loading ? 'Updating Password...' : 'Reset Password'}
-        </Button>
-      </form>
-    );
-  };
+  const bgColor =
+    status === 'loading'
+      ? 'bg-indigo-100 text-indigo-600'
+      : status === 'success'
+      ? 'bg-emerald-100 text-emerald-600'
+      : 'bg-red-100 text-red-600';
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <UnifiedNavigation />
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
+      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-bl-md shadow-sm">
+        <Logo size="md" />
+      </header>
 
-      <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-md">
-          <header className="text-center">
-            <h1 className="text-3xl font-bold">Reset Password</h1>
-            <p className="mt-2 text-gray-600">Enter your new password below</p>
-          </header>
+      <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="w-full max-w-md sm:max-w-lg md:max-w-xl"
+        >
+          <Card className="relative overflow-hidden border border-gray-200 shadow-xl rounded-3xl bg-white min-h-[24rem]">
+            <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-[radial-gradient(circle_at_top_left,theme(colors.indigo.300)_0%,transparent_70%)]" />
 
-          {renderContent()}
-        </div>
+            <CardHeader className="text-center pb-1 relative z-10 bg-white/85 backdrop-blur-sm rounded-t-3xl">
+              <CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900">
+                {heading}
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                {status === 'loading'
+                  ? 'Verifying reset link…'
+                  : status === 'success'
+                  ? 'You are verified.'
+                  : 'We encountered a problem.'}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex flex-col items-center gap-6 p-10 relative z-10">
+              <motion.div
+                className={`flex items-center justify-center h-20 w-20 rounded-full ${bgColor}`}
+                animate={status}
+                variants={iconVariants}
+              >
+                <Icon className="h-12 w-12" />
+              </motion.div>
+              <p className="text-center text-lg text-gray-700 max-w-sm leading-relaxed">{message}</p>
+            </CardContent>
+
+            <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center bg-gray-50 rounded-b-3xl relative z-10 p-6">
+              {status === 'success' ? (
+                <Button
+                  style={{ background: BRAND_PURPLE }}
+                  onClick={() => navigate('/dashboard')}
+                  className="w-full sm:w-auto text-white hover:opacity-90"
+                >
+                  Go to Dashboard
+                </Button>
+              ) : (
+                <Button onClick={() => navigate('/login')} className="w-full sm:w-auto" variant="outline">
+                  Return to Login
+                </Button>
+              )}
+            </CardFooter>
+          </Card>
+        </motion.div>
       </main>
 
-      <Footer />
+      <footer className="py-6 text-center text-xs text-gray-500">
+        © {new Date().getFullYear()} Theraiapi. All rights reserved.
+      </footer>
     </div>
   );
 };
 
-export default Password;
+export default ResetPassword;
