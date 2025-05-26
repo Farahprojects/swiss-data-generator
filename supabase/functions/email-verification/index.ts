@@ -22,20 +22,22 @@ serve(async (req) => {
 
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
+  let userId = "";
   let currentEmail = "";
   let newEmail = "";
 
   try {
     const body = await req.json();
+    userId = body.user_id ?? "";
     currentEmail = (body.current_email ?? "").toLowerCase();
     newEmail = (body.new_email ?? "").toLowerCase();
-    log("Parsed request:", { currentEmail, newEmail });
+    log("Parsed request:", { userId, currentEmail, newEmail });
   } catch {
     return respond(400, { error: "Invalid JSON" });
   }
 
-  if (!currentEmail || !newEmail) {
-    return respond(400, { error: "Both current_email and new_email are required" });
+  if (!userId || !currentEmail || !newEmail) {
+    return respond(400, { error: "user_id, current_email, and new_email are required" });
   }
 
   const url = Deno.env.get("SUPABASE_URL");
@@ -52,10 +54,24 @@ serve(async (req) => {
   let emailOtp = "";
 
   try {
+    // Ensure new_email is explicitly set before requesting the token
+    const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
+      new_email: newEmail,
+    });
+
+    if (updateErr) {
+      log("Update failed:", updateErr.message);
+      return respond(500, { error: "Failed to re-set pending email", details: updateErr.message });
+    }
+  } catch (e: any) {
+    return respond(500, { error: "Error updating user", details: e.message });
+  }
+
+  try {
     const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
       type: "email_change_new",
       email: currentEmail,
-      newEmail: newEmail,
+      newEmail,
       options: { redirectTo },
     });
 
