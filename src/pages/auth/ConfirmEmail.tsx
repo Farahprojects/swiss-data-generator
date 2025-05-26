@@ -1,6 +1,5 @@
-// Updated ConfirmEmail Page to support magiclink login and email update
 import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Card,
   CardHeader,
@@ -110,95 +109,97 @@ const ConfirmEmail: React.FC = () => {
     verify();
   }, [location.hash, location.search]);
 
-  const Icon = status === 'loading' ? Loader : status === 'success' ? CheckCircle : XCircle;
   const heading =
     status === 'loading' ? 'Email Verification' : status === 'success' ? 'All Set!' : 'Uh‑oh…';
-  const bgGradient =
-    status === 'success'
-      ? 'from-emerald-50 via-white to-white'
-      : status === 'error'
-      ? 'from-gray-100 via-white to-white'
-      : 'from-indigo-50 via-white to-white';
+
+  const iconVariants = {
+    loading: {
+      rotate: 360,
+      transition: { repeat: Infinity, duration: 1.2, ease: 'linear' },
+    },
+    error: {
+      scale: [1, 1.1, 1],
+      rotate: [0, -10, 10, -10, 10, 0],
+      transition: { duration: 0.8, ease: 'easeInOut' },
+    },
+    success: {},
+  };
+
+  const Icon = status === 'loading' ? Loader : status === 'success' ? CheckCircle : XCircle;
+
+  const bgColor =
+    status === 'loading'
+      ? 'bg-indigo-100 text-indigo-600'
+      : status === 'success'
+      ? 'bg-emerald-100 text-emerald-600'
+      : 'bg-red-100 text-red-600';
 
   return (
-    <div className={`min-h-screen flex flex-col bg-gradient-to-br ${bgGradient}`}>      
-      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
+      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-bl-md shadow-sm">
         <Logo size="md" />
       </header>
 
       <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8">
-  <motion.div
-    initial={{ opacity: 0, scale: 0.96 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ duration: 0.35, ease: 'easeOut' }}
-    className="w-full max-w-md sm:max-w-lg md:max-w-xl"
-  >
-    <Card className="relative overflow-hidden border border-gray-200 shadow-xl rounded-3xl bg-white min-h-[24rem]">
-      <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-[radial-gradient(circle_at_top_left,theme(colors.indigo.300)_0%,transparent_70%)]" />
-
-      <CardHeader className="text-center pb-1 relative z-10 bg-white/85 backdrop-blur-sm rounded-t-3xl">
-        <CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900">
-          {heading}
-        </CardTitle>
-        <CardDescription className="text-gray-600">
-          {status === 'loading'
-            ? 'Hold tight while we confirm…'
-            : status === 'success'
-            ? 'You are verified.'
-            : 'We encountered a problem.'}
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="flex flex-col items-center gap-6 p-10 relative z-10">
         <motion.div
-          animate={{ rotate: status === 'loading' ? 360 : 0 }}
-          transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
-          className={`flex items-center justify-center h-20 w-20 rounded-full ${
-            status === 'loading'
-              ? 'bg-indigo-100'
-              : status === 'success'
-              ? 'bg-emerald-100'
-              : 'bg-red-100'
-          }`}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="w-full max-w-md sm:max-w-lg md:max-w-xl"
         >
-          <Icon
-            className={`h-12 w-12 ${
-              status === 'loading'
-                ? 'text-indigo-600'
-                : status === 'success'
-                ? 'text-emerald-600'
-                : 'text-red-600'
-            } ${status === 'loading' ? 'animate-none' : ''}`}
-          />
-        </motion.div>
-        <p className="text-center text-lg text-gray-700 max-w-sm leading-relaxed">{message}</p>
-      </CardContent>
+          <Card className="relative overflow-hidden border border-gray-200 shadow-xl rounded-3xl bg-white min-h-[24rem]">
+            <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-[radial-gradient(circle_at_top_left,theme(colors.indigo.300)_0%,transparent_70%)]" />
 
-      <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center bg-gray-50 rounded-b-3xl relative z-10 p-6">
-        {status === 'success' ? (
-          <Button
-            style={{ background: BRAND_PURPLE }}
-            onClick={() => navigate('/dashboard')}
-            className="w-full sm:w-auto text-white hover:opacity-90"
-          >
-            Go to Dashboard
-          </Button>
-        ) : (
-          <>
-            <Button onClick={() => navigate('/login')} className="w-full sm:w-auto" variant="outline">
-              Return to Login
-            </Button>
-            {status === 'error' && (
-              <Button asChild variant="outline" className="w-full sm:w-auto">
-                <Link to="/signup">Create Account</Link>
-              </Button>
-            )}
-          </>
-        )}
-      </CardFooter>
-    </Card>
-  </motion.div>
-</main>
+            <CardHeader className="text-center pb-1 relative z-10 bg-white/85 backdrop-blur-sm rounded-t-3xl">
+              <CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900">
+                {heading}
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                {status === 'loading'
+                  ? 'Hold tight while we confirm…'
+                  : status === 'success'
+                  ? 'You are verified.'
+                  : 'We encountered a problem.'}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex flex-col items-center gap-6 p-10 relative z-10">
+              <motion.div
+                className={`flex items-center justify-center h-20 w-20 rounded-full ${bgColor}`}
+                animate={status}
+                variants={iconVariants}
+              >
+                <Icon className="h-12 w-12" />
+              </motion.div>
+              <p className="text-center text-lg text-gray-700 max-w-sm leading-relaxed">{message}</p>
+            </CardContent>
+
+            <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center bg-gray-50 rounded-b-3xl relative z-10 p-6">
+              {status === 'success' ? (
+                <Button
+                  style={{ background: BRAND_PURPLE }}
+                  onClick={() => navigate('/dashboard')}
+                  className="w-full sm:w-auto text-white hover:opacity-90"
+                >
+                  Go to Dashboard
+                </Button>
+              ) : (
+                <>
+                  <Button onClick={() => navigate('/login')} className="w-full sm:w-auto" variant="outline">
+                    Return to Login
+                  </Button>
+                  {status === 'error' && (
+                    <Button asChild variant="outline" className="w-full sm:w-auto">
+                      <Link to="/signup">Create Account</Link>
+                    </Button>
+                  )}
+                </>
+              )}
+            </CardFooter>
+          </Card>
+        </motion.div>
+      </main>
+
       <footer className="py-6 text-center text-xs text-gray-500">
         © {new Date().getFullYear()} Theraiapi. All rights reserved.
       </footer>
