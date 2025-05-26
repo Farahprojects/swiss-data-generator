@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -15,11 +16,12 @@ import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
 import { logToSupabase } from '@/utils/batchedLogManager';
+import PasswordResetForm from '@/components/auth/PasswordResetForm';
 
 const BRAND_PURPLE = '#7C3AED';
 
 const ResetPassword: React.FC = () => {
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'update-password'>('loading');
   const [message, setMessage] = useState('Resetting your password…');
 
   const navigate = useNavigate();
@@ -44,12 +46,16 @@ const ResetPassword: React.FC = () => {
         const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (error) throw error;
 
-        setStatus('success');
-        setMessage('Your password has been reset – you are now logged in!');
-        toast({ variant: 'success', title: 'Password Reset', description: 'You are now logged in!' });
+        logToSupabase('Password reset link verified successfully', {
+          level: 'info',
+          page: 'ResetPassword'
+        });
+
+        // Instead of redirecting, show the password update form
+        setStatus('update-password');
+        setMessage('Please set your new password');
 
         window.history.replaceState({}, '', '/auth/password');
-        setTimeout(() => navigate('/dashboard'), 2800);
       } catch (err: any) {
         logToSupabase('password reset failed', {
           level: 'error',
@@ -63,10 +69,24 @@ const ResetPassword: React.FC = () => {
       }
     };
     verify();
-  }, [location.hash, location.search]);
+  }, [location.hash, location.search, toast]);
+
+  const handlePasswordUpdateSuccess = () => {
+    setStatus('success');
+    setMessage('Your password has been updated successfully!');
+    toast({ 
+      variant: 'success', 
+      title: 'Password Updated', 
+      description: 'You can now access your account with your new password.' 
+    });
+    
+    setTimeout(() => navigate('/dashboard'), 2000);
+  };
 
   const heading =
-    status === 'loading' ? 'Password Reset' : status === 'success' ? 'All Set!' : 'Uh‑oh…';
+    status === 'loading' ? 'Password Reset' : 
+    status === 'update-password' ? 'Set New Password' :
+    status === 'success' ? 'All Set!' : 'Uh‑oh…';
 
   const iconVariants = {
     loading: {
@@ -90,9 +110,35 @@ const ResetPassword: React.FC = () => {
       ? 'bg-emerald-100 text-emerald-600'
       : 'bg-red-100 text-red-600';
 
+  // Show password update form when status is 'update-password'
+  if (status === 'update-password') {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
+        <header className="w-full py-5 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
+          <Logo size="md" />
+        </header>
+
+        <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+            className="w-full max-w-md sm:max-w-lg md:max-w-xl"
+          >
+            <PasswordResetForm onSuccess={handlePasswordUpdateSuccess} />
+          </motion.div>
+        </main>
+
+        <footer className="py-6 text-center text-xs text-gray-500">
+          © {new Date().getFullYear()} Theraiapi. All rights reserved.
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
-      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-bl-md shadow-sm">
+      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
         <Logo size="md" />
       </header>
 
