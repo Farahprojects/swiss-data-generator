@@ -51,7 +51,7 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
         data: { email: verificationEmail, isEmailChange }
       });
 
-      // Call the new email-verification edge function with proper payload
+      // Call the email-verification edge function with correct payload format
       const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
@@ -63,9 +63,9 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
           'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
         },
         body: JSON.stringify({
-          email: verificationEmail,
           user_id: user?.id || '',
-          template_type: isEmailChange ? 'email_change_new' : 'signup_confirmation'
+          current_email: isEmailChange ? email : verificationEmail,
+          new_email: verificationEmail
         })
       });
 
