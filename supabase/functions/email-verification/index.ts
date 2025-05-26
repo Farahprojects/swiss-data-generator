@@ -70,7 +70,7 @@ serve(async (req) => {
 
   try {
     const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
-      type: "email_change",
+      type: "email_change_new",
       email: currentEmail,
       newEmail: newEmail,
       options: { redirectTo },
