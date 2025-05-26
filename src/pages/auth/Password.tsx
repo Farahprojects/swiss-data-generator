@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,10 +52,21 @@ const ResetPassword = () => {
         return;
       }
 
+      if (!email) {
+        logToSupabase("Password reset verification failed - missing email", {
+          level: 'error',
+          page: 'Password',
+          data: { token: token ? 'present' : 'missing', type }
+        });
+        setStatus('error');
+        setMessage('Missing email parameter. Please request a new password reset.');
+        return;
+      }
+
       try {
-        // The password_token edge function generates a recovery token that needs to be verified
-        // We use verifyOtp with the token directly (not token_hash)
+        // Use verifyOtp with email and token for recovery type
         const { data, error } = await supabase.auth.verifyOtp({ 
+          email: email,
           token: token, 
           type: 'recovery' 
         });
@@ -68,7 +78,8 @@ const ResetPassword = () => {
             data: { 
               error: error.message,
               errorCode: error.status,
-              token: token ? 'present' : 'missing'
+              token: token ? 'present' : 'missing',
+              email: email
             }
           });
           setStatus('error');
@@ -77,7 +88,7 @@ const ResetPassword = () => {
           logToSupabase("Password reset verification failed - no session", {
             level: 'error',
             page: 'Password',
-            data: { hasData: !!data }
+            data: { hasData: !!data, email: email }
           });
           setStatus('error');
           setMessage('Token verification failed. Please request a new password reset.');
@@ -85,7 +96,7 @@ const ResetPassword = () => {
           logToSupabase("Password reset token verified successfully", {
             level: 'info',
             page: 'Password',
-            data: { userId: data.user?.id }
+            data: { userId: data.user?.id, email: email }
           });
           setStatus('valid');
           setMessage('Enter your new password.');
@@ -94,7 +105,7 @@ const ResetPassword = () => {
         logToSupabase("Password reset verification error", {
           level: 'error',
           page: 'Password',
-          data: { error: err.message || String(err) }
+          data: { error: err.message || String(err), email: email }
         });
         setStatus('error');
         setMessage('An error occurred while verifying the reset link. Please try again.');
