@@ -25,18 +25,22 @@ serve(async (req) => {
     return new Response(null, { headers: CORS });
   }
 
+  let userId = "";
   let newEmail = "";
-  let currentUserId = "";
+  let currentEmail = "";
   try {
     const body = await req.json();
-    newEmail = (body.email ?? "").toLowerCase();
-    currentUserId = body.user_id ?? "";
-    log("Parsed request:", { newEmail, currentUserId });
+    userId = body.user_id ?? "";
+    newEmail = (body.new_email ?? "").toLowerCase();
+    currentEmail = (body.current_email ?? "").toLowerCase();
+    log("Parsed request:", { userId, newEmail, currentEmail });
   } catch {
     return respond(400, { error: "Invalid JSON" });
   }
 
-  if (!newEmail || !currentUserId) return respond(400, { error: "Email and user_id required" });
+  if (!userId || !newEmail || !currentEmail) {
+    return respond(400, { error: "user_id, new_email, and current_email are required" });
+  }
 
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -46,17 +50,18 @@ serve(async (req) => {
   }
   const supabase = createClient(url, key);
 
-  let foundUser: any = null;
   try {
-    const { data, error: listErr } = await supabase.auth.admin.listUsers({ email: newEmail });
-    if (listErr) throw listErr;
-    foundUser = data?.users?.[0] ?? null;
-  } catch (e) {
-    return respond(500, { error: "User lookup failed", details: (e as Error).message });
-  }
+    const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
+      email: currentEmail,
+      new_email: newEmail,
+    });
 
-  if (foundUser && foundUser.id !== currentUserId) {
-    return respond(200, { status: "user_exists", message: "Email already in use" });
+    if (updateErr) {
+      log("User update failed:", updateErr.message);
+      return respond(500, { error: "Failed to set new email", details: updateErr.message });
+    }
+  } catch (err: any) {
+    return respond(500, { error: "Update user failed", details: err.message });
   }
 
   let tokenLink = "";
@@ -65,8 +70,9 @@ serve(async (req) => {
 
   try {
     const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
-      type: "magiclink",
-      email: newEmail,
+      type: "email_change",
+      email: currentEmail,
+      newEmail: newEmail,
       options: { redirectTo },
     });
 
@@ -76,44 +82,36 @@ serve(async (req) => {
     }
 
     log("linkData >>>", JSON.stringify(linkData, null, 2));
-    log("Top-level action_link:", linkData?.action_link);
-    log("Nested properties.action_link:", linkData?.properties?.action_link);
-
     tokenLink = linkData?.action_link || linkData?.properties?.action_link || "";
     const props = (linkData as any)?.properties ?? {};
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
     if (!tokenLink) {
-      log("Missing action_link in Supabase response. Full linkData:", linkData);
       return respond(500, {
         error: "Missing action_link in token generation",
-        details: linkData
+        details: linkData,
       });
     }
 
     tokenLink += `&email=${encodeURIComponent(newEmail)}`;
-    log("Using raw action_link for tokenLink with email param");
+    log("Final tokenLink:", tokenLink);
   } catch (err: any) {
-    log("Link generation error:", err.message);
     return respond(500, { error: "Link generation failed", details: err.message });
   }
 
   const { data: templateData, error: templateErr } = await supabase
     .from("token_emails")
     .select("subject, body_html")
-    .eq("template_type", "magiclink")
+    .eq("template_type", "email_change")
     .single();
 
   if (templateErr || !templateData) {
-    log("Template fetch failed:", templateErr?.message);
     return respond(500, { error: "Template fetch failed", details: templateErr?.message });
   }
 
   const html = templateData.body_html
     .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
     .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
-
-  log("Sending magiclink e-mail to:", newEmail);
 
   const send = await fetch(smtpEndpoint, {
     method: "POST",
@@ -128,10 +126,9 @@ serve(async (req) => {
 
   if (!send.ok) {
     const errTxt = await send.text();
-    log("SMTP error:", errTxt);
     return respond(500, { error: "Email sending failed", details: errTxt });
   }
 
-  log("✔ Sent magiclink e-mail to", newEmail);
-  return respond(200, { status: "sent", template_type: "magiclink" });
+  log(`✔ Sent email_change e-mail to ${newEmail}`);
+  return respond(200, { status: "sent", template_type: "email_change" });
 });
