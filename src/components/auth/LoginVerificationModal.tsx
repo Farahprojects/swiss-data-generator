@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface LoginVerificationModalProps {
   isOpen: boolean;
   email: string;
+  currentEmail: string; // The user's confirmed email address
   pendingEmail?: string; // The new email address where verification was sent
   resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
   onVerified: () => void;
@@ -25,6 +26,7 @@ interface LoginVerificationModalProps {
 export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   isOpen,
   email,
+  currentEmail,
   pendingEmail,
   resendVerificationEmail,
   onVerified,
@@ -38,6 +40,9 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
   // Use pendingEmail if available, otherwise fall back to email
   const verificationEmail = pendingEmail || email;
   const isEmailChange = !!pendingEmail;
+  
+  // Use the actual current email for display
+  const displayCurrentEmail = currentEmail || user?.email || email;
 
   const handleResend = async () => {
     setIsResending(true);
@@ -48,43 +53,25 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
       logToSupabase("Resending login verification email", {
         level: 'info',
         page: 'LoginVerificationModal',
-        data: { email: verificationEmail, isEmailChange }
+        data: { 
+          verificationEmail, 
+          currentEmail: displayCurrentEmail,
+          isEmailChange 
+        }
       });
 
-      // Call the email-verification edge function with correct payload format
-      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
-
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-        },
-        body: JSON.stringify({
-          user_id: user?.id || '',
-          current_email: isEmailChange ? email : verificationEmail,
-          new_email: verificationEmail
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
-      }
-
-      const result = await response.json();
+      // Call the resend function with the verification email
+      const result = await resendVerificationEmail(verificationEmail);
       
-      if (result.status === 'sent') {
-        setResendSuccess(true);
-        logToSupabase("Login verification email resent successfully", {
-          level: 'info',
-          page: 'LoginVerificationModal'
-        });
-      } else {
-        throw new Error(result.error || 'Unexpected response from server');
+      if (result.error) {
+        throw result.error;
       }
+
+      setResendSuccess(true);
+      logToSupabase("Login verification email resent successfully", {
+        level: 'info',
+        page: 'LoginVerificationModal'
+      });
 
     } catch (error: any) {
       setResendError(error.message || 'Failed to resend verification email');
@@ -120,8 +107,8 @@ export const LoginVerificationModal: React.FC<LoginVerificationModalProps> = ({
           <li>Check your <strong>{verificationEmail}</strong> inbox for a verification email</li>
           <li>Click the link in that email to confirm your address</li>
           <li>Didn't get it? Check your spam or junk folder</li>
-          {isEmailChange && (
-            <li className="text-xs text-gray-500">Your previous email ({email}) has also been notified of this change</li>
+          {isEmailChange && displayCurrentEmail !== verificationEmail && (
+            <li className="text-xs text-gray-500">Your previous email ({displayCurrentEmail}) has also been notified of this change</li>
           )}
         </ul>
 

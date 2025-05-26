@@ -83,17 +83,27 @@ const Login = () => {
     setLoading(false);
   };
 
-  // Create a wrapper function that matches LoginVerificationModal's expected signature
+  // Fixed resend verification function with correct email sources
   const handleResendVerification = async (emailToVerify: string) => {
     try {
       logToSupabase("Resending login verification email", {
         level: 'info',
         page: 'Login',
-        data: { email: emailToVerify }
+        data: { emailToVerify, userEmail: user?.email }
       });
 
       const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+
+      // Use the user's confirmed email as current_email and the target email as new_email
+      const currentEmail = user?.email || email;
+      const newEmail = emailToVerify;
+
+      logToSupabase("Email verification payload details", {
+        level: 'debug',
+        page: 'Login',
+        data: { currentEmail, newEmail, userId: user?.id }
+      });
 
       const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
         method: 'POST',
@@ -104,8 +114,8 @@ const Login = () => {
         },
         body: JSON.stringify({
           user_id: user?.id || '',
-          current_email: email || '',
-          new_email: emailToVerify
+          current_email: currentEmail,
+          new_email: newEmail
         })
       });
 
@@ -308,7 +318,8 @@ const Login = () => {
       {showVerificationModal && (
         <LoginVerificationModal
           isOpen={showVerificationModal}
-          email={email || pendingEmailAddress || ''}
+          email={pendingEmailAddress || email}
+          currentEmail={user?.email || ''}
           pendingEmail={pendingEmailAddress}
           resendVerificationEmail={handleResendVerification}
           onVerified={handleVerificationFinished}
