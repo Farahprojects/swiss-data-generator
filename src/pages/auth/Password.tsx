@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { logToSupabase } from '@/utils/batchedLogManager';
 
 const ResetPassword = () => {
   const [status, setStatus] = useState<'verifying' | 'valid' | 'success' | 'error'>('verifying');
@@ -28,87 +27,20 @@ const ResetPassword = () => {
       const params = new URLSearchParams(location.search);
       const token = params.get('token');
       const type = params.get('type');
-      const email = params.get('email');
-
-      logToSupabase("Password reset verification attempt", {
-        level: 'info',
-        page: 'Password',
-        data: { 
-          hasToken: !!token,
-          type: type,
-          hasEmail: !!email,
-          fullUrl: location.search
-        }
-      });
 
       if (!token || type !== 'recovery') {
-        logToSupabase("Password reset verification failed - missing or invalid parameters", {
-          level: 'error',
-          page: 'Password',
-          data: { token: token ? 'present' : 'missing', type }
-        });
         setStatus('error');
-        setMessage('Missing or invalid reset link parameters. Please request a new password reset.');
+        setMessage('Missing or invalid token.');
         return;
       }
 
-      if (!email) {
-        logToSupabase("Password reset verification failed - missing email", {
-          level: 'error',
-          page: 'Password',
-          data: { token: token ? 'present' : 'missing', type }
-        });
+      const { data, error } = await supabase.auth.verifyOtp({ token_hash: token, type: 'recovery' });
+      if (error || !data?.session) {
         setStatus('error');
-        setMessage('Missing email parameter. Please request a new password reset.');
-        return;
-      }
-
-      try {
-        // Use verifyOtp with email and token for recovery type
-        const { data, error } = await supabase.auth.verifyOtp({ 
-          email: email,
-          token: token, 
-          type: 'recovery' 
-        });
-
-        if (error) {
-          logToSupabase("Password reset token verification failed", {
-            level: 'error',
-            page: 'Password',
-            data: { 
-              error: error.message,
-              errorCode: error.status,
-              token: token ? 'present' : 'missing',
-              email: email
-            }
-          });
-          setStatus('error');
-          setMessage(error.message || 'Token verification failed. The link may have expired or been used already.');
-        } else if (!data?.session) {
-          logToSupabase("Password reset verification failed - no session", {
-            level: 'error',
-            page: 'Password',
-            data: { hasData: !!data, email: email }
-          });
-          setStatus('error');
-          setMessage('Token verification failed. Please request a new password reset.');
-        } else {
-          logToSupabase("Password reset token verified successfully", {
-            level: 'info',
-            page: 'Password',
-            data: { userId: data.user?.id, email: email }
-          });
-          setStatus('valid');
-          setMessage('Enter your new password.');
-        }
-      } catch (err: any) {
-        logToSupabase("Password reset verification error", {
-          level: 'error',
-          page: 'Password',
-          data: { error: err.message || String(err), email: email }
-        });
-        setStatus('error');
-        setMessage('An error occurred while verifying the reset link. Please try again.');
+        setMessage(error?.message || 'Token verification failed.');
+      } else {
+        setStatus('valid');
+        setMessage('Enter your new password.');
       }
     };
 
@@ -127,40 +59,15 @@ const ResetPassword = () => {
     }
 
     setSubmitting(true);
-    
-    try {
-      logToSupabase("Attempting password update", {
-        level: 'info',
-        page: 'Password'
-      });
+    const { error } = await supabase.auth.updateUser({ password });
+    setSubmitting(false);
 
-      const { error } = await supabase.auth.updateUser({ password });
-      
-      if (error) {
-        logToSupabase("Password update failed", {
-          level: 'error',
-          page: 'Password',
-          data: { error: error.message }
-        });
-        toast({ title: 'Reset failed', description: error.message, variant: 'destructive' });
-      } else {
-        logToSupabase("Password updated successfully", {
-          level: 'info',
-          page: 'Password'
-        });
-        setStatus('success');
-        setMessage('Password updated successfully. You are now logged in.');
-        setTimeout(() => navigate('/dashboard'), 3000);
-      }
-    } catch (err: any) {
-      logToSupabase("Password update error", {
-        level: 'error',
-        page: 'Password',
-        data: { error: err.message || String(err) }
-      });
-      toast({ title: 'Reset failed', description: 'An unexpected error occurred', variant: 'destructive' });
-    } finally {
-      setSubmitting(false);
+    if (error) {
+      toast({ title: 'Reset failed', description: error.message, variant: 'destructive' });
+    } else {
+      setStatus('success');
+      setMessage('Password updated successfully. You are now logged in.');
+      setTimeout(() => navigate('/dashboard'), 3000);
     }
   };
 
@@ -171,7 +78,7 @@ const ResetPassword = () => {
       </header>
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-full mx-auto">
+        <div className="w-full max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-extrabold text-gray-900 mb-4">
               {status === 'verifying'
@@ -185,7 +92,7 @@ const ResetPassword = () => {
             <p className="text-lg text-gray-600">{message}</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border p-8 md:p-12 max-w-2xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border p-8 md:p-12">
             {status === 'valid' && (
               <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-6">
                 <div>
@@ -242,14 +149,9 @@ const ResetPassword = () => {
               <div className="text-center text-red-600 py-12">
                 <XCircle className="w-12 h-12 mx-auto mb-4" />
                 <p className="text-lg mb-6">{message}</p>
-                <div className="space-y-3">
-                  <Button variant="outline" onClick={() => navigate('/login')} className="text-base">
-                    Back to Login
-                  </Button>
-                  <p className="text-sm text-gray-500">
-                    Need a new reset link? Go to login and click "Forgot Password"
-                  </p>
-                </div>
+                <Button variant="outline" onClick={() => navigate('/login')} className="text-base">
+                  Back to Login
+                </Button>
               </div>
             )}
 
