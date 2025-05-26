@@ -71,7 +71,7 @@ const ResetPassword: React.FC = () => {
   }, [location.hash, location.search, toast]);
 
   const handlePasswordUpdateSuccess = () => {
-    logToSupabase('Password update completed, redirecting to dashboard', {
+    logToSupabase('Password update completed, redirecting to login', {
       level: 'info',
       page: 'ResetPassword'
     });
@@ -82,12 +82,12 @@ const ResetPassword: React.FC = () => {
     toast({ 
       variant: 'success', 
       title: 'Password Updated Successfully!', 
-      description: 'You can now access your account with your new password.' 
+      description: 'Please sign in with your new password.' 
     });
     
-    // Redirect to dashboard after a short delay
+    // Redirect to login after a short delay
     setTimeout(() => {
-      window.location.href = '/dashboard';
+      navigate('/login');
     }, 1500);
   };
 
@@ -168,7 +168,7 @@ const ResetPassword: React.FC = () => {
                 {status === 'loading'
                   ? 'Verifying reset link…'
                   : status === 'success'
-                  ? 'You are verified.'
+                  ? 'You can now sign in with your new password.'
                   : 'We encountered a problem.'}
               </CardDescription>
             </CardHeader>
@@ -188,10 +188,10 @@ const ResetPassword: React.FC = () => {
               {status === 'success' ? (
                 <Button
                   style={{ background: BRAND_PURPLE }}
-                  onClick={() => window.location.href = '/dashboard'}
+                  onClick={() => navigate('/login')}
                   className="w-full sm:w-auto text-white hover:opacity-90"
                 >
-                  Go to Dashboard
+                  Go to Login
                 </Button>
               ) : (
                 <Button onClick={() => navigate('/login')} className="w-full sm:w-auto" variant="outline">

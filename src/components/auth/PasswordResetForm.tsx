@@ -72,11 +72,14 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
         page: 'PasswordResetForm'
       });
 
+      // Sign out the user after password update to ensure clean state
+      await supabase.auth.signOut();
+
       setShowSuccess(true);
       toast({
         variant: 'success',
         title: 'Password Updated Successfully!',
-        description: 'Your password has been updated. Redirecting to dashboard...'
+        description: 'Please sign in with your new password.'
       });
 
       // Show success for a moment, then call onSuccess
@@ -155,7 +158,7 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
 
           {showSuccess && (
             <div className="text-center text-sm text-green-600 mt-2">
-              Success! Redirecting to dashboard...
+              Success! Redirecting to login...
             </div>
           )}
         </form>
