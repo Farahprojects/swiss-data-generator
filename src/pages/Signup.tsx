@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,9 +9,8 @@ import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
-import { Mail } from 'lucide-react';
+import { CheckCircle, Mail } from 'lucide-react';
 import { logToSupabase } from '@/utils/batchedLogManager';
-import { supabase } from '@/integrations/supabase/client';
 
 // Debug utility
 const debug = (...args: any[]) => {
@@ -22,7 +20,7 @@ const debug = (...args: any[]) => {
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signInWithGoogle, signInWithApple, user } = useAuth();
+  const { signUp, signInWithGoogle, signInWithApple, user } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,14 +53,7 @@ const Signup = () => {
         data: { email: email }
       });
 
-      // Create user with Supabase but disable email confirmation
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/email`
-        }
-      });
+      const { error } = await signUp(email, password);
       
       if (error) {
         debug('Signup error', error);
@@ -81,56 +72,9 @@ const Signup = () => {
         setLoading(false);
         return;
       }
-
-      // Send custom verification email using our notification system
-      if (data.user) {
-        try {
-          const verificationLink = `${window.location.origin}/auth/email?token=${data.user.email_confirmation_token}&type=signup&email=${encodeURIComponent(email)}`;
-          
-          const emailResponse = await fetch('https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/send-notification-email', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0',
-              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0'
-            },
-            body: JSON.stringify({
-              templateType: 'signup_verification',
-              recipientEmail: email,
-              variables: {
-                verificationLink,
-                email
-              }
-            })
-          });
-
-          if (!emailResponse.ok) {
-            throw new Error('Failed to send verification email');
-          }
-
-          logToSupabase('Custom verification email sent successfully', {
-            level: 'info',
-            page: 'Signup',
-            data: { email: email }
-          });
-
-        } catch (emailError) {
-          logToSupabase('Failed to send custom verification email', {
-            level: 'error',
-            page: 'Signup',
-            data: { error: emailError instanceof Error ? emailError.message : String(emailError) }
-          });
-
-          toast({
-            title: 'Warning',
-            description: 'Account created but verification email could not be sent. Please contact support.',
-            variant: 'destructive'
-          });
-        }
-      }
       
       // Show success message
-      logToSupabase('User signup successful - custom verification email sent', {
+      logToSupabase('User signup successful - verification email sent', {
         level: 'info',
         page: 'Signup',
         data: { email: email }
@@ -198,41 +142,29 @@ const Signup = () => {
   const handleResendVerification = async () => {
     try {
       setLoading(true);
+      const { error } = await signUp(verificationEmail, password);
       
-      // Resend custom verification email
-      const emailResponse = await fetch('https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/send-notification-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0'
-        },
-        body: JSON.stringify({
-          templateType: 'signup_verification',
-          recipientEmail: verificationEmail,
-          variables: {
-            verificationLink: `${window.location.origin}/auth/email?email=${encodeURIComponent(verificationEmail)}`,
-            email: verificationEmail
-          }
-        })
-      });
-      
-      if (!emailResponse.ok) {
-        throw new Error('Failed to resend verification email');
+      if (error) {
+        if (!error.message.includes('already registered')) {
+          toast({ 
+            title: 'Error', 
+            description: error.message ?? 'Failed to resend verification email', 
+            variant: 'destructive' 
+          });
+        } else {
+          toast({ 
+            title: 'Verification Email Sent', 
+            description: 'A new verification email has been sent to your inbox', 
+            variant: 'success' 
+          });
+          
+          logToSupabase('Verification email resent', {
+            level: 'info',
+            page: 'Signup',
+            data: { email: verificationEmail }
+          });
+        }
       }
-      
-      toast({ 
-        title: 'Verification Email Sent', 
-        description: 'A new verification email has been sent to your inbox', 
-        variant: 'success' 
-      });
-      
-      logToSupabase('Custom verification email resent', {
-        level: 'info',
-        page: 'Signup',
-        data: { email: verificationEmail }
-      });
-      
     } catch (err: any) {
       toast({ 
         title: 'Error', 
