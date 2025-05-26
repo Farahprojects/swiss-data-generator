@@ -1,340 +1,155 @@
-
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import Logo from '@/components/Logo';
+import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import UnifiedNavigation from '@/components/UnifiedNavigation';
-import Footer from '@/components/Footer';
-import PasswordInput from '@/components/auth/PasswordInput';
-import { CheckCircle, Loader2, RefreshCw } from 'lucide-react';
-import { extractTokenFromUrl } from '@/utils/urlUtils';
-import { log, logAuth } from '@/utils/logUtils';
 
-const Password = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { toast } = useToast();
+const ResetPassword = () => {
+  const [status, setStatus] = useState<'verifying' | 'valid' | 'success' | 'error'>('verifying');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [passwordUpdated, setPasswordUpdated] = useState(false);
-  const [automaticRedirect, setAutomaticRedirect] = useState(false);
-  const [secondsToRedirect, setSecondsToRedirect] = useState(10);
-  
-  // States for token verification
-  const [verifyingToken, setVerifyingToken] = useState(true);
-  const [tokenValid, setTokenValid] = useState(false);
-  // Track whether we've already attempted token verification to prevent loops
-  const [tokenAttempted, setTokenAttempted] = useState(false);
-  
-  // Memoize verification function to prevent re-creation on each render
-  const verifyResetToken = useCallback(async (tokenParam: string) => {
-    try {
-      logAuth("Attempting to verify reset token");
-      
-      // For recovery flow, we need to use TokenHashParams
-      const { data, error } = await supabase.auth.verifyOtp({
-        token_hash: tokenParam,
-        type: 'recovery',
-      });
-      
-      setVerifyingToken(false);
-      
-      if (error) {
-        log('error', "Token verification failed", { error: error.message });
-        setTokenValid(false);
-        toast({ 
-          title: "Invalid reset link", 
-          description: error.message,
-          variant: "destructive"
-        });
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState('Verifying reset link...');
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
+  const processedRef = useRef(false);
+
+  useEffect(() => {
+    const verify = async () => {
+      if (processedRef.current) return;
+      processedRef.current = true;
+
+      const params = new URLSearchParams(location.search);
+      const token = params.get('token');
+      const type = params.get('type');
+
+      if (!token || type !== 'recovery') {
+        setStatus('error');
+        setMessage('Missing or invalid token.');
         return;
       }
-      
-      if (data && data.session) {
-        logAuth("Token verified successfully, session created");
-        setTokenValid(true);
+
+      const { data, error } = await supabase.auth.verifyOtp({ token_hash: token, type: 'recovery' });
+      if (error || !data?.session) {
+        setStatus('error');
+        setMessage(error?.message || 'Token verification failed.');
       } else {
-        log('error', "Token verification returned no session");
-        setTokenValid(false);
-        toast({ 
-          title: "Invalid reset link", 
-          description: "Please request a new password reset link.",
-          variant: "destructive"
-        });
+        setStatus('valid');
+        setMessage('Enter your new password.');
       }
-    } catch (error: any) {
-      log('error', "Error verifying token", { error: error.message });
-      setVerifyingToken(false);
-      setTokenValid(false);
-      toast({ 
-        title: "Error", 
-        description: error.message || "An error occurred verifying your reset link.",
-        variant: "destructive"
-      });
-    }
-  }, [toast]);
+    };
 
-  // Single effect to handle token verification
-  useEffect(() => {
-    // Only log once when component mounts
-    logAuth("Password reset page loaded");
-    
-    const recoveryFlow = searchParams.get('type') === 'recovery';
-    const tokenParam = extractTokenFromUrl(searchParams);
-    
-    // Only log minimal info about the token
-    logAuth("Processing password reset request", { 
-      recoveryFlow,
-      hasToken: !!tokenParam,
-      tokenType: tokenParam?.length > 10 ? 'hash' : 'short'
-    });
-    
-    // Only attempt verification if we haven't tried yet
-    if (recoveryFlow && tokenParam && !tokenAttempted) {
-      logAuth("Starting token verification");
-      setTokenAttempted(true);
-      verifyResetToken(tokenParam);
-    } else if (!tokenAttempted) {
-      // No token or not a recovery flow
-      log('warn', "No valid token found for password reset");
-      setVerifyingToken(false);
-      setTokenValid(false);
-      setTokenAttempted(true);
-      toast({ 
-        title: "Invalid or expired link", 
-        description: "Please request a new password reset link.",
-        variant: "destructive"
-      });
-    }
-  }, [searchParams, toast, tokenAttempted, verifyResetToken]);
+    verify();
+  }, [location.search]);
 
-  /* ─────────────────────────────────────────────────────────────
-   * Update password reset flow
-   * ────────────────────────────────────────────────────────────*/
-  const handlePasswordReset = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (password !== confirmPassword) {
-      toast({ 
-        title: "Passwords don't match", 
-        description: "Please make sure both passwords are the same.",
-        variant: "destructive"
-      });
+      toast({ title: 'Passwords do not match', variant: 'destructive' });
       return;
     }
-
     if (password.length < 8) {
-      toast({ 
-        title: "Password too short", 
-        description: "Password must be at least 8 characters long.",
-        variant: "destructive"
-      });
+      toast({ title: 'Password too short', description: 'Minimum 8 characters.', variant: 'destructive' });
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setSubmitting(false);
 
-    try {
-      logAuth("Updating password");
-      const { error } = await supabase.auth.updateUser({ password });
-
-      if (error) {
-        log('error', "Password update failed", { error: error.message });
-        toast({ 
-          title: "Password reset failed", 
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        logAuth("Password updated successfully");
-        // Show success state
-        setPasswordUpdated(true);
-        
-        // Start countdown for redirect
-        setAutomaticRedirect(true);
-        
-        toast({ 
-          title: "Password updated", 
-          description: "Your password has been successfully reset. You'll be redirected to the dashboard shortly."
-        });
-        
-        // Set up countdown timer
-        const countdownInterval = setInterval(() => {
-          setSecondsToRedirect(prev => {
-            if (prev <= 1) {
-              clearInterval(countdownInterval);
-              navigate('/dashboard');
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        
-        // Clear interval on component unmount
-        return () => clearInterval(countdownInterval);
-      }
-    } catch (error: any) {
-      log('error', "Password update error", { error: error.message });
-      toast({ 
-        title: "Error", 
-        description: error.message || "Failed to reset password.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+    if (error) {
+      toast({ title: 'Reset failed', description: error.message, variant: 'destructive' });
+    } else {
+      setStatus('success');
+      setMessage('Password updated successfully. You are now logged in.');
+      setTimeout(() => navigate('/dashboard'), 3000);
     }
-  };
-
-  // Function to request a new password reset link
-  const handleRequestNewLink = () => {
-    navigate('/login?requestPasswordReset=true');
-    toast({
-      title: "Password Reset",
-      description: "You'll be redirected to request a new password reset link."
-    });
-  };
-
-  // Show success state when password is updated
-  const renderSuccess = () => {
-    return (
-      <div className="text-center space-y-4">
-        <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-        <h2 className="text-2xl font-semibold">Password Updated!</h2>
-        <p>Your password has been successfully reset.</p>
-        
-        {automaticRedirect ? (
-          <p className="text-sm text-gray-500">
-            Redirecting you to the dashboard in {secondsToRedirect} seconds...
-          </p>
-        ) : (
-          <p className="text-sm text-gray-500">
-            You can now go to the dashboard or log in with your new password.
-          </p>
-        )}
-        
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
-          <Button onClick={() => navigate('/dashboard')} className="w-full sm:w-auto">
-            Go to Dashboard Now
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/login')} 
-            className="w-full sm:w-auto"
-          >
-            Go to Login
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // Render verification state
-  const renderVerifying = () => {
-    return (
-      <div className="flex flex-col items-center justify-center space-y-4 py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p>Verifying your reset link...</p>
-      </div>
-    );
-  };
-  
-  // Error state when token is invalid
-  const renderInvalidToken = () => {
-    return (
-      <div className="text-center space-y-4">
-        <h2 className="text-xl font-semibold text-red-600">Invalid Reset Link</h2>
-        <p>This password reset link is invalid or has expired.</p>
-        <p className="text-sm text-gray-500">Please request a new password reset link.</p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
-          <Button 
-            onClick={handleRequestNewLink}
-            className="w-full sm:w-auto flex items-center gap-2"
-          >
-            <RefreshCw size={16} />
-            Request New Link
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/login')} 
-            className="w-full sm:w-auto"
-          >
-            Back to Login
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // Function to render the appropriate content based on verification status
-  const renderContent = () => {
-    if (verifyingToken) {
-      return renderVerifying();
-    }
-    
-    if (!tokenValid) {
-      return renderInvalidToken();
-    }
-    
-    if (passwordUpdated) {
-      return renderSuccess();
-    }
-
-    return (
-      <form onSubmit={handlePasswordReset} className="space-y-6">
-        <div className="space-y-4">
-          <PasswordInput
-            password={password}
-            isValid={password.length >= 8}
-            showRequirements={true}
-            onChange={setPassword}
-          />
-          
-          <div className="space-y-1">
-            <PasswordInput
-              password={confirmPassword}
-              isValid={confirmPassword.length >= 8 && password === confirmPassword}
-              showRequirements={false}
-              onChange={setConfirmPassword}
-              placeholder="Confirm new password"
-              id="confirm-password"
-            />
-            {confirmPassword && password !== confirmPassword && (
-              <p className="text-xs text-red-600">Passwords do not match</p>
-            )}
-          </div>
-        </div>
-
-        <Button 
-          type="submit" 
-          className="w-full" 
-          disabled={loading || password.length < 8 || password !== confirmPassword}
-        >
-          {loading ? 'Updating Password...' : 'Reset Password'}
-        </Button>
-      </form>
-    );
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <UnifiedNavigation />
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
+      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-bl-md shadow-sm">
+        <Logo size="md" />
+      </header>
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-md">
-          <header className="text-center">
-            <h1 className="text-3xl font-bold">Reset Password</h1>
-            <p className="mt-2 text-gray-600">Enter your new password below</p>
-          </header>
+        <Card className="w-full max-w-md sm:max-w-lg md:max-w-xl">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-extrabold text-gray-900">
+              {status === 'verifying'
+                ? 'Verifying...'
+                : status === 'valid'
+                ? 'Reset Password'
+                : status === 'success'
+                ? 'Success'
+                : 'Error'}
+            </CardTitle>
+            <CardDescription>{message}</CardDescription>
+          </CardHeader>
 
-          {renderContent()}
-        </div>
+          <CardContent>
+            {status === 'valid' && (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <Input
+                  type="password"
+                  placeholder="New password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting ? 'Updating...' : 'Reset Password'}
+                </Button>
+              </form>
+            )}
+
+            {status === 'verifying' && (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="animate-spin h-6 w-6 text-gray-600" />
+              </div>
+            )}
+
+            {status === 'error' && (
+              <div className="text-center text-red-600 py-8">
+                <XCircle className="w-10 h-10 mx-auto mb-2" />
+                <p>{message}</p>
+              </div>
+            )}
+
+            {status === 'success' && (
+              <div className="text-center text-emerald-600 py-8">
+                <CheckCircle className="w-10 h-10 mx-auto mb-2" />
+                <p>{message}</p>
+              </div>
+            )}
+          </CardContent>
+
+          <CardFooter className="flex justify-center bg-gray-50">
+            {(status === 'error' || status === 'success') && (
+              <Button variant="outline" onClick={() => navigate('/login')}>
+                Back to Login
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
       </main>
 
-      <Footer />
+      <footer className="py-6 text-center text-xs text-gray-500">
+        © {new Date().getFullYear()} Theraiapi. All rights reserved.
+      </footer>
     </div>
   );
 };
 
-export default Password;
+export default ResetPassword;
