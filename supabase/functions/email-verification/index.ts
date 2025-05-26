@@ -20,39 +20,36 @@ serve(async (req) => {
     });
   }
 
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
-  let userId = "";
-  let newEmail = "";
   let currentEmail = "";
+  let newEmail = "";
+
   try {
     const body = await req.json();
-    userId = body.user_id ?? "";
-    newEmail = (body.new_email ?? "").toLowerCase();
     currentEmail = (body.current_email ?? "").toLowerCase();
-    log("Parsed request:", { userId, newEmail, currentEmail });
+    newEmail = (body.new_email ?? "").toLowerCase();
+    log("Parsed request:", { currentEmail, newEmail });
   } catch {
     return respond(400, { error: "Invalid JSON" });
   }
 
-  if (!userId || !newEmail || !currentEmail) {
-    return respond(400, { error: "user_id, new_email, and current_email are required" });
+  if (!currentEmail || !newEmail) {
+    return respond(400, { error: "Both current_email and new_email are required" });
   }
 
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const smtpEndpoint = Deno.env.get("THERIA_SMTP_ENDPOINT");
+
   if (!url || !key || !smtpEndpoint) {
     return respond(500, { error: "Missing environment variables" });
   }
 
   const supabase = createClient(url, key);
-
+  const redirectTo = "https://www.theraiapi.com/auth/email";
   let tokenLink = "";
   let emailOtp = "";
-  const redirectTo = "https://www.theraiapi.com/auth/email";
 
   try {
     const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
@@ -67,7 +64,6 @@ serve(async (req) => {
       return respond(500, { error: "Token generation failed", details: tokenErr.message });
     }
 
-    log("linkData >>>", JSON.stringify(linkData, null, 2));
     tokenLink = linkData?.action_link || linkData?.properties?.action_link || "";
     const props = (linkData as any)?.properties ?? {};
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
@@ -115,6 +111,6 @@ serve(async (req) => {
     return respond(500, { error: "Email sending failed", details: errTxt });
   }
 
-  log(`✔ Sent email_change_new e-mail to ${newEmail}`);
+  log(`✔ Resent email_change_new link to ${newEmail}`);
   return respond(200, { status: "sent", template_type: "email_change_new" });
 });
