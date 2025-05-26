@@ -1,26 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader, CheckCircle, XCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
+import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { logToSupabase } from '@/utils/batchedLogManager';
 
-const BRAND_PURPLE = '#7C3AED';
-
-const ResetPassword: React.FC = () => {
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Resetting your password…');
+const ResetPassword = () => {
+  const [status, setStatus] = useState<'verifying' | 'valid' | 'success' | 'error'>('verifying');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState('Verifying reset link...');
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,121 +24,149 @@ const ResetPassword: React.FC = () => {
       if (processedRef.current) return;
       processedRef.current = true;
 
-      try {
-        const hash = new URLSearchParams(location.hash.slice(1));
-        const search = new URLSearchParams(location.search);
+      const params = new URLSearchParams(location.search);
+      const token = params.get('token');
+      const type = params.get('type');
 
-        const accessToken = hash.get('access_token');
-        const refreshToken = hash.get('refresh_token');
-
-        if (!accessToken || !refreshToken) throw new Error('Missing access credentials');
-
-        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        if (error) throw error;
-
-        setStatus('success');
-        setMessage('Your password has been reset – you are now logged in!');
-        toast({ variant: 'success', title: 'Password Reset', description: 'You are now logged in!' });
-
-        window.history.replaceState({}, '', '/auth/password');
-        setTimeout(() => navigate('/dashboard'), 2800);
-      } catch (err: any) {
-        logToSupabase('password reset failed', {
-          level: 'error',
-          page: 'ResetPassword',
-          data: { error: err?.message },
-        });
+      if (!token || type !== 'recovery') {
         setStatus('error');
-        const msg = err?.message ?? 'Password reset failed – link may have expired.';
-        setMessage(msg);
-        toast({ variant: 'destructive', title: 'Password reset failed', description: msg });
+        setMessage('Missing or invalid token.');
+        return;
+      }
+
+      const { data, error } = await supabase.auth.verifyOtp({ token_hash: token, type: 'recovery' });
+      if (error || !data?.session) {
+        setStatus('error');
+        setMessage(error?.message || 'Token verification failed.');
+      } else {
+        setStatus('valid');
+        setMessage('Enter your new password.');
       }
     };
+
     verify();
-  }, [location.hash, location.search]);
+  }, [location.search]);
 
-  const heading =
-    status === 'loading' ? 'Password Reset' : status === 'success' ? 'All Set!' : 'Uh‑oh…';
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      toast({ title: 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+    if (password.length < 8) {
+      toast({ title: 'Password too short', description: 'Minimum 8 characters.', variant: 'destructive' });
+      return;
+    }
 
-  const iconVariants = {
-    loading: {
-      rotate: 360,
-      transition: { repeat: Infinity, duration: 1.2, ease: 'linear' },
-    },
-    error: {
-      scale: [1, 1.1, 1],
-      rotate: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.8, ease: 'easeInOut' },
-    },
-    success: {},
+    setSubmitting(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setSubmitting(false);
+
+    if (error) {
+      toast({ title: 'Reset failed', description: error.message, variant: 'destructive' });
+    } else {
+      setStatus('success');
+      setMessage('Password updated successfully. You are now logged in.');
+      setTimeout(() => navigate('/dashboard'), 3000);
+    }
   };
-
-  const Icon = status === 'loading' ? Loader : status === 'success' ? CheckCircle : XCircle;
-
-  const bgColor =
-    status === 'loading'
-      ? 'bg-indigo-100 text-indigo-600'
-      : status === 'success'
-      ? 'bg-emerald-100 text-emerald-600'
-      : 'bg-red-100 text-red-600';
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
-      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-bl-md shadow-sm">
+      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
         <Logo size="md" />
       </header>
 
-      <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="w-full max-w-md sm:max-w-lg md:max-w-xl"
-        >
-          <Card className="relative overflow-hidden border border-gray-200 shadow-xl rounded-3xl bg-white min-h-[24rem]">
-            <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-[radial-gradient(circle_at_top_left,theme(colors.indigo.300)_0%,transparent_70%)]" />
+      <main className="flex-grow flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-extrabold text-gray-900 mb-4">
+              {status === 'verifying'
+                ? 'Verifying Reset Link'
+                : status === 'valid'
+                ? 'Create New Password'
+                : status === 'success'
+                ? 'Password Updated Successfully'
+                : 'Reset Link Error'}
+            </h1>
+            <p className="text-lg text-gray-600">{message}</p>
+          </div>
 
-            <CardHeader className="text-center pb-1 relative z-10 bg-white/85 backdrop-blur-sm rounded-t-3xl">
-              <CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900">
-                {heading}
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                {status === 'loading'
-                  ? 'Verifying reset link…'
-                  : status === 'success'
-                  ? 'You are verified.'
-                  : 'We encountered a problem.'}
-              </CardDescription>
-            </CardHeader>
+          <div className="bg-white rounded-lg shadow-sm border p-8 md:p-12">
+            {status === 'valid' && (
+              <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-6">
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                    New Password
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your new password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
 
-            <CardContent className="flex flex-col items-center gap-6 p-10 relative z-10">
-              <motion.div
-                className={`flex items-center justify-center h-20 w-20 rounded-full ${bgColor}`}
-                animate={status}
-                variants={iconVariants}
-              >
-                <Icon className="h-12 w-12" />
-              </motion.div>
-              <p className="text-center text-lg text-gray-700 max-w-sm leading-relaxed">{message}</p>
-            </CardContent>
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm Password
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
 
-            <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center bg-gray-50 rounded-b-3xl relative z-10 p-6">
-              {status === 'success' ? (
-                <Button
-                  style={{ background: BRAND_PURPLE }}
-                  onClick={() => navigate('/dashboard')}
-                  className="w-full sm:w-auto text-white hover:opacity-90"
-                >
+                <Button type="submit" className="w-full text-base py-3" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                      Updating Password...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
+                </Button>
+              </form>
+            )}
+
+            {status === 'verifying' && (
+              <div className="flex justify-center items-center py-12">
+                <div className="text-center">
+                  <Loader2 className="animate-spin h-8 w-8 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Verifying your reset link...</p>
+                </div>
+              </div>
+            )}
+
+            {status === 'error' && (
+              <div className="text-center text-red-600 py-12">
+                <XCircle className="w-12 h-12 mx-auto mb-4" />
+                <p className="text-lg mb-6">{message}</p>
+                <Button variant="outline" onClick={() => navigate('/login')} className="text-base">
+                  Back to Login
+                </Button>
+              </div>
+            )}
+
+            {status === 'success' && (
+              <div className="text-center text-emerald-600 py-12">
+                <CheckCircle className="w-12 h-12 mx-auto mb-4" />
+                <p className="text-lg mb-6">{message}</p>
+                <p className="text-gray-600 mb-6">Redirecting to dashboard...</p>
+                <Button onClick={() => navigate('/dashboard')} className="text-base">
                   Go to Dashboard
                 </Button>
-              ) : (
-                <Button onClick={() => navigate('/login')} className="w-full sm:w-auto" variant="outline">
-                  Return to Login
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-        </motion.div>
+              </div>
+            )}
+          </div>
+        </div>
       </main>
 
       <footer className="py-6 text-center text-xs text-gray-500">
