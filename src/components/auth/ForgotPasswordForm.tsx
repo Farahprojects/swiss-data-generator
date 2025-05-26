@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -28,17 +27,15 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
 
     setLoading(true);
     try {
-      // Generate absolute URL for password reset
-      const redirectUrl = getAbsoluteUrl('auth/password');
-      
-      logToSupabase(`Sending password reset email to ${email} with redirectTo: ${redirectUrl}`, {
+      logToSupabase(`Sending password reset email to ${email}`, {
         level: 'info',
         page: 'ForgotPasswordForm',
-        data: { email, redirectUrl }
+        data: { email }
       });
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
+      // Call the password_token edge function with email as payload
+      const { error } = await supabase.functions.invoke('password_token', {
+        body: { email }
       });
 
       if (error) {
