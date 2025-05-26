@@ -53,13 +53,13 @@ serve(async (req) => {
   try {
     const { data: userData, error: fetchErr } = await supabase.auth.admin.getUserById(userId);
 
-    if (fetchErr || !userData) {
+    if (fetchErr || !userData || !userData.user) {
       return respond(500, { error: "Failed to fetch user", details: fetchErr?.message });
     }
 
     log("Full user object:", JSON.stringify(userData, null, 2));
-    currentEmail = userData.email;
-    newEmail = userData.new_email;
+    currentEmail = userData.user.email;
+    newEmail = userData.user.new_email;
 
     if (!currentEmail || !newEmail) {
       return respond(400, {
