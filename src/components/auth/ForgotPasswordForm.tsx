@@ -7,6 +7,7 @@ import EmailInput from '@/components/auth/EmailInput';
 import { validateEmail } from '@/utils/authValidation';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface ForgotPasswordFormProps {
@@ -27,57 +28,39 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
 
     setLoading(true);
     try {
-      logToSupabase(`Processing password reset request for ${email}`, {
+      // Generate absolute URL for password reset
+      const redirectUrl = getAbsoluteUrl('auth/password');
+      
+      logToSupabase(`Sending password reset email to ${email} with redirectTo: ${redirectUrl}`, {
         level: 'info',
         page: 'ForgotPasswordForm',
-        data: { email }
+        data: { email, redirectUrl }
+      });
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
       });
 
-      // First, get the user by email using the admin function
-      const { data: userData, error: userError } = await supabase
-        .rpc('admin_get_user_by_email', { email_input: email });
-
-      if (userError) {
-        logToSupabase("Error fetching user by email", {
+      if (error) {
+        logToSupabase("Password reset email error", {
           level: 'error',
           page: 'ForgotPasswordForm',
-          data: { error: userError.message }
+          data: { error: error.message }
         });
-        throw new Error('Failed to process request');
-      }
-
-      if (!userData || userData.length === 0) {
-        // Don't reveal if email exists or not for security
-        logToSupabase("No user found for email, but showing success message", {
+        toast({ 
+          title: 'Error', 
+          description: error.message,
+          variant: 'destructive'
+        });
+      } else {
+        logToSupabase("Password reset email sent successfully", {
           level: 'info',
           page: 'ForgotPasswordForm',
           data: { email }
         });
         setEmailSent(true);
         setResetLinkSent(true);
-        setLoading(false);
-        return;
       }
-
-      const user = userData[0];
-      
-      // Call the password_token edge function with the user ID
-      const { error: functionError } = await supabase.functions.invoke('password_token', {
-        body: { user_id: user.id }
-      });
-      
-      if (functionError) {
-        throw new Error(functionError.message);
-      }
-      
-      logToSupabase("Password reset email sent successfully", {
-        level: 'info',
-        page: 'ForgotPasswordForm',
-        data: { email }
-      });
-      
-      setEmailSent(true);
-      setResetLinkSent(true);
     } catch (err: any) {
       logToSupabase("Password reset email error", {
         level: 'error',
