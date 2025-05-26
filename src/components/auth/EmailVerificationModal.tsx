@@ -15,15 +15,17 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface EmailVerificationModalProps {
   isOpen: boolean;
-  email: string;
-  resend: (email: string) => Promise<{ error: Error | null }>;
+  currentEmail: string;
+  newEmail: string;
+  resend: (currentEmail: string, newEmail: string) => Promise<{ error: Error | null }>;
   onVerified: () => void;
   onCancel: () => void;
 }
 
 export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
   isOpen,
-  email,
+  currentEmail,
+  newEmail,
   resend,
   onVerified,
   onCancel
@@ -42,10 +44,10 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
       logToSupabase("Resending verification email", {
         level: 'info',
         page: 'EmailVerificationModal',
-        data: { email }
+        data: { currentEmail, newEmail }
       });
 
-      // Call the email-verification edge function directly with user_id
+      // Call the email-verification edge function with exact payload format
       const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
@@ -57,9 +59,9 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
           'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
         },
         body: JSON.stringify({
-          email: email,
           user_id: user?.id || '',
-          template_type: 'email_change_new'
+          current_email: currentEmail,
+          new_email: newEmail
         })
       });
 
@@ -101,12 +103,12 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
             Verify Your New Email Address
           </DialogTitle>
           <DialogDescription className="text-sm text-gray-600 mt-1">
-            We've sent instructions to <span className="font-medium text-gray-800">{email}</span>
+            We've sent instructions to <span className="font-medium text-gray-800">{newEmail}</span>
           </DialogDescription>
         </DialogHeader>
 
         <ul className="mt-4 space-y-3 text-sm text-gray-700">
-          <li>Check your <strong>{email}</strong> inbox for a verification email</li>
+          <li>Check your <strong>{newEmail}</strong> inbox for a verification email</li>
           <li>Click the link in that email to confirm your address</li>
           <li>Check your spam/junk folder if it's not in your inbox</li>
           <li>Your old email has also been notified of this change</li>
@@ -117,7 +119,7 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
             <CheckCircle className="h-5 w-5 mt-0.5 text-green-600" />
             <div>
               <p className="font-medium">Email resent</p>
-              <p className="text-xs text-gray-600">A new verification link has been sent to {email}</p>
+              <p className="text-xs text-gray-600">A new verification link has been sent to {newEmail}</p>
             </div>
           </div>
         )}

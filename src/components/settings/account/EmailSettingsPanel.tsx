@@ -31,6 +31,7 @@ export const EmailSettingsPanel = () => {
   const {
     isUpdatingEmail,
     pendingEmailVerification,
+    currentEmailAddress,
     newEmailAddress,
     changeEmail,
     resendVerificationEmail,
@@ -62,7 +63,7 @@ export const EmailSettingsPanel = () => {
     
     clearToast();
     
-    // Use the hook's changeEmail function - no password needed anymore
+    // Use the hook's changeEmail function with current and new email
     const result = await changeEmail(user?.email || '', data.newEmail);
     
     logToSupabase("Email change attempt result", {
@@ -124,7 +125,8 @@ export const EmailSettingsPanel = () => {
       {/* Email Verification Modal */}
       <EmailVerificationModal 
         isOpen={pendingEmailVerification}
-        email={newEmailAddress}
+        currentEmail={currentEmailAddress}
+        newEmail={newEmailAddress}
         resend={resendVerificationEmail}
         onVerified={handleVerificationComplete}
         onCancel={cancelEmailChange}

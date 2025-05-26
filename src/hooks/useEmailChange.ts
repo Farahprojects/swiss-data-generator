@@ -8,6 +8,7 @@ import { sendEmailChangeNotification } from '@/utils/notificationService';
 export function useEmailChange() {
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
+  const [currentEmailAddress, setCurrentEmailAddress] = useState("");
   const [newEmailAddress, setNewEmailAddress] = useState("");
   const { toast, clearToast } = useToast();
 
@@ -102,7 +103,8 @@ export function useEmailChange() {
         data: { from: currentEmail, to: newEmail }
       });
       
-      // Store the new email before updating
+      // Store both emails before updating
+      setCurrentEmailAddress(currentEmail);
       setNewEmailAddress(newEmail);
 
       // Update the email without triggering automatic Supabase emails
@@ -135,7 +137,7 @@ export function useEmailChange() {
       }
       
       // Send verification email to NEW email address
-      await sendVerificationEmail(newEmail, 'email_change_new');
+      await sendVerificationEmail(currentEmail, newEmail);
       
       // Send notification email to OLD email address
       await sendEmailChangeNotification(currentEmail, newEmail);
@@ -168,14 +170,15 @@ export function useEmailChange() {
     }
   };
 
-  const sendVerificationEmail = async (email: string, templateType: string) => {
+  const sendVerificationEmail = async (currentEmail: string, newEmail: string) => {
     logToSupabase("Sending verification email", {
       level: 'info',
       page: 'useEmailChange',
-      data: { email, templateType }
+      data: { currentEmail, newEmail }
     });
     
     try {
+      const { data: userData } = await supabase.auth.getUser();
       const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
@@ -187,8 +190,9 @@ export function useEmailChange() {
           'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
         },
         body: JSON.stringify({
-          email: email,
-          template_type: templateType
+          user_id: userData?.user?.id || '',
+          current_email: currentEmail,
+          new_email: newEmail
         })
       });
 
@@ -202,7 +206,7 @@ export function useEmailChange() {
       logToSupabase("Verification email sent successfully", {
         level: 'info',
         page: 'useEmailChange',
-        data: { email, templateType }
+        data: { currentEmail, newEmail }
       });
       
       return result;
@@ -210,22 +214,22 @@ export function useEmailChange() {
       logToSupabase("Error sending verification email", {
         level: 'error',
         page: 'useEmailChange',
-        data: { error: err.message || String(err), email, templateType }
+        data: { error: err.message || String(err), currentEmail, newEmail }
       });
       
       throw err;
     }
   };
 
-  const resendVerificationEmail = async (email: string) => {
+  const resendVerificationEmail = async (currentEmail: string, newEmail: string) => {
     logToSupabase("Resending email verification", {
       level: 'info',
       page: 'useEmailChange',
-      data: { email }
+      data: { currentEmail, newEmail }
     });
     
     try {
-      await sendVerificationEmail(email, 'email_change_new');
+      await sendVerificationEmail(currentEmail, newEmail);
       return { error: null };
     } catch (err: any) {
       logToSupabase("Error resending verification", {
@@ -290,7 +294,9 @@ export function useEmailChange() {
     isUpdatingEmail,
     pendingEmailVerification,
     setPendingEmailVerification,
+    currentEmailAddress,
     newEmailAddress,
+    setCurrentEmailAddress,
     setNewEmailAddress,
     changeEmail,
     resendVerificationEmail,
