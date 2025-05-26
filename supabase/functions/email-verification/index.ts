@@ -1,11 +1,10 @@
-// deno-lint-ignore-file no-explicit-any10
+// deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -48,21 +47,8 @@ serve(async (req) => {
   if (!url || !key || !smtpEndpoint) {
     return respond(500, { error: "Missing environment variables" });
   }
+
   const supabase = createClient(url, key);
-
-  try {
-    const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
-      email: currentEmail,
-      new_email: newEmail,
-    });
-
-    if (updateErr) {
-      log("User update failed:", updateErr.message);
-      return respond(500, { error: "Failed to set new email", details: updateErr.message });
-    }
-  } catch (err: any) {
-    return respond(500, { error: "Update user failed", details: err.message });
-  }
 
   let tokenLink = "";
   let emailOtp = "";
@@ -129,6 +115,6 @@ serve(async (req) => {
     return respond(500, { error: "Email sending failed", details: errTxt });
   }
 
-  log(`✔ Sent email_change e-mail to ${newEmail}`);
-  return respond(200, { status: "sent", template_type: "email_change" });
+  log(`✔ Sent email_change_new e-mail to ${newEmail}`);
+  return respond(200, { status: "sent", template_type: "email_change_new" });
 });
