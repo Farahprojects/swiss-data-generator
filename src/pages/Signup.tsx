@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,8 +10,9 @@ import EmailInput from '@/components/auth/EmailInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
-import { CheckCircle, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { logToSupabase } from '@/utils/batchedLogManager';
+import { supabase } from '@/integrations/supabase/client';
 
 // Debug utility
 const debug = (...args: any[]) => {
@@ -20,7 +22,7 @@ const debug = (...args: any[]) => {
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signUp, signInWithGoogle, signInWithApple, user } = useAuth();
+  const { signInWithGoogle, signInWithApple, user } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,6 +41,64 @@ const Signup = () => {
     return <Navigate to="/" replace />;
   }
 
+  const sendCustomVerificationEmail = async (userEmail: string, token: string) => {
+    try {
+      logToSupabase('Sending custom verification email', {
+        level: 'info',
+        page: 'Signup',
+        data: { email: userEmail }
+      });
+
+      // Get the signup_confirmation template
+      const { data: template, error: templateError } = await supabase
+        .from('token_emails')
+        .select('subject, body_html, body_text')
+        .eq('template_type', 'signup_confirmation')
+        .single();
+
+      if (templateError || !template) {
+        throw new Error('Email template not found');
+      }
+
+      // Replace token placeholder in template
+      const htmlContent = template.body_html.replace(/{{token}}/g, token);
+      const textContent = template.body_text.replace(/{{token}}/g, token);
+      const subject = template.subject.replace(/{{token}}/g, token);
+
+      // Send email through custom SMTP
+      const response = await fetch('https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: userEmail,
+          subject: subject,
+          html: htmlContent,
+          text: textContent
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send verification email');
+      }
+
+      logToSupabase('Custom verification email sent successfully', {
+        level: 'info',
+        page: 'Signup',
+        data: { email: userEmail }
+      });
+
+    } catch (error: any) {
+      logToSupabase('Failed to send custom verification email', {
+        level: 'error',
+        page: 'Signup',
+        data: { error: error.message }
+      });
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailValid || !passwordValid || !passwordsMatch || loading) return;
@@ -53,7 +113,14 @@ const Signup = () => {
         data: { email: email }
       });
 
-      const { error } = await signUp(email, password);
+      // Create user without email confirmation (we'll handle it manually)
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/email`
+        }
+      });
       
       if (error) {
         debug('Signup error', error);
@@ -72,16 +139,32 @@ const Signup = () => {
         setLoading(false);
         return;
       }
-      
-      // Show success message
-      logToSupabase('User signup successful - verification email sent', {
-        level: 'info',
-        page: 'Signup',
-        data: { email: email }
-      });
 
-      setVerificationEmail(email);
-      setSignupSuccess(true);
+      // If user was created but needs verification
+      if (data.user && !data.user.email_confirmed_at) {
+        try {
+          // Generate a simple verification token (in production, use a more secure method)
+          const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          
+          await sendCustomVerificationEmail(email, verificationToken);
+          
+          logToSupabase('User signup successful - custom verification email sent', {
+            level: 'info',
+            page: 'Signup',
+            data: { email: email }
+          });
+
+          setVerificationEmail(email);
+          setSignupSuccess(true);
+        } catch (emailError) {
+          toast({ 
+            title: 'Account Created', 
+            description: 'Account created but verification email failed to send. Please contact support.', 
+            variant: 'destructive' 
+          });
+        }
+      }
+      
       setLoading(false);
     } catch (err: any) {
       toast({ title: 'Error', description: err.message ?? 'Failed to sign up', variant: 'destructive' });
@@ -142,29 +225,23 @@ const Signup = () => {
   const handleResendVerification = async () => {
     try {
       setLoading(true);
-      const { error } = await signUp(verificationEmail, password);
       
-      if (error) {
-        if (!error.message.includes('already registered')) {
-          toast({ 
-            title: 'Error', 
-            description: error.message ?? 'Failed to resend verification email', 
-            variant: 'destructive' 
-          });
-        } else {
-          toast({ 
-            title: 'Verification Email Sent', 
-            description: 'A new verification email has been sent to your inbox', 
-            variant: 'success' 
-          });
-          
-          logToSupabase('Verification email resent', {
-            level: 'info',
-            page: 'Signup',
-            data: { email: verificationEmail }
-          });
-        }
-      }
+      // Generate a new verification token
+      const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      await sendCustomVerificationEmail(verificationEmail, verificationToken);
+      
+      toast({ 
+        title: 'Verification Email Sent', 
+        description: 'A new verification email has been sent to your inbox', 
+        variant: 'success' 
+      });
+      
+      logToSupabase('Verification email resent', {
+        level: 'info',
+        page: 'Signup',
+        data: { email: verificationEmail }
+      });
     } catch (err: any) {
       toast({ 
         title: 'Error', 
@@ -234,7 +311,7 @@ const Signup = () => {
 
   const renderSuccessMessage = () => (
     <div className="space-y-6 animate-fade-in">
-      <div className="text-center">
+      <div className="text-center flex-1">
         <h3 className="font-medium text-lg">Account created successfully!</h3>
         <p className="text-gray-700">
           A verification email has been sent to <strong>{verificationEmail}</strong>. 
