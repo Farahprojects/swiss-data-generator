@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { translate } from "../_shared/translator.ts";
@@ -149,6 +150,11 @@ serve(async (req) => {
     }, 401);
   }
 
+  // DETAILED BALANCE LOOKUP LOGGING
+  console.log("[swiss] 🔍 Starting balance lookup with API key:", apiKey);
+  console.log("[swiss] 🔍 Auth method:", authMethod);
+  console.log("[swiss] 🔍 Using v_api_key_balance view to get balance");
+
   // Proceed with balance check using the API key (regardless of how it was obtained)
   const { data: row, error } = await sb
     .from("v_api_key_balance")
@@ -156,24 +162,41 @@ serve(async (req) => {
     .eq("api_key", apiKey)
     .maybeSingle();
 
+  console.log("[swiss] 🔍 Raw balance query response:");
+  console.log("[swiss] 🔍 - data:", row);
+  console.log("[swiss] 🔍 - error:", error);
+
   if (error) {
+    console.error("[swiss] ❌ Balance lookup query failed:", error);
     return json({ success: false, message: "Balance lookup failed." }, 500);
   }
 
   if (!row) {
+    console.log("[swiss] ❌ No row returned from v_api_key_balance for API key:", apiKey);
     return json({
       success: false,
       message: "Invalid API key. Log in at theraiapi.com to check your credentials.",
     }, 401);
   }
 
+  console.log("[swiss] 🔍 Found user_id:", row.user_id);
+  console.log("[swiss] 🔍 Raw balance_usd from DB:", row.balance_usd);
+  console.log("[swiss] 🔍 Type of balance_usd:", typeof row.balance_usd);
+
   const balance = parseFloat(String(row.balance_usd));
+  console.log("[swiss] 🔍 Parsed balance:", balance);
+  console.log("[swiss] 🔍 Is balance finite?", Number.isFinite(balance));
+  console.log("[swiss] 🔍 Balance > 0?", balance > 0);
+
   if (!Number.isFinite(balance) || balance <= 0) {
+    console.log("[swiss] ❌ Insufficient balance - User:", row.user_id, "Balance:", balance);
     return json({
       success: false,
       message: `Your account is active, but your balance is $${balance}. Please top up to continue.`,
     }, 402);
   }
+
+  console.log("[swiss] ✅ Balance check passed - User:", row.user_id, "Balance:", balance);
 
   urlObj.searchParams.delete("api_key");
   
