@@ -43,6 +43,7 @@ export type Database = {
         Row: {
           api_key: string
           created_at: string | null
+          email: string | null
           id: string
           is_active: boolean | null
           pending_email_change: boolean
@@ -52,6 +53,7 @@ export type Database = {
         Insert: {
           api_key: string
           created_at?: string | null
+          email?: string | null
           id?: string
           is_active?: boolean | null
           pending_email_change?: boolean
@@ -61,6 +63,7 @@ export type Database = {
         Update: {
           api_key?: string
           created_at?: string | null
+          email?: string | null
           id?: string
           is_active?: boolean | null
           pending_email_change?: boolean

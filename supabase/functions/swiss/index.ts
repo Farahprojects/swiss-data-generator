@@ -64,7 +64,7 @@ function extractApiKey(headers: Headers, url: URL, body?: Record<string, unknown
   return null;
 }
 
-// Updated function to retrieve API key by email using Admin API
+// Updated function to retrieve API key by email using direct query
 async function getApiKeyByEmail(email: string): Promise<string | null> {
   if (!email || typeof email !== 'string' || !email.includes('@')) {
     console.log("[swiss] Invalid email format:", email);
@@ -74,37 +74,22 @@ async function getApiKeyByEmail(email: string): Promise<string | null> {
   try {
     console.log("[swiss] Looking up API key for email:", email);
     
-    // Use the Admin API to look up the user by email
-    const { data: userData, error: userError } = await sb.auth.admin.listUsers({
-      filter: {
-        email: email
-      }
-    });
-      
-    if (userError || !userData || userData.users.length === 0) {
-      console.log("[swiss] Failed to find user with email:", email, userError);
-      return null;
-    }
-    
-    const userId = userData.users[0].id;
-    
-    // Then, get the API key associated with this user_id
-    const { data: keyData, error: keyError } = await sb
+    const { data, error } = await sb
       .from("api_keys")
       .select("api_key")
-      .eq("user_id", userId)
+      .eq("email", email)
       .eq("is_active", true)
       .maybeSingle();
-      
-    if (keyError || !keyData) {
-      console.log("[swiss] Failed to find API key for user:", userId, keyError);
+
+    if (error || !data) {
+      console.log("[swiss] No active API key found for email:", email, error);
       return null;
     }
-    
-    console.log("[swiss] Successfully found API key for email:", email);
-    return keyData.api_key;
+
+    console.log("[swiss] Found API key for email:", email);
+    return data.api_key;
   } catch (err) {
-    console.error("[swiss] Error looking up API key by email:", err);
+    console.error("[swiss] Error during API key lookup:", err);
     return null;
   }
 }
