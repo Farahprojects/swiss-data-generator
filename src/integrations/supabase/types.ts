@@ -756,6 +756,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      check_user_admin_role: {
+        Args: { user_id_param: string }
+        Returns: boolean
+      }
       clean_completed_topups: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -775,6 +779,18 @@ export type Database = {
       generate_session_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_all_users_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          email: string
+          created_at: string
+          last_sign_in_at: string
+          email_confirmed_at: string
+          role: string
+          balance_usd: number
+        }[]
       }
       get_flow_status: {
         Args: { user_email: string }
