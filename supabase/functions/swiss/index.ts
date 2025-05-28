@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { translate } from "../_shared/translator.ts";
@@ -194,22 +193,28 @@ serve(async (req) => {
     auth_method: authMethod, 
   };
 
-  // Special handling for email-based requests
+  // Special handling for email-based requests - FIXED LOGIC
   if (authMethod === "email" && bodyJson?.body) {
     console.log("[swiss] Processing email payload with body:", bodyJson.body);
     
-    // Extract the body content and use it as the "request" field
-    mergedPayload.request = String(bodyJson.body);
-    
-    // Set subject as additional metadata if available
-    if (bodyJson.subject) {
-      mergedPayload.email_subject = bodyJson.subject;
+    try {
+      // Try to parse the email body as JSON
+      const parsedEmailBody = JSON.parse(String(bodyJson.body));
+      console.log("[swiss] Successfully parsed email body as JSON:", parsedEmailBody);
+      
+      // Replace the entire payload with the parsed JSON (except for system fields)
+      Object.assign(mergedPayload, parsedEmailBody);
+      
+      // Remove the original body field as we've now extracted its content
+      delete mergedPayload.body;
+      
+      console.log("[swiss] Final email payload after JSON parsing:", mergedPayload);
+    } catch (parseError) {
+      console.log("[swiss] Email body is not valid JSON, treating as plain text request");
+      // Fall back to current behavior if not valid JSON
+      mergedPayload.request = String(bodyJson.body);
+      delete mergedPayload.body;
     }
-    
-    // Remove the original body field as we've now extracted its content
-    delete mergedPayload.body;
-    
-    console.log("[swiss] Transformed email payload:", mergedPayload);
   }
 
   const { status, text } = await translate(mergedPayload);
