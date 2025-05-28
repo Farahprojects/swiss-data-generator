@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { translate } from "../_shared/translator.ts";
@@ -104,13 +105,34 @@ serve(async (req) => {
     return json({ success: false, message: "Method not allowed" }, 405);
   }
 
+  // LOG: Capture raw request details before any processing
+  console.log("[swiss] 📥 RAW REQUEST RECEIVED:");
+  console.log("[swiss] 📥 Method:", req.method);
+  console.log("[swiss] 📥 URL:", req.url);
+  console.log("[swiss] 📥 Headers:", Object.fromEntries(req.headers.entries()));
+
   let bodyJson: Record<string, unknown> | undefined;
+  let rawBodyText = "";
   if (req.method === "POST") {
     const raw = await req.arrayBuffer();
     if (raw.byteLength) {
-      bodyJson = JSON.parse(new TextDecoder().decode(raw));
+      rawBodyText = new TextDecoder().decode(raw);
+      console.log("[swiss] 📥 RAW BODY TEXT:", rawBodyText);
+      
+      try {
+        bodyJson = JSON.parse(rawBodyText);
+        console.log("[swiss] 📥 PARSED BODY JSON:", bodyJson);
+      } catch (parseError) {
+        console.log("[swiss] 📥 BODY PARSE ERROR:", parseError);
+        console.log("[swiss] 📥 Raw body was not valid JSON, treating as text");
+      }
+    } else {
+      console.log("[swiss] 📥 Empty request body");
     }
   }
+
+  // LOG: URL parameters
+  console.log("[swiss] 📥 URL PARAMETERS:", Object.fromEntries(urlObj.searchParams.entries()));
 
   // Try to extract API key using standard methods
   let apiKey = extractApiKey(req.headers, urlObj, bodyJson);
