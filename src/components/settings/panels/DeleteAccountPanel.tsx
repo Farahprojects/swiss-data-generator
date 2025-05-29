@@ -47,8 +47,8 @@ export const DeleteAccountPanel = () => {
     setIsDeleting(true);
     
     try {
-      // Call the admin function to delete the user
-      const { data, error } = await supabase.rpc('delete_user_account', {
+      // Call the admin function to delete the user using the PostgreSQL function
+      const { data, error } = await supabase.rpc('delete_user_account' as any, {
         user_id_to_delete: user.id
       });
       

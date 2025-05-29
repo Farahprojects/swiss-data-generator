@@ -771,6 +771,10 @@ export type Database = {
         Args: { user_id: string; plan_type?: string }
         Returns: undefined
       }
+      delete_user_account: {
+        Args: { user_id_to_delete: string }
+        Returns: boolean
+      }
       gen_random_bytes: {
         Args: { "": number }
         Returns: string
