@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { Check, X } from 'lucide-react';
@@ -115,7 +114,7 @@ const LogsTable = ({ logs, loading, isMobile, onRowClick }: LogsTableProps) => {
                 </td>
                 <td 
                   className="px-4 py-3 cursor-pointer"
-                  onClick={() => !isFailedLog(log.response_status) && onRowClick(log)}
+                  onClick={() => onRowClick(log)}
                 >
                   {isFailedLog(log.response_status) ? (
                     <span className="text-gray-500 text-sm">None</span>
