@@ -28,6 +28,13 @@ const ConfirmEmail: React.FC = () => {
   const processedRef = useRef(false);
 
   const finishSuccess = (kind: 'signup' | 'email_change') => {
+    console.log(`[EMAIL-VERIFY] ✓ SUCCESS: ${kind} verification completed`);
+    logToSupabase('verification success', {
+      level: 'info',
+      page: 'ConfirmEmail',
+      data: { kind, timestamp: new Date().toISOString() },
+    });
+    
     setStatus('success');
     const msg =
       kind === 'signup'
@@ -45,9 +52,35 @@ const ConfirmEmail: React.FC = () => {
       if (processedRef.current) return;
       processedRef.current = true;
 
+      // Entry point logging
+      const requestId = crypto.randomUUID().substring(0, 8);
+      console.log(`[EMAIL-VERIFY:${requestId}] Starting verification process`);
+      console.log(`[EMAIL-VERIFY:${requestId}] Full URL:`, window.location.href);
+      console.log(`[EMAIL-VERIFY:${requestId}] Hash:`, location.hash);
+      console.log(`[EMAIL-VERIFY:${requestId}] Search:`, location.search);
+
       try {
         const hash = new URLSearchParams(location.hash.slice(1));
         const search = new URLSearchParams(location.search);
+
+        // Parameter extraction logging
+        const extractedParams = {
+          accessToken: !!hash.get('access_token'),
+          refreshToken: !!hash.get('refresh_token'),
+          pkceCode: !!hash.get('code'),
+          hashType: hash.get('type'),
+          token: hash.get('token') || search.get('token'),
+          tokenType: hash.get('type') || search.get('type'),
+          email: hash.get('email') || search.get('email'),
+          newEmail: hash.get('email') || search.get('email'),
+        };
+
+        console.log(`[EMAIL-VERIFY:${requestId}] Extracted parameters:`, extractedParams);
+        logToSupabase('parameter extraction', {
+          level: 'info',
+          page: 'ConfirmEmail',
+          data: { requestId, extractedParams },
+        });
 
         const accessToken = hash.get('access_token');
         const refreshToken = hash.get('refresh_token');
@@ -55,16 +88,31 @@ const ConfirmEmail: React.FC = () => {
         const newEmail = hash.get('email') || search.get('email');
         const hashType = hash.get('type');
 
+        // Flow path determination
         if (accessToken && refreshToken) {
+          console.log(`[EMAIL-VERIFY:${requestId}] → Flow: ACCESS_TOKEN method`);
+          logToSupabase('flow path selected', {
+            level: 'info',
+            page: 'ConfirmEmail',
+            data: { requestId, flowType: 'access_token', hasNewEmail: !!newEmail },
+          });
+
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
-          if (error) throw error;
+          if (error) {
+            console.error(`[EMAIL-VERIFY:${requestId}] setSession error:`, error);
+            throw error;
+          }
 
           if (newEmail) {
+            console.log(`[EMAIL-VERIFY:${requestId}] Updating user email to:`, newEmail);
             const { error: updateErr } = await supabase.auth.updateUser({ email: newEmail });
-            if (updateErr) throw updateErr;
+            if (updateErr) {
+              console.error(`[EMAIL-VERIFY:${requestId}] updateUser error:`, updateErr);
+              throw updateErr;
+            }
           }
 
           finishSuccess('email_change');
@@ -72,34 +120,107 @@ const ConfirmEmail: React.FC = () => {
         }
 
         if (pkceCode) {
+          console.log(`[EMAIL-VERIFY:${requestId}] → Flow: PKCE method`);
+          logToSupabase('flow path selected', {
+            level: 'info',
+            page: 'ConfirmEmail',
+            data: { requestId, flowType: 'pkce', hasNewEmail: !!newEmail },
+          });
+
           const { data, error } = await supabase.auth.exchangeCodeForSession(pkceCode);
-          if (error || !data.session) throw error ?? new Error('No session returned');
+          if (error || !data.session) {
+            console.error(`[EMAIL-VERIFY:${requestId}] exchangeCodeForSession error:`, error);
+            throw error ?? new Error('No session returned');
+          }
 
           if (newEmail) {
+            console.log(`[EMAIL-VERIFY:${requestId}] Updating user email to:`, newEmail);
             const { error: updateErr } = await supabase.auth.updateUser({ email: newEmail });
-            if (updateErr) throw updateErr;
+            if (updateErr) {
+              console.error(`[EMAIL-VERIFY:${requestId}] updateUser error:`, updateErr);
+              throw updateErr;
+            }
           }
 
           finishSuccess('email_change');
           return;
         }
 
+        // OTP Flow
         const token = hash.get('token') || search.get('token');
         const tokenType = hash.get('type') || search.get('type');
         const email = hash.get('email') || search.get('email');
 
-        if (!token || !tokenType || !email) throw new Error('Invalid link – missing token.');
+        console.log(`[EMAIL-VERIFY:${requestId}] → Flow: OTP method`);
+        console.log(`[EMAIL-VERIFY:${requestId}] OTP params - token: ${!!token}, type: ${tokenType}, email: ${email}`);
 
-        const { error } = await supabase.auth.verifyOtp({ token, type: tokenType as any, email });
-        if (error) throw error;
+        if (!token || !tokenType || !email) {
+          const missingParams = [];
+          if (!token) missingParams.push('token');
+          if (!tokenType) missingParams.push('type');
+          if (!email) missingParams.push('email');
+          
+          console.error(`[EMAIL-VERIFY:${requestId}] Missing OTP parameters:`, missingParams);
+          logToSupabase('missing parameters', {
+            level: 'error',
+            page: 'ConfirmEmail',
+            data: { requestId, missingParams, fullUrl: window.location.href },
+          });
+          throw new Error(`Invalid link – missing: ${missingParams.join(', ')}`);
+        }
 
+        logToSupabase('flow path selected', {
+          level: 'info',
+          page: 'ConfirmEmail',
+          data: { requestId, flowType: 'otp', tokenType, email },
+        });
+
+        // Pre-verification logging
+        console.log(`[EMAIL-VERIFY:${requestId}] Calling verifyOtp with:`, {
+          tokenLength: token.length,
+          type: tokenType,
+          email: email,
+        });
+
+        const { error } = await supabase.auth.verifyOtp({ 
+          token, 
+          type: tokenType as any, 
+          email 
+        });
+        
+        if (error) {
+          console.error(`[EMAIL-VERIFY:${requestId}] verifyOtp error:`, {
+            message: error.message,
+            status: (error as any).status,
+            details: error,
+          });
+          throw error;
+        }
+
+        console.log(`[EMAIL-VERIFY:${requestId}] ✓ verifyOtp successful`);
         finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change');
+
       } catch (err: any) {
+        console.error(`[EMAIL-VERIFY:${requestId}] ✗ VERIFICATION FAILED:`, {
+          message: err?.message,
+          status: err?.status,
+          code: err?.code,
+          details: err,
+        });
+        
         logToSupabase('verification failed', {
           level: 'error',
           page: 'ConfirmEmail',
-          data: { error: err?.message },
+          data: { 
+            requestId,
+            error: err?.message,
+            errorCode: err?.code,
+            errorStatus: err?.status,
+            fullUrl: window.location.href,
+            timestamp: new Date().toISOString(),
+          },
         });
+        
         setStatus('error');
         const msg = err?.message ?? 'Verification failed – link may have expired.';
         setMessage(msg);
