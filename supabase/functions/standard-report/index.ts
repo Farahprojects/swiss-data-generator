@@ -163,11 +163,20 @@ async function getSystemPrompt(requestId: string): Promise<string> {
 // Generate report using Gemini API
 async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<string> {
   const logPrefix = `[standard-report][${requestId}]`;
-  console.log(`${logPrefix} Generating report with Gemini`);
+  console.log(`${logPrefix} ==> Starting report generation with Gemini`);
 
-  // Enhanced logging of the incoming payload
-  console.log(`${logPrefix} Report data endpoint: ${reportData.endpoint}`);
-  console.log(`${logPrefix} Report data contains chartData: ${reportData.chartData ? "Yes" : "No"}`);
+  // DETAILED LOGGING: Log the incoming payload structure
+  console.log(`${logPrefix} ==> Report data analysis:`);
+  console.log(`${logPrefix} ==> - endpoint: ${reportData.endpoint}`);
+  console.log(`${logPrefix} ==> - chartData present: ${reportData.chartData ? "YES" : "NO"}`);
+  console.log(`${logPrefix} ==> - chartData type: ${typeof reportData.chartData}`);
+  if (reportData.chartData) {
+    console.log(`${logPrefix} ==> - chartData keys: ${Object.keys(reportData.chartData).join(", ")}`);
+    console.log(`${logPrefix} ==> - chartData sample: ${JSON.stringify(reportData.chartData).substring(0, 200)}...`);
+  }
+  console.log(`${logPrefix} ==> - report_type: ${reportData.report_type || "unknown"}`);
+  console.log(`${logPrefix} ==> - user_id: ${reportData.user_id || "unknown"}`);
+  console.log(`${logPrefix} ==> - apiKey present: ${reportData.apiKey ? "YES" : "NO"}`);
   
   // Structure data for the prompt
   const userMessage = JSON.stringify({
@@ -176,11 +185,12 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     ...reportData // Include any other relevant data
   });
 
-  console.log(`${logPrefix} Calling Gemini API with model: ${GOOGLE_MODEL}`);
-  console.log(`${logPrefix} API Key format check: ${GOOGLE_API_KEY.length > 20 ? "Valid length" : "Invalid length"}`);
+  console.log(`${logPrefix} ==> User message length: ${userMessage.length} characters`);
+  console.log(`${logPrefix} ==> Calling Gemini API with model: ${GOOGLE_MODEL}`);
+  console.log(`${logPrefix} ==> API Key format check: ${GOOGLE_API_KEY.length > 20 ? "Valid length" : "Invalid length"}`);
 
   const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
-  console.log(`${logPrefix} Target API URL (without key): ${GOOGLE_ENDPOINT}`);
+  console.log(`${logPrefix} ==> Target API URL (without key): ${GOOGLE_ENDPOINT}`);
 
   const requestBody = {
     contents: [
@@ -200,24 +210,37 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     }
   };
 
+  console.log(`${logPrefix} ==> Request body structure:`, {
+    contentsLength: requestBody.contents.length,
+    partsLength: requestBody.contents[0].parts.length,
+    systemPromptLength: systemPrompt.length,
+    userMessageLength: userMessage.length,
+    generationConfig: requestBody.generationConfig
+  });
+
   const callGeminiApi = async () => {
+    console.log(`${logPrefix} ==> Making actual API call to Gemini...`);
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
-        console.warn(`${logPrefix} Gemini API call timed out after ${API_TIMEOUT_MS}ms`);
+        console.warn(`${logPrefix} ==> Gemini API call timed out after ${API_TIMEOUT_MS}ms`);
     }, API_TIMEOUT_MS);
 
     let response;
     try {
+        console.log(`${logPrefix} ==> Sending request to Gemini API...`);
         response = await fetch(apiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(requestBody),
             signal: controller.signal,
         });
+        console.log(`${logPrefix} ==> Received response from Gemini API`);
     } catch (fetchError) {
         // This catch is primarily for network errors or if AbortController aborts
         clearTimeout(timeoutId);
+        console.error(`${logPrefix} ==> Fetch error:`, fetchError);
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
             throw new Error(`Gemini API call aborted due to timeout (${API_TIMEOUT_MS}ms)`);
         }
@@ -226,11 +249,12 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     
     clearTimeout(timeoutId); // Clear timeout if fetch completed
 
-    console.log(`${logPrefix} Gemini API response status: ${response.status}`);
+    console.log(`${logPrefix} ==> Gemini API response status: ${response.status}`);
+    console.log(`${logPrefix} ==> Gemini API response headers:`, Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`${logPrefix} Gemini API error response: ${response.status} - ${errorText}`);
+      console.error(`${logPrefix} ==> Gemini API error response: ${response.status} - ${errorText}`);
       const error = new Error(`Gemini API error: ${response.status} - ${errorText}`);
       // Add status to error object for potential specific handling in retry logic if needed
       (error as any).status = response.status;
@@ -241,22 +265,35 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
       throw error;
     }
 
+    console.log(`${logPrefix} ==> Parsing Gemini API response...`);
     const data = await response.json();
+    console.log(`${logPrefix} ==> Gemini API response structure:`, {
+      hasCandidates: !!data.candidates,
+      candidatesLength: data.candidates?.length || 0,
+      hasContent: data.candidates?.[0]?.content ? "YES" : "NO",
+      hasParts: data.candidates?.[0]?.content?.parts ? "YES" : "NO",
+      partsLength: data.candidates?.[0]?.content?.parts?.length || 0
+    });
 
     if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-      console.error(`${logPrefix} No content or parts returned from Gemini API in candidate:`, JSON.stringify(data));
+      console.error(`${logPrefix} ==> No content or parts returned from Gemini API in candidate:`, JSON.stringify(data));
       throw new Error("Malformed response from Gemini API: No content/parts in candidate");
     }
 
     const generatedText = data.candidates[0].content.parts[0].text;
-    console.log(`${logPrefix} Successfully generated report from Gemini`);
+    console.log(`${logPrefix} ==> Successfully generated report from Gemini (length: ${generatedText.length} characters)`);
+    console.log(`${logPrefix} ==> Generated report preview: ${generatedText.substring(0, 150)}...`);
     return generatedText;
   };
 
   try {
-    return await retryWithBackoff(callGeminiApi, logPrefix, MAX_API_RETRIES, INITIAL_RETRY_DELAY_MS, RETRY_BACKOFF_FACTOR, "Gemini API call");
+    console.log(`${logPrefix} ==> Starting Gemini API call with retry logic...`);
+    const result = await retryWithBackoff(callGeminiApi, logPrefix, MAX_API_RETRIES, INITIAL_RETRY_DELAY_MS, RETRY_BACKOFF_FACTOR, "Gemini API call");
+    console.log(`${logPrefix} ==> Report generation completed successfully`);
+    return result;
   } catch (err) {
-    console.error(`${logPrefix} Failed to generate report with Gemini after retries:`, err);
+    console.error(`${logPrefix} ==> Failed to generate report with Gemini after retries:`, err);
+    console.error(`${logPrefix} ==> Error stack:`, err instanceof Error ? err.stack : "No stack trace");
     // If error has skipRetry, it means it's a non-retryable client error
     if ((err as any).skipRetry) {
         throw new Error(`Permanent Gemini API error: ${err.message}`);
@@ -310,7 +347,9 @@ serve(async (req) => {
   const logPrefix = `[standard-report][${requestId}]`;
   const startTime = Date.now();
 
-  console.log(`${logPrefix} Received ${req.method} request for ${req.url}`);
+  console.log(`${logPrefix} ========================================`);
+  console.log(`${logPrefix} NEW REQUEST: Received ${req.method} request for ${req.url}`);
+  console.log(`${logPrefix} ========================================`);
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -332,8 +371,17 @@ serve(async (req) => {
     // Parse the request payload
     let reportData;
     try {
+      console.log(`${logPrefix} Parsing request payload...`);
       reportData = await req.json();
       console.log(`${logPrefix} Successfully parsed request payload`);
+      console.log(`${logPrefix} PAYLOAD RECEIVED:`, {
+        hasChartData: !!reportData?.chartData,
+        endpoint: reportData?.endpoint,
+        reportType: reportData?.report_type,
+        userId: reportData?.user_id,
+        hasApiKey: !!reportData?.apiKey,
+        payloadKeys: Object.keys(reportData || {})
+      });
     } catch (parseError) {
       console.error(`${logPrefix} Invalid JSON payload:`, parseError);
       return jsonResponse(
@@ -342,12 +390,17 @@ serve(async (req) => {
         requestId
       );
     }
+
     console.log(`${logPrefix} Processing report for endpoint: ${reportData?.endpoint}`);
     console.log(`${logPrefix} Payload structure check - keys: ${Object.keys(reportData || {}).join(', ')}`);
 
     // Validate required fields
     if (!reportData || !reportData.chartData || !reportData.endpoint) {
-      console.error(`${logPrefix} Missing required fields in request payload. Received:`, reportData);
+      console.error(`${logPrefix} VALIDATION FAILED - Missing required fields in request payload.`);
+      console.error(`${logPrefix} - reportData exists: ${!!reportData}`);
+      console.error(`${logPrefix} - chartData exists: ${!!reportData?.chartData}`);
+      console.error(`${logPrefix} - endpoint exists: ${!!reportData?.endpoint}`);
+      console.error(`${logPrefix} Full payload:`, reportData);
       
       // Log the failed attempt
       if (reportData && reportData.apiKey && reportData.user_id) {
@@ -372,14 +425,21 @@ serve(async (req) => {
       );
     }
 
+    console.log(`${logPrefix} VALIDATION PASSED - All required fields present`);
+
     // Fetch the system prompt
+    console.log(`${logPrefix} Fetching system prompt...`);
     const systemPrompt = await getSystemPrompt(requestId);
+    console.log(`${logPrefix} System prompt retrieved successfully (length: ${systemPrompt.length})`);
 
     // Generate the report
+    console.log(`${logPrefix} Starting report generation...`);
     const report = await generateReport(systemPrompt, reportData, requestId);
+    console.log(`${logPrefix} Report generation completed successfully`);
     
     // Log successful report generation - this is now the ONLY place reports are logged
     if (reportData.apiKey && reportData.user_id) {
+      console.log(`${logPrefix} Logging successful report to database...`);
       await logReportAttempt(
         reportData.apiKey,
         reportData.user_id,
@@ -392,10 +452,14 @@ serve(async (req) => {
         null,
         requestId
       );
+      console.log(`${logPrefix} Database logging completed`);
     }
 
     // Return the generated report
     console.log(`${logPrefix} Successfully processed request in ${Date.now() - startTime}ms`);
+    console.log(`${logPrefix} ========================================`);
+    console.log(`${logPrefix} REQUEST COMPLETED SUCCESSFULLY`);
+    console.log(`${logPrefix} ========================================`);
     return jsonResponse({
       success: true,
       report: report,
@@ -404,7 +468,10 @@ serve(async (req) => {
 
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
-    console.error(`${logPrefix} Error processing request: ${errorMessage}`, err instanceof Error ? err.stack : err);
+    console.error(`${logPrefix} ========================================`);
+    console.error(`${logPrefix} ERROR processing request: ${errorMessage}`);
+    console.error(`${logPrefix} Error details:`, err instanceof Error ? err.stack : err);
+    console.error(`${logPrefix} ========================================`);
     
     // Log the failed attempt if we have user info
     if (err instanceof Error && err.cause && typeof err.cause === 'object' && err.cause !== null) {
