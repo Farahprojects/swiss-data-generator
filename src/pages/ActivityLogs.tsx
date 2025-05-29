@@ -395,21 +395,22 @@ const ActivityLogs = () => {
                               {renderStatusIcon(log.response_status)}
                             </td>
                             <td className="px-4 py-3">
-                              {isFailedLog(log.response_status) ? (
-                                <span className="text-gray-500 text-sm">None</span>
-                              ) : (
-                                <div className="flex flex-col">
-                                  <span className="font-medium cursor-pointer text-primary hover:underline text-sm" 
-                                    onClick={() => openDrawer(log)}>
-                                    {formatTypeValue(log.request_type)}
+                              <div className="flex flex-col">
+                                <span 
+                                  className="font-medium cursor-pointer text-primary hover:underline text-sm" 
+                                  onClick={() => openDrawer(log)}
+                                >
+                                  {formatTypeValue(log.request_type)}
+                                </span>
+                                {log.report_tier && (
+                                  <span 
+                                    className="text-sm text-primary cursor-pointer hover:underline"
+                                    onClick={() => openDrawer(log)}
+                                  >
+                                    {formatTypeValue(log.report_tier)}
                                   </span>
-                                  {log.report_tier && (
-                                    <span className="text-sm text-primary">
-                                      {formatTypeValue(log.report_tier)}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-right">
                               ${log.total_cost_usd?.toFixed(2) || '0.00'}
