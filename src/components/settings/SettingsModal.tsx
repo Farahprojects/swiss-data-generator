@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -91,7 +92,7 @@ export const SettingsModal = () => {
                     <Button variant="outline" className="text-sm" onClick={handleLogout}>Log out</Button>
                   </div>
                   <div className="flex items-center justify-between py-3">
-                    <span className="text-sm text-red-600">Delete all account data</span>
+                    <span className="text-sm text-red-600">Delete account</span>
                     <Button variant="destructive" className="text-sm" onClick={() => handleTabChange("delete")}>Delete account</Button>
                   </div>
                 </div>

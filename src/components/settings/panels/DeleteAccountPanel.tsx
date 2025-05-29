@@ -26,7 +26,7 @@ export const DeleteAccountPanel = () => {
   };
   
   const confirmDelete = async () => {
-    if (confirmation.toLowerCase() !== "delete my account") {
+    if (confirmation !== "DELETE") {
       toast({
         variant: "destructive",
         title: "Error",
@@ -117,12 +117,12 @@ export const DeleteAccountPanel = () => {
           
           <div className="py-4">
             <p className="mb-3 font-medium">
-              Type "delete my account" to confirm:
+              Type "DELETE" to confirm:
             </p>
             <Input
               value={confirmation}
               onChange={(e) => setConfirmation(e.target.value)}
-              placeholder="delete my account"
+              placeholder="DELETE"
               className="mb-2"
             />
           </div>
@@ -134,7 +134,7 @@ export const DeleteAccountPanel = () => {
             <Button 
               variant="destructive" 
               onClick={confirmDelete}
-              disabled={isDeleting || confirmation.toLowerCase() !== "delete my account"}
+              disabled={isDeleting || confirmation !== "DELETE"}
               className="bg-red-600 hover:bg-red-700"
             >
               {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
