@@ -213,13 +213,6 @@ const ActivityLogs = () => {
 
   // Helper function to check if a log has a valid report
   const hasValidReport = (log: ActivityLog): boolean => {
-    console.log('hasValidReport check:', {
-      id: log.id,
-      report_tier: log.report_tier,
-      response_status: log.response_status,
-      isFailedLog: isFailedLog(log.response_status),
-      result: !!log.report_tier && !isFailedLog(log.response_status)
-    });
     return !!log.report_tier && !isFailedLog(log.response_status);
   };
 
@@ -405,19 +398,16 @@ const ActivityLogs = () => {
                               {isFailedLog(log.response_status) ? (
                                 <span className="text-gray-500 text-sm">None</span>
                               ) : (
-                                <div 
-                                  className="flex flex-col cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors"
-                                  onClick={() => {
-                                    console.log('Type column clicked:', log);
-                                    openDrawer(log);
-                                  }}
-                                >
-                                  <span className="font-medium text-primary hover:underline text-sm">
+                                <div className="flex flex-col">
+                                  <span className="font-medium cursor-pointer text-primary hover:underline text-sm" 
+                                    onClick={() => openDrawer(log)}>
                                     {formatTypeValue(log.request_type)}
                                   </span>
-                                  <span className="text-sm text-primary">
-                                    {formatTypeValue(log.report_tier)}
-                                  </span>
+                                  {log.report_tier && (
+                                    <span className="text-sm text-primary">
+                                      {formatTypeValue(log.report_tier)}
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </td>
