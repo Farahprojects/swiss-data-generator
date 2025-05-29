@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -400,7 +399,7 @@ const ActivityLogs = () => {
                                 <span className="text-gray-500 text-sm">None</span>
                               ) : hasValidReport(log) ? (
                                 <div 
-                                  className="flex flex-col cursor-pointer hover:bg-blue-50 p-2 -m-2 rounded transition-colors"
+                                  className="flex flex-col cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors"
                                   onClick={() => openDrawer(log)}
                                 >
                                   <span className="font-medium text-primary hover:underline text-sm">
