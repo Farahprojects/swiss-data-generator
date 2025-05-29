@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export const DeleteAccountPanel = () => {
   const { user, signOut } = useAuth();
@@ -34,15 +35,45 @@ export const DeleteAccountPanel = () => {
       return;
     }
     
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No user session found."
+      });
+      return;
+    }
+    
     setIsDeleting(true);
     
     try {
-      // In a real implementation, this would call Supabase auth to delete the user
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the admin function to delete the user
+      const { data, error } = await supabase.rpc('delete_user_account', {
+        user_id_to_delete: user.id
+      });
+      
+      if (error) {
+        console.error('Delete account error:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to delete account. Please try again."
+        });
+        setIsDeleting(false);
+        setIsDialogOpen(false);
+        return;
+      }
+      
+      // If successful, sign out and redirect
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been successfully deleted."
+      });
       
       await signOut();
       window.location.href = '/login';
     } catch (error) {
+      console.error('Delete account exception:', error);
       toast({
         variant: "destructive",
         title: "Error",
