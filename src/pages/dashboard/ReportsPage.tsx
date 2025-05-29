@@ -102,52 +102,50 @@ const ReportsPage = () => {
         <div className="flex w-full">
           <DashboardSidebar />
           
-          <SidebarInset className="p-0 md:p-6">
-            <div className="p-4 md:p-0">
-              <h1 className="text-2xl font-bold mb-6">Reports</h1>
-              
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                {loading ? (
-                  <div className="p-8 text-center">
-                    <p>Loading reports...</p>
-                  </div>
-                ) : reports.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <p>No reports found.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full table-auto">
-                      <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
-                        <tr>
-                          <th className="px-4 py-3 text-left">Date</th>
-                          <th className="px-4 py-3 text-left">Report Name</th>
+          <SidebarInset className="p-6">
+            <h1 className="text-2xl font-bold mb-6">Reports</h1>
+            
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              {loading ? (
+                <div className="p-8 text-center">
+                  <p>Loading reports...</p>
+                </div>
+              ) : reports.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p>No reports found.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full table-auto">
+                    <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Date</th>
+                        <th className="px-4 py-3 text-left">Report Name</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {reports.map((report) => (
+                        <tr 
+                          key={report.id} 
+                          className="hover:bg-gray-50 transition-colors cursor-pointer"
+                          onClick={() => openDrawer(report)}
+                        >
+                          <td className="px-4 py-3">
+                            {report.created_at ? 
+                              format(new Date(report.created_at), 'MMM d, yyyy HH:mm:ss') : 
+                              'N/A'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-medium text-primary hover:underline">
+                              {formatReportName(report.request_type, report.report_tier)}
+                            </span>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {reports.map((report) => (
-                          <tr 
-                            key={report.id} 
-                            className="hover:bg-gray-50 transition-colors cursor-pointer"
-                            onClick={() => openDrawer(report)}
-                          >
-                            <td className="px-4 py-3">
-                              {report.created_at ? 
-                                format(new Date(report.created_at), 'MMM d, yyyy HH:mm:ss') : 
-                                'N/A'}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="font-medium text-primary hover:underline">
-                                {formatReportName(report.request_type, report.report_tier)}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </SidebarInset>
         </div>
