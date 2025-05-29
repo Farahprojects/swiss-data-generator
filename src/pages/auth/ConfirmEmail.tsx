@@ -52,9 +52,12 @@ const ConfirmEmail: React.FC = () => {
         const accessToken = hash.get('access_token');
         const refreshToken = hash.get('refresh_token');
         const pkceCode = hash.get('code');
-        const newEmail = hash.get('email') || search.get('email');
-        const hashType = hash.get('type');
+        const typeFromHash = hash.get('type') || search.get('type');
+        const token = hash.get('token') || search.get('token');
 
+        const type = (typeFromHash ?? '') as 'signup' | 'email_change' | 'invite' | 'recovery';
+
+        // Case 1: OAuth or magic link (access + refresh token)
         if (accessToken && refreshToken) {
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -62,38 +65,30 @@ const ConfirmEmail: React.FC = () => {
           });
           if (error) throw error;
 
-          if (newEmail) {
-            const { error: updateErr } = await supabase.auth.updateUser({ email: newEmail });
-            if (updateErr) throw updateErr;
-          }
-
           finishSuccess('email_change');
           return;
         }
 
+        // Case 2: PKCE flow (e.g., signup)
         if (pkceCode) {
           const { data, error } = await supabase.auth.exchangeCodeForSession(pkceCode);
           if (error || !data.session) throw error ?? new Error('No session returned');
 
-          if (newEmail) {
-            const { error: updateErr } = await supabase.auth.updateUser({ email: newEmail });
-            if (updateErr) throw updateErr;
-          }
-
           finishSuccess('email_change');
           return;
         }
 
-        const token = hash.get('token') || search.get('token');
-        const tokenType = hash.get('type') || search.get('type');
-        const email = hash.get('email') || search.get('email');
+        // Case 3: Token-based verification (signup or email_change)
+        if (!token || !type) throw new Error('Invalid link – missing token or type.');
 
-        if (!token || !tokenType || !email) throw new Error('Invalid link – missing token.');
+        const { error } = await supabase.auth.verifyOtp({
+          token,
+          type,
+        });
 
-        const { error } = await supabase.auth.verifyOtp({ token, type: tokenType as any, email });
         if (error) throw error;
 
-        finishSuccess(tokenType.startsWith('sign') ? 'signup' : 'email_change');
+        finishSuccess(type === 'signup' ? 'signup' : 'email_change');
       } catch (err: any) {
         logToSupabase('verification failed', {
           level: 'error',
@@ -106,6 +101,7 @@ const ConfirmEmail: React.FC = () => {
         toast({ variant: 'destructive', title: 'Verification failed', description: msg });
       }
     };
+
     verify();
   }, [location.hash, location.search]);
 
