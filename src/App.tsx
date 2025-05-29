@@ -18,6 +18,7 @@ import ActivityLogs from './pages/dashboard/ActivityLogs';
 import ApiKeys from './pages/dashboard/ApiKeys';
 import ApiDocs from './pages/dashboard/ApiDocs';
 import UsagePage from './pages/dashboard/UsagePage';
+import ReportsPage from './pages/dashboard/ReportsPage';
 import BillingPage from './pages/dashboard/BillingPage';
 import PricingPage from './pages/dashboard/PricingPage';
 import { AuthProvider } from './contexts/AuthContext';
@@ -171,6 +172,7 @@ function App() {
                     <Route path="api-keys" element={<ApiKeys />} />
                     <Route path="docs" element={<ApiDocs />} />
                     <Route path="usage" element={<UsagePage />} />
+                    <Route path="reports" element={<ReportsPage />} />
                     <Route path="billing" element={<BillingPage />} />
                     <Route path="pricing" element={<PricingPage />} />
                   </Route>

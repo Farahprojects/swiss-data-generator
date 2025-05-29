@@ -45,8 +45,8 @@ const DashboardSidebar = () => {
       icon: <DollarSign size={20} />
     },
     {
-      name: "Usage",
-      path: "/dashboard/usage",
+      name: "Reports",
+      path: "/dashboard/reports",
       icon: <FileText size={20} />
     },
     {
