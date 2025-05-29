@@ -73,8 +73,17 @@ const ActivityLogs = () => {
 
   // Function to open the drawer with a specific log
   const openDrawer = (log: ActivityLog) => {
+    console.log('Opening drawer for log:', log.id, log.request_type); // Debug logging
     setSelectedLog(log);
     setDrawerOpen(true);
+  };
+
+  // Handle click with event propagation
+  const handleLogClick = (e: React.MouseEvent, log: ActivityLog) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Log clicked:', log.id); // Debug logging
+    openDrawer(log);
   };
 
   // Function to load logs from the database
@@ -384,7 +393,7 @@ const ActivityLogs = () => {
                         {logs.map((log) => (
                           <tr 
                             key={log.id} 
-                            className="hover:bg-gray-50 transition-colors"
+                            className="group hover:bg-gray-50 transition-colors"
                           >
                             <td className="px-4 py-3">
                               {log.created_at ? 
@@ -394,21 +403,18 @@ const ActivityLogs = () => {
                             <td className="px-4 py-3">
                               {renderStatusIcon(log.response_status)}
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col">
-                                <span 
-                                  className="font-medium cursor-pointer text-primary hover:underline text-sm" 
-                                  onClick={() => openDrawer(log)}
-                                >
+                            <td 
+                              className="px-4 py-3 cursor-pointer relative"
+                              onClick={(e) => handleLogClick(e, log)}
+                            >
+                              <div className="flex flex-col space-y-1">
+                                <div className="font-medium text-primary hover:underline text-sm transition-colors">
                                   {formatTypeValue(log.request_type)}
-                                </span>
+                                </div>
                                 {log.report_tier && (
-                                  <span 
-                                    className="text-sm text-primary cursor-pointer hover:underline"
-                                    onClick={() => openDrawer(log)}
-                                  >
+                                  <div className="text-sm text-primary hover:underline transition-colors">
                                     {formatTypeValue(log.report_tier)}
-                                  </span>
+                                  </div>
                                 )}
                               </div>
                             </td>
