@@ -98,23 +98,23 @@ const ReportsPage = () => {
         <UnifiedNavigation />
       </div>
       
-      <div className="flex flex-grow bg-gray-50 pt-1">
-        <div className="flex w-full">
-          <DashboardSidebar />
-          
-          <SidebarInset className="p-6">
+      <div className="flex flex-grow">
+        <DashboardSidebar />
+        
+        <SidebarInset className="flex-1">
+          <div className="p-6">
             <h1 className="text-2xl font-bold mb-6">Reports</h1>
             
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              {loading ? (
-                <div className="p-8 text-center">
-                  <p>Loading reports...</p>
-                </div>
-              ) : reports.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p>No reports found.</p>
-                </div>
-              ) : (
+            {loading ? (
+              <div className="p-8 text-center">
+                <p>Loading reports...</p>
+              </div>
+            ) : reports.length === 0 ? (
+              <div className="p-8 text-center">
+                <p>No reports found.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full table-auto">
                     <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
@@ -145,10 +145,10 @@ const ReportsPage = () => {
                     </tbody>
                   </table>
                 </div>
-              )}
-            </div>
-          </SidebarInset>
-        </div>
+              </div>
+            )}
+          </div>
+        </SidebarInset>
       </div>
       
       <ActivityLogDrawer
