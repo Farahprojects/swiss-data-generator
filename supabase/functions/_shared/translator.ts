@@ -5,7 +5,7 @@
 
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { processReportRequest } from "./reportOrchestrator.ts";
+import { handleReportGeneration } from "./reportHandler.ts";
 
 /*──────────────── ENV ------------------------------------*/
 const SWISS_API = Deno.env.get("SWISS_EPHEMERIS_URL")!;
@@ -174,6 +174,7 @@ export async function translate(
   let   googleGeoUsed = false;
   const userId        = raw.user_id; // Extract user ID from the payload
   const apiKey        = raw.api_key; // Extract API key for report orchestrator
+  const requestId     = crypto.randomUUID().substring(0, 8); // Generate request ID for tracking
 
   try {
     const body = Base.parse(raw);
@@ -245,6 +246,7 @@ export async function translate(
       if (body.date) payload.date = body.date;
       if (body.time) payload.time = body.time;
 
+      console.log(`[translator][${requestId}] Making sync request to Swiss API`);
       const r   = await fetch(`${SWISS_API}/sync`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -252,18 +254,35 @@ export async function translate(
       });
       const txt = await r.text();
 
+      console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
+
+      // Handle report generation using shared handler
+      const reportResult = await handleReportGeneration({
+        requestData: raw,
+        swissApiResponse: txt,
+        swissApiStatus: r.status,
+        requestId
+      });
+
+      // Determine final response data and error message
+      const finalResponseData = reportResult.responseData;
+      const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
+
       await logToSupabase(
         requestType,
         raw,
         r.status,
-        (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
+        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
         Date.now() - startTime,
-        !r.ok ? `Swiss API returned ${r.status}` : undefined,
+        finalErrorMessage,
         googleGeoUsed,
         userId,
       );
 
-      return { status: r.status, text: txt };
+      return { 
+        status: r.status, 
+        text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
+      };
     }
 
     /*──────────────── SYNASTRY ───────────────────────────*/
@@ -290,6 +309,7 @@ export async function translate(
       const a = normalise(pa);
       const b = normalise(pb);
 
+      console.log(`[translator][${requestId}] Making synastry request to Swiss API`);
       const r   = await fetch(`${SWISS_API}/synastry`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -297,37 +317,72 @@ export async function translate(
       });
       const txt = await r.text();
 
+      console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
+
+      // Handle report generation using shared handler
+      const reportResult = await handleReportGeneration({
+        requestData: raw,
+        swissApiResponse: txt,
+        swissApiStatus: r.status,
+        requestId
+      });
+
+      // Determine final response data and error message
+      const finalResponseData = reportResult.responseData;
+      const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
+
       await logToSupabase(
         requestType,
         raw,
         r.status,
-        (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
+        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
         Date.now() - startTime,
-        !r.ok ? `Swiss API returned ${r.status}` : undefined,
+        finalErrorMessage,
         googleGeoUsed,
         userId,
       );
 
-      return { status: r.status, text: txt };
+      return { 
+        status: r.status, 
+        text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
+      };
     }
 
     /*──────────────── simple GETs ─────────────────────────*/
     if (canon === "moonphases") {
       const year = body.year ?? new Date().getFullYear();
+      console.log(`[translator][${requestId}] Making moonphases request to Swiss API`);
       const r    = await fetch(`${SWISS_API}/moonphases?year=${year}`);
       const txt  = await r.text();
+
+      console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
+
+      // Handle report generation using shared handler
+      const reportResult = await handleReportGeneration({
+        requestData: raw,
+        swissApiResponse: txt,
+        swissApiStatus: r.status,
+        requestId
+      });
+
+      // Determine final response data and error message
+      const finalResponseData = reportResult.responseData;
+      const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
 
       await logToSupabase(
         requestType,
         raw,
         r.status,
-        (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
+        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
         Date.now() - startTime,
-        !r.ok ? `Swiss API returned ${r.status}` : undefined,
+        finalErrorMessage,
         googleGeoUsed,
         userId,
       );
-      return { status: r.status, text: txt };
+      return { 
+        status: r.status, 
+        text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
+      };
     }
 
     if (canon === "positions") {
@@ -335,20 +390,39 @@ export async function translate(
         utc:      body.utc ?? new Date().toISOString(),
         sidereal: String(body.sidereal ?? false),
       });
+      console.log(`[translator][${requestId}] Making positions request to Swiss API`);
       const r   = await fetch(`${SWISS_API}/positions?${qs}`);
       const txt = await r.text();
+
+      console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
+
+      // Handle report generation using shared handler
+      const reportResult = await handleReportGeneration({
+        requestData: raw,
+        swissApiResponse: txt,
+        swissApiStatus: r.status,
+        requestId
+      });
+
+      // Determine final response data and error message
+      const finalResponseData = reportResult.responseData;
+      const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
 
       await logToSupabase(
         requestType,
         raw,
         r.status,
-        (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
+        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
         Date.now() - startTime,
-        !r.ok ? `Swiss API returned ${r.status}` : undefined,
+        finalErrorMessage,
         googleGeoUsed,
         userId,
       );
-      return { status: r.status, text: txt };
+
+      return { 
+        status: r.status, 
+        text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
+      };
     }
 
     /*──────────────── POST chart routes ──────────────────*/
@@ -363,6 +437,7 @@ export async function translate(
     ------------------------------------------------------*/
     const path = canon;                   // e.g. "mindset", "monthly", …
 
+    console.log(`[translator][${requestId}] Making ${path} request to Swiss API`);
     const r   = await fetch(`${SWISS_API}/${path}`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
@@ -370,115 +445,35 @@ export async function translate(
     });
     const txt = await r.text();
     
-    // Check if this request includes a report generation
-    if (raw.report && ["standard", "premium"].includes(raw.report)) {
-      console.log(`[translator] Report requested: ${raw.report} for ${canon}`);
+    console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
 
-      // First check if the response was successful
-      if (!r.ok) {
-        console.log(`[translator] Swiss API returned error ${r.status}, not generating report`);
-        
-        // Return the Swiss API error without attempting to generate a report
-        await logToSupabase(
-          requestType,
-          raw,
-          r.status,
-          (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
-          Date.now() - startTime,
-          `Swiss API returned ${r.status}, report generation skipped`,
-          googleGeoUsed,
-          userId,
-        );
-        
-        return { 
-          status: r.status, 
-          text: JSON.stringify({
-            error: "Unable to generate report due to invalid request data",
-            message: "Please check your request details and try again",
-            details: (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })()
-          })
-        };
-      }
-      
-      try {
-        // Parse the Swiss API response
-        const swissData = JSON.parse(txt);
-        
-        // Prepare payload for report orchestrator
-        const reportPayload = {
-          endpoint: canon,
-          report_type: raw.report,
-          user_id: userId,
-          apiKey: apiKey,
-          chartData: swissData,
-          // Include any other relevant data from the request
-          ...enriched
-        };
-        
-        // Process the report request
-        const reportResult = await processReportRequest(reportPayload);
-        
-        if (reportResult.success && reportResult.report) {
-          // Combine the Swiss API data with the report
-          const combinedResponse = {
-            ...swissData,
-            report: reportResult.report
-          };
-          
-          // Log here but note that the report service also logs - we may want to consolidate this
-          // in the future to avoid duplication
-          await logToSupabase(
-            requestType,
-            raw,
-            r.status,
-            combinedResponse,
-            Date.now() - startTime,
-            undefined,
-            googleGeoUsed,
-            userId,
-          );
-          
-          return { status: r.status, text: JSON.stringify(combinedResponse) };
-        } else {
-          console.log(`[translator] Report generation failed: ${reportResult.errorMessage}`);
-          
-          // Still return the Swiss API data, but with an error message about the report
-          const responseWithError = {
-            ...JSON.parse(txt),
-            report_error: reportResult.errorMessage
-          };
-          
-          await logToSupabase(
-            requestType,
-            raw,
-            r.status,
-            responseWithError,
-            Date.now() - startTime,
-            reportResult.errorMessage,
-            googleGeoUsed,
-            userId,
-          );
-          
-          return { status: r.status, text: JSON.stringify(responseWithError) };
-        }
-      } catch (parseError) {
-        console.error("[translator] Error parsing Swiss API response:", parseError);
-        // Continue with original response if we can't parse it
-      }
-    }
+    // Handle report generation using shared handler
+    const reportResult = await handleReportGeneration({
+      requestData: raw,
+      swissApiResponse: txt,
+      swissApiStatus: r.status,
+      requestId
+    });
+
+    // Determine final response data and error message
+    const finalResponseData = reportResult.responseData;
+    const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
 
     await logToSupabase(
       requestType,
       raw,
       r.status,
-      (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
+      (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
       Date.now() - startTime,
-      !r.ok ? `Swiss API returned ${r.status}` : undefined,
+      finalErrorMessage,
       googleGeoUsed,
       userId,
     );
 
-    return { status: r.status, text: txt };
+    return { 
+      status: r.status, 
+      text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
+    };
   } catch (err) {
     const msg = (err as Error).message;
     await logToSupabase(
