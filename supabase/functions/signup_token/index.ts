@@ -48,7 +48,6 @@ serve(async (req) => {
   }
 
   const supabase = createClient(url, key);
-  const redirectTo = "https://www.theraiapi.com/auth/email";
   let tokenLink = "";
   let emailOtp = "";
   let userEmail = "";
@@ -101,13 +100,11 @@ serve(async (req) => {
     log("Token generation params:", {
       type: "signup",
       email: userEmail,
-      redirectTo,
     });
 
     const { data: linkData, error: tokenErr } = await supabase.auth.admin.generateLink({
       type: "signup",
       email: userEmail,
-      options: { redirectTo },
     });
 
     if (tokenErr) {
@@ -127,18 +124,19 @@ serve(async (req) => {
       keys: Object.keys(linkData || {}),
     });
 
-    tokenLink = linkData?.action_link || linkData?.properties?.action_link || "";
+    // Extract token from the generated link
+    const generatedLink = linkData?.action_link || linkData?.properties?.action_link || "";
     const props = (linkData as any)?.properties ?? {};
     emailOtp = props.email_otp ?? (linkData as any)?.email_otp ?? "";
 
     log("Token extraction results:", {
-      hasTokenLink: !!tokenLink,
+      hasGeneratedLink: !!generatedLink,
       hasEmailOtp: !!emailOtp,
-      tokenLinkLength: tokenLink.length,
+      generatedLinkLength: generatedLink.length,
       otpLength: emailOtp.length,
     });
 
-    if (!tokenLink) {
+    if (!generatedLink) {
       log("✗ Missing action_link in response:", linkData);
       return respond(500, {
         error: "Missing action_link in token generation",
@@ -146,14 +144,21 @@ serve(async (req) => {
       });
     }
 
-    // Link construction
-    const originalLink = tokenLink;
-    tokenLink += `&email=${encodeURIComponent(userEmail)}`;
+    // Extract token from the Supabase generated link
+    const urlParams = new URL(generatedLink);
+    const token = urlParams.searchParams.get('token');
     
-    log("✓ Link construction complete:", {
-      originalLength: originalLink.length,
+    if (!token) {
+      log("✗ Could not extract token from generated link:", generatedLink);
+      return respond(500, { error: "Could not extract token from generated link" });
+    }
+
+    // Build our own verification link pointing to our app
+    tokenLink = `https://www.theraiapi.com/auth/email?token=${encodeURIComponent(token)}&type=signup&email=${encodeURIComponent(userEmail)}`;
+    
+    log("✓ Custom link construction complete:", {
+      extractedToken: token.substring(0, 20) + "...",
       finalLength: tokenLink.length,
-      addedParam: `email=${encodeURIComponent(userEmail)}`,
     });
     log("Final verification link:", tokenLink);
   } catch (err: any) {
@@ -171,7 +176,7 @@ serve(async (req) => {
       .eq("template_type", "signup_confirmation")
       .single();
 
-    if (templateErr || !templateData) {
+    if (templateErr || !data) {
       log("✗ Template fetch failed:", {
         error: templateErr?.message,
         hasData: !!data,
