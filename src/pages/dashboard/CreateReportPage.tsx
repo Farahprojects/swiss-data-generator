@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Calendar, MapPin, Clock } from 'lucide-react';
+import { Calendar, MapPin, Clock } from 'lucide-react';
 
 const CreateReportPage = () => {
   const [formData, setFormData] = useState({
@@ -33,22 +33,12 @@ const CreateReportPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <FileText className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Create Report</h1>
-          <p className="text-gray-600">Generate a new astrological report</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Create Report</h1>
       </div>
 
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>Report Details</CardTitle>
-          <CardDescription>
-            Fill in the details below to generate your custom astrological report
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="max-w-2xl border border-gray-200 shadow-sm">
+        <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="reportType">Report Type</Label>
