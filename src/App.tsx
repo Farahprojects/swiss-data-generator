@@ -21,6 +21,7 @@ import UsagePage from './pages/dashboard/UsagePage';
 import ReportsPage from './pages/dashboard/ReportsPage';
 import BillingPage from './pages/dashboard/BillingPage';
 import PricingPage from './pages/dashboard/PricingPage';
+import CreateReportPage from './pages/dashboard/CreateReportPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "./components/ui/toaster";
@@ -175,6 +176,7 @@ function App() {
                     <Route path="reports" element={<ReportsPage />} />
                     <Route path="billing" element={<BillingPage />} />
                     <Route path="pricing" element={<PricingPage />} />
+                    <Route path="create-report" element={<CreateReportPage />} />
                   </Route>
                   
                   {/* Legacy routes redirect */}
