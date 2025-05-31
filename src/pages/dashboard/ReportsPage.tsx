@@ -1,176 +1,146 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { FileText, Plus } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
+import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+
+type Report = {
+  id: string;
+  created_at: string;
+  request_type: string;
+  report_tier: string | null;
+  response_payload?: any;
+  request_payload?: any;
+  error_message?: string;
+  response_status: number;
+  processing_time_ms: number | null;
+  google_geo?: boolean;
+  total_cost_usd: number;
+};
 
 const ReportsPage = () => {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [reportType, setReportType] = useState<string>('');
-  const [reportData, setReportData] = useState({
-    name: '',
-    birthDate: '',
-    birthTime: '',
-    location: '',
-    reportLevel: 'standard'
-  });
+  const { user } = useAuth();
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
-  const handleCreateReport = () => {
-    // TODO: Implement report creation logic
-    console.log('Creating report with data:', reportData, 'Type:', reportType);
-    setIsCreateDialogOpen(false);
+  const openDrawer = (report: Report) => {
+    setSelectedReport(report);
+    setDrawerOpen(true);
+  };
+
+  const loadReports = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('translator_logs')
+        .select(`
+          *,
+          api_usage!translator_log_id(total_cost_usd)
+        `)
+        .eq('user_id', user.id)
+        .gte('response_status', 200)
+        .lt('response_status', 300)
+        .not('report_tier', 'is', null)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching reports:", error);
+        return;
+      }
+
+      const processedData: Report[] = data?.map(item => ({
+        id: item.id,
+        created_at: item.created_at,
+        response_status: item.response_status || 0,
+        request_type: item.request_type || '',
+        report_tier: item.report_tier,
+        total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
+        processing_time_ms: item.processing_time_ms,
+        response_payload: item.response_payload,
+        request_payload: item.request_payload,
+        error_message: item.error_message,
+        google_geo: item.google_geo
+      })) || [];
+      
+      setReports(processedData);
+    } catch (err) {
+      console.error("Unexpected error loading reports:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReports();
+  }, [user]);
+
+  const formatReportName = (type: string | null, tier: string | null): string => {
+    if (!type && !tier) return 'Unknown Report';
+    if (tier) {
+      return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase() + ' Report';
+    }
+    return type ? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() : 'Report';
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-          <p className="text-muted-foreground">
-            Generate and manage your astrological reports
-          </p>
+    <>
+      <h1 className="text-2xl font-bold mb-6">Reports</h1>
+      
+      {loading ? (
+        <div className="p-8 text-center">
+          <p>Loading reports...</p>
         </div>
-        
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Create Report
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Create New Report</DialogTitle>
-              <DialogDescription>
-                Generate a new astrological report by providing the required information.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="reportType">Report Type</Label>
-                <Select value={reportType} onValueChange={setReportType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select report type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="natal">Natal Chart</SelectItem>
-                    <SelectItem value="transits">Current Transits</SelectItem>
-                    <SelectItem value="progressions">Progressions</SelectItem>
-                    <SelectItem value="return">Solar Return</SelectItem>
-                    <SelectItem value="synastry">Synastry</SelectItem>
-                    <SelectItem value="essence">Essence Report</SelectItem>
-                    <SelectItem value="flow">Flow Report</SelectItem>
-                    <SelectItem value="mindset">Mindset Report</SelectItem>
-                    <SelectItem value="monthly">Monthly Report</SelectItem>
-                    <SelectItem value="focus">Focus Report</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter name"
-                  value={reportData.name}
-                  onChange={(e) => setReportData({...reportData, name: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="birthDate">Birth Date</Label>
-                <Input
-                  id="birthDate"
-                  type="date"
-                  value={reportData.birthDate}
-                  onChange={(e) => setReportData({...reportData, birthDate: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="birthTime">Birth Time</Label>
-                <Input
-                  id="birthTime"
-                  type="time"
-                  value={reportData.birthTime}
-                  onChange={(e) => setReportData({...reportData, birthTime: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location">Birth Location</Label>
-                <Input
-                  id="location"
-                  placeholder="City, State/Country"
-                  value={reportData.location}
-                  onChange={(e) => setReportData({...reportData, location: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reportLevel">Report Level</Label>
-                <Select 
-                  value={reportData.reportLevel} 
-                  onValueChange={(value) => setReportData({...reportData, reportLevel: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="standard">Standard Report</SelectItem>
-                    <SelectItem value="premium">Premium Report</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateReport}
-                disabled={!reportType || !reportData.name || !reportData.birthDate}
-              >
-                Generate Report
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid gap-4">
-        <div className="border rounded-lg p-6 text-center">
-          <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Reports Yet</h3>
-          <p className="text-muted-foreground mb-4">
-            Create your first astrological report to get started.
-          </p>
-          <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Your First Report
-          </Button>
+      ) : reports.length === 0 ? (
+        <div className="p-8 text-center">
+          <p>No reports found.</p>
         </div>
-      </div>
-    </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto">
+              <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
+                <tr>
+                  <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-left">Report Name</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {reports.map((report) => (
+                  <tr 
+                    key={report.id} 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => openDrawer(report)}
+                  >
+                    <td className="px-4 py-3">
+                      {report.created_at ? 
+                        format(new Date(report.created_at), 'MMM d, yyyy HH:mm:ss') : 
+                        'N/A'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-primary hover:underline">
+                        {formatReportName(report.request_type, report.report_tier)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      
+      <ActivityLogDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        logData={selectedReport}
+      />
+    </>
   );
 };
 
