@@ -37,7 +37,7 @@ const CreateReportPage = () => {
         <h1 className="text-3xl font-bold text-gray-900">Create Report</h1>
       </div>
 
-      <Card className="max-w-2xl border border-gray-200 shadow-sm">
+      <Card className="max-w-2xl border-2 border-gray-100">
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
