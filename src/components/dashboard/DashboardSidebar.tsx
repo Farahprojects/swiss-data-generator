@@ -15,8 +15,7 @@ import {
   FileText, 
   FileQuestion, 
   CreditCard,
-  DollarSign,
-  FilePlus
+  DollarSign
 } from 'lucide-react';
 
 const DashboardSidebar = () => {
@@ -49,11 +48,6 @@ const DashboardSidebar = () => {
       name: "Reports",
       path: "/dashboard/reports",
       icon: <FileText size={20} />
-    },
-    {
-      name: "Create Report",
-      path: "/dashboard/create-report",
-      icon: <FilePlus size={20} />
     },
     {
       name: "Documentation",
