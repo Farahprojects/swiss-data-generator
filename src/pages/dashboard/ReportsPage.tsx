@@ -80,12 +80,17 @@ const ReportsPage = () => {
     loadReports();
   }, [user]);
 
-  const formatReportName = (type: string | null, tier: string | null): string => {
-    if (!type && !tier) return 'Unknown Report';
-    if (tier) {
-      return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase() + ' Report';
+  const formatReportType = (tier: string | null): string => {
+    if (!tier) return 'Unknown';
+    return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
+  };
+
+  const getReportName = (report: Report): string => {
+    // Extract name from request payload or use a default
+    if (report.request_payload && report.request_payload.name) {
+      return report.request_payload.name;
     }
-    return type ? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() : 'Report';
+    return 'Untitled Report';
   };
 
   return (
@@ -106,8 +111,9 @@ const ReportsPage = () => {
             <table className="w-full table-auto">
               <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                 <tr>
-                  <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-left">Report Name</th>
+                  <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-left">Report Type</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -118,14 +124,17 @@ const ReportsPage = () => {
                     onClick={() => openDrawer(report)}
                   >
                     <td className="px-4 py-3">
+                      <span className="font-medium text-primary hover:underline">
+                        {getReportName(report)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
                       {report.created_at ? 
                         format(new Date(report.created_at), 'MMM d, yyyy HH:mm:ss') : 
                         'N/A'}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-medium text-primary hover:underline">
-                        {formatReportName(report.request_type, report.report_tier)}
-                      </span>
+                      {formatReportType(report.report_tier)}
                     </td>
                   </tr>
                 ))}
