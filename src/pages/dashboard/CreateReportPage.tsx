@@ -158,7 +158,7 @@ const CreateReportPage = () => {
                     value="personal-identity" 
                     className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
                   >
-                    Personal –identity
+                    Personal
                   </ToggleGroupItem>
                   <ToggleGroupItem 
                     value="professional" 
@@ -300,7 +300,7 @@ const CreateReportPage = () => {
 
                 {/* Today's Date and Time - only for Body Matrix and Essence reports */}
                 {requiresTodayDateTime && (
-                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg border">
+                  <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-gray-700">
                         Optional: Add today's date and time if you're not in the same location as birth
