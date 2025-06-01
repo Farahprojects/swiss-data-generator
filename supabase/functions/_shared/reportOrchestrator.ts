@@ -29,7 +29,7 @@ const initSupabase = () => {
 
 interface ReportPayload {
   endpoint: string;
-  report_type: "standard" | "premium";
+  report_type: string; // Changed from "standard" | "premium" to string
   user_id: string;
   apiKey: string;
   chartData: any; // Swiss API response data
@@ -54,16 +54,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
   const startTime = Date.now();
   
   try {
-    // Step 1: Validate report type
-    if (!["standard", "premium"].includes(payload.report_type)) {
-      console.error(`[reportOrchestrator] Invalid report type: ${payload.report_type}`);
-      return { 
-        success: false, 
-        errorMessage: "Invalid report type. Supported types: standard, premium" 
-      };
-    }
-
-    // Step 2: Get cost from price_list
+    // Step 1: Initialize Supabase client
     let supabase;
     try {
       supabase = initSupabase();
@@ -75,6 +66,45 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
       };
     }
 
+    // Step 2: Dynamic validation - check if report type exists in report_prompts table
+    try {
+      const { data: promptExists, error: promptError } = await supabase
+        .from("report_prompts")
+        .select("name")
+        .eq("name", payload.report_type)
+        .maybeSingle();
+      
+      if (promptError) {
+        if (promptError.message?.includes("JWT")) {
+          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 in prompt validation: ${promptError.message}`);
+        } else {
+          console.error(`[reportOrchestrator] Error validating report type: ${promptError.message}`);
+        }
+        throw promptError;
+      }
+      
+      if (!promptExists) {
+        console.error(`[reportOrchestrator] Invalid report type: ${payload.report_type}`);
+        return { 
+          success: false, 
+          errorMessage: `Report type '${payload.report_type}' not found. Please check available report types.` 
+        };
+      }
+      
+      console.log(`[reportOrchestrator] Report type '${payload.report_type}' validated successfully`);
+    } catch (dbError) {
+      if (String(dbError).includes("JWT")) {
+        console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 during report type validation: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
+      } else {
+        console.error(`[reportOrchestrator] Database error during validation: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
+      }
+      return {
+        success: false,
+        errorMessage: "Error validating report type"
+      };
+    }
+
+    // Step 3: Get cost from price_list using the actual report_type
     try {
       const { data: priceData, error: priceError } = await supabase
         .from("price_list")
@@ -116,7 +146,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     // Trust the payload for user_id instead of checking balances
     const userId = payload.user_id;
     
-    // Step 3: Generate the report
+    // Step 4: Generate the report
     const report = await generateReport(payload);
     
     if (!report.success) {
@@ -161,70 +191,63 @@ async function generateReport(payload: ReportPayload) {
       throw new Error("Missing SUPABASE_URL environment variable");
     }
     
-    // Based on report type, call the appropriate function
-    if (payload.report_type === "premium") {
-      // This would call premium_report() function
-      console.log("[reportOrchestrator] Generating premium report");
+    // Call the standard-report edge function with the actual report type
+    console.log(`[reportOrchestrator] Calling standard-report edge function for ${payload.report_type} report`);
+    
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/standard-report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // No Authorization header as verify_jwt = false in config.toml
+        },
+        body: JSON.stringify({
+          ...payload,
+          reportType: payload.report_type // Pass the actual report type
+        })
+      });
+      
+      // Improved error handling for HTTP errors
+      if (!response.ok) {
+        const errorText = await response.text();
+        const status = response.status;
+        
+        if (status === 401 || errorText.includes("JWT")) {
+          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 from standard-report function: ${status} - ${errorText}`);
+          return {
+            success: false,
+            errorMessage: `JWT authentication error (401): ${errorText}`
+          };
+        } else {
+          console.error(`[reportOrchestrator] Error from standard-report function: ${status} - ${errorText}`);
+          return {
+            success: false,
+            errorMessage: `Report generation failed with status ${status}: ${errorText}`
+          };
+        }
+      }
+      
+      const reportResult = await response.json();
+      console.log(`[reportOrchestrator] Successfully received ${payload.report_type} report from standard-report function`);
+      
       return {
         success: true,
-        data: await mockPremiumReport(payload)
+        data: {
+          title: `${payload.report_type.charAt(0).toUpperCase() + payload.report_type.slice(1)} ${payload.endpoint} Report`,
+          content: reportResult.report,
+          generated_at: new Date().toISOString()
+        }
       };
-    } else {
-      // Call the standard-report edge function
-      console.log("[reportOrchestrator] Calling standard-report edge function");
-      
-      try {
-        const response = await fetch(`${supabaseUrl}/functions/v1/standard-report`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            // No Authorization header as verify_jwt = false in config.toml
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        // Improved error handling for HTTP errors
-        if (!response.ok) {
-          const errorText = await response.text();
-          const status = response.status;
-          
-          if (status === 401 || errorText.includes("JWT")) {
-            console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 from standard-report function: ${status} - ${errorText}`);
-            return {
-              success: false,
-              errorMessage: `JWT authentication error (401): ${errorText}`
-            };
-          } else {
-            console.error(`[reportOrchestrator] Error from standard-report function: ${status} - ${errorText}`);
-            return {
-              success: false,
-              errorMessage: `Report generation failed with status ${status}: ${errorText}`
-            };
-          }
-        }
-        
-        const reportResult = await response.json();
-        console.log("[reportOrchestrator] Successfully received report from standard-report function");
-        
-        return {
-          success: true,
-          data: {
-            title: `Standard ${payload.endpoint} Report`,
-            content: reportResult.report,
-            generated_at: new Date().toISOString()
-          }
-        };
-      } catch (fetchErr) {
-        if (String(fetchErr).includes("JWT") || String(fetchErr).includes("401")) {
-          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 calling standard-report: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
-        } else {
-          console.error(`[reportOrchestrator] Fetch error calling standard-report:`, fetchErr);
-        }
-        return {
-          success: false,
-          errorMessage: `Network error calling report service: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`
-        };
+    } catch (fetchErr) {
+      if (String(fetchErr).includes("JWT") || String(fetchErr).includes("401")) {
+        console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 calling standard-report: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
+      } else {
+        console.error(`[reportOrchestrator] Fetch error calling standard-report:`, fetchErr);
       }
+      return {
+        success: false,
+        errorMessage: `Network error calling report service: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`
+      };
     }
   } catch (err) {
     if (String(err).includes("JWT") || String(err).includes("401")) {
@@ -237,15 +260,4 @@ async function generateReport(payload: ReportPayload) {
       errorMessage: err instanceof Error ? err.message : String(err)
     };
   }
-}
-
-// Placeholder function for premium reports that would be replaced with actual report generation logic
-async function mockPremiumReport(payload: ReportPayload) {
-  // In a real implementation, this would call an AI service or other logic
-  return {
-    title: `Premium ${payload.endpoint} Report`,
-    content: "This is a placeholder for the premium report content with extended analysis",
-    sections: ["Overview", "Detailed Analysis", "Recommendations"],
-    generated_at: new Date().toISOString()
-  };
 }

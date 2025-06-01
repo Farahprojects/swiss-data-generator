@@ -1,4 +1,3 @@
-
 /*─────────────────────Made──────────────────────────────────────────────────────────
   standard-report.ts
   Edge Function: Generates standard reports using Google's Gemini 2.5 Flash Preview model
@@ -22,7 +21,6 @@ const INITIAL_RETRY_DELAY_MS = parseInt(Deno.env.get("INITIAL_RETRY_DELAY_MS") |
 const RETRY_BACKOFF_FACTOR = parseFloat(Deno.env.get("RETRY_BACKOFF_FACTOR") || "2");
 const API_TIMEOUT_MS = parseInt(Deno.env.get("API_TIMEOUT_MS") || "90000"); 
 const MAX_DB_RETRIES = parseInt(Deno.env.get("MAX_DB_RETRIES") || "2");
-
 
 // Enhanced debugging for initialization
 const LOG_PREFIX_INIT = "[standard-report][init]";
@@ -120,16 +118,16 @@ async function retryWithBackoff<T>(
   throw new Error(`${logPrefix} Retry logic error for ${operationName}: exceeded max attempts without throwing.`);
 }
 
-// Fetch the system prompt from the reports_prompts table
-async function getSystemPrompt(requestId: string): Promise<string> {
+// Fetch the system prompt from the reports_prompts table - now accepts reportType parameter
+async function getSystemPrompt(reportType: string, requestId: string): Promise<string> {
   const logPrefix = `[standard-report][${requestId}]`;
-  console.log(`${logPrefix} Fetching system prompt from database`);
+  console.log(`${logPrefix} Fetching system prompt for report type: ${reportType}`);
 
   const fetchPrompt = async () => {
     const { data, error, status } = await supabase
       .from("report_prompts")
       .select("system_prompt")
-      .eq("name", "standard")
+      .eq("name", reportType) // Changed from hardcoded "standard" to dynamic reportType
       .maybeSingle();
 
     if (error) {
@@ -142,17 +140,17 @@ async function getSystemPrompt(requestId: string): Promise<string> {
     }
 
     if (!data || !data.system_prompt) {
-      console.error(`${logPrefix} No system prompt found for 'standard'`);
-      throw new Error("System prompt not found for standard report");
+      console.error(`${logPrefix} No system prompt found for '${reportType}'`);
+      throw new Error(`System prompt not found for ${reportType} report`);
     }
     
-    console.log(`${logPrefix} Retrieved system prompt for 'standard' report type`);
+    console.log(`${logPrefix} Retrieved system prompt for '${reportType}' report type`);
     return data.system_prompt;
   };
 
   try {
     const systemPrompt = await retryWithBackoff(fetchPrompt, logPrefix, MAX_DB_RETRIES, 500, 2, "database system prompt fetch");
-    console.log(`${logPrefix} Successfully retrieved system prompt`);
+    console.log(`${logPrefix} Successfully retrieved system prompt for ${reportType}`);
     return systemPrompt;
   } catch (err) {
     console.error(`${logPrefix} Unexpected error after retries fetching system prompt:`, err);
@@ -342,7 +340,10 @@ serve(async (req) => {
         requestId
       );
     }
-    console.log(`${logPrefix} Processing report for endpoint: ${reportData?.endpoint}`);
+    
+    // Extract the report type from the payload (either reportType or report_type)
+    const reportType = reportData.reportType || reportData.report_type || "standard";
+    console.log(`${logPrefix} Processing ${reportType} report for endpoint: ${reportData?.endpoint}`);
     console.log(`${logPrefix} Payload structure check - keys: ${Object.keys(reportData || {}).join(', ')}`);
 
     // Validate required fields
@@ -354,7 +355,7 @@ serve(async (req) => {
         await logReportAttempt(
           reportData.apiKey,
           reportData.user_id,
-          reportData.report_type || "standard",
+          reportType,
           reportData.endpoint || "unknown",
           null,
           null,
@@ -372,8 +373,8 @@ serve(async (req) => {
       );
     }
 
-    // Fetch the system prompt
-    const systemPrompt = await getSystemPrompt(requestId);
+    // Fetch the system prompt using the dynamic report type
+    const systemPrompt = await getSystemPrompt(reportType, requestId);
 
     // Generate the report
     const report = await generateReport(systemPrompt, reportData, requestId);
@@ -383,7 +384,7 @@ serve(async (req) => {
       await logReportAttempt(
         reportData.apiKey,
         reportData.user_id,
-        reportData.report_type || "standard",
+        reportType,
         reportData.endpoint,
         reportData.chartData,
         report, // Make sure this contains the actual report text
@@ -395,7 +396,7 @@ serve(async (req) => {
     }
 
     // Return the generated report
-    console.log(`${logPrefix} Successfully processed request in ${Date.now() - startTime}ms`);
+    console.log(`${logPrefix} Successfully processed ${reportType} request in ${Date.now() - startTime}ms`);
     return jsonResponse({
       success: true,
       report: report,
@@ -413,7 +414,7 @@ serve(async (req) => {
         await logReportAttempt(
           payload.apiKey,
           payload.user_id,
-          payload.report_type || "standard",
+          payload.reportType || payload.report_type || "unknown",
           payload.endpoint || "unknown",
           payload.chartData,
           null,

@@ -286,6 +286,7 @@ export type Database = {
       }
       price_list: {
         Row: {
+          created_at: string | null
           description: string | null
           endpoint: string | null
           id: string
@@ -294,6 +295,7 @@ export type Database = {
           unit_price_usd: number
         }
         Insert: {
+          created_at?: string | null
           description?: string | null
           endpoint?: string | null
           id: string
@@ -302,6 +304,7 @@ export type Database = {
           unit_price_usd: number
         }
         Update: {
+          created_at?: string | null
           description?: string | null
           endpoint?: string | null
           id?: string
