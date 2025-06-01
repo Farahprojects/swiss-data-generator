@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Toggle } from "@/components/ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 type ActivityLogItem = {
   id: string;
@@ -124,27 +124,29 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
       <DrawerContent className="h-[90vh] max-w-[60vw] mx-auto">
         <DrawerHeader className="flex flex-row items-center justify-between border-b p-4">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Toggle 
-                pressed={viewMode === 'report'} 
-                onPressedChange={(pressed) => setViewMode(pressed ? 'report' : 'payload')}
+            <ToggleGroup 
+              type="single" 
+              value={viewMode} 
+              onValueChange={(value) => value && setViewMode(value as 'report' | 'payload')}
+            >
+              <ToggleGroupItem 
+                value="report" 
                 disabled={!logData?.response_payload?.report}
               >
                 Report
-              </Toggle>
-              <Toggle 
-                pressed={viewMode === 'payload'} 
-                onPressedChange={(pressed) => setViewMode(pressed ? 'payload' : 'report')}
+              </ToggleGroupItem>
+              <ToggleGroupItem 
+                value="payload" 
                 disabled={!logData?.response_payload && !logData?.request_payload}
               >
                 Payload
-              </Toggle>
-            </div>
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="ghost" className="text-sm font-normal p-0 h-auto hover:bg-transparent">
                   <Download className="h-4 w-4 mr-1" />
                   Download
                 </Button>
