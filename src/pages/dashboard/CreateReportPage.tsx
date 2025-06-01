@@ -82,22 +82,7 @@ const CreateReportPage = () => {
               </Select>
             </div>
 
-            {/* Specific Date Fields */}
-            {requiresTransitDate && (
-              <div className="space-y-2">
-                <Label htmlFor="transitDate" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Transit Date
-                </Label>
-                <Input
-                  id="transitDate"
-                  type="date"
-                  value={formData.transitDate}
-                  onChange={(e) => handleInputChange('transitDate', e.target.value)}
-                />
-              </div>
-            )}
-
+            {/* Moon Date - standalone field for moonphases */}
             {requiresMoonDate && (
               <div className="space-y-2">
                 <Label htmlFor="moonDate" className="flex items-center gap-2">
@@ -113,63 +98,81 @@ const CreateReportPage = () => {
               </div>
             )}
 
-            {/* First Person */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {requiresTwoPeople ? 'First Person' : 'Person Details'}
-              </h3>
-              
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter full name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Person Details - only show if NOT moonphases */}
+            {!requiresMoonDate && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {requiresTwoPeople ? 'First Person' : 'Person Details'}
+                </h3>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="birthDate" className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Birth Date
-                  </Label>
+                  <Label htmlFor="name">Full Name</Label>
                   <Input
-                    id="birthDate"
-                    type="date"
-                    value={formData.birthDate}
-                    onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                    id="name"
+                    placeholder="Enter full name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
                   />
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="birthDate" className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Birth Date
+                    </Label>
+                    <Input
+                      id="birthDate"
+                      type="date"
+                      value={formData.birthDate}
+                      onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="birthTime" className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Birth Time
+                    </Label>
+                    <Input
+                      id="birthTime"
+                      type="time"
+                      value={formData.birthTime}
+                      onChange={(e) => handleInputChange('birthTime', e.target.value)}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="birthTime" className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Birth Time
+                  <Label htmlFor="birthLocation" className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Birth Location
                   </Label>
                   <Input
-                    id="birthTime"
-                    type="time"
-                    value={formData.birthTime}
-                    onChange={(e) => handleInputChange('birthTime', e.target.value)}
+                    id="birthLocation"
+                    placeholder="City, Country"
+                    value={formData.birthLocation}
+                    onChange={(e) => handleInputChange('birthLocation', e.target.value)}
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="birthLocation" className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Birth Location
-                </Label>
-                <Input
-                  id="birthLocation"
-                  placeholder="City, Country"
-                  value={formData.birthLocation}
-                  onChange={(e) => handleInputChange('birthLocation', e.target.value)}
-                />
+                {/* Transit Date - appears after Birth Location for transits */}
+                {requiresTransitDate && (
+                  <div className="space-y-2">
+                    <Label htmlFor="transitDate" className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Transit Date
+                    </Label>
+                    <Input
+                      id="transitDate"
+                      type="date"
+                      value={formData.transitDate}
+                      onChange={(e) => handleInputChange('transitDate', e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
+            )}
 
             {/* Second Person - only show for compatibility and sync reports */}
             {requiresTwoPeople && (
