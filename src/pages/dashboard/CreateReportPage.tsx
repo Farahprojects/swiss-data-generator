@@ -20,6 +20,9 @@ const CreateReportPage = () => {
     birthDate2: '',
     birthTime2: '',
     birthLocation2: '',
+    // Specific date fields for certain report types
+    transitDate: '',
+    moonDate: '',
     notes: ''
   });
 
@@ -38,6 +41,10 @@ const CreateReportPage = () => {
 
   // Check if report type requires two people
   const requiresTwoPeople = formData.reportType === 'compatibility' || formData.reportType === 'sync';
+  
+  // Check if report type requires specific date
+  const requiresTransitDate = formData.reportType === 'transits';
+  const requiresMoonDate = formData.reportType === 'moonphases';
 
   return (
     <div className="space-y-6">
@@ -74,6 +81,37 @@ const CreateReportPage = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Specific Date Fields */}
+            {requiresTransitDate && (
+              <div className="space-y-2">
+                <Label htmlFor="transitDate" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Transit Date
+                </Label>
+                <Input
+                  id="transitDate"
+                  type="date"
+                  value={formData.transitDate}
+                  onChange={(e) => handleInputChange('transitDate', e.target.value)}
+                />
+              </div>
+            )}
+
+            {requiresMoonDate && (
+              <div className="space-y-2">
+                <Label htmlFor="moonDate" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Moon Date
+                </Label>
+                <Input
+                  id="moonDate"
+                  type="date"
+                  value={formData.moonDate}
+                  onChange={(e) => handleInputChange('moonDate', e.target.value)}
+                />
+              </div>
+            )}
 
             {/* First Person */}
             <div className="space-y-4">
@@ -216,6 +254,8 @@ const CreateReportPage = () => {
                 birthDate2: '',
                 birthTime2: '',
                 birthLocation2: '',
+                transitDate: '',
+                moonDate: '',
                 notes: ''
               })}>
                 Clear Form
