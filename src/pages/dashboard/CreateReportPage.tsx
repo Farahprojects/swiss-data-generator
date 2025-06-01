@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,21 @@ const CreateReportPage = () => {
       [field]: value
     }));
   };
+
+  // Pre-select "Personal" when sync report is selected
+  useEffect(() => {
+    if (formData.reportType === 'sync' && !formData.relationshipType) {
+      setFormData(prev => ({
+        ...prev,
+        relationshipType: 'personal'
+      }));
+    } else if (formData.reportType !== 'sync') {
+      setFormData(prev => ({
+        ...prev,
+        relationshipType: ''
+      }));
+    }
+  }, [formData.reportType]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,10 +119,16 @@ const CreateReportPage = () => {
                   onValueChange={(value) => handleInputChange('relationshipType', value || '')}
                   className="justify-start"
                 >
-                  <ToggleGroupItem value="personal" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  <ToggleGroupItem 
+                    value="personal" 
+                    className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
+                  >
                     Personal
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="professional" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  <ToggleGroupItem 
+                    value="professional" 
+                    className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
+                  >
                     Professional
                   </ToggleGroupItem>
                 </ToggleGroup>
