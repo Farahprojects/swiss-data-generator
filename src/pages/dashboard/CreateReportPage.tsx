@@ -22,6 +22,7 @@ const CreateReportPage = () => {
     birthLocation2: '',
     // Specific date fields for certain report types
     transitDate: '',
+    progressionDate: '',
     moonDate: '',
     notes: ''
   });
@@ -44,6 +45,7 @@ const CreateReportPage = () => {
   
   // Check if report type requires specific date
   const requiresTransitDate = formData.reportType === 'transits';
+  const requiresProgressionDate = formData.reportType === 'progressions';
   const requiresMoonDate = formData.reportType === 'moonphases';
 
   return (
@@ -171,6 +173,22 @@ const CreateReportPage = () => {
                     />
                   </div>
                 )}
+
+                {/* Progression Date - appears after Birth Location for progressions */}
+                {requiresProgressionDate && (
+                  <div className="space-y-2">
+                    <Label htmlFor="progressionDate" className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Progression Date
+                    </Label>
+                    <Input
+                      id="progressionDate"
+                      type="date"
+                      value={formData.progressionDate}
+                      onChange={(e) => handleInputChange('progressionDate', e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -258,6 +276,7 @@ const CreateReportPage = () => {
                 birthTime2: '',
                 birthLocation2: '',
                 transitDate: '',
+                progressionDate: '',
                 moonDate: '',
                 notes: ''
               })}>
