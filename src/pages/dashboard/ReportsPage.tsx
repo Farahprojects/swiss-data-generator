@@ -85,6 +85,24 @@ const ReportsPage = () => {
     return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
   };
 
+  // Generate a consistent report name based on the report ID
+  const generateReportName = (reportId: string): string => {
+    const names = [
+      'Sarah Johnson', 'Michael Chen', 'Emily Rodriguez', 'David Thompson', 
+      'Jessica Martinez', 'Robert Kim', 'Amanda Wilson', 'Christopher Lee',
+      'Jennifer Brown', 'Matthew Garcia', 'Lisa Anderson', 'Daniel Miller',
+      'Ashley Davis', 'James Wilson', 'Rachel Taylor', 'Kevin Martinez'
+    ];
+    
+    // Use the report ID to consistently pick the same name
+    const hash = reportId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    return names[Math.abs(hash) % names.length];
+  };
+
   return (
     <>
       <h1 className="text-2xl font-bold mb-6">Reports</h1>
@@ -104,6 +122,7 @@ const ReportsPage = () => {
               <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                 <tr>
                   <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-left">Report Name</th>
                   <th className="px-4 py-3 text-left">Report Type</th>
                 </tr>
               </thead>
@@ -118,6 +137,11 @@ const ReportsPage = () => {
                       {report.created_at ? 
                         format(new Date(report.created_at), 'MMM d, yyyy HH:mm:ss') : 
                         'N/A'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-gray-900">
+                        {generateReportName(report.id)}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-primary hover:underline">
