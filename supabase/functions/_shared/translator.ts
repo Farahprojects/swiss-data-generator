@@ -75,11 +75,9 @@ async function logToSupabase(
   googleGeoUsed = false,
   userId?: string,
 ) {
-  /* extract report tier, if present */
-  const reportTier =
-    ["standard", "premium"].includes(requestPayload?.report)
-      ? requestPayload.report
-      : null;
+  
+  /* extract report tier - now accepts any report type from payload */
+  const reportTier = requestPayload?.report || null;
 
   const { error } = await sb.from("translator_logs").insert({
     request_type:       requestType,
