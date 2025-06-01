@@ -31,6 +31,9 @@ const CreateReportPage = () => {
     positionsLocation: '',
     positionsDate: '',
     positionsEndDate: '',
+    // Today's date/time fields for body matrix and essence
+    todayDate: '',
+    todayTime: '',
     notes: ''
   });
 
@@ -72,6 +75,7 @@ const CreateReportPage = () => {
   const requiresMoonDate = formData.reportType === 'moonphases';
   const requiresPositionsFields = formData.reportType === 'positions';
   const isSyncReport = formData.reportType === 'sync';
+  const requiresTodayDateTime = formData.reportType === 'body_matrix' || formData.reportType === 'essence';
 
   return (
     <div className="space-y-6">
@@ -256,6 +260,45 @@ const CreateReportPage = () => {
                     onChange={(e) => handleInputChange('birthLocation', e.target.value)}
                   />
                 </div>
+
+                {/* Today's Date and Time - only for Body Matrix and Essence reports */}
+                {requiresTodayDateTime && (
+                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg border">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Optional: Add today's date and time if you're not in the same location as birth
+                      </Label>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="todayDate" className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Today's Date
+                        </Label>
+                        <Input
+                          id="todayDate"
+                          type="date"
+                          value={formData.todayDate}
+                          onChange={(e) => handleInputChange('todayDate', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="todayTime" className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Today's Time
+                        </Label>
+                        <Input
+                          id="todayTime"
+                          type="time"
+                          value={formData.todayTime}
+                          onChange={(e) => handleInputChange('todayTime', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Transit Date - appears after Birth Location for transits */}
                 {requiresTransitDate && (
