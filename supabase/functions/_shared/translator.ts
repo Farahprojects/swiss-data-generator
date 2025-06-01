@@ -1,4 +1,5 @@
 
+
 // supabase/functions/_shared/translator.ts
 // Pure helper module – NO Edge Function wrapper
 // Exported translate() returns { status, text } so other functions can await it.
@@ -75,11 +76,8 @@ async function logToSupabase(
   googleGeoUsed = false,
   userId?: string,
 ) {
-  /* extract report tier, if present */
-  const reportTier =
-    ["standard", "premium"].includes(requestPayload?.report)
-      ? requestPayload.report
-      : null;
+  /* extract report tier - now accepts any report type from payload */
+  const reportTier = requestPayload?.report || null;
 
   const { error } = await sb.from("translator_logs").insert({
     request_type:       requestType,
@@ -489,3 +487,74 @@ export async function translate(
     return { status: 500, text: JSON.stringify({ error: msg }) };
   }
 }
+
+/*──────────────── helpers */
+async function ensureLatLon(
+  obj: any,
+): Promise<{ data: any; googleGeoUsed: boolean }> {
+  // If lat/lon are provided or no location, return as is
+  if (
+    (obj.latitude !== undefined && obj.longitude !== undefined) ||
+    !obj.location
+  ) return { data: obj, googleGeoUsed: false };
+
+  const place = String(obj.location).trim();
+  let googleGeoUsed = true; // Mark as used for geo lookup regardless of source
+
+  /* ---------- cache first ---------- */
+  const { data } = await sb
+    .from(GEO_TAB)
+    .select("lat,lon,updated_at")
+    .eq("place", place)
+    .maybeSingle();
+
+  if (data) {
+    const age = (Date.now() - Date.parse(data.updated_at)) / 60000;
+    if (age < GEO_TTL) {
+      // Even though we're using cache, we still mark googleGeoUsed as true
+      // This is the key change - we charge for the geo lookup service regardless of source
+      return {
+        data: { ...obj, latitude: data.lat, longitude: data.lon },
+        googleGeoUsed: true, // Changed from false to true
+      };
+    }
+  }
+
+  /* ---------- Google fallback ---------- */
+  const url =
+    `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+      place,
+    )}&key=${GEO_KEY}`;
+  const g = await fetch(url).then((r) => r.json());
+  if (g.status !== "OK") throw new Error(`Geocode failed: ${g.status}`);
+
+  const { lat, lng } = g.results[0].geometry.location;
+  await sb.from(GEO_TAB).upsert({ place, lat, lon: lng });
+
+  return {
+    data: { ...obj, latitude: lat, longitude: lng },
+    googleGeoUsed: true,
+  };
+}
+
+function normalise(p: any) {
+  const out = { ...p };
+
+  if (out.system && out.sidereal === undefined) {
+    out.sidereal = out.system.toLowerCase() === "vedic";
+  }
+
+  if (out.house && !out.settings?.house_system) {
+    const letter = HOUSE_ALIASES[out.house.toLowerCase()];
+    if (letter) out.settings = { ...(out.settings ?? {}), house_system: letter };
+  }
+
+  if (out.house_system && !out.settings?.house_system) {
+    const letter = HOUSE_ALIASES[out.house_system.toLowerCase()] ??
+      out.house_system;
+    out.settings = { ...(out.settings ?? {}), house_system: letter };
+    delete out.house_system;
+  }
+  return out;
+}
+
