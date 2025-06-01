@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -332,30 +331,9 @@ const CreateReportPage = () => {
               />
             </div>
 
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" className="flex-1">
+            <div className="pt-4">
+              <Button type="submit" className="w-full">
                 Generate Report
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setFormData({
-                reportType: '',
-                name: '',
-                birthDate: '',
-                birthTime: '',
-                birthLocation: '',
-                name2: '',
-                birthDate2: '',
-                birthTime2: '',
-                birthLocation2: '',
-                transitDate: '',
-                progressionDate: '',
-                returnDate: '',
-                moonDate: '',
-                positionsLocation: '',
-                positionsDate: '',
-                positionsEndDate: '',
-                notes: ''
-              })}>
-                Clear Form
               </Button>
             </div>
           </form>
