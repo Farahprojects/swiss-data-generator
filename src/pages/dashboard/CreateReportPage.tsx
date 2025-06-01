@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +13,7 @@ const CreateReportPage = () => {
   const [formData, setFormData] = useState({
     reportType: '',
     relationshipType: '',
+    essenceType: '',
     name: '',
     birthDate: '',
     birthTime: '',
@@ -58,6 +60,16 @@ const CreateReportPage = () => {
     }
   }, [formData.reportType]);
 
+  // Clear essence type when report type changes away from essence
+  useEffect(() => {
+    if (formData.reportType !== 'essence') {
+      setFormData(prev => ({
+        ...prev,
+        essenceType: ''
+      }));
+    }
+  }, [formData.reportType]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Creating report with data:', formData);
@@ -74,6 +86,7 @@ const CreateReportPage = () => {
   const requiresMoonDate = formData.reportType === 'moonphases';
   const requiresPositionsFields = formData.reportType === 'positions';
   const isSyncReport = formData.reportType === 'sync';
+  const isEssenceReport = formData.reportType === 'essence';
   const requiresTodayDateTime = formData.reportType === 'body_matrix' || formData.reportType === 'essence';
 
   return (
@@ -101,7 +114,6 @@ const CreateReportPage = () => {
                   <SelectItem value="mindset">Mindset Report</SelectItem>
                   <SelectItem value="monthly">Monthly Report</SelectItem>
                   <SelectItem value="focus">Focus Report</SelectItem>
-                  <SelectItem value="reports">Reports (Tracking)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -127,6 +139,38 @@ const CreateReportPage = () => {
                     className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
                   >
                     Professional
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            )}
+
+            {/* Essence Type - only show for essence reports */}
+            {isEssenceReport && (
+              <div className="space-y-2">
+                <Label>Essence Type</Label>
+                <ToggleGroup 
+                  type="single" 
+                  value={formData.essenceType}
+                  onValueChange={(value) => handleInputChange('essenceType', value || '')}
+                  className="justify-start"
+                >
+                  <ToggleGroupItem 
+                    value="personal-identity" 
+                    className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
+                  >
+                    Personal –identity
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="professional" 
+                    className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
+                  >
+                    Professional
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="relational" 
+                    className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
+                  >
+                    Relational
                   </ToggleGroupItem>
                 </ToggleGroup>
               </div>
