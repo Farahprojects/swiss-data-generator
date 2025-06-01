@@ -80,12 +80,9 @@ const ReportsPage = () => {
     loadReports();
   }, [user]);
 
-  const formatReportName = (type: string | null, tier: string | null): string => {
-    if (!type && !tier) return 'Unknown Report';
-    if (tier) {
-      return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase() + ' Report';
-    }
-    return type ? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() : 'Report';
+  const formatReportTier = (tier: string | null): string => {
+    if (!tier) return 'Unknown';
+    return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
   };
 
   return (
@@ -107,7 +104,7 @@ const ReportsPage = () => {
               <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                 <tr>
                   <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-left">Report Name</th>
+                  <th className="px-4 py-3 text-left">Report Type</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -124,7 +121,7 @@ const ReportsPage = () => {
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-primary hover:underline">
-                        {formatReportName(report.request_type, report.report_tier)}
+                        {formatReportTier(report.report_tier)}
                       </span>
                     </td>
                   </tr>
