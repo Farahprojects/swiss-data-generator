@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,6 +25,10 @@ const CreateReportPage = () => {
     progressionDate: '',
     returnDate: '',
     moonDate: '',
+    // Planetary positions fields
+    positionsLocation: '',
+    positionsDate: '',
+    positionsEndDate: '',
     notes: ''
   });
 
@@ -48,6 +53,7 @@ const CreateReportPage = () => {
   const requiresProgressionDate = formData.reportType === 'progressions';
   const requiresReturnDate = formData.reportType === 'return';
   const requiresMoonDate = formData.reportType === 'moonphases';
+  const requiresPositionsFields = formData.reportType === 'positions';
 
   return (
     <div className="space-y-6">
@@ -101,8 +107,56 @@ const CreateReportPage = () => {
               </div>
             )}
 
-            {/* Person Details - only show if NOT moonphases */}
-            {!requiresMoonDate && (
+            {/* Planetary Positions Fields */}
+            {requiresPositionsFields && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Location & Date</h3>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="positionsLocation" className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Location
+                  </Label>
+                  <Input
+                    id="positionsLocation"
+                    placeholder="City, Country"
+                    value={formData.positionsLocation}
+                    onChange={(e) => handleInputChange('positionsLocation', e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="positionsDate" className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Date
+                    </Label>
+                    <Input
+                      id="positionsDate"
+                      type="date"
+                      value={formData.positionsDate}
+                      onChange={(e) => handleInputChange('positionsDate', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="positionsEndDate" className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      End Date (Optional)
+                    </Label>
+                    <Input
+                      id="positionsEndDate"
+                      type="date"
+                      value={formData.positionsEndDate}
+                      onChange={(e) => handleInputChange('positionsEndDate', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Person Details - only show if NOT moonphases and NOT positions */}
+            {!requiresMoonDate && !requiresPositionsFields && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {requiresTwoPeople ? 'First Person' : 'Person Details'}
@@ -296,6 +350,9 @@ const CreateReportPage = () => {
                 progressionDate: '',
                 returnDate: '',
                 moonDate: '',
+                positionsLocation: '',
+                positionsDate: '',
+                positionsEndDate: '',
                 notes: ''
               })}>
                 Clear Form
