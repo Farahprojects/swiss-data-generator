@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import { 
@@ -8,8 +9,14 @@ import {
   DrawerTitle
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Toggle } from "@/components/ui/toggle";
 
 type ActivityLogItem = {
   id: string;
@@ -33,9 +40,7 @@ interface ActivityLogDrawerProps {
 }
 
 const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps) => {
-  const [activeTab, setActiveTab] = useState<string>(
-    logData?.response_payload?.report ? "report" : "payload"
-  );
+  const [viewMode, setViewMode] = useState<'report' | 'payload'>('report');
 
   // Handle download as CSV
   const handleDownloadCSV = () => {
@@ -75,11 +80,11 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     alert('PDF download functionality would be implemented with a library like jsPDF');
   };
 
-  // Determine which tab to show by default
+  // Determine which view to show by default
   useEffect(() => {
     if (logData) {
       const hasReport = logData.response_payload?.report;
-      setActiveTab(hasReport ? "report" : "payload");
+      setViewMode(hasReport ? "report" : "payload");
     }
   }, [logData]);
 
@@ -116,20 +121,43 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[90vh] max-w-[40vw] mx-auto">
+      <DrawerContent className="h-[90vh] max-w-[60vw] mx-auto">
         <DrawerHeader className="flex flex-row items-center justify-between border-b p-4">
-          <DrawerTitle className="text-xl">
-            {logData?.report_tier ? `${logData.report_tier} Report` : 'API Response'}
-          </DrawerTitle>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Toggle 
+                pressed={viewMode === 'report'} 
+                onPressedChange={(pressed) => setViewMode(pressed ? 'report' : 'payload')}
+                disabled={!logData?.response_payload?.report}
+              >
+                Report
+              </Toggle>
+              <Toggle 
+                pressed={viewMode === 'payload'} 
+                onPressedChange={(pressed) => setViewMode(pressed ? 'payload' : 'report')}
+                disabled={!logData?.response_payload && !logData?.request_payload}
+              >
+                Payload
+              </Toggle>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleDownloadCSV}>
-              <Download className="h-4 w-4 mr-1" />
-              CSV
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-              <Download className="h-4 w-4 mr-1" />
-              PDF
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-1" />
+                  Download
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-white">
+                <DropdownMenuItem onClick={handleDownloadCSV}>
+                  CSV Format
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadPDF}>
+                  PDF Format
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <DrawerClose asChild>
               <Button variant="ghost" size="sm">
                 <X className="h-4 w-4" />
@@ -148,23 +176,8 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 </div>
               )}
               
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid grid-cols-2">
-                  <TabsTrigger 
-                    value="report"
-                    disabled={!logData.response_payload?.report}
-                  >
-                    Report
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="payload"
-                    disabled={!logData.response_payload && !logData.request_payload}
-                  >
-                    Payload
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="report" className="mt-4">
+              <div className="w-full">
+                {viewMode === 'report' && (
                   <ScrollArea className="h-[65vh]">
                     <div className="p-4 bg-gray-50 rounded-md">
                       {logData.response_payload?.report ? (
@@ -176,9 +189,9 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                       )}
                     </div>
                   </ScrollArea>
-                </TabsContent>
+                )}
                 
-                <TabsContent value="payload" className="mt-4">
+                {viewMode === 'payload' && (
                   <ScrollArea className="h-[65vh]">
                     <div className="p-4 bg-gray-50 rounded-md">
                       {(logData.response_payload || logData.request_payload) ? (
@@ -208,8 +221,8 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                       )}
                     </div>
                   </ScrollArea>
-                </TabsContent>
-              </Tabs>
+                )}
+              </div>
             </div>
           )}
         </div>
