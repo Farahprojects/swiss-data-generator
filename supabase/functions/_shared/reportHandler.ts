@@ -36,7 +36,8 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
   }
 
   // Check if report was requested
-  const reportRequested = requestData.report && ["standard", "premium"].includes(requestData.report);
+  const reportRequested = requestData.report;
+
   
   if (!reportRequested) {
     console.log(`${logPrefix} No report requested, returning Swiss API data only`);
