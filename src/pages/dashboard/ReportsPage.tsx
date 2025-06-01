@@ -85,13 +85,6 @@ const ReportsPage = () => {
     return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
   };
 
-  const generateReportName = (report: Report): string => {
-    // Generate a report name based on the report data
-    const dateStr = report.created_at ? format(new Date(report.created_at), 'MMM-dd-yyyy') : 'Unknown';
-    const tierStr = formatReportTier(report.report_tier);
-    return `${tierStr} Report ${dateStr}`;
-  };
-
   return (
     <>
       <h1 className="text-2xl font-bold mb-6">Reports</h1>
@@ -111,7 +104,6 @@ const ReportsPage = () => {
               <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
                 <tr>
                   <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-left">Report Name</th>
                   <th className="px-4 py-3 text-left">Report Type</th>
                 </tr>
               </thead>
@@ -126,11 +118,6 @@ const ReportsPage = () => {
                       {report.created_at ? 
                         format(new Date(report.created_at), 'MMM d, yyyy HH:mm:ss') : 
                         'N/A'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-medium text-gray-900">
-                        {generateReportName(report)}
-                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-primary hover:underline">
