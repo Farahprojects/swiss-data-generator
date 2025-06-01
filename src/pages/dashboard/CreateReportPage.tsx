@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -94,14 +93,8 @@ const CreateReportPage = () => {
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="natal">Natal Chart Report</SelectItem>
-                  <SelectItem value="transits">Transits Report</SelectItem>
-                  <SelectItem value="progressions">Progressions Report</SelectItem>
                   <SelectItem value="return">Solar/Lunar Return Report</SelectItem>
-                  <SelectItem value="compatibility">Compatibility Report</SelectItem>
                   <SelectItem value="positions">Planetary Positions</SelectItem>
-                  <SelectItem value="moonphases">Moon Phases</SelectItem>
-                  <SelectItem value="body_matrix">Body Matrix Report</SelectItem>
                   <SelectItem value="sync">Sync Report</SelectItem>
                   <SelectItem value="essence">Essence Report</SelectItem>
                   <SelectItem value="flow">Flow Report</SelectItem>
