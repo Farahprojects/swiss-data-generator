@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -5,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Calendar, MapPin, Clock } from 'lucide-react';
 
 const CreateReportPage = () => {
   const [formData, setFormData] = useState({
     reportType: '',
+    relationshipType: '',
     name: '',
     birthDate: '',
     birthTime: '',
@@ -53,6 +56,7 @@ const CreateReportPage = () => {
   const requiresReturnDate = formData.reportType === 'return';
   const requiresMoonDate = formData.reportType === 'moonphases';
   const requiresPositionsFields = formData.reportType === 'positions';
+  const isSyncReport = formData.reportType === 'sync';
 
   return (
     <div className="space-y-6">
@@ -89,6 +93,26 @@ const CreateReportPage = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Relationship Type - only show for sync reports */}
+            {isSyncReport && (
+              <div className="space-y-2">
+                <Label>Relationship Type</Label>
+                <ToggleGroup 
+                  type="single" 
+                  value={formData.relationshipType}
+                  onValueChange={(value) => handleInputChange('relationshipType', value || '')}
+                  className="justify-start"
+                >
+                  <ToggleGroupItem value="personal" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    Personal
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="professional" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    Professional
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            )}
 
             {/* Moon Date - standalone field for moonphases */}
             {requiresMoonDate && (
