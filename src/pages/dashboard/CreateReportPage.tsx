@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +22,7 @@ const CreateReportPage = () => {
     // Specific date fields for certain report types
     transitDate: '',
     progressionDate: '',
+    returnDate: '',
     moonDate: '',
     notes: ''
   });
@@ -46,6 +46,7 @@ const CreateReportPage = () => {
   // Check if report type requires specific date
   const requiresTransitDate = formData.reportType === 'transits';
   const requiresProgressionDate = formData.reportType === 'progressions';
+  const requiresReturnDate = formData.reportType === 'return';
   const requiresMoonDate = formData.reportType === 'moonphases';
 
   return (
@@ -189,6 +190,22 @@ const CreateReportPage = () => {
                     />
                   </div>
                 )}
+
+                {/* Return Date - appears after Birth Location for return reports */}
+                {requiresReturnDate && (
+                  <div className="space-y-2">
+                    <Label htmlFor="returnDate" className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Return Date
+                    </Label>
+                    <Input
+                      id="returnDate"
+                      type="date"
+                      value={formData.returnDate}
+                      onChange={(e) => handleInputChange('returnDate', e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -277,6 +294,7 @@ const CreateReportPage = () => {
                 birthLocation2: '',
                 transitDate: '',
                 progressionDate: '',
+                returnDate: '',
                 moonDate: '',
                 notes: ''
               })}>
