@@ -6,7 +6,7 @@ export type ActivityLogsFilterState = {
   endDate?: Date;
   reportType: string | null;
   status: string | null;
-  search: string;
+  search?: string;
 };
 
 export function buildLogQuery(userId: string, filters: ActivityLogsFilterState) {
