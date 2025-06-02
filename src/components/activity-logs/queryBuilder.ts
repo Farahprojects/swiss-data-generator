@@ -36,13 +36,10 @@ export function buildLogQuery(userId: string, filters: ActivityLogsFilterState) 
   }
   
   if (filters.status) {
-    // Convert the text status to a number
-    const statusCode = filters.status === 'success' ? 200 : 
-                      filters.status === 'failed' ? 400 : null;
-    if (statusCode && statusCode === 200) {
-      query = query.eq('response_status', statusCode);
-    } else if (statusCode && statusCode === 400) {
-      query = query.or('response_status.gt.399,response_status.lt.600');
+    if (filters.status === 'success') {
+      query = query.gte('response_status', 200).lt('response_status', 300);
+    } else if (filters.status === 'failed') {
+      query = query.or('response_status.gte.400,response_status.lt.200');
     }
   }
   
