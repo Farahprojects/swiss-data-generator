@@ -3,12 +3,11 @@ import { ReportPdfData, PdfGenerationOptions, PdfMetadata } from '../types';
 
 export class ReportTemplate extends BaseTemplate {
   async generate(data: ReportPdfData, options: PdfGenerationOptions = {}): Promise<void> {
-    // Set PDF metadata
     const metadata: PdfMetadata = {
-      title: data.title,
-      subject: 'Client Report',
+      title: 'Essence Professional',
+      subject: 'Client Energetic Insight',
       author: 'Theria Astro',
-      keywords: ['report', data.metadata.reportType].filter(Boolean)
+      keywords: ['astrology', 'psychology', 'client profile']
     };
     this.setMetadata(metadata);
 
@@ -25,56 +24,60 @@ export class ReportTemplate extends BaseTemplate {
     };
 
     const logo = await fetchImageAsBase64('https://auth.theraiastro.com/storage/v1/object/public/therai-assets//therai-logo.png');
-    this.doc.addImage(logo, 'PNG', this.margins.left, 20, 40, 20);
 
-    // Add title
-    this.doc.setFontSize(18);
+    // Add logo (top-left) and title (centered)
+    const logoWidth = 30;
+    const logoHeight = 18;
+    const logoY = 20;
+
+    this.doc.addImage(logo, 'PNG', this.margins.left, logoY, logoWidth, logoHeight);
+
+    this.doc.setFontSize(20);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(40, 40, 60);
-    this.doc.text(data.title, this.pageWidth / 2, 50, { align: 'center' });
+    this.doc.text('Essence Professional', this.pageWidth / 2, logoY + 12, { align: 'center' });
 
-    // Add metadata (clean and minimal)
-    const metadataForPdf: Record<string, string> = {
-      'Report ID': data.id.substring(0, 8),
-      'Generated At': data.metadata.generatedAt,
-      'Report Type': data.metadata.reportType || 'N/A'
-    };
-
-    let y = 65;
+    // Clean metadata below title
+    let y = logoY + 25;
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'normal');
     this.doc.setTextColor(100);
 
-    for (const [key, value] of Object.entries(metadataForPdf)) {
-      this.doc.text(`${key}:`, this.margins.left, y);
-      this.doc.setFont('helvetica', 'bold');
-      this.doc.text(`${value}`, this.margins.left + 40, y);
-      this.doc.setFont('helvetica', 'normal');
-      y += 6;
-    }
+    this.doc.text(`Report ID:`, this.margins.left, y);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text(data.id.substring(0, 8), this.margins.left + 40, y);
 
-    // Stop early if error is present
+    this.doc.setFont('helvetica', 'normal');
+    y += 6;
+    this.doc.text(`Generated At:`, this.margins.left, y);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.text(data.metadata.generatedAt, this.margins.left + 40, y);
+
+    y += 10;
+
+    // Handle error state early
     if (data.error) {
       this.doc.setFontSize(12);
       this.doc.setFont('helvetica', 'bold');
       this.doc.setTextColor(200, 0, 0);
-      this.doc.text('Error:', this.margins.left, y + 10);
+      this.doc.text('Error:', this.margins.left, y);
 
       this.doc.setFontSize(10);
       this.doc.setFont('helvetica', 'normal');
       this.doc.setTextColor(0, 0, 0);
       const errorLines = this.doc.splitTextToSize(data.error, this.pageWidth - this.margins.left - this.margins.right);
-      this.doc.text(errorLines, this.margins.left, y + 17);
+      this.doc.text(errorLines, this.margins.left, y + 8);
       return;
     }
 
-    // Add section heading
+    // Section heading
+    y += 15;
     this.doc.setFontSize(13);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(75, 63, 114);
-    this.doc.text('Energetic Insight & Client Profile', this.margins.left, y + 10);
+    this.doc.text('Client Energetic Insight', this.margins.left, y);
 
-    // Add report content
+    // Report content
     this.doc.setFont('times', 'normal');
     this.doc.setFontSize(11);
     this.doc.setTextColor(33);
@@ -83,9 +86,9 @@ export class ReportTemplate extends BaseTemplate {
       data.content,
       this.pageWidth - this.margins.left - this.margins.right
     );
-    this.doc.text(contentLines, this.margins.left, y + 20);
+    this.doc.text(contentLines, this.margins.left, y + 10);
 
-    // Add footer
+    // Footer
     if (options.includeFooter !== false) {
       this.doc.setFontSize(9);
       this.doc.setFont('helvetica', 'italic');
@@ -98,7 +101,6 @@ export class ReportTemplate extends BaseTemplate {
       );
     }
 
-    // Download the PDF
     const filename = `report-${data.id.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.pdf`;
     this.download(filename);
   }
