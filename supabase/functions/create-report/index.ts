@@ -75,13 +75,10 @@ function validateFormData(data: CreateReportRequest): { isValid: boolean; errors
   return { isValid: errors.length === 0, errors };
 }
 
-// Data transformation helper
+// Data transformation helper - creates clean payload like curl requests
 function transformToSwissFormat(data: CreateReportRequest): any {
   const basePayload: any = {
-    request: data.reportType,
-    user_id: null, // Will be set from auth
-    api_key: null, // Will be set from auth
-    auth_method: 'supabase'
+    request: data.reportType
   };
 
   // Handle different report types
@@ -186,13 +183,21 @@ function getReportName(data: CreateReportRequest): string {
   return data.name || 'Unknown';
 }
 
-// Swiss API caller helper
-async function callSwissAPI(payload: any): Promise<{ success: boolean; data?: any; error?: string }> {
+// Swiss API caller helper - sends clean payload with auth in headers
+async function callSwissAPI(payload: any, userId: string, apiKey: string): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
-    console.log('[create-report] Calling Swiss API with payload:', JSON.stringify(payload, null, 2));
+    console.log('[create-report] Calling Swiss API with clean payload:', JSON.stringify(payload, null, 2));
+    console.log('[create-report] Using user_id:', userId);
+    console.log('[create-report] Using api_key:', apiKey.substring(0, 10) + '...');
     
+    // Send clean payload with auth as separate parameters
     const response = await supabase.functions.invoke('swiss', {
-      body: payload
+      body: {
+        ...payload,
+        user_id: userId,
+        api_key: apiKey,
+        auth_method: 'supabase'
+      }
     });
 
     console.log('[create-report] Swiss API response:', {
@@ -281,15 +286,12 @@ serve(async (req) => {
       });
     }
 
-    // Transform data to Swiss API format
-    const swissPayload = transformToSwissFormat(formData);
-    swissPayload.user_id = user.id;
-    swissPayload.api_key = apiKeyData.api_key;
+    // Transform data to clean Swiss API format (like curl)
+    const cleanPayload = transformToSwissFormat(formData);
+    console.log('[create-report] Clean payload for Swiss API:', JSON.stringify(cleanPayload, null, 2));
 
-    console.log('[create-report] Transformed payload for Swiss API:', JSON.stringify(swissPayload, null, 2));
-
-    // Call Swiss API
-    const swissResult = await callSwissAPI(swissPayload);
+    // Call Swiss API with clean payload and separate auth
+    const swissResult = await callSwissAPI(cleanPayload, user.id, apiKeyData.api_key);
     
     if (!swissResult.success) {
       return new Response(JSON.stringify({ 
@@ -310,7 +312,7 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         request_type: formData.reportType,
-        request_payload: swissPayload,
+        request_payload: cleanPayload,
         response_payload: swissResult.data,
         response_status: 200,
         report_name: reportName
