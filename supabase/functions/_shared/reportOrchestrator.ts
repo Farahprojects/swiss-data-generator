@@ -29,7 +29,7 @@ const initSupabase = () => {
 
 interface ReportPayload {
   endpoint: string;
-  report_type: string; // Changed from "standard" | "premium" to string
+  report_type: string; 
   user_id: string;
   apiKey: string;
   chartData: any; // Swiss API response data
@@ -109,7 +109,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
       const { data: priceData, error: priceError } = await supabase
         .from("price_list")
         .select("unit_price_usd")
-        .eq("report_tier", payload.report_type)
+        .eq("id", payload.report_type)
         .maybeSingle();
       
       if (priceError) {
