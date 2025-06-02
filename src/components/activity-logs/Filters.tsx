@@ -20,64 +20,10 @@ const Filters = ({ filters, onChange }: FiltersProps) => {
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
       <div className="flex flex-col gap-4">
-        {/* Date Range Picker */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {filters.startDate ? (
-                    filters.endDate ? (
-                      <>
-                        {format(filters.startDate, 'PPP')} - {format(filters.endDate, 'PPP')}
-                      </>
-                    ) : (
-                      format(filters.startDate, 'PPP')
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <ScrollArea className="h-[300px]">
-                  <div className="p-3">
-                    <div className="mb-3">
-                      <div className="text-sm font-medium mb-1">Start Date</div>
-                      <CalendarComponent
-                        mode="single"
-                        selected={filters.startDate}
-                        onSelect={(date) => onChange('startDate', date)}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium mb-1">End Date</div>
-                      <CalendarComponent
-                        mode="single"
-                        selected={filters.endDate}
-                        onSelect={(date) => onChange('endDate', date)}
-                        disabled={(date) => filters.startDate ? date < filters.startDate : false}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </div>
-                  </div>
-                </ScrollArea>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-        
-        {/* Single row for all other filters */}
+        {/* Single row for all filters */}
         <div className="flex gap-3 items-center">
           {/* Report Type Dropdown */}
-          <div className="w-40">
+          <div className="w-32">
             <Select
               value={filters.reportType || ""}
               onValueChange={(value) => onChange('reportType', value === "all" ? null : value)}
@@ -115,6 +61,58 @@ const Filters = ({ filters, onChange }: FiltersProps) => {
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Date Range Picker */}
+          <div className="w-48">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal h-9 text-sm"
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {filters.startDate ? (
+                    filters.endDate ? (
+                      <>
+                        {format(filters.startDate, 'MMM d')} - {format(filters.endDate, 'MMM d')}
+                      </>
+                    ) : (
+                      format(filters.startDate, 'MMM d')
+                    )
+                  ) : (
+                    <span>Date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <ScrollArea className="h-[300px]">
+                  <div className="p-3">
+                    <div className="mb-3">
+                      <div className="text-sm font-medium mb-1">Start Date</div>
+                      <CalendarComponent
+                        mode="single"
+                        selected={filters.startDate}
+                        onSelect={(date) => onChange('startDate', date)}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1">End Date</div>
+                      <CalendarComponent
+                        mode="single"
+                        selected={filters.endDate}
+                        onSelect={(date) => onChange('endDate', date)}
+                        disabled={(date) => filters.startDate ? date < filters.startDate : false}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </div>
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
           </div>
           
           {/* Search Field */}
