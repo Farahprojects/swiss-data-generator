@@ -125,6 +125,51 @@ export type Database = {
           },
         ]
       }
+      clients: {
+        Row: {
+          avatar_url: string | null
+          birth_date: string | null
+          birth_location: string | null
+          birth_time: string | null
+          coach_id: string
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          birth_date?: string | null
+          birth_location?: string | null
+          birth_time?: string | null
+          coach_id: string
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          birth_date?: string | null
+          birth_location?: string | null
+          birth_time?: string | null
+          coach_id?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_notification_templates: {
         Row: {
           body_html: string
@@ -175,6 +220,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          client_id: string
+          coach_id: string
+          created_at: string
+          entry_text: string
+          id: string
+          linked_report_id: string | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          coach_id: string
+          created_at?: string
+          entry_text: string
+          id?: string
+          linked_report_id?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          coach_id?: string
+          created_at?: string
+          entry_text?: string
+          id?: string
+          linked_report_id?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       legal_documents: {
         Row: {

@@ -1,23 +1,47 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Grid, List, Mail, Phone } from 'lucide-react';
-import { mockClients } from '@/data/mockClients';
-import { Client } from '@/types/clients';
+import { clientsService } from '@/services/clients';
+import { Client } from '@/types/database';
+import { useToast } from '@/hooks/use-toast';
 
 const ClientsPage = () => {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
+  const { toast } = useToast();
 
-  const filteredClients = mockClients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (client.tags && client.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
+  useEffect(() => {
+    loadClients();
+  }, []);
+
+  const loadClients = async () => {
+    try {
+      setLoading(true);
+      const data = await clientsService.getClients();
+      setClients(data);
+    } catch (error) {
+      console.error('Error loading clients:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load clients. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredClients = clients.filter(client =>
+    client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const formatLastActivity = (dateString: string) => {
@@ -40,18 +64,20 @@ const ClientsPage = () => {
         <CardHeader className="pb-2">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
-              {client.avatar ? (
-                <img src={client.avatar} alt={client.name} className="w-12 h-12 rounded-full object-cover" />
+              {client.avatar_url ? (
+                <img src={client.avatar_url} alt={client.full_name} className="w-12 h-12 rounded-full object-cover" />
               ) : (
-                client.name.split(' ').map(n => n[0]).join('')
+                client.full_name.split(' ').map(n => n[0]).join('')
               )}
             </div>
             <div className="flex-1">
-              <CardTitle className="text-lg">{client.name}</CardTitle>
-              <div className="flex items-center text-sm text-gray-600 mt-1">
-                <Mail className="w-3 h-3 mr-1" />
-                {client.email}
-              </div>
+              <CardTitle className="text-lg">{client.full_name}</CardTitle>
+              {client.email && (
+                <div className="flex items-center text-sm text-gray-600 mt-1">
+                  <Mail className="w-3 h-3 mr-1" />
+                  {client.email}
+                </div>
+              )}
               {client.phone && (
                 <div className="flex items-center text-sm text-gray-600">
                   <Phone className="w-3 h-3 mr-1" />
@@ -64,25 +90,20 @@ const ClientsPage = () => {
         <CardContent>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Reports</span>
-              <span className="font-medium">{client.reportsCount}</span>
+              <span className="text-gray-600">Created</span>
+              <span className="font-medium">{formatLastActivity(client.created_at)}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Last Activity</span>
-              <span className="font-medium">{formatLastActivity(client.lastActivity)}</span>
-            </div>
-            {client.tags && client.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-2">
-                {client.tags.slice(0, 3).map(tag => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-                {client.tags.length > 3 && (
-                  <Badge variant="secondary" className="text-xs">
-                    +{client.tags.length - 3}
-                  </Badge>
-                )}
+            {client.birth_date && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Birth Date</span>
+                <span className="font-medium">{new Date(client.birth_date).toLocaleDateString()}</span>
+              </div>
+            )}
+            {client.birth_location && (
+              <div className="pt-2">
+                <Badge variant="secondary" className="text-xs">
+                  {client.birth_location}
+                </Badge>
               </div>
             )}
           </div>
@@ -90,6 +111,16 @@ const ClientsPage = () => {
       </Link>
     </Card>
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-lg">Loading clients...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -113,7 +144,7 @@ const ClientsPage = () => {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
-            placeholder="Search clients by name, email, or tags..."
+            placeholder="Search clients by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -153,7 +184,7 @@ const ClientsPage = () => {
       </div>
 
       {/* Empty State */}
-      {filteredClients.length === 0 && (
+      {filteredClients.length === 0 && !loading && (
         <div className="text-center py-12">
           <div className="text-gray-400 text-lg mb-2">No clients found</div>
           <p className="text-gray-600 mb-4">
@@ -171,7 +202,7 @@ const ClientsPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">New Client</h3>
-            <p className="text-gray-600 mb-4">New client form will be implemented here</p>
+            <p className="text-gray-600 mb-4">Client creation form will be implemented next</p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowNewClientModal(false)}>
                 Cancel
