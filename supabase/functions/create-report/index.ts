@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -74,10 +75,10 @@ function validateFormData(data: CreateReportRequest): { isValid: boolean; errors
   return { isValid: errors.length === 0, errors };
 }
 
-// Data transformation helper - creates clean payload like curl requests
+// Data transformation helper - creates clean payload that matches exact curl format
 function transformToSwissFormat(data: CreateReportRequest): any {
   const basePayload: any = {
-    request: data.reportType
+    request: data.reportType  // CRITICAL: Add the request field that Swiss API requires
   };
 
   // Handle different report types
@@ -98,11 +99,11 @@ function transformToSwissFormat(data: CreateReportRequest): any {
     return basePayload;
   }
 
-  // Person-based reports
+  // Person-based reports - Map form fields to Swiss API field names
   basePayload.name = data.name;
   basePayload.birth_date = data.birthDate;
-  basePayload.time = data.birthTime;
-  basePayload.location = data.birthLocation;
+  basePayload.time = data.birthTime;  // Map birthTime → time
+  basePayload.location = data.birthLocation;  // Map birthLocation → location
 
   // Add today's date/time if provided
   if (data.todayDate) {
@@ -128,14 +129,14 @@ function transformToSwissFormat(data: CreateReportRequest): any {
     basePayload.person_a = {
       name: data.name,
       birth_date: data.birthDate,
-      time: data.birthTime,
-      location: data.birthLocation
+      time: data.birthTime,  // Map birthTime → time
+      location: data.birthLocation  // Map birthLocation → location
     };
     basePayload.person_b = {
       name: data.name2,
       birth_date: data.birthDate2,
-      time: data.birthTime2,
-      location: data.birthLocation2
+      time: data.birthTime2,  // Map birthTime2 → time
+      location: data.birthLocation2  // Map birthLocation2 → location
     };
     
     // Remove individual fields for two-person reports
@@ -149,7 +150,16 @@ function transformToSwissFormat(data: CreateReportRequest): any {
   if (data.reportType === 'sync' && data.relationshipType) {
     basePayload.report = `sync_${data.relationshipType}`;
   } else if (data.reportType === 'essence' && data.essenceType) {
-    basePayload.report = `essence_${data.essenceType}`;
+    // CRITICAL FIX: Map essence types correctly
+    if (data.essenceType === 'personal-identity') {
+      basePayload.report = 'essence_personal';
+    } else if (data.essenceType === 'professional') {
+      basePayload.report = 'essence_professional';
+    } else if (data.essenceType === 'relational') {
+      basePayload.report = 'essence_relational';
+    } else {
+      basePayload.report = `essence_${data.essenceType}`;
+    }
   } else {
     // For other report types, add report field if it's a report-generating endpoint
     const reportGeneratingTypes = ['return', 'essence', 'flow', 'mindset', 'monthly', 'focus'];
