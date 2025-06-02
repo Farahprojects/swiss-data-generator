@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import { 
@@ -30,7 +31,7 @@ type ActivityLogItem = {
   request_payload?: any;
   error_message?: string;
   google_geo?: boolean;
-  swiss_payload?: any; // Add swiss_payload field
+  swiss_payload?: any;
 };
 
 interface ActivityLogDrawerProps {
@@ -41,6 +42,16 @@ interface ActivityLogDrawerProps {
 
 const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps) => {
   const [viewMode, setViewMode] = useState<'report' | 'payload'>('report');
+
+  // Debug logging when logData changes
+  useEffect(() => {
+    if (logData) {
+      console.log('ActivityLogDrawer received logData:', logData);
+      console.log('Swiss payload:', logData.swiss_payload);
+      console.log('Request payload:', logData.request_payload);
+      console.log('Response payload:', logData.response_payload);
+    }
+  }, [logData]);
 
   // Handle download as CSV
   const handleDownloadCSV = () => {
@@ -84,6 +95,12 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
   useEffect(() => {
     if (logData) {
       const hasReport = logData.response_payload?.report;
+      const hasPayload = logData.swiss_payload || logData.request_payload;
+      
+      console.log('Has report:', hasReport);
+      console.log('Has payload:', hasPayload);
+      
+      // Default to report if available, otherwise payload
       setViewMode(hasReport ? "report" : "payload");
     }
   }, [logData]);
