@@ -35,7 +35,6 @@ import { useState } from 'react';
 const DashboardSidebar = () => {
   const location = useLocation();
   const { state } = useSidebar();
-  const [isDeveloperOpen, setIsDeveloperOpen] = useState(true);
   const [isAccountOpen, setIsAccountOpen] = useState(true);
   
   // Always visible menu items
@@ -64,15 +63,10 @@ const DashboardSidebar = () => {
       name: "Activity Logs",
       path: "/dashboard/activity-logs",
       icon: <Activity size={20} />
-    },
-    {
-      name: "Support",
-      path: "/dashboard/support",
-      icon: <LifeBuoy size={20} />
     }
   ];
 
-  // Developer section items
+  // Developer section items (hidden but kept for future use)
   const developerItems = [
     {
       name: "API Keys",
@@ -96,6 +90,11 @@ const DashboardSidebar = () => {
       name: "Pricing",
       path: "/dashboard/pricing",
       icon: <DollarSign size={20} />
+    },
+    {
+      name: "Support",
+      path: "/dashboard/support",
+      icon: <LifeBuoy size={20} />
     }
   ];
 
@@ -141,31 +140,6 @@ const DashboardSidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* Developer Section - Direct collapsible without SidebarGroup wrapper */}
-        <div className="px-2">
-          <Collapsible open={isDeveloperOpen} onOpenChange={setIsDeveloperOpen}>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton
-                    className="text-black hover:text-primary flex items-center gap-3 px-4 py-2 w-full data-[state=open]:bg-accent/10"
-                    tooltip={state === "collapsed" ? "Developer" : undefined}
-                  >
-                    <Code size={20} />
-                    <span>Developer</span>
-                    <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[collapsible=icon]:hidden data-[state=open]:rotate-180" />
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-              </SidebarMenuItem>
-            </SidebarMenu>
-            <CollapsibleContent>
-              <SidebarMenu>
-                <MenuItems items={developerItems} />
-              </SidebarMenu>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
 
         {/* Account Section - Direct collapsible without SidebarGroup wrapper */}
         <div className="px-2">
