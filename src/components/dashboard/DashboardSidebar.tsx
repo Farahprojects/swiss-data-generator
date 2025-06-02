@@ -58,11 +58,6 @@ const DashboardSidebar = () => {
       name: "Clients",
       path: "/dashboard/clients",
       icon: <Users size={20} />
-    },
-    {
-      name: "Activity Logs",
-      path: "/dashboard/activity-logs",
-      icon: <Activity size={20} />
     }
   ];
 
@@ -77,6 +72,11 @@ const DashboardSidebar = () => {
       name: "Documentation",
       path: "/dashboard/docs",
       icon: <FileQuestion size={20} />
+    },
+    {
+      name: "Activity Logs",
+      path: "/dashboard/activity-logs",
+      icon: <Activity size={20} />
     }
   ];
 

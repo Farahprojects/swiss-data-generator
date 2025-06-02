@@ -5,6 +5,14 @@ import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import ReportsFilter from '@/components/reports/ReportsFilter';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type Report = {
   id: string;
@@ -155,40 +163,44 @@ const ReportsPage = () => {
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full table-auto">
-              <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
-                <tr>
-                  <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-left">Report Name</th>
-                  <th className="px-4 py-3 text-left">Report Type</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
+            <Table>
+              <TableHeader className="bg-gray-50">
+                <TableRow>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Date</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Report Name</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500">Report Type</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-500 text-right">Cost</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-100">
                 {filteredReports.map((report) => (
-                  <tr 
+                  <TableRow 
                     key={report.id} 
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => openDrawer(report)}
                   >
-                    <td className="px-4 py-3">
+                    <TableCell className="py-3">
                       {report.created_at ? 
                         format(new Date(report.created_at), 'MMM d, yyyy HH:mm') : 
                         'N/A'}
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="py-3">
                       <span className="font-medium text-gray-900">
                         {getDisplayName(report)}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="py-3">
                       <span className="font-medium text-primary hover:underline">
                         {formatReportTier(report.report_tier)}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="py-3 text-right text-sm">
+                      ${report.total_cost_usd?.toFixed(2) || '0.00'}
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
