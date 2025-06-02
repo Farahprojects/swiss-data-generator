@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import { 
@@ -28,6 +29,7 @@ type ActivityLogItem = {
   processing_time_ms: number | null;
   response_payload?: any;
   request_payload?: any;
+  swiss_payload?: any;
   error_message?: string;
   google_geo?: boolean;
 };
