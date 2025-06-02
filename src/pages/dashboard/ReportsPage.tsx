@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
@@ -19,6 +18,7 @@ type Report = {
   processing_time_ms: number | null;
   google_geo?: boolean;
   total_cost_usd: number;
+  swiss_payload?: any; // Add swiss_payload field
 };
 
 const ReportsPage = () => {
@@ -48,7 +48,8 @@ const ReportsPage = () => {
         .from('translator_logs')
         .select(`
           *,
-          api_usage!translator_log_id(total_cost_usd)
+          api_usage!translator_log_id(total_cost_usd),
+          report_logs!inner(swiss_payload)
         `)
         .eq('user_id', user.id)
         .gte('response_status', 200)
@@ -73,7 +74,8 @@ const ReportsPage = () => {
         response_payload: item.response_payload,
         request_payload: item.request_payload,
         error_message: item.error_message,
-        google_geo: item.google_geo
+        google_geo: item.google_geo,
+        swiss_payload: item.report_logs?.[0]?.swiss_payload // Extract swiss_payload from report_logs
       })) || [];
       
       setReports(processedData);
