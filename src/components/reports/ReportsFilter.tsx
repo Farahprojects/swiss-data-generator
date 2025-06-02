@@ -16,14 +16,14 @@ const ReportsFilter = ({ reportType, search, onReportTypeChange, onSearchChange 
     <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
       <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
         {/* Report Type Dropdown */}
-        <div className="flex-1 min-w-[200px]">
+        <div className="w-auto min-w-[180px]">
           <Select
             value={reportType || ""}
             onValueChange={(value) => onReportTypeChange(value === "all" ? null : value)}
           >
             <SelectTrigger>
               <FileText className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="All Report Types" />
+              <SelectValue placeholder="Report Type" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Report Types</SelectItem>
