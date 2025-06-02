@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
+import ReportsFilter from '@/components/reports/ReportsFilter';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -22,9 +24,14 @@ type Report = {
 const ReportsPage = () => {
   const { user } = useAuth();
   const [reports, setReports] = useState<Report[]>([]);
+  const [filteredReports, setFilteredReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  
+  // Filter states
+  const [reportType, setReportType] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const openDrawer = (report: Report) => {
     setSelectedReport(report);
@@ -70,12 +77,39 @@ const ReportsPage = () => {
       })) || [];
       
       setReports(processedData);
+      setFilteredReports(processedData);
     } catch (err) {
       console.error("Unexpected error loading reports:", err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Filter reports based on current filter states
+  useEffect(() => {
+    let filtered = [...reports];
+
+    // Filter by report type
+    if (reportType) {
+      filtered = filtered.filter(report => report.report_tier === reportType);
+    }
+
+    // Filter by search term (report name or ID)
+    if (search.trim()) {
+      const searchTerm = search.toLowerCase().trim();
+      filtered = filtered.filter(report => {
+        const reportName = report.report_name?.toLowerCase() || '';
+        const reportId = report.id.toLowerCase();
+        const shortId = report.id.substring(0, 8).toLowerCase();
+        
+        return reportName.includes(searchTerm) || 
+               reportId.includes(searchTerm) || 
+               shortId.includes(searchTerm);
+      });
+    }
+
+    setFilteredReports(filtered);
+  }, [reports, reportType, search]);
 
   useEffect(() => {
     loadReports();
@@ -103,13 +137,20 @@ const ReportsPage = () => {
     <>
       <h1 className="text-2xl font-bold mb-6">Reports</h1>
       
+      <ReportsFilter
+        reportType={reportType}
+        search={search}
+        onReportTypeChange={setReportType}
+        onSearchChange={setSearch}
+      />
+      
       {loading ? (
         <div className="p-8 text-center">
           <p>Loading reports...</p>
         </div>
-      ) : reports.length === 0 ? (
+      ) : filteredReports.length === 0 ? (
         <div className="p-8 text-center">
-          <p>No reports found.</p>
+          <p>{reports.length === 0 ? 'No reports found.' : 'No reports match your current filters.'}</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -123,7 +164,7 @@ const ReportsPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {reports.map((report) => (
+                {filteredReports.map((report) => (
                   <tr 
                     key={report.id} 
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
