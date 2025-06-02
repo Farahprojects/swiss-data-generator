@@ -19,7 +19,7 @@ const ApiDocumentationContent: React.FC = () => {
   };
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
+    <div className="p-4 w-full max-w-full">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Your API Documentation</h1>
         <p className="text-gray-600">
@@ -29,33 +29,30 @@ const ApiDocumentationContent: React.FC = () => {
 
       {/* Quick Start Guide */}
       <Card className="overflow-hidden mb-6 border-blue-200 bg-blue-50">
-        <div className="p-6">
+        <div className="p-4 lg:p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Info className="h-5 w-5 text-blue-600" />
+            <Info className="h-5 w-5 text-blue-600 flex-shrink-0" />
             <h2 className="text-xl font-bold text-blue-800">Quick Start Guide</h2>
           </div>
           
           <div className="bg-white rounded-lg p-4 mb-4 border border-blue-200">
             <h3 className="font-semibold mb-2 text-blue-700">How to use your API key:</h3>
             
-            <div className="flex flex-col md:flex-row items-center gap-4 mb-4">
-              <div className="bg-gray-50 border rounded-md p-3 flex-grow w-full md:w-auto">
-                <code className="text-sm">https://api.theriaapi.com/swiss/natal</code>
+            <div className="flex flex-col gap-4 mb-4">
+              <div className="bg-gray-50 border rounded-md p-3 w-full overflow-x-auto">
+                <code className="text-sm whitespace-nowrap">https://api.theriaapi.com/swiss/natal</code>
               </div>
-              <div className="flex items-center">
-                <ArrowRight className="hidden md:block mx-2 text-blue-500" />
-                <div className="md:hidden flex justify-center w-full my-2">
-                  <ArrowRight className="transform rotate-90 text-blue-500" />
-                </div>
+              <div className="flex justify-center">
+                <ArrowRight className="text-blue-500 transform rotate-90 lg:rotate-0" />
               </div>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 flex-grow w-full md:w-auto">
-                <div className="flex justify-between">
-                  <code className="text-sm font-bold">Authorization: Bearer yourtheriaapikeyhere</code>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 w-full">
+                <div className="flex flex-col sm:flex-row justify-between gap-2">
+                  <code className="text-sm font-bold break-all">Authorization: Bearer yourtheriaapikeyhere</code>
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => copyToClipboard("Authorization: Bearer yourtheriaapikeyhere", "bearer")}
-                    className="ml-2 h-6 px-2 text-gray-500 hover:text-gray-700"
+                    className="flex-shrink-0 h-6 px-2 text-gray-500 hover:text-gray-700"
                   >
                     {copied === "bearer" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </Button>
@@ -67,8 +64,8 @@ const ApiDocumentationContent: React.FC = () => {
               Always add your API key as a Bearer token in the Authorization header for all requests.
             </p>
 
-            <div className="bg-gray-50 p-3 rounded-md border">
-              <div className="flex justify-between items-center">
+            <div className="bg-gray-50 p-3 rounded-md border w-full overflow-hidden">
+              <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium text-sm">Complete request example:</h4>
                 <Button 
                   variant="ghost" 
@@ -78,18 +75,20 @@ const ApiDocumentationContent: React.FC = () => {
   -H 'Authorization: Bearer yourtheriaapikeyhere' \\
   -H 'Content-Type: application/json' \\
   -d '{"birth_date": "1990-01-15", "birth_time": "14:30", "location": "New York, USA", "bearer": "yourtheriaapikeyhere"}'`, "example")}
-                  className="h-6 px-2 text-gray-500 hover:text-gray-700"
+                  className="flex-shrink-0 h-6 px-2 text-gray-500 hover:text-gray-700"
                 >
                   {copied === "example" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
-              <pre className="mt-2 text-xs overflow-x-auto">
-                <code>{`curl -X POST \\
+              <div className="overflow-x-auto">
+                <pre className="text-xs whitespace-pre">
+                  <code>{`curl -X POST \\
   'https://api.theriaapi.com/swiss/natal' \\
   -H 'Authorization: Bearer yourtheriaapikeyhere' \\
   -H 'Content-Type: application/json' \\
   -d '{"birth_date": "1990-01-15", "birth_time": "14:30", "location": "New York, USA", "bearer": "yourtheriaapikeyhere"}'`}</code>
-              </pre>
+                </pre>
+              </div>
             </div>
           </div>
 
@@ -99,8 +98,8 @@ const ApiDocumentationContent: React.FC = () => {
               When sending JSON in your request body, always include your API key as a bearer token in the header and in the request body:
             </p>
 
-            <div className="bg-gray-50 p-3 rounded-md border">
-              <div className="flex justify-between items-center">
+            <div className="bg-gray-50 p-3 rounded-md border mb-3 w-full overflow-hidden">
+              <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium text-sm">Header:</h4>
                 <Button 
                   variant="ghost" 
@@ -109,21 +108,23 @@ const ApiDocumentationContent: React.FC = () => {
   "Authorization": "Bearer yourtheriaapikeyhere",
   "Content-Type": "application/json"
 }`, "json-header")}
-                  className="h-6 px-2 text-gray-500 hover:text-gray-700"
+                  className="flex-shrink-0 h-6 px-2 text-gray-500 hover:text-gray-700"
                 >
                   {copied === "json-header" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
-              <pre className="mt-2 text-xs overflow-x-auto">
-                <code>{`{
+              <div className="overflow-x-auto">
+                <pre className="text-xs whitespace-pre">
+                  <code>{`{
   "Authorization": "Bearer yourtheriaapikeyhere",
   "Content-Type": "application/json"
 }`}</code>
-              </pre>
+                </pre>
+              </div>
             </div>
 
-            <div className="mt-3 bg-gray-50 p-3 rounded-md border">
-              <div className="flex justify-between items-center">
+            <div className="bg-gray-50 p-3 rounded-md border w-full overflow-hidden">
+              <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium text-sm">Body Example:</h4>
                 <Button 
                   variant="ghost" 
@@ -135,26 +136,28 @@ const ApiDocumentationContent: React.FC = () => {
   "longitude": -74.0060,
   "bearer": "yourtheriaapikeyhere"
 }`, "json-body")}
-                  className="h-6 px-2 text-gray-500 hover:text-gray-700"
+                  className="flex-shrink-0 h-6 px-2 text-gray-500 hover:text-gray-700"
                 >
                   {copied === "json-body" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
-              <pre className="mt-2 text-xs overflow-x-auto">
-                <code>{`{
+              <div className="overflow-x-auto">
+                <pre className="text-xs whitespace-pre">
+                  <code>{`{
   "date": "1990-01-15",
   "time": "14:30:00",
   "latitude": 40.7128,
   "longitude": -74.0060,
   "bearer": "yourtheriaapikeyhere"
 }`}</code>
-              </pre>
+                </pre>
+              </div>
             </div>
           </div>
         </div>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden w-full">
         <ApiDocumentation />
       </Card>
     </div>

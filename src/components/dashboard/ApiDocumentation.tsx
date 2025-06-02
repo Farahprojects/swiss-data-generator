@@ -25,7 +25,7 @@ export const ApiDocumentation: React.FC = () => {
     title?: string; 
     language?: string;
   }) => (
-    <div className="relative mt-2 mb-4">
+    <div className="relative mt-2 mb-4 w-full overflow-hidden">
       {title && <h5 className="text-sm font-medium text-gray-700 mb-1">{title}</h5>}
       <div className="bg-gray-900 rounded-t-md py-2 px-4 text-xs text-gray-300 flex justify-between items-center">
         <span>{language.toUpperCase()}</span>
@@ -33,7 +33,7 @@ export const ApiDocumentation: React.FC = () => {
           variant="ghost"
           size="sm"
           onClick={() => copyToClipboard(code, id)}
-          className="h-6 px-2 text-gray-400 hover:text-white"
+          className="h-6 px-2 text-gray-400 hover:text-white flex-shrink-0"
         >
           {copiedSection === id ? (
             <span className="flex items-center">
@@ -46,15 +46,17 @@ export const ApiDocumentation: React.FC = () => {
           )}
         </Button>
       </div>
-      <pre className="bg-gray-900 text-gray-100 p-4 rounded-b-md overflow-x-auto text-sm">
-        <code>{code}</code>
-      </pre>
+      <div className="bg-gray-900 text-gray-100 p-4 rounded-b-md overflow-x-auto">
+        <pre className="text-sm whitespace-pre">
+          <code>{code}</code>
+        </pre>
+      </div>
     </div>
   );
 
   return (
-    <Card className="p-6">
-      <div className="prose max-w-none">
+    <Card className="p-4 lg:p-6 w-full overflow-hidden">
+      <div className="prose max-w-none w-full">
         <h1 className="text-3xl font-bold mb-6">Theria Astrology API Documentation</h1>
         
         <p className="mb-6">
@@ -66,9 +68,11 @@ export const ApiDocumentation: React.FC = () => {
         
         <h3 className="text-xl font-semibold mb-4">General Information</h3>
         
-        <p className="mb-2"><strong>Base URL</strong>: https://api.theriaapi.com/api</p>
-        <p className="mb-2"><strong>Request Format</strong>: JSON</p>
-        <p className="mb-2"><strong>Response Format</strong>: JSON</p>
+        <div className="space-y-2 mb-4">
+          <p><strong>Base URL</strong>: <code className="bg-gray-100 px-1 rounded break-all">https://api.theriaapi.com/api</code></p>
+          <p><strong>Request Format</strong>: JSON</p>
+          <p><strong>Response Format</strong>: JSON</p>
+        </div>
         
         <p className="mb-4">Include these headers in each request:</p>
         <CodeBlock 
@@ -84,7 +88,9 @@ Authorization: Bearer yourtheriaapikeyhere`}
         <h3 className="text-2xl font-semibold mb-4">API Endpoints</h3>
         
         <h4 className="text-xl font-semibold mb-3">1. Natal Chart</h4>
-        <p className="mb-3 font-mono bg-gray-100 p-1 inline-block">{`POST https://api.theriaapi.com/swiss/natal`}</p>
+        <div className="bg-gray-100 p-2 rounded mb-3 overflow-x-auto">
+          <code className="text-sm whitespace-nowrap">{`POST https://api.theriaapi.com/swiss/natal`}</code>
+        </div>
         
         <p className="mb-4">Get birth chart details including planets, houses, aspects, and angles.</p>
         

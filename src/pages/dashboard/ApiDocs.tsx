@@ -3,7 +3,7 @@ import ApiDocumentationContent from "@/components/dashboard/ApiDocumentationCont
 
 const ApiDocs = () => {
   return (
-    <div>
+    <div className="w-full max-w-full overflow-hidden">
       <h1 className="text-2xl font-bold mb-6">API Documentation</h1>
       <ApiDocumentationContent />
     </div>
