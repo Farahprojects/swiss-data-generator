@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
@@ -132,7 +131,7 @@ const ReportsPage = () => {
                   >
                     <td className="px-4 py-3">
                       {report.created_at ? 
-                        format(new Date(report.created_at), 'MMM d, yyyy HH:mm:ss') : 
+                        format(new Date(report.created_at), 'MMM d, yyyy HH:mm') : 
                         'N/A'}
                     </td>
                     <td className="px-4 py-3">

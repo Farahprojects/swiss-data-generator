@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -195,7 +194,7 @@ export const RecentApiCalls = () => {
                   >
                     <TableCell className="py-3 text-sm">
                       {log.created_at ? 
-                        format(new Date(log.created_at), 'MMM d, yyyy HH:mm:ss') : 
+                        format(new Date(log.created_at), 'MMM d, yyyy HH:mm') : 
                         'N/A'}
                     </TableCell>
                     <TableCell className="py-3">
