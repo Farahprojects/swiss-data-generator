@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import { 
@@ -119,6 +118,16 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     return 'No report content available';
   };
 
+  // Helper function to get filtered response payload (without report field)
+  const getFilteredResponsePayload = (responsePayload: any) => {
+    if (!responsePayload || typeof responsePayload !== 'object') {
+      return responsePayload;
+    }
+    
+    const { report, ...filteredPayload } = responsePayload;
+    return filteredPayload;
+  };
+
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="h-[90vh] max-w-[60vw] mx-auto">
@@ -211,7 +220,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                             <div>
                               <h4 className="text-sm font-medium mb-2">Response Payload</h4>
                               <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto bg-gray-100 p-2 rounded">
-                                {JSON.stringify(logData.response_payload, null, 2)}
+                                {JSON.stringify(getFilteredResponsePayload(logData.response_payload), null, 2)}
                               </pre>
                             </div>
                           )}
