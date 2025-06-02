@@ -87,29 +87,18 @@ const ReportsPage = () => {
     return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
   };
 
-  // Fallback name generator for reports without stored names
-  const getFallbackReportName = (reportId: string): string => {
-    const names = [
-      'Sarah Johnson', 'Michael Chen', 'Emily Rodriguez', 'David Thompson', 
-      'Jessica Martinez', 'Robert Kim', 'Amanda Wilson', 'Christopher Lee',
-      'Jennifer Brown', 'Matthew Garcia', 'Lisa Anderson', 'Daniel Miller',
-      'Ashley Davis', 'James Wilson', 'Rachel Taylor', 'Kevin Martinez'
-    ];
-    
-    // Use the report ID to consistently pick the same name
-    const hash = reportId.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    return names[Math.abs(hash) % names.length];
+  // Generate a professional report identifier when no name is stored
+  const generateReportId = (report: Report): string => {
+    const reportType = formatReportTier(report.report_tier || report.request_type);
+    const shortId = report.id.substring(0, 8);
+    return `${reportType} #${shortId}`;
   };
 
   const getDisplayName = (report: Report): string => {
     if (report.report_name) {
       return report.report_name;
     }
-    return getFallbackReportName(report.id);
+    return generateReportId(report);
   };
 
   return (
