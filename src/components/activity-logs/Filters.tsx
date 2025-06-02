@@ -33,13 +33,14 @@ const Filters = ({ filters, onChange }: FiltersProps) => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="standard">Standard</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-                <SelectItem value="essence">Essence</SelectItem>
-                <SelectItem value="professional">Professional</SelectItem>
-                <SelectItem value="mindset">Mindset</SelectItem>
-                <SelectItem value="health">Health</SelectItem>
-                <SelectItem value="spiritual">Spiritual</SelectItem>
+                <SelectItem value="return">Solar/Lunar Return Report</SelectItem>
+                <SelectItem value="positions">Planetary Positions</SelectItem>
+                <SelectItem value="sync">Sync Report</SelectItem>
+                <SelectItem value="essence">Essence Report</SelectItem>
+                <SelectItem value="flow">Flow Report</SelectItem>
+                <SelectItem value="mindset">Mindset Report</SelectItem>
+                <SelectItem value="monthly">Monthly Report</SelectItem>
+                <SelectItem value="focus">Focus Report</SelectItem>
               </SelectContent>
             </Select>
           </div>
