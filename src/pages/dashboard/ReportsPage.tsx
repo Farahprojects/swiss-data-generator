@@ -10,6 +10,7 @@ type Report = {
   created_at: string;
   request_type: string;
   report_tier: string | null;
+  report_name: string | null;
   response_payload?: any;
   request_payload?: any;
   error_message?: string;
@@ -60,6 +61,7 @@ const ReportsPage = () => {
         response_status: item.response_status || 0,
         request_type: item.request_type || '',
         report_tier: item.report_tier,
+        report_name: item.report_name,
         total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
         processing_time_ms: item.processing_time_ms,
         response_payload: item.response_payload,
@@ -85,8 +87,8 @@ const ReportsPage = () => {
     return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
   };
 
-  // Generate a consistent report name based on the report ID
-  const generateReportName = (reportId: string): string => {
+  // Fallback name generator for reports without stored names
+  const getFallbackReportName = (reportId: string): string => {
     const names = [
       'Sarah Johnson', 'Michael Chen', 'Emily Rodriguez', 'David Thompson', 
       'Jessica Martinez', 'Robert Kim', 'Amanda Wilson', 'Christopher Lee',
@@ -101,6 +103,13 @@ const ReportsPage = () => {
     }, 0);
     
     return names[Math.abs(hash) % names.length];
+  };
+
+  const getDisplayName = (report: Report): string => {
+    if (report.report_name) {
+      return report.report_name;
+    }
+    return getFallbackReportName(report.id);
   };
 
   return (
@@ -140,7 +149,7 @@ const ReportsPage = () => {
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-gray-900">
-                        {generateReportName(report.id)}
+                        {getDisplayName(report)}
                       </span>
                     </td>
                     <td className="px-4 py-3">

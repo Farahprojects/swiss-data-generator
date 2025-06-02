@@ -165,6 +165,27 @@ function transformToSwissFormat(data: CreateReportRequest): any {
   return basePayload;
 }
 
+// Helper to determine the report name to store
+function getReportName(data: CreateReportRequest): string {
+  const requiresTwoPeople = ['compatibility', 'sync'].includes(data.reportType);
+  const requiresPositionsFields = data.reportType === 'positions';
+  const requiresMoonDate = data.reportType === 'moonphases';
+  
+  if (requiresMoonDate) {
+    return 'Moon Phases Report';
+  }
+  
+  if (requiresPositionsFields) {
+    return `Planetary Positions - ${data.positionsLocation}`;
+  }
+  
+  if (requiresTwoPeople && data.name && data.name2) {
+    return `${data.name} & ${data.name2}`;
+  }
+  
+  return data.name || 'Unknown';
+}
+
 // Swiss API caller helper
 async function callSwissAPI(payload: any): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
@@ -279,6 +300,21 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    // Log to translator_logs with the report name
+    const reportName = getReportName(formData);
+    console.log('[create-report] Saving report with name:', reportName);
+
+    await supabase
+      .from('translator_logs')
+      .insert({
+        user_id: user.id,
+        request_type: formData.reportType,
+        request_payload: swissPayload,
+        response_payload: swissResult.data,
+        response_status: 200,
+        report_name: reportName
+      });
 
     // Format and return response
     const formattedResponse = formatResponse(swissResult.data, formData.reportType);

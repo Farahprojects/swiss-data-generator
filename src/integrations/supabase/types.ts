@@ -633,6 +633,7 @@ export type Database = {
           google_geo: boolean | null
           id: string
           processing_time_ms: number | null
+          report_name: string | null
           report_tier: string | null
           request_payload: Json | null
           request_type: string | null
@@ -646,6 +647,7 @@ export type Database = {
           google_geo?: boolean | null
           id?: string
           processing_time_ms?: number | null
+          report_name?: string | null
           report_tier?: string | null
           request_payload?: Json | null
           request_type?: string | null
@@ -659,6 +661,7 @@ export type Database = {
           google_geo?: boolean | null
           id?: string
           processing_time_ms?: number | null
+          report_name?: string | null
           report_tier?: string | null
           request_payload?: Json | null
           request_type?: string | null
