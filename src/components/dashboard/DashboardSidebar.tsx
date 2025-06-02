@@ -6,8 +6,16 @@ import {
   SidebarMenu, 
   SidebarMenuItem, 
   SidebarMenuButton,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   useSidebar
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { 
   LayoutDashboard, 
   Key, 
@@ -16,15 +24,23 @@ import {
   FileQuestion, 
   CreditCard,
   DollarSign,
-  FilePlus
+  FilePlus,
+  User,
+  Code,
+  LifeBuoy,
+  ChevronDown
 } from 'lucide-react';
+import { useState } from 'react';
 
 const DashboardSidebar = () => {
   const location = useLocation();
   const { state } = useSidebar();
+  const [isDeveloperOpen, setIsDeveloperOpen] = useState(true);
+  const [isAccountOpen, setIsAccountOpen] = useState(true);
+  const [isSupportOpen, setIsSupportOpen] = useState(true);
   
-  // Define menu items with proper routes
-  const menuItems = [
+  // Always visible menu items
+  const mainItems = [
     {
       name: "Dashboard",
       path: "/dashboard",
@@ -36,34 +52,51 @@ const DashboardSidebar = () => {
       icon: <FilePlus size={20} />
     },
     {
-      name: "API Keys",
-      path: "/dashboard/api-keys",
-      icon: <Key size={20} />
-    },
-    {
-      name: "Activity Logs",
-      path: "/dashboard/activity-logs",
-      icon: <Activity size={20} />
-    },
-    {
-      name: "Pricing",
-      path: "/dashboard/pricing",
-      icon: <DollarSign size={20} />
-    },
-    {
       name: "Reports",
       path: "/dashboard/reports",
       icon: <FileText size={20} />
     },
     {
+      name: "Activity Logs",
+      path: "/dashboard/activity-logs",
+      icon: <Activity size={20} />
+    }
+  ];
+
+  // Developer section items
+  const developerItems = [
+    {
+      name: "API Keys",
+      path: "/dashboard/api-keys",
+      icon: <Key size={20} />
+    },
+    {
       name: "Documentation",
       path: "/dashboard/docs",
       icon: <FileQuestion size={20} />
-    },
+    }
+  ];
+
+  // Account section items
+  const accountItems = [
     {
       name: "Billing",
       path: "/dashboard/billing",
       icon: <CreditCard size={20} />
+    },
+    {
+      name: "Pricing",
+      path: "/dashboard/pricing",
+      icon: <DollarSign size={20} />
+    }
+  ];
+
+  // Support section items
+  const supportItems = [
+    {
+      name: "Support",
+      path: "/dashboard/support",
+      icon: <LifeBuoy size={20} />
     }
   ];
 
@@ -75,6 +108,31 @@ const DashboardSidebar = () => {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
+  // Check if any item in a section is active
+  const isSectionActive = (items: typeof mainItems) => {
+    return items.some(item => isActive(item.path));
+  };
+
+  const MenuItems = ({ items }: { items: typeof mainItems }) => (
+    <>
+      {items.map((item) => (
+        <SidebarMenuItem key={item.name}>
+          <SidebarMenuButton 
+            asChild
+            isActive={isActive(item.path)}
+            className="text-black hover:text-primary data-[active=true]:text-primary data-[active=true]:bg-accent/20 flex items-center gap-3 px-4 py-2 w-full"
+            tooltip={state === "collapsed" ? item.name : undefined}
+          >
+            <Link to={item.path}>
+              {item.icon}
+              <span>{item.name}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </>
+  );
+
   return (
     <Sidebar 
       variant="sidebar" 
@@ -82,23 +140,89 @@ const DashboardSidebar = () => {
       className="border-r border-gray-200"
     >
       <SidebarContent className="pt-6">
-        <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.name}>
-              <SidebarMenuButton 
-                asChild
-                isActive={isActive(item.path)}
-                className="text-black hover:text-primary data-[active=true]:text-primary data-[active=true]:bg-accent/20 flex items-center gap-3 px-4 py-2 w-full"
-                tooltip={state === "collapsed" ? item.name : undefined}
-              >
-                <Link to={item.path}>
-                  {item.icon}
-                  <span>{item.name}</span>
-                </Link>
-              </SidebarMenuButton>
+        {/* Main always-visible items */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <MenuItems items={mainItems} />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Developer Section */}
+        <SidebarGroup>
+          <Collapsible open={isDeveloperOpen} onOpenChange={setIsDeveloperOpen}>
+            <SidebarMenuItem>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                  className="text-black hover:text-primary flex items-center gap-3 px-4 py-2 w-full data-[state=open]:bg-accent/10"
+                  tooltip={state === "collapsed" ? "Developer" : undefined}
+                >
+                  <Code size={20} />
+                  <span>Developer</span>
+                  <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[collapsible=icon]:hidden data-[state=open]:rotate-180" />
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
             </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="ml-4">
+                  <MenuItems items={developerItems} />
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+
+        {/* Account Section */}
+        <SidebarGroup>
+          <Collapsible open={isAccountOpen} onOpenChange={setIsAccountOpen}>
+            <SidebarMenuItem>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                  className="text-black hover:text-primary flex items-center gap-3 px-4 py-2 w-full data-[state=open]:bg-accent/10"
+                  tooltip={state === "collapsed" ? "Account" : undefined}
+                >
+                  <User size={20} />
+                  <span>Account</span>
+                  <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[collapsible=icon]:hidden data-[state=open]:rotate-180" />
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+            </SidebarMenuItem>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="ml-4">
+                  <MenuItems items={accountItems} />
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+
+        {/* Support Section */}
+        <SidebarGroup>
+          <Collapsible open={isSupportOpen} onOpenChange={setIsSupportOpen}>
+            <SidebarMenuItem>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                  className="text-black hover:text-primary flex items-center gap-3 px-4 py-2 w-full data-[state=open]:bg-accent/10"
+                  tooltip={state === "collapsed" ? "Support" : undefined}
+                >
+                  <LifeBuoy size={20} />
+                  <span>Support</span>
+                  <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[collapsible=icon]:hidden data-[state=open]:rotate-180" />
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+            </SidebarMenuItem>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="ml-4">
+                  <MenuItems items={supportItems} />
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );
