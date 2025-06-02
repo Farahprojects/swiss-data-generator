@@ -26,8 +26,8 @@ export class ReportTemplate extends BaseTemplate {
     const logo = await fetchImageAsBase64('https://auth.theraiastro.com/storage/v1/object/public/therai-assets//therai-logo.png');
 
     // Centered logo
-    const logoWidth = 40;
-    const logoHeight = 40;
+    const logoWidth = 55;
+    const logoHeight = 55;
     const centerX = this.pageWidth / 2 - logoWidth / 2;
     const logoY = 20;
     this.doc.addImage(logo, 'PNG', centerX, logoY, logoWidth, logoHeight);
