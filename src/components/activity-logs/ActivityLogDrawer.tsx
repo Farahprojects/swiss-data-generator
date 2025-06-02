@@ -31,6 +31,7 @@ type ActivityLogItem = {
   request_payload?: any;
   error_message?: string;
   google_geo?: boolean;
+  swiss_payload?: any;
 };
 
 interface ActivityLogDrawerProps {
@@ -137,7 +138,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
               </ToggleGroupItem>
               <ToggleGroupItem 
                 value="payload" 
-                disabled={!logData?.response_payload && !logData?.request_payload}
+                disabled={!logData?.swiss_payload && !logData?.request_payload}
               >
                 Payload
               </ToggleGroupItem>
@@ -196,7 +197,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 {viewMode === 'payload' && (
                   <ScrollArea className="h-[65vh]">
                     <div className="p-4 bg-gray-50 rounded-md">
-                      {(logData.response_payload || logData.request_payload) ? (
+                      {(logData.swiss_payload || logData.request_payload) ? (
                         <div>
                           {logData.request_payload && (
                             <div className="mb-4">
@@ -207,11 +208,11 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                             </div>
                           )}
                           
-                          {logData.response_payload && (
+                          {logData.swiss_payload && (
                             <div>
-                              <h4 className="text-sm font-medium mb-2">Response Payload</h4>
+                              <h4 className="text-sm font-medium mb-2">Swiss Ephemeris Data</h4>
                               <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto bg-gray-100 p-2 rounded">
-                                {JSON.stringify(logData.response_payload, null, 2)}
+                                {JSON.stringify(logData.swiss_payload, null, 2)}
                               </pre>
                             </div>
                           )}
