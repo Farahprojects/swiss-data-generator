@@ -12,11 +12,7 @@ type Report = {
   report_type: string;
   report_text: string | null;
   swiss_payload?: any;
-  request_payload?: any;
   error_message?: string;
-  response_status: number;
-  processing_time_ms: number | null;
-  total_cost_usd: number;
   endpoint: string;
   api_key: string;
   user_id: string;
@@ -49,12 +45,9 @@ const ReportsPage = () => {
     try {
       const { data, error } = await supabase
         .from('report_logs')
-        .select(`
-          *,
-          api_usage!left(total_cost_usd)
-        `)
+        .select('*')
         .eq('user_id', user.id)
-        .gte('status', 'success')
+        .eq('status', 'success')
         .not('report_text', 'is', null)
         .order('created_at', { ascending: false });
       
@@ -66,13 +59,9 @@ const ReportsPage = () => {
       const processedData: Report[] = data?.map(item => ({
         id: item.id,
         created_at: item.created_at,
-        response_status: 200, // report_logs doesn't have response_status, defaulting to 200 for successful reports
         report_type: item.report_type || '',
         report_text: item.report_text,
-        total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
-        processing_time_ms: item.duration_ms,
         swiss_payload: item.swiss_payload,
-        request_payload: null, // report_logs doesn't have request_payload
         error_message: item.error_message,
         endpoint: item.endpoint,
         api_key: item.api_key,
@@ -81,6 +70,7 @@ const ReportsPage = () => {
         status: item.status
       })) || [];
       
+      console.log('Fetched reports:', processedData);
       setReports(processedData);
       setFilteredReports(processedData);
     } catch (err) {

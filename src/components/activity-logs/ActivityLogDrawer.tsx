@@ -21,13 +21,14 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 type ActivityLogItem = {
   id: string;
   created_at: string;
-  response_status: number;
+  response_status?: number;
   endpoint?: string;
   request_type?: string;
   report_tier?: string | null;
   report_type?: string;
-  total_cost_usd: number;
-  processing_time_ms: number | null;
+  total_cost_usd?: number;
+  processing_time_ms?: number | null;
+  duration_ms?: number | null;
   response_payload?: any;
   request_payload?: any;
   swiss_payload?: any;
@@ -50,14 +51,13 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     if (!logData) return;
     
     // Create CSV content
-    const headers = "Timestamp,Status,Endpoint/Type,Report Type,Cost,Processing Time\n";
+    const headers = "Timestamp,Status,Endpoint/Type,Report Type,Processing Time\n";
     const row = [
       new Date(logData.created_at).toLocaleString(),
-      logData.response_status,
+      logData.response_status || 'N/A',
       logData.endpoint || logData.request_type || 'N/A',
       logData.report_tier || logData.report_type || 'None',
-      logData.total_cost_usd.toFixed(2),
-      logData.processing_time_ms ? `${(logData.processing_time_ms / 1000).toFixed(2)}s` : 'N/A'
+      (logData.processing_time_ms || logData.duration_ms) ? `${((logData.processing_time_ms || logData.duration_ms || 0) / 1000).toFixed(2)}s` : 'N/A'
     ].join(',');
     
     const content = headers + row;
