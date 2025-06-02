@@ -108,7 +108,7 @@ const Legal = () => {
                         <ScrollArea className="h-[60vh]">
                           <div 
                             className="prose prose-slate max-w-none"
-                            dangerouslySetInnerHTML={{ __html: marked.parse(doc.content) }} 
+                            dangerouslySetInnerHTML={{ __html: String(marked(doc.content)) }} 
                           />
                         </ScrollArea>
                       </div>
