@@ -74,17 +74,17 @@ const Filters = ({ filters, onChange }: FiltersProps) => {
           </div>
         </div>
         
-        {/* Responsive grid for filter controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        {/* Single row for all other filters */}
+        <div className="flex gap-3 items-center">
           {/* Report Type Dropdown */}
-          <div>
+          <div className="w-40">
             <Select
               value={filters.reportType || ""}
               onValueChange={(value) => onChange('reportType', value === "all" ? null : value)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9 text-sm">
                 <FileText className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Report Type" />
+                <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
@@ -100,12 +100,12 @@ const Filters = ({ filters, onChange }: FiltersProps) => {
           </div>
           
           {/* Status Dropdown */}
-          <div>
+          <div className="w-32">
             <Select
               value={filters.status || ""}
               onValueChange={(value) => onChange('status', value === "all" ? null : value)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9 text-sm">
                 <Filter className="mr-2 h-4 w-4" />
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -118,12 +118,12 @@ const Filters = ({ filters, onChange }: FiltersProps) => {
           </div>
           
           {/* Search Field */}
-          <div className="sm:col-span-2 md:col-span-1">
+          <div className="flex-1 min-w-[200px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search..."
-                className="pl-10"
+                className="pl-10 h-9 text-sm"
                 value={filters.search}
                 onChange={(e) => onChange('search', e.target.value)}
               />

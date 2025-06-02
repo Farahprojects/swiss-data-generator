@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { Check, X } from 'lucide-react';
@@ -109,7 +110,7 @@ const LogsTable = ({ logs, loading, isMobile, onRowClick }: LogsTableProps) => {
                 >
                   <td className="px-4 py-3">
                     {log.created_at ? 
-                      format(new Date(log.created_at), 'MMM d, yyyy HH:mm') : 
+                      format(new Date(log.created_at), 'MMM d, yyyy') : 
                       'N/A'}
                   </td>
                   <td className="px-4 py-3">
