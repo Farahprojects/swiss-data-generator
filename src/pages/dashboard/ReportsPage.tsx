@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
@@ -47,7 +46,7 @@ const ReportsPage = () => {
         .eq('user_id', user.id)
         .gte('response_status', 200)
         .lt('response_status', 300)
-        .not('report_tier', 'is', null)
+        .or('report_tier.not.is.null,report_name.not.is.null')
         .order('created_at', { ascending: false });
       
       if (error) {
