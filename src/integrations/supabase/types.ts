@@ -80,6 +80,7 @@ export type Database = {
           id: string
           report_price_usd: number | null
           report_tier: string | null
+          request_params: Json | null
           total_cost_usd: number
           translator_log_id: string
           unit_price_usd: number
@@ -93,6 +94,7 @@ export type Database = {
           id?: string
           report_price_usd?: number | null
           report_tier?: string | null
+          request_params?: Json | null
           total_cost_usd: number
           translator_log_id: string
           unit_price_usd: number
@@ -106,6 +108,7 @@ export type Database = {
           id?: string
           report_price_usd?: number | null
           report_tier?: string | null
+          request_params?: Json | null
           total_cost_usd?: number
           translator_log_id?: string
           unit_price_usd?: number

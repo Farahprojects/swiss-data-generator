@@ -7,9 +7,21 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Calendar, MapPin, Clock } from 'lucide-react';
+import { Calendar, MapPin, Clock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface ReportResult {
+  success: boolean;
+  reportType: string;
+  data: any;
+  generatedAt: string;
+}
 
 const CreateReportPage = () => {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [reportResult, setReportResult] = useState<ReportResult | null>(null);
   const [formData, setFormData] = useState({
     reportType: '',
     relationshipType: '',
@@ -70,10 +82,85 @@ const CreateReportPage = () => {
     }
   }, [formData.reportType]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Creating report with data:', formData);
-    // TODO: Implement report generation logic
+    setIsLoading(true);
+    setReportResult(null);
+
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to generate reports",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Submitting form data:', formData);
+
+      const response = await supabase.functions.invoke('create-report', {
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      console.log('Create report response:', response);
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to create report');
+      }
+
+      if (response.data.error) {
+        throw new Error(response.data.details || response.data.error);
+      }
+
+      setReportResult(response.data);
+      toast({
+        title: "Report Generated Successfully",
+        description: `Your ${formData.reportType} report has been created`,
+      });
+
+    } catch (error) {
+      console.error('Error creating report:', error);
+      toast({
+        title: "Error Creating Report",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      reportType: '',
+      relationshipType: '',
+      essenceType: '',
+      name: '',
+      birthDate: '',
+      birthTime: '',
+      birthLocation: '',
+      name2: '',
+      birthDate2: '',
+      birthTime2: '',
+      birthLocation2: '',
+      transitDate: '',
+      progressionDate: '',
+      returnDate: '',
+      moonDate: '',
+      positionsLocation: '',
+      positionsDate: '',
+      positionsEndDate: '',
+      todayDate: '',
+      todayTime: '',
+      notes: ''
+    });
+    setReportResult(null);
   };
 
   // Check if report type requires two people
@@ -88,6 +175,48 @@ const CreateReportPage = () => {
   const isSyncReport = formData.reportType === 'sync';
   const isEssenceReport = formData.reportType === 'essence';
   const requiresTodayDateTime = formData.reportType === 'body_matrix' || formData.reportType === 'essence';
+
+  // Show result if we have one
+  if (reportResult) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Report Generated</h1>
+        </div>
+
+        <Card className="max-w-4xl border-2 border-green-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-green-500/10 to-transparent p-1"></div>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <CheckCircle className="h-8 w-8 text-green-500" />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {reportResult.reportType.charAt(0).toUpperCase() + reportResult.reportType.slice(1)} Report
+                </h2>
+                <p className="text-gray-600">Generated on {new Date(reportResult.generatedAt).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold mb-2">Report Data</h3>
+              <pre className="text-sm overflow-auto max-h-96 bg-white p-3 rounded border">
+                {JSON.stringify(reportResult.data, null, 2)}
+              </pre>
+            </div>
+
+            <div className="flex gap-4">
+              <Button onClick={resetForm} variant="outline">
+                Create Another Report
+              </Button>
+              <Button onClick={() => window.print()} variant="outline">
+                Print Report
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -457,8 +586,15 @@ const CreateReportPage = () => {
             </div>
 
             <div className="pt-4">
-              <Button type="submit" className="w-full">
-                Generate Report
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Report...
+                  </>
+                ) : (
+                  'Generate Report'
+                )}
               </Button>
             </div>
           </form>
