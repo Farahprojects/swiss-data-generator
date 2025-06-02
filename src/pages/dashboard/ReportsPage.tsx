@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
@@ -86,11 +87,10 @@ const ReportsPage = () => {
     return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
   };
 
-  // Generate a professional report identifier when no name is stored
+  // Generate a clean report identifier when no name is stored
   const generateReportId = (report: Report): string => {
-    const reportType = formatReportTier(report.report_tier || report.request_type);
     const shortId = report.id.substring(0, 8);
-    return `${reportType} #${shortId}`;
+    return `#${shortId}`;
   };
 
   const getDisplayName = (report: Report): string => {
