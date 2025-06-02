@@ -1,3 +1,4 @@
+
 import { BaseTemplate } from './BaseTemplate';
 import { ReportPdfData, PdfGenerationOptions, PdfMetadata } from '../types';
 
@@ -108,6 +109,8 @@ export class ReportTemplate extends BaseTemplate {
         this.doc.setFont('helvetica', 'bold');
         this.doc.setTextColor(40, 40, 60);
         this.doc.text(line, this.margins.left, lineY);
+        lineY += lineHeight;
+        // Add extra space after heading
         lineY += lineHeight;
         this.doc.setFont('helvetica', 'normal');
         this.doc.setTextColor(33);
