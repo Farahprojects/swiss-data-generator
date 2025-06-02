@@ -24,21 +24,22 @@ export class ReportTemplate extends BaseTemplate {
     };
 
     const logo = await fetchImageAsBase64('https://auth.theraiastro.com/storage/v1/object/public/therai-assets//therai-logo.png');
-    const logoWidth = 40;
-    const logoAspect = 350 / 200; // estimated logo aspect ratio (adjust if needed)
-    const logoHeight = logoWidth / logoAspect;
-    const logoY = 20;
 
-    this.doc.addImage(logo, 'PNG', this.margins.left, logoY, 40, 40); 
+    // Centered logo
+    const logoWidth = 40;
+    const logoHeight = 40;
+    const centerX = this.pageWidth / 2 - logoWidth / 2;
+    const logoY = 20;
+    this.doc.addImage(logo, 'PNG', centerX, logoY, logoWidth, logoHeight);
 
     // Title
     this.doc.setFontSize(20);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(40, 40, 60);
-    this.doc.text('Essence Professional', this.pageWidth / 2, logoY + 12, { align: 'center' });
+    this.doc.text('Essence Professional', this.pageWidth / 2, logoY + logoHeight + 10, { align: 'center' });
 
     // Metadata
-    let y = logoY + logoHeight + 12;
+    let y = logoY + logoHeight + 25;
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'normal');
     this.doc.setTextColor(100);
@@ -68,25 +69,25 @@ export class ReportTemplate extends BaseTemplate {
       return;
     }
 
-    // Section Header
+    // Section Heading
     y += 18;
     this.doc.setFontSize(13);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(75, 63, 114);
     this.doc.text('Client Energetic Insight', this.margins.left, y);
 
-    // Content (cleaned and auto-paginated)
+    // Content (strip markdown and auto-paginate)
     const contentText = data.content.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[_`]/g, '');
     const contentLines = this.doc.splitTextToSize(
       contentText,
       this.pageWidth - this.margins.left - this.margins.right
     );
 
-    this.doc.setFont('times', 'normal');
+    this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(11);
     this.doc.setTextColor(33);
 
-    let lineY = y + 10;
+    let lineY = y + 12;
     const bottomPadding = 20;
     const lineHeight = 6;
 
@@ -99,7 +100,7 @@ export class ReportTemplate extends BaseTemplate {
       lineY += lineHeight;
     }
 
-    // Footer
+    // Footer (only if space available)
     if (options.includeFooter !== false && lineY + 15 < this.pageHeight) {
       this.doc.setFontSize(9);
       this.doc.setFont('helvetica', 'italic');
@@ -112,7 +113,6 @@ export class ReportTemplate extends BaseTemplate {
       );
     }
 
-    // Save
     const filename = `report-${data.id.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.pdf`;
     this.download(filename);
   }
