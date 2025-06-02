@@ -26,44 +26,64 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
   const { requestData, swissApiResponse, swissApiStatus, requestId } = params;
   const logPrefix = requestId ? `[reportHandler][${requestId}]` : "[reportHandler]";
   
+  console.log(`${logPrefix} ========== REPORT GENERATION DEBUG START ==========`);
+  console.log(`${logPrefix} Swiss API Status: ${swissApiStatus}`);
+  console.log(`${logPrefix} Request Data Keys: ${Object.keys(requestData || {}).join(', ')}`);
+  console.log(`${logPrefix} Report field in request: ${JSON.stringify(requestData?.report)}`);
+  console.log(`${logPrefix} Report field type: ${typeof requestData?.report}`);
+  console.log(`${logPrefix} Report field truthiness: ${!!requestData?.report}`);
+  
   // Only proceed if Swiss API call was successful
   if (swissApiStatus !== 200) {
     console.log(`${logPrefix} Swiss API failed (${swissApiStatus}), skipping report generation`);
+    console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
     return {
       success: true,
       responseData: swissApiResponse
     };
   }
 
-  // Check if report was requested
-  const reportRequested = requestData.report;
-
+  // Enhanced report request checking with detailed logging
+  const reportRequested = requestData?.report;
+  console.log(`${logPrefix} Raw report field value: "${reportRequested}"`);
+  console.log(`${logPrefix} Report requested check: ${reportRequested ? 'YES' : 'NO'}`);
   
   if (!reportRequested) {
-    console.log(`${logPrefix} No report requested, returning Swiss API data only`);
+    console.warn(`${logPrefix} No report requested - request payload:`, {
+      hasReportField: 'report' in (requestData || {}),
+      reportValue: requestData?.report,
+      allFields: Object.keys(requestData || {})
+    });
+    console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
     return {
       success: true,
-      responseData: swissApiResponse
+      responseData: swissApiResponse,
+      errorMessage: "No report field found in request or report field is empty/falsy"
     };
   }
 
-  console.log(`${logPrefix} Report requested: ${requestData.report}, processing...`);
+  console.log(`${logPrefix} Report requested: "${reportRequested}", proceeding with generation...`);
 
   try {
-    // Parse Swiss API response
+    // Parse Swiss API response with enhanced logging
     let swissData;
+    console.log(`${logPrefix} Swiss API response type: ${typeof swissApiResponse}`);
+    console.log(`${logPrefix} Swiss API response preview (first 200 chars): ${JSON.stringify(swissApiResponse).substring(0, 200)}...`);
+    
     try {
       swissData = typeof swissApiResponse === 'string' ? JSON.parse(swissApiResponse) : swissApiResponse;
+      console.log(`${logPrefix} Successfully parsed Swiss API response. Keys: ${Object.keys(swissData || {}).join(', ')}`);
     } catch (parseError) {
       console.error(`${logPrefix} Failed to parse Swiss API response:`, parseError);
+      console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
       return {
         success: false,
         responseData: swissApiResponse,
-        errorMessage: "Unable to process Swiss API response for report generation"
+        errorMessage: "Unable to process Swiss API response for report generation - invalid JSON format"
       };
     }
 
-    // Prepare report payload
+    // Prepare report payload with enhanced logging
     const reportPayload = {
       endpoint: requestData.request || "unknown",
       report_type: requestData.report,
@@ -74,13 +94,46 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       ...requestData
     };
 
-    console.log(`${logPrefix} Calling report orchestrator for ${reportPayload.report_type} report`);
+    console.log(`${logPrefix} Report payload prepared:`, {
+      endpoint: reportPayload.endpoint,
+      report_type: reportPayload.report_type,
+      user_id: reportPayload.user_id ? 'present' : 'missing',
+      apiKey: reportPayload.apiKey ? 'present' : 'missing',
+      chartData: reportPayload.chartData ? 'present' : 'missing',
+      chartDataKeys: reportPayload.chartData ? Object.keys(reportPayload.chartData).join(', ') : 'none'
+    });
+
+    // Validate report type before calling orchestrator
+    if (!reportPayload.report_type || typeof reportPayload.report_type !== 'string') {
+      console.error(`${logPrefix} Invalid report type:`, {
+        value: reportPayload.report_type,
+        type: typeof reportPayload.report_type
+      });
+      console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
+      return {
+        success: true,
+        responseData: {
+          ...swissData,
+          report_error: `Invalid report type: ${reportPayload.report_type}`
+        },
+        errorMessage: `Invalid report type provided: ${reportPayload.report_type}`
+      };
+    }
+
+    console.log(`${logPrefix} Calling report orchestrator for "${reportPayload.report_type}" report...`);
     
     // Generate the report
     const reportResult = await processReportRequest(reportPayload);
     
+    console.log(`${logPrefix} Report orchestrator response:`, {
+      success: reportResult.success,
+      hasReport: !!reportResult.report,
+      errorMessage: reportResult.errorMessage,
+      reportPreview: reportResult.report ? 'Report generated successfully' : 'No report in response'
+    });
+    
     if (reportResult.success && reportResult.report) {
-      console.log(`${logPrefix} Report generated successfully`);
+      console.log(`${logPrefix} Report generated successfully for "${reportPayload.report_type}"`);
       
       // Combine Swiss API data with the report
       const combinedResponse = {
@@ -88,38 +141,63 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
         report: reportResult.report
       };
       
+      console.log(`${logPrefix} Combined response prepared with report included`);
+      console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
+      
       return {
         success: true,
         responseData: combinedResponse
       };
     } else {
-      console.error(`${logPrefix} Report generation failed: ${reportResult.errorMessage}`);
+      const errorMsg = reportResult.errorMessage || "Report generation failed without specific error";
+      console.error(`${logPrefix} Report generation failed:`, {
+        orchestratorSuccess: reportResult.success,
+        errorMessage: errorMsg,
+        reportType: reportPayload.report_type
+      });
       
-      // Return Swiss API data with error message about report
+      // Return Swiss API data with detailed error message about report
       const responseWithError = {
         ...swissData,
-        report_error: reportResult.errorMessage || "Report generation failed"
+        report_error: `Failed to generate ${reportPayload.report_type} report: ${errorMsg}`
       };
+      
+      console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
       
       return {
         success: true,
         responseData: responseWithError,
-        errorMessage: reportResult.errorMessage
+        errorMessage: `Report generation failed for ${reportPayload.report_type}: ${errorMsg}`
       };
     }
   } catch (error) {
-    console.error(`${logPrefix} Unexpected error in report generation:`, error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`${logPrefix} Unexpected error in report generation:`, {
+      error: errorMsg,
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      reportType: requestData?.report
+    });
+    
+    // Parse Swiss data for error response if possible
+    let swissData;
+    try {
+      swissData = typeof swissApiResponse === 'string' ? JSON.parse(swissApiResponse) : swissApiResponse;
+    } catch {
+      swissData = { raw_response: swissApiResponse };
+    }
     
     // Return Swiss API data with error message
     const responseWithError = {
       ...swissData,
-      report_error: "Unexpected error during report generation"
+      report_error: `Unexpected error during ${requestData?.report || 'unknown'} report generation: ${errorMsg}`
     };
+    
+    console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
     
     return {
       success: true,
       responseData: responseWithError,
-      errorMessage: error instanceof Error ? error.message : String(error)
+      errorMessage: `Unexpected error generating ${requestData?.report || 'unknown'} report: ${errorMsg}`
     };
   }
 }
