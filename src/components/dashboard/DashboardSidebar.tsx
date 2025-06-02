@@ -37,7 +37,6 @@ const DashboardSidebar = () => {
   const { state } = useSidebar();
   const [isDeveloperOpen, setIsDeveloperOpen] = useState(true);
   const [isAccountOpen, setIsAccountOpen] = useState(true);
-  const [isSupportOpen, setIsSupportOpen] = useState(true);
   
   // Always visible menu items
   const mainItems = [
@@ -60,6 +59,11 @@ const DashboardSidebar = () => {
       name: "Activity Logs",
       path: "/dashboard/activity-logs",
       icon: <Activity size={20} />
+    },
+    {
+      name: "Support",
+      path: "/dashboard/support",
+      icon: <LifeBuoy size={20} />
     }
   ];
 
@@ -88,15 +92,6 @@ const DashboardSidebar = () => {
       name: "Pricing",
       path: "/dashboard/pricing",
       icon: <DollarSign size={20} />
-    }
-  ];
-
-  // Support section items
-  const supportItems = [
-    {
-      name: "Support",
-      path: "/dashboard/support",
-      icon: <LifeBuoy size={20} />
     }
   ];
 
@@ -166,7 +161,7 @@ const DashboardSidebar = () => {
             </SidebarMenuItem>
             <CollapsibleContent>
               <SidebarGroupContent>
-                <SidebarMenu className="ml-4">
+                <SidebarMenu>
                   <MenuItems items={developerItems} />
                 </SidebarMenu>
               </SidebarGroupContent>
@@ -191,33 +186,8 @@ const DashboardSidebar = () => {
             </SidebarMenuItem>
             <CollapsibleContent>
               <SidebarGroupContent>
-                <SidebarMenu className="ml-4">
+                <SidebarMenu>
                   <MenuItems items={accountItems} />
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
-
-        {/* Support Section */}
-        <SidebarGroup>
-          <Collapsible open={isSupportOpen} onOpenChange={setIsSupportOpen}>
-            <SidebarMenuItem>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton
-                  className="text-black hover:text-primary flex items-center gap-3 px-4 py-2 w-full data-[state=open]:bg-accent/10"
-                  tooltip={state === "collapsed" ? "Support" : undefined}
-                >
-                  <LifeBuoy size={20} />
-                  <span>Support</span>
-                  <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[collapsible=icon]:hidden data-[state=open]:rotate-180" />
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-            </SidebarMenuItem>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu className="ml-4">
-                  <MenuItems items={supportItems} />
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>
