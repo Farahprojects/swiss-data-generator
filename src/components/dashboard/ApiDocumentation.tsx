@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Copy, Check } from "lucide-react";
@@ -25,7 +24,7 @@ export const ApiDocumentation: React.FC = () => {
     title?: string; 
     language?: string;
   }) => (
-    <div className="relative mt-2 mb-4 w-full overflow-hidden">
+    <div className="relative mt-2 mb-4 w-full min-w-0 overflow-hidden">
       {title && <h5 className="text-sm font-medium text-gray-700 mb-1">{title}</h5>}
       <div className="bg-gray-900 rounded-t-md py-2 px-4 text-xs text-gray-300 flex justify-between items-center">
         <span>{language.toUpperCase()}</span>
@@ -46,17 +45,17 @@ export const ApiDocumentation: React.FC = () => {
           )}
         </Button>
       </div>
-      <div className="bg-gray-900 text-gray-100 p-4 rounded-b-md overflow-x-auto">
-        <pre className="text-sm whitespace-pre">
-          <code>{code}</code>
+      <div className="bg-gray-900 text-gray-100 p-4 rounded-b-md overflow-x-auto min-w-0">
+        <pre className="text-sm whitespace-pre min-w-0">
+          <code className="break-all">{code}</code>
         </pre>
       </div>
     </div>
   );
 
   return (
-    <Card className="p-4 lg:p-6 w-full overflow-hidden">
-      <div className="prose max-w-none w-full">
+    <div className="p-4 lg:p-6 w-full min-w-0 overflow-hidden">
+      <div className="prose max-w-none w-full min-w-0">
         <h1 className="text-3xl font-bold mb-6">Theria Astrology API Documentation</h1>
         
         <p className="mb-6">
@@ -88,8 +87,8 @@ Authorization: Bearer yourtheriaapikeyhere`}
         <h3 className="text-2xl font-semibold mb-4">API Endpoints</h3>
         
         <h4 className="text-xl font-semibold mb-3">1. Natal Chart</h4>
-        <div className="bg-gray-100 p-2 rounded mb-3 overflow-x-auto">
-          <code className="text-sm whitespace-nowrap">{`POST https://api.theriaapi.com/swiss/natal`}</code>
+        <div className="bg-gray-100 p-2 rounded mb-3 overflow-x-auto min-w-0">
+          <code className="text-sm break-all">{`POST https://api.theriaapi.com/swiss/natal`}</code>
         </div>
         
         <p className="mb-4">Get birth chart details including planets, houses, aspects, and angles.</p>
@@ -132,12 +131,12 @@ Authorization: Bearer yourtheriaapikeyhere`}
 }`}
         />
         
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md mt-4 mb-6">
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md mt-4 mb-6 overflow-x-auto min-w-0">
           <h5 className="font-bold text-blue-800 mb-2">House System Codes Reference</h5>
           <p className="mb-2 text-sm">Use a single uppercase letter code in the <code className="bg-blue-100 px-1 rounded">house_system</code> field. Default is <code className="bg-blue-100 px-1 rounded">P</code> (Placidus) if omitted.</p>
           
-          <div className="overflow-x-auto mt-2">
-            <Table className="w-full">
+          <div className="overflow-x-auto mt-2 min-w-0">
+            <Table className="w-full min-w-max">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">Code</TableHead>
@@ -508,6 +507,6 @@ Authorization: Bearer yourtheriaapikeyhere`}
           For further assistance or clarification, please contact our support team directly.
         </p>
       </div>
-    </Card>
+    </div>
   );
 };

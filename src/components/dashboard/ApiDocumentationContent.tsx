@@ -19,7 +19,7 @@ const ApiDocumentationContent: React.FC = () => {
   };
 
   return (
-    <div className="p-4 w-full max-w-full">
+    <div className="w-full max-w-none overflow-hidden">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Your API Documentation</h1>
         <p className="text-gray-600">
@@ -39,20 +39,20 @@ const ApiDocumentationContent: React.FC = () => {
             <h3 className="font-semibold mb-2 text-blue-700">How to use your API key:</h3>
             
             <div className="flex flex-col gap-4 mb-4">
-              <div className="bg-gray-50 border rounded-md p-3 w-full overflow-x-auto">
-                <code className="text-sm whitespace-nowrap">https://api.theriaapi.com/swiss/natal</code>
+              <div className="bg-gray-50 border rounded-md p-3 w-full min-w-0">
+                <code className="text-sm break-all">https://api.theriaapi.com/swiss/natal</code>
               </div>
               <div className="flex justify-center">
                 <ArrowRight className="text-blue-500 transform rotate-90 lg:rotate-0" />
               </div>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 w-full">
-                <div className="flex flex-col sm:flex-row justify-between gap-2">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 w-full min-w-0">
+                <div className="flex flex-col gap-2">
                   <code className="text-sm font-bold break-all">Authorization: Bearer yourtheriaapikeyhere</code>
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => copyToClipboard("Authorization: Bearer yourtheriaapikeyhere", "bearer")}
-                    className="flex-shrink-0 h-6 px-2 text-gray-500 hover:text-gray-700"
+                    className="self-start h-6 px-2 text-gray-500 hover:text-gray-700"
                   >
                     {copied === "bearer" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </Button>
@@ -64,7 +64,7 @@ const ApiDocumentationContent: React.FC = () => {
               Always add your API key as a Bearer token in the Authorization header for all requests.
             </p>
 
-            <div className="bg-gray-50 p-3 rounded-md border w-full overflow-hidden">
+            <div className="bg-gray-50 p-3 rounded-md border w-full min-w-0 overflow-hidden">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium text-sm">Complete request example:</h4>
                 <Button 
@@ -81,8 +81,8 @@ const ApiDocumentationContent: React.FC = () => {
                 </Button>
               </div>
               <div className="overflow-x-auto">
-                <pre className="text-xs whitespace-pre">
-                  <code>{`curl -X POST \\
+                <pre className="text-xs whitespace-pre min-w-0">
+                  <code className="break-all">{`curl -X POST \\
   'https://api.theriaapi.com/swiss/natal' \\
   -H 'Authorization: Bearer yourtheriaapikeyhere' \\
   -H 'Content-Type: application/json' \\
@@ -98,7 +98,7 @@ const ApiDocumentationContent: React.FC = () => {
               When sending JSON in your request body, always include your API key as a bearer token in the header and in the request body:
             </p>
 
-            <div className="bg-gray-50 p-3 rounded-md border mb-3 w-full overflow-hidden">
+            <div className="bg-gray-50 p-3 rounded-md border mb-3 w-full min-w-0 overflow-hidden">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium text-sm">Header:</h4>
                 <Button 
@@ -114,7 +114,7 @@ const ApiDocumentationContent: React.FC = () => {
                 </Button>
               </div>
               <div className="overflow-x-auto">
-                <pre className="text-xs whitespace-pre">
+                <pre className="text-xs whitespace-pre min-w-0">
                   <code>{`{
   "Authorization": "Bearer yourtheriaapikeyhere",
   "Content-Type": "application/json"
@@ -123,7 +123,7 @@ const ApiDocumentationContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-md border w-full overflow-hidden">
+            <div className="bg-gray-50 p-3 rounded-md border w-full min-w-0 overflow-hidden">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-medium text-sm">Body Example:</h4>
                 <Button 
@@ -142,7 +142,7 @@ const ApiDocumentationContent: React.FC = () => {
                 </Button>
               </div>
               <div className="overflow-x-auto">
-                <pre className="text-xs whitespace-pre">
+                <pre className="text-xs whitespace-pre min-w-0">
                   <code>{`{
   "date": "1990-01-15",
   "time": "14:30:00",
@@ -157,7 +157,7 @@ const ApiDocumentationContent: React.FC = () => {
         </div>
       </Card>
 
-      <Card className="overflow-hidden w-full">
+      <Card className="overflow-hidden w-full min-w-0">
         <ApiDocumentation />
       </Card>
     </div>
