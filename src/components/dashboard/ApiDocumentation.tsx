@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Copy, Check } from "lucide-react";
@@ -131,134 +132,137 @@ Authorization: Bearer yourtheriaapikeyhere`}
 }`}
         />
         
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md mt-4 mb-6 overflow-x-auto min-w-0">
-          <h5 className="font-bold text-blue-800 mb-2">House System Codes Reference</h5>
-          <p className="mb-2 text-sm">Use a single uppercase letter code in the <code className="bg-blue-100 px-1 rounded">house_system</code> field. Default is <code className="bg-blue-100 px-1 rounded">P</code> (Placidus) if omitted.</p>
+        <div className="border-l-4 border-blue-500 pl-6 py-4 my-6 bg-gray-50">
+          <h5 className="text-lg font-semibold text-gray-900 mb-3">House System Codes Reference</h5>
+          <p className="text-gray-700 mb-4">
+            Use a single uppercase letter code in the <code className="bg-gray-200 px-2 py-1 rounded text-sm">house_system</code> field. 
+            Default is <code className="bg-gray-200 px-2 py-1 rounded text-sm">P</code> (Placidus) if omitted.
+          </p>
           
-          <div className="overflow-x-auto mt-2 min-w-0">
-            <Table className="w-full min-w-max">
+          <div className="overflow-x-auto">
+            <Table className="w-full">
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">Code</TableHead>
-                  <TableHead>House System</TableHead>
-                  <TableHead className="hidden sm:table-cell">Notes / Synonyms</TableHead>
+                <TableRow className="border-gray-200">
+                  <TableHead className="w-16 font-semibold">Code</TableHead>
+                  <TableHead className="font-semibold">House System</TableHead>
+                  <TableHead className="hidden sm:table-cell font-semibold">Notes / Synonyms</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  <TableCell className="font-mono">P</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">P</TableCell>
                   <TableCell>Placidus</TableCell>
-                  <TableCell className="hidden sm:table-cell">default in most Western software</TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600">default in most Western software</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">K</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">K</TableCell>
                   <TableCell>Koch</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">O</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">O</TableCell>
                   <TableCell>Porphyry</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">R</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">R</TableCell>
                   <TableCell>Regiomontanus</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">C</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">C</TableCell>
                   <TableCell>Campanus</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">A/E</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">A/E</TableCell>
                   <TableCell>Equal (cusp 1 = Ascendant)</TableCell>
-                  <TableCell className="hidden sm:table-cell">interchangeable letters</TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600">interchangeable letters</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">W</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">W</TableCell>
                   <TableCell>Whole-sign</TableCell>
-                  <TableCell className="hidden sm:table-cell">30° signs; cusp 1 = Asc sign</TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600">30° signs; cusp 1 = Asc sign</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">B</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">B</TableCell>
                   <TableCell>Alcabitius</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">V</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">V</TableCell>
                   <TableCell>Vehlow (equal)</TableCell>
-                  <TableCell className="hidden sm:table-cell">Asc on cusp 1</TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600">Asc on cusp 1</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">T</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">T</TableCell>
                   <TableCell>Polich/Page ("Topocentric")</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">M</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">M</TableCell>
                   <TableCell>Morinus</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">S</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">S</TableCell>
                   <TableCell>Sripati</TableCell>
-                  <TableCell className="hidden sm:table-cell">Topocentric variant</TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600">Topocentric variant</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">G</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">G</TableCell>
                   <TableCell>Gauquelin sectors</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">U</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">U</TableCell>
                   <TableCell>Krusinski-Pisa-Goelzer</TableCell>
-                  <TableCell className="hidden sm:table-cell">Meridian-based</TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600">Meridian-based</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">X</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">X</TableCell>
                   <TableCell>Axial rotation / Meridian / Zariel</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">H</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">H</TableCell>
                   <TableCell>Horizontal / Azimuthal</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">F</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">F</TableCell>
                   <TableCell>Carter "Poli-Equatorial"</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">D</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">D</TableCell>
                   <TableCell>Equal-MC (cusp 10 = MC)</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">N</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">N</TableCell>
                   <TableCell>Equal, house 1 = 0° Aries</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">L</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">L</TableCell>
                   <TableCell>Pullen SD (Sinusoidal Δ)</TableCell>
-                  <TableCell className="hidden sm:table-cell">ex Neo-Porphyry</TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600">ex Neo-Porphyry</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">Q</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">Q</TableCell>
                   <TableCell>Pullen SR (Sinusoidal Ratio)</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">Y</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">Y</TableCell>
                   <TableCell>APC ("Ram" school)</TableCell>
-                  <TableCell className="hidden sm:table-cell"></TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600"></TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell className="font-mono">I/i</TableCell>
+                <TableRow className="border-gray-100">
+                  <TableCell className="font-mono bg-gray-100">I/i</TableCell>
                   <TableCell>Sunshine (Makransky)</TableCell>
-                  <TableCell className="hidden sm:table-cell">two numerical variants</TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-600">two numerical variants</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
