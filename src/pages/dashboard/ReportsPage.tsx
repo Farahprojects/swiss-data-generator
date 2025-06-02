@@ -9,15 +9,16 @@ import { supabase } from '@/integrations/supabase/client';
 type Report = {
   id: string;
   created_at: string;
-  report_type: string;
-  report_text: string | null;
-  swiss_payload?: any;
+  request_type: string;
+  report_tier: string | null;
+  report_name: string | null;
+  response_payload?: any;
+  request_payload?: any;
   error_message?: string;
-  endpoint: string;
-  api_key: string;
-  user_id: string;
-  duration_ms: number | null;
-  status: string;
+  response_status: number;
+  processing_time_ms: number | null;
+  google_geo?: boolean;
+  total_cost_usd: number;
 };
 
 const ReportsPage = () => {
@@ -44,11 +45,15 @@ const ReportsPage = () => {
     
     try {
       const { data, error } = await supabase
-        .from('report_logs')
-        .select('*')
+        .from('translator_logs')
+        .select(`
+          *,
+          api_usage!translator_log_id(total_cost_usd)
+        `)
         .eq('user_id', user.id)
-        .eq('status', 'success')
-        .not('report_text', 'is', null)
+        .gte('response_status', 200)
+        .lt('response_status', 300)
+        .or('report_tier.not.is.null,report_name.not.is.null')
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -59,18 +64,18 @@ const ReportsPage = () => {
       const processedData: Report[] = data?.map(item => ({
         id: item.id,
         created_at: item.created_at,
-        report_type: item.report_type || '',
-        report_text: item.report_text,
-        swiss_payload: item.swiss_payload,
+        response_status: item.response_status || 0,
+        request_type: item.request_type || '',
+        report_tier: item.report_tier,
+        report_name: item.report_name,
+        total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
+        processing_time_ms: item.processing_time_ms,
+        response_payload: item.response_payload,
+        request_payload: item.request_payload,
         error_message: item.error_message,
-        endpoint: item.endpoint,
-        api_key: item.api_key,
-        user_id: item.user_id,
-        duration_ms: item.duration_ms,
-        status: item.status
+        google_geo: item.google_geo
       })) || [];
       
-      console.log('Fetched reports:', processedData);
       setReports(processedData);
       setFilteredReports(processedData);
     } catch (err) {
@@ -86,14 +91,14 @@ const ReportsPage = () => {
 
     // Filter by report type
     if (reportType) {
-      filtered = filtered.filter(report => report.report_type === reportType);
+      filtered = filtered.filter(report => report.report_tier === reportType);
     }
 
     // Filter by search term (report name or ID)
     if (search.trim()) {
       const searchTerm = search.toLowerCase().trim();
       filtered = filtered.filter(report => {
-        const reportName = report.report_text?.toLowerCase() || '';
+        const reportName = report.report_name?.toLowerCase() || '';
         const reportId = report.id.toLowerCase();
         const shortId = report.id.substring(0, 8).toLowerCase();
         
@@ -122,13 +127,8 @@ const ReportsPage = () => {
   };
 
   const getDisplayName = (report: Report): string => {
-    if (report.report_text) {
-      // Extract first line or first 50 characters as a name
-      const firstLine = report.report_text.split('\n')[0];
-      if (firstLine.length > 50) {
-        return firstLine.substring(0, 47) + '...';
-      }
-      return firstLine || generateReportId(report);
+    if (report.report_name) {
+      return report.report_name;
     }
     return generateReportId(report);
   };
@@ -182,7 +182,7 @@ const ReportsPage = () => {
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-primary hover:underline">
-                        {formatReportTier(report.report_type)}
+                        {formatReportTier(report.report_tier)}
                       </span>
                     </td>
                   </tr>

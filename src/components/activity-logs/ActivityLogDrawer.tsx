@@ -21,18 +21,14 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 type ActivityLogItem = {
   id: string;
   created_at: string;
-  response_status?: number;
+  response_status: number;
   endpoint?: string;
   request_type?: string;
-  report_tier?: string | null;
-  report_type?: string;
-  total_cost_usd?: number;
-  processing_time_ms?: number | null;
-  duration_ms?: number | null;
+  report_tier: string | null;
+  total_cost_usd: number;
+  processing_time_ms: number | null;
   response_payload?: any;
   request_payload?: any;
-  swiss_payload?: any;
-  report_text?: string | null;
   error_message?: string;
   google_geo?: boolean;
 };
@@ -51,13 +47,14 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     if (!logData) return;
     
     // Create CSV content
-    const headers = "Timestamp,Status,Endpoint/Type,Report Type,Processing Time\n";
+    const headers = "Timestamp,Status,Endpoint/Type,Report Type,Cost,Processing Time\n";
     const row = [
       new Date(logData.created_at).toLocaleString(),
-      logData.response_status || 'N/A',
+      logData.response_status,
       logData.endpoint || logData.request_type || 'N/A',
-      logData.report_tier || logData.report_type || 'None',
-      (logData.processing_time_ms || logData.duration_ms) ? `${((logData.processing_time_ms || logData.duration_ms || 0) / 1000).toFixed(2)}s` : 'N/A'
+      logData.report_tier || 'None',
+      logData.total_cost_usd.toFixed(2),
+      logData.processing_time_ms ? `${(logData.processing_time_ms / 1000).toFixed(2)}s` : 'N/A'
     ].join(',');
     
     const content = headers + row;
@@ -86,7 +83,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
   // Determine which view to show by default
   useEffect(() => {
     if (logData) {
-      const hasReport = logData.report_text || logData.response_payload?.report;
+      const hasReport = logData.response_payload?.report;
       setViewMode(hasReport ? "report" : "payload");
     }
   }, [logData]);
@@ -134,13 +131,13 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
             >
               <ToggleGroupItem 
                 value="report" 
-                disabled={!logData?.report_text && !logData?.response_payload?.report}
+                disabled={!logData?.response_payload?.report}
               >
                 Report
               </ToggleGroupItem>
               <ToggleGroupItem 
                 value="payload" 
-                disabled={!logData?.swiss_payload && !logData?.request_payload}
+                disabled={!logData?.response_payload && !logData?.request_payload}
               >
                 Payload
               </ToggleGroupItem>
@@ -185,9 +182,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 {viewMode === 'report' && (
                   <ScrollArea className="h-[65vh]">
                     <div className="p-4 bg-gray-50 rounded-md">
-                      {logData.report_text ? (
-                        <div className="whitespace-pre-wrap">{logData.report_text}</div>
-                      ) : logData.response_payload?.report ? (
+                      {logData.response_payload?.report ? (
                         renderReport(logData.response_payload.report)
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
@@ -201,7 +196,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 {viewMode === 'payload' && (
                   <ScrollArea className="h-[65vh]">
                     <div className="p-4 bg-gray-50 rounded-md">
-                      {(logData.swiss_payload || logData.request_payload) ? (
+                      {(logData.response_payload || logData.request_payload) ? (
                         <div>
                           {logData.request_payload && (
                             <div className="mb-4">
@@ -212,11 +207,11 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                             </div>
                           )}
                           
-                          {logData.swiss_payload && (
+                          {logData.response_payload && (
                             <div>
-                              <h4 className="text-sm font-medium mb-2">Swiss Ephemeris Payload</h4>
+                              <h4 className="text-sm font-medium mb-2">Response Payload</h4>
                               <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto bg-gray-100 p-2 rounded">
-                                {JSON.stringify(logData.swiss_payload, null, 2)}
+                                {JSON.stringify(logData.response_payload, null, 2)}
                               </pre>
                             </div>
                           )}
