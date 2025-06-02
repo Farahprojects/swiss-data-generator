@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -45,12 +44,34 @@ export const PricingPage = () => {
     fetchPrices();
   }, []);
 
+  // Function to format report names to match dropdown list
+  const formatReportName = (name: string): string => {
+    const nameMap: Record<string, string> = {
+      'return': 'Solar/Lunar Return Report',
+      'positions': 'Planetary Positions',
+      'sync': 'Sync Report',
+      'essence': 'Essence Report',
+      'flow': 'Flow Report',
+      'mindset': 'Mindset Report',
+      'monthly': 'Monthly Report',
+      'focus': 'Focus Report'
+    };
+    
+    // If the name exists in our map, use the formatted version
+    if (nameMap[name.toLowerCase()]) {
+      return nameMap[name.toLowerCase()];
+    }
+    
+    // Otherwise, just replace underscores with spaces and capitalize
+    return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   // Group prices by report_tier only - removing the API Endpoints category
   const groupedPrices = prices.reduce((acc, price) => {
     let category;
     
     if (price.report_tier) {
-      category = 'Report Tiers';
+      category = 'Reports';
     } else {
       category = 'Other Services'; // All other items go here
     }
@@ -140,7 +161,7 @@ export const PricingPage = () => {
             <CardHeader className="bg-gray-50 border-b pb-3">
               <CardTitle>{category}</CardTitle>
               <CardDescription>
-                {category === 'Report Tiers' && 'Pricing for different report complexity levels'}
+                {category === 'Reports' && 'Pricing for different report types'}
                 {category === 'Other Services' && 'Additional services and features'}
               </CardDescription>
             </CardHeader>
@@ -150,7 +171,7 @@ export const PricingPage = () => {
                   <div key={price.id} className="bg-white p-5 rounded-lg border-2 border-gray-100 hover:shadow-md transition-shadow duration-200 flex flex-col h-full overflow-hidden">
                     <div className="bg-gradient-to-r from-primary/10 to-transparent p-1 -mx-5 -mt-5 mb-4"></div>
                     <div className="flex-grow">
-                      <h3 className="text-lg font-medium text-gray-900">{price.name}</h3>
+                      <h3 className="text-lg font-medium text-gray-900">{formatReportName(price.name)}</h3>
                       <p className="text-sm text-gray-500 mt-1">{price.description || 'Standard pricing'}</p>
                     </div>
                     
