@@ -27,7 +27,8 @@ import {
   User,
   Code,
   LifeBuoy,
-  ChevronDown
+  ChevronDown,
+  Users
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -55,6 +56,11 @@ const DashboardSidebar = () => {
       icon: <FileText size={20} />
     },
     {
+      name: "Clients",
+      path: "/dashboard/clients",
+      icon: <Users size={20} />
+    },
+    {
       name: "Activity Logs",
       path: "/dashboard/activity-logs",
       icon: <Activity size={20} />
@@ -80,7 +86,6 @@ const DashboardSidebar = () => {
     }
   ];
 
-  // Account section items
   const accountItems = [
     {
       name: "Billing",
@@ -94,7 +99,6 @@ const DashboardSidebar = () => {
     }
   ];
 
-  // Simple function to check if a route is active
   const isActive = (path: string) => {
     if (path === "/dashboard") {
       return location.pathname === "/dashboard";

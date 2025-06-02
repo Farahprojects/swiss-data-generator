@@ -22,6 +22,8 @@ import ReportsPage from './pages/dashboard/ReportsPage';
 import BillingPage from './pages/dashboard/BillingPage';
 import PricingPage from './pages/dashboard/PricingPage';
 import CreateReportPage from './pages/dashboard/CreateReportPage';
+import ClientsPage from './pages/dashboard/ClientsPage';
+import ClientDashboard from './pages/dashboard/ClientDashboard';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Toaster } from "./components/ui/toaster";
@@ -176,6 +178,8 @@ function App() {
                     <Route path="billing" element={<BillingPage />} />
                     <Route path="pricing" element={<PricingPage />} />
                     <Route path="create-report" element={<CreateReportPage />} />
+                    <Route path="clients" element={<ClientsPage />} />
+                    <Route path="clients/:clientId" element={<ClientDashboard />} />
                   </Route>
                   
                   {/* Activity Logs as standalone route with its own layout */}
