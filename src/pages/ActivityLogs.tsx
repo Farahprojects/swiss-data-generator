@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UnifiedNavigation from '@/components/UnifiedNavigation';
@@ -38,7 +37,6 @@ const ActivityLogs = () => {
     endDate: undefined,
     reportType: null,
     status: null,
-    search: '',
   });
   const isMobile = useIsMobile();
   
@@ -119,7 +117,7 @@ const ActivityLogs = () => {
           
           <SidebarInset className="p-0 md:p-6">
             <div className="p-4 md:p-0">
-              <h1 className="text-2xl font-bold mb-6">API Activity Logs</h1>
+              <h1 className="text-2xl font-bold mb-6">Activity Logs</h1>
               
               <Filters filters={filters} onChange={handleFilterChange} />
               

@@ -1,9 +1,8 @@
 
 import React from 'react';
-import { Calendar, Search, Filter, FileText } from 'lucide-react';
+import { Calendar, Filter, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -23,7 +22,7 @@ const Filters = ({ filters, onChange }: FiltersProps) => {
         {/* Single row for all filters */}
         <div className="flex gap-3 items-center">
           {/* Report Type Dropdown */}
-          <div className="w-32">
+          <div className="w-28">
             <Select
               value={filters.reportType || ""}
               onValueChange={(value) => onChange('reportType', value === "all" ? null : value)}
@@ -113,19 +112,6 @@ const Filters = ({ filters, onChange }: FiltersProps) => {
                 </ScrollArea>
               </PopoverContent>
             </Popover>
-          </div>
-          
-          {/* Search Field */}
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search..."
-                className="pl-10 h-9 text-sm"
-                value={filters.search}
-                onChange={(e) => onChange('search', e.target.value)}
-              />
-            </div>
           </div>
         </div>
       </div>
