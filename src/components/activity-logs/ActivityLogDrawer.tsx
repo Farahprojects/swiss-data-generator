@@ -16,6 +16,8 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { PdfGenerator } from '@/services/pdf/PdfGenerator';
+import { transformLogDataToPdfData } from '@/services/pdf/utils/reportDataTransformer';
 
 type ActivityLogItem = {
   id: string;
@@ -70,13 +72,22 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     URL.revokeObjectURL(url);
   };
 
-  // Handle download as PDF (simplified implementation)
-  const handleDownloadPDF = () => {
+  // Handle download as PDF
+  const handleDownloadPDF = async () => {
     if (!logData) return;
     
-    // In a real implementation, you would use a library like jsPDF
-    // For this example, we'll just show an alert
-    alert('PDF download functionality would be implemented with a library like jsPDF');
+    try {
+      const pdfData = transformLogDataToPdfData(logData);
+      await PdfGenerator.generateReportPdf(pdfData, {
+        format: 'a4',
+        orientation: 'portrait',
+        includeHeader: true,
+        includeFooter: true
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
   };
 
   // Determine which view to show by default
