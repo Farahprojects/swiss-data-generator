@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -183,33 +182,40 @@ function getReportName(data: CreateReportRequest): string {
   return data.name || 'Unknown';
 }
 
-// Swiss API caller helper - sends clean payload with auth in headers
+// Swiss API caller helper - sends clean payload with auth in headers like curl
 async function callSwissAPI(payload: any, userId: string, apiKey: string): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     console.log('[create-report] Calling Swiss API with clean payload:', JSON.stringify(payload, null, 2));
     console.log('[create-report] Using user_id:', userId);
     console.log('[create-report] Using api_key:', apiKey.substring(0, 10) + '...');
     
-    // Send clean payload with auth as separate parameters
-    const response = await supabase.functions.invoke('swiss', {
-      body: {
-        ...payload,
-        user_id: userId,
-        api_key: apiKey,
-        auth_method: 'supabase'
-      }
+    // Make direct HTTP request to Swiss function with API key in headers (like curl)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const response = await fetch(`${supabaseUrl}/functions/v1/swiss`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      },
+      body: JSON.stringify(payload)
     });
 
-    console.log('[create-report] Swiss API response:', {
-      data: response.data ? 'present' : 'missing',
-      error: response.error ? response.error.message : 'none'
-    });
+    console.log('[create-report] Swiss API response status:', response.status);
 
-    if (response.error) {
-      return { success: false, error: response.error.message };
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log('[create-report] Swiss API error response:', errorText);
+      return { success: false, error: `Swiss API error: ${response.status} - ${errorText}` };
     }
 
-    return { success: true, data: response.data };
+    const data = await response.json();
+    console.log('[create-report] Swiss API response:', {
+      data: data ? 'present' : 'missing',
+      success: data ? true : false
+    });
+
+    return { success: true, data: data };
   } catch (error) {
     console.error('[create-report] Error calling Swiss API:', error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
@@ -290,7 +296,7 @@ serve(async (req) => {
     const cleanPayload = transformToSwissFormat(formData);
     console.log('[create-report] Clean payload for Swiss API:', JSON.stringify(cleanPayload, null, 2));
 
-    // Call Swiss API with clean payload and separate auth
+    // Call Swiss API with clean payload and API key in headers (like curl)
     const swissResult = await callSwissAPI(cleanPayload, user.id, apiKeyData.api_key);
     
     if (!swissResult.success) {
