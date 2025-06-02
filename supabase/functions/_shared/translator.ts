@@ -77,7 +77,7 @@ async function logToSupabase(
 ) {
   
   /* extract report tier - now accepts any report type from payload */
-  const reportTier = requestPayload?.report || null;
+  const reportTier = requestPayload?.report || raw?.report || null;
 
   const { error } = await sb.from("translator_logs").insert({
     request_type:       requestType,
