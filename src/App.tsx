@@ -14,7 +14,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
 import PaymentReturn from './pages/PaymentReturn';
-import ActivityLogs from './pages/dashboard/ActivityLogs';
+import ActivityLogs from './pages/ActivityLogs';
 import ApiKeys from './pages/dashboard/ApiKeys';
 import ApiDocs from './pages/dashboard/ApiDocs';
 import UsagePage from './pages/dashboard/UsagePage';
@@ -169,7 +169,6 @@ function App() {
                     {/* Redirect all settings routes to dashboard */}
                     <Route path="settings" element={<Navigate to="/dashboard" replace />} />
                     <Route path="upgrade" element={<UpgradePlan />} />
-                    <Route path="activity-logs" element={<ActivityLogs />} />
                     <Route path="api-keys" element={<ApiKeys />} />
                     <Route path="docs" element={<ApiDocs />} />
                     <Route path="usage" element={<UsagePage />} />
@@ -178,6 +177,16 @@ function App() {
                     <Route path="pricing" element={<PricingPage />} />
                     <Route path="create-report" element={<CreateReportPage />} />
                   </Route>
+                  
+                  {/* Activity Logs as standalone route with its own layout */}
+                  <Route 
+                    path="/dashboard/activity-logs" 
+                    element={
+                      <AuthGuard>
+                        <ActivityLogs />
+                      </AuthGuard>
+                    } 
+                  />
                   
                   {/* Legacy routes redirect */}
                   <Route path="/settings" element={<Navigate to="/dashboard" replace />} />
