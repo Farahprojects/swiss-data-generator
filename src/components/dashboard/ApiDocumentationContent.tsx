@@ -74,19 +74,29 @@ const ApiDocumentationContent: React.FC = () => {
   'https://api.theriaapi.com/swiss/natal' \\
   -H 'Authorization: Bearer yourtheriaapikeyhere' \\
   -H 'Content-Type: application/json' \\
-  -d '{"birth_date": "1990-01-15", "birth_time": "14:30", "location": "New York, USA", "bearer": "yourtheriaapikeyhere"}'`, "example")}
+  -d '{
+    "birth_date": "1990-01-15",
+    "birth_time": "14:30",
+    "location": "New York, USA",
+    "bearer": "yourtheriaapikeyhere"
+  }'`, "example")}
                   className="flex-shrink-0 h-6 px-2 text-gray-500 hover:text-gray-700"
                 >
                   {copied === "example" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
               <div className="overflow-x-auto">
-                <pre className="text-xs whitespace-pre min-w-0">
-                  <code className="break-all">{`curl -X POST \\
+                <pre className="text-xs whitespace-pre-wrap min-w-0">
+                  <code className="break-words">{`curl -X POST \\
   'https://api.theriaapi.com/swiss/natal' \\
   -H 'Authorization: Bearer yourtheriaapikeyhere' \\
   -H 'Content-Type: application/json' \\
-  -d '{"birth_date": "1990-01-15", "birth_time": "14:30", "location": "New York, USA", "bearer": "yourtheriaapikeyhere"}'`}</code>
+  -d '{
+    "birth_date": "1990-01-15",
+    "birth_time": "14:30",
+    "location": "New York, USA",
+    "bearer": "yourtheriaapikeyhere"
+  }'`}</code>
                 </pre>
               </div>
             </div>
@@ -114,8 +124,8 @@ const ApiDocumentationContent: React.FC = () => {
                 </Button>
               </div>
               <div className="overflow-x-auto">
-                <pre className="text-xs whitespace-pre min-w-0">
-                  <code>{`{
+                <pre className="text-xs whitespace-pre-wrap min-w-0">
+                  <code className="break-words">{`{
   "Authorization": "Bearer yourtheriaapikeyhere",
   "Content-Type": "application/json"
 }`}</code>
@@ -142,8 +152,8 @@ const ApiDocumentationContent: React.FC = () => {
                 </Button>
               </div>
               <div className="overflow-x-auto">
-                <pre className="text-xs whitespace-pre min-w-0">
-                  <code>{`{
+                <pre className="text-xs whitespace-pre-wrap min-w-0">
+                  <code className="break-words">{`{
   "date": "1990-01-15",
   "time": "14:30:00",
   "latitude": 40.7128,
