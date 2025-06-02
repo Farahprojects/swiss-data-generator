@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
@@ -8,16 +9,19 @@ import { supabase } from '@/integrations/supabase/client';
 type Report = {
   id: string;
   created_at: string;
-  request_type: string;
-  report_tier: string | null;
-  report_name: string | null;
-  response_payload?: any;
+  report_type: string;
+  report_text: string | null;
+  swiss_payload?: any;
   request_payload?: any;
   error_message?: string;
   response_status: number;
   processing_time_ms: number | null;
-  google_geo?: boolean;
   total_cost_usd: number;
+  endpoint: string;
+  api_key: string;
+  user_id: string;
+  duration_ms: number | null;
+  status: string;
 };
 
 const ReportsPage = () => {
@@ -44,15 +48,14 @@ const ReportsPage = () => {
     
     try {
       const { data, error } = await supabase
-        .from('translator_logs')
+        .from('report_logs')
         .select(`
           *,
-          api_usage!translator_log_id(total_cost_usd)
+          api_usage!left(total_cost_usd)
         `)
         .eq('user_id', user.id)
-        .gte('response_status', 200)
-        .lt('response_status', 300)
-        .or('report_tier.not.is.null,report_name.not.is.null')
+        .gte('status', 'success')
+        .not('report_text', 'is', null)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -63,16 +66,19 @@ const ReportsPage = () => {
       const processedData: Report[] = data?.map(item => ({
         id: item.id,
         created_at: item.created_at,
-        response_status: item.response_status || 0,
-        request_type: item.request_type || '',
-        report_tier: item.report_tier,
-        report_name: item.report_name,
+        response_status: 200, // report_logs doesn't have response_status, defaulting to 200 for successful reports
+        report_type: item.report_type || '',
+        report_text: item.report_text,
         total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
-        processing_time_ms: item.processing_time_ms,
-        response_payload: item.response_payload,
-        request_payload: item.request_payload,
+        processing_time_ms: item.duration_ms,
+        swiss_payload: item.swiss_payload,
+        request_payload: null, // report_logs doesn't have request_payload
         error_message: item.error_message,
-        google_geo: item.google_geo
+        endpoint: item.endpoint,
+        api_key: item.api_key,
+        user_id: item.user_id,
+        duration_ms: item.duration_ms,
+        status: item.status
       })) || [];
       
       setReports(processedData);
@@ -90,14 +96,14 @@ const ReportsPage = () => {
 
     // Filter by report type
     if (reportType) {
-      filtered = filtered.filter(report => report.report_tier === reportType);
+      filtered = filtered.filter(report => report.report_type === reportType);
     }
 
     // Filter by search term (report name or ID)
     if (search.trim()) {
       const searchTerm = search.toLowerCase().trim();
       filtered = filtered.filter(report => {
-        const reportName = report.report_name?.toLowerCase() || '';
+        const reportName = report.report_text?.toLowerCase() || '';
         const reportId = report.id.toLowerCase();
         const shortId = report.id.substring(0, 8).toLowerCase();
         
@@ -126,8 +132,13 @@ const ReportsPage = () => {
   };
 
   const getDisplayName = (report: Report): string => {
-    if (report.report_name) {
-      return report.report_name;
+    if (report.report_text) {
+      // Extract first line or first 50 characters as a name
+      const firstLine = report.report_text.split('\n')[0];
+      if (firstLine.length > 50) {
+        return firstLine.substring(0, 47) + '...';
+      }
+      return firstLine || generateReportId(report);
     }
     return generateReportId(report);
   };
@@ -181,7 +192,7 @@ const ReportsPage = () => {
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-primary hover:underline">
-                        {formatReportTier(report.report_tier)}
+                        {formatReportTier(report.report_type)}
                       </span>
                     </td>
                   </tr>
