@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
@@ -18,7 +19,6 @@ type Report = {
   processing_time_ms: number | null;
   google_geo?: boolean;
   total_cost_usd: number;
-  swiss_payload?: any;
 };
 
 const ReportsPage = () => {
@@ -34,7 +34,6 @@ const ReportsPage = () => {
   const [search, setSearch] = useState('');
 
   const openDrawer = (report: Report) => {
-    console.log('Opening drawer with report:', report); // Debug log
     setSelectedReport(report);
     setDrawerOpen(true);
   };
@@ -49,8 +48,7 @@ const ReportsPage = () => {
         .from('translator_logs')
         .select(`
           *,
-          api_usage!translator_log_id(total_cost_usd),
-          report_logs!inner(swiss_payload)
+          api_usage!translator_log_id(total_cost_usd)
         `)
         .eq('user_id', user.id)
         .gte('response_status', 200)
@@ -63,36 +61,21 @@ const ReportsPage = () => {
         return;
       }
 
-      console.log('Raw data from database:', data); // Debug log
-
-      const processedData: Report[] = data?.map(item => {
-        console.log('Processing item:', item); // Debug log
-        console.log('Report logs for item:', item.report_logs); // Debug log
-        
-        const swissPayload = Array.isArray(item.report_logs) && item.report_logs.length > 0 
-          ? item.report_logs[0].swiss_payload 
-          : null;
-          
-        console.log('Extracted swiss_payload:', swissPayload); // Debug log
-        
-        return {
-          id: item.id,
-          created_at: item.created_at,
-          response_status: item.response_status || 0,
-          request_type: item.request_type || '',
-          report_tier: item.report_tier,
-          report_name: item.report_name,
-          total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
-          processing_time_ms: item.processing_time_ms,
-          response_payload: item.response_payload,
-          request_payload: item.request_payload,
-          error_message: item.error_message,
-          google_geo: item.google_geo,
-          swiss_payload: swissPayload
-        };
-      }) || [];
+      const processedData: Report[] = data?.map(item => ({
+        id: item.id,
+        created_at: item.created_at,
+        response_status: item.response_status || 0,
+        request_type: item.request_type || '',
+        report_tier: item.report_tier,
+        report_name: item.report_name,
+        total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
+        processing_time_ms: item.processing_time_ms,
+        response_payload: item.response_payload,
+        request_payload: item.request_payload,
+        error_message: item.error_message,
+        google_geo: item.google_geo
+      })) || [];
       
-      console.log('Processed data:', processedData); // Debug log
       setReports(processedData);
       setFilteredReports(processedData);
     } catch (err) {
