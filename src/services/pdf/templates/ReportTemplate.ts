@@ -29,7 +29,7 @@ export class ReportTemplate extends BaseTemplate {
     const logoHeight = logoWidth / logoAspect;
     const logoY = 20;
 
-    this.doc.addImage(logo, 'PNG', this.margins.left, logoY, logoWidth, logoHeight);
+    this.doc.addImage(logo, 'PNG', this.margins.left, logoY, 40, 40); 
 
     // Title
     this.doc.setFontSize(20);
