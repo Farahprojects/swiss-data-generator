@@ -11,7 +11,7 @@ export class ReportTemplate extends BaseTemplate {
     };
     this.setMetadata(metadata);
 
-    // Fetch and embed logo from Supabase
+    // Fetch and embed logo
     const fetchImageAsBase64 = async (url: string): Promise<string> => {
       const response = await fetch(url);
       const blob = await response.blob();
@@ -24,72 +24,83 @@ export class ReportTemplate extends BaseTemplate {
     };
 
     const logo = await fetchImageAsBase64('https://auth.theraiastro.com/storage/v1/object/public/therai-assets//therai-logo.png');
-
-    // Add logo (top-left) and title (centered)
-    const logoWidth = 30;
-    const logoHeight = 18;
+    const logoWidth = 40;
+    const logoAspect = 350 / 200; // estimated logo aspect ratio (adjust if needed)
+    const logoHeight = logoWidth / logoAspect;
     const logoY = 20;
 
     this.doc.addImage(logo, 'PNG', this.margins.left, logoY, logoWidth, logoHeight);
 
+    // Title
     this.doc.setFontSize(20);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(40, 40, 60);
     this.doc.text('Essence Professional', this.pageWidth / 2, logoY + 12, { align: 'center' });
 
-    // Clean metadata below title
-    let y = logoY + 25;
+    // Metadata
+    let y = logoY + logoHeight + 12;
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'normal');
     this.doc.setTextColor(100);
 
-    this.doc.text(`Report ID:`, this.margins.left, y);
+    this.doc.text('Report ID:', this.margins.left, y);
     this.doc.setFont('helvetica', 'bold');
     this.doc.text(data.id.substring(0, 8), this.margins.left + 40, y);
 
     this.doc.setFont('helvetica', 'normal');
     y += 6;
-    this.doc.text(`Generated At:`, this.margins.left, y);
+    this.doc.text('Generated At:', this.margins.left, y);
     this.doc.setFont('helvetica', 'bold');
     this.doc.text(data.metadata.generatedAt, this.margins.left + 40, y);
 
-    y += 10;
-
-    // Handle error state early
+    // Error Handling
     if (data.error) {
       this.doc.setFontSize(12);
       this.doc.setFont('helvetica', 'bold');
       this.doc.setTextColor(200, 0, 0);
-      this.doc.text('Error:', this.margins.left, y);
+      this.doc.text('Error:', this.margins.left, y + 10);
 
       this.doc.setFontSize(10);
       this.doc.setFont('helvetica', 'normal');
       this.doc.setTextColor(0, 0, 0);
       const errorLines = this.doc.splitTextToSize(data.error, this.pageWidth - this.margins.left - this.margins.right);
-      this.doc.text(errorLines, this.margins.left, y + 8);
+      this.doc.text(errorLines, this.margins.left, y + 17);
       return;
     }
 
-    // Section heading
-    y += 15;
+    // Section Header
+    y += 18;
     this.doc.setFontSize(13);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(75, 63, 114);
     this.doc.text('Client Energetic Insight', this.margins.left, y);
 
-    // Report content
+    // Content (cleaned and auto-paginated)
+    const contentText = data.content.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[_`]/g, '');
+    const contentLines = this.doc.splitTextToSize(
+      contentText,
+      this.pageWidth - this.margins.left - this.margins.right
+    );
+
     this.doc.setFont('times', 'normal');
     this.doc.setFontSize(11);
     this.doc.setTextColor(33);
 
-    const contentLines = this.doc.splitTextToSize(
-      data.content,
-      this.pageWidth - this.margins.left - this.margins.right
-    );
-    this.doc.text(contentLines, this.margins.left, y + 10);
+    let lineY = y + 10;
+    const bottomPadding = 20;
+    const lineHeight = 6;
+
+    for (const line of contentLines) {
+      if (lineY + lineHeight > this.pageHeight - bottomPadding) {
+        this.doc.addPage();
+        lineY = this.margins.top;
+      }
+      this.doc.text(line, this.margins.left, lineY);
+      lineY += lineHeight;
+    }
 
     // Footer
-    if (options.includeFooter !== false) {
+    if (options.includeFooter !== false && lineY + 15 < this.pageHeight) {
       this.doc.setFontSize(9);
       this.doc.setFont('helvetica', 'italic');
       this.doc.setTextColor(120);
@@ -101,6 +112,7 @@ export class ReportTemplate extends BaseTemplate {
       );
     }
 
+    // Save
     const filename = `report-${data.id.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.pdf`;
     this.download(filename);
   }
