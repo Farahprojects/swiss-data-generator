@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -47,19 +48,27 @@ const CreateJournalEntryForm = ({
     handleSubmit,
     reset,
     setValue,
-    getValues,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema),
   });
 
+  // Watch the entry_text field to ensure it updates properly
+  const watchedEntryText = useWatch({
+    control,
+    name: 'entry_text',
+    defaultValue: ''
+  });
+
   // Handle transcript ready callback
   const handleTranscriptReady = (transcript: string) => {
     console.log('Transcript ready callback received:', transcript);
-    const currentText = getValues('entry_text') || '';
+    const currentText = watchedEntryText || '';
     const newText = currentText ? `${currentText} ${transcript}` : transcript;
+    console.log('Current text:', currentText);
     console.log('Setting new text:', newText);
-    setValue('entry_text', newText);
+    setValue('entry_text', newText, { shouldDirty: true, shouldTouch: true });
   };
 
   const { isRecording, isProcessing, audioLevel, toggleRecording } = useSpeechToText(handleTranscriptReady);
@@ -90,15 +99,6 @@ const CreateJournalEntryForm = ({
         description: "Failed to create journal entry. Please try again.",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleMicClick = async () => {
-    try {
-      console.log('Mic button clicked, current recording state:', isRecording);
-      await toggleRecording();
-    } catch (error) {
-      console.error('Error with speech recording:', error);
     }
   };
 
@@ -134,6 +134,8 @@ const CreateJournalEntryForm = ({
             <Textarea
               id="entry_text"
               {...register('entry_text')}
+              value={watchedEntryText}
+              onChange={(e) => setValue('entry_text', e.target.value, { shouldDirty: true })}
               placeholder="Write your journal entry here or use the mic button below to speak..."
               rows={8}
             />
@@ -146,13 +148,13 @@ const CreateJournalEntryForm = ({
               <div className="flex-1 space-y-2">
                 {isRecording && (
                   <div className="space-y-2">
-                    <p className="text-sm text-blue-600 animate-pulse">
+                    <p className="text-sm text-purple-600 animate-pulse">
                       🎤 Recording... Will auto-process after 3 seconds of silence
                     </p>
                     {/* Audio level indicator */}
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-150"
+                        className="bg-purple-600 h-2 rounded-full transition-all duration-150"
                         style={{ width: `${Math.min(100, audioLevel)}%` }}
                       />
                     </div>
@@ -167,11 +169,15 @@ const CreateJournalEntryForm = ({
               </div>
               <Button
                 type="button"
-                variant={isRecording ? "destructive" : "outline"}
+                variant="outline"
                 size="sm"
                 onClick={toggleRecording}
                 disabled={isProcessing}
-                className="flex items-center gap-2 ml-4"
+                className={`flex items-center gap-2 ml-4 transition-all duration-200 ${
+                  isRecording 
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-600/50 animate-pulse' 
+                    : 'hover:bg-purple-50 hover:border-purple-300'
+                }`}
               >
                 {isRecording ? (
                   <>
