@@ -27,6 +27,8 @@ export const useTypeAnimation = (
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isInterruptedRef = useRef(false);
+  const lastTargetTextRef = useRef('');
+  const animationRunningRef = useRef(false);
 
   // Cursor blinking effect
   useEffect(() => {
@@ -45,16 +47,35 @@ export const useTypeAnimation = (
     };
   }, [isTyping]);
 
-  const startTyping = useCallback(() => {
-    if (!targetText || isInterruptedRef.current) return;
+  const clearTimeouts = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
 
+  const startTyping = useCallback(() => {
+    if (!targetText || isInterruptedRef.current || animationRunningRef.current) {
+      console.log('startTyping aborted:', { targetText: !!targetText, interrupted: isInterruptedRef.current, running: animationRunningRef.current });
+      return;
+    }
+
+    console.log('Starting type animation for:', targetText.substring(0, 50) + '...');
+    animationRunningRef.current = true;
     setIsTyping(true);
     setDisplayText('');
     currentIndexRef.current = 0;
     setShowCursor(true);
 
     const typeNextCharacter = () => {
-      if (isInterruptedRef.current) return;
+      if (isInterruptedRef.current || !animationRunningRef.current) {
+        console.log('Animation stopped');
+        return;
+      }
 
       if (currentIndexRef.current < targetText.length) {
         const char = targetText[currentIndexRef.current];
@@ -63,12 +84,12 @@ export const useTypeAnimation = (
         setDisplayText(targetText.slice(0, currentIndexRef.current + 1));
         currentIndexRef.current++;
 
-        // Add delay for punctuation to make it feel more natural
         const delay = isPunctuation ? punctuationDelay : speed;
-        
         timeoutRef.current = setTimeout(typeNextCharacter, delay);
       } else {
         // Animation complete
+        console.log('Type animation complete');
+        animationRunningRef.current = false;
         setIsTyping(false);
         setShowCursor(false);
         onComplete?.();
@@ -79,55 +100,45 @@ export const useTypeAnimation = (
   }, [targetText, speed, punctuationDelay, onComplete]);
 
   const stopTyping = useCallback(() => {
+    console.log('Stopping type animation');
     isInterruptedRef.current = true;
+    animationRunningRef.current = false;
     setIsTyping(false);
     setShowCursor(false);
-    
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    
+    clearTimeouts();
     onInterrupt?.();
-  }, [onInterrupt]);
+  }, [onInterrupt, clearTimeouts]);
 
   const resetAnimation = useCallback(() => {
+    console.log('Resetting type animation');
     isInterruptedRef.current = false;
+    animationRunningRef.current = false;
     setDisplayText('');
     setIsTyping(false);
     setShowCursor(false);
     currentIndexRef.current = 0;
-    
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-  }, []);
+    clearTimeouts();
+  }, [clearTimeouts]);
 
+  // Trigger animation when startAnimation changes from false to true
   useEffect(() => {
-    if (startAnimation && targetText) {
+    if (startAnimation && targetText && targetText !== lastTargetTextRef.current) {
+      lastTargetTextRef.current = targetText;
       resetAnimation();
       // Small delay to ensure state is reset
-      setTimeout(startTyping, 50);
+      const startTimeout = setTimeout(() => {
+        startTyping();
+      }, 50);
+      
+      return () => clearTimeout(startTimeout);
     }
-  }, [startAnimation, targetText, startTyping, resetAnimation]);
+  }, [startAnimation, targetText]); // Removed startTyping and resetAnimation from deps
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      clearTimeouts();
     };
-  }, []);
+  }, [clearTimeouts]);
 
   return {
     displayText,

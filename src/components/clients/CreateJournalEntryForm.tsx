@@ -45,9 +45,9 @@ const CreateJournalEntryForm = ({
 }: CreateJournalEntryFormProps) => {
   const { toast } = useToast();
   const [processingState, setProcessingState] = useState<'idle' | 'processing' | 'typing'>('idle');
-  const [pendingTranscript, setPendingTranscript] = useState('');
+  const [textToType, setTextToType] = useState('');
   const [startTyping, setStartTyping] = useState(false);
-  const userTypingRef = useRef(false);
+  const animationKeyRef = useRef(0);
   
   const {
     register,
@@ -67,46 +67,46 @@ const CreateJournalEntryForm = ({
     setProcessingState('processing');
   };
 
-  // Handle when transcript is ready - start type animation
+  // Handle when transcript is ready - prepare for type animation
   const handleTranscriptReady = (transcript: string) => {
-    console.log('Transcript ready, starting type animation:', transcript);
+    console.log('Transcript ready:', transcript);
     const currentText = getValues('entry_text') || '';
     const newText = currentText ? `${currentText} ${transcript}` : transcript;
     
-    setPendingTranscript(newText);
+    setTextToType(newText);
     setProcessingState('typing');
+    animationKeyRef.current++;
     setStartTyping(true);
   };
 
   // Type animation configuration
   const { displayText, isTyping, showCursor, stopTyping } = useTypeAnimation(
-    pendingTranscript,
+    textToType,
     startTyping,
     {
       speed: 50,
       punctuationDelay: 200,
       onComplete: () => {
         console.log('Type animation complete');
-        setValue('entry_text', pendingTranscript, { 
+        setValue('entry_text', textToType, { 
           shouldDirty: true, 
           shouldTouch: true, 
           shouldValidate: true 
         });
         setProcessingState('idle');
         setStartTyping(false);
-        setPendingTranscript('');
+        setTextToType('');
       },
       onInterrupt: () => {
         console.log('Type animation interrupted by user');
-        // User started typing, complete the text immediately
-        setValue('entry_text', pendingTranscript, { 
+        setValue('entry_text', textToType, { 
           shouldDirty: true, 
           shouldTouch: true, 
           shouldValidate: true 
         });
         setProcessingState('idle');
         setStartTyping(false);
-        setPendingTranscript('');
+        setTextToType('');
       }
     }
   );
@@ -120,7 +120,6 @@ const CreateJournalEntryForm = ({
   const handleTextareaChange = (value: string) => {
     if (isTyping) {
       console.log('User typing detected during animation, stopping animation');
-      userTypingRef.current = true;
       stopTyping();
     }
     return value;
@@ -156,6 +155,12 @@ const CreateJournalEntryForm = ({
   };
 
   const handleClose = () => {
+    if (isTyping) {
+      stopTyping();
+    }
+    setProcessingState('idle');
+    setStartTyping(false);
+    setTextToType('');
     reset();
     onOpenChange(false);
   };
@@ -233,7 +238,7 @@ const CreateJournalEntryForm = ({
               </div>
             )}
             
-            {/* Mic button with indigo styling */}
+            {/* Mic button */}
             <div className="flex justify-end">
               <button
                 type="button"
