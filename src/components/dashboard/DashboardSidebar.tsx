@@ -4,10 +4,6 @@ import {
   Home, 
   Users, 
   FileText, 
-  BarChart3, 
-  Key,
-  CreditCard,
-  Book,
   Globe
 } from "lucide-react";
 import {
@@ -15,12 +11,9 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
 } from "@/components/ui/sidebar";
 
 const sidebarItems = [
@@ -28,10 +21,6 @@ const sidebarItems = [
   { name: "Clients", href: "/dashboard/clients", icon: Users },
   { name: "Reports", href: "/dashboard/reports", icon: FileText },
   { name: "Website Builder", href: "/dashboard/website-builder", icon: Globe },
-  { name: "Usage", href: "/dashboard/usage", icon: BarChart3 },
-  { name: "API Keys", href: "/dashboard/api-keys", icon: Key },
-  { name: "Billing", href: "/dashboard/billing", icon: CreditCard },
-  { name: "Documentation", href: "/dashboard/api-docs", icon: Book },
 ];
 
 export function DashboardSidebar() {
@@ -39,15 +28,8 @@ export function DashboardSidebar() {
 
   return (
     <Sidebar variant="inset">
-      <SidebarHeader>
-        <div className="px-2 py-2">
-          <h2 className="text-lg font-semibold tracking-tight">Dashboard</h2>
-        </div>
-      </SidebarHeader>
-      
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {sidebarItems.map((item) => {
@@ -67,14 +49,6 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      
-      <SidebarFooter>
-        <div className="px-2 py-2">
-          <p className="text-xs text-muted-foreground">
-            Professional Dashboard v1.0
-          </p>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }
