@@ -46,7 +46,7 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    --header-height: 64px; /* Fixed header height */
+    --header-height: 64px;
   }
 
   .dark {
@@ -95,8 +95,7 @@
 
   body {
     @apply bg-background text-foreground;
-    overflow-x: hidden; /* Prevent horizontal scrolling */
-    /* Add padding to account for fixed header */
+    overflow-x: hidden;
     padding-top: var(--header-height);
   }
   
@@ -105,13 +104,12 @@
   }
 }
 
-/* Updated layout structure for consistent header width and fixed positioning */
+/* Dashboard layout fixes */
 .dashboard-layout {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
-  /* Remove padding-top since body now handles it */
 }
 
 .dashboard-content {
@@ -128,16 +126,31 @@ nav.fixed {
   right: 0;
   top: 0;
   height: var(--header-height);
+  z-index: 50;
 }
 
-/* Ensure the sidebar starts properly below the fixed header */
+/* Fix sidebar positioning - remove the margin that causes white lines */
 [data-sidebar="sidebar"] {
   padding-top: 0;
-  margin-top: var(--header-height);
   height: calc(100vh - var(--header-height));
+  top: var(--header-height);
 }
 
-/* Add these utility classes for better responsiveness */
+/* Ensure SidebarInset doesn't have extra margin causing white lines */
+[data-sidebar="inset"] {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  min-height: calc(100vh - var(--header-height));
+  margin-top: 0; /* Remove any margin that creates white lines */
+}
+
+/* Override any conflicting sticky positioning */
+.sticky {
+  position: fixed !important;
+}
+
+/* Utility classes for better responsiveness */
 .full-width-container {
   width: 100%;
   max-width: 100%;
@@ -146,23 +159,4 @@ nav.fixed {
 .content-container {
   width: 100%;
   height: 100%;
-}
-
-/* Fix for SidebarInset to take full width and account for header */
-[data-sidebar="inset"] {
-  flex: 1;
-  width: 100%;
-  max-width: 100%;
-  margin-top: var(--header-height);
-  min-height: calc(100vh - var(--header-height));
-}
-
-/* Ensure main content areas don't overlap with fixed header */
-main {
-  padding-top: 0; /* Remove any extra padding since body handles it */
-}
-
-/* Override any conflicting sticky positioning */
-.sticky {
-  position: fixed !important;
 }
