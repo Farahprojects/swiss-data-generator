@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
@@ -129,17 +128,43 @@ const ReportsPage = () => {
     return tier.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  // Generate a clean report identifier when no name is stored
-  const generateReportId = (report: Report): string => {
-    const shortId = report.id.substring(0, 8);
-    return `#${shortId}`;
+  // Extract person's name from the request payload
+  const extractPersonName = (report: Report): string => {
+    if (!report.request_payload) return 'Unknown';
+    
+    const payload = report.request_payload;
+    
+    // Check for two-person reports (compatibility, sync)
+    if (payload.person_a && payload.person_b) {
+      return `${payload.person_a.name} & ${payload.person_b.name}`;
+    }
+    
+    // Check for single person name
+    if (payload.name) {
+      return payload.name;
+    }
+    
+    // For positions reports
+    if (report.request_type === 'positions' && payload.location) {
+      return `Positions - ${payload.location}`;
+    }
+    
+    // For moon phases
+    if (report.request_type === 'moonphases') {
+      return 'Moon Phases Report';
+    }
+    
+    return 'Unknown';
   };
 
   const getDisplayName = (report: Report): string => {
+    // If we have a stored report_name, use it
     if (report.report_name) {
       return report.report_name;
     }
-    return generateReportId(report);
+    
+    // Otherwise extract the name from the request payload
+    return extractPersonName(report);
   };
 
   return (
