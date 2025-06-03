@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
-import { SidebarInset } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import Filters from '@/components/activity-logs/Filters';
 import LogsTable from '@/components/activity-logs/LogsTable';
@@ -114,22 +114,24 @@ const ActivityLogs = () => {
       {/* Main content area - flexes below the header */}
       <div className="flex flex-grow bg-gray-50 pt-1">
         <div className="flex w-full">
-          <DashboardSidebar />
-          
-          <SidebarInset className="p-0 md:p-6">
-            <div className="p-4 md:p-0">
-              <h1 className="text-2xl font-bold mb-6">Activity Logs</h1>
-              
-              <Filters filters={filters} onChange={handleFilterChange} />
-              
-              <LogsTable 
-                logs={logs} 
-                loading={loading}
-                isMobile={isMobile} 
-                onRowClick={openDrawer} 
-              />
-            </div>
-          </SidebarInset>
+          <SidebarProvider defaultOpen={true}>
+            <DashboardSidebar />
+            
+            <SidebarInset className="p-0 md:p-6">
+              <div className="p-4 md:p-0">
+                <h1 className="text-2xl font-bold mb-6">Activity Logs</h1>
+                
+                <Filters filters={filters} onChange={handleFilterChange} />
+                
+                <LogsTable 
+                  logs={logs} 
+                  loading={loading}
+                  isMobile={isMobile} 
+                  onRowClick={openDrawer} 
+                />
+              </div>
+            </SidebarInset>
+          </SidebarProvider>
         </div>
       </div>
       
