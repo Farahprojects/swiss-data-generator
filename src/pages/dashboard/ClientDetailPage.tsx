@@ -115,30 +115,33 @@ const ClientDetailPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="space-y-4">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/clients')}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Clients
           </Button>
+        </div>
+        
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{client.full_name}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{client.full_name}</h1>
             <p className="text-gray-600">Client Details & Journal</p>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowEditModal(true)}>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Client
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleDeleteClient}>
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowEditModal(true)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Client
+            </Button>
+            <Button variant="outline" onClick={handleDeleteClient}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Client Overview */}
+      {/* Client Information Card */}
       <Card>
         <CardHeader>
           <CardTitle>Client Information</CardTitle>
@@ -146,40 +149,74 @@ const ClientDetailPage = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {client.email && (
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-gray-500" />
-                <span>{client.email}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 p-2 bg-blue-100 rounded-lg">
+                  <Mail className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Email</div>
+                  <div className="font-medium">{client.email}</div>
+                </div>
               </div>
             )}
+            
             {client.phone && (
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-gray-500" />
-                <span>{client.phone}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 p-2 bg-green-100 rounded-lg">
+                  <Phone className="w-4 h-4 text-green-600" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Phone</div>
+                  <div className="font-medium">{client.phone}</div>
+                </div>
               </div>
             )}
+            
             {client.birth_date && (
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <span>Born: {formatDate(client.birth_date)}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 p-2 bg-purple-100 rounded-lg">
+                  <Calendar className="w-4 h-4 text-purple-600" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Birth Date</div>
+                  <div className="font-medium">{formatDate(client.birth_date)}</div>
+                </div>
               </div>
             )}
+            
             {client.birth_time && (
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-500" />
-                <span>Time: {client.birth_time}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 p-2 bg-orange-100 rounded-lg">
+                  <Clock className="w-4 h-4 text-orange-600" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Birth Time</div>
+                  <div className="font-medium">{client.birth_time}</div>
+                </div>
               </div>
             )}
+            
             {client.birth_location && (
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-gray-500" />
-                <span>{client.birth_location}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 p-2 bg-red-100 rounded-lg">
+                  <MapPin className="w-4 h-4 text-red-600" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Birth Location</div>
+                  <div className="font-medium">{client.birth_location}</div>
+                </div>
               </div>
             )}
           </div>
+          
           {client.notes && (
-            <div className="mt-4 pt-4 border-t">
-              <h4 className="font-medium mb-2">Notes</h4>
-              <p className="text-gray-600">{client.notes}</p>
+            <div className="mt-6 pt-6 border-t">
+              <div className="mb-2">
+                <h4 className="font-medium text-gray-900">Notes</h4>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-gray-700 leading-relaxed">{client.notes}</p>
+              </div>
             </div>
           )}
         </CardContent>
