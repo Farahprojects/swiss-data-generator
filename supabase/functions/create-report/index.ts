@@ -172,7 +172,7 @@ function transformToSwissFormat(data: CreateReportRequest): any {
   return basePayload;
 }
 
-// Helper to determine the report name to store - updated to use report_tier for detailed naming
+// Helper to determine the report name to store - simplified to just names
 function getReportName(data: CreateReportRequest, reportTier?: string): string {
   const requiresTwoPeople = ['compatibility', 'sync'].includes(data.reportType);
   const requiresPositionsFields = data.reportType === 'positions';
@@ -186,48 +186,14 @@ function getReportName(data: CreateReportRequest, reportTier?: string): string {
     return `Planetary Positions - ${data.positionsLocation}`;
   }
   
-  // Base name construction
-  let baseName: string;
+  // Just return the person's name(s)
   if (requiresTwoPeople && data.name && data.name2) {
-    baseName = `${data.name} & ${data.name2}`;
+    return `${data.name} & ${data.name2}`;
   } else if (data.name) {
-    baseName = data.name;
+    return data.name;
   } else {
-    baseName = 'Unknown';
+    return 'Unknown';
   }
-  
-  // Format report type with subtype if available
-  let reportTypeFormatted = data.reportType;
-  
-  if (reportTier) {
-    // Extract subtype from report_tier for better formatting
-    if (reportTier.startsWith('essence_')) {
-      const subtype = reportTier.replace('essence_', '');
-      reportTypeFormatted = `essence (${subtype})`;
-    } else if (reportTier.startsWith('sync_')) {
-      const subtype = reportTier.replace('sync_', '');
-      reportTypeFormatted = `sync (${subtype})`;
-    } else if (data.reportType === 'return' && data.returnDate) {
-      const year = new Date(data.returnDate).getFullYear();
-      reportTypeFormatted = `return (${year})`;
-    }
-    // For other report types, use the report_tier as is if it's different from reportType
-    else if (reportTier !== data.reportType) {
-      reportTypeFormatted = reportTier;
-    }
-  } else {
-    // Fallback formatting for reports without report_tier
-    if (data.reportType === 'essence' && data.essenceType) {
-      reportTypeFormatted = `essence (${data.essenceType.replace('-', ' ')})`;
-    } else if (data.reportType === 'sync' && data.relationshipType) {
-      reportTypeFormatted = `sync (${data.relationshipType})`;
-    } else if (data.reportType === 'return' && data.returnDate) {
-      const year = new Date(data.returnDate).getFullYear();
-      reportTypeFormatted = `return (${year})`;
-    }
-  }
-  
-  return `${baseName} - ${reportTypeFormatted}`;
 }
 
 // Swiss API caller helper - sends clean payload with auth in headers like curl

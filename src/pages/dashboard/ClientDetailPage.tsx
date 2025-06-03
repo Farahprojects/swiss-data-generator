@@ -365,11 +365,16 @@ const ClientDetailPage = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-lg">
-                          {report.report_name || getReportTypeLabel(report.request_type)}
+                          {report.report_name || 'Unnamed Report'}
                         </CardTitle>
-                        <p className="text-sm text-gray-600">
-                          Generated on {formatDateTime(report.created_at)}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline">
+                            {getReportTypeLabel(report.request_type)}
+                          </Badge>
+                          <span className="text-sm text-gray-600">
+                            Generated on {formatDateTime(report.created_at)}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex gap-2 items-center">
                         <Badge variant={report.response_status >= 200 && report.response_status < 300 ? 'default' : 'destructive'}>
