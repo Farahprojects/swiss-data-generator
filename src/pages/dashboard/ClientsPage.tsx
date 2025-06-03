@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Grid, List, Mail, Phone } from 'lucide-react';
+import { Plus, Search, Grid, List } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
@@ -77,18 +76,6 @@ const ClientsPage = () => {
             </div>
             <div className="flex-1">
               <CardTitle className="text-lg">{client.full_name}</CardTitle>
-              {client.email && (
-                <div className="flex items-center text-sm text-gray-600 mt-1">
-                  <Mail className="w-3 h-3 mr-1" />
-                  {client.email}
-                </div>
-              )}
-              {client.phone && (
-                <div className="flex items-center text-sm text-gray-600">
-                  <Phone className="w-3 h-3 mr-1" />
-                  {client.phone}
-                </div>
-              )}
             </div>
           </div>
         </CardHeader>
@@ -98,12 +85,6 @@ const ClientsPage = () => {
               <span className="text-gray-600">Created</span>
               <span className="font-medium">{formatLastActivity(client.created_at)}</span>
             </div>
-            {client.birth_date && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Birth Date</span>
-                <span className="font-medium">{new Date(client.birth_date).toLocaleDateString()}</span>
-              </div>
-            )}
             {client.birth_location && (
               <div className="pt-2">
                 <Badge variant="secondary" className="text-xs">
