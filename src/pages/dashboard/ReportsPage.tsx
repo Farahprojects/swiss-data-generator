@@ -137,7 +137,14 @@ const ReportsPage = () => {
 
   const getDisplayName = (report: Report): string => {
     if (report.report_name) {
-      return report.report_name;
+      // Remove any descriptive text after delimiters like " - ", " | ", etc.
+      const cleanName = report.report_name
+        .split(' - ')[0]  // Remove everything after " - "
+        .split(' | ')[0]  // Remove everything after " | "
+        .split(' (')[0]   // Remove everything after " ("
+        .trim();
+      
+      return cleanName || generateReportId(report);
     }
     return generateReportId(report);
   };
