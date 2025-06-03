@@ -181,6 +181,6 @@ nav.fixed {
 }
 
 [data-sidebar="menu-button"][data-active="true"] {
-  background-color: hsl(var(--sidebar-accent)) !important;
+  background-color: #f0edff !important;
   color: hsl(var(--sidebar-accent-foreground)) !important;
 }
