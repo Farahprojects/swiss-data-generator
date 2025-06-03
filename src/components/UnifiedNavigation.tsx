@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -82,9 +83,9 @@ const UnifiedNavigation = () => {
     <nav className="fixed top-0 left-0 right-0 w-full h-16 bg-white z-50 shadow-sm border-b">
       <div className="h-full max-w-none px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-full">
-          {/* Left section with hamburger menu for logged in users */}
+          {/* Left section with hamburger menu for logged in users on mobile or logo for not logged in */}
           <div className="flex items-center">
-            {isLoggedIn ? (
+            {isLoggedIn && isMobile ? (
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -96,7 +97,7 @@ const UnifiedNavigation = () => {
               </Button>
             ) : (
               /* Only show logo on left for not logged in users */
-              <Logo />
+              !isLoggedIn && <Logo />
             )}
           </div>
           

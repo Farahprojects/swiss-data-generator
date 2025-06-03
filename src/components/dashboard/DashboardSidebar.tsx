@@ -7,8 +7,16 @@ import {
   Globe,
   FilePlus
 } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
 
 const sidebarItems = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -20,51 +28,36 @@ const sidebarItems = [
 
 export function DashboardSidebar() {
   const location = useLocation();
-  const { openMobile, setOpenMobile } = useSidebar();
-
-  const handleLinkClick = () => {
-    setOpenMobile(false);
-  };
 
   return (
-    <Sheet open={openMobile} onOpenChange={setOpenMobile}>
-      <SheetContent side="left" className="w-64 p-0">
-        <div className="flex flex-col h-full bg-white">
-          <div className="flex-1 py-4">
-            <div className="px-3 py-2">
-              <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                Menu
-              </h2>
-              <div className="space-y-1">
-                {sidebarItems.map((item) => {
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      onClick={handleLinkClick}
-                      className={`flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-100 ${
-                        isActive 
-                          ? 'bg-gray-100 text-gray-900' 
-                          : 'text-gray-700 hover:text-gray-900'
-                      }`}
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      <span>{item.name}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          <div className="p-4 border-t">
-            <div className="text-xs text-gray-600 text-center">
-              <div>© {new Date().getFullYear()} Therai Astro.</div>
-              <div>All rights reserved.</div>
-            </div>
-          </div>
+    <Sidebar variant="inset">
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {sidebarItems.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link to={item.href} className="text-black hover:text-white">
+                        <item.icon />
+                        <span>{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <div className="p-2 text-xs text-gray-600 text-center">
+          <div>© {new Date().getFullYear()} Therai Astro.</div>
+          <div>All rights reserved.</div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

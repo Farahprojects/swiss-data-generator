@@ -6,8 +6,9 @@ import { useSettingsModal } from "@/contexts/SettingsModalContext";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { DashboardBreadcrumb } from "@/components/dashboard/DashboardBreadcrumb";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
-import { SidebarInset } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 
 /**
  * Professional DashboardLayout with proper nested routing
@@ -53,9 +54,15 @@ const DashboardLayout = () => {
         <DashboardSidebar />
         
         <SidebarInset className="flex flex-col flex-1">
-          {/* Main content area with error boundary - no header */}
+          {/* Dashboard header with breadcrumbs and trigger - reduce height to eliminate white line */}
+          <header className="flex h-12 shrink-0 items-center gap-2 px-4 border-b bg-white">
+            <SidebarTrigger className="-ml-1" />
+            <DashboardBreadcrumb />
+          </header>
+          
+          {/* Main content area with error boundary - removed shadow and rounded corners */}
           <main className="flex-1 p-4 md:p-6">
-            <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-120px)]">
+            <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
               <DashboardErrorBoundary>
                 <Outlet />
               </DashboardErrorBoundary>
