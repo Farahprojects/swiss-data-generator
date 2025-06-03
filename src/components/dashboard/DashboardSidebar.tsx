@@ -5,7 +5,7 @@ import {
   Users, 
   FileText, 
   Globe,
-  Plus
+  FilePlus
 } from "lucide-react";
 import {
   Sidebar,
@@ -22,7 +22,7 @@ const sidebarItems = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Clients", href: "/dashboard/clients", icon: Users },
   { name: "Reports", href: "/dashboard/reports", icon: FileText },
-  { name: "Create Report", href: "/dashboard/reports/create", icon: Plus },
+  { name: "Create Report", href: "/dashboard/reports/create", icon: FilePlus },
   { name: "Website Builder", href: "/dashboard/website-builder", icon: Globe },
 ];
 

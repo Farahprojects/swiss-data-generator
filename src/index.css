@@ -177,10 +177,10 @@ nav.fixed {
 
 [data-sidebar="menu-button"]:hover {
   background-color: #f0edff !important;
-  color: hsl(var(--sidebar-accent-foreground)) !important;
+  color: #6366f1 !important;
 }
 
 [data-sidebar="menu-button"][data-active="true"] {
   background-color: #f0edff !important;
-  color: hsl(var(--sidebar-accent-foreground)) !important;
+  color: #6366f1 !important;
 }
