@@ -1,35 +1,31 @@
 
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import UnifiedNavigation from "@/components/UnifiedNavigation";
-import Footer from "@/components/Footer";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import { SidebarInset } from "@/components/ui/sidebar";
+import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettingsModal } from "@/contexts/SettingsModalContext";
 import { logToSupabase } from "@/utils/batchedLogManager";
+import UnifiedNavigation from "@/components/UnifiedNavigation";
+import Footer from "@/components/Footer";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { DashboardBreadcrumb } from "@/components/dashboard/DashboardBreadcrumb";
+import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
+import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 
 /**
- * DashboardLayout serves as the outer shell for all dashboard pages
- * It maintains consistent navigation, sidebar, and footer across all dashboard routes
+ * Professional DashboardLayout with proper nested routing
+ * Provides consistent navigation, sidebar, breadcrumbs, and error handling
  */
 const DashboardLayout = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const { openSettings } = useSettingsModal();
   
-  // Check if this is a settings route - handle both new and legacy paths
-  const isSettingsRoute = location.pathname.includes('/dashboard/settings') || location.pathname.includes('/settings');
-  
-  // Get panel from query params
-  const searchParams = new URLSearchParams(location.search);
-  const panelParam = searchParams.get('panel');
-  
-  // Handle any redirects to settings
+  // Handle settings route redirects
   useEffect(() => {
+    const isSettingsRoute = location.pathname.includes('/settings');
     if (isSettingsRoute) {
-      const panel = panelParam || 'account';
+      const searchParams = new URLSearchParams(location.search);
+      const panel = searchParams.get('panel') || 'account';
       
       logToSupabase("Redirecting from settings route to modal", {
         level: 'info',
@@ -37,16 +33,12 @@ const DashboardLayout = () => {
         data: { panel }
       });
       
-      // Open the settings modal with the specified panel
       openSettings(panel as "account" | "notifications" | "delete" | "support");
-      
-      // Redirect to dashboard
-      navigate('/dashboard', { replace: true });
     }
-  }, [isSettingsRoute, panelParam, openSettings, navigate]);
+  }, [location.pathname, location.search, openSettings]);
   
   useEffect(() => {
-    logToSupabase("DashboardLayout mounted or updated", {
+    logToSupabase("DashboardLayout mounted", {
       level: 'info',
       page: 'DashboardLayout',
       data: { user: user?.email, path: location.pathname }
@@ -54,23 +46,32 @@ const DashboardLayout = () => {
   }, [user, location.pathname]);
 
   return (
-    <div className="flex flex-col min-h-screen w-full">
-      {/* Fixed header at the top that spans full width */}
+    <div className="min-h-screen flex flex-col w-full">
+      {/* Fixed header */}
       <div className="sticky top-0 z-50 w-full">
         <UnifiedNavigation />
       </div>
       
-      {/* Main content area - flexes below the header */}
-      <div className="flex flex-grow bg-gray-50 mt-0 w-full">
-        <div className="flex w-full">
-          <DashboardSidebar />
+      {/* Main dashboard content with sidebar */}
+      <div className="flex flex-1 w-full">
+        <DashboardSidebar />
+        
+        <SidebarInset className="flex flex-col flex-1">
+          {/* Dashboard header with breadcrumbs and trigger */}
+          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
+            <SidebarTrigger className="-ml-1" />
+            <DashboardBreadcrumb />
+          </header>
           
-          <SidebarInset className="p-4 md:p-6 w-full">
-            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 w-full">
-              <Outlet />
+          {/* Main content area with error boundary */}
+          <main className="flex-1 p-4 md:p-6">
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 w-full min-h-[calc(100vh-200px)]">
+              <DashboardErrorBoundary>
+                <Outlet />
+              </DashboardErrorBoundary>
             </div>
-          </SidebarInset>
-        </div>
+          </main>
+        </SidebarInset>
       </div>
       
       <Footer />

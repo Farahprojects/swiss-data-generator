@@ -8,6 +8,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { SettingsModalProvider } from "@/contexts/SettingsModalContext";
 import NavigationStateProvider from "@/contexts/NavigationStateContext";
 import { AuthGuard } from "@/components/auth/AuthGuard";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { Suspense, lazy } from "react";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -25,19 +27,20 @@ import PaymentReturn from "./pages/PaymentReturn";
 import ActivityLogs from "./pages/ActivityLogs";
 import PasswordReset from "./pages/auth/Password";
 import ConfirmEmail from "./pages/auth/ConfirmEmail";
+import DashboardLayout from "./components/dashboard/DashboardLayout";
 
-// Dashboard Pages
-import DashboardHome from "./pages/dashboard/DashboardHome";
-import ClientsPage from "./pages/dashboard/ClientsPage";
-import ClientDetailPage from "./pages/dashboard/ClientDetailPage";
-import ReportsPage from "./pages/dashboard/ReportsPage";
-import CreateReportPage from "./pages/dashboard/CreateReportPage";
-import UsagePage from "./pages/dashboard/UsagePage";
-import ApiKeys from "./pages/dashboard/ApiKeys";
-import BillingPage from "./pages/dashboard/BillingPage";
-import PricingPage from "./pages/dashboard/PricingPage";
-import ApiDocs from "./pages/dashboard/ApiDocs";
-import WebsiteBuilder from "./pages/dashboard/WebsiteBuilder";
+// Lazy load dashboard pages for better performance
+const DashboardHome = lazy(() => import("./pages/dashboard/DashboardHome"));
+const ClientsPage = lazy(() => import("./pages/dashboard/ClientsPage"));
+const ClientDetailPage = lazy(() => import("./pages/dashboard/ClientDetailPage"));
+const ReportsPage = lazy(() => import("./pages/dashboard/ReportsPage"));
+const CreateReportPage = lazy(() => import("./pages/dashboard/CreateReportPage"));
+const UsagePage = lazy(() => import("./pages/dashboard/UsagePage"));
+const ApiKeys = lazy(() => import("./pages/dashboard/ApiKeys"));
+const BillingPage = lazy(() => import("./pages/dashboard/BillingPage"));
+const PricingPage = lazy(() => import("./pages/dashboard/PricingPage"));
+const ApiDocs = lazy(() => import("./pages/dashboard/ApiDocs"));
+const WebsiteBuilder = lazy(() => import("./pages/dashboard/WebsiteBuilder"));
 
 import "./App.css";
 
@@ -69,23 +72,78 @@ function App() {
                   <Route path="/auth/password" element={<PasswordReset />} />
                   <Route path="/auth/confirm" element={<ConfirmEmail />} />
 
-                  {/* Protected routes */}
+                  {/* Legacy protected routes */}
                   <Route path="/dashboard-old" element={<AuthGuard><Dashboard /></AuthGuard>} />
                   <Route path="/user-settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
                   <Route path="/activity-logs" element={<AuthGuard><ActivityLogs /></AuthGuard>} />
 
-                  {/* Dashboard routes with layout */}
-                  <Route path="/dashboard" element={<AuthGuard><DashboardHome /></AuthGuard>} />
-                  <Route path="/dashboard/clients" element={<AuthGuard><ClientsPage /></AuthGuard>} />
-                  <Route path="/dashboard/clients/:id" element={<AuthGuard><ClientDetailPage /></AuthGuard>} />
-                  <Route path="/dashboard/reports" element={<AuthGuard><ReportsPage /></AuthGuard>} />
-                  <Route path="/dashboard/reports/create" element={<AuthGuard><CreateReportPage /></AuthGuard>} />
-                  <Route path="/dashboard/website-builder" element={<AuthGuard><WebsiteBuilder /></AuthGuard>} />
-                  <Route path="/dashboard/usage" element={<AuthGuard><UsagePage /></AuthGuard>} />
-                  <Route path="/dashboard/api-keys" element={<AuthGuard><ApiKeys /></AuthGuard>} />
-                  <Route path="/dashboard/billing" element={<AuthGuard><BillingPage /></AuthGuard>} />
-                  <Route path="/dashboard/pricing" element={<AuthGuard><PricingPage /></AuthGuard>} />
-                  <Route path="/dashboard/api-docs" element={<AuthGuard><ApiDocs /></AuthGuard>} />
+                  {/* Dashboard routes with proper nested structure */}
+                  <Route 
+                    path="/dashboard/*" 
+                    element={
+                      <AuthGuard>
+                        <SidebarProvider defaultOpen={true}>
+                          <DashboardLayout />
+                        </SidebarProvider>
+                      </AuthGuard>
+                    }
+                  >
+                    <Route index element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <DashboardHome />
+                      </Suspense>
+                    } />
+                    <Route path="clients" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <ClientsPage />
+                      </Suspense>
+                    } />
+                    <Route path="clients/:id" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <ClientDetailPage />
+                      </Suspense>
+                    } />
+                    <Route path="reports" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <ReportsPage />
+                      </Suspense>
+                    } />
+                    <Route path="reports/create" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <CreateReportPage />
+                      </Suspense>
+                    } />
+                    <Route path="website-builder" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <WebsiteBuilder />
+                      </Suspense>
+                    } />
+                    <Route path="usage" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <UsagePage />
+                      </Suspense>
+                    } />
+                    <Route path="api-keys" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <ApiKeys />
+                      </Suspense>
+                    } />
+                    <Route path="billing" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <BillingPage />
+                      </Suspense>
+                    } />
+                    <Route path="pricing" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <PricingPage />
+                      </Suspense>
+                    } />
+                    <Route path="api-docs" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <ApiDocs />
+                      </Suspense>
+                    } />
+                  </Route>
 
                   {/* Catch all */}
                   <Route path="*" element={<NotFound />} />
