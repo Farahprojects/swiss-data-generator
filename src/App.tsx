@@ -40,13 +40,7 @@ const ApiKeys = lazy(() => import("./pages/dashboard/ApiKeys"));
 const BillingPage = lazy(() => import("./pages/dashboard/BillingPage"));
 const PricingPage = lazy(() => import("./pages/dashboard/PricingPage"));
 const ApiDocs = lazy(() => import("./pages/dashboard/ApiDocs"));
-
-// Website Builder pages
-const WebsiteBuilderTemplates = lazy(() => import("./pages/dashboard/website-builder/Templates"));
-const WebsiteBuilderContent = lazy(() => import("./pages/dashboard/website-builder/Content"));
-const WebsiteBuilderDesign = lazy(() => import("./pages/dashboard/website-builder/Design"));
-const WebsiteBuilderSEO = lazy(() => import("./pages/dashboard/website-builder/SEO"));
-const WebsiteBuilderPublish = lazy(() => import("./pages/dashboard/website-builder/Publish"));
+const WebsiteBuilder = lazy(() => import("./pages/dashboard/WebsiteBuilder"));
 
 import "./App.css";
 
@@ -119,34 +113,11 @@ function App() {
                         <CreateReportPage />
                       </Suspense>
                     } />
-                    
-                    {/* Website Builder routes */}
-                    <Route path="website-builder/templates" element={
+                    <Route path="website-builder" element={
                       <Suspense fallback={<div>Loading...</div>}>
-                        <WebsiteBuilderTemplates />
+                        <WebsiteBuilder />
                       </Suspense>
                     } />
-                    <Route path="website-builder/content" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <WebsiteBuilderContent />
-                      </Suspense>
-                    } />
-                    <Route path="website-builder/design" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <WebsiteBuilderDesign />
-                      </Suspense>
-                    } />
-                    <Route path="website-builder/seo" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <WebsiteBuilderSEO />
-                      </Suspense>
-                    } />
-                    <Route path="website-builder/publish" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <WebsiteBuilderPublish />
-                      </Suspense>
-                    } />
-                    
                     <Route path="usage" element={
                       <Suspense fallback={<div>Loading...</div>}>
                         <UsagePage />
