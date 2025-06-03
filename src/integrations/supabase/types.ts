@@ -728,6 +728,7 @@ export type Database = {
       }
       translator_logs: {
         Row: {
+          client_id: string | null
           created_at: string | null
           error_message: string | null
           google_geo: boolean | null
@@ -742,6 +743,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          client_id?: string | null
           created_at?: string | null
           error_message?: string | null
           google_geo?: boolean | null
@@ -756,6 +758,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          client_id?: string | null
           created_at?: string | null
           error_message?: string | null
           google_geo?: boolean | null
@@ -769,7 +772,15 @@ export type Database = {
           response_status?: number | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "translator_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_credits: {
         Row: {

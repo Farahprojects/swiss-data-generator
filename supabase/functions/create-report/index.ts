@@ -318,52 +318,33 @@ serve(async (req) => {
       });
     }
 
-    // Log to translator_logs with the report name
+    // Log to translator_logs with the report name and client_id
     const reportName = getReportName(formData);
     console.log('[create-report] Saving report with name:', reportName);
 
+    const translatorLogData: any = {
+      user_id: user.id,
+      request_type: formData.reportType,
+      request_payload: cleanPayload,
+      response_payload: swissResult.data,
+      response_status: 200,
+      report_name: reportName
+    };
+
+    // Add client_id if provided
+    if (formData.client_id) {
+      translatorLogData.client_id = formData.client_id;
+      console.log('[create-report] Saving with client_id:', formData.client_id);
+    }
+
     const { data: translatorLog, error: translatorLogError } = await supabase
       .from('translator_logs')
-      .insert({
-        user_id: user.id,
-        request_type: formData.reportType,
-        request_payload: cleanPayload,
-        response_payload: swissResult.data,
-        response_status: 200,
-        report_name: reportName
-      })
+      .insert(translatorLogData)
       .select()
       .single();
 
     if (translatorLogError) {
       console.error('[create-report] Error saving translator log:', translatorLogError);
-    }
-
-    // Save to report_logs table with client_id if provided
-    if (formData.client_id) {
-      console.log('[create-report] Saving client report with client_id:', formData.client_id);
-      
-      const { data: reportLog, error: reportLogError } = await supabase
-        .from('report_logs')
-        .insert({
-          user_id: user.id,
-          client_id: formData.client_id,
-          api_key: apiKeyData.api_key,
-          report_type: formData.reportType,
-          endpoint: formData.reportType,
-          swiss_payload: cleanPayload,
-          report_text: swissResult.data,
-          status: 'success',
-          duration_ms: 0 // We don't track duration in this flow
-        })
-        .select()
-        .single();
-
-      if (reportLogError) {
-        console.error('[create-report] Error saving report log:', reportLogError);
-      } else {
-        console.log('[create-report] Successfully saved client report:', reportLog.id);
-      }
     }
 
     // Format and return response

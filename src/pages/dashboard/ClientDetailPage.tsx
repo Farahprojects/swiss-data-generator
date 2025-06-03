@@ -18,11 +18,11 @@ import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 
 interface ClientReport {
   id: string;
-  report_type: string;
-  report_text: any;
+  request_type: string;
+  response_payload: any;
   created_at: string;
-  status: string;
-  endpoint: string;
+  response_status: number;
+  report_name?: string;
 }
 
 const ClientDetailPage = () => {
@@ -364,20 +364,22 @@ const ClientDetailPage = () => {
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg">{getReportTypeLabel(report.report_type)}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {report.report_name || getReportTypeLabel(report.request_type)}
+                        </CardTitle>
                         <p className="text-sm text-gray-600">
                           Generated on {formatDateTime(report.created_at)}
                         </p>
                       </div>
                       <div className="flex gap-2 items-center">
-                        <Badge variant={report.status === 'success' ? 'default' : 'destructive'}>
-                          {report.status}
+                        <Badge variant={report.response_status >= 200 && report.response_status < 300 ? 'default' : 'destructive'}>
+                          {report.response_status >= 200 && report.response_status < 300 ? 'success' : 'failed'}
                         </Badge>
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => handleViewReport(report)}
-                          disabled={report.status !== 'success'}
+                          disabled={!(report.response_status >= 200 && report.response_status < 300)}
                         >
                           <FileText className="w-3 h-3 mr-1" />
                           View Report
@@ -440,13 +442,13 @@ const ClientDetailPage = () => {
         logData={selectedReport ? {
           id: selectedReport.id,
           created_at: selectedReport.created_at,
-          response_status: 200,
-          request_type: selectedReport.report_type,
-          endpoint: selectedReport.endpoint,
+          response_status: selectedReport.response_status,
+          request_type: selectedReport.request_type,
+          endpoint: selectedReport.request_type,
           report_tier: null,
           total_cost_usd: 0,
           processing_time_ms: null,
-          response_payload: selectedReport.report_text,
+          response_payload: selectedReport.response_payload,
           request_payload: null,
           error_message: null,
           google_geo: false

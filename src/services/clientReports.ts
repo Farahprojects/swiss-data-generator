@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ClientReportFormData {
@@ -95,7 +94,7 @@ export const clientReportsService = {
 
   async getClientReports(clientId: string) {
     const { data, error } = await supabase
-      .from('report_logs')
+      .from('translator_logs')
       .select('*')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false });
