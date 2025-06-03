@@ -1,17 +1,29 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Plus, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Plus, Edit, Trash2, FileText } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
+import { clientReportsService } from '@/services/clientReports';
 import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import EditClientForm from '@/components/clients/EditClientForm';
 import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
 import ClientReportModal from '@/components/clients/ClientReportModal';
+import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
+
+interface ClientReport {
+  id: string;
+  report_type: string;
+  report_text: any;
+  created_at: string;
+  status: string;
+  endpoint: string;
+}
 
 const ClientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,10 +32,13 @@ const ClientDetailPage = () => {
   
   const [client, setClient] = useState<Client | null>(null);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [clientReports, setClientReports] = useState<ClientReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateJournalModal, setShowCreateJournalModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showReportDrawer, setShowReportDrawer] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -36,13 +51,15 @@ const ClientDetailPage = () => {
     
     try {
       setLoading(true);
-      const [clientData, journalData] = await Promise.all([
+      const [clientData, journalData, reportsData] = await Promise.all([
         clientsService.getClient(id),
-        journalEntriesService.getJournalEntries(id)
+        journalEntriesService.getJournalEntries(id),
+        clientReportsService.getClientReports(id)
       ]);
       
       setClient(clientData);
       setJournalEntries(journalData);
+      setClientReports(reportsData);
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
@@ -77,12 +94,34 @@ const ClientDetailPage = () => {
     }
   };
 
+  const handleViewReport = (report: ClientReport) => {
+    setSelectedReport(report);
+    setShowReportDrawer(true);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  const getReportTypeLabel = (reportType: string) => {
+    const typeMap: { [key: string]: string } = {
+      'natal': 'Natal Report',
+      'composite': 'Composite Report',
+      'compatibility': 'Compatibility Report',
+      'return': 'Solar/Lunar Return',
+      'positions': 'Planetary Positions',
+      'sync': 'Sync Report',
+      'essence': 'Essence Report',
+      'flow': 'Flow Report',
+      'mindset': 'Mindset Report',
+      'monthly': 'Monthly Report',
+      'focus': 'Focus Report',
+    };
+    return typeMap[reportType] || reportType;
   };
 
   if (loading) {
@@ -228,7 +267,7 @@ const ClientDetailPage = () => {
       <Tabs defaultValue="journal" className="space-y-4">
         <TabsList>
           <TabsTrigger value="journal">Journal Entries ({journalEntries.length})</TabsTrigger>
-          <TabsTrigger value="reports">Reports (0)</TabsTrigger>
+          <TabsTrigger value="reports">Reports ({clientReports.length})</TabsTrigger>
           <TabsTrigger value="insights">Insights (0)</TabsTrigger>
         </TabsList>
 
@@ -305,18 +344,51 @@ const ClientDetailPage = () => {
             </Button>
           </div>
 
-          <Card>
-            <CardContent className="py-8">
-              <div className="text-center">
-                <div className="text-gray-400 text-lg mb-2">No reports generated yet</div>
-                <p className="text-gray-600 mb-4">Generate astrological reports for this client</p>
-                <Button onClick={() => setShowReportModal(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Generate Report
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {clientReports.length === 0 ? (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center">
+                  <div className="text-gray-400 text-lg mb-2">No reports generated yet</div>
+                  <p className="text-gray-600 mb-4">Generate astrological reports for this client</p>
+                  <Button onClick={() => setShowReportModal(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Generate Report
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {clientReports.map((report) => (
+                <Card key={report.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-lg">{getReportTypeLabel(report.report_type)}</CardTitle>
+                        <p className="text-sm text-gray-600">
+                          Generated on {formatDateTime(report.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <Badge variant={report.status === 'success' ? 'default' : 'destructive'}>
+                          {report.status}
+                        </Badge>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleViewReport(report)}
+                          disabled={report.status !== 'success'}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          View Report
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="insights" className="space-y-4">
@@ -357,15 +429,29 @@ const ClientDetailPage = () => {
           client={client}
           open={showReportModal}
           onOpenChange={setShowReportModal}
-          onReportGenerated={() => {
-            // TODO: Refresh reports list when we implement report storage
-            toast({
-              title: "Success",
-              description: "Report generated successfully!",
-            });
-          }}
+          onReportGenerated={loadClientData}
         />
       )}
+
+      {/* Report Viewer Drawer */}
+      <ActivityLogDrawer
+        isOpen={showReportDrawer}
+        onClose={() => setShowReportDrawer(false)}
+        logData={selectedReport ? {
+          id: selectedReport.id,
+          created_at: selectedReport.created_at,
+          response_status: 200,
+          request_type: selectedReport.report_type,
+          endpoint: selectedReport.endpoint,
+          report_tier: null,
+          total_cost_usd: 0,
+          processing_time_ms: null,
+          response_payload: selectedReport.report_text,
+          request_payload: null,
+          error_message: null,
+          google_geo: false
+        } : null}
+      />
     </div>
   );
 };

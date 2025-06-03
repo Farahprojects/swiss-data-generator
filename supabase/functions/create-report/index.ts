@@ -34,6 +34,7 @@ interface CreateReportRequest {
   todayDate?: string;
   todayTime?: string;
   notes?: string;
+  client_id?: string; // Add client_id parameter
 }
 
 // Form validation helper
@@ -170,7 +171,7 @@ function transformToSwissFormat(data: CreateReportRequest): any {
   return basePayload;
 }
 
-// Helper to determine the report name to store
+// Helper to determine the report name to store - updated for client reports
 function getReportName(data: CreateReportRequest): string {
   const requiresTwoPeople = ['compatibility', 'sync'].includes(data.reportType);
   const requiresPositionsFields = data.reportType === 'positions';
@@ -185,10 +186,10 @@ function getReportName(data: CreateReportRequest): string {
   }
   
   if (requiresTwoPeople && data.name && data.name2) {
-    return `${data.name} & ${data.name2}`;
+    return `${data.name} & ${data.name2} - ${data.reportType}`;
   }
   
-  return data.name || 'Unknown';
+  return `${data.name} - ${data.reportType}`;
 }
 
 // Swiss API caller helper - sends clean payload with auth in headers like curl
@@ -321,7 +322,7 @@ serve(async (req) => {
     const reportName = getReportName(formData);
     console.log('[create-report] Saving report with name:', reportName);
 
-    await supabase
+    const { data: translatorLog, error: translatorLogError } = await supabase
       .from('translator_logs')
       .insert({
         user_id: user.id,
@@ -330,7 +331,40 @@ serve(async (req) => {
         response_payload: swissResult.data,
         response_status: 200,
         report_name: reportName
-      });
+      })
+      .select()
+      .single();
+
+    if (translatorLogError) {
+      console.error('[create-report] Error saving translator log:', translatorLogError);
+    }
+
+    // Save to report_logs table with client_id if provided
+    if (formData.client_id) {
+      console.log('[create-report] Saving client report with client_id:', formData.client_id);
+      
+      const { data: reportLog, error: reportLogError } = await supabase
+        .from('report_logs')
+        .insert({
+          user_id: user.id,
+          client_id: formData.client_id,
+          api_key: apiKeyData.api_key,
+          report_type: formData.reportType,
+          endpoint: formData.reportType,
+          swiss_payload: cleanPayload,
+          report_text: swissResult.data,
+          status: 'success',
+          duration_ms: 0 // We don't track duration in this flow
+        })
+        .select()
+        .single();
+
+      if (reportLogError) {
+        console.error('[create-report] Error saving report log:', reportLogError);
+      } else {
+        console.log('[create-report] Successfully saved client report:', reportLog.id);
+      }
+    }
 
     // Format and return response
     const formattedResponse = formatResponse(swissResult.data, formData.reportType);

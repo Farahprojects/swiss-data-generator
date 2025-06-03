@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -25,6 +24,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { X } from 'lucide-react';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { clientReportsService, ClientReportFormData } from '@/services/clientReports';
 
 const reportFormSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
@@ -105,20 +105,36 @@ const ClientReportModal = ({
     try {
       setIsGenerating(true);
       
-      // Here we'll call the report generation service
-      // For now, just show a success message
+      // Check if client has required birth information
+      if (!client.birth_date || !client.birth_time || !client.birth_location) {
+        toast({
+          title: "Missing Birth Information",
+          description: "This client needs complete birth information (date, time, and location) to generate reports.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert form data to service format
+      const serviceData: ClientReportFormData = {
+        reportType: data.reportType,
+        relationshipType: data.relationshipType,
+        essenceType: data.essenceType,
+        notes: data.notes,
+        secondPersonName: data.secondPersonName,
+        secondPersonBirthDate: data.secondPersonBirthDate,
+        secondPersonBirthTime: data.secondPersonBirthTime,
+        secondPersonBirthLocation: data.secondPersonBirthLocation,
+        returnYear: data.returnYear,
+      };
+
+      // Generate the report
+      await clientReportsService.generateClientReport(client, serviceData);
+
       toast({
-        title: "Report Generation Started",
-        description: `Generating ${data.reportType} report for ${client.full_name}...`,
+        title: "Report Generated Successfully",
+        description: `${data.reportType} report has been generated for ${client.full_name}.`,
       });
-
-      console.log('Report generation data:', {
-        client,
-        reportData: data,
-      });
-
-      // TODO: Integrate with actual report generation service
-      // await generateClientReport(client, data);
 
       handleClose();
       if (onReportGenerated) {
@@ -128,7 +144,7 @@ const ClientReportModal = ({
       console.error('Error generating report:', error);
       toast({
         title: "Error",
-        description: "Failed to generate report. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to generate report. Please try again.",
         variant: "destructive",
       });
     } finally {

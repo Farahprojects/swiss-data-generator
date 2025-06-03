@@ -409,6 +409,7 @@ export type Database = {
       report_logs: {
         Row: {
           api_key: string
+          client_id: string | null
           created_at: string | null
           duration_ms: number | null
           endpoint: string
@@ -422,6 +423,7 @@ export type Database = {
         }
         Insert: {
           api_key: string
+          client_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
           endpoint: string
@@ -435,6 +437,7 @@ export type Database = {
         }
         Update: {
           api_key?: string
+          client_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
           endpoint?: string
@@ -446,7 +449,15 @@ export type Database = {
           swiss_payload?: Json | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "report_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       report_prompts: {
         Row: {
