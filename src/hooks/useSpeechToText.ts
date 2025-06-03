@@ -2,7 +2,10 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void) => {
+export const useSpeechToText = (
+  onTranscriptReady?: (transcript: string) => void,
+  onSilenceDetected?: () => void
+) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
@@ -119,9 +122,8 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
       const normalizedLevel = Math.min(100, (rms / 128) * 100);
       
       setAudioLevel(normalizedLevel);
-      console.log('Audio RMS level:', rms, 'Normalized:', normalizedLevel);
       
-      const silenceThreshold = 8; // Increased threshold
+      const silenceThreshold = 8;
       const now = Date.now();
       
       if (rms < silenceThreshold) {
@@ -131,6 +133,12 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
         } else if (now - silenceStart >= 3000) { // 3 seconds of silence
           console.log('3 seconds of silence detected, stopping recording...');
           monitoringRef.current = false;
+          
+          // Trigger silence detected callback immediately
+          if (onSilenceDetected) {
+            onSilenceDetected();
+          }
+          
           if (isRecordingRef.current) {
             stopRecording();
           }
@@ -148,7 +156,7 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
     };
     
     checkSilence();
-  }, []);
+  }, [onSilenceDetected]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -190,11 +198,11 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
         }
       };
 
-      mediaRecorder.start(100); // Collect data every 100ms for better quality
+      mediaRecorder.start(100);
       setIsRecording(true);
       
       // Start monitoring for silence
-      setTimeout(() => monitorSilence(), 100); // Small delay to ensure setup is complete
+      setTimeout(() => monitorSilence(), 100);
       
       toast({
         title: "Recording started",

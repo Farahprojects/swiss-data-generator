@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,10 +13,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
+import { TypingCursor } from '@/components/ui/TypingCursor';
 import { CreateJournalEntryData } from '@/types/database';
 import { journalEntriesService } from '@/services/journalEntries';
 import { useToast } from '@/hooks/use-toast';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useTypeAnimation } from '@/hooks/useTypeAnimation';
 import { X, Mic } from 'lucide-react';
 
 const journalEntrySchema = z.object({
@@ -41,6 +44,10 @@ const CreateJournalEntryForm = ({
   onEntryCreated 
 }: CreateJournalEntryFormProps) => {
   const { toast } = useToast();
+  const [processingState, setProcessingState] = useState<'idle' | 'processing' | 'typing'>('idle');
+  const [pendingTranscript, setPendingTranscript] = useState('');
+  const [startTyping, setStartTyping] = useState(false);
+  const userTypingRef = useRef(false);
   
   const {
     register,
@@ -54,19 +61,70 @@ const CreateJournalEntryForm = ({
     resolver: zodResolver(journalEntrySchema),
   });
 
-  // Handle transcript ready callback
+  // Handle when silence is detected - show immediate feedback
+  const handleSilenceDetected = () => {
+    console.log('Silence detected, showing processing state');
+    setProcessingState('processing');
+  };
+
+  // Handle when transcript is ready - start type animation
   const handleTranscriptReady = (transcript: string) => {
+    console.log('Transcript ready, starting type animation:', transcript);
     const currentText = getValues('entry_text') || '';
     const newText = currentText ? `${currentText} ${transcript}` : transcript;
     
-    setValue('entry_text', newText, { 
-      shouldDirty: true, 
-      shouldTouch: true, 
-      shouldValidate: true 
-    });
+    setPendingTranscript(newText);
+    setProcessingState('typing');
+    setStartTyping(true);
   };
 
-  const { isRecording, isProcessing, toggleRecording } = useSpeechToText(handleTranscriptReady);
+  // Type animation configuration
+  const { displayText, isTyping, showCursor, stopTyping } = useTypeAnimation(
+    pendingTranscript,
+    startTyping,
+    {
+      speed: 50,
+      punctuationDelay: 200,
+      onComplete: () => {
+        console.log('Type animation complete');
+        setValue('entry_text', pendingTranscript, { 
+          shouldDirty: true, 
+          shouldTouch: true, 
+          shouldValidate: true 
+        });
+        setProcessingState('idle');
+        setStartTyping(false);
+        setPendingTranscript('');
+      },
+      onInterrupt: () => {
+        console.log('Type animation interrupted by user');
+        // User started typing, complete the text immediately
+        setValue('entry_text', pendingTranscript, { 
+          shouldDirty: true, 
+          shouldTouch: true, 
+          shouldValidate: true 
+        });
+        setProcessingState('idle');
+        setStartTyping(false);
+        setPendingTranscript('');
+      }
+    }
+  );
+
+  const { isRecording, isProcessing, toggleRecording } = useSpeechToText(
+    handleTranscriptReady,
+    handleSilenceDetected
+  );
+
+  // Handle user typing during animation
+  const handleTextareaChange = (value: string) => {
+    if (isTyping) {
+      console.log('User typing detected during animation, stopping animation');
+      userTypingRef.current = true;
+      stopTyping();
+    }
+    return value;
+  };
 
   const onSubmit = async (data: JournalEntryFormData) => {
     try {
@@ -126,21 +184,53 @@ const CreateJournalEntryForm = ({
 
           <div className="space-y-2">
             <Label htmlFor="entry_text">Entry Text *</Label>
-            <Controller
-              control={control}
-              name="entry_text"
-              defaultValue=""
-              render={({ field }) => (
-                <Textarea
-                  {...field}
-                  id="entry_text"
-                  placeholder="Write your journal entry here or use the mic button below to speak..."
-                  rows={8}
-                />
+            <div className="relative">
+              <Controller
+                control={control}
+                name="entry_text"
+                defaultValue=""
+                render={({ field }) => (
+                  <Textarea
+                    {...field}
+                    id="entry_text"
+                    placeholder="Write your journal entry here or use the mic button below to speak..."
+                    rows={8}
+                    onChange={(e) => {
+                      const newValue = handleTextareaChange(e.target.value);
+                      field.onChange(newValue);
+                    }}
+                    value={processingState === 'typing' ? displayText : field.value}
+                    disabled={processingState === 'typing'}
+                    className={processingState === 'typing' ? 'bg-gray-50' : ''}
+                  />
+                )}
+              />
+              
+              {/* Typing cursor overlay */}
+              {processingState === 'typing' && (
+                <div className="absolute bottom-3 left-3 pointer-events-none">
+                  <TypingCursor visible={showCursor} />
+                </div>
               )}
-            />
+            </div>
+            
             {errors.entry_text && (
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
+            )}
+            
+            {/* Processing indicator */}
+            {processingState === 'processing' && (
+              <ProcessingIndicator 
+                message="Processing speech..." 
+                className="mt-2"
+              />
+            )}
+            
+            {processingState === 'typing' && (
+              <div className="flex items-center gap-2 text-sm text-indigo-600 mt-2">
+                <span>Adding text...</span>
+                <TypingCursor visible={showCursor} />
+              </div>
             )}
             
             {/* Mic button with indigo styling */}
@@ -148,12 +238,12 @@ const CreateJournalEntryForm = ({
               <button
                 type="button"
                 onClick={toggleRecording}
-                disabled={isProcessing}
+                disabled={isProcessing || processingState !== 'idle'}
                 className={`p-2.5 rounded-full transition-colors ${
                   isRecording 
                     ? 'bg-indigo-100 text-indigo-600' 
                     : 'text-gray-500 hover:bg-gray-100'
-                }`}
+                } ${(isProcessing || processingState !== 'idle') ? 'opacity-50 cursor-not-allowed' : ''}`}
                 aria-label={isRecording ? 'Stop recording' : 'Start recording'}
                 title={isRecording ? 'Stop recording' : 'Start voice recording'}
               >
@@ -178,7 +268,10 @@ const CreateJournalEntryForm = ({
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || isRecording || isProcessing}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || isRecording || isProcessing || processingState === 'typing'}
+            >
               {isSubmitting ? 'Creating...' : 'Create Entry'}
             </Button>
           </DialogFooter>
