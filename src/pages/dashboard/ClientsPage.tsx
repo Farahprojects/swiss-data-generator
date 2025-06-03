@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Grid, List } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +15,6 @@ const ClientsPage = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const { toast } = useToast();
 
@@ -48,18 +48,13 @@ const ClientsPage = () => {
     (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const formatLastActivity = (dateString: string) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    } else if (diffInHours < 168) {
-      return `${Math.floor(diffInHours / 24)}d ago`;
-    } else {
-      return `${Math.floor(diffInHours / 168)}w ago`;
-    }
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const ClientCard = ({ client }: { client: Client }) => (
@@ -83,7 +78,7 @@ const ClientsPage = () => {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Created</span>
-              <span className="font-medium">{formatLastActivity(client.created_at)}</span>
+              <span className="font-medium">{formatDate(client.created_at)}</span>
             </div>
             {client.birth_location && (
               <div className="pt-2">
@@ -125,33 +120,15 @@ const ClientsPage = () => {
         </Button>
       </div>
 
-      {/* Search and View Toggle */}
-      <div className="flex justify-between items-center">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search clients by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-          >
-            <Grid className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-          >
-            <List className="w-4 h-4" />
-          </Button>
-        </div>
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          placeholder="Search clients by name or email..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
       {/* Client Count */}
@@ -160,10 +137,7 @@ const ClientsPage = () => {
       </div>
 
       {/* Clients Grid */}
-      <div className={viewMode === 'grid' 
-        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
-        : "space-y-4"
-      }>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredClients.map(client => (
           <ClientCard key={client.id} client={client} />
         ))}
