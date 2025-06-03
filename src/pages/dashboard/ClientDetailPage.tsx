@@ -129,7 +129,7 @@ const ClientDetailPage = () => {
   const getReportTypeLabel = (reportType: string) => {
     const typeMap: { [key: string]: string } = {
       'natal': 'Natal Report',
-      'composite': 'Composite Report',
+      'composite': 'Composite Report', 
       'compatibility': 'Compatibility Report',
       'return': 'Solar/Lunar Return',
       'positions': 'Planetary Positions',
@@ -383,6 +383,9 @@ const ClientDetailPage = () => {
                         <CardTitle className="text-lg">
                           {getDisplayName(report)}
                         </CardTitle>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {getReportTypeLabel(report.request_type)}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-sm text-gray-600">
                             Generated on {formatDateTime(report.created_at)}
