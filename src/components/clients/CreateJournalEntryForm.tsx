@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -48,32 +48,33 @@ const CreateJournalEntryForm = ({
     handleSubmit,
     reset,
     setValue,
-    control,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema),
   });
 
-  // Watch the entry_text field to ensure it updates properly
-  const watchedEntryText = useWatch({
-    control,
-    name: 'entry_text',
-    defaultValue: ''
-  });
-
   // Handle transcript ready callback
   const handleTranscriptReady = (transcript: string) => {
     console.log('Transcript ready callback received:', transcript);
-    const currentText = watchedEntryText || '';
-    const newText = currentText ? `${currentText} ${transcript}` : transcript;
-    console.log('Current text:', currentText);
-    console.log('Setting new text:', newText);
-    setValue('entry_text', newText, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
     
-    // Force a re-render by triggering the control
+    // Use getValues to get the current form value instead of useWatch
+    const currentText = getValues('entry_text') || '';
+    const newText = currentText ? `${currentText} ${transcript}` : transcript;
+    
+    console.log('Current text from form:', currentText);
+    console.log('Setting new text:', newText);
+    
+    setValue('entry_text', newText, { 
+      shouldDirty: true, 
+      shouldTouch: true, 
+      shouldValidate: true 
+    });
+    
+    // Add debug log to verify the value was set
     setTimeout(() => {
-      console.log('Text after setValue:', watchedEntryText);
-    }, 100);
+      console.log('Form value after setValue:', getValues('entry_text'));
+    }, 50);
   };
 
   const { isRecording, isProcessing, audioLevel, toggleRecording } = useSpeechToText(handleTranscriptReady);
@@ -139,8 +140,6 @@ const CreateJournalEntryForm = ({
             <Textarea
               id="entry_text"
               {...register('entry_text')}
-              value={watchedEntryText}
-              onChange={(e) => setValue('entry_text', e.target.value, { shouldDirty: true })}
               placeholder="Write your journal entry here or use the mic button below to speak..."
               rows={8}
             />
