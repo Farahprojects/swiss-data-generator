@@ -47,12 +47,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <SettingsModalProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <NavigationStateProvider>
+        <BrowserRouter>
+          <NavigationStateProvider>
+            <AuthProvider>
+              <SettingsModalProvider>
+                <Toaster />
+                <Sonner />
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<Index />} />
@@ -90,10 +90,10 @@ function App() {
                   {/* Catch all */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </NavigationStateProvider>
-            </BrowserRouter>
-          </SettingsModalProvider>
-        </AuthProvider>
+              </SettingsModalProvider>
+            </AuthProvider>
+          </NavigationStateProvider>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );
