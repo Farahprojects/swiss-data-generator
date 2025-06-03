@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,7 +42,8 @@ const CreateJournalEntryForm = ({
 }: CreateJournalEntryFormProps) => {
   const { toast } = useToast();
   const [processingState, setProcessingState] = useState<'idle' | 'processing' | 'typing'>('idle');
-  const [textToType, setTextToType] = useState('');
+  const [newTranscriptToType, setNewTranscriptToType] = useState('');
+  const [existingText, setExistingText] = useState('');
   const [startTyping, setStartTyping] = useState(false);
   const [showMetadataForm, setShowMetadataForm] = useState(false);
   const [entryText, setEntryText] = useState('');
@@ -69,9 +71,12 @@ const CreateJournalEntryForm = ({
   const handleTranscriptReady = (transcript: string) => {
     console.log('Transcript ready:', transcript);
     const currentText = getValues('entry_text') || '';
-    const newText = currentText ? `${currentText} ${transcript}` : transcript;
     
-    setTextToType(newText);
+    // Store existing text and new transcript separately
+    setExistingText(currentText);
+    const newTranscript = currentText ? ` ${transcript}` : transcript;
+    setNewTranscriptToType(newTranscript);
+    
     setProcessingState('typing');
     animationKeyRef.current++;
     setStartTyping(true);
@@ -79,32 +84,36 @@ const CreateJournalEntryForm = ({
 
   // Type animation configuration
   const { displayText, isTyping, showCursor, stopTyping } = useTypeAnimation(
-    textToType,
+    newTranscriptToType,
     startTyping,
     {
       speed: 50,
       punctuationDelay: 200,
       onComplete: () => {
         console.log('Type animation complete');
-        setValue('entry_text', textToType, { 
+        const finalText = existingText + newTranscriptToType;
+        setValue('entry_text', finalText, { 
           shouldDirty: true, 
           shouldTouch: true, 
           shouldValidate: true 
         });
         setProcessingState('idle');
         setStartTyping(false);
-        setTextToType('');
+        setNewTranscriptToType('');
+        setExistingText('');
       },
       onInterrupt: () => {
         console.log('Type animation interrupted by user');
-        setValue('entry_text', textToType, { 
+        const finalText = existingText + newTranscriptToType;
+        setValue('entry_text', finalText, { 
           shouldDirty: true, 
           shouldTouch: true, 
           shouldValidate: true 
         });
         setProcessingState('idle');
         setStartTyping(false);
-        setTextToType('');
+        setNewTranscriptToType('');
+        setExistingText('');
       }
     }
   );
@@ -135,7 +144,8 @@ const CreateJournalEntryForm = ({
     }
     setProcessingState('idle');
     setStartTyping(false);
-    setTextToType('');
+    setNewTranscriptToType('');
+    setExistingText('');
     setShowMetadataForm(false);
     setEntryText('');
     reset();
@@ -149,6 +159,14 @@ const CreateJournalEntryForm = ({
   const handleEntryCreated = () => {
     handleClose();
     onEntryCreated();
+  };
+
+  // Compute the display value for the textarea
+  const getTextareaDisplayValue = () => {
+    if (processingState === 'typing') {
+      return existingText + displayText;
+    }
+    return getValues('entry_text') || '';
   };
 
   return (
@@ -182,7 +200,7 @@ const CreateJournalEntryForm = ({
                         const newValue = handleTextareaChange(e.target.value);
                         field.onChange(newValue);
                       }}
-                      value={processingState === 'typing' ? displayText : field.value}
+                      value={getTextareaDisplayValue()}
                       disabled={processingState === 'typing'}
                       className={processingState === 'typing' ? 'bg-gray-50' : ''}
                     />
