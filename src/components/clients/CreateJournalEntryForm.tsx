@@ -16,6 +16,7 @@ import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
 import { TypingCursor } from '@/components/ui/TypingCursor';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useTypeAnimation } from '@/hooks/useTypeAnimation';
+import { useToast } from '@/hooks/use-toast';
 import { X, Mic } from 'lucide-react';
 import JournalEntryMetadataForm from './JournalEntryMetadataForm';
 
