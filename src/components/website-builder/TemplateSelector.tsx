@@ -80,97 +80,131 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     }
   ];
 
-  const getTemplatePreview = (template: any) => {
+  const getRealisticPreview = (template: any) => {
+    const colors = template.preview.colors;
+    const layout = template.template_data?.layout;
+
     return (
-      <div className="w-full h-64 rounded-lg border overflow-hidden bg-gray-50 relative group">
-        {/* Hero Section Preview */}
-        <div 
-          className="h-20 flex items-center px-4 relative"
-          style={{ 
-            background: template.template_data?.layout === 'creative' 
-              ? `linear-gradient(135deg, ${template.preview.colors[0]}, ${template.preview.colors[1]})` 
-              : template.preview.colors[0] 
-          }}
-        >
-          <div className="w-24 h-4 bg-white bg-opacity-80 rounded"></div>
-          {template.template_data?.layout === 'professional' && (
-            <div className="ml-auto flex space-x-2">
-              <div className="w-10 h-2 bg-white bg-opacity-60 rounded"></div>
-              <div className="w-10 h-2 bg-white bg-opacity-60 rounded"></div>
-              <div className="w-10 h-2 bg-white bg-opacity-60 rounded"></div>
+      <div className="w-full h-80 rounded-lg border overflow-hidden bg-white relative group shadow-sm">
+        {/* Website Header */}
+        <div className="h-12 bg-white border-b flex items-center px-4 justify-between">
+          <div className="flex items-center space-x-6">
+            <div className="w-6 h-6 rounded" style={{ backgroundColor: colors[0] }}></div>
+            <div className="hidden sm:flex space-x-4">
+              <div className="w-12 h-2 bg-gray-300 rounded"></div>
+              <div className="w-16 h-2 bg-gray-300 rounded"></div>
+              <div className="w-14 h-2 bg-gray-300 rounded"></div>
             </div>
-          )}
+          </div>
+          <div className="w-16 h-6 rounded" style={{ backgroundColor: colors[0] }}></div>
         </div>
 
-        {/* Content Preview */}
-        <div className="p-4 space-y-4 bg-white">
-          {template.template_data?.layout === 'minimal' ? (
-            <div className="text-center space-y-3">
-              <div className="w-20 h-3 bg-gray-800 rounded mx-auto"></div>
-              <div className="w-2 h-6 bg-gray-400 mx-auto"></div>
-              <div className="w-32 h-2 bg-gray-300 rounded mx-auto"></div>
-              <div className="w-16 h-4 bg-gray-200 rounded mx-auto"></div>
-            </div>
-          ) : template.template_data?.layout === 'classic' ? (
-            <div className="text-center space-y-3">
-              <div className="w-6 h-6 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full mx-auto"></div>
-              <div className="w-24 h-3 bg-gray-800 rounded mx-auto"></div>
-              <div className="w-16 h-1 bg-amber-500 mx-auto"></div>
-              <div className="w-36 h-2 bg-gray-300 rounded mx-auto"></div>
-              <div className="w-20 h-4 bg-purple-600 rounded mx-auto"></div>
-            </div>
-          ) : template.template_data?.layout === 'creative' ? (
-            <div className="grid grid-cols-3 gap-2">
-              <div className="h-12 bg-gradient-to-br from-yellow-300 to-orange-400 rounded transform rotate-3"></div>
-              <div className="h-10 bg-gradient-to-br from-purple-300 to-pink-400 rounded transform -rotate-2 mt-1"></div>
-              <div className="h-11 bg-gradient-to-br from-blue-300 to-teal-400 rounded transform rotate-1"></div>
-            </div>
-          ) : template.template_data?.layout === 'professional' ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="w-full h-3 bg-gray-800 rounded mb-2"></div>
-                <div className="w-3/4 h-2 bg-gray-400 rounded mb-3"></div>
-                <div className="w-16 h-4 bg-blue-600 rounded"></div>
-              </div>
-              <div className="bg-blue-50 rounded p-3 grid grid-cols-2 gap-2">
-                <div className="text-center">
-                  <div className="w-full h-3 bg-blue-600 rounded mb-1"></div>
-                  <div className="w-full h-1 bg-blue-300 rounded"></div>
+        {/* Hero Section based on layout */}
+        {layout === 'modern' && (
+          <div className="h-40 relative" style={{ background: `linear-gradient(135deg, ${colors[2]}, ${colors[0]})` }}>
+            <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+            <div className="relative z-10 p-6 text-white">
+              <div className="grid grid-cols-2 gap-6 h-full">
+                <div className="flex flex-col justify-center">
+                  <div className="w-24 h-4 bg-white bg-opacity-90 rounded mb-3"></div>
+                  <div className="w-16 h-2 bg-white bg-opacity-60 rounded mb-4"></div>
+                  <div className="w-12 h-3 bg-white rounded"></div>
                 </div>
-                <div className="text-center">
-                  <div className="w-full h-3 bg-blue-600 rounded mb-1"></div>
-                  <div className="w-full h-1 bg-blue-300 rounded"></div>
+                <div className="relative">
+                  <div className="w-full h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg shadow-lg"></div>
+                  <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full"></div>
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="w-full h-4 bg-gray-800 rounded mb-3"></div>
-                <div className="w-3/4 h-2 bg-gray-400 rounded mb-3"></div>
-                <div className="flex space-x-2">
-                  <div className="w-12 h-4 bg-blue-600 rounded"></div>
-                  <div className="w-12 h-4 bg-gray-300 rounded"></div>
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded h-20"></div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Services Preview */}
-        <div className="px-4 pb-3">
+        {layout === 'classic' && (
+          <div className="h-40 bg-gradient-to-b from-gray-50 to-white">
+            <div className="text-center pt-8 px-6">
+              <div className="w-8 h-8 rounded-full mx-auto mb-4" style={{ background: `linear-gradient(45deg, ${colors[0]}, ${colors[1]})` }}></div>
+              <div className="w-32 h-4 bg-gray-800 rounded mx-auto mb-3"></div>
+              <div className="w-2 h-6 mx-auto mb-4" style={{ backgroundColor: colors[0] }}></div>
+              <div className="w-40 h-2 bg-gray-400 rounded mx-auto mb-4"></div>
+              <div className="w-20 h-6 rounded mx-auto" style={{ backgroundColor: colors[0] }}></div>
+            </div>
+          </div>
+        )}
+
+        {layout === 'minimal' && (
+          <div className="h-40 bg-white flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-28 h-5 bg-gray-900 rounded mx-auto mb-6"></div>
+              <div className="w-1 h-8 bg-gray-900 mx-auto mb-6"></div>
+              <div className="w-36 h-2 bg-gray-400 rounded mx-auto mb-6"></div>
+              <div className="w-16 h-6 border border-gray-900 rounded mx-auto"></div>
+            </div>
+          </div>
+        )}
+
+        {layout === 'creative' && (
+          <div className="h-40 relative overflow-hidden" style={{ background: `linear-gradient(45deg, ${colors[0]}, ${colors[1]})` }}>
+            <div className="absolute inset-0">
+              <div className="absolute top-4 left-4 w-12 h-12 rounded-full" style={{ backgroundColor: colors[2] }} className="opacity-80"></div>
+              <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white opacity-60"></div>
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <div className="text-center text-white">
+                  <div className="w-24 h-5 bg-white bg-opacity-90 rounded mx-auto mb-3"></div>
+                  <div className="w-16 h-2 bg-white bg-opacity-70 rounded mx-auto mb-4"></div>
+                  <div className="w-14 h-4 bg-white rounded mx-auto"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {layout === 'professional' && (
+          <div className="h-40" style={{ backgroundColor: colors[0] }}>
+            <div className="grid grid-cols-3 h-full">
+              <div className="col-span-2 p-6 text-white">
+                <div className="w-32 h-4 bg-white bg-opacity-90 rounded mb-3"></div>
+                <div className="w-24 h-2 bg-white bg-opacity-60 rounded mb-4"></div>
+                <div className="w-16 h-4 bg-white rounded"></div>
+                <div className="mt-6 grid grid-cols-3 gap-2">
+                  <div className="h-8 bg-white bg-opacity-20 rounded flex items-center justify-center">
+                    <div className="w-8 h-1 bg-white rounded"></div>
+                  </div>
+                  <div className="h-8 bg-white bg-opacity-20 rounded flex items-center justify-center">
+                    <div className="w-8 h-1 bg-white rounded"></div>
+                  </div>
+                  <div className="h-8 bg-white bg-opacity-20 rounded flex items-center justify-center">
+                    <div className="w-8 h-1 bg-white rounded"></div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white bg-opacity-10 p-4 flex items-center justify-center">
+                <div className="w-16 h-16 bg-white bg-opacity-30 rounded"></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Content Section */}
+        <div className="p-4 space-y-3 bg-white flex-1">
+          <div className="flex justify-between items-center">
+            <div className="w-20 h-3 bg-gray-800 rounded"></div>
+            <div className="w-12 h-2 bg-gray-300 rounded"></div>
+          </div>
+          
           <div className="grid grid-cols-3 gap-2">
-            {[...Array(3)].map((_, i) => (
-              <div 
-                key={i} 
-                className="h-10 bg-gray-100 rounded flex items-center justify-center"
-                style={{ backgroundColor: `${template.preview.colors[0]}20` }}
-              >
-                <div className="w-6 h-2 rounded" style={{ backgroundColor: template.preview.colors[0] }}></div>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-12 bg-gray-100 rounded"></div>
+                <div className="w-full h-1.5 bg-gray-300 rounded"></div>
+                <div className="w-3/4 h-1 bg-gray-200 rounded"></div>
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="h-8 border-t bg-gray-50 flex items-center justify-center">
+          <div className="w-24 h-1.5 bg-gray-300 rounded"></div>
         </div>
 
         {/* Hover Overlay */}
@@ -220,7 +254,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
               </CardHeader>
               
               <CardContent className="space-y-6">
-                {getTemplatePreview(template)}
+                {getRealisticPreview(template)}
                 
                 <Button 
                   onClick={() => onSelectTemplate(template)}
