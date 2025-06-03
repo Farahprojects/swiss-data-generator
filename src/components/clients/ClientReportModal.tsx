@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { X } from 'lucide-react';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
@@ -215,18 +216,22 @@ const ClientReportModal = ({
                 control={control}
                 name="essenceType"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select essence focus" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {essenceTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ToggleGroup
+                    type="single"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    className="justify-start"
+                  >
+                    {essenceTypes.map((type) => (
+                      <ToggleGroupItem 
+                        key={type.value} 
+                        value={type.value}
+                        className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
+                        {type.label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
                 )}
               />
             </div>
@@ -292,18 +297,22 @@ const ClientReportModal = ({
                 control={control}
                 name="relationshipType"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select relationship type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {relationshipTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ToggleGroup
+                    type="single"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    className="justify-start"
+                  >
+                    {relationshipTypes.map((type) => (
+                      <ToggleGroupItem 
+                        key={type.value} 
+                        value={type.value}
+                        className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                      >
+                        {type.label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
                 )}
               />
             </div>
