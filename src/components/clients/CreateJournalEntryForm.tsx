@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,9 +57,8 @@ const CreateJournalEntryForm = ({
 
   // Handle transcript ready callback
   const handleTranscriptReady = (transcript: string) => {
-    console.log('Transcript ready callback received:', transcript);
+    console.log('🗣 transcript:', transcript);
     
-    // Use getValues to get the current form value
     const currentText = getValues('entry_text') || '';
     const newText = currentText ? `${currentText} ${transcript}` : transcript;
     
@@ -71,10 +71,12 @@ const CreateJournalEntryForm = ({
       shouldValidate: true 
     });
     
-    // Add debug log to verify the value was set
+    // Enhanced debug log
     setTimeout(() => {
-      console.log('Form value after setValue:', getValues('entry_text'));
-      console.log('DOM value:', (document.getElementById('entry_text') as HTMLTextAreaElement)?.value);
+      console.log(
+        'after STT setValue → getValues:', getValues('entry_text'),
+        'DOM:', (document.getElementById('entry_text') as HTMLTextAreaElement)?.value
+      );
     }, 100);
   };
 
@@ -154,6 +156,29 @@ const CreateJournalEntryForm = ({
             {errors.entry_text && (
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
             )}
+            
+            {/* DEBUG HELPER - Manual test button */}
+            <div className="border-2 border-dashed border-yellow-300 bg-yellow-50 p-3 rounded">
+              <p className="text-sm text-yellow-800 mb-2">🔧 DEBUG HELPER (remove later)</p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setValue("entry_text", "[TEST] hello world", {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: false,
+                  });
+                  console.log(
+                    "Manual setValue → getValues:", getValues("entry_text"),
+                    "DOM:", (document.getElementById("entry_text") as HTMLTextAreaElement)?.value
+                  );
+                }}
+              >
+                Force "hello world"
+              </Button>
+            </div>
             
             {/* Mic button and audio level indicator */}
             <div className="flex items-center justify-between">
