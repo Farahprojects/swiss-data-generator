@@ -126,8 +126,7 @@ const ClientDetailPage = () => {
         
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{client.full_name}</h1>
-            <p className="text-gray-600">Client Details & Journal</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Client: {client.full_name}</h1>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setShowEditModal(true)}>
@@ -151,8 +150,8 @@ const ClientDetailPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {client.email && (
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 p-2 bg-blue-100 rounded-lg">
-                  <Mail className="w-4 h-4 text-blue-600" />
+                <div className="flex-shrink-0">
+                  <Mail className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Email</div>
@@ -163,8 +162,8 @@ const ClientDetailPage = () => {
             
             {client.phone && (
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 p-2 bg-green-100 rounded-lg">
-                  <Phone className="w-4 h-4 text-green-600" />
+                <div className="flex-shrink-0">
+                  <Phone className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Phone</div>
@@ -175,8 +174,8 @@ const ClientDetailPage = () => {
             
             {client.birth_date && (
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 p-2 bg-purple-100 rounded-lg">
-                  <Calendar className="w-4 h-4 text-purple-600" />
+                <div className="flex-shrink-0">
+                  <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Birth Date</div>
@@ -187,8 +186,8 @@ const ClientDetailPage = () => {
             
             {client.birth_time && (
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 p-2 bg-orange-100 rounded-lg">
-                  <Clock className="w-4 h-4 text-orange-600" />
+                <div className="flex-shrink-0">
+                  <Clock className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Birth Time</div>
@@ -199,8 +198,8 @@ const ClientDetailPage = () => {
             
             {client.birth_location && (
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 p-2 bg-red-100 rounded-lg">
-                  <MapPin className="w-4 h-4 text-red-600" />
+                <div className="flex-shrink-0">
+                  <MapPin className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <div className="text-sm text-gray-500">Birth Location</div>
