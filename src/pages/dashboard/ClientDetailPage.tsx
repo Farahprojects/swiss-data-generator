@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -303,9 +302,6 @@ const ClientDetailPage = () => {
                         {entry.title && (
                           <CardTitle className="text-lg">{entry.title}</CardTitle>
                         )}
-                        <p className="text-sm text-gray-600">
-                          {formatDateTime(entry.created_at)}
-                        </p>
                       </div>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm">
