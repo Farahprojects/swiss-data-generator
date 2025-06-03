@@ -10,32 +10,19 @@ import {
   SidebarGroupContent,
   useSidebar
 } from "@/components/ui/sidebar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import { 
   LayoutDashboard, 
   Key, 
   Activity, 
   FileText, 
   FileQuestion, 
-  CreditCard,
-  DollarSign,
   FilePlus,
-  User,
-  Code,
-  LifeBuoy,
-  ChevronDown,
   Users
 } from 'lucide-react';
-import { useState } from 'react';
 
 const DashboardSidebar = () => {
   const location = useLocation();
   const { state } = useSidebar();
-  const [isAccountOpen, setIsAccountOpen] = useState(true);
   
   // Always visible menu items
   const mainItems = [
@@ -77,24 +64,6 @@ const DashboardSidebar = () => {
       name: "Activity Logs",
       path: "/dashboard/activity-logs",
       icon: <Activity size={20} />
-    }
-  ];
-
-  const accountItems = [
-    {
-      name: "Billing",
-      path: "/dashboard/billing",
-      icon: <CreditCard size={20} />
-    },
-    {
-      name: "Pricing",
-      path: "/dashboard/pricing",
-      icon: <DollarSign size={20} />
-    },
-    {
-      name: "Support",
-      path: "/dashboard/support",
-      icon: <LifeBuoy size={20} />
     }
   ];
 
@@ -140,31 +109,6 @@ const DashboardSidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* Account Section - Direct collapsible without SidebarGroup wrapper */}
-        <div className="px-2">
-          <Collapsible open={isAccountOpen} onOpenChange={setIsAccountOpen}>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton
-                    className="text-black hover:text-primary flex items-center gap-3 px-4 py-2 w-full data-[state=open]:bg-accent/10"
-                    tooltip={state === "collapsed" ? "Account" : undefined}
-                  >
-                    <User size={20} />
-                    <span>Account</span>
-                    <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[collapsible=icon]:hidden data-[state=open]:rotate-180" />
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-              </SidebarMenuItem>
-            </SidebarMenu>
-            <CollapsibleContent>
-              <SidebarMenu>
-                <MenuItems items={accountItems} />
-              </SidebarMenu>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
       </SidebarContent>
     </Sidebar>
   );
