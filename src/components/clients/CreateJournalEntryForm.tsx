@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,7 @@ const CreateJournalEntryForm = ({
     reset,
     setValue,
     getValues,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema),
@@ -58,7 +59,7 @@ const CreateJournalEntryForm = ({
   const handleTranscriptReady = (transcript: string) => {
     console.log('Transcript ready callback received:', transcript);
     
-    // Use getValues to get the current form value instead of useWatch
+    // Use getValues to get the current form value
     const currentText = getValues('entry_text') || '';
     const newText = currentText ? `${currentText} ${transcript}` : transcript;
     
@@ -74,7 +75,8 @@ const CreateJournalEntryForm = ({
     // Add debug log to verify the value was set
     setTimeout(() => {
       console.log('Form value after setValue:', getValues('entry_text'));
-    }, 50);
+      console.log('DOM value:', document.getElementById('entry_text')?.value);
+    }, 100);
   };
 
   const { isRecording, isProcessing, audioLevel, toggleRecording } = useSpeechToText(handleTranscriptReady);
@@ -137,11 +139,18 @@ const CreateJournalEntryForm = ({
 
           <div className="space-y-2">
             <Label htmlFor="entry_text">Entry Text *</Label>
-            <Textarea
-              id="entry_text"
-              {...register('entry_text')}
-              placeholder="Write your journal entry here or use the mic button below to speak..."
-              rows={8}
+            <Controller
+              control={control}
+              name="entry_text"
+              defaultValue=""
+              render={({ field }) => (
+                <Textarea
+                  {...field}
+                  id="entry_text"
+                  placeholder="Write your journal entry here or use the mic button below to speak..."
+                  rows={8}
+                />
+              )}
             />
             {errors.entry_text && (
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
