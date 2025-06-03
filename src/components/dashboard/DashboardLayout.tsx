@@ -47,18 +47,16 @@ const DashboardLayout = () => {
 
   return (
     <div className="min-h-screen flex flex-col w-full">
-      {/* Fixed header */}
-      <div className="sticky top-0 z-50 w-full">
-        <UnifiedNavigation />
-      </div>
+      {/* Fixed header that doesn't need a container - it's positioned fixed */}
+      <UnifiedNavigation />
       
-      {/* Main dashboard content with sidebar */}
+      {/* Main dashboard content with sidebar - positioned below fixed header */}
       <div className="flex flex-1 w-full">
         <DashboardSidebar />
         
         <SidebarInset className="flex flex-col flex-1">
           {/* Dashboard header with breadcrumbs and trigger */}
-          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b">
+          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b bg-white">
             <SidebarTrigger className="-ml-1" />
             <DashboardBreadcrumb />
           </header>
