@@ -57,30 +57,17 @@ const CreateJournalEntryForm = ({
 
   // Handle transcript ready callback
   const handleTranscriptReady = (transcript: string) => {
-    console.log('🗣 transcript:', transcript);
-    
     const currentText = getValues('entry_text') || '';
     const newText = currentText ? `${currentText} ${transcript}` : transcript;
-    
-    console.log('Current text from form:', currentText);
-    console.log('Setting new text:', newText);
     
     setValue('entry_text', newText, { 
       shouldDirty: true, 
       shouldTouch: true, 
       shouldValidate: true 
     });
-    
-    // Enhanced debug log
-    setTimeout(() => {
-      console.log(
-        'after STT setValue → getValues:', getValues('entry_text'),
-        'DOM:', (document.getElementById('entry_text') as HTMLTextAreaElement)?.value
-      );
-    }, 100);
   };
 
-  const { isRecording, isProcessing, audioLevel, toggleRecording } = useSpeechToText(handleTranscriptReady);
+  const { isRecording, isProcessing, toggleRecording } = useSpeechToText(handleTranscriptReady);
 
   const onSubmit = async (data: JournalEntryFormData) => {
     try {
@@ -157,69 +144,24 @@ const CreateJournalEntryForm = ({
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
             )}
             
-            {/* DEBUG HELPER - Manual test button */}
-            <div className="border-2 border-dashed border-yellow-300 bg-yellow-50 p-3 rounded">
-              <p className="text-sm text-yellow-800 mb-2">🔧 DEBUG HELPER (remove later)</p>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setValue("entry_text", "[TEST] hello world", {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                    shouldValidate: false,
-                  });
-                  console.log(
-                    "Manual setValue → getValues:", getValues("entry_text"),
-                    "DOM:", (document.getElementById("entry_text") as HTMLTextAreaElement)?.value
-                  );
-                }}
-              >
-                Force "hello world"
-              </Button>
-            </div>
-            
-            {/* Mic button and audio level indicator */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1 space-y-2">
-                {isRecording && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-purple-600">
-                      🎤 Recording... Will auto-process after 3 seconds of silence
-                    </p>
-                    {/* Audio level indicator */}
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-purple-600 h-2 rounded-full transition-all duration-150"
-                        style={{ width: `${Math.min(100, audioLevel)}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">Audio level: {Math.round(audioLevel)}%</p>
-                  </div>
-                )}
-                {isProcessing && (
-                  <p className="text-sm text-orange-600">
-                    Processing speech...
-                  </p>
-                )}
-              </div>
+            {/* Simple mic button with glow effect */}
+            <div className="flex justify-end">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={toggleRecording}
                 disabled={isProcessing}
-                className={`flex items-center gap-2 ml-4 transition-colors duration-200 ${
+                className={`flex items-center gap-2 transition-all duration-300 ${
                   isRecording 
-                    ? 'bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200' 
-                    : 'hover:bg-purple-50 hover:border-purple-300'
+                    ? 'bg-red-50 text-red-700 border-red-300 shadow-lg shadow-red-200/50 animate-pulse' 
+                    : 'hover:bg-gray-50'
                 }`}
               >
                 {isRecording ? (
                   <>
                     <MicOff className="w-4 h-4" />
-                    Recording...
+                    Stop
                   </>
                 ) : (
                   <>
