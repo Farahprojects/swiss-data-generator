@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.standard-report]
 verify_jwt = false
+
+[functions.google-speech-to-text]
+verify_jwt = true

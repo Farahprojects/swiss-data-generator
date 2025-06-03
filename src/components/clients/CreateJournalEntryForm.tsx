@@ -17,7 +17,8 @@ import {
 import { CreateJournalEntryData } from '@/types/database';
 import { journalEntriesService } from '@/services/journalEntries';
 import { useToast } from '@/hooks/use-toast';
-import { X } from 'lucide-react';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { X, Mic, MicOff } from 'lucide-react';
 
 const journalEntrySchema = z.object({
   title: z.string().optional(),
@@ -41,10 +42,14 @@ const CreateJournalEntryForm = ({
   onEntryCreated 
 }: CreateJournalEntryFormProps) => {
   const { toast } = useToast();
+  const { isRecording, isProcessing, toggleRecording } = useSpeechToText();
+  
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema),
@@ -79,6 +84,20 @@ const CreateJournalEntryForm = ({
     }
   };
 
+  const handleMicClick = async () => {
+    try {
+      const transcript = await toggleRecording();
+      if (transcript && !isRecording) {
+        // Append to existing text or set new text
+        const currentText = getValues('entry_text') || '';
+        const newText = currentText ? `${currentText} ${transcript}` : transcript;
+        setValue('entry_text', newText);
+      }
+    } catch (error) {
+      console.error('Error with speech recording:', error);
+    }
+  };
+
   const handleClose = () => {
     reset();
     onOpenChange(false);
@@ -107,15 +126,42 @@ const CreateJournalEntryForm = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="entry_text">Entry Text *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="entry_text">Entry Text *</Label>
+              <Button
+                type="button"
+                variant={isRecording ? "destructive" : "outline"}
+                size="sm"
+                onClick={handleMicClick}
+                disabled={isProcessing}
+                className="flex items-center gap-2"
+              >
+                {isRecording ? (
+                  <>
+                    <MicOff className="w-4 h-4" />
+                    Stop Recording
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4" />
+                    {isProcessing ? 'Processing...' : 'Start Recording'}
+                  </>
+                )}
+              </Button>
+            </div>
             <Textarea
               id="entry_text"
               {...register('entry_text')}
-              placeholder="Write your journal entry here..."
+              placeholder="Write your journal entry here or use the mic button to speak..."
               rows={8}
             />
             {errors.entry_text && (
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
+            )}
+            {isRecording && (
+              <p className="text-sm text-blue-600 animate-pulse">
+                🎤 Recording... Click "Stop Recording" when done
+              </p>
             )}
           </div>
 
@@ -135,7 +181,7 @@ const CreateJournalEntryForm = ({
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || isRecording || isProcessing}>
               {isSubmitting ? 'Creating...' : 'Create Entry'}
             </Button>
           </DialogFooter>
