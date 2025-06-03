@@ -11,6 +11,7 @@ import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import EditClientForm from '@/components/clients/EditClientForm';
 import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
+import ClientReportModal from '@/components/clients/ClientReportModal';
 
 const ClientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,7 @@ const ClientDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateJournalModal, setShowCreateJournalModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -295,12 +297,20 @@ const ClientDetailPage = () => {
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Reports</h3>
+            <Button size="sm" onClick={() => setShowReportModal(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Generate Report
+            </Button>
+          </div>
+
           <Card>
             <CardContent className="py-8">
               <div className="text-center">
                 <div className="text-gray-400 text-lg mb-2">No reports generated yet</div>
                 <p className="text-gray-600 mb-4">Generate astrological reports for this client</p>
-                <Button>
+                <Button onClick={() => setShowReportModal(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Generate Report
                 </Button>
@@ -338,6 +348,22 @@ const ClientDetailPage = () => {
           open={showCreateJournalModal}
           onOpenChange={setShowCreateJournalModal}
           onEntryCreated={loadClientData}
+        />
+      )}
+
+      {/* Generate Report Modal */}
+      {client && (
+        <ClientReportModal
+          client={client}
+          open={showReportModal}
+          onOpenChange={setShowReportModal}
+          onReportGenerated={() => {
+            // TODO: Refresh reports list when we implement report storage
+            toast({
+              title: "Success",
+              description: "Report generated successfully!",
+            });
+          }}
         />
       )}
     </div>
