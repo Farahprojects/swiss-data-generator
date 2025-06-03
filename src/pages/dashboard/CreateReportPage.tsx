@@ -5,9 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Calendar, MapPin, Clock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Clock, Loader2, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -46,8 +45,7 @@ const CreateReportPage = () => {
     positionsEndDate: '',
     // Today's date/time fields for body matrix and essence
     todayDate: '',
-    todayTime: '',
-    notes: ''
+    todayTime: ''
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -157,8 +155,7 @@ const CreateReportPage = () => {
       positionsDate: '',
       positionsEndDate: '',
       todayDate: '',
-      todayTime: '',
-      notes: ''
+      todayTime: ''
     });
     setReportResult(null);
   };
@@ -197,19 +194,14 @@ const CreateReportPage = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h3 className="font-semibold mb-2">Report Data</h3>
-              <pre className="text-sm overflow-auto max-h-96 bg-white p-3 rounded border">
-                {JSON.stringify(reportResult.data, null, 2)}
-              </pre>
+            <div className="bg-green-50 rounded-lg p-6 mb-6 text-center">
+              <h3 className="text-lg font-semibold text-green-800 mb-2">Success!</h3>
+              <p className="text-green-700">Your report has been generated successfully and saved to your account.</p>
             </div>
 
             <div className="flex gap-4">
               <Button onClick={resetForm} variant="outline">
                 Create Another Report
-              </Button>
-              <Button onClick={() => window.print()} variant="outline">
-                Print Report
               </Button>
             </div>
           </CardContent>
@@ -573,17 +565,6 @@ const CreateReportPage = () => {
                 </div>
               </div>
             )}
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Any additional information or specific focus areas..."
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                rows={4}
-              />
-            </div>
 
             <div className="pt-4">
               <Button type="submit" className="w-full" disabled={isLoading}>
