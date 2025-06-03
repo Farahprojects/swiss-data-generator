@@ -39,6 +39,9 @@ import PricingPage from "./pages/dashboard/PricingPage";
 import ApiDocs from "./pages/dashboard/ApiDocs";
 import WebsiteBuilder from "./pages/dashboard/WebsiteBuilder";
 
+// Dashboard Layout
+import DashboardLayout from "./components/dashboard/DashboardLayout";
+
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -75,17 +78,19 @@ function App() {
                   <Route path="/activity-logs" element={<AuthGuard><ActivityLogs /></AuthGuard>} />
 
                   {/* Dashboard routes with layout */}
-                  <Route path="/dashboard" element={<AuthGuard><DashboardHome /></AuthGuard>} />
-                  <Route path="/dashboard/clients" element={<AuthGuard><ClientsPage /></AuthGuard>} />
-                  <Route path="/dashboard/clients/:id" element={<AuthGuard><ClientDetailPage /></AuthGuard>} />
-                  <Route path="/dashboard/reports" element={<AuthGuard><ReportsPage /></AuthGuard>} />
-                  <Route path="/dashboard/reports/create" element={<AuthGuard><CreateReportPage /></AuthGuard>} />
-                  <Route path="/dashboard/website-builder" element={<AuthGuard><WebsiteBuilder /></AuthGuard>} />
-                  <Route path="/dashboard/usage" element={<AuthGuard><UsagePage /></AuthGuard>} />
-                  <Route path="/dashboard/api-keys" element={<AuthGuard><ApiKeys /></AuthGuard>} />
-                  <Route path="/dashboard/billing" element={<AuthGuard><BillingPage /></AuthGuard>} />
-                  <Route path="/dashboard/pricing" element={<AuthGuard><PricingPage /></AuthGuard>} />
-                  <Route path="/dashboard/api-docs" element={<AuthGuard><ApiDocs /></AuthGuard>} />
+                  <Route path="/dashboard" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
+                    <Route index element={<DashboardHome />} />
+                    <Route path="clients" element={<ClientsPage />} />
+                    <Route path="clients/:id" element={<ClientDetailPage />} />
+                    <Route path="reports" element={<ReportsPage />} />
+                    <Route path="reports/create" element={<CreateReportPage />} />
+                    <Route path="website-builder" element={<WebsiteBuilder />} />
+                    <Route path="usage" element={<UsagePage />} />
+                    <Route path="api-keys" element={<ApiKeys />} />
+                    <Route path="billing" element={<BillingPage />} />
+                    <Route path="pricing" element={<PricingPage />} />
+                    <Route path="api-docs" element={<ApiDocs />} />
+                  </Route>
 
                   {/* Catch all */}
                   <Route path="*" element={<NotFound />} />
