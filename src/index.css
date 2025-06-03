@@ -94,7 +94,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white text-foreground;
     overflow-x: hidden;
     padding-top: var(--header-height);
   }
@@ -110,12 +110,14 @@
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
+  background-color: white;
 }
 
 .dashboard-content {
   display: flex;
   flex-grow: 1;
   width: 100%;
+  background-color: white;
 }
 
 /* Ensure header is truly fixed and spans full width */
@@ -142,7 +144,8 @@ nav.fixed {
   width: 100%;
   max-width: 100%;
   min-height: calc(100vh - var(--header-height));
-  margin-top: 0; /* Remove any margin that creates white lines */
+  margin-top: 0;
+  background-color: white;
 }
 
 /* Override any conflicting sticky positioning */
@@ -154,9 +157,11 @@ nav.fixed {
 .full-width-container {
   width: 100%;
   max-width: 100%;
+  background-color: white;
 }
 
 .content-container {
   width: 100%;
   height: 100%;
+  background-color: white;
 }
