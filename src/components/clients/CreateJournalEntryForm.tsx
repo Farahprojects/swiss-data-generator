@@ -126,42 +126,52 @@ const CreateJournalEntryForm = ({
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="entry_text">Entry Text *</Label>
-              <Button
-                type="button"
-                variant={isRecording ? "destructive" : "outline"}
-                size="sm"
-                onClick={handleMicClick}
-                disabled={isProcessing}
-                className="flex items-center gap-2"
-              >
-                {isRecording ? (
-                  <>
-                    <MicOff className="w-4 h-4" />
-                    Stop Recording
-                  </>
-                ) : (
-                  <>
-                    <Mic className="w-4 h-4" />
-                    {isProcessing ? 'Processing...' : 'Start Recording'}
-                  </>
-                )}
-              </Button>
+            <Label htmlFor="entry_text">Entry Text *</Label>
+            <div className="relative">
+              <Textarea
+                id="entry_text"
+                {...register('entry_text')}
+                placeholder="Write your journal entry here or use the mic button below to speak..."
+                rows={8}
+                className="pr-4"
+              />
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex-1">
+                  {isRecording && (
+                    <p className="text-sm text-blue-600 animate-pulse">
+                      🎤 Recording... Will auto-process after 3 seconds of silence
+                    </p>
+                  )}
+                  {isProcessing && (
+                    <p className="text-sm text-orange-600">
+                      Processing speech...
+                    </p>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant={isRecording ? "destructive" : "outline"}
+                  size="sm"
+                  onClick={handleMicClick}
+                  disabled={isProcessing}
+                  className="flex items-center gap-2"
+                >
+                  {isRecording ? (
+                    <>
+                      <MicOff className="w-4 h-4" />
+                      Stop
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-4 h-4" />
+                      {isProcessing ? 'Processing...' : 'Record'}
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-            <Textarea
-              id="entry_text"
-              {...register('entry_text')}
-              placeholder="Write your journal entry here or use the mic button to speak..."
-              rows={8}
-            />
             {errors.entry_text && (
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
-            )}
-            {isRecording && (
-              <p className="text-sm text-blue-600 animate-pulse">
-                🎤 Recording... Click "Stop Recording" when done
-              </p>
             )}
           </div>
 
