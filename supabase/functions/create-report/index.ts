@@ -79,7 +79,8 @@ function validateFormData(data: CreateReportRequest): { isValid: boolean; errors
 // Data transformation helper - creates clean payload that matches exact curl format
 function transformToSwissFormat(data: CreateReportRequest): any {
   const basePayload: any = {
-    request: data.reportType  // CRITICAL: Add the request field that Swiss API requires
+    request: data.reportType,  // CRITICAL: Add the request field that Swiss API requires
+    skip_logging: true  // CRITICAL: Tell translator not to log since we handle it here
   };
 
   // Handle different report types
@@ -302,7 +303,7 @@ serve(async (req) => {
       });
     }
 
-    // Transform data to clean Swiss API format (like curl)
+    // Transform data to clean Swiss API format (like curl) with skip_logging flag
     const cleanPayload = transformToSwissFormat(formData);
     console.log('[create-report] Clean payload for Swiss API:', JSON.stringify(cleanPayload, null, 2));
 

@@ -173,6 +173,7 @@ export async function translate(
   const userId        = raw.user_id; // Extract user ID from the payload
   const apiKey        = raw.api_key; // Extract API key for report orchestrator
   const requestId     = crypto.randomUUID().substring(0, 8); // Generate request ID for tracking
+  const skipLogging   = raw.skip_logging === true; // Check if logging should be skipped
 
   try {
     const body = Base.parse(raw);
@@ -181,41 +182,7 @@ export async function translate(
 
     if (!canon) {
       const err = `Unknown request ${body.request}`;
-      await logToSupabase(
-        requestType,
-        raw,
-        400,
-        { error: err },
-        Date.now() - startTime,
-        err,
-        googleGeoUsed,
-        userId,
-      );
-      return { status: 400, text: JSON.stringify({ error: err }) };
-    }
-
-    requestType = canon;
-
-    /*──────────────── REPORTS (tracking-only) ─────────────*/
-    if (canon === "reports") {
-      const msg = "Reports request logged";
-      await logToSupabase(
-        requestType,
-        raw,
-        200,
-        { message: msg },
-        Date.now() - startTime,
-        undefined,
-        googleGeoUsed,
-        userId,
-      );
-      return { status: 200, text: JSON.stringify({ message: msg }) };
-    }
-
-    /*──────────────── SYNC ───────────────────────────────*/
-    if (canon === "sync") {
-      if (!body.person_a || !body.person_b) {
-        const err = "person_a & person_b required";
+      if (!skipLogging) {
         await logToSupabase(
           requestType,
           raw,
@@ -226,6 +193,46 @@ export async function translate(
           googleGeoUsed,
           userId,
         );
+      }
+      return { status: 400, text: JSON.stringify({ error: err }) };
+    }
+
+    requestType = canon;
+
+    /*──────────────── REPORTS (tracking-only) ─────────────*/
+    if (canon === "reports") {
+      const msg = "Reports request logged";
+      if (!skipLogging) {
+        await logToSupabase(
+          requestType,
+          raw,
+          200,
+          { message: msg },
+          Date.now() - startTime,
+          undefined,
+          googleGeoUsed,
+          userId,
+        );
+      }
+      return { status: 200, text: JSON.stringify({ message: msg }) };
+    }
+
+    /*──────────────── SYNC ───────────────────────────────*/
+    if (canon === "sync") {
+      if (!body.person_a || !body.person_b) {
+        const err = "person_a & person_b required";
+        if (!skipLogging) {
+          await logToSupabase(
+            requestType,
+            raw,
+            400,
+            { error: err },
+            Date.now() - startTime,
+            err,
+            googleGeoUsed,
+            userId,
+          );
+        }
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
 
@@ -266,16 +273,18 @@ export async function translate(
       const finalResponseData = reportResult.responseData;
       const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
 
-      await logToSupabase(
-        requestType,
-        raw,
-        r.status,
-        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
-        Date.now() - startTime,
-        finalErrorMessage,
-        googleGeoUsed,
-        userId,
-      );
+      if (!skipLogging) {
+        await logToSupabase(
+          requestType,
+          raw,
+          r.status,
+          (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
+          Date.now() - startTime,
+          finalErrorMessage,
+          googleGeoUsed,
+          userId,
+        );
+      }
 
       return { 
         status: r.status, 
@@ -287,16 +296,18 @@ export async function translate(
     if (canon === "synastry") {
       if (!body.person_a || !body.person_b) {
         const err = "person_a & person_b required";
-        await logToSupabase(
-          requestType,
-          raw,
-          400,
-          { error: err },
-          Date.now() - startTime,
-          err,
-          googleGeoUsed,
-          userId,
-        );
+        if (!skipLogging) {
+          await logToSupabase(
+            requestType,
+            raw,
+            400,
+            { error: err },
+            Date.now() - startTime,
+            err,
+            googleGeoUsed,
+            userId,
+          );
+        }
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
 
@@ -329,16 +340,18 @@ export async function translate(
       const finalResponseData = reportResult.responseData;
       const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
 
-      await logToSupabase(
-        requestType,
-        raw,
-        r.status,
-        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
-        Date.now() - startTime,
-        finalErrorMessage,
-        googleGeoUsed,
-        userId,
-      );
+      if (!skipLogging) {
+        await logToSupabase(
+          requestType,
+          raw,
+          r.status,
+          (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
+          Date.now() - startTime,
+          finalErrorMessage,
+          googleGeoUsed,
+          userId,
+        );
+      }
 
       return { 
         status: r.status, 
@@ -367,16 +380,18 @@ export async function translate(
       const finalResponseData = reportResult.responseData;
       const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
 
-      await logToSupabase(
-        requestType,
-        raw,
-        r.status,
-        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
-        Date.now() - startTime,
-        finalErrorMessage,
-        googleGeoUsed,
-        userId,
-      );
+      if (!skipLogging) {
+        await logToSupabase(
+          requestType,
+          raw,
+          r.status,
+          (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
+          Date.now() - startTime,
+          finalErrorMessage,
+          googleGeoUsed,
+          userId,
+        );
+      }
       return { 
         status: r.status, 
         text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
@@ -406,16 +421,18 @@ export async function translate(
       const finalResponseData = reportResult.responseData;
       const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
 
-      await logToSupabase(
-        requestType,
-        raw,
-        r.status,
-        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
-        Date.now() - startTime,
-        finalErrorMessage,
-        googleGeoUsed,
-        userId,
-      );
+      if (!skipLogging) {
+        await logToSupabase(
+          requestType,
+          raw,
+          r.status,
+          (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
+          Date.now() - startTime,
+          finalErrorMessage,
+          googleGeoUsed,
+          userId,
+        );
+      }
 
       return { 
         status: r.status, 
@@ -457,16 +474,18 @@ export async function translate(
     const finalResponseData = reportResult.responseData;
     const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
 
-    await logToSupabase(
-      requestType,
-      raw,
-      r.status,
-      (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
-      Date.now() - startTime,
-      finalErrorMessage,
-      googleGeoUsed,
-      userId,
-    );
+    if (!skipLogging) {
+      await logToSupabase(
+        requestType,
+        raw,
+        r.status,
+        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
+        Date.now() - startTime,
+        finalErrorMessage,
+        googleGeoUsed,
+        userId,
+      );
+    }
 
     return { 
       status: r.status, 
@@ -474,16 +493,18 @@ export async function translate(
     };
   } catch (err) {
     const msg = (err as Error).message;
-    await logToSupabase(
-      requestType,
-      raw,
-      500,
-      { error: msg },
-      Date.now() - startTime,
-      msg,
-      googleGeoUsed,
-      userId,
-    );
+    if (!skipLogging) {
+      await logToSupabase(
+        requestType,
+        raw,
+        500,
+        { error: msg },
+        Date.now() - startTime,
+        msg,
+        googleGeoUsed,
+        userId,
+      );
+    }
     return { status: 500, text: JSON.stringify({ error: msg }) };
   }
 }
