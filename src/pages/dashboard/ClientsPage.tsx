@@ -9,6 +9,7 @@ import { Plus, Search, Grid, List, Mail, Phone } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import ClientForm from '@/components/clients/ClientForm';
 
 const ClientsPage = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -37,6 +38,10 @@ const ClientsPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClientCreated = () => {
+    loadClients();
   };
 
   const filteredClients = clients.filter(client =>
@@ -197,23 +202,12 @@ const ClientsPage = () => {
         </div>
       )}
 
-      {/* New Client Modal Placeholder */}
-      {showNewClientModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">New Client</h3>
-            <p className="text-gray-600 mb-4">Client creation form will be implemented next</p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowNewClientModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => setShowNewClientModal(false)}>
-                Save Client
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Client Form Modal */}
+      <ClientForm
+        open={showNewClientModal}
+        onOpenChange={setShowNewClientModal}
+        onClientCreated={handleClientCreated}
+      />
     </div>
   );
 };
