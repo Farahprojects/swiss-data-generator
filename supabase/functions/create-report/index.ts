@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -328,7 +329,8 @@ serve(async (req) => {
       request_payload: cleanPayload,
       response_payload: swissResult.data,
       response_status: 200,
-      report_name: reportName
+      report_name: reportName,
+      report_tier: cleanPayload.report
     };
 
     // Add client_id if provided
