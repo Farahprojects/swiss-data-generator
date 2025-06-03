@@ -6,13 +6,12 @@ import { useSettingsModal } from "@/contexts/SettingsModalContext";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { DashboardBreadcrumb } from "@/components/dashboard/DashboardBreadcrumb";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
 
 /**
- * Professional DashboardLayout with proper nested routing
- * Provides consistent navigation, sidebar, breadcrumbs, and error handling
+ * Professional DashboardLayout with burger menu sidebar
+ * Provides consistent navigation with hidden breadcrumbs and burger menu
  */
 const DashboardLayout = () => {
   const { user } = useAuth();
@@ -49,18 +48,12 @@ const DashboardLayout = () => {
       {/* Fixed header that spans full width */}
       <UnifiedNavigation />
       
-      {/* Main dashboard content with sidebar - no extra padding/margin */}
+      {/* Main dashboard content with burger menu sidebar */}
       <div className="flex flex-1 w-full">
         <DashboardSidebar />
         
         <SidebarInset className="flex flex-col flex-1">
-          {/* Dashboard header with breadcrumbs and trigger - reduce height to eliminate white line */}
-          <header className="flex h-12 shrink-0 items-center gap-2 px-4 border-b bg-white">
-            <SidebarTrigger className="-ml-1" />
-            <DashboardBreadcrumb />
-          </header>
-          
-          {/* Main content area with error boundary - removed shadow and rounded corners */}
+          {/* Main content area without header - clean and minimal */}
           <main className="flex-1 p-4 md:p-6">
             <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
               <DashboardErrorBoundary>
