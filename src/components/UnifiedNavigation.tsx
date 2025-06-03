@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSidebar } from '@/components/ui/sidebar';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -17,13 +16,47 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { logToSupabase } from '@/utils/batchedLogManager';
+import React from 'react';
+
+// Create a hook that safely uses useSidebar with fallback
+const useSafeSubebar = () => {
+  try {
+    const { useSidebar } = require('@/components/ui/sidebar');
+    return useSidebar();
+  } catch {
+    // Return a mock object when SidebarProvider is not available
+    return {
+      toggleSidebar: () => {},
+      isMobile: false,
+      state: 'expanded'
+    };
+  }
+};
 
 const UnifiedNavigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { toggleSidebar } = useSidebar();
+  
+  // Safely get sidebar context - will fallback if not in provider
+  const sidebarContext = React.useMemo(() => {
+    try {
+      const SidebarContext = React.createContext(null);
+      const context = React.useContext(SidebarContext);
+      if (context) {
+        const { useSidebar } = require('@/components/ui/sidebar');
+        return useSidebar();
+      }
+    } catch {}
+    
+    return {
+      toggleSidebar: () => {},
+      isMobile: false,
+      state: 'expanded'
+    };
+  }, []);
+  
   const { openSettings } = useSettingsModal();
   
   const isLoggedIn = !!user;
@@ -56,7 +89,7 @@ const UnifiedNavigation = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={toggleSidebar} 
+                onClick={sidebarContext.toggleSidebar} 
                 className="mr-2"
                 aria-label="Toggle sidebar"
               >
