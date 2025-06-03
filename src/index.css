@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -177,7 +176,7 @@ nav.fixed {
 }
 
 [data-sidebar="menu-button"]:hover {
-  background-color: hsl(var(--sidebar-accent)) !important;
+  background-color: #f0edff !important;
   color: hsl(var(--sidebar-accent-foreground)) !important;
 }
 
