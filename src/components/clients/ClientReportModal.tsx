@@ -49,32 +49,25 @@ interface ClientReportModalProps {
 }
 
 const reportTypes = [
-  { value: 'solar-return', label: 'Solar Return' },
-  { value: 'lunar-return', label: 'Lunar Return' },
-  { value: 'essence-professional', label: 'Essence Professional' },
-  { value: 'essence-basic', label: 'Essence Basic' },
-  { value: 'flow-professional', label: 'Flow Professional' },
-  { value: 'flow-basic', label: 'Flow Basic' },
-  { value: 'sync-professional', label: 'Sync Professional' },
-  { value: 'sync-basic', label: 'Sync Basic' },
-  { value: 'transit', label: 'Transit' },
-  { value: 'progression', label: 'Progression' },
+  { value: 'return', label: 'Solar/Lunar Return Report' },
+  { value: 'positions', label: 'Planetary Positions' },
+  { value: 'sync', label: 'Sync Report' },
+  { value: 'essence', label: 'Essence Report' },
+  { value: 'flow', label: 'Flow Report' },
+  { value: 'mindset', label: 'Mindset Report' },
+  { value: 'monthly', label: 'Monthly Report' },
+  { value: 'focus', label: 'Focus Report' },
 ];
 
 const relationshipTypes = [
-  { value: 'romantic', label: 'Romantic' },
-  { value: 'friendship', label: 'Friendship' },
-  { value: 'family', label: 'Family' },
-  { value: 'business', label: 'Business' },
-  { value: 'general', label: 'General' },
+  { value: 'personal', label: 'Personal' },
+  { value: 'professional', label: 'Professional' },
 ];
 
 const essenceTypes = [
-  { value: 'personality', label: 'Personality' },
-  { value: 'career', label: 'Career' },
-  { value: 'relationships', label: 'Relationships' },
-  { value: 'spiritual', label: 'Spiritual' },
-  { value: 'general', label: 'General' },
+  { value: 'personal-identity', label: 'Personal' },
+  { value: 'professional', label: 'Professional' },
+  { value: 'relational', label: 'Relational' },
 ];
 
 const ClientReportModal = ({ 
@@ -99,10 +92,10 @@ const ClientReportModal = ({
 
   const selectedReportType = watch('reportType');
 
-  const requiresSecondPerson = ['sync-professional', 'sync-basic'].includes(selectedReportType);
+  const requiresSecondPerson = selectedReportType === 'sync';
   const requiresRelationshipType = requiresSecondPerson;
-  const requiresEssenceType = ['essence-professional', 'essence-basic'].includes(selectedReportType);
-  const requiresReturnYear = ['solar-return', 'lunar-return'].includes(selectedReportType);
+  const requiresEssenceType = selectedReportType === 'essence';
+  const requiresReturnYear = selectedReportType === 'return';
 
   const onSubmit = async (data: ReportFormData) => {
     try {
