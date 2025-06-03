@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -170,17 +171,17 @@ nav.fixed {
   background-color: white;
 }
 
-/* Sidebar menu button customization for black text */
+/* Sidebar menu button customization for black text and darker purple hover/active */
 [data-sidebar="menu-button"] {
   color: black !important;
 }
 
 [data-sidebar="menu-button"]:hover {
-  background-color: #f0edff !important;
-  color: hsl(var(--sidebar-accent-foreground)) !important;
+  background-color: #6951f3 !important;
+  color: white !important;
 }
 
 [data-sidebar="menu-button"][data-active="true"] {
-  background-color: #f0edff !important;
-  color: hsl(var(--sidebar-accent-foreground)) !important;
+  background-color: #6951f3 !important;
+  color: white !important;
 }
