@@ -10,6 +10,7 @@ import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
 import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import EditClientForm from '@/components/clients/EditClientForm';
 
 const ClientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ const ClientDetailPage = () => {
   const [client, setClient] = useState<Client | null>(null);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -47,6 +49,28 @@ const ClientDetailPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    if (!client) return;
+    
+    if (confirm(`Are you sure you want to delete ${client.full_name}? This action cannot be undone.`)) {
+      try {
+        await clientsService.deleteClient(client.id);
+        toast({
+          title: "Success",
+          description: "Client deleted successfully.",
+        });
+        navigate('/dashboard/clients');
+      } catch (error) {
+        console.error('Error deleting client:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete client. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -103,11 +127,11 @@ const ClientDetailPage = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setShowEditModal(true)}>
             <Edit className="w-4 h-4 mr-2" />
             Edit Client
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleDeleteClient}>
             <Trash2 className="w-4 h-4 mr-2" />
             Delete
           </Button>
@@ -259,6 +283,16 @@ const ClientDetailPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Client Modal */}
+      {client && (
+        <EditClientForm
+          client={client}
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          onClientUpdated={loadClientData}
+        />
+      )}
     </div>
   );
 };

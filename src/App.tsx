@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Index';
@@ -23,6 +22,7 @@ import BillingPage from './pages/dashboard/BillingPage';
 import PricingPage from './pages/dashboard/PricingPage';
 import CreateReportPage from './pages/dashboard/CreateReportPage';
 import ClientsPage from './pages/dashboard/ClientsPage';
+import ClientDetailPage from './pages/dashboard/ClientDetailPage';
 import ClientDashboard from './pages/dashboard/ClientDashboard';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/auth/AuthGuard';
@@ -179,7 +179,7 @@ function App() {
                     <Route path="pricing" element={<PricingPage />} />
                     <Route path="create-report" element={<CreateReportPage />} />
                     <Route path="clients" element={<ClientsPage />} />
-                    <Route path="clients/:clientId" element={<ClientDashboard />} />
+                    <Route path="clients/:id" element={<ClientDetailPage />} />
                   </Route>
                   
                   {/* Activity Logs as standalone route with its own layout */}
