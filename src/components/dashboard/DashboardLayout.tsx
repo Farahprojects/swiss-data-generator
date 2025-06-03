@@ -1,4 +1,3 @@
-
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,9 +60,9 @@ const DashboardLayout = () => {
             <DashboardBreadcrumb />
           </header>
           
-          {/* Main content area with error boundary */}
+          {/* Main content area with error boundary - removed shadow and border */}
           <main className="flex-1 p-4 md:p-6">
-            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
+            <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
               <DashboardErrorBoundary>
                 <Outlet />
               </DashboardErrorBoundary>
