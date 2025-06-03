@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -75,7 +74,7 @@ const CreateJournalEntryForm = ({
     // Add debug log to verify the value was set
     setTimeout(() => {
       console.log('Form value after setValue:', getValues('entry_text'));
-      console.log('DOM value:', document.getElementById('entry_text')?.value);
+      console.log('DOM value:', (document.getElementById('entry_text') as HTMLTextAreaElement)?.value);
     }, 100);
   };
 
