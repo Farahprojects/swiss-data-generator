@@ -147,63 +147,63 @@ const ClientDetailPage = () => {
           <CardTitle>Client Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {client.email && (
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex-shrink-0 mt-0.5">
                   <Mail className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500">Email</div>
-                  <div className="font-medium">{client.email}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-gray-500 mb-1">Email</div>
+                  <div className="font-medium break-words break-all">{client.email}</div>
                 </div>
               </div>
             )}
             
             {client.phone && (
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex-shrink-0 mt-0.5">
                   <Phone className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500">Phone</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-gray-500 mb-1">Phone</div>
                   <div className="font-medium">{client.phone}</div>
                 </div>
               </div>
             )}
             
             {client.birth_date && (
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex-shrink-0 mt-0.5">
                   <Calendar className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500">Birth Date</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-gray-500 mb-1">Birth Date</div>
                   <div className="font-medium">{formatDate(client.birth_date)}</div>
                 </div>
               </div>
             )}
             
             {client.birth_time && (
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex-shrink-0 mt-0.5">
                   <Clock className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500">Birth Time</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-gray-500 mb-1">Birth Time</div>
                   <div className="font-medium">{client.birth_time}</div>
                 </div>
               </div>
             )}
             
             {client.birth_location && (
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex-shrink-0 mt-0.5">
                   <MapPin className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500">Birth Location</div>
-                  <div className="font-medium">{client.birth_location}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-gray-500 mb-1">Birth Location</div>
+                  <div className="font-medium break-words">{client.birth_location}</div>
                 </div>
               </div>
             )}
