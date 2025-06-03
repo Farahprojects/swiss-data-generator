@@ -19,6 +19,9 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { openSettings } = useSettingsModal();
   
+  // Check if we're on the website builder page
+  const isWebsiteBuilder = location.pathname.includes('/website-builder');
+  
   // Handle settings route redirects
   useEffect(() => {
     const isSettingsRoute = location.pathname.includes('/settings');
@@ -44,23 +47,34 @@ const DashboardLayout = () => {
     });
   }, [user, location.pathname]);
 
+  // Website builder gets full width without sidebar
+  if (isWebsiteBuilder) {
+    return (
+      <div className="min-h-screen flex flex-col w-full">
+        <UnifiedNavigation />
+        <main className="flex-1 pt-16">
+          <DashboardErrorBoundary>
+            <Outlet />
+          </DashboardErrorBoundary>
+        </main>
+      </div>
+    );
+  }
+
+  // Regular dashboard layout with sidebar
   return (
     <div className="min-h-screen flex flex-col w-full">
-      {/* Fixed header that spans full width */}
       <UnifiedNavigation />
       
-      {/* Main dashboard content with sidebar - no extra padding/margin */}
-      <div className="flex flex-1 w-full">
+      <div className="flex flex-1 w-full pt-16">
         <DashboardSidebar />
         
         <SidebarInset className="flex flex-col flex-1">
-          {/* Dashboard header with breadcrumbs and trigger - reduce height to eliminate white line */}
           <header className="flex h-12 shrink-0 items-center gap-2 px-4 border-b bg-white">
             <SidebarTrigger className="-ml-1" />
             <DashboardBreadcrumb />
           </header>
           
-          {/* Main content area with error boundary - removed shadow and rounded corners */}
           <main className="flex-1 p-4 md:p-6">
             <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
               <DashboardErrorBoundary>
