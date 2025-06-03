@@ -42,7 +42,6 @@ const CreateJournalEntryForm = ({
   onEntryCreated 
 }: CreateJournalEntryFormProps) => {
   const { toast } = useToast();
-  const { isRecording, isProcessing, toggleRecording } = useSpeechToText();
   
   const {
     register,
@@ -54,6 +53,17 @@ const CreateJournalEntryForm = ({
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema),
   });
+
+  // Handle transcript ready callback
+  const handleTranscriptReady = (transcript: string) => {
+    console.log('Transcript ready callback received:', transcript);
+    const currentText = getValues('entry_text') || '';
+    const newText = currentText ? `${currentText} ${transcript}` : transcript;
+    console.log('Setting new text:', newText);
+    setValue('entry_text', newText);
+  };
+
+  const { isRecording, isProcessing, toggleRecording } = useSpeechToText(handleTranscriptReady);
 
   const onSubmit = async (data: JournalEntryFormData) => {
     try {
@@ -86,13 +96,8 @@ const CreateJournalEntryForm = ({
 
   const handleMicClick = async () => {
     try {
-      const transcript = await toggleRecording();
-      if (transcript && !isRecording) {
-        // Append to existing text or set new text
-        const currentText = getValues('entry_text') || '';
-        const newText = currentText ? `${currentText} ${transcript}` : transcript;
-        setValue('entry_text', newText);
-      }
+      console.log('Mic button clicked, current recording state:', isRecording);
+      await toggleRecording();
     } catch (error) {
       console.error('Error with speech recording:', error);
     }
@@ -127,52 +132,51 @@ const CreateJournalEntryForm = ({
 
           <div className="space-y-2">
             <Label htmlFor="entry_text">Entry Text *</Label>
-            <div className="relative">
-              <Textarea
-                id="entry_text"
-                {...register('entry_text')}
-                placeholder="Write your journal entry here or use the mic button below to speak..."
-                rows={8}
-                className="pr-4"
-              />
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex-1">
-                  {isRecording && (
-                    <p className="text-sm text-blue-600 animate-pulse">
-                      🎤 Recording... Will auto-process after 3 seconds of silence
-                    </p>
-                  )}
-                  {isProcessing && (
-                    <p className="text-sm text-orange-600">
-                      Processing speech...
-                    </p>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant={isRecording ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={handleMicClick}
-                  disabled={isProcessing}
-                  className="flex items-center gap-2"
-                >
-                  {isRecording ? (
-                    <>
-                      <MicOff className="w-4 h-4" />
-                      Stop
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-4 h-4" />
-                      {isProcessing ? 'Processing...' : 'Record'}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+            <Textarea
+              id="entry_text"
+              {...register('entry_text')}
+              placeholder="Write your journal entry here or use the mic button below to speak..."
+              rows={8}
+            />
             {errors.entry_text && (
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
             )}
+            
+            {/* Mic button below textarea */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                {isRecording && (
+                  <p className="text-sm text-blue-600 animate-pulse">
+                    🎤 Recording... Will auto-process after 3 seconds of silence
+                  </p>
+                )}
+                {isProcessing && (
+                  <p className="text-sm text-orange-600">
+                    Processing speech...
+                  </p>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant={isRecording ? "destructive" : "outline"}
+                size="sm"
+                onClick={handleMicClick}
+                disabled={isProcessing}
+                className="flex items-center gap-2"
+              >
+                {isRecording ? (
+                  <>
+                    <MicOff className="w-4 h-4" />
+                    Recording...
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4" />
+                    {isProcessing ? 'Processing...' : 'Record'}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">

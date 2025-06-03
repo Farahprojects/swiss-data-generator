@@ -3,7 +3,7 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-export const useSpeechToText = () => {
+export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -15,13 +15,16 @@ export const useSpeechToText = () => {
 
   const processAudio = useCallback(async () => {
     if (audioChunksRef.current.length === 0) {
+      console.log('No audio chunks to process');
       return '';
     }
 
     try {
       setIsProcessing(true);
+      console.log('Starting audio processing...');
       
       const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      console.log('Audio blob created, size:', audioBlob.size);
       
       // Convert to base64
       const reader = new FileReader();
@@ -29,6 +32,7 @@ export const useSpeechToText = () => {
         reader.onloadend = async () => {
           try {
             const base64Audio = (reader.result as string).split(',')[1];
+            console.log('Audio converted to base64, length:', base64Audio.length);
             
             const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
               body: {
@@ -43,10 +47,16 @@ export const useSpeechToText = () => {
             });
 
             if (error) {
+              console.error('Supabase function error:', error);
               throw error;
             }
 
             const transcript = data?.transcript || '';
+            console.log('Transcript received:', transcript);
+            
+            if (transcript && onTranscriptReady) {
+              onTranscriptReady(transcript);
+            }
             
             toast({
               title: "Speech converted",
@@ -71,9 +81,10 @@ export const useSpeechToText = () => {
       });
     } catch (error) {
       setIsProcessing(false);
+      console.error('Audio processing error:', error);
       throw error;
     }
-  }, [toast]);
+  }, [toast, onTranscriptReady]);
 
   const monitorSilence = useCallback(() => {
     if (!analyserRef.current) return;
@@ -88,12 +99,16 @@ export const useSpeechToText = () => {
       
       // Calculate average volume
       const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-      const silenceThreshold = 5; // Adjust this value as needed
+      const silenceThreshold = 5;
+      
+      console.log('Audio level:', average);
       
       if (average < silenceThreshold) {
         // Start or continue silence timer
         if (!silenceTimerRef.current) {
+          console.log('Starting silence timer...');
           silenceTimerRef.current = setTimeout(async () => {
+            console.log('Silence detected, stopping recording...');
             if (isRecording) {
               await stopRecording();
             }
@@ -102,6 +117,7 @@ export const useSpeechToText = () => {
       } else {
         // Reset silence timer if sound is detected
         if (silenceTimerRef.current) {
+          console.log('Sound detected, resetting silence timer');
           clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = null;
         }
@@ -116,6 +132,7 @@ export const useSpeechToText = () => {
 
   const startRecording = useCallback(async () => {
     try {
+      console.log('Starting recording...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       // Set up audio context for silence detection
@@ -134,6 +151,7 @@ export const useSpeechToText = () => {
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
+          console.log('Audio data chunk received:', event.data.size);
           audioChunksRef.current.push(event.data);
         }
       };
@@ -161,9 +179,12 @@ export const useSpeechToText = () => {
   const stopRecording = useCallback((): Promise<string> => {
     return new Promise(async (resolve, reject) => {
       if (!mediaRecorderRef.current || !isRecording) {
-        reject(new Error('No active recording'));
+        console.log('No active recording to stop');
+        resolve('');
         return;
       }
+
+      console.log('Stopping recording...');
 
       // Clear silence timer
       if (silenceTimerRef.current) {
@@ -179,9 +200,11 @@ export const useSpeechToText = () => {
 
       mediaRecorderRef.current.onstop = async () => {
         try {
+          console.log('Recording stopped, processing audio...');
           const transcript = await processAudio();
           resolve(transcript);
         } catch (error) {
+          console.error('Error in onstop handler:', error);
           reject(error);
         }
       };
