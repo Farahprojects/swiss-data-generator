@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,7 +17,7 @@ import { CreateJournalEntryData } from '@/types/database';
 import { journalEntriesService } from '@/services/journalEntries';
 import { useToast } from '@/hooks/use-toast';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
-import { X, Mic, MicOff } from 'lucide-react';
+import { X, Mic } from 'lucide-react';
 
 const journalEntrySchema = z.object({
   title: z.string().optional(),
@@ -144,32 +143,22 @@ const CreateJournalEntryForm = ({
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
             )}
             
-            {/* Simple mic button with glow effect */}
+            {/* Mic button with indigo styling */}
             <div className="flex justify-end">
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={toggleRecording}
                 disabled={isProcessing}
-                className={`flex items-center gap-2 transition-all duration-300 ${
+                className={`p-2.5 rounded-full transition-colors ${
                   isRecording 
-                    ? 'bg-red-50 text-red-700 border-red-300 shadow-lg shadow-red-200/50 animate-pulse' 
-                    : 'hover:bg-gray-50'
+                    ? 'bg-indigo-100 text-indigo-600' 
+                    : 'text-gray-500 hover:bg-gray-100'
                 }`}
+                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+                title={isRecording ? 'Stop recording' : 'Start voice recording'}
               >
-                {isRecording ? (
-                  <>
-                    <MicOff className="w-4 h-4" />
-                    Stop
-                  </>
-                ) : (
-                  <>
-                    <Mic className="w-4 h-4" />
-                    {isProcessing ? 'Processing...' : 'Record'}
-                  </>
-                )}
-              </Button>
+                <Mic className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
