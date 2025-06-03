@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -173,8 +172,8 @@ function transformToSwissFormat(data: CreateReportRequest): any {
   return basePayload;
 }
 
-// Helper to determine the report name to store - updated for client reports
-function getReportName(data: CreateReportRequest): string {
+// Helper to determine the report name to store - updated to use report_tier for detailed naming
+function getReportName(data: CreateReportRequest, reportTier?: string): string {
   const requiresTwoPeople = ['compatibility', 'sync'].includes(data.reportType);
   const requiresPositionsFields = data.reportType === 'positions';
   const requiresMoonDate = data.reportType === 'moonphases';
@@ -187,11 +186,48 @@ function getReportName(data: CreateReportRequest): string {
     return `Planetary Positions - ${data.positionsLocation}`;
   }
   
+  // Base name construction
+  let baseName: string;
   if (requiresTwoPeople && data.name && data.name2) {
-    return `${data.name} & ${data.name2} - ${data.reportType}`;
+    baseName = `${data.name} & ${data.name2}`;
+  } else if (data.name) {
+    baseName = data.name;
+  } else {
+    baseName = 'Unknown';
   }
   
-  return `${data.name} - ${data.reportType}`;
+  // Format report type with subtype if available
+  let reportTypeFormatted = data.reportType;
+  
+  if (reportTier) {
+    // Extract subtype from report_tier for better formatting
+    if (reportTier.startsWith('essence_')) {
+      const subtype = reportTier.replace('essence_', '');
+      reportTypeFormatted = `essence (${subtype})`;
+    } else if (reportTier.startsWith('sync_')) {
+      const subtype = reportTier.replace('sync_', '');
+      reportTypeFormatted = `sync (${subtype})`;
+    } else if (data.reportType === 'return' && data.returnDate) {
+      const year = new Date(data.returnDate).getFullYear();
+      reportTypeFormatted = `return (${year})`;
+    }
+    // For other report types, use the report_tier as is if it's different from reportType
+    else if (reportTier !== data.reportType) {
+      reportTypeFormatted = reportTier;
+    }
+  } else {
+    // Fallback formatting for reports without report_tier
+    if (data.reportType === 'essence' && data.essenceType) {
+      reportTypeFormatted = `essence (${data.essenceType.replace('-', ' ')})`;
+    } else if (data.reportType === 'sync' && data.relationshipType) {
+      reportTypeFormatted = `sync (${data.relationshipType})`;
+    } else if (data.reportType === 'return' && data.returnDate) {
+      const year = new Date(data.returnDate).getFullYear();
+      reportTypeFormatted = `return (${year})`;
+    }
+  }
+  
+  return `${baseName} - ${reportTypeFormatted}`;
 }
 
 // Swiss API caller helper - sends clean payload with auth in headers like curl
@@ -320,8 +356,8 @@ serve(async (req) => {
       });
     }
 
-    // Log to translator_logs with the report name and client_id
-    const reportName = getReportName(formData);
+    // Log to translator_logs with the report name and client_id using the report_tier
+    const reportName = getReportName(formData, cleanPayload.report);
     console.log('[create-report] Saving report with name:', reportName);
 
     const translatorLogData: any = {
