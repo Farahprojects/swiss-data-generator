@@ -125,7 +125,8 @@ const ReportsPage = () => {
 
   const formatReportTier = (tier: string | null): string => {
     if (!tier) return 'Unknown';
-    return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
+    // Replace underscores with spaces and capitalize properly
+    return tier.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   // Generate a clean report identifier when no name is stored
