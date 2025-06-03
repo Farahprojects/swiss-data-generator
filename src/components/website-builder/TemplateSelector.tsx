@@ -28,7 +28,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       name: "Modern",
       description: "Clean, contemporary design with bold typography and asymmetric layouts",
       template_data: { layout: 'modern', colorScheme: 'modern' },
-      features: ["Split Hero Layout", "Gradient Overlays", "Modern Typography", "Card-based Services"],
       preview: {
         hero: "Split layout with large typography",
         colors: ["#6366F1", "#3B82F6", "#1E40AF"],
@@ -40,7 +39,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       name: "Classic",
       description: "Timeless design with elegant typography and traditional layouts",
       template_data: { layout: 'classic', colorScheme: 'elegant' },
-      features: ["Centered Hero", "Serif Typography", "Golden Ratio", "Elegant Spacing"],
       preview: {
         hero: "Centered with traditional elegance",
         colors: ["#8B5CF6", "#A855F7", "#7C3AED"],
@@ -52,7 +50,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       name: "Minimal",
       description: "Ultra-clean design focusing on simplicity and whitespace",
       template_data: { layout: 'minimal', colorScheme: 'minimal' },
-      features: ["Maximum Whitespace", "Typography Focus", "Clean Lines", "Subtle Interactions"],
       preview: {
         hero: "Minimal with maximum impact",
         colors: ["#10B981", "#059669", "#047857"],
@@ -64,7 +61,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       name: "Creative",
       description: "Bold, artistic design with vibrant colors and dynamic elements",
       template_data: { layout: 'creative', colorScheme: 'vibrant' },
-      features: ["Floating Elements", "Vibrant Gradients", "Asymmetric Grid", "Playful Animations"],
       preview: {
         hero: "Dynamic with artistic flair",
         colors: ["#F59E0B", "#EC4899", "#8B5CF6"],
@@ -76,7 +72,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       name: "Professional",
       description: "Corporate-focused design with structured layouts and business appeal",
       template_data: { layout: 'professional', colorScheme: 'corporate' },
-      features: ["Header Navigation", "Structured Grid", "Business Colors", "Data Focused"],
       preview: {
         hero: "Corporate with credibility focus",
         colors: ["#1E40AF", "#3B82F6", "#60A5FA"],
@@ -87,90 +82,92 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
   const getTemplatePreview = (template: any) => {
     return (
-      <div className="w-full h-48 rounded-lg border overflow-hidden bg-gray-50 relative group">
+      <div className="w-full h-64 rounded-lg border overflow-hidden bg-gray-50 relative group">
         {/* Hero Section Preview */}
         <div 
-          className="h-16 flex items-center px-4 relative"
+          className="h-20 flex items-center px-4 relative"
           style={{ 
             background: template.template_data?.layout === 'creative' 
               ? `linear-gradient(135deg, ${template.preview.colors[0]}, ${template.preview.colors[1]})` 
               : template.preview.colors[0] 
           }}
         >
-          <div className="w-20 h-3 bg-white bg-opacity-80 rounded"></div>
+          <div className="w-24 h-4 bg-white bg-opacity-80 rounded"></div>
           {template.template_data?.layout === 'professional' && (
             <div className="ml-auto flex space-x-2">
-              <div className="w-8 h-2 bg-white bg-opacity-60 rounded"></div>
-              <div className="w-8 h-2 bg-white bg-opacity-60 rounded"></div>
-              <div className="w-8 h-2 bg-white bg-opacity-60 rounded"></div>
+              <div className="w-10 h-2 bg-white bg-opacity-60 rounded"></div>
+              <div className="w-10 h-2 bg-white bg-opacity-60 rounded"></div>
+              <div className="w-10 h-2 bg-white bg-opacity-60 rounded"></div>
             </div>
           )}
         </div>
 
         {/* Content Preview */}
-        <div className="p-4 space-y-3 bg-white">
+        <div className="p-4 space-y-4 bg-white">
           {template.template_data?.layout === 'minimal' ? (
-            <div className="text-center space-y-2">
-              <div className="w-16 h-2 bg-gray-800 rounded mx-auto"></div>
-              <div className="w-1 h-4 bg-gray-400 mx-auto"></div>
-              <div className="w-24 h-1 bg-gray-300 rounded mx-auto"></div>
+            <div className="text-center space-y-3">
+              <div className="w-20 h-3 bg-gray-800 rounded mx-auto"></div>
+              <div className="w-2 h-6 bg-gray-400 mx-auto"></div>
+              <div className="w-32 h-2 bg-gray-300 rounded mx-auto"></div>
+              <div className="w-16 h-4 bg-gray-200 rounded mx-auto"></div>
             </div>
           ) : template.template_data?.layout === 'classic' ? (
-            <div className="text-center space-y-2">
-              <div className="w-4 h-4 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full mx-auto"></div>
-              <div className="w-20 h-2 bg-gray-800 rounded mx-auto"></div>
-              <div className="w-12 h-0.5 bg-amber-500 mx-auto"></div>
-              <div className="w-28 h-1 bg-gray-300 rounded mx-auto"></div>
+            <div className="text-center space-y-3">
+              <div className="w-6 h-6 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full mx-auto"></div>
+              <div className="w-24 h-3 bg-gray-800 rounded mx-auto"></div>
+              <div className="w-16 h-1 bg-amber-500 mx-auto"></div>
+              <div className="w-36 h-2 bg-gray-300 rounded mx-auto"></div>
+              <div className="w-20 h-4 bg-purple-600 rounded mx-auto"></div>
             </div>
           ) : template.template_data?.layout === 'creative' ? (
             <div className="grid grid-cols-3 gap-2">
-              <div className="h-8 bg-gradient-to-br from-yellow-300 to-orange-400 rounded transform rotate-2"></div>
-              <div className="h-6 bg-gradient-to-br from-purple-300 to-pink-400 rounded transform -rotate-1 mt-1"></div>
-              <div className="h-7 bg-gradient-to-br from-blue-300 to-teal-400 rounded transform rotate-1"></div>
+              <div className="h-12 bg-gradient-to-br from-yellow-300 to-orange-400 rounded transform rotate-3"></div>
+              <div className="h-10 bg-gradient-to-br from-purple-300 to-pink-400 rounded transform -rotate-2 mt-1"></div>
+              <div className="h-11 bg-gradient-to-br from-blue-300 to-teal-400 rounded transform rotate-1"></div>
             </div>
           ) : template.template_data?.layout === 'professional' ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="w-full h-2 bg-gray-800 rounded mb-1"></div>
-                <div className="w-3/4 h-1 bg-gray-400 rounded mb-2"></div>
-                <div className="w-12 h-3 bg-blue-600 rounded"></div>
+                <div className="w-full h-3 bg-gray-800 rounded mb-2"></div>
+                <div className="w-3/4 h-2 bg-gray-400 rounded mb-3"></div>
+                <div className="w-16 h-4 bg-blue-600 rounded"></div>
               </div>
-              <div className="bg-blue-50 rounded p-2 grid grid-cols-2 gap-1">
+              <div className="bg-blue-50 rounded p-3 grid grid-cols-2 gap-2">
                 <div className="text-center">
-                  <div className="w-full h-2 bg-blue-600 rounded mb-1"></div>
+                  <div className="w-full h-3 bg-blue-600 rounded mb-1"></div>
                   <div className="w-full h-1 bg-blue-300 rounded"></div>
                 </div>
                 <div className="text-center">
-                  <div className="w-full h-2 bg-blue-600 rounded mb-1"></div>
+                  <div className="w-full h-3 bg-blue-600 rounded mb-1"></div>
                   <div className="w-full h-1 bg-blue-300 rounded"></div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="w-full h-3 bg-gray-800 rounded mb-2"></div>
-                <div className="w-3/4 h-1 bg-gray-400 rounded mb-2"></div>
-                <div className="flex space-x-1">
-                  <div className="w-8 h-3 bg-blue-600 rounded"></div>
-                  <div className="w-8 h-3 bg-gray-300 rounded"></div>
+                <div className="w-full h-4 bg-gray-800 rounded mb-3"></div>
+                <div className="w-3/4 h-2 bg-gray-400 rounded mb-3"></div>
+                <div className="flex space-x-2">
+                  <div className="w-12 h-4 bg-blue-600 rounded"></div>
+                  <div className="w-12 h-4 bg-gray-300 rounded"></div>
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded h-16"></div>
+              <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded h-20"></div>
             </div>
           )}
         </div>
 
         {/* Services Preview */}
-        <div className="px-4 pb-2">
-          <div className="grid grid-cols-3 gap-1">
+        <div className="px-4 pb-3">
+          <div className="grid grid-cols-3 gap-2">
             {[...Array(3)].map((_, i) => (
               <div 
                 key={i} 
-                className="h-8 bg-gray-100 rounded text-xs flex items-center justify-center"
+                className="h-10 bg-gray-100 rounded flex items-center justify-center"
                 style={{ backgroundColor: `${template.preview.colors[0]}20` }}
               >
-                <div className="w-4 h-1 rounded" style={{ backgroundColor: template.preview.colors[0] }}></div>
+                <div className="w-6 h-2 rounded" style={{ backgroundColor: template.preview.colors[0] }}></div>
               </div>
             ))}
           </div>
@@ -222,38 +219,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                 </CardDescription>
               </CardHeader>
               
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {getTemplatePreview(template)}
-                
-                {/* Features */}
-                <div className="space-y-2">
-                  <div className="text-sm font-medium text-gray-700">Key Features:</div>
-                  <div className="flex flex-wrap gap-1">
-                    {template.features.map((feature, i) => (
-                      <Badge 
-                        key={i} 
-                        variant="outline" 
-                        className="text-xs px-2 py-1"
-                      >
-                        {feature}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Color Palette */}
-                <div className="space-y-2">
-                  <div className="text-sm font-medium text-gray-700">Color Palette:</div>
-                  <div className="flex space-x-2">
-                    {template.preview.colors.map((color, i) => (
-                      <div 
-                        key={i}
-                        className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
-                        style={{ backgroundColor: color }}
-                      ></div>
-                    ))}
-                  </div>
-                </div>
                 
                 <Button 
                   onClick={() => onSelectTemplate(template)}
