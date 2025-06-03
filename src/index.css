@@ -111,7 +111,6 @@
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
-  /* Remove padding-top since body now handles it */
 }
 
 .dashboard-content {
@@ -128,13 +127,30 @@ nav.fixed {
   right: 0;
   top: 0;
   height: var(--header-height);
+  z-index: 50;
 }
 
-/* Ensure the sidebar starts properly below the fixed header */
+/* Remove extra margin from sidebar - it should start right below the fixed header */
 [data-sidebar="sidebar"] {
   padding-top: 0;
-  margin-top: var(--header-height);
+  margin-top: 0;
   height: calc(100vh - var(--header-height));
+  top: var(--header-height);
+  position: fixed;
+}
+
+/* Remove extra margin from SidebarInset - let it fill naturally */
+[data-sidebar="inset"] {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0;
+  min-height: calc(100vh - var(--header-height));
+}
+
+/* Ensure main content areas don't have extra padding */
+main {
+  padding-top: 0;
 }
 
 /* Add these utility classes for better responsiveness */
@@ -146,23 +162,4 @@ nav.fixed {
 .content-container {
   width: 100%;
   height: 100%;
-}
-
-/* Fix for SidebarInset to take full width and account for header */
-[data-sidebar="inset"] {
-  flex: 1;
-  width: 100%;
-  max-width: 100%;
-  margin-top: var(--header-height);
-  min-height: calc(100vh - var(--header-height));
-}
-
-/* Ensure main content areas don't overlap with fixed header */
-main {
-  padding-top: 0; /* Remove any extra padding since body handles it */
-}
-
-/* Override any conflicting sticky positioning */
-.sticky {
-  position: fixed !important;
 }

@@ -54,16 +54,16 @@ const DashboardLayout = () => {
       <div className="flex flex-1 w-full">
         <DashboardSidebar />
         
-        <SidebarInset className="flex flex-col flex-1">
-          {/* Dashboard header with breadcrumbs and trigger */}
-          <header className="flex h-16 shrink-0 items-center gap-2 px-4 border-b bg-white">
+        <SidebarInset className="flex flex-col flex-1 ml-0">
+          {/* Dashboard header with breadcrumbs and trigger - reduced height */}
+          <header className="flex h-12 shrink-0 items-center gap-2 px-4 border-b bg-white">
             <SidebarTrigger className="-ml-1" />
             <DashboardBreadcrumb />
           </header>
           
           {/* Main content area with error boundary */}
           <main className="flex-1 p-4 md:p-6">
-            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 w-full min-h-[calc(100vh-200px)]">
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
               <DashboardErrorBoundary>
                 <Outlet />
               </DashboardErrorBoundary>
