@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { logToSupabase } from "@/utils/batchedLogManager";
 
-type SettingsPanelType = "general" | "account" | "notifications" | "delete" | "support";
+type SettingsPanelType = "general" | "account" | "notifications" | "delete" | "support" | "billing";
 
 interface SettingsModalContextProps {
   isOpen: boolean;

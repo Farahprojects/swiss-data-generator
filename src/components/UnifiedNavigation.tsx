@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, Trash2 } from 'lucide-react';
+import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, Trash2, CreditCard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
@@ -43,7 +43,7 @@ const UnifiedNavigation = () => {
       data: { panel }
     });
     
-    openSettings(panel as "general" | "account" | "notifications" | "support");
+    openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
   };
 
   return (
@@ -110,6 +110,10 @@ const UnifiedNavigation = () => {
                   <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
                     <User className="mr-2 h-4 w-4" />
                     Account Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Billing
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
                     <Bell className="mr-2 h-4 w-4" />

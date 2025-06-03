@@ -6,7 +6,7 @@ import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface SettingsButtonProps extends ButtonProps {
-  panel?: "general" | "account" | "notifications" | "delete" | "support";
+  panel?: "general" | "account" | "notifications" | "delete" | "support" | "billing";
   showIcon?: boolean;
   label?: string;
 }

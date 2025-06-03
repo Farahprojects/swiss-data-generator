@@ -3,12 +3,13 @@ import { useEffect } from "react";
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { X, User, Bell, LifeBuoy, Settings as SettingsIcon, LogOut, Trash2 } from "lucide-react";
+import { X, User, Bell, LifeBuoy, Settings as SettingsIcon, LogOut, Trash2, CreditCard } from "lucide-react";
 import { useSettingsModal } from "@/contexts/SettingsModalContext";
 import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
 import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
+import { BillingPanel } from "./panels/BillingPanel";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -47,6 +48,7 @@ export const SettingsModal = () => {
   const tabs = [
     { id: "general", label: "General", icon: SettingsIcon },
     { id: "account", label: "Account", icon: User },
+    { id: "billing", label: "Billing", icon: CreditCard },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "support", label: "Support", icon: LifeBuoy },
   ];
@@ -98,6 +100,7 @@ export const SettingsModal = () => {
                 </div>
               </TabsContent>
               <TabsContent value="account"><AccountSettingsPanel /></TabsContent>
+              <TabsContent value="billing"><BillingPanel /></TabsContent>
               <TabsContent value="notifications"><NotificationsPanel /></TabsContent>
               <TabsContent value="support"><ContactSupportPanel /></TabsContent>
               <TabsContent value="delete"><DeleteAccountPanel /></TabsContent>
