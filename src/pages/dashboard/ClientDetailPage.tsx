@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,6 +105,26 @@ const ClientDetailPage = () => {
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  const formatReportTier = (tier: string | null): string => {
+    if (!tier) return 'Unknown';
+    // Replace underscores with spaces and capitalize properly
+    return tier.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const getDisplayName = (report: ClientReport): string => {
+    if (report.report_name) {
+      // Remove any descriptive text after delimiters like " - ", " | ", etc.
+      const cleanName = report.report_name
+        .split(' - ')[0]  // Remove everything after " - "
+        .split(' | ')[0]  // Remove everything after " | "
+        .split(' (')[0]   // Remove everything after " ("
+        .trim();
+      
+      return cleanName || `#${report.id.substring(0, 8)}`;
+    }
+    return `#${report.id.substring(0, 8)}`;
   };
 
   const getReportTypeLabel = (reportType: string) => {
@@ -361,11 +382,11 @@ const ClientDetailPage = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-lg">
-                          {report.report_name || 'Unnamed Report'}
+                          {getDisplayName(report)}
                         </CardTitle>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline">
-                            {getReportTypeLabel(report.request_type)}
+                            {formatReportTier(report.request_type)}
                           </Badge>
                           <span className="text-sm text-gray-600">
                             Generated on {formatDateTime(report.created_at)}
