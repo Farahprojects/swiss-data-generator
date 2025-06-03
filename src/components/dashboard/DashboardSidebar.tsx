@@ -14,6 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 
 const sidebarItems = [
@@ -37,7 +38,7 @@ export function DashboardSidebar() {
                 return (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link to={item.href}>
+                      <Link to={item.href} className="text-black hover:text-white">
                         <item.icon />
                         <span>{item.name}</span>
                       </Link>
@@ -49,6 +50,12 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <div className="p-2 text-xs text-gray-600 text-center">
+          <div>© {new Date().getFullYear()} Therai Astro.</div>
+          <div>All rights reserved.</div>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

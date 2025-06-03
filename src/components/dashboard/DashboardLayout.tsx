@@ -5,7 +5,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSettingsModal } from "@/contexts/SettingsModalContext";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
-import Footer from "@/components/Footer";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardBreadcrumb } from "@/components/dashboard/DashboardBreadcrumb";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
@@ -71,8 +70,6 @@ const DashboardLayout = () => {
           </main>
         </SidebarInset>
       </div>
-      
-      <Footer />
     </div>
   );
 };
