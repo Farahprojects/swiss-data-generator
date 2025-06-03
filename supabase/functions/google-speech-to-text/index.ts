@@ -24,7 +24,7 @@ serve(async (req) => {
       throw new Error('Google API key not configured');
     }
 
-    // Enhanced configuration for better transcription accuracy
+    // Simplified configuration using only supported fields
     const defaultConfig = {
       encoding: 'WEBM_OPUS',
       sampleRateHertz: 48000,
@@ -32,10 +32,6 @@ serve(async (req) => {
       enableAutomaticPunctuation: true,
       model: 'latest_long',
       useEnhanced: true,
-      enableSpeakerDiarization: false,
-      enableWordTimeOffsets: false,
-      enableWordConfidence: true,
-      profanityFilter: false,
       speechContexts: [{
         phrases: ["therapy", "session", "client", "feelings", "emotions", "breakthrough", "progress"],
         boost: 10
@@ -50,7 +46,7 @@ serve(async (req) => {
       config: defaultConfig
     };
 
-    console.log('Sending request to Google Speech-to-Text API with enhanced config');
+    console.log('Sending request to Google Speech-to-Text API');
     console.log('Config:', JSON.stringify(defaultConfig, null, 2));
     
     const response = await fetch(
@@ -67,7 +63,7 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Google API error:', errorText);
-      throw new Error(`Google Speech-to-Text API error: ${response.status}`);
+      throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();

@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -47,9 +46,6 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
                   enableAutomaticPunctuation: true,
                   model: 'latest_long',
                   useEnhanced: true,
-                  enableSpeakerDiarization: false,
-                  enableWordTimeOffsets: false,
-                  enableWordConfidence: true,
                   speechContexts: [{
                     phrases: ["therapy", "session", "client", "feelings", "emotions", "breakthrough", "progress"],
                     boost: 10
