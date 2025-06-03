@@ -6,11 +6,14 @@ import { useToast } from '@/hooks/use-toast';
 export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const isRecordingRef = useRef(false);
+  const monitoringRef = useRef(false);
   const { toast } = useToast();
 
   const processAudio = useCallback(async () => {
@@ -23,7 +26,7 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
       setIsProcessing(true);
       console.log('Starting audio processing...');
       
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' });
       console.log('Audio blob created, size:', audioBlob.size);
       
       // Convert to base64
@@ -42,6 +45,15 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
                   sampleRateHertz: 48000,
                   languageCode: 'en-US',
                   enableAutomaticPunctuation: true,
+                  model: 'latest_long',
+                  useEnhanced: true,
+                  enableSpeakerDiarization: false,
+                  enableWordTimeOffsets: false,
+                  enableWordConfidence: true,
+                  speechContexts: [{
+                    phrases: ["therapy", "session", "client", "feelings", "emotions", "breakthrough", "progress"],
+                    boost: 10
+                  }]
                 }
               }
             });
@@ -87,39 +99,51 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
   }, [toast, onTranscriptReady]);
 
   const monitorSilence = useCallback(() => {
-    if (!analyserRef.current) return;
-
+    if (!analyserRef.current || monitoringRef.current) return;
+    
+    monitoringRef.current = true;
     const bufferLength = analyserRef.current.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+    let silenceStart: number | null = null;
     
     const checkSilence = () => {
-      if (!isRecording || !analyserRef.current) return;
+      if (!isRecordingRef.current || !analyserRef.current) {
+        monitoringRef.current = false;
+        return;
+      }
       
       analyserRef.current.getByteFrequencyData(dataArray);
       
-      // Calculate average volume
-      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-      const silenceThreshold = 5;
+      // Calculate RMS (Root Mean Square) for better audio level detection
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        sum += dataArray[i] * dataArray[i];
+      }
+      const rms = Math.sqrt(sum / bufferLength);
+      const normalizedLevel = Math.min(100, (rms / 128) * 100);
       
-      console.log('Audio level:', average);
+      setAudioLevel(normalizedLevel);
+      console.log('Audio RMS level:', rms, 'Normalized:', normalizedLevel);
       
-      if (average < silenceThreshold) {
-        // Start or continue silence timer
-        if (!silenceTimerRef.current) {
-          console.log('Starting silence timer...');
-          silenceTimerRef.current = setTimeout(async () => {
-            console.log('Silence detected, stopping recording...');
-            if (isRecording) {
-              await stopRecording();
-            }
-          }, 3000); // 3 seconds of silence
+      const silenceThreshold = 8; // Increased threshold
+      const now = Date.now();
+      
+      if (rms < silenceThreshold) {
+        if (silenceStart === null) {
+          silenceStart = now;
+          console.log('Silence started at:', silenceStart);
+        } else if (now - silenceStart >= 3000) { // 3 seconds of silence
+          console.log('3 seconds of silence detected, stopping recording...');
+          monitoringRef.current = false;
+          if (isRecordingRef.current) {
+            stopRecording();
+          }
+          return;
         }
       } else {
-        // Reset silence timer if sound is detected
-        if (silenceTimerRef.current) {
+        if (silenceStart !== null) {
           console.log('Sound detected, resetting silence timer');
-          clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = null;
+          silenceStart = null;
         }
       }
       
@@ -128,26 +152,40 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
     };
     
     checkSilence();
-  }, [isRecording]);
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
       console.log('Starting recording...');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Enhanced audio constraints for better quality
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+          channelCount: 1
+        } 
+      });
       
       // Set up audio context for silence detection
-      audioContextRef.current = new AudioContext();
+      audioContextRef.current = new AudioContext({ sampleRate: 48000 });
       const source = audioContextRef.current.createMediaStreamSource(stream);
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
+      analyserRef.current.fftSize = 2048;
+      analyserRef.current.smoothingTimeConstant = 0.8;
       source.connect(analyserRef.current);
       
+      // Enhanced MediaRecorder options
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 128000
       });
       
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      isRecordingRef.current = true;
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -156,11 +194,11 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
         }
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(100); // Collect data every 100ms for better quality
       setIsRecording(true);
       
       // Start monitoring for silence
-      monitorSilence();
+      setTimeout(() => monitorSilence(), 100); // Small delay to ensure setup is complete
       
       toast({
         title: "Recording started",
@@ -168,6 +206,7 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
       });
     } catch (error) {
       console.error('Error starting recording:', error);
+      isRecordingRef.current = false;
       toast({
         title: "Error",
         description: "Could not access microphone. Please check permissions.",
@@ -178,13 +217,15 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
 
   const stopRecording = useCallback((): Promise<string> => {
     return new Promise(async (resolve, reject) => {
-      if (!mediaRecorderRef.current || !isRecording) {
+      if (!mediaRecorderRef.current || !isRecordingRef.current) {
         console.log('No active recording to stop');
         resolve('');
         return;
       }
 
       console.log('Stopping recording...');
+      isRecordingRef.current = false;
+      monitoringRef.current = false;
 
       // Clear silence timer
       if (silenceTimerRef.current) {
@@ -215,21 +256,23 @@ export const useSpeechToText = (onTranscriptReady?: (transcript: string) => void
       mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
       
       setIsRecording(false);
+      setAudioLevel(0);
     });
-  }, [isRecording, processAudio]);
+  }, [processAudio]);
 
   const toggleRecording = useCallback(async () => {
-    if (isRecording) {
+    if (isRecordingRef.current) {
       return stopRecording();
     } else {
       await startRecording();
       return Promise.resolve('');
     }
-  }, [isRecording, startRecording, stopRecording]);
+  }, [startRecording, stopRecording]);
 
   return {
     isRecording,
     isProcessing,
+    audioLevel,
     startRecording,
     stopRecording,
     toggleRecording,

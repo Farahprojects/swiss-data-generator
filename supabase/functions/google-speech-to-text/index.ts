@@ -24,12 +24,22 @@ serve(async (req) => {
       throw new Error('Google API key not configured');
     }
 
-    // Default configuration for speech recognition
+    // Enhanced configuration for better transcription accuracy
     const defaultConfig = {
       encoding: 'WEBM_OPUS',
       sampleRateHertz: 48000,
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
+      model: 'latest_long',
+      useEnhanced: true,
+      enableSpeakerDiarization: false,
+      enableWordTimeOffsets: false,
+      enableWordConfidence: true,
+      profanityFilter: false,
+      speechContexts: [{
+        phrases: ["therapy", "session", "client", "feelings", "emotions", "breakthrough", "progress"],
+        boost: 10
+      }],
       ...config
     };
 
@@ -40,7 +50,8 @@ serve(async (req) => {
       config: defaultConfig
     };
 
-    console.log('Sending request to Google Speech-to-Text API');
+    console.log('Sending request to Google Speech-to-Text API with enhanced config');
+    console.log('Config:', JSON.stringify(defaultConfig, null, 2));
     
     const response = await fetch(
       `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
@@ -64,11 +75,15 @@ serve(async (req) => {
 
     // Extract the transcript from the first result
     const transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
+    const confidence = result.results?.[0]?.alternatives?.[0]?.confidence || 0;
+
+    console.log('Extracted transcript:', transcript);
+    console.log('Confidence score:', confidence);
 
     return new Response(
       JSON.stringify({ 
         transcript,
-        confidence: result.results?.[0]?.alternatives?.[0]?.confidence || 0
+        confidence
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -63,7 +62,7 @@ const CreateJournalEntryForm = ({
     setValue('entry_text', newText);
   };
 
-  const { isRecording, isProcessing, toggleRecording } = useSpeechToText(handleTranscriptReady);
+  const { isRecording, isProcessing, audioLevel, toggleRecording } = useSpeechToText(handleTranscriptReady);
 
   const onSubmit = async (data: JournalEntryFormData) => {
     try {
@@ -142,13 +141,23 @@ const CreateJournalEntryForm = ({
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
             )}
             
-            {/* Mic button below textarea */}
+            {/* Mic button and audio level indicator */}
             <div className="flex items-center justify-between">
-              <div className="flex-1">
+              <div className="flex-1 space-y-2">
                 {isRecording && (
-                  <p className="text-sm text-blue-600 animate-pulse">
-                    🎤 Recording... Will auto-process after 3 seconds of silence
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-blue-600 animate-pulse">
+                      🎤 Recording... Will auto-process after 3 seconds of silence
+                    </p>
+                    {/* Audio level indicator */}
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-150"
+                        style={{ width: `${Math.min(100, audioLevel)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">Audio level: {Math.round(audioLevel)}%</p>
+                  </div>
                 )}
                 {isProcessing && (
                   <p className="text-sm text-orange-600">
@@ -160,9 +169,9 @@ const CreateJournalEntryForm = ({
                 type="button"
                 variant={isRecording ? "destructive" : "outline"}
                 size="sm"
-                onClick={handleMicClick}
+                onClick={toggleRecording}
                 disabled={isProcessing}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 ml-4"
               >
                 {isRecording ? (
                   <>
