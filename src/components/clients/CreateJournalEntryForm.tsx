@@ -68,7 +68,12 @@ const CreateJournalEntryForm = ({
     const newText = currentText ? `${currentText} ${transcript}` : transcript;
     console.log('Current text:', currentText);
     console.log('Setting new text:', newText);
-    setValue('entry_text', newText, { shouldDirty: true, shouldTouch: true });
+    setValue('entry_text', newText, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+    
+    // Force a re-render by triggering the control
+    setTimeout(() => {
+      console.log('Text after setValue:', watchedEntryText);
+    }, 100);
   };
 
   const { isRecording, isProcessing, audioLevel, toggleRecording } = useSpeechToText(handleTranscriptReady);
@@ -148,7 +153,7 @@ const CreateJournalEntryForm = ({
               <div className="flex-1 space-y-2">
                 {isRecording && (
                   <div className="space-y-2">
-                    <p className="text-sm text-purple-600 animate-pulse">
+                    <p className="text-sm text-purple-600">
                       🎤 Recording... Will auto-process after 3 seconds of silence
                     </p>
                     {/* Audio level indicator */}
@@ -173,9 +178,9 @@ const CreateJournalEntryForm = ({
                 size="sm"
                 onClick={toggleRecording}
                 disabled={isProcessing}
-                className={`flex items-center gap-2 ml-4 transition-all duration-200 ${
+                className={`flex items-center gap-2 ml-4 transition-colors duration-200 ${
                   isRecording 
-                    ? 'bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-600/50 animate-pulse' 
+                    ? 'bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200' 
                     : 'hover:bg-purple-50 hover:border-purple-300'
                 }`}
               >
