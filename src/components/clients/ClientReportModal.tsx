@@ -50,6 +50,9 @@ interface ClientReportModalProps {
 }
 
 const reportTypes = [
+  { value: 'natal', label: 'Natal Report' },
+  { value: 'composite', label: 'Composite Report' },
+  { value: 'compatibility', label: 'Compatibility Report' },
   { value: 'return', label: 'Solar/Lunar Return Report' },
   { value: 'positions', label: 'Planetary Positions' },
   { value: 'sync', label: 'Sync Report' },
@@ -226,7 +229,7 @@ const ClientReportModal = ({
                       <ToggleGroupItem 
                         key={type.value} 
                         value={type.value}
-                        className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                        className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
                       >
                         {type.label}
                       </ToggleGroupItem>
@@ -307,7 +310,7 @@ const ClientReportModal = ({
                       <ToggleGroupItem 
                         key={type.value} 
                         value={type.value}
-                        className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                        className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
                       >
                         {type.label}
                       </ToggleGroupItem>
@@ -317,16 +320,6 @@ const ClientReportModal = ({
               />
             </div>
           )}
-
-          {/* Optional Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes (Optional)</Label>
-            <Textarea
-              {...register('notes')}
-              placeholder="Any specific focus areas or questions for this report..."
-              rows={3}
-            />
-          </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>
