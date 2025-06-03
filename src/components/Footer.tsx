@@ -1,7 +1,6 @@
 
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import Logo from '@/components/Logo';
 
 const Footer = () => {
   const { user } = useAuth();
@@ -10,11 +9,9 @@ const Footer = () => {
   // Simplified footer for signed-in users
   if (isLoggedIn) {
     return (
-      <footer className="bg-gray-50 text-gray-600 py-6 border-t border-gray-200">
+      <footer className="bg-white text-gray-600 py-6 border-t border-gray-200">
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center justify-center">
-            <Logo className="mb-4" />
-            <div className="border-t border-gray-200 w-full my-4"></div>
             <p className="text-sm text-center">&copy; {new Date().getFullYear()} Therai Astro. All rights reserved.</p>
           </div>
         </div>
@@ -28,7 +25,6 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           <div className="col-span-1 lg:col-span-2">
-            <Logo className="mb-4" />
             <p className="text-sm mb-4 max-w-md">
               The most precise astrological calculations available, powered by Swiss Ephemeris data.
               Trusted by developers, astrologers, and businesses worldwide.
