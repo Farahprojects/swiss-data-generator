@@ -16,8 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Loader } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
-import { EmailVerificationModal } from "@/components/auth/EmailVerificationModal";
-import useEmailChange from "@/hooks/useEmailChange";
+import { LoginVerificationModal } from "@/components/auth/LoginVerificationModal";
 
 type EmailFormValues = {
   newEmail: string;
@@ -25,19 +24,10 @@ type EmailFormValues = {
 
 export const EmailSettingsPanel = () => {
   const { user } = useAuth();
-  const { clearToast } = useToast();
-  
-  // Use the hook for all email change related state and functions
-  const {
-    isUpdatingEmail,
-    pendingEmailVerification,
-    currentEmailAddress,
-    newEmailAddress,
-    changeEmail,
-    resendVerificationEmail,
-    handleVerificationComplete,
-    cancelEmailChange
-  } = useEmailChange();
+  const { toast, clearToast } = useToast();
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [pendingNewEmail, setPendingNewEmail] = useState("");
   
   const emailForm = useForm<EmailFormValues>({
     defaultValues: {
@@ -61,21 +51,122 @@ export const EmailSettingsPanel = () => {
       return;
     }
     
+    setIsUpdatingEmail(true);
     clearToast();
     
-    // Use the hook's changeEmail function with current and new email
-    const result = await changeEmail(user?.email || '', data.newEmail);
-    
-    logToSupabase("Email change attempt result", {
-      level: 'info',
-      page: 'EmailSettingsPanel',
-      data: { success: result.success, hasError: !!result.error }
-    });
-    
-    if (result.success) {
+    try {
+      logToSupabase("Initiating email change", {
+        level: 'info',
+        page: 'EmailSettingsPanel',
+        data: { from: user?.email, to: data.newEmail }
+      });
+      
+      // Update the email using Supabase
+      const { error } = await supabase.auth.updateUser({ 
+        email: data.newEmail 
+      });
+      
+      if (error) {
+        logToSupabase("Email update error", {
+          level: 'error',
+          page: 'EmailSettingsPanel',
+          data: { error: error.message }
+        });
+        
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "There was an error updating your email address."
+        });
+        return;
+      }
+      
+      // Store the pending email and show verification modal
+      setPendingNewEmail(data.newEmail);
+      setShowVerificationModal(true);
+      
+      toast({
+        title: "Email verification sent",
+        description: `We've sent a verification link to ${data.newEmail}. Please check your inbox.`
+      });
+      
       // Reset the form on success
       emailForm.reset();
+      
+    } catch (error: any) {
+      logToSupabase("Error updating email address", {
+        level: 'error',
+        page: 'EmailSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "There was an error updating your email address."
+      });
+    } finally {
+      setIsUpdatingEmail(false);
     }
+  };
+
+  const handleResendVerification = async (emailToVerify: string) => {
+    try {
+      logToSupabase("Resending email verification from settings", {
+        level: 'info',
+        page: 'EmailSettingsPanel',
+        data: { emailToVerify, userId: user?.id }
+      });
+
+      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({
+          user_id: user?.id || ''
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
+      }
+
+      return { error: null };
+    } catch (error: any) {
+      logToSupabase("Exception resending verification from settings", {
+        level: 'error',
+        page: 'EmailSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
+      return { error: error as Error };
+    }
+  };
+
+  const handleVerificationComplete = () => {
+    setShowVerificationModal(false);
+    setPendingNewEmail("");
+    
+    toast({
+      title: "Email verified",
+      description: "Your email address has been successfully verified."
+    });
+  };
+
+  const handleVerificationCancel = () => {
+    setShowVerificationModal(false);
+    setPendingNewEmail("");
+    
+    toast({
+      title: "Email change cancelled",
+      description: "Your email address change has been cancelled."
+    });
   };
 
   return (
@@ -122,14 +213,15 @@ export const EmailSettingsPanel = () => {
         </form>
       </Form>
 
-      {/* Email Verification Modal */}
-      <EmailVerificationModal 
-        isOpen={pendingEmailVerification}
-        currentEmail={currentEmailAddress}
-        newEmail={newEmailAddress}
-        resend={resendVerificationEmail}
+      {/* Login Verification Modal */}
+      <LoginVerificationModal
+        isOpen={showVerificationModal}
+        email={pendingNewEmail}
+        currentEmail={user?.email || ''}
+        pendingEmail={pendingNewEmail}
+        resendVerificationEmail={handleResendVerification}
         onVerified={handleVerificationComplete}
-        onCancel={cancelEmailChange}
+        onCancel={handleVerificationCancel}
       />
     </div>
   );
