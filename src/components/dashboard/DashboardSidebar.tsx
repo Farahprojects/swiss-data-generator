@@ -1,116 +1,56 @@
 
-import { useLocation, Link } from 'react-router-dom';
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
 import { 
-  Sidebar, 
-  SidebarContent, 
-  SidebarMenu, 
-  SidebarMenuItem, 
-  SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupContent,
-  useSidebar
-} from "@/components/ui/sidebar";
-import { 
-  LayoutDashboard, 
-  Key, 
-  Activity, 
+  Home, 
+  Users, 
   FileText, 
-  FileQuestion, 
-  FilePlus,
-  Users
-} from 'lucide-react';
+  Settings, 
+  BarChart3, 
+  Key,
+  CreditCard,
+  Book,
+  Globe
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const sidebarItems = [
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Clients", href: "/dashboard/clients", icon: Users },
+  { name: "Reports", href: "/dashboard/reports", icon: FileText },
+  { name: "Website Builder", href: "/dashboard/website-builder", icon: Globe },
+  { name: "Usage", href: "/dashboard/usage", icon: BarChart3 },
+  { name: "API Keys", href: "/dashboard/api-keys", icon: Key },
+  { name: "Billing", href: "/dashboard/billing", icon: CreditCard },
+  { name: "Documentation", href: "/dashboard/api-docs", icon: Book },
+];
 
 const DashboardSidebar = () => {
   const location = useLocation();
-  const { state } = useSidebar();
-  
-  // Always visible menu items
-  const mainItems = [
-    {
-      name: "Dashboard",
-      path: "/dashboard",
-      icon: <LayoutDashboard size={20} />
-    },
-    {
-      name: "Create Report",
-      path: "/dashboard/create-report",
-      icon: <FilePlus size={20} />
-    },
-    {
-      name: "Reports",
-      path: "/dashboard/reports",
-      icon: <FileText size={20} />
-    },
-    {
-      name: "Clients",
-      path: "/dashboard/clients",
-      icon: <Users size={20} />
-    }
-  ];
-
-  // Developer section items (hidden but kept for future use)
-  const developerItems = [
-    {
-      name: "API Keys",
-      path: "/dashboard/api-keys",
-      icon: <Key size={20} />
-    },
-    {
-      name: "Documentation",
-      path: "/dashboard/docs",
-      icon: <FileQuestion size={20} />
-    },
-    {
-      name: "Activity Logs",
-      path: "/dashboard/activity-logs",
-      icon: <Activity size={20} />
-    }
-  ];
-
-  const isActive = (path: string) => {
-    if (path === "/dashboard") {
-      return location.pathname === "/dashboard";
-    }
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
-  };
-
-  const MenuItems = ({ items }: { items: typeof mainItems }) => (
-    <>
-      {items.map((item) => (
-        <SidebarMenuItem key={item.name}>
-          <SidebarMenuButton 
-            asChild
-            isActive={isActive(item.path)}
-            className="text-black hover:text-primary data-[active=true]:text-primary data-[active=true]:bg-accent/20 flex items-center gap-3 px-4 py-2 w-full"
-            tooltip={state === "collapsed" ? item.name : undefined}
-          >
-            <Link to={item.path}>
-              {item.icon}
-              <span>{item.name}</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
-    </>
-  );
 
   return (
-    <Sidebar 
-      variant="sidebar" 
-      collapsible="icon" 
-      className="border-r border-gray-200"
-    >
-      <SidebarContent className="pt-6">
-        {/* Main always-visible items */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <MenuItems items={mainItems} />
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+    <div className="w-64 bg-white border-r border-gray-200 min-h-screen p-4">
+      <div className="space-y-2">
+        {sidebarItems.map((item) => {
+          const isActive = location.pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              to={item.href}
+              className={cn(
+                "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+                isActive 
+                  ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                  : "text-gray-700 hover:bg-gray-50"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              <span className="font-medium">{item.name}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
   );
 };
 

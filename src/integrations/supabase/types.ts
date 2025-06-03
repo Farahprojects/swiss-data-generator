@@ -170,6 +170,50 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_websites: {
+        Row: {
+          coach_id: string
+          created_at: string
+          customization_data: Json
+          id: string
+          is_published: boolean
+          published_at: string | null
+          site_slug: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          customization_data?: Json
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          site_slug: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          customization_data?: Json
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          site_slug?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_websites_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "website_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_notification_templates: {
         Row: {
           body_html: string
@@ -854,6 +898,39 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      website_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          preview_image_url: string | null
+          template_data: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          preview_image_url?: string | null
+          template_data: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          preview_image_url?: string | null
+          template_data?: Json
+          updated_at?: string
         }
         Relationships: []
       }

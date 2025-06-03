@@ -1,210 +1,101 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
-import Home from './pages/Index';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import DashboardLayout from './components/dashboard/DashboardLayout';
-import DashboardHome from './pages/dashboard/DashboardHome';
-import UpgradePlan from './pages/UpgradePlan';
-import ApiProducts from './pages/ApiProducts';
-import Pricing from './pages/Pricing';
-import Documentation from './pages/Documentation';
-import About from './pages/About';
-import Contact from './pages/Contact';
-import NotFound from './pages/NotFound';
-import PaymentReturn from './pages/PaymentReturn';
-import ActivityLogs from './pages/ActivityLogs';
-import ApiKeys from './pages/dashboard/ApiKeys';
-import ApiDocs from './pages/dashboard/ApiDocs';
-import UsagePage from './pages/dashboard/UsagePage';
-import ReportsPage from './pages/dashboard/ReportsPage';
-import BillingPage from './pages/dashboard/BillingPage';
-import PricingPage from './pages/dashboard/PricingPage';
-import CreateReportPage from './pages/dashboard/CreateReportPage';
-import ClientsPage from './pages/dashboard/ClientsPage';
-import ClientDetailPage from './pages/dashboard/ClientDetailPage';
-import ClientDashboard from './pages/dashboard/ClientDashboard';
-import { AuthProvider } from './contexts/AuthContext';
-import { AuthGuard } from './components/auth/AuthGuard';
-import { Toaster } from "./components/ui/toaster";
-import { SidebarProvider } from './components/ui/sidebar';
-import NavigationStateProvider from './contexts/NavigationStateContext';
-import ConfirmEmail from './pages/auth/ConfirmEmail';
-import Password from './pages/auth/Password';
-import { detectAndCleanPhantomAuth, forceAuthReset } from './utils/authCleanup';
-import { supabase } from './integrations/supabase/client';
-import { logToSupabase } from './utils/batchedLogManager';
-import { useBatchedLogging } from './hooks/use-batched-logging';
-import { checkForAuthRemnants } from './utils/authCleanup';
-import Legal from './pages/Legal';
-import { SettingsModalProvider } from './contexts/SettingsModalContext';
-import { SettingsModal } from './components/settings/SettingsModal';
 
-// Route debugging wrapper with phantom auth detection
-const RouteDebugger = ({ children }: { children: React.ReactNode }) => {
-  const location = useLocation();
-  const { logAction } = useBatchedLogging();
-  
-  // Use a reference to track initial load vs subsequent navigations
-  const isInitialLoad = React.useRef(true);
-  
-  useEffect(() => {
-    // Batch log route change
-    const isAuthRoute = location.pathname.includes('/auth/') || 
-                        location.pathname === '/login' || 
-                        location.pathname === '/signup';
-    
-    // Log route info
-    logAction('Route change detected', 'info', {
-      path: location.pathname,
-      search: location.search,
-      isAuthRoute,
-      isInitialLoad: isInitialLoad.current
-    });
-    
-    // More detailed logging only for auth-related routes or initial load
-    if (isAuthRoute || isInitialLoad.current) {
-      // Add more detailed logging for recovery tokens
-      const searchParams = new URLSearchParams(location.search);
-      const isRecoveryFlow = searchParams.get('type') === 'recovery';
-      
-      if (isRecoveryFlow) {
-        logAction('Password recovery flow detected', 'info');
-      }
-      
-      // Check localStorage items only on important routes
-      const supabaseItems = Object.keys(localStorage).filter(key => 
-        key.includes('supabase') || key.includes('sb-')
-      );
-      
-      logAction('Auth state check', 'debug', { 
-        hasSupabaseItems: supabaseItems.length > 0,
-        itemCount: supabaseItems.length 
-      });
-    }
-    
-    // Check if we're on a public page that needs phantom auth detection
-    const isPublicPage = [
-      '/', 
-      '/login', 
-      '/signup', 
-      '/api-products', 
-      '/pricing', 
-      '/documentation',
-      '/about',
-      '/contact'
-    ].includes(location.pathname) || location.pathname.includes('/auth/password');
-    
-    if (isPublicPage) {
-      logAction('Checking for phantom authentication state', 'debug');
-      detectAndCleanPhantomAuth(supabase).then(wasPhantom => {
-        if (wasPhantom) {
-          logAction('Phantom auth detected and cleaned up', 'warn', {
-            path: location.pathname
-          });
-        } else {
-          logAction('No auth remnants found, clean state', 'debug');
-        }
-      });
-      
-      // If user is stuck in login loop (e.g., coming back to login repeatedly),
-      // perform a stronger reset
-      if (location.pathname === '/login' && document.referrer.includes('/login')) {
-        logAction('Possible login loop detected, performing stronger reset', 'warn');
-        forceAuthReset(supabase);
-      }
-    }
-    
-    // Check for password reset flow - if user lands on the homepage with a recovery token in URL
-    // This helps catch when Supabase redirects to home instead of /auth/password
-    const searchParams = new URLSearchParams(location.search);
-    const hasRecoveryToken = searchParams.get('type') === 'recovery';
-    if ((location.pathname === '/' || location.pathname === '/login') && hasRecoveryToken) {
-      logAction('Detected password recovery flow on wrong page, redirecting to password reset page', 'warn');
-      // Use replace instead of href to avoid creating a history entry
-      window.location.replace('/auth/password' + location.search);
-    }
-    
-    // After first render, set isInitialLoad to false
-    isInitialLoad.current = false;
-  }, [location, logAction]);
-  
-  return <>{children}</>;
-};
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { SettingsModalProvider } from "@/contexts/SettingsModalContext";
+import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
+import AuthGuard from "@/components/auth/AuthGuard";
+import Index from "./pages/Index";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Legal from "./pages/Legal";
+import Pricing from "./pages/Pricing";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Documentation from "./pages/Documentation";
+import Dashboard from "./pages/Dashboard";
+import NotFound from "./pages/NotFound";
+import UserSettings from "./pages/UserSettings";
+import ApiProducts from "./pages/ApiProducts";
+import UpgradePlan from "./pages/UpgradePlan";
+import PaymentReturn from "./pages/PaymentReturn";
+import ActivityLogs from "./pages/ActivityLogs";
+import PasswordReset from "./pages/auth/Password";
+import ConfirmEmail from "./pages/auth/ConfirmEmail";
+
+// Dashboard Pages
+import DashboardHome from "./pages/dashboard/DashboardHome";
+import ClientsPage from "./pages/dashboard/ClientsPage";
+import ClientDetailPage from "./pages/dashboard/ClientDetailPage";
+import ReportsPage from "./pages/dashboard/ReportsPage";
+import CreateReportPage from "./pages/dashboard/CreateReportPage";
+import UsagePage from "./pages/dashboard/UsagePage";
+import ApiKeys from "./pages/dashboard/ApiKeys";
+import BillingPage from "./pages/dashboard/BillingPage";
+import PricingPage from "./pages/dashboard/PricingPage";
+import ApiDocs from "./pages/dashboard/ApiDocs";
+import WebsiteBuilder from "./pages/dashboard/WebsiteBuilder";
+
+import "./App.css";
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <Router>
-      <NavigationStateProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
         <AuthProvider>
-          <SidebarProvider>
-            <SettingsModalProvider>
-              <RouteDebugger>
+          <SettingsModalProvider>
+            <NavigationStateProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
                 <Routes>
                   {/* Public routes */}
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/api-products" element={<ApiProducts />} />
-                  <Route path="/pricing" element={<Pricing />} />
-                  <Route path="/documentation" element={<Documentation />} />
+                  <Route path="/" element={<Index />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
-                  <Route path="/payment-return" element={<PaymentReturn />} />
                   <Route path="/legal" element={<Legal />} />
-                  
-                  {/* Auth routes */}
-                  <Route path="/auth/email" element={<ConfirmEmail />} />
-                  <Route path="/auth/password" element={<Password />} />
-                  <Route path="/auth/reset-password" element={<Navigate to="/auth/password" replace />} />
-                  
-                  {/* Protected dashboard routes with nested structure */}
-                  <Route 
-                    path="/dashboard" 
-                    element={
-                      <AuthGuard>
-                        <DashboardLayout />
-                      </AuthGuard>
-                    }
-                  >
-                    <Route index element={<DashboardHome />} />
-                    {/* Redirect all settings routes to dashboard */}
-                    <Route path="settings" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="upgrade" element={<UpgradePlan />} />
-                    <Route path="api-keys" element={<ApiKeys />} />
-                    <Route path="docs" element={<ApiDocs />} />
-                    <Route path="usage" element={<UsagePage />} />
-                    <Route path="reports" element={<ReportsPage />} />
-                    <Route path="billing" element={<BillingPage />} />
-                    <Route path="pricing" element={<PricingPage />} />
-                    <Route path="create-report" element={<CreateReportPage />} />
-                    <Route path="clients" element={<ClientsPage />} />
-                    <Route path="clients/:id" element={<ClientDetailPage />} />
-                  </Route>
-                  
-                  {/* Activity Logs as standalone route with its own layout */}
-                  <Route 
-                    path="/dashboard/activity-logs" 
-                    element={
-                      <AuthGuard>
-                        <ActivityLogs />
-                      </AuthGuard>
-                    } 
-                  />
-                  
-                  {/* Legacy routes redirect */}
-                  <Route path="/settings" element={<Navigate to="/dashboard" replace />} />
-                  
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/documentation" element={<Documentation />} />
+                  <Route path="/api-products" element={<ApiProducts />} />
+                  <Route path="/upgrade-plan" element={<UpgradePlan />} />
+                  <Route path="/payment-return" element={<PaymentReturn />} />
+                  <Route path="/auth/password" element={<PasswordReset />} />
+                  <Route path="/auth/confirm" element={<ConfirmEmail />} />
+
+                  {/* Protected routes */}
+                  <Route path="/dashboard-old" element={<AuthGuard><Dashboard /></AuthGuard>} />
+                  <Route path="/user-settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
+                  <Route path="/activity-logs" element={<AuthGuard><ActivityLogs /></AuthGuard>} />
+
+                  {/* Dashboard routes with layout */}
+                  <Route path="/dashboard" element={<AuthGuard><DashboardHome /></AuthGuard>} />
+                  <Route path="/dashboard/clients" element={<AuthGuard><ClientsPage /></AuthGuard>} />
+                  <Route path="/dashboard/clients/:id" element={<AuthGuard><ClientDetailPage /></AuthGuard>} />
+                  <Route path="/dashboard/reports" element={<AuthGuard><ReportsPage /></AuthGuard>} />
+                  <Route path="/dashboard/reports/create" element={<AuthGuard><CreateReportPage /></AuthGuard>} />
+                  <Route path="/dashboard/website-builder" element={<AuthGuard><WebsiteBuilder /></AuthGuard>} />
+                  <Route path="/dashboard/usage" element={<AuthGuard><UsagePage /></AuthGuard>} />
+                  <Route path="/dashboard/api-keys" element={<AuthGuard><ApiKeys /></AuthGuard>} />
+                  <Route path="/dashboard/billing" element={<AuthGuard><BillingPage /></AuthGuard>} />
+                  <Route path="/dashboard/pricing" element={<AuthGuard><PricingPage /></AuthGuard>} />
+                  <Route path="/dashboard/api-docs" element={<AuthGuard><ApiDocs /></AuthGuard>} />
+
+                  {/* Catch all */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <SettingsModal />
-              </RouteDebugger>
-            </SettingsModalProvider>
-          </SidebarProvider>
+              </BrowserRouter>
+            </NavigationStateProvider>
+          </SettingsModalProvider>
         </AuthProvider>
-        <Toaster />
-      </NavigationStateProvider>
-    </Router>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 
