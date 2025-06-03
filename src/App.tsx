@@ -1,13 +1,13 @@
 
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SettingsModalProvider } from "@/contexts/SettingsModalContext";
-import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
-import AuthGuard from "@/components/auth/AuthGuard";
+import NavigationStateProvider from "@/contexts/NavigationStateContext";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
