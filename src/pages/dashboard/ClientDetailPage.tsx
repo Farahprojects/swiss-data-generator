@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +10,7 @@ import { journalEntriesService } from '@/services/journalEntries';
 import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import EditClientForm from '@/components/clients/EditClientForm';
+import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
 
 const ClientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +21,7 @@ const ClientDetailPage = () => {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateJournalModal, setShowCreateJournalModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -233,7 +234,7 @@ const ClientDetailPage = () => {
         <TabsContent value="journal" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Journal Entries</h3>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setShowCreateJournalModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
               New Entry
             </Button>
@@ -245,7 +246,7 @@ const ClientDetailPage = () => {
                 <div className="text-center">
                   <div className="text-gray-400 text-lg mb-2">No journal entries yet</div>
                   <p className="text-gray-600 mb-4">Start documenting your sessions and insights</p>
-                  <Button>
+                  <Button onClick={() => setShowCreateJournalModal(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Create First Entry
                   </Button>
@@ -328,6 +329,16 @@ const ClientDetailPage = () => {
           open={showEditModal}
           onOpenChange={setShowEditModal}
           onClientUpdated={loadClientData}
+        />
+      )}
+
+      {/* Create Journal Entry Modal */}
+      {client && (
+        <CreateJournalEntryForm
+          clientId={client.id}
+          open={showCreateJournalModal}
+          onOpenChange={setShowCreateJournalModal}
+          onEntryCreated={loadClientData}
         />
       )}
     </div>
