@@ -30,7 +30,7 @@ export function DashboardSidebar() {
   const location = useLocation();
 
   return (
-    <Sidebar variant="sidebar" collapsible="offcanvas">
+    <Sidebar variant="inset">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
