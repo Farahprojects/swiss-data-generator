@@ -47,6 +47,10 @@ export type Database = {
           id: string
           is_active: boolean | null
           pending_email_change: boolean
+          slug_coach: string | null
+          slug_life: string | null
+          slug_store: string | null
+          slug_win: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -57,6 +61,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           pending_email_change?: boolean
+          slug_coach?: string | null
+          slug_life?: string | null
+          slug_store?: string | null
+          slug_win?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -67,6 +75,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           pending_email_change?: boolean
+          slug_coach?: string | null
+          slug_life?: string | null
+          slug_store?: string | null
+          slug_win?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -211,6 +223,67 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "website_templates"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_messages: {
+        Row: {
+          body: string | null
+          client_id: string | null
+          created_at: string | null
+          direction: string
+          from_address: string
+          id: string
+          sent_via: string | null
+          subject: string | null
+          to_address: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          direction: string
+          from_address: string
+          id?: string
+          sent_via?: string | null
+          subject?: string | null
+          to_address: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          direction?: string
+          from_address?: string
+          id?: string
+          sent_via?: string | null
+          subject?: string | null
+          to_address?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "email_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_api_key_balance"
+            referencedColumns: ["user_id"]
           },
         ]
       }

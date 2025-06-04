@@ -145,7 +145,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         {layout === 'creative' && (
           <div className="h-40 relative overflow-hidden" style={{ background: `linear-gradient(45deg, ${colors[0]}, ${colors[1]})` }}>
             <div className="absolute inset-0">
-              <div className="absolute top-4 left-4 w-12 h-12 rounded-full" style={{ backgroundColor: colors[2] }} className="opacity-80"></div>
+              <div className="absolute top-4 left-4 w-12 h-12 rounded-full opacity-80" style={{ backgroundColor: colors[2] }}></div>
               <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white opacity-60"></div>
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 <div className="text-center text-white">
