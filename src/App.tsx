@@ -33,6 +33,8 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 const DashboardHome = lazy(() => import("./pages/dashboard/DashboardHome"));
 const ClientsPage = lazy(() => import("./pages/dashboard/ClientsPage"));
 const ClientDetailPage = lazy(() => import("./pages/dashboard/ClientDetailPage"));
+const MessagesPage = lazy(() => import("./pages/dashboard/MessagesPage"));
+const MessageDetailPage = lazy(() => import("./pages/dashboard/MessageDetailPage"));
 const ReportsPage = lazy(() => import("./pages/dashboard/ReportsPage"));
 const CreateReportPage = lazy(() => import("./pages/dashboard/CreateReportPage"));
 const UsagePage = lazy(() => import("./pages/dashboard/UsagePage"));
@@ -101,6 +103,16 @@ function App() {
                     <Route path="clients/:id" element={
                       <Suspense fallback={<div>Loading...</div>}>
                         <ClientDetailPage />
+                      </Suspense>
+                    } />
+                    <Route path="messages" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <MessagesPage />
+                      </Suspense>
+                    } />
+                    <Route path="messages/:id" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <MessageDetailPage />
                       </Suspense>
                     } />
                     <Route path="reports" element={
