@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -47,7 +46,14 @@ const MessageDetailPage = () => {
         .single();
 
       if (error) throw error;
-      setMessage(data);
+      
+      // Type assertion for direction field
+      const messageData = {
+        ...data,
+        direction: data.direction as 'incoming' | 'outgoing'
+      };
+      
+      setMessage(messageData);
     } catch (error) {
       console.error('Error loading message:', error);
       toast({

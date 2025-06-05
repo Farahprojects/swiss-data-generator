@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -44,7 +43,14 @@ const MessagesPage = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      // Type assertion for direction field in the array
+      const messagesData = (data || []).map(message => ({
+        ...message,
+        direction: message.direction as 'incoming' | 'outgoing'
+      }));
+      
+      setMessages(messagesData);
     } catch (error) {
       console.error('Error loading messages:', error);
       toast({
