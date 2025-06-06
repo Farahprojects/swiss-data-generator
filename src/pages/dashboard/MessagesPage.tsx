@@ -121,7 +121,7 @@ const MessagesPage = () => {
     }
   };
 
-  const handleSelectMessage = (messageId: string, checked: boolean) => {
+  const handleSelectMessageCheckbox = (messageId: string, checked: boolean) => {
     setSelectedMessages(prev => {
       const newSet = new Set(prev);
       if (checked) {
@@ -238,7 +238,7 @@ const MessagesPage = () => {
           selectedMessages={selectedMessages}
           selectedMessage={selectedMessage}
           onSelectMessage={handleSelectMessage}
-          onSelectMessageCheckbox={handleSelectMessage}
+          onSelectMessageCheckbox={handleSelectMessageCheckbox}
           onSelectAll={handleSelectAll}
         />
 

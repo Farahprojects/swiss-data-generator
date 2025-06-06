@@ -83,9 +83,6 @@ export const MessageList = ({
         <div className="flex items-center gap-3">
           <Checkbox
             checked={allSelected}
-            ref={(el) => {
-              if (el) el.indeterminate = someSelected && !allSelected;
-            }}
             onCheckedChange={onSelectAll}
           />
           <span className="text-sm font-medium text-gray-700">
