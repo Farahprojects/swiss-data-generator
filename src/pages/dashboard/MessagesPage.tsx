@@ -1,13 +1,29 @@
+
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Mail, Send, ArrowUp, ArrowDown } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { 
+  Plus, 
+  Search, 
+  Mail, 
+  MailOpen, 
+  Archive, 
+  Trash2, 
+  Reply, 
+  Forward, 
+  ArrowLeft,
+  Paperclip,
+  Star,
+  StarOff
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { MessageList } from '@/components/messages/MessageList';
+import { MessageDetail } from '@/components/messages/MessageDetail';
+import { ComposeModal } from '@/components/messages/ComposeModal';
 
 interface EmailMessage {
   id: string;
@@ -19,13 +35,18 @@ interface EmailMessage {
   created_at: string;
   client_id?: string;
   sent_via: string;
+  read?: boolean;
+  starred?: boolean;
 }
 
 const MessagesPage = () => {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
+  const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(new Set());
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+  const [showCompose, setShowCompose] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'inbox' | 'sent' | 'archived'>('all');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -44,10 +65,11 @@ const MessagesPage = () => {
 
       if (error) throw error;
       
-      // Type assertion for direction field in the array
       const messagesData = (data || []).map(message => ({
         ...message,
-        direction: message.direction as 'incoming' | 'outgoing'
+        direction: message.direction as 'incoming' | 'outgoing',
+        read: Math.random() > 0.3, // Temporary mock data for read status
+        starred: Math.random() > 0.8 // Temporary mock data for starred
       }));
       
       setMessages(messagesData);
@@ -63,110 +85,71 @@ const MessagesPage = () => {
     }
   };
 
-  const handleDeleteMessage = (messageId: string) => {
-    setDeletedMessageIds(prev => new Set(prev).add(messageId));
-    toast({
-      title: "Message deleted",
-      description: "Message has been removed from view.",
-    });
-  };
-
-  const filteredMessages = messages
-    .filter(message => !deletedMessageIds.has(message.id))
-    .filter(message =>
-      message.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredMessages = messages.filter(message => {
+    const matchesSearch = message.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       message.from_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       message.to_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      message.body?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+      message.body?.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const matchesFilter = (() => {
+      switch (filter) {
+        case 'inbox': return message.direction === 'incoming';
+        case 'sent': return message.direction === 'outgoing';
+        case 'archived': return false; // We'll implement this later
+        default: return true;
+      }
+    })();
 
-    if (days === 0) {
-      return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } else if (days === 1) {
-      return 'Yesterday';
-    } else if (days < 7) {
-      return date.toLocaleDateString('en-US', { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      });
+    return matchesSearch && matchesFilter;
+  });
+
+  const handleSelectMessage = (message: EmailMessage) => {
+    setSelectedMessage(message);
+    // Mark as read
+    if (!message.read) {
+      setMessages(prev => prev.map(m => 
+        m.id === message.id ? { ...m, read: true } : m
+      ));
     }
   };
 
-  const truncateText = (text: string, maxLength: number = 120) => {
-    if (!text) return '';
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedMessages(new Set(filteredMessages.map(m => m.id)));
+    } else {
+      setSelectedMessages(new Set());
+    }
   };
 
-  const MessageCard = ({ message }: { message: EmailMessage }) => (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer group">
-      <Link to={`/dashboard/messages/${message.id}`}>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3 flex-1">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center text-white">
-                {message.direction === 'incoming' ? (
-                  <ArrowDown className="w-5 h-5" />
-                ) : (
-                  <ArrowUp className="w-5 h-5" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-1">
-                  <CardTitle className="text-base font-semibold truncate">
-                    {message.direction === 'incoming' ? message.from_address : message.to_address}
-                  </CardTitle>
-                  <Badge variant={message.direction === 'incoming' ? 'default' : 'secondary'} className="text-xs">
-                    {message.direction === 'incoming' ? 'Received' : 'Sent'}
-                  </Badge>
-                </div>
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {message.subject || 'No Subject'}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col items-end space-y-1">
-              <span className="text-xs text-gray-500">{formatDate(message.created_at)}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleDeleteMessage(message.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-sm text-gray-600 leading-relaxed">
-            {truncateText(message.body)}
-          </p>
-          {message.sent_via && message.sent_via !== 'email' && (
-            <div className="mt-2">
-              <Badge variant="outline" className="text-xs">
-                via {message.sent_via}
-              </Badge>
-            </div>
-          )}
-        </CardContent>
-      </Link>
-    </Card>
-  );
+  const handleSelectMessage = (messageId: string, checked: boolean) => {
+    setSelectedMessages(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(messageId);
+      } else {
+        newSet.delete(messageId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBulkArchive = () => {
+    toast({
+      title: "Messages archived",
+      description: `${selectedMessages.size} messages archived.`,
+    });
+    setSelectedMessages(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    toast({
+      title: "Messages deleted",
+      description: `${selectedMessages.size} messages deleted.`,
+    });
+    setSelectedMessages(new Set());
+  };
+
+  const unreadCount = messages.filter(m => !m.read && m.direction === 'incoming').length;
 
   if (loading) {
     return (
@@ -179,56 +162,127 @@ const MessagesPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-          <p className="text-gray-600">Manage your email communications and client correspondence</p>
+      <div className="border-b bg-white px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+            <p className="text-gray-600">
+              {unreadCount > 0 && `${unreadCount} unread • `}
+              {filteredMessages.length} total messages
+            </p>
+          </div>
+          <Button onClick={() => setShowCompose(true)} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Compose
+          </Button>
         </div>
-        <Button className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          New Message
-        </Button>
+
+        {/* Search and Filters */}
+        <div className="flex items-center gap-4 mt-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search messages..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            {['all', 'inbox', 'sent'].map((filterOption) => (
+              <Button
+                key={filterOption}
+                variant={filter === filterOption ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter(filterOption as any)}
+                className="capitalize"
+              >
+                {filterOption === 'inbox' && <Mail className="w-4 h-4 mr-1" />}
+                {filterOption}
+                {filterOption === 'inbox' && unreadCount > 0 && (
+                  <Badge variant="destructive" className="ml-2 px-1 py-0 text-xs">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Bulk Actions */}
+        {selectedMessages.size > 0 && (
+          <div className="flex items-center gap-2 mt-3 p-2 bg-blue-50 rounded-md">
+            <span className="text-sm text-blue-700">
+              {selectedMessages.size} selected
+            </span>
+            <Button size="sm" variant="outline" onClick={handleBulkArchive}>
+              <Archive className="w-4 h-4 mr-1" />
+              Archive
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleBulkDelete}>
+              <Trash2 className="w-4 h-4 mr-1" />
+              Delete
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-        <Input
-          placeholder="Search messages by subject, sender, or content..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+      {/* Main Content */}
+      <div className="flex-1 flex">
+        {/* Message List */}
+        <MessageList
+          messages={filteredMessages}
+          selectedMessages={selectedMessages}
+          selectedMessage={selectedMessage}
+          onSelectMessage={handleSelectMessage}
+          onSelectMessageCheckbox={handleSelectMessage}
+          onSelectAll={handleSelectAll}
+        />
+
+        {/* Message Detail */}
+        <MessageDetail
+          message={selectedMessage}
+          onClose={() => setSelectedMessage(null)}
+          onReply={() => {
+            setShowCompose(true);
+            // We'll implement reply functionality in the compose modal
+          }}
+          onForward={() => {
+            setShowCompose(true);
+            // We'll implement forward functionality in the compose modal
+          }}
+          onArchive={() => {
+            toast({
+              title: "Message archived",
+              description: "Message has been archived.",
+            });
+          }}
+          onDelete={() => {
+            toast({
+              title: "Message deleted",
+              description: "Message has been deleted.",
+            });
+            setSelectedMessage(null);
+          }}
         />
       </div>
 
-      {/* Message Count */}
-      <div className="text-sm text-gray-600">
-        {filteredMessages.length} message{filteredMessages.length !== 1 ? 's' : ''} found
-      </div>
-
-      {/* Messages Grid */}
-      <div className="grid grid-cols-1 gap-4">
-        {filteredMessages.map(message => (
-          <MessageCard key={message.id} message={message} />
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {filteredMessages.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <Mail className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <div className="text-gray-400 text-lg mb-2">No messages found</div>
-          <p className="text-gray-600 mb-4">
-            {searchTerm ? 'Try adjusting your search terms' : 'Your messages will appear here when you start communicating with clients'}
-          </p>
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Send Your First Message
-          </Button>
-        </div>
-      )}
+      {/* Compose Modal */}
+      <ComposeModal
+        isOpen={showCompose}
+        onClose={() => setShowCompose(false)}
+        onSend={(messageData) => {
+          toast({
+            title: "Message sent",
+            description: "Your message has been sent successfully.",
+          });
+          setShowCompose(false);
+          loadMessages(); // Refresh to show sent message
+        }}
+      />
     </div>
   );
 };

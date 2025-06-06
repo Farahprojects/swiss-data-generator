@@ -234,6 +234,7 @@ export type Database = {
           direction: string
           from_address: string
           id: string
+          raw_headers: string | null
           sent_via: string | null
           subject: string | null
           to_address: string
@@ -246,6 +247,7 @@ export type Database = {
           direction: string
           from_address: string
           id?: string
+          raw_headers?: string | null
           sent_via?: string | null
           subject?: string | null
           to_address: string
@@ -258,6 +260,7 @@ export type Database = {
           direction?: string
           from_address?: string
           id?: string
+          raw_headers?: string | null
           sent_via?: string | null
           subject?: string | null
           to_address?: string
