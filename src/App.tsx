@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +27,7 @@ import ActivityLogs from "./pages/ActivityLogs";
 import PasswordReset from "./pages/auth/Password";
 import ConfirmEmail from "./pages/auth/ConfirmEmail";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
+import TemplatePreview from "./pages/TemplatePreview";
 
 // Lazy load dashboard pages for better performance
 const DashboardHome = lazy(() => import("./pages/dashboard/DashboardHome"));
@@ -73,6 +73,7 @@ function App() {
                   <Route path="/payment-return" element={<PaymentReturn />} />
                   <Route path="/auth/password" element={<PasswordReset />} />
                   <Route path="/auth/confirm" element={<ConfirmEmail />} />
+                  <Route path="/template-preview" element={<TemplatePreview />} />
 
                   {/* Legacy protected routes */}
                   <Route path="/dashboard-old" element={<AuthGuard><Dashboard /></AuthGuard>} />
