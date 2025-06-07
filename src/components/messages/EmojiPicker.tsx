@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Smile } from 'lucide-react';
 
 const emojiCategories = {
@@ -64,7 +65,7 @@ export const EmojiPicker = ({ onEmojiSelect }: EmojiPickerProps) => {
         </div>
         
         {!searchTerm && (
-          <div className="h-12 overflow-y-auto border-b">
+          <ScrollArea className="h-12">
             <div className="flex p-2 gap-1">
               {Object.entries(emojiCategories).map(([key, category]) => (
                 <Button
@@ -79,10 +80,10 @@ export const EmojiPicker = ({ onEmojiSelect }: EmojiPickerProps) => {
                 </Button>
               ))}
             </div>
-          </div>
+          </ScrollArea>
         )}
         
-        <div className="h-32 overflow-y-auto">
+        <ScrollArea className="h-48">
           <div className="p-3 grid grid-cols-6 gap-2">
             {filteredEmojis.map((emoji, index) => (
               <Button
@@ -96,7 +97,7 @@ export const EmojiPicker = ({ onEmojiSelect }: EmojiPickerProps) => {
               </Button>
             ))}
           </div>
-        </div>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );

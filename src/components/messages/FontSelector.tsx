@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Type } from 'lucide-react';
 
 const fonts = [
@@ -9,24 +10,14 @@ const fonts = [
   { name: 'Roboto', value: 'font-roboto', class: 'font-roboto' },
   { name: 'Open Sans', value: 'font-opensans', class: 'font-opensans' },
   { name: 'Lato', value: 'font-lato', class: 'font-lato' },
-  { name: 'Montserrat', value: 'font-montserrat', class: 'font-montserrat' },
-  { name: 'Poppins', value: 'font-poppins', class: 'font-poppins' },
-  { name: 'Nunito', value: 'font-nunito', class: 'font-nunito' },
-  { name: 'Source Sans Pro', value: 'font-source-sans-pro', class: 'font-source-sans-pro' },
-  { name: 'Playfair Display', value: 'font-playfair', class: 'font-playfair' },
-  { name: 'Merriweather', value: 'font-merriweather', class: 'font-merriweather' },
-  { name: 'Ubuntu', value: 'font-ubuntu', class: 'font-ubuntu' },
-  { name: 'Raleway', value: 'font-raleway', class: 'font-raleway' }
+  { name: 'Montserrat', value: 'font-montserrat', class: 'font-montserrat' }
 ];
 
 const fontSizes = [
-  { name: 'Extra Small', value: 'text-xs', class: 'text-xs' },
   { name: 'Small', value: 'text-sm', class: 'text-sm' },
   { name: 'Normal', value: 'text-base', class: 'text-base' },
   { name: 'Large', value: 'text-lg', class: 'text-lg' },
-  { name: 'Extra Large', value: 'text-xl', class: 'text-xl' },
-  { name: '2X Large', value: 'text-2xl', class: 'text-2xl' },
-  { name: '3X Large', value: 'text-3xl', class: 'text-3xl' }
+  { name: 'Extra Large', value: 'text-xl', class: 'text-xl' }
 ];
 
 interface FontSelectorProps {
@@ -55,8 +46,8 @@ export const FontSelector = ({
         <div className="p-4 space-y-4">
           <div className="space-y-2">
             <div className="text-sm font-medium">Font Family</div>
-            <div className="h-20 overflow-y-auto border rounded-md">
-              <div className="space-y-1 p-2">
+            <ScrollArea className="h-32">
+              <div className="space-y-1 pr-3">
                 {fonts.map((font) => (
                   <Button
                     key={font.value}
@@ -69,13 +60,13 @@ export const FontSelector = ({
                   </Button>
                 ))}
               </div>
-            </div>
+            </ScrollArea>
           </div>
           
           <div className="space-y-2">
             <div className="text-sm font-medium">Font Size</div>
-            <div className="h-16 overflow-y-auto border rounded-md">
-              <div className="space-y-1 p-2">
+            <ScrollArea className="h-24">
+              <div className="space-y-1 pr-3">
                 {fontSizes.map((size) => (
                   <Button
                     key={size.value}
@@ -88,7 +79,7 @@ export const FontSelector = ({
                   </Button>
                 ))}
               </div>
-            </div>
+            </ScrollArea>
           </div>
         </div>
       </PopoverContent>
