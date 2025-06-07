@@ -92,32 +92,37 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     onChange('services', services);
   };
 
-  const SectionHeader = ({ icon: Icon, title, isOpen, onClick }: any) => (
-    <CollapsibleTrigger asChild>
+  const SectionHeader = ({ icon: Icon, title, sectionKey }: { icon: any, title: string, sectionKey: string }) => {
+    const isOpen = openSections[sectionKey as keyof typeof openSections];
+    
+    return (
       <div 
         className="flex items-center justify-between cursor-pointer p-4 hover:bg-gray-50 transition-colors"
-        onClick={onClick}
+        onClick={() => toggleSection(sectionKey)}
       >
         <div className="flex items-center space-x-3">
           <Icon className="h-5 w-5 text-blue-600" />
           <span className="font-semibold text-gray-900">{title}</span>
         </div>
-        {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        <div className={`transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+          <ChevronDown className="h-4 w-4" />
+        </div>
       </div>
-    </CollapsibleTrigger>
-  );
+    );
+  };
 
   return (
     <div className="space-y-4">
       {/* Basic Information */}
       <Card className="overflow-hidden">
         <Collapsible open={openSections.basic} onOpenChange={() => toggleSection('basic')}>
-          <SectionHeader 
-            icon={User} 
-            title="Basic Information" 
-            isOpen={openSections.basic}
-            onClick={() => toggleSection('basic')}
-          />
+          <CollapsibleTrigger asChild>
+            <SectionHeader 
+              icon={User} 
+              title="Basic Information" 
+              sectionKey="basic"
+            />
+          </CollapsibleTrigger>
           <AnimatePresence>
             {openSections.basic && (
               <CollapsibleContent forceMount>
@@ -177,12 +182,13 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
       {/* Services */}
       <Card className="overflow-hidden">
         <Collapsible open={openSections.services} onOpenChange={() => toggleSection('services')}>
-          <SectionHeader 
-            icon={Briefcase} 
-            title="Services & Offerings" 
-            isOpen={openSections.services}
-            onClick={() => toggleSection('services')}
-          />
+          <CollapsibleTrigger asChild>
+            <SectionHeader 
+              icon={Briefcase} 
+              title="Services & Offerings" 
+              sectionKey="services"
+            />
+          </CollapsibleTrigger>
           <AnimatePresence>
             {openSections.services && (
               <CollapsibleContent forceMount>
@@ -268,12 +274,13 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
       {/* Call to Action */}
       <Card className="overflow-hidden">
         <Collapsible open={openSections.cta} onOpenChange={() => toggleSection('cta')}>
-          <SectionHeader 
-            icon={Settings} 
-            title="Call to Action" 
-            isOpen={openSections.cta}
-            onClick={() => toggleSection('cta')}
-          />
+          <CollapsibleTrigger asChild>
+            <SectionHeader 
+              icon={Settings} 
+              title="Call to Action" 
+              sectionKey="cta"
+            />
+          </CollapsibleTrigger>
           <AnimatePresence>
             {openSections.cta && (
               <CollapsibleContent forceMount>
@@ -308,12 +315,13 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
       {/* Design Settings */}
       <Card className="overflow-hidden">
         <Collapsible open={openSections.design} onOpenChange={() => toggleSection('design')}>
-          <SectionHeader 
-            icon={Palette} 
-            title="Design & Styling" 
-            isOpen={openSections.design}
-            onClick={() => toggleSection('design')}
-          />
+          <CollapsibleTrigger asChild>
+            <SectionHeader 
+              icon={Palette} 
+              title="Design & Styling" 
+              sectionKey="design"
+            />
+          </CollapsibleTrigger>
           <AnimatePresence>
             {openSections.design && (
               <CollapsibleContent forceMount>
