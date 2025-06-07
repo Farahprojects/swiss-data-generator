@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -100,6 +101,11 @@ export default {
 			fontFamily: {
 				'sans': ['Inter', 'sans-serif'],
 				'therai': ['Inter', 'sans-serif'],
+				'inter': ['Inter', 'sans-serif'],
+				'roboto': ['Roboto', 'sans-serif'],
+				'opensans': ['Open Sans', 'sans-serif'],
+				'lato': ['Lato', 'sans-serif'],
+				'montserrat': ['Montserrat', 'sans-serif'],
 			}
 		}
 	},

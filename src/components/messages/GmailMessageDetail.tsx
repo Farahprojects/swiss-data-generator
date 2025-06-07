@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   ArrowRight
 } from 'lucide-react';
+import { ReplyModal } from './ReplyModal';
 
 interface EmailMessage {
   id: string;
@@ -45,6 +46,8 @@ export const GmailMessageDetail = ({
   onArchive,
   onDelete
 }: GmailMessageDetailProps) => {
+  const [showReplyModal, setShowReplyModal] = useState(false);
+
   if (!message) {
     return (
       <div className="flex-1 bg-white flex items-center justify-center h-[calc(100vh-8rem)]">
@@ -70,6 +73,17 @@ export const GmailMessageDetail = ({
   const getInitials = (email: string) => {
     const name = email.split('@')[0];
     return name.charAt(0).toUpperCase();
+  };
+
+  const handleReplyClick = () => {
+    setShowReplyModal(true);
+  };
+
+  const handleReplySend = (replyData: any) => {
+    console.log('Reply sent:', replyData);
+    // Here you would typically send the reply via your email service
+    onReply(); // Call the original onReply for any additional handling
+    setShowReplyModal(false);
   };
 
   return (
@@ -159,7 +173,7 @@ export const GmailMessageDetail = ({
 
           {/* Action Buttons */}
           <div className="mt-8 flex items-center gap-3">
-            <Button onClick={onReply} className="flex items-center gap-2">
+            <Button onClick={handleReplyClick} className="flex items-center gap-2">
               <Reply className="w-4 h-4" />
               Reply
             </Button>
@@ -170,6 +184,14 @@ export const GmailMessageDetail = ({
           </div>
         </div>
       </div>
+
+      {/* Reply Modal */}
+      <ReplyModal
+        isOpen={showReplyModal}
+        onClose={() => setShowReplyModal(false)}
+        originalMessage={message}
+        onSend={handleReplySend}
+      />
     </div>
   );
 };
