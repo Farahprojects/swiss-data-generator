@@ -96,21 +96,23 @@ serve(async (req) => {
       }
     });
     
-    // Build the exact payload to send to the SMTP endpoint
+    // Build the payload in the format expected by the external SMTP service
     const smtpPayload = {
-      to,
-      subject,
-      html,
-      text: text || "",
-      from: from || "TherAI <no-reply@theraiastro.com>"
+      slug: "madman",
+      domain: "therai.coach",
+      to_email: to,
+      subject: subject,
+      body: text || html // Use text version if available, otherwise HTML
     };
     
     logMessage("Sending payload to outbound SMTP endpoint", { 
       level: 'debug', 
       data: { 
-        to, 
-        subject, 
-        payloadSize: JSON.stringify(smtpPayload).length 
+        to_email: smtpPayload.to_email, 
+        subject: smtpPayload.subject, 
+        payloadSize: JSON.stringify(smtpPayload).length,
+        slug: smtpPayload.slug,
+        domain: smtpPayload.domain
       }
     });
     
@@ -127,7 +129,7 @@ serve(async (req) => {
         data: { 
           status: response.status, 
           error,
-          to
+          to_email: smtpPayload.to_email
         }
       });
       return new Response(JSON.stringify({ error: "Failed to send outbound message", details: error }), {
@@ -140,7 +142,7 @@ serve(async (req) => {
     logMessage("Outbound email sent successfully", { 
       level: 'info',
       data: { 
-        to, 
+        to_email: smtpPayload.to_email, 
         responseStatus: response.status
       }
     });
