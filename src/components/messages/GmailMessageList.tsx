@@ -73,9 +73,9 @@ export const GmailMessageList = ({
   const allSelected = messages.length > 0 && messages.every(m => selectedMessages.has(m.id));
 
   return (
-    <div className="w-96 border-r bg-white flex flex-col">
+    <div className="w-96 border-r bg-white flex flex-col h-[calc(100vh-180px)]">
       {/* Toolbar */}
-      <div className="px-4 py-2 border-b bg-gray-50/50">
+      <div className="px-4 py-2 border-b bg-gray-50/50 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Checkbox
@@ -97,8 +97,8 @@ export const GmailMessageList = ({
         </div>
       </div>
 
-      {/* Message List */}
-      <div className="flex-1 overflow-auto">
+      {/* Message List - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
           <div className="p-12 text-center text-gray-500">
             <div className="text-lg mb-2">No messages found</div>

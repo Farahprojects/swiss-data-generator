@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,9 +170,9 @@ const MessagesPage = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex-shrink-0">
+    <div className="w-full">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-white border-b px-6 py-4">
         <div className="flex items-center gap-6">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
           
@@ -189,7 +190,7 @@ const MessagesPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex">
         {/* Left Sidebar */}
         <MessagesSidebar
           activeFilter={activeFilter}
