@@ -2,26 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Plus, 
-  Search, 
-  Mail, 
-  MailOpen, 
-  Archive, 
-  Trash2, 
-  Reply, 
-  Forward, 
-  ArrowLeft,
-  Paperclip,
-  Star,
-  StarOff
-} from 'lucide-react';
+import { Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { MessageList } from '@/components/messages/MessageList';
+import { MessagesSidebar } from '@/components/messages/MessagesSidebar';
+import { ImprovedMessageList } from '@/components/messages/ImprovedMessageList';
 import { MessageDetail } from '@/components/messages/MessageDetail';
 import { ComposeModal } from '@/components/messages/ComposeModal';
 
@@ -46,7 +32,7 @@ const MessagesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [showCompose, setShowCompose] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'inbox' | 'sent' | 'archived'>('all');
+  const [activeFilter, setActiveFilter] = useState('inbox');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -92,10 +78,12 @@ const MessagesPage = () => {
       message.body?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesFilter = (() => {
-      switch (filter) {
+      switch (activeFilter) {
         case 'inbox': return message.direction === 'incoming';
         case 'sent': return message.direction === 'outgoing';
-        case 'archived': return false; // We'll implement this later
+        case 'starred': return message.starred;
+        case 'archive': return false; // We'll implement this later
+        case 'trash': return false; // We'll implement this later
         default: return true;
       }
     })();
@@ -133,20 +121,11 @@ const MessagesPage = () => {
     });
   };
 
-  const handleBulkArchive = () => {
+  const handleOpenBranding = () => {
     toast({
-      title: "Messages archived",
-      description: `${selectedMessages.size} messages archived.`,
+      title: "Branding Settings",
+      description: "Email branding features coming soon!",
     });
-    setSelectedMessages(new Set());
-  };
-
-  const handleBulkDelete = () => {
-    toast({
-      title: "Messages deleted",
-      description: `${selectedMessages.size} messages deleted.`,
-    });
-    setSelectedMessages(new Set());
   };
 
   const unreadCount = messages.filter(m => !m.read && m.direction === 'incoming').length;
@@ -162,78 +141,42 @@ const MessagesPage = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <div className="border-b bg-white px-6 py-4">
+      <div className="bg-white border-b px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-            <p className="text-gray-600">
-              {unreadCount > 0 && `${unreadCount} unread • `}
-              {filteredMessages.length} total messages
-            </p>
-          </div>
-          <Button onClick={() => setShowCompose(true)} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Compose
-          </Button>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="flex items-center gap-4 mt-4">
-          <div className="relative flex-1 max-w-md">
+          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+          
+          {/* Search */}
+          <div className="relative max-w-md flex-1 mx-8">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search messages..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-gray-50 border-gray-200"
             />
           </div>
           
-          <div className="flex gap-2">
-            {['all', 'inbox', 'sent'].map((filterOption) => (
-              <Button
-                key={filterOption}
-                variant={filter === filterOption ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilter(filterOption as any)}
-                className="capitalize"
-              >
-                {filterOption === 'inbox' && <Mail className="w-4 h-4 mr-1" />}
-                {filterOption}
-                {filterOption === 'inbox' && unreadCount > 0 && (
-                  <Badge variant="destructive" className="ml-2 px-1 py-0 text-xs">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </Button>
-            ))}
+          <div className="text-sm text-gray-600">
+            {filteredMessages.length} messages
           </div>
         </div>
-
-        {/* Bulk Actions */}
-        {selectedMessages.size > 0 && (
-          <div className="flex items-center gap-2 mt-3 p-2 bg-blue-50 rounded-md">
-            <span className="text-sm text-blue-700">
-              {selectedMessages.size} selected
-            </span>
-            <Button size="sm" variant="outline" onClick={handleBulkArchive}>
-              <Archive className="w-4 h-4 mr-1" />
-              Archive
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleBulkDelete}>
-              <Trash2 className="w-4 h-4 mr-1" />
-              Delete
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar */}
+        <MessagesSidebar
+          activeFilter={activeFilter}
+          unreadCount={unreadCount}
+          onFilterChange={setActiveFilter}
+          onCompose={() => setShowCompose(true)}
+          onOpenBranding={handleOpenBranding}
+        />
+
         {/* Message List */}
-        <MessageList
+        <ImprovedMessageList
           messages={filteredMessages}
           selectedMessages={selectedMessages}
           selectedMessage={selectedMessage}
@@ -248,11 +191,9 @@ const MessagesPage = () => {
           onClose={() => setSelectedMessage(null)}
           onReply={() => {
             setShowCompose(true);
-            // We'll implement reply functionality in the compose modal
           }}
           onForward={() => {
             setShowCompose(true);
-            // We'll implement forward functionality in the compose modal
           }}
           onArchive={() => {
             toast({
@@ -280,7 +221,7 @@ const MessagesPage = () => {
             description: "Your message has been sent successfully.",
           });
           setShowCompose(false);
-          loadMessages(); // Refresh to show sent message
+          loadMessages();
         }}
       />
     </div>
