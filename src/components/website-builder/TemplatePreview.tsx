@@ -23,20 +23,21 @@ export const TemplatePreview = ({
 }: TemplatePreviewProps) => {
   const renderTemplate = () => {
     const templateType = template?.template_data?.layout || 'modern';
+    const isPreview = !isFullScreen;
     
     switch (templateType) {
       case 'modern':
-        return <ModernTemplate customizationData={customizationData} />;
+        return <ModernTemplate customizationData={customizationData} isPreview={isPreview} />;
       case 'classic':
-        return <ClassicTemplate customizationData={customizationData} />;
+        return <ClassicTemplate customizationData={customizationData} isPreview={isPreview} />;
       case 'minimal':
-        return <MinimalTemplate customizationData={customizationData} />;
+        return <MinimalTemplate customizationData={customizationData} isPreview={isPreview} />;
       case 'creative':
-        return <CreativeTemplate customizationData={customizationData} />;
+        return <CreativeTemplate customizationData={customizationData} isPreview={isPreview} />;
       case 'professional':
-        return <ProfessionalTemplate customizationData={customizationData} />;
+        return <ProfessionalTemplate customizationData={customizationData} isPreview={isPreview} />;
       default:
-        return <ModernTemplate customizationData={customizationData} />;
+        return <ModernTemplate customizationData={customizationData} isPreview={isPreview} />;
     }
   };
 
@@ -71,8 +72,8 @@ export const TemplatePreview = ({
         <div className="text-xs text-gray-500">Preview</div>
       </div>
       
-      <div className="h-[48rem] overflow-auto">
-        <div className="transform scale-50 origin-top-left w-[200%] h-[200%]">
+      <div className="overflow-auto">
+        <div className="transform scale-50 origin-top-left w-[200%]">
           {renderTemplate()}
         </div>
       </div>

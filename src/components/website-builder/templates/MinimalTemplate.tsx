@@ -4,16 +4,17 @@ import { Button } from "@/components/ui/button";
 
 interface TemplateProps {
   customizationData: any;
+  isPreview?: boolean;
 }
 
-export const MinimalTemplate = ({ customizationData }: TemplateProps) => {
+export const MinimalTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
   const themeColor = customizationData.themeColor || '#10B981';
   const fontFamily = customizationData.fontFamily || 'Inter';
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+    <div className={`bg-white ${isPreview ? 'min-h-0' : 'min-h-screen'}`} style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Ultra Minimal Hero */}
-      <section className="min-h-screen flex items-center justify-center bg-white">
+      <section className={`${isPreview ? 'py-32' : 'min-h-screen'} flex items-center justify-center bg-white`}>
         <div className="max-w-2xl mx-auto px-6 text-center">
           <motion.div
             initial={{ opacity: 0 }}

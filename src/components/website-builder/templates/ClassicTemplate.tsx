@@ -4,14 +4,15 @@ import { Button } from "@/components/ui/button";
 
 interface TemplateProps {
   customizationData: any;
+  isPreview?: boolean;
 }
 
-export const ClassicTemplate = ({ customizationData }: TemplateProps) => {
+export const ClassicTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
   const themeColor = customizationData.themeColor || '#8B5CF6';
   const fontFamily = customizationData.fontFamily || 'Playfair Display';
 
   return (
-    <div className="min-h-screen bg-cream-50" style={{ fontFamily: `${fontFamily}, serif` }}>
+    <div className={`bg-cream-50 ${isPreview ? 'min-h-0' : 'min-h-screen'}`} style={{ fontFamily: `${fontFamily}, serif` }}>
       {/* Classic Centered Hero */}
       <section className="relative py-32 bg-gradient-to-b from-amber-50 to-white">
         <div className="max-w-4xl mx-auto px-6 text-center">

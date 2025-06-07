@@ -4,14 +4,15 @@ import { Button } from "@/components/ui/button";
 
 interface TemplateProps {
   customizationData: any;
+  isPreview?: boolean;
 }
 
-export const ProfessionalTemplate = ({ customizationData }: TemplateProps) => {
+export const ProfessionalTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
   const themeColor = customizationData.themeColor || '#1E40AF';
   const fontFamily = customizationData.fontFamily || 'Inter';
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+    <div className={`bg-white ${isPreview ? 'min-h-0' : 'min-h-screen'}`} style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Professional Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-6 py-4">

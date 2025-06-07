@@ -4,16 +4,17 @@ import { Button } from "@/components/ui/button";
 
 interface TemplateProps {
   customizationData: any;
+  isPreview?: boolean;
 }
 
-export const ModernTemplate = ({ customizationData }: TemplateProps) => {
+export const ModernTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
   const themeColor = customizationData.themeColor || '#6366F1';
   const fontFamily = customizationData.fontFamily || 'Inter';
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+    <div className={`bg-gray-50 ${isPreview ? 'min-h-0' : 'min-h-screen'}`} style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Modern Hero with Split Layout */}
-      <section className="relative min-h-screen flex items-center">
+      <section className={`relative ${isPreview ? 'py-20' : 'min-h-screen'} flex items-center`}>
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-blue-600 opacity-20"></div>
         

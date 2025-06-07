@@ -4,23 +4,24 @@ import { Button } from "@/components/ui/button";
 
 interface TemplateProps {
   customizationData: any;
+  isPreview?: boolean;
 }
 
-export const CreativeTemplate = ({ customizationData }: TemplateProps) => {
+export const CreativeTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
   const themeColor = customizationData.themeColor || '#F59E0B';
   const fontFamily = customizationData.fontFamily || 'Poppins';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+    <div className={`bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 ${isPreview ? 'min-h-0' : 'min-h-screen'}`} style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Creative Asymmetric Hero */}
-      <section className="relative min-h-screen overflow-hidden">
+      <section className={`relative ${isPreview ? 'py-20' : 'min-h-screen'} overflow-hidden`}>
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full transform -translate-x-32 -translate-y-32 opacity-70"></div>
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full transform translate-x-48 translate-y-48 opacity-60"></div>
           <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-gradient-to-br from-blue-400 to-teal-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 opacity-50"></div>
         </div>
         
-        <div className="relative z-10 min-h-screen flex items-center">
+        <div className={`relative z-10 ${isPreview ? 'py-20' : 'min-h-screen'} flex items-center`}>
           <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
