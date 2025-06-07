@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -170,8 +171,8 @@ const MessagesPage = () => {
 
   return (
     <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex-shrink-0">
+      {/* Messages Header - Sticky */}
+      <div className="sticky top-0 z-10 bg-white border-b px-6 py-4 flex-shrink-0">
         <div className="flex items-center gap-6">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
           
@@ -182,15 +183,15 @@ const MessagesPage = () => {
               placeholder="Search mail"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
+              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-8 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
             />
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Scrollable */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
+        {/* Left Sidebar - Fixed */}
         <MessagesSidebar
           activeFilter={activeFilter}
           unreadCount={unreadCount}
@@ -199,7 +200,7 @@ const MessagesPage = () => {
           onOpenBranding={handleOpenBranding}
         />
 
-        {/* Message List */}
+        {/* Message List - Scrollable */}
         <GmailMessageList
           messages={filteredMessages}
           selectedMessages={selectedMessages}
@@ -209,7 +210,7 @@ const MessagesPage = () => {
           onSelectAll={handleSelectAll}
         />
 
-        {/* Message Detail */}
+        {/* Message Detail - Scrollable */}
         <GmailMessageDetail
           message={selectedMessage}
           onClose={() => setSelectedMessage(null)}
