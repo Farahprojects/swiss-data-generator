@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,8 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { MessagesSidebar } from '@/components/messages/MessagesSidebar';
-import { ImprovedMessageList } from '@/components/messages/ImprovedMessageList';
-import { MessageDetail } from '@/components/messages/MessageDetail';
+import { GmailMessageList } from '@/components/messages/GmailMessageList';
+import { GmailMessageDetail } from '@/components/messages/GmailMessageDetail';
 import { ComposeModal } from '@/components/messages/ComposeModal';
 
 interface EmailMessage {
@@ -169,20 +170,20 @@ const MessagesPage = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-white">
       {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex-shrink-0">
+      <div className="bg-white border-b px-6 py-3 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+          <h1 className="text-xl font-normal text-gray-900">Messages</h1>
           
           {/* Search */}
-          <div className="relative max-w-md flex-1 mx-8">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <div className="relative max-w-2xl flex-1 mx-8">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
-              placeholder="Search messages..."
+              placeholder="Search mail"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-gray-50 border-gray-200"
+              className="pl-10 bg-gray-50 border-gray-200 rounded-full h-12 focus:bg-white focus:shadow-md transition-all"
             />
           </div>
           
@@ -202,7 +203,7 @@ const MessagesPage = () => {
         />
 
         {/* Message List */}
-        <ImprovedMessageList
+        <GmailMessageList
           messages={filteredMessages}
           selectedMessages={selectedMessages}
           selectedMessage={selectedMessage}
@@ -212,7 +213,7 @@ const MessagesPage = () => {
         />
 
         {/* Message Detail */}
-        <MessageDetail
+        <GmailMessageDetail
           message={selectedMessage}
           onClose={() => setSelectedMessage(null)}
           onReply={() => {
