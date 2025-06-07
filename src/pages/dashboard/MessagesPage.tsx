@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,9 +170,9 @@ const MessagesPage = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex-shrink-0">
+    <div className="h-full flex flex-col bg-white">
+      {/* Fixed Header with Search */}
+      <div className="bg-white border-b px-6 py-3 flex-shrink-0 sticky top-0 z-40">
         <div className="flex items-center gap-6">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
           
@@ -182,13 +183,13 @@ const MessagesPage = () => {
               placeholder="Search mail"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
+              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-8 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
             />
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Scrollable */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
         <MessagesSidebar
