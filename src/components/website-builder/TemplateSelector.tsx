@@ -1,7 +1,6 @@
 
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { ModernTemplate } from "./templates/ModernTemplate";
@@ -109,9 +108,12 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
   const getLivePreview = (template: any) => {
     return (
-      <div className="w-full h-80 rounded-lg border overflow-hidden bg-white relative group shadow-sm">
+      <div 
+        className="w-full h-80 rounded-lg border bg-white shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
+        onClick={() => onSelectTemplate(template)}
+      >
         {/* Browser Chrome */}
-        <div className="h-8 bg-gray-100 border-b flex items-center px-3 space-x-2">
+        <div className="h-8 bg-gray-100 border-b flex items-center px-3 space-x-2 rounded-t-lg">
           <div className="flex space-x-1">
             <div className="w-3 h-3 rounded-full bg-red-400"></div>
             <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
@@ -122,18 +124,10 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           </div>
         </div>
 
-        {/* Live Template Preview */}
-        <div className="h-72 overflow-hidden">
-          <div className="transform scale-[0.35] origin-top-left w-[285%] h-[285%] pointer-events-none">
+        {/* Scrollable Template Preview */}
+        <div className="h-72 overflow-auto">
+          <div className="transform scale-[0.35] origin-top-left w-[285%] h-[285%]">
             {getTemplateComponent(template)}
-          </div>
-        </div>
-
-        {/* Hover Overlay */}
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 flex items-center justify-center">
-          <div className="text-white text-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <div className="text-sm font-medium">Preview Template</div>
-            <div className="text-xs opacity-80">Click to select</div>
           </div>
         </div>
       </div>
@@ -155,7 +149,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: index * 0.1 }}
           >
-            <Card className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-blue-200 overflow-hidden">
+            <Card className="hover:shadow-xl transition-all duration-300 border-2 hover:border-blue-200 overflow-hidden">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between mb-2">
                   <CardTitle className="text-xl font-bold">{template.name}</CardTitle>
@@ -175,16 +169,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                 </CardDescription>
               </CardHeader>
               
-              <CardContent className="space-y-6">
+              <CardContent>
                 {getLivePreview(template)}
-                
-                <Button 
-                  onClick={() => onSelectTemplate(template)}
-                  className="w-full group-hover:bg-blue-600 transition-colors text-lg py-6 font-medium"
-                  style={{ backgroundColor: template.preview.colors[0] }}
-                >
-                  Select {template.name} Template
-                </Button>
               </CardContent>
             </Card>
           </motion.div>
