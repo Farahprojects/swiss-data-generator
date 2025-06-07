@@ -1,4 +1,3 @@
-
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,7 +61,7 @@ const DashboardLayout = () => {
     );
   }
 
-  // Main dashboard layout with traditional sidebar
+  // Main dashboard layout with traditional sidebar (no toggle button)
   return (
     <div className="min-h-screen flex flex-col w-full">
       <UnifiedNavigation />
@@ -71,11 +70,6 @@ const DashboardLayout = () => {
         <DashboardSidebar />
         
         <SidebarInset className="flex flex-col flex-1">
-          <header className="flex h-12 shrink-0 items-center gap-2 px-4 border-b bg-white">
-            <SidebarTrigger className="-ml-1" />
-            <DashboardBreadcrumb />
-          </header>
-          
           <main className="flex-1 p-4 md:p-6">
             <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
               <DashboardErrorBoundary>
