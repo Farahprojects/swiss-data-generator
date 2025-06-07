@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +9,7 @@ import { MessagesSidebar } from '@/components/messages/MessagesSidebar';
 import { GmailMessageList } from '@/components/messages/GmailMessageList';
 import { GmailMessageDetail } from '@/components/messages/GmailMessageDetail';
 import { ComposeModal } from '@/components/messages/ComposeModal';
+import { useNavigate } from 'react-router-dom';
 
 interface EmailMessage {
   id: string;
@@ -35,6 +35,7 @@ const MessagesPage = () => {
   const [activeFilter, setActiveFilter] = useState('inbox');
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user?.id) {
@@ -117,7 +118,9 @@ const MessagesPage = () => {
   });
 
   const handleSelectMessage = (message: EmailMessage) => {
-    setSelectedMessage(message);
+    // Navigate to message detail page
+    navigate(`/dashboard/messages/${message.id}`);
+    
     // Mark as read
     if (!message.read) {
       setMessages(prev => prev.map(m => 
@@ -200,41 +203,15 @@ const MessagesPage = () => {
           onOpenBranding={handleOpenBranding}
         />
 
-        {/* Content area - Offset for fixed sidebar */}
-        <div className="flex ml-64 w-full">
-          {/* Message List */}
+        {/* Content area - Full width message list */}
+        <div className="ml-64 w-full">
           <GmailMessageList
             messages={filteredMessages}
             selectedMessages={selectedMessages}
-            selectedMessage={selectedMessage}
+            selectedMessage={null}
             onSelectMessage={handleSelectMessage}
             onSelectMessageCheckbox={handleSelectMessageCheckbox}
             onSelectAll={handleSelectAll}
-          />
-
-          {/* Message Detail */}
-          <GmailMessageDetail
-            message={selectedMessage}
-            onClose={() => setSelectedMessage(null)}
-            onReply={() => {
-              setShowCompose(true);
-            }}
-            onForward={() => {
-              setShowCompose(true);
-            }}
-            onArchive={() => {
-              toast({
-                title: "Message archived",
-                description: "Message has been archived.",
-              });
-            }}
-            onDelete={() => {
-              toast({
-                title: "Message deleted",
-                description: "Message has been deleted.",
-              });
-              setSelectedMessage(null);
-            }}
           />
         </div>
       </div>

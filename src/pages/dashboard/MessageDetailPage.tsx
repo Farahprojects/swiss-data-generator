@@ -1,9 +1,23 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Reply, Forward, Archive, Trash2, ArrowUp, ArrowDown, User } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  ArrowRight,
+  Reply, 
+  Forward, 
+  Archive, 
+  Trash2, 
+  ArrowUp, 
+  ArrowDown, 
+  User,
+  Star,
+  StarOff,
+  MoreHorizontal
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +40,7 @@ const MessageDetailPage = () => {
   const [message, setMessage] = useState<EmailMessage | null>(null);
   const [loading, setLoading] = useState(true);
   const [isArchived, setIsArchived] = useState(false);
+  const [isStarred, setIsStarred] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -71,6 +86,22 @@ const MessageDetailPage = () => {
     navigate('/dashboard/messages');
   };
 
+  const handlePrevious = () => {
+    // Navigate to previous message - implement logic here
+    toast({
+      title: "Previous message",
+      description: "Previous message navigation coming soon.",
+    });
+  };
+
+  const handleNext = () => {
+    // Navigate to next message - implement logic here
+    toast({
+      title: "Next message",
+      description: "Next message navigation coming soon.",
+    });
+  };
+
   const handleDelete = () => {
     toast({
       title: "Message deleted",
@@ -84,6 +115,14 @@ const MessageDetailPage = () => {
     toast({
       title: "Message archived",
       description: "Message has been archived.",
+    });
+  };
+
+  const handleStar = () => {
+    setIsStarred(!isStarred);
+    toast({
+      title: isStarred ? "Unstarred" : "Starred",
+      description: `Message has been ${isStarred ? 'unstarred' : 'starred'}.`,
     });
   };
 
@@ -112,6 +151,11 @@ const MessageDetailPage = () => {
     });
   };
 
+  const getInitials = (email: string) => {
+    const name = email.split('@')[0];
+    return name.charAt(0).toUpperCase();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -135,16 +179,105 @@ const MessageDetailPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={handleBack} className="flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Messages
-        </Button>
-        
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleReply} className="flex items-center gap-2">
+    <div className="w-full max-w-5xl mx-auto">
+      {/* Gmail-style Header */}
+      <div className="sticky top-16 z-10 bg-white border-b px-4 py-3">
+        <div className="flex items-center justify-between">
+          {/* Left: Navigation */}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={handleBack} className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <div className="h-6 w-px bg-gray-300 mx-2" />
+            <Button variant="ghost" size="sm" onClick={handlePrevious}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleNext}>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={handleArchive} disabled={isArchived}>
+              <Archive className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleStar}>
+              {isStarred ? (
+                <Star className="w-4 h-4 text-yellow-400 fill-current" />
+              ) : (
+                <StarOff className="w-4 h-4" />
+              )}
+            </Button>
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Message Content */}
+      <div className="p-6">
+        <Card>
+          <CardHeader>
+            <div className="space-y-4">
+              {/* Subject */}
+              <CardTitle className="text-2xl font-normal">{message.subject || 'No Subject'}</CardTitle>
+              
+              {/* Message Info */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center text-white text-lg font-medium">
+                    {getInitials(message.direction === 'incoming' ? message.from_address : message.to_address)}
+                  </div>
+                  <div>
+                    <div className="font-medium text-lg">
+                      {message.direction === 'incoming' ? message.from_address : message.to_address}
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      to {message.direction === 'incoming' ? message.to_address : message.from_address}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      {formatDateTime(message.created_at)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Badge variant={message.direction === 'incoming' ? 'default' : 'secondary'}>
+                    {message.direction === 'incoming' ? 'Received' : 'Sent'}
+                  </Badge>
+                  {message.sent_via && message.sent_via !== 'email' && (
+                    <Badge variant="outline">
+                      via {message.sent_via}
+                    </Badge>
+                  )}
+                  {isArchived && (
+                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                      Archived
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="prose max-w-none">
+              <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-base">
+                {message.body}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="mt-6 flex items-center gap-3">
+          <Button onClick={handleReply} className="flex items-center gap-2">
             <Reply className="w-4 h-4" />
             Reply
           </Button>
@@ -152,94 +285,8 @@ const MessageDetailPage = () => {
             <Forward className="w-4 h-4" />
             Forward
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleArchive}
-            disabled={isArchived}
-            className="flex items-center gap-2"
-          >
-            <Archive className="w-4 h-4" />
-            {isArchived ? 'Archived' : 'Archive'}
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleDelete}
-            className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </Button>
         </div>
       </div>
-
-      {/* Message Content */}
-      <Card>
-        <CardHeader>
-          <div className="space-y-4">
-            {/* Subject */}
-            <CardTitle className="text-xl">{message.subject || 'No Subject'}</CardTitle>
-            
-            {/* Message Info */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center text-white">
-                    {message.direction === 'incoming' ? (
-                      <ArrowDown className="w-4 h-4" />
-                    ) : (
-                      <ArrowUp className="w-4 h-4" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-medium">
-                      {message.direction === 'incoming' ? 'From' : 'To'}: {message.direction === 'incoming' ? message.from_address : message.to_address}
-                    </div>
-                    {message.direction === 'incoming' && (
-                      <div className="text-sm text-gray-600">
-                        To: {message.to_address}
-                      </div>
-                    )}
-                    {message.direction === 'outgoing' && (
-                      <div className="text-sm text-gray-600">
-                        From: {message.from_address}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Badge variant={message.direction === 'incoming' ? 'default' : 'secondary'}>
-                  {message.direction === 'incoming' ? 'Received' : 'Sent'}
-                </Badge>
-                {message.sent_via && message.sent_via !== 'email' && (
-                  <Badge variant="outline">
-                    via {message.sent_via}
-                  </Badge>
-                )}
-                {isArchived && (
-                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                    Archived
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Date */}
-            <div className="text-sm text-gray-600">
-              {formatDateTime(message.created_at)}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <div className="prose max-w-none">
-            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-              {message.body}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

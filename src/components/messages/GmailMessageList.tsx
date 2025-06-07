@@ -7,7 +7,8 @@ import {
   StarOff, 
   Archive, 
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  Circle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -73,7 +74,7 @@ export const GmailMessageList = ({
   const allSelected = messages.length > 0 && messages.every(m => selectedMessages.has(m.id));
 
   return (
-    <div className="w-96 border-r bg-white flex flex-col h-[calc(100vh-8rem)]">
+    <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
       {/* Toolbar */}
       <div className="px-4 py-2 border-b bg-gray-50/50 flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -111,7 +112,6 @@ export const GmailMessageList = ({
                 key={message.id}
                 message={message}
                 isSelected={selectedMessages.has(message.id)}
-                isActive={selectedMessage?.id === message.id}
                 onSelect={() => onSelectMessage(message)}
                 onCheckboxChange={(checked) => onSelectMessageCheckbox(message.id, checked)}
                 formatDate={formatDate}
@@ -128,7 +128,6 @@ export const GmailMessageList = ({
 interface MessageRowProps {
   message: EmailMessage;
   isSelected: boolean;
-  isActive: boolean;
   onSelect: () => void;
   onCheckboxChange: (checked: boolean) => void;
   formatDate: (date: string) => string;
@@ -138,7 +137,6 @@ interface MessageRowProps {
 const MessageRow = ({
   message,
   isSelected,
-  isActive,
   onSelect,
   onCheckboxChange,
   formatDate,
@@ -148,7 +146,6 @@ const MessageRow = ({
     <div
       className={cn(
         "flex items-center gap-3 px-4 py-3 cursor-pointer hover:shadow-sm transition-all group border-b border-gray-100",
-        isActive && "bg-blue-50 shadow-sm",
         !message.read && "bg-white shadow-sm"
       )}
       onClick={onSelect}
@@ -176,6 +173,14 @@ const MessageRow = ({
             <StarOff className="h-4 w-4 text-gray-400" />
           )}
         </Button>
+      </div>
+
+      {/* Bullet Point */}
+      <div className="flex-shrink-0">
+        <Circle className={cn(
+          "w-2 h-2 fill-current",
+          !message.read ? "text-blue-600" : "text-gray-300"
+        )} />
       </div>
 
       {/* Message Content */}
