@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,6 @@ import { MessagesSidebar } from '@/components/messages/MessagesSidebar';
 import { GmailMessageList } from '@/components/messages/GmailMessageList';
 import { GmailMessageDetail } from '@/components/messages/GmailMessageDetail';
 import { ComposeModal } from '@/components/messages/ComposeModal';
-import { useNavigate } from 'react-router-dom';
 
 interface EmailMessage {
   id: string;
@@ -35,7 +35,6 @@ const MessagesPage = () => {
   const [activeFilter, setActiveFilter] = useState('inbox');
   const { user } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (user?.id) {
@@ -118,8 +117,8 @@ const MessagesPage = () => {
   });
 
   const handleSelectMessage = (message: EmailMessage) => {
-    // Navigate to message detail page
-    navigate(`/dashboard/messages/${message.id}`);
+    // Set selected message for detail view instead of navigating
+    setSelectedMessage(message);
     
     // Mark as read
     if (!message.read) {
@@ -127,6 +126,10 @@ const MessagesPage = () => {
         m.id === message.id ? { ...m, read: true } : m
       ));
     }
+  };
+
+  const handleBackToList = () => {
+    setSelectedMessage(null);
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -154,6 +157,35 @@ const MessagesPage = () => {
       title: "Branding Settings",
       description: "Email branding features coming soon!",
     });
+  };
+
+  const handleReply = () => {
+    toast({
+      title: "Reply feature",
+      description: "Reply functionality will be available soon.",
+    });
+  };
+
+  const handleForward = () => {
+    toast({
+      title: "Forward feature",
+      description: "Forward functionality will be available soon.",
+    });
+  };
+
+  const handleArchive = () => {
+    toast({
+      title: "Message archived",
+      description: "Message has been archived.",
+    });
+  };
+
+  const handleDelete = () => {
+    toast({
+      title: "Message deleted",
+      description: "Message has been deleted.",
+    });
+    setSelectedMessage(null);
   };
 
   const unreadCount = messages.filter(m => !m.read && m.direction === 'incoming').length;
@@ -203,16 +235,27 @@ const MessagesPage = () => {
           onOpenBranding={handleOpenBranding}
         />
 
-        {/* Content area - Full width message list */}
+        {/* Content area - Either show message list or message detail */}
         <div className="ml-64 w-full">
-          <GmailMessageList
-            messages={filteredMessages}
-            selectedMessages={selectedMessages}
-            selectedMessage={null}
-            onSelectMessage={handleSelectMessage}
-            onSelectMessageCheckbox={handleSelectMessageCheckbox}
-            onSelectAll={handleSelectAll}
-          />
+          {selectedMessage ? (
+            <GmailMessageDetail
+              message={selectedMessage}
+              onClose={handleBackToList}
+              onReply={handleReply}
+              onForward={handleForward}
+              onArchive={handleArchive}
+              onDelete={handleDelete}
+            />
+          ) : (
+            <GmailMessageList
+              messages={filteredMessages}
+              selectedMessages={selectedMessages}
+              selectedMessage={null}
+              onSelectMessage={handleSelectMessage}
+              onSelectMessageCheckbox={handleSelectMessageCheckbox}
+              onSelectAll={handleSelectAll}
+            />
+          )}
         </div>
       </div>
 

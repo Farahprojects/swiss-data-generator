@@ -10,7 +10,8 @@ import {
   Star,
   StarOff,
   MoreHorizontal,
-  ArrowLeft
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 
 interface EmailMessage {
@@ -46,7 +47,7 @@ export const GmailMessageDetail = ({
 }: GmailMessageDetailProps) => {
   if (!message) {
     return (
-      <div className="flex-1 bg-white flex items-center justify-center">
+      <div className="flex-1 bg-white flex items-center justify-center h-[calc(100vh-8rem)]">
         <div className="text-center text-gray-500">
           <div className="text-lg mb-2">No message selected</div>
           <p className="text-sm">Select a message to view its content</p>
@@ -59,9 +60,9 @@ export const GmailMessageDetail = ({
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit'
     });
   };
@@ -72,87 +73,101 @@ export const GmailMessageDetail = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
-      {/* Header */}
-      <div className="border-b p-4">
-        <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" onClick={onClose} className="lg:hidden">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
+    <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
+      {/* Toolbar - similar to message list toolbar */}
+      <div className="px-4 py-2 border-b bg-gray-50/50 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div className="h-6 w-px bg-gray-300 mx-2" />
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
           
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={onArchive} className="h-8 w-8 p-0">
               <Archive className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={onDelete} className="h-8 w-8 p-0">
               <Trash2 className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
               {message.starred ? (
                 <Star className="w-4 h-4 text-yellow-400 fill-current" />
               ) : (
                 <StarOff className="w-4 h-4" />
               )}
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
               <MoreHorizontal className="w-4 h-4" />
             </Button>
           </div>
         </div>
+      </div>
 
-        <h1 className="text-xl font-normal text-gray-900 mb-4">
-          {message.subject || 'No Subject'}
-        </h1>
+      {/* Message Content - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6">
+          {/* Subject */}
+          <h1 className="text-2xl font-normal text-gray-900 mb-6">
+            {message.subject || 'No Subject'}
+          </h1>
 
-        {/* Sender Info */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium">
-              {getInitials(message.direction === 'incoming' ? message.from_address : message.to_address)}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-900">
+          {/* Message Info */}
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center text-white text-lg font-medium">
+                {getInitials(message.direction === 'incoming' ? message.from_address : message.to_address)}
+              </div>
+              <div>
+                <div className="font-medium text-lg">
                   {message.direction === 'incoming' ? message.from_address : message.to_address}
-                </span>
-                {message.sent_via !== 'email' && (
-                  <Badge variant="outline" className="text-xs">
-                    via {message.sent_via}
-                  </Badge>
-                )}
-              </div>
-              <div className="text-sm text-gray-600 mt-1">
-                to {message.direction === 'incoming' ? message.to_address : message.from_address}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  to {message.direction === 'incoming' ? message.to_address : message.from_address}
+                </div>
+                <div className="text-sm text-gray-500 mt-1">
+                  {formatDateTime(message.created_at)}
+                </div>
               </div>
             </div>
+            
+            <div className="flex items-center space-x-2">
+              <Badge variant={message.direction === 'incoming' ? 'default' : 'secondary'}>
+                {message.direction === 'incoming' ? 'Received' : 'Sent'}
+              </Badge>
+              {message.sent_via && message.sent_via !== 'email' && (
+                <Badge variant="outline">
+                  via {message.sent_via}
+                </Badge>
+              )}
+            </div>
           </div>
-          
-          <div className="text-sm text-gray-600">
-            {formatDateTime(message.created_at)}
-          </div>
-        </div>
-      </div>
 
-      {/* Message Body */}
-      <div className="flex-1 p-6 overflow-auto">
-        <div className="max-w-none">
-          <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-sm">
-            {message.body}
+          {/* Message Body */}
+          <div className="prose max-w-none">
+            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-base">
+              {message.body}
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Action Buttons */}
-      <div className="border-t p-4">
-        <div className="flex items-center gap-2">
-          <Button onClick={onReply} className="flex items-center gap-2">
-            <Reply className="w-4 h-4" />
-            Reply
-          </Button>
-          <Button variant="outline" onClick={onForward} className="flex items-center gap-2">
-            <Forward className="w-4 h-4" />
-            Forward
-          </Button>
+          {/* Action Buttons */}
+          <div className="mt-8 flex items-center gap-3">
+            <Button onClick={onReply} className="flex items-center gap-2">
+              <Reply className="w-4 h-4" />
+              Reply
+            </Button>
+            <Button variant="outline" onClick={onForward} className="flex items-center gap-2">
+              <Forward className="w-4 h-4" />
+              Forward
+            </Button>
+          </div>
         </div>
       </div>
     </div>
