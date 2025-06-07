@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,15 +63,25 @@ const MessagesPage = () => {
         throw error;
       }
       
-      console.log('Loaded messages:', data);
+      console.log('Raw messages from database:', data);
       
-      const messagesData = (data || []).map(message => ({
-        ...message,
-        direction: message.direction as 'incoming' | 'outgoing',
-        read: Math.random() > 0.3, // Temporary mock data for read status
-        starred: Math.random() > 0.8 // Temporary mock data for starred
-      }));
+      // Map database direction values to UI values
+      const messagesData = (data || []).map(message => {
+        const mappedDirection = message.direction === 'inbound' ? 'incoming' : 
+                               message.direction === 'outbound' ? 'outgoing' : 
+                               message.direction; // fallback to original value
+        
+        console.log(`Message ${message.id}: ${message.direction} -> ${mappedDirection}`);
+        
+        return {
+          ...message,
+          direction: mappedDirection as 'incoming' | 'outgoing',
+          read: Math.random() > 0.3, // Temporary mock data for read status
+          starred: Math.random() > 0.8 // Temporary mock data for starred
+        };
+      });
       
+      console.log('Processed messages:', messagesData);
       setMessages(messagesData);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -144,6 +153,10 @@ const MessagesPage = () => {
   };
 
   const unreadCount = messages.filter(m => !m.read && m.direction === 'incoming').length;
+
+  console.log('Current filter:', activeFilter);
+  console.log('Filtered messages count:', filteredMessages.length);
+  console.log('Total messages count:', messages.length);
 
   if (loading) {
     return (
