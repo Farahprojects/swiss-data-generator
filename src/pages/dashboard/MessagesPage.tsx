@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,8 +170,8 @@ const MessagesPage = () => {
 
   return (
     <div className="w-full">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-10 bg-white border-b px-6 py-4">
+      {/* Sticky Header - positioned below the global nav */}
+      <div className="sticky top-16 z-10 bg-white border-b px-6 py-4">
         <div className="flex items-center gap-6">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
           
