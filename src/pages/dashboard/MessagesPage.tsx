@@ -158,9 +158,7 @@ const MessagesPage = () => {
             />
           </div>
           
-          <div className="text-sm text-gray-600">
-            {filteredMessages.length} messages
-          </div>
+          <div></div>
         </div>
       </div>
 

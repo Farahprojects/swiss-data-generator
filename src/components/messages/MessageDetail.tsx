@@ -48,11 +48,8 @@ export const MessageDetail = ({
 }: MessageDetailProps) => {
   if (!message) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <div className="text-center text-gray-500">
-          <div className="text-lg mb-2">Select a message</div>
-          <p className="text-sm">Choose a message from the list to view its contents</p>
-        </div>
+      <div className="flex-1 bg-gray-50">
+        {/* Empty state - no content needed */}
       </div>
     );
   }
