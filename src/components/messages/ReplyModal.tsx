@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,12 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Send, X, Bold, Italic, Underline } from 'lucide-react';
+import { Send, X, Bold, Italic, Underline, Loader2 } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { LinkInsertPopup } from './LinkInsertPopup';
 import { ColorPicker } from './ColorPicker';
 import { FontSelector } from './FontSelector';
 import { AttachmentDropzone } from './AttachmentDropzone';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface EmailMessage {
   id: string;
@@ -57,30 +58,109 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
     italic: false,
     underline: false
   });
+  const [isSending, setIsSending] = useState(false);
+  const { toast } = useToast();
 
-  const handleSend = () => {
-    if (!body.trim()) return;
+  const handleSend = async () => {
+    if (!body.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a message before sending.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    onSend({
-      to,
-      subject,
-      body: formatBodyWithStyles(),
-      attachments
-    });
+    setIsSending(true);
 
-    // Reset form
-    setBody('');
-    setAttachments([]);
-    setTextStyles({ bold: false, italic: false, underline: false });
-    onClose();
+    try {
+      const formattedBody = formatBodyWithStyles();
+      
+      // Call the outbound-messenger edge function
+      const { data, error } = await supabase.functions.invoke('outbound-messenger', {
+        body: {
+          to,
+          subject,
+          html: formattedBody,
+          text: body // Also send plain text version
+        }
+      });
+
+      if (error) {
+        console.error('Error sending email:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send email. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Call the original onSend callback
+      onSend({
+        to,
+        subject,
+        body: formattedBody,
+        attachments
+      });
+
+      toast({
+        title: "Success",
+        description: "Reply sent successfully!"
+      });
+
+      // Reset form
+      setBody('');
+      setAttachments([]);
+      setTextStyles({ bold: false, italic: false, underline: false });
+      onClose();
+
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const formatBodyWithStyles = () => {
     let formattedBody = body;
     
+    // Convert basic formatting to HTML
+    if (textStyles.bold) {
+      formattedBody = `<strong>${formattedBody}</strong>`;
+    }
+    if (textStyles.italic) {
+      formattedBody = `<em>${formattedBody}</em>`;
+    }
+    if (textStyles.underline) {
+      formattedBody = `<u>${formattedBody}</u>`;
+    }
+    
+    // Apply color if not default
+    if (currentColor !== '#000000') {
+      formattedBody = `<span style="color: ${currentColor}">${formattedBody}</span>`;
+    }
+    
+    // Convert line breaks to HTML
+    formattedBody = formattedBody.replace(/\n/g, '<br>');
+    
     // Add original message quote
     const originalDate = new Date(originalMessage.created_at).toLocaleString();
-    const quote = `\n\n--- Original Message ---\nFrom: ${originalMessage.from_address}\nDate: ${originalDate}\nSubject: ${originalMessage.subject}\n\n${originalMessage.body}`;
+    const quote = `
+      <br><br>
+      <div style="border-left: 3px solid #ccc; padding-left: 10px; margin: 10px 0;">
+        <strong>--- Original Message ---</strong><br>
+        <strong>From:</strong> ${originalMessage.from_address}<br>
+        <strong>Date:</strong> ${originalDate}<br>
+        <strong>Subject:</strong> ${originalMessage.subject}<br><br>
+        ${originalMessage.body.replace(/\n/g, '<br>')}
+      </div>
+    `;
     
     return formattedBody + quote;
   };
@@ -244,12 +324,21 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
             {attachments.length > 0 && `${attachments.length} attachment(s)`}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={isSending}>
               Cancel
             </Button>
-            <Button onClick={handleSend} disabled={!body.trim()}>
-              <Send className="w-4 h-4 mr-2" />
-              Send Reply
+            <Button onClick={handleSend} disabled={!body.trim() || isSending}>
+              {isSending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Reply
+                </>
+              )}
             </Button>
           </div>
         </div>
