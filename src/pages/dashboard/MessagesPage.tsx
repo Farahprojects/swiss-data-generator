@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +6,8 @@ import { MessagesSidebar } from '@/components/messages/MessagesSidebar';
 import { GmailMessageList } from '@/components/messages/GmailMessageList';
 import { GmailMessageDetail } from '@/components/messages/GmailMessageDetail';
 import { ComposeModal } from '@/components/messages/ComposeModal';
+import { MessagesHeader } from '@/components/messages/MessagesHeader';
+import UnifiedNavigation from '@/components/UnifiedNavigation';
 
 interface EmailMessage {
   id: string;
@@ -160,35 +159,29 @@ const MessagesPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="text-lg">Loading messages...</div>
+      <div className="min-h-screen flex flex-col bg-white">
+        <UnifiedNavigation />
+        <div className="flex items-center justify-center flex-1 pt-16">
+          <div className="text-center">
+            <div className="text-lg">Loading messages...</div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex-shrink-0">
-        <div className="flex items-center gap-6">
-          <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
-          
-          {/* Search */}
-          <div className="relative flex-1 max-w-2xl">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search mail"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
-            />
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Fixed Navigation Header */}
+      <UnifiedNavigation />
+      
+      {/* Sticky Messages Header */}
+      <MessagesHeader 
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
 
-      {/* Main Content */}
+      {/* Main Content - Scrollable */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
         <MessagesSidebar

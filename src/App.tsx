@@ -78,6 +78,15 @@ function App() {
                   <Route path="/user-settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
                   <Route path="/activity-logs" element={<AuthGuard><ActivityLogs /></AuthGuard>} />
 
+                  {/* Dedicated Messages Route - bypasses dashboard layout */}
+                  <Route path="/dashboard/messages" element={
+                    <AuthGuard>
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <MessagesPage />
+                      </Suspense>
+                    </AuthGuard>
+                  } />
+
                   {/* Dashboard routes with proper nested structure */}
                   <Route 
                     path="/dashboard/*" 
@@ -102,11 +111,6 @@ function App() {
                     <Route path="clients/:id" element={
                       <Suspense fallback={<div>Loading...</div>}>
                         <ClientDetailPage />
-                      </Suspense>
-                    } />
-                    <Route path="messages" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <MessagesPage />
                       </Suspense>
                     } />
                     <Route path="reports" element={
