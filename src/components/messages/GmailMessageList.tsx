@@ -37,6 +37,7 @@ interface GmailMessageListProps {
 export const GmailMessageList = ({
   messages,
   selectedMessages,
+  selectedMessage,
   onSelectMessage,
   onSelectMessageCheckbox,
   onSelectAll
@@ -72,9 +73,9 @@ export const GmailMessageList = ({
   const allSelected = messages.length > 0 && messages.every(m => selectedMessages.has(m.id));
 
   return (
-    <div className="flex flex-col bg-white h-full">
+    <div className="w-96 border-r bg-white flex flex-col">
       {/* Toolbar */}
-      <div className="px-4 py-2 border-b bg-gray-50/50 flex-shrink-0">
+      <div className="px-4 py-2 border-b bg-gray-50/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Checkbox
@@ -110,6 +111,7 @@ export const GmailMessageList = ({
                 key={message.id}
                 message={message}
                 isSelected={selectedMessages.has(message.id)}
+                isActive={selectedMessage?.id === message.id}
                 onSelect={() => onSelectMessage(message)}
                 onCheckboxChange={(checked) => onSelectMessageCheckbox(message.id, checked)}
                 formatDate={formatDate}
@@ -126,6 +128,7 @@ export const GmailMessageList = ({
 interface MessageRowProps {
   message: EmailMessage;
   isSelected: boolean;
+  isActive: boolean;
   onSelect: () => void;
   onCheckboxChange: (checked: boolean) => void;
   formatDate: (date: string) => string;
@@ -135,6 +138,7 @@ interface MessageRowProps {
 const MessageRow = ({
   message,
   isSelected,
+  isActive,
   onSelect,
   onCheckboxChange,
   formatDate,
@@ -143,7 +147,8 @@ const MessageRow = ({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-3 cursor-pointer hover:shadow-sm transition-all group border-b border-gray-100 hover:bg-gray-50",
+        "flex items-center gap-3 px-4 py-3 cursor-pointer hover:shadow-sm transition-all group border-b border-gray-100",
+        isActive && "bg-blue-50 shadow-sm",
         !message.read && "bg-white shadow-sm"
       )}
       onClick={onSelect}
