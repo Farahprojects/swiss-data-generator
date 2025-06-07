@@ -170,74 +170,69 @@ const MessagesPage = () => {
 
   return (
     <div className="h-screen flex flex-col bg-white">
-      {/* Sticky Messages Header */}
-      <div className="sticky top-0 z-30 bg-white border-b px-6 py-3 flex-shrink-0">
+      {/* Header */}
+      <div className="bg-white border-b px-6 py-4 flex-shrink-0">
         <div className="flex items-center gap-6">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
           
-          {/* Search - made slimmer */}
+          {/* Search */}
           <div className="relative flex-1 max-w-2xl">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search mail"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-8 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
+              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
             />
           </div>
         </div>
       </div>
 
-      {/* Main Content - scrollable area */}
+      {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - sticky */}
-        <div className="flex-shrink-0">
-          <MessagesSidebar
-            activeFilter={activeFilter}
-            unreadCount={unreadCount}
-            onFilterChange={setActiveFilter}
-            onCompose={() => setShowCompose(true)}
-            onOpenBranding={handleOpenBranding}
-          />
-        </div>
+        {/* Left Sidebar */}
+        <MessagesSidebar
+          activeFilter={activeFilter}
+          unreadCount={unreadCount}
+          onFilterChange={setActiveFilter}
+          onCompose={() => setShowCompose(true)}
+          onOpenBranding={handleOpenBranding}
+        />
 
-        {/* Email content area - scrollable */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Message List */}
-          <GmailMessageList
-            messages={filteredMessages}
-            selectedMessages={selectedMessages}
-            selectedMessage={selectedMessage}
-            onSelectMessage={handleSelectMessage}
-            onSelectMessageCheckbox={handleSelectMessageCheckbox}
-            onSelectAll={handleSelectAll}
-          />
+        {/* Message List */}
+        <GmailMessageList
+          messages={filteredMessages}
+          selectedMessages={selectedMessages}
+          selectedMessage={selectedMessage}
+          onSelectMessage={handleSelectMessage}
+          onSelectMessageCheckbox={handleSelectMessageCheckbox}
+          onSelectAll={handleSelectAll}
+        />
 
-          {/* Message Detail */}
-          <GmailMessageDetail
-            message={selectedMessage}
-            onClose={() => setSelectedMessage(null)}
-            onReply={() => {
-              setShowCompose(true);
-            }}
-            onForward={() => {
-              setShowCompose(true);
-            }}
-            onArchive={() => {
-              toast({
-                title: "Message archived",
-                description: "Message has been archived.",
-              });
-            }}
-            onDelete={() => {
-              toast({
-                title: "Message deleted",
-                description: "Message has been deleted.",
-              });
-              setSelectedMessage(null);
-            }}
-          />
-        </div>
+        {/* Message Detail */}
+        <GmailMessageDetail
+          message={selectedMessage}
+          onClose={() => setSelectedMessage(null)}
+          onReply={() => {
+            setShowCompose(true);
+          }}
+          onForward={() => {
+            setShowCompose(true);
+          }}
+          onArchive={() => {
+            toast({
+              title: "Message archived",
+              description: "Message has been archived.",
+            });
+          }}
+          onDelete={() => {
+            toast({
+              title: "Message deleted",
+              description: "Message has been deleted.",
+            });
+            setSelectedMessage(null);
+          }}
+        />
       </div>
 
       {/* Compose Modal */}
