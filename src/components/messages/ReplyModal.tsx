@@ -220,7 +220,7 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
               id="to"
               value={to}
               disabled
-              className="bg-gray-50 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="bg-gray-50"
             />
           </div>
 
@@ -232,63 +232,7 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Subject"
-              className="focus-visible:ring-0 focus-visible:ring-offset-0"
             />
-          </div>
-
-          {/* Formatting Toolbar */}
-          <div className="border rounded-lg p-2">
-            <div className="flex items-center gap-1 flex-wrap">
-              {/* Text Formatting */}
-              <Button
-                variant={textStyles.bold ? "default" : "ghost"}
-                size="sm"
-                type="button"
-                onClick={() => toggleStyle('bold')}
-              >
-                <Bold className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={textStyles.italic ? "default" : "ghost"}
-                size="sm"
-                type="button"
-                onClick={() => toggleStyle('italic')}
-              >
-                <Italic className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={textStyles.underline ? "default" : "ghost"}
-                size="sm"
-                type="button"
-                onClick={() => toggleStyle('underline')}
-              >
-                <Underline className="w-4 h-4" />
-              </Button>
-
-              <Separator orientation="vertical" className="h-6 mx-1" />
-
-              {/* Font and Color Tools */}
-              <FontSelector
-                onFontSelect={setCurrentFont}
-                onFontSizeSelect={setCurrentSize}
-                currentFont={currentFont}
-                currentSize={currentSize}
-              />
-              <ColorPicker
-                onColorSelect={setCurrentColor}
-                currentColor={currentColor}
-              />
-
-              <Separator orientation="vertical" className="h-6 mx-1" />
-
-              {/* Content Tools */}
-              <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-              <LinkInsertPopup onLinkInsert={handleLinkInsert} />
-              <AttachmentDropzone
-                attachments={attachments}
-                onAttachmentsChange={setAttachments}
-              />
-            </div>
           </div>
 
           {/* Message Body */}
@@ -319,11 +263,66 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions with formatting tools */}
         <div className="flex items-center justify-between pt-4 border-t">
-          <div className="text-sm text-gray-500">
-            {attachments.length > 0 && `${attachments.length} attachment(s)`}
+          <div className="flex items-center gap-1">
+            {/* Text Formatting */}
+            <Button
+              variant={textStyles.bold ? "default" : "ghost"}
+              size="sm"
+              type="button"
+              onClick={() => toggleStyle('bold')}
+            >
+              <Bold className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={textStyles.italic ? "default" : "ghost"}
+              size="sm"
+              type="button"
+              onClick={() => toggleStyle('italic')}
+            >
+              <Italic className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={textStyles.underline ? "default" : "ghost"}
+              size="sm"
+              type="button"
+              onClick={() => toggleStyle('underline')}
+            >
+              <Underline className="w-4 h-4" />
+            </Button>
+
+            <Separator orientation="vertical" className="h-6 mx-1" />
+
+            {/* Font and Color Tools */}
+            <FontSelector
+              onFontSelect={setCurrentFont}
+              onFontSizeSelect={setCurrentSize}
+              currentFont={currentFont}
+              currentSize={currentSize}
+            />
+            <ColorPicker
+              onColorSelect={setCurrentColor}
+              currentColor={currentColor}
+            />
+
+            <Separator orientation="vertical" className="h-6 mx-1" />
+
+            {/* Content Tools */}
+            <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+            <LinkInsertPopup onLinkInsert={handleLinkInsert} />
+            <AttachmentDropzone
+              attachments={attachments}
+              onAttachmentsChange={setAttachments}
+            />
+            
+            {attachments.length > 0 && (
+              <span className="text-sm text-muted-foreground ml-2">
+                {attachments.length} attachment(s)
+              </span>
+            )}
           </div>
+          
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose} disabled={isSending}>
               Cancel
