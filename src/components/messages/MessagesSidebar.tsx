@@ -2,6 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Inbox, 
   Send, 
@@ -45,17 +46,17 @@ export const MessagesSidebar = ({
   ];
 
   return (
-    <div className="w-64 bg-white border-r flex flex-col">
-      {/* Compose Button */}
-      <div className="p-4 border-b">
+    <div className="w-64 bg-white border-r flex flex-col h-[calc(100vh-4rem)] fixed left-0 top-16 z-5">
+      {/* Compose Button - Fixed at top */}
+      <div className="p-4 border-b bg-white flex-shrink-0">
         <Button onClick={onCompose} className="w-full flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Compose
         </Button>
       </div>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-auto">
+      {/* Navigation - Scrollable content */}
+      <ScrollArea className="flex-1">
         <div className="p-2">
           <div className="space-y-1">
             {navigationItems.map((item) => (
@@ -103,7 +104,7 @@ export const MessagesSidebar = ({
             </div>
           </div>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 };

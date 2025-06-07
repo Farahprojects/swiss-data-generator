@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -188,9 +189,9 @@ const MessagesPage = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Adjusted for fixed sidebar */}
       <div className="flex">
-        {/* Left Sidebar */}
+        {/* Left Sidebar - Now fixed */}
         <MessagesSidebar
           activeFilter={activeFilter}
           unreadCount={unreadCount}
@@ -199,40 +200,43 @@ const MessagesPage = () => {
           onOpenBranding={handleOpenBranding}
         />
 
-        {/* Message List */}
-        <GmailMessageList
-          messages={filteredMessages}
-          selectedMessages={selectedMessages}
-          selectedMessage={selectedMessage}
-          onSelectMessage={handleSelectMessage}
-          onSelectMessageCheckbox={handleSelectMessageCheckbox}
-          onSelectAll={handleSelectAll}
-        />
+        {/* Content area - Offset for fixed sidebar */}
+        <div className="flex ml-64 w-full">
+          {/* Message List */}
+          <GmailMessageList
+            messages={filteredMessages}
+            selectedMessages={selectedMessages}
+            selectedMessage={selectedMessage}
+            onSelectMessage={handleSelectMessage}
+            onSelectMessageCheckbox={handleSelectMessageCheckbox}
+            onSelectAll={handleSelectAll}
+          />
 
-        {/* Message Detail */}
-        <GmailMessageDetail
-          message={selectedMessage}
-          onClose={() => setSelectedMessage(null)}
-          onReply={() => {
-            setShowCompose(true);
-          }}
-          onForward={() => {
-            setShowCompose(true);
-          }}
-          onArchive={() => {
-            toast({
-              title: "Message archived",
-              description: "Message has been archived.",
-            });
-          }}
-          onDelete={() => {
-            toast({
-              title: "Message deleted",
-              description: "Message has been deleted.",
-            });
-            setSelectedMessage(null);
-          }}
-        />
+          {/* Message Detail */}
+          <GmailMessageDetail
+            message={selectedMessage}
+            onClose={() => setSelectedMessage(null)}
+            onReply={() => {
+              setShowCompose(true);
+            }}
+            onForward={() => {
+              setShowCompose(true);
+            }}
+            onArchive={() => {
+              toast({
+                title: "Message archived",
+                description: "Message has been archived.",
+              });
+            }}
+            onDelete={() => {
+              toast({
+                title: "Message deleted",
+                description: "Message has been deleted.",
+              });
+              setSelectedMessage(null);
+            }}
+          />
+        </div>
       </div>
 
       {/* Compose Modal */}
