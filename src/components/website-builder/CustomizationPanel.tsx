@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -92,17 +91,14 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     onChange('services', services);
   };
 
-  const SectionHeader = ({ icon: Icon, title, isOpen, onClick }: any) => (
+  const SectionHeader = ({ icon: Icon, title, isOpen, section }: any) => (
     <CollapsibleTrigger asChild>
-      <div 
-        className="flex items-center justify-between cursor-pointer p-4 hover:bg-gray-50 transition-colors"
-        onClick={onClick}
-      >
+      <div className="flex items-center justify-between cursor-pointer p-4 hover:bg-gray-50 transition-colors w-full">
         <div className="flex items-center space-x-3">
           <Icon className="h-5 w-5 text-blue-600" />
           <span className="font-semibold text-gray-900">{title}</span>
         </div>
-        {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </div>
     </CollapsibleTrigger>
   );
@@ -116,7 +112,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             icon={User} 
             title="Basic Information" 
             isOpen={openSections.basic}
-            onClick={() => toggleSection('basic')}
+            section="basic"
           />
           <AnimatePresence>
             {openSections.basic && (
@@ -181,7 +177,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             icon={Briefcase} 
             title="Services & Offerings" 
             isOpen={openSections.services}
-            onClick={() => toggleSection('services')}
+            section="services"
           />
           <AnimatePresence>
             {openSections.services && (
@@ -272,7 +268,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             icon={Settings} 
             title="Call to Action" 
             isOpen={openSections.cta}
-            onClick={() => toggleSection('cta')}
+            section="cta"
           />
           <AnimatePresence>
             {openSections.cta && (
@@ -312,7 +308,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             icon={Palette} 
             title="Design & Styling" 
             isOpen={openSections.design}
-            onClick={() => toggleSection('design')}
+            section="design"
           />
           <AnimatePresence>
             {openSections.design && (
