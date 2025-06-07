@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,9 +6,9 @@ import { Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 import { MessagesSidebar } from '@/components/messages/MessagesSidebar';
 import { GmailMessageList } from '@/components/messages/GmailMessageList';
-import { GmailMessageDetail } from '@/components/messages/GmailMessageDetail';
 import { ComposeModal } from '@/components/messages/ComposeModal';
 
 interface EmailMessage {
@@ -26,7 +27,6 @@ interface EmailMessage {
 
 const MessagesPage = () => {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
-  const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
@@ -34,6 +34,7 @@ const MessagesPage = () => {
   const [activeFilter, setActiveFilter] = useState('inbox');
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user?.id) {
@@ -116,7 +117,9 @@ const MessagesPage = () => {
   });
 
   const handleSelectMessage = (message: EmailMessage) => {
-    setSelectedMessage(message);
+    // Navigate to the detail page instead of showing inline detail
+    navigate(`/dashboard/messages/${message.id}`);
+    
     // Mark as read
     if (!message.read) {
       setMessages(prev => prev.map(m => 
@@ -171,7 +174,7 @@ const MessagesPage = () => {
   return (
     <div className="h-screen flex flex-col bg-white">
       {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex-shrink-0">
+      <div className="bg-white border-b px-6 py-4 flex-shrink-0 sticky top-0 z-10">
         <div className="flex items-center gap-6">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
           
@@ -182,13 +185,13 @@ const MessagesPage = () => {
               placeholder="Search mail"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
+              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-8 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
             />
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Two Column Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
         <MessagesSidebar
@@ -199,40 +202,17 @@ const MessagesPage = () => {
           onOpenBranding={handleOpenBranding}
         />
 
-        {/* Message List */}
-        <GmailMessageList
-          messages={filteredMessages}
-          selectedMessages={selectedMessages}
-          selectedMessage={selectedMessage}
-          onSelectMessage={handleSelectMessage}
-          onSelectMessageCheckbox={handleSelectMessageCheckbox}
-          onSelectAll={handleSelectAll}
-        />
-
-        {/* Message Detail */}
-        <GmailMessageDetail
-          message={selectedMessage}
-          onClose={() => setSelectedMessage(null)}
-          onReply={() => {
-            setShowCompose(true);
-          }}
-          onForward={() => {
-            setShowCompose(true);
-          }}
-          onArchive={() => {
-            toast({
-              title: "Message archived",
-              description: "Message has been archived.",
-            });
-          }}
-          onDelete={() => {
-            toast({
-              title: "Message deleted",
-              description: "Message has been deleted.",
-            });
-            setSelectedMessage(null);
-          }}
-        />
+        {/* Message List - Full Width */}
+        <div className="flex-1">
+          <GmailMessageList
+            messages={filteredMessages}
+            selectedMessages={selectedMessages}
+            selectedMessage={null}
+            onSelectMessage={handleSelectMessage}
+            onSelectMessageCheckbox={handleSelectMessageCheckbox}
+            onSelectAll={handleSelectAll}
+          />
+        </div>
       </div>
 
       {/* Compose Modal */}

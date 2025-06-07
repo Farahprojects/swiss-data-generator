@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -107,6 +108,11 @@ function App() {
                     <Route path="messages" element={
                       <Suspense fallback={<div>Loading...</div>}>
                         <MessagesPage />
+                      </Suspense>
+                    } />
+                    <Route path="messages/:id" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <MessageDetailPage />
                       </Suspense>
                     } />
                     <Route path="reports" element={
