@@ -141,14 +141,14 @@ const Index = () => {
               transition={{ delay: 0.4, duration: 0.6 }}
               className="mt-6 flex flex-row items-center justify-center gap-4"
             >
-              <Link to="/signup">
-                <Button 
-                  size="lg" 
-                  className="transform transition duration-200 hover:scale-105 hover:bg-primary-hover"
-                >
-                  Start Free Trial
-                </Button>
-              </Link>
+              <Button 
+                disabled
+                size="lg" 
+                className="opacity-50 cursor-not-allowed"
+                title="Signup temporarily disabled"
+              >
+                Start Free Trial
+              </Button>
               <Link to="/documentation">
                 <Button 
                   variant="outline" 
@@ -286,11 +286,14 @@ const Index = () => {
               transition={{ delay: 0.2, duration: 0.6 }}
               className="flex flex-col items-center justify-center gap-4 sm:flex-row"
             >
-              <Link to="/signup">
-                <Button size="lg" className="bg-white text-primary hover:bg-gray-100">
-                  Claim Free Key
-                </Button>
-              </Link>
+              <Button 
+                disabled
+                size="lg" 
+                className="bg-white text-primary opacity-50 cursor-not-allowed"
+                title="Signup temporarily disabled"
+              >
+                Claim Free Key
+              </Button>
               <Link to="/contact">
                 <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
                   Talk to Sales

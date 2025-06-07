@@ -182,6 +182,51 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_profiles: {
+        Row: {
+          brand_color: string | null
+          business_name: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          logo_url: string | null
+          phone: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          brand_color?: string | null
+          business_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          brand_color?: string | null
+          business_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       coach_websites: {
         Row: {
           coach_id: string
@@ -317,6 +362,78 @@ export type Database = {
           subject?: string
           template_type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      email_signatures: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          logo_url: string | null
+          name: string
+          signature_html: string
+          signature_text: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          logo_url?: string | null
+          name: string
+          signature_html: string
+          signature_text: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          logo_url?: string | null
+          name?: string
+          signature_html?: string
+          signature_text?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          body_template: string
+          category: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          subject_template: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          body_template: string
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject_template: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          body_template?: string
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject_template?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
