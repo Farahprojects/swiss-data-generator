@@ -3,15 +3,34 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Smile } from 'lucide-react';
 
 const emojiCategories = {
-  smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑'],
-  people: ['👶', '🧒', '👦', '👧', '🧑', '👨', '👩', '🧓', '👴', '👵', '👮', '🕵️', '💂', '👷', '🤴', '👸', '👳', '👲', '🧕', '🤵', '👰', '🤰', '🤱', '👼', '🎅', '🤶'],
-  nature: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥'],
-  food: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🍍', '🥭', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥒', '🥬', '🌶️', '🌽', '🥕', '🥔'],
-  travel: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🚚', '🚛', '🚜', '🏍️', '🚲', '🛴', '🚁', '🚟', '🚠', '🚡', '⛵', '🚤', '🛥️', '🛳️', '⛴️', '✈️'],
-  objects: ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠']
+  smileys: { 
+    label: '😀 Smileys', 
+    emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑']
+  },
+  people: { 
+    label: '👶 People', 
+    emojis: ['👶', '🧒', '👦', '👧', '🧑', '👨', '👩', '🧓', '👴', '👵', '👮', '🕵️', '💂', '👷', '🤴', '👸', '👳', '👲', '🧕', '🤵', '👰', '🤰', '🤱', '👼', '🎅', '🤶']
+  },
+  nature: { 
+    label: '🐶 Nature', 
+    emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥']
+  },
+  food: { 
+    label: '🍏 Food', 
+    emojis: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🍍', '🥭', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥒', '🥬', '🌶️', '🌽', '🥕', '🥔']
+  },
+  travel: { 
+    label: '🚗 Travel', 
+    emojis: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🚚', '🚛', '🚜', '🏍️', '🚲', '🛴', '🚁', '🚟', '🚠', '🚡', '⛵', '🚤', '🛥️', '🛳️', '⛴️', '✈️']
+  },
+  objects: { 
+    label: '⌚ Objects', 
+    emojis: ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠']
+  }
 };
 
 interface EmojiPickerProps {
@@ -23,10 +42,10 @@ export const EmojiPicker = ({ onEmojiSelect }: EmojiPickerProps) => {
   const [activeCategory, setActiveCategory] = useState('smileys');
 
   const filteredEmojis = searchTerm
-    ? Object.values(emojiCategories).flat().filter(emoji => 
-        emoji.includes(searchTerm) // Simple filter, could be enhanced
+    ? Object.values(emojiCategories).flatMap(cat => cat.emojis).filter(emoji => 
+        emoji.includes(searchTerm)
       )
-    : emojiCategories[activeCategory as keyof typeof emojiCategories];
+    : emojiCategories[activeCategory as keyof typeof emojiCategories].emojis;
 
   return (
     <Popover>
@@ -46,34 +65,39 @@ export const EmojiPicker = ({ onEmojiSelect }: EmojiPickerProps) => {
         </div>
         
         {!searchTerm && (
-          <div className="flex border-b">
-            {Object.keys(emojiCategories).map((category) => (
+          <ScrollArea className="h-12">
+            <div className="flex p-2 gap-1">
+              {Object.entries(emojiCategories).map(([key, category]) => (
+                <Button
+                  key={key}
+                  variant={activeCategory === key ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveCategory(key)}
+                  className="text-xs whitespace-nowrap px-2"
+                  title={category.label}
+                >
+                  {category.label.split(' ')[0]}
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+        
+        <ScrollArea className="h-48">
+          <div className="p-3 grid grid-cols-8 gap-1">
+            {filteredEmojis.map((emoji, index) => (
               <Button
-                key={category}
-                variant={activeCategory === category ? "secondary" : "ghost"}
+                key={index}
+                variant="ghost"
                 size="sm"
-                onClick={() => setActiveCategory(category)}
-                className="flex-1 rounded-none capitalize"
+                onClick={() => onEmojiSelect(emoji)}
+                className="h-8 w-8 p-0 text-lg hover:bg-accent"
               >
-                {category}
+                {emoji}
               </Button>
             ))}
           </div>
-        )}
-        
-        <div className="p-3 grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
-          {filteredEmojis.map((emoji, index) => (
-            <Button
-              key={index}
-              variant="ghost"
-              size="sm"
-              onClick={() => onEmojiSelect(emoji)}
-              className="h-8 w-8 p-0 text-lg hover:bg-gray-100"
-            >
-              {emoji}
-            </Button>
-          ))}
-        </div>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );

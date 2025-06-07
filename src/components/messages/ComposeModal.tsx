@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -272,7 +271,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 placeholder="recipient@email.com"
-                className="flex-1"
+                className="flex-1 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               <div className="flex gap-1">
                 <Button
@@ -280,7 +279,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowCc(!showCc)}
-                  className={showCc ? 'text-blue-600' : ''}
+                  className={showCc ? 'bg-primary text-primary-foreground' : ''}
                 >
                   Cc
                 </Button>
@@ -289,7 +288,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowBcc(!showBcc)}
-                  className={showBcc ? 'text-blue-600' : ''}
+                  className={showBcc ? 'bg-primary text-primary-foreground' : ''}
                 >
                   Bcc
                 </Button>
@@ -306,7 +305,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
                   value={cc}
                   onChange={(e) => setCc(e.target.value)}
                   placeholder="cc@email.com"
-                  className="flex-1"
+                  className="flex-1 focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
             )}
@@ -321,7 +320,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
                   value={bcc}
                   onChange={(e) => setBcc(e.target.value)}
                   placeholder="bcc@email.com"
-                  className="flex-1"
+                  className="flex-1 focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
             )}
@@ -335,7 +334,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Message subject"
-                className="flex-1"
+                className="flex-1 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
           </div>
@@ -345,7 +344,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
             <div className="flex items-center gap-1 flex-wrap">
               {/* Text Formatting */}
               <Button
-                variant={textStyles.bold ? "secondary" : "ghost"}
+                variant={textStyles.bold ? "default" : "ghost"}
                 size="sm"
                 type="button"
                 onClick={() => toggleStyle('bold')}
@@ -353,7 +352,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
                 <Bold className="w-4 h-4" />
               </Button>
               <Button
-                variant={textStyles.italic ? "secondary" : "ghost"}
+                variant={textStyles.italic ? "default" : "ghost"}
                 size="sm"
                 type="button"
                 onClick={() => toggleStyle('italic')}
@@ -361,7 +360,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
                 <Italic className="w-4 h-4" />
               </Button>
               <Button
-                variant={textStyles.underline ? "secondary" : "ghost"}
+                variant={textStyles.underline ? "default" : "ghost"}
                 size="sm"
                 type="button"
                 onClick={() => toggleStyle('underline')}

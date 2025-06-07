@@ -220,7 +220,7 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
               id="to"
               value={to}
               disabled
-              className="bg-gray-50"
+              className="bg-gray-50 focus-visible:ring-0 focus-visible:ring-offset-0"
             />
           </div>
 
@@ -232,6 +232,7 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Subject"
+              className="focus-visible:ring-0 focus-visible:ring-offset-0"
             />
           </div>
 
@@ -240,7 +241,7 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
             <div className="flex items-center gap-1 flex-wrap">
               {/* Text Formatting */}
               <Button
-                variant={textStyles.bold ? "secondary" : "ghost"}
+                variant={textStyles.bold ? "default" : "ghost"}
                 size="sm"
                 type="button"
                 onClick={() => toggleStyle('bold')}
@@ -248,7 +249,7 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
                 <Bold className="w-4 h-4" />
               </Button>
               <Button
-                variant={textStyles.italic ? "secondary" : "ghost"}
+                variant={textStyles.italic ? "default" : "ghost"}
                 size="sm"
                 type="button"
                 onClick={() => toggleStyle('italic')}
@@ -256,7 +257,7 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
                 <Italic className="w-4 h-4" />
               </Button>
               <Button
-                variant={textStyles.underline ? "secondary" : "ghost"}
+                variant={textStyles.underline ? "default" : "ghost"}
                 size="sm"
                 type="button"
                 onClick={() => toggleStyle('underline')}

@@ -47,7 +47,7 @@ export const ColorPicker = ({ onColorSelect, currentColor }: ColorPickerProps) =
                 variant="ghost"
                 size="sm"
                 onClick={() => handleColorSelect(color)}
-                className="h-8 w-8 p-0 border hover:scale-110 transition-transform"
+                className="h-8 w-8 p-0 border hover:scale-110 transition-transform hover:bg-accent"
                 style={{ backgroundColor: color }}
               >
                 <span className="sr-only">{color}</span>

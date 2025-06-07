@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Type } from 'lucide-react';
 
 const fonts = [
@@ -41,40 +42,44 @@ export const FontSelector = ({
           <Type className="w-4 h-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64" align="start">
-        <div className="space-y-4">
+      <PopoverContent className="w-64 p-0" align="start">
+        <div className="p-4 space-y-4">
           <div className="space-y-2">
             <div className="text-sm font-medium">Font Family</div>
-            <div className="space-y-1">
-              {fonts.map((font) => (
-                <Button
-                  key={font.value}
-                  variant={currentFont === font.value ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => onFontSelect(font.value)}
-                  className={`w-full justify-start ${font.class}`}
-                >
-                  {font.name}
-                </Button>
-              ))}
-            </div>
+            <ScrollArea className="h-32">
+              <div className="space-y-1 pr-3">
+                {fonts.map((font) => (
+                  <Button
+                    key={font.value}
+                    variant={currentFont === font.value ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => onFontSelect(font.value)}
+                    className={`w-full justify-start ${font.class}`}
+                  >
+                    {font.name}
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
           
           <div className="space-y-2">
             <div className="text-sm font-medium">Font Size</div>
-            <div className="space-y-1">
-              {fontSizes.map((size) => (
-                <Button
-                  key={size.value}
-                  variant={currentSize === size.value ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => onFontSizeSelect(size.value)}
-                  className={`w-full justify-start ${size.class}`}
-                >
-                  {size.name}
-                </Button>
-              ))}
-            </div>
+            <ScrollArea className="h-24">
+              <div className="space-y-1 pr-3">
+                {fontSizes.map((size) => (
+                  <Button
+                    key={size.value}
+                    variant={currentSize === size.value ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => onFontSizeSelect(size.value)}
+                    className={`w-full justify-start ${size.class}`}
+                  >
+                    {size.name}
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
         </div>
       </PopoverContent>
