@@ -30,7 +30,8 @@ const UnifiedNavigation = () => {
   const { openSettings } = useSettingsModal();
   
   const isLoggedIn = !!user;
-  const isWebsiteBuilder = location.pathname.includes('/website-builder');
+  const isMainDashboard = location.pathname === '/dashboard';
+  const isDashboardPageWithBurgerMenu = location.pathname.startsWith('/dashboard') && !isMainDashboard;
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -61,7 +62,7 @@ const UnifiedNavigation = () => {
           <div className="flex justify-between items-center h-full">
             {/* Left section */}
             <div className="flex items-center">
-              {isLoggedIn && isWebsiteBuilder ? (
+              {isLoggedIn && isDashboardPageWithBurgerMenu ? (
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -207,8 +208,8 @@ const UnifiedNavigation = () => {
         )}
       </nav>
 
-      {/* Sidebar Sheet for Website Builder */}
-      {isWebsiteBuilder && (
+      {/* Sidebar Sheet for Dashboard Pages with Burger Menu */}
+      {isDashboardPageWithBurgerMenu && (
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetContent side="left" className="w-[240px] p-0">
             <DashboardSidebar />

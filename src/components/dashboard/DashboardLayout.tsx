@@ -19,8 +19,9 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { openSettings } = useSettingsModal();
   
-  // Check if we're on the website builder page
-  const isWebsiteBuilder = location.pathname.includes('/website-builder');
+  // Check layout type based on current route
+  const isMainDashboard = location.pathname === '/dashboard';
+  const isDashboardPageWithBurgerMenu = location.pathname.startsWith('/dashboard') && !isMainDashboard;
   
   // Handle settings route redirects
   useEffect(() => {
@@ -47,8 +48,8 @@ const DashboardLayout = () => {
     });
   }, [user, location.pathname]);
 
-  // Website builder gets full width without sidebar
-  if (isWebsiteBuilder) {
+  // Dashboard pages with burger menu get full width without sidebar (like website builder)
+  if (isDashboardPageWithBurgerMenu) {
     return (
       <div className="min-h-screen flex flex-col w-full">
         <UnifiedNavigation />
@@ -61,7 +62,7 @@ const DashboardLayout = () => {
     );
   }
 
-  // Regular dashboard layout with sidebar
+  // Main dashboard layout with traditional sidebar
   return (
     <div className="min-h-screen flex flex-col w-full">
       <UnifiedNavigation />
