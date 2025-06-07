@@ -50,7 +50,7 @@ export const EmojiPicker = ({ onEmojiSelect }: EmojiPickerProps) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" type="button">
+        <Button variant="ghost" size="sm" type="button" className="p-2">
           <Smile className="w-4 h-4" />
         </Button>
       </PopoverTrigger>
@@ -73,7 +73,7 @@ export const EmojiPicker = ({ onEmojiSelect }: EmojiPickerProps) => {
                   variant={activeCategory === key ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setActiveCategory(key)}
-                  className="text-xs whitespace-nowrap px-2"
+                  className="text-lg whitespace-nowrap px-2 h-8"
                   title={category.label}
                 >
                   {category.label.split(' ')[0]}
@@ -84,14 +84,14 @@ export const EmojiPicker = ({ onEmojiSelect }: EmojiPickerProps) => {
         )}
         
         <ScrollArea className="h-48">
-          <div className="p-3 grid grid-cols-8 gap-1">
+          <div className="p-3 grid grid-cols-6 gap-2">
             {filteredEmojis.map((emoji, index) => (
               <Button
                 key={index}
                 variant="ghost"
                 size="sm"
                 onClick={() => onEmojiSelect(emoji)}
-                className="h-8 w-8 p-0 text-lg hover:bg-accent"
+                className="h-10 w-10 p-0 text-2xl hover:bg-accent rounded-md"
               >
                 {emoji}
               </Button>
