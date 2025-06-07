@@ -71,8 +71,10 @@ export const TemplatePreview = ({
         <div className="text-xs text-gray-500">Preview</div>
       </div>
       
-      <div className="transform scale-50 origin-top-left w-[200%]">
-        {renderTemplate()}
+      <div className="h-96 overflow-auto">
+        <div className="transform scale-50 origin-top-left w-[200%] h-[200%]">
+          {renderTemplate()}
+        </div>
       </div>
     </div>
   );
