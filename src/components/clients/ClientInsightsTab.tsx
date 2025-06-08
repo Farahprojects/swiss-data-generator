@@ -5,17 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Brain, TrendingUp, Calendar, Target } from 'lucide-react';
 import { formatDateTime } from '@/utils/dateFormatters';
-
-interface ClientInsight {
-  id: string;
-  title: string;
-  content: string;
-  type: 'pattern' | 'recommendation' | 'trend' | 'milestone';
-  created_at: string;
-  confidence_score?: number;
-}
+import { InsightEntry } from '@/types/database';
 
 interface ClientInsightsTabProps {
+  insightEntries?: InsightEntry[];
   onGenerateInsight?: () => void;
 }
 
@@ -60,10 +53,9 @@ const getInsightBadgeVariant = (type: string) => {
 };
 
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
+  insightEntries = [],
   onGenerateInsight
 }) => {
-  const insights: ClientInsight[] = []; // Cleared mock data
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -74,7 +66,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
         </Button>
       </div>
 
-      {insights.length === 0 ? (
+      {insightEntries.length === 0 ? (
         <Card>
           <CardContent className="py-8">
             <div className="text-center">
@@ -89,7 +81,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
         </Card>
       ) : (
         <div className="space-y-4">
-          {insights.map((insight) => (
+          {insightEntries.map((insight) => (
             <Card key={insight.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">
