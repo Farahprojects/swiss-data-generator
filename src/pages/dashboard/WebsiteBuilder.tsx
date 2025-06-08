@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,7 @@ import { PublishingModal } from "@/components/website-builder/PublishingModal";
 import { Button } from "@/components/ui/button";
 import { Eye, Save, Globe } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
+import { useAutoSave } from "@/hooks/useAutoSave";
 
 interface WebsiteTemplate {
   id: string;
@@ -36,6 +38,14 @@ export default function WebsiteBuilder() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+
+  // Auto-save hook
+  useAutoSave({
+    customizationData,
+    selectedTemplate,
+    website,
+    onWebsiteUpdate: setWebsite
+  });
 
   useEffect(() => {
     loadTemplatesAndWebsite();
@@ -71,6 +81,19 @@ export default function WebsiteBuilder() {
         if (template) {
           setSelectedTemplate(template);
         }
+      } else {
+        // Initialize with default customization data for new users
+        const defaultData = {
+          coachName: user?.email?.split('@')[0] || 'Your Name',
+          tagline: 'Professional Coach',
+          bio: 'I help people transform their lives through personalized coaching.',
+          services: [],
+          buttonText: 'Book a Consultation',
+          themeColor: '#3B82F6',
+          fontFamily: 'Inter',
+          backgroundStyle: 'solid'
+        };
+        setCustomizationData(defaultData);
       }
 
     } catch (error: any) {
@@ -91,78 +114,61 @@ export default function WebsiteBuilder() {
     }
   };
 
-  // Auto-save functionality
-  useEffect(() => {
-    if (!user || !selectedTemplate || isLoading) return;
+  const createWebsiteIfNeeded = async () => {
+    if (!user || website) return website;
 
-    const timeoutId = setTimeout(async () => {
-      try {
-        const slug = user.email?.split('@')[0]?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'coach';
-        
-        if (website) {
-          // Update existing website
-          const { error } = await supabase
-            .from('coach_websites')
-            .update({
-              template_id: selectedTemplate.id,
-              customization_data: customizationData
-            })
-            .eq('id', website.id);
+    try {
+      const slug = user.email?.split('@')[0]?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'coach';
+      
+      const { data, error } = await supabase
+        .from('coach_websites')
+        .insert({
+          coach_id: user.id,
+          template_id: selectedTemplate?.id || null,
+          site_slug: slug,
+          customization_data: customizationData
+        })
+        .select()
+        .single();
 
-          if (error) throw error;
-        } else {
-          // Create new website
-          const { data, error } = await supabase
-            .from('coach_websites')
-            .insert({
-              coach_id: user.id,
-              template_id: selectedTemplate.id,
-              site_slug: slug,
-              customization_data: customizationData
-            })
-            .select()
-            .single();
-
-          if (error) throw error;
-          setWebsite(data);
-        }
-
-        console.log('Auto-saved website changes');
-      } catch (error: any) {
-        console.error('Auto-save failed:', error);
-      }
-    }, 2000);
-
-    return () => clearTimeout(timeoutId);
-  }, [customizationData, selectedTemplate, user, website, isLoading]);
+      if (error) throw error;
+      
+      setWebsite(data);
+      return data;
+    } catch (error: any) {
+      console.error('Failed to create website:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save changes."
+      });
+      return null;
+    }
+  };
 
   const handleTemplateSelect = (template: WebsiteTemplate) => {
     setSelectedTemplate(template);
     
-    // Set default customization data if no existing website
-    if (!website) {
-      const defaultData = {
-        coachName: user?.email?.split('@')[0] || 'Your Name',
-        tagline: template.template_data?.defaultContent?.hero?.subtitle || 'Professional Coach',
-        bio: 'I help people transform their lives through personalized coaching.',
-        services: [
-          { title: 'Life Coaching', description: '1-on-1 sessions to help you achieve your goals', price: '$150/session' },
-          { title: 'Career Coaching', description: 'Navigate your career path with confidence', price: '$120/session' }
-        ],
-        buttonText: 'Book a Consultation',
-        themeColor: '#3B82F6',
-        fontFamily: 'Inter',
-        backgroundStyle: 'solid'
-      };
-      setCustomizationData(defaultData);
-    }
+    // Merge template defaults with existing customization data
+    const templateDefaults = {
+      tagline: template.template_data?.defaultContent?.hero?.subtitle || 'Professional Coach',
+    };
+    
+    setCustomizationData(prev => ({
+      ...templateDefaults,
+      ...prev, // Keep existing customizations
+      coachName: prev.coachName || user?.email?.split('@')[0] || 'Your Name',
+    }));
   };
 
-  const handleCustomizationChange = (field: string, value: any) => {
+  const handleCustomizationChange = async (field: string, value: any) => {
     setCustomizationData(prev => ({
       ...prev,
       [field]: value
     }));
+
+    // Create website record immediately if it doesn't exist
+    await createWebsiteIfNeeded();
   };
 
   const handlePublish = async () => {
@@ -240,12 +246,10 @@ export default function WebsiteBuilder() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Website Builder</h1>
               <p className="text-gray-600">Template: {selectedTemplate.name}</p>
-              {website && (
-                <div className="flex items-center space-x-2 mt-1">
-                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-500">Auto-saving changes</span>
-                </div>
-              )}
+              <div className="flex items-center space-x-2 mt-1">
+                <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-500">Auto-saving changes</span>
+              </div>
             </div>
             
             <div className="flex items-center space-x-3">

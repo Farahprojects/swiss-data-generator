@@ -31,7 +31,7 @@ export const useAutoSave = ({
       return;
     }
 
-    if (!user || !selectedTemplate) return;
+    if (!user) return;
 
     // Clear existing timeout
     if (timeoutRef.current) {
@@ -48,19 +48,19 @@ export const useAutoSave = ({
           const { error } = await supabase
             .from('coach_websites')
             .update({
-              template_id: selectedTemplate.id,
+              template_id: selectedTemplate?.id || website.template_id,
               customization_data: customizationData
             })
             .eq('id', website.id);
 
           if (error) throw error;
         } else {
-          // Create new website
+          // Create new website - no longer requires selectedTemplate
           const { data, error } = await supabase
             .from('coach_websites')
             .insert({
               coach_id: user.id,
-              template_id: selectedTemplate.id,
+              template_id: selectedTemplate?.id || null,
               site_slug: slug,
               customization_data: customizationData
             })

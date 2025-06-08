@@ -33,6 +33,55 @@ export const ImageManager: React.FC<ImageManagerProps> = ({
       : `${basePath}/${fileName}`;
   };
 
+  const createWebsiteIfNeeded = async (imageUrl: string) => {
+    try {
+      // Check if website record exists
+      const { data: existingWebsite } = await supabase
+        .from('coach_websites')
+        .select('id, customization_data')
+        .eq('coach_id', user!.id)
+        .single();
+
+      if (existingWebsite) {
+        // Update existing website with new image
+        const updatedCustomization = {
+          ...existingWebsite.customization_data,
+          [`${section}ImageUrl`]: imageUrl
+        };
+
+        await supabase
+          .from('coach_websites')
+          .update({ customization_data: updatedCustomization })
+          .eq('id', existingWebsite.id);
+      } else {
+        // Create new website record
+        const slug = user!.email?.split('@')[0]?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'coach';
+        const customizationData = {
+          coachName: user!.email?.split('@')[0] || 'Your Name',
+          tagline: 'Professional Coach',
+          bio: 'I help people transform their lives through personalized coaching.',
+          services: [],
+          buttonText: 'Book a Consultation',
+          themeColor: '#3B82F6',
+          fontFamily: 'Inter',
+          backgroundStyle: 'solid',
+          [`${section}ImageUrl`]: imageUrl
+        };
+
+        await supabase
+          .from('coach_websites')
+          .insert({
+            coach_id: user!.id,
+            template_id: null,
+            site_slug: slug,
+            customization_data: customizationData
+          });
+      }
+    } catch (error) {
+      console.error('Failed to save image to database:', error);
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
@@ -82,8 +131,13 @@ export const ImageManager: React.FC<ImageManagerProps> = ({
         .from('website-images')
         .getPublicUrl(data.path);
 
+      const imageUrl = urlData.publicUrl;
+
       // Update the customization data immediately
-      onChange(urlData.publicUrl);
+      onChange(imageUrl);
+
+      // Save to database immediately
+      await createWebsiteIfNeeded(imageUrl);
 
       toast({
         title: "Image uploaded",
