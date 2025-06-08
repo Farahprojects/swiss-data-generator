@@ -28,6 +28,41 @@ const sidebarItems = [
   { name: "Website Builder", href: "/dashboard/website-builder", icon: Globe },
 ];
 
+// Simple navigation menu for mobile use (without Sidebar context)
+export function SimpleSidebarMenu() {
+  const location = useLocation();
+
+  return (
+    <div className="p-4">
+      <nav className="space-y-2">
+        {sidebarItems.map((item) => {
+          const isActive = location.pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              to={item.href}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+            >
+              <item.icon className="h-5 w-5" />
+              <span>{item.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
+      
+      <div className="mt-8 p-2 text-xs text-gray-600 text-center border-t">
+        <div>© {new Date().getFullYear()} Therai Astro.</div>
+        <div>All rights reserved.</div>
+      </div>
+    </div>
+  );
+}
+
+// Full sidebar component for desktop use (with Sidebar context)
 export function DashboardSidebar() {
   const location = useLocation();
 

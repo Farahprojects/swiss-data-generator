@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { logToSupabase } from '@/utils/batchedLogManager';
-import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { SimpleSidebarMenu } from '@/components/dashboard/DashboardSidebar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 const UnifiedNavigation = () => {
@@ -212,7 +212,7 @@ const UnifiedNavigation = () => {
       {isDashboardPageWithBurgerMenu && (
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetContent side="left" className="w-[240px] p-0">
-            <DashboardSidebar />
+            <SimpleSidebarMenu />
           </SheetContent>
         </Sheet>
       )}
