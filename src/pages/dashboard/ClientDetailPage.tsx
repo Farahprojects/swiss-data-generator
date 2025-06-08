@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -187,10 +188,10 @@ const ClientDetailPage = () => {
             {/* Desktop View */}
             <div className="hidden md:flex items-center gap-4">
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm" 
                 onClick={() => navigate('/dashboard/clients')}
-                className="bg-primary/5 border-primary/20 hover:bg-primary/10"
+                className="text-foreground hover:bg-primary/10 hover:text-primary"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Clients
@@ -198,27 +199,27 @@ const ClientDetailPage = () => {
               
               <div className="flex items-center gap-2">
                 <Button 
-                  variant="secondary" 
+                  variant="ghost" 
                   size="sm"
                   onClick={() => setShowCreateJournalModal(true)}
-                  className="bg-primary/10 text-primary hover:bg-primary/20"
+                  className="text-foreground hover:bg-primary/10 hover:text-primary"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Journal
                 </Button>
                 <Button 
-                  variant="secondary" 
+                  variant="ghost" 
                   size="sm"
                   onClick={() => setShowReportModal(true)}
-                  className="bg-secondary/80 text-secondary-foreground hover:bg-secondary"
+                  className="text-foreground hover:bg-primary/10 hover:text-primary"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Report
                 </Button>
                 <Button 
-                  variant="secondary" 
+                  variant="ghost" 
                   size="sm"
-                  className="bg-accent hover:bg-accent/80"
+                  className="text-foreground hover:bg-primary/10 hover:text-primary"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Insight
@@ -229,9 +230,10 @@ const ClientDetailPage = () => {
             {/* Mobile View - Show Back Button */}
             <div className="md:hidden">
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm" 
                 onClick={() => navigate('/dashboard/clients')}
+                className="text-foreground hover:bg-primary/10 hover:text-primary"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
