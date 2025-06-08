@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -105,6 +105,9 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
             <Brain className="w-5 h-5" />
             Generate AI Insight
           </DialogTitle>
+          <DialogDescription>
+            Create personalized insights using AI analysis of your client's journal entries, reports, and goals.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

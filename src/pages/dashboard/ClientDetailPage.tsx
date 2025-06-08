@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { clientsService } from '@/services/clients';
@@ -85,72 +84,69 @@ const ClientDetailPage = () => {
     return <div className="container mx-auto px-4 py-6">Loading client details...</div>;
   }
 
+  if (!client) {
+    return <div className="container mx-auto px-4 py-6">Client not found</div>;
+  }
+
   return (
     <div className="container mx-auto px-4 py-6">
-      {loading ? (
-        <div>Loading client details...</div>
-      ) : !client ? (
-        <div>Client not found</div>
-      ) : (
-        <>
-          <ClientDetailHeader 
-            client={client} 
-            isMobile={isMobile}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            journalCount={journalEntries.length}
-            reportCount={clientReports.length}
-            isClientInfoOpen={expandedSections.info}
-            setIsClientInfoOpen={(open) => setExpandedSections(prev => ({ ...prev, info: open }))}
+      <ClientDetailHeader 
+        client={client} 
+        isMobile={isMobile}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        journalCount={journalEntries.length}
+        reportCount={clientReports.length}
+        insightCount={insightEntries.length}
+        isClientInfoOpen={expandedSections.info}
+        setIsClientInfoOpen={(open) => setExpandedSections(prev => ({ ...prev, info: open }))}
+        onCreateJournal={handleCreateJournal}
+        onCreateReport={handleCreateReport}
+      />
+
+      <ClientInfoCard
+        client={client}
+        isOpen={expandedSections.info}
+        onEditClick={handleEditClient}
+        onDeleteClient={handleDeleteClient}
+        showDeleteDialog={showDeleteDialog}
+        setShowDeleteDialog={setShowDeleteDialog}
+      />
+
+      <Tabs defaultValue="journals" className="w-full" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="journals">Journals</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="journals" className="space-y-4">
+          <ClientJournalTab
+            journalEntries={journalEntries}
             onCreateJournal={handleCreateJournal}
+            isMobile={isMobile}
+          />
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-4">
+          <ClientReportsTab
+            clientReports={clientReports}
             onCreateReport={handleCreateReport}
+            onViewReport={() => {}}
           />
+        </TabsContent>
 
-          <ClientInfoCard
-            client={client}
-            isOpen={expandedSections.info}
-            onEditClick={handleEditClient}
-            onDeleteClient={handleDeleteClient}
-            showDeleteDialog={showDeleteDialog}
-            setShowDeleteDialog={setShowDeleteDialog}
+        <TabsContent value="insights" className="space-y-4">
+          <ClientInsightsTab
+            insightEntries={insightEntries}
+            clientId={client.id}
+            clientGoals={client.notes}
+            journalEntries={journalEntries}
+            clientReports={clientReports}
+            onInsightGenerated={loadClientData}
           />
-
-          <Tabs defaultValue="journals" className="w-full" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="journals">Journals</TabsTrigger>
-              <TabsTrigger value="reports">Reports</TabsTrigger>
-              <TabsTrigger value="insights">Insights</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="journals" className="space-y-4">
-              <ClientJournalTab
-                journalEntries={journalEntries}
-                onCreateJournal={handleCreateJournal}
-                isMobile={isMobile}
-              />
-            </TabsContent>
-
-            <TabsContent value="reports" className="space-y-4">
-              <ClientReportsTab
-                clientReports={clientReports}
-                onCreateReport={handleCreateReport}
-                onViewReport={() => {}}
-              />
-            </TabsContent>
-
-            <TabsContent value="insights" className="space-y-4">
-              <ClientInsightsTab
-                insightEntries={insightEntries}
-                clientId={client.id}
-                clientGoals={client.notes}
-                journalEntries={journalEntries}
-                clientReports={clientReports}
-                onInsightGenerated={loadClientData}
-              />
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
