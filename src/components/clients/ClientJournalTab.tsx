@@ -76,7 +76,7 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
                     ))}
                   </div>
                 )}
-              </Content>
+              </CardContent>
             </Card>
           ))}
         </div>
