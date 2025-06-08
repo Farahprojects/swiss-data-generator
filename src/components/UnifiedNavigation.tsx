@@ -17,6 +17,7 @@ import {
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { logToSupabase } from '@/utils/batchedLogManager';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { MobileSidebar } from '@/components/dashboard/MobileSidebar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 const UnifiedNavigation = () => {
@@ -211,8 +212,8 @@ const UnifiedNavigation = () => {
       {/* Sidebar Sheet for Dashboard Pages with Burger Menu */}
       {isDashboardPageWithBurgerMenu && (
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-          <SheetContent side="left" className="w-[240px] p-0">
-            <DashboardSidebar />
+          <SheetContent side="left" className="w-[280px] p-0">
+            <MobileSidebar />
           </SheetContent>
         </Sheet>
       )}
