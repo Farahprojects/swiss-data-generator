@@ -106,6 +106,40 @@ async function getInsightPrompt(insightType: string, requestId: string): Promise
   }
 }
 
+async function getInsightPrice(requestId: string): Promise<number> {
+  const logPrefix = `[generate-insights][${requestId}]`;
+  console.log(`${logPrefix} Fetching price for insights generation`);
+
+  const fetchPrice = async () => {
+    const { data, error } = await supabase
+      .from("price_list")
+      .select("unit_price_usd")
+      .eq("id", "insights-generation")
+      .maybeSingle();
+
+    if (error) {
+      console.error(`${logPrefix} Error fetching price:`, error.message);
+      throw new Error(`Failed to fetch price: ${error.message}`);
+    }
+
+    if (!data || data.unit_price_usd == null) {
+      console.warn(`${logPrefix} No price found for insights-generation, using fallback`);
+      return 7.50; // Fallback to previous hardcoded value
+    }
+
+    const price = parseFloat(String(data.unit_price_usd));
+    console.log(`${logPrefix} Retrieved price for insights generation: $${price}`);
+    return price;
+  };
+
+  try {
+    return await retryWithBackoff(fetchPrice, logPrefix, 2, 500, 2, "price fetch");
+  } catch (err) {
+    console.error(`${logPrefix} Error fetching price, using fallback:`, err);
+    return 7.50; // Fallback price
+  }
+}
+
 async function generateInsight(systemPrompt: string, clientData: any, requestId: string): Promise<string> {
   const logPrefix = `[generate-insights][${requestId}]`;
   console.log(`${logPrefix} Generating insight with Gemini`);
@@ -297,10 +331,13 @@ serve(async (req) => {
     // Record API usage if we have the necessary data
     if (apiKey && userId) {
       try {
+        // Fetch dynamic pricing
+        const costUsd = await getInsightPrice(requestId);
+        
         const { error: usageError } = await supabase.rpc('record_api_usage', {
           _user_id: userId,
           _endpoint: 'generate-insights',
-          _cost_usd: 7.50,
+          _cost_usd: costUsd,
           _request_params: { insightType, clientId },
           _response_status: 200,
           _processing_time_ms: Date.now() - startTime
@@ -308,6 +345,8 @@ serve(async (req) => {
 
         if (usageError) {
           console.error(`${logPrefix} Error recording API usage:`, usageError);
+        } else {
+          console.log(`${logPrefix} Successfully recorded API usage with cost: $${costUsd}`);
         }
       } catch (usageErr) {
         console.error(`${logPrefix} Failed to record API usage:`, usageErr);
