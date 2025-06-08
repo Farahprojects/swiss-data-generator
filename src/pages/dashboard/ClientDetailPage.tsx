@@ -301,9 +301,14 @@ const ClientDetailPage = () => {
                 <TooltipContent>Back to Clients</TooltipContent>
               </Tooltip>
 
-              <div className="text-sm font-medium truncate flex-1 text-center px-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsClientInfoOpen(!isClientInfoOpen)}
+                className="text-sm font-medium truncate flex-1 text-center px-2 hover:bg-primary/10 hover:text-primary"
+              >
                 {client && getAbbreviatedName(client.full_name)}
-              </div>
+              </Button>
 
               <div className="flex items-center gap-1">
                 <Tooltip>
