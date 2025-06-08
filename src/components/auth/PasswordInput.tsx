@@ -16,6 +16,7 @@ interface PasswordInputProps {
   placeholder?: string;
   id?: string;
   showMatchError?: boolean;
+  disabled?: boolean;
 }
 
 const PasswordInput: React.FC<PasswordInputProps> = ({ 
@@ -27,7 +28,8 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   onFocus,
   placeholder = "Enter your password",
   id,
-  showMatchError = false
+  showMatchError = false,
+  disabled = false
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -56,12 +58,14 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           placeholder={placeholder}
           className={`mt-1 pr-10 ${(!isValid && password) || showMatchError ? 'border-red-500' : ''}`}
           required
+          disabled={disabled}
         />
         <button
           type="button"
           onClick={togglePasswordVisibility}
           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
           tabIndex={-1}
+          disabled={disabled}
         >
           {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
