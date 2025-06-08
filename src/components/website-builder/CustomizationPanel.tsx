@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,26 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, X, ChevronDown, ChevronUp, Palette, Type, Settings, User, Briefcase } from "lucide-react";
+import { Plus, X, ChevronDown, ChevronUp, Palette, Type, Settings, User, Briefcase, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface Service {
-  title: string;
-  description: string;
-  price: string;
-}
-
-interface CustomizationData {
-  coachName?: string;
-  profileImage?: string;
-  tagline?: string;
-  bio?: string;
-  services?: Service[];
-  buttonText?: string;
-  themeColor?: string;
-  fontFamily?: string;
-  backgroundStyle?: string;
-}
+import { ImageUploader } from "./ImageUploader";
+import type { Service, CustomizationData } from "@/types/website-builder";
 
 interface CustomizationPanelProps {
   customizationData: CustomizationData;
@@ -62,6 +47,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 }) => {
   const [openSections, setOpenSections] = useState({
     basic: true,
+    images: false,
     services: true,
     cta: false,
     design: false
@@ -82,7 +68,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
   const addService = () => {
     const services = [...(customizationData.services || [])];
-    services.push({ title: '', description: '', price: '' });
+    services.push({ title: '', description: '', price: '', imageUrl: '' });
     onChange('services', services);
   };
 
@@ -170,6 +156,46 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
         </Collapsible>
       </Card>
 
+      {/* Images Section */}
+      <Card className="overflow-hidden">
+        <Collapsible open={openSections.images} onOpenChange={() => toggleSection('images')}>
+          <SectionHeader 
+            icon={ImageIcon} 
+            title="Images" 
+            isOpen={openSections.images}
+            section="images"
+          />
+          <AnimatePresence>
+            {openSections.images && (
+              <CollapsibleContent forceMount>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <CardContent className="space-y-6 pt-0">
+                    <ImageUploader
+                      value={customizationData.headerImageUrl}
+                      onChange={(url) => onChange('headerImageUrl', url)}
+                      label="Header Background Image"
+                      section="header"
+                    />
+                    
+                    <ImageUploader
+                      value={customizationData.aboutImageUrl}
+                      onChange={(url) => onChange('aboutImageUrl', url)}
+                      label="About Section Image"
+                      section="about"
+                    />
+                  </CardContent>
+                </motion.div>
+              </CollapsibleContent>
+            )}
+          </AnimatePresence>
+        </Collapsible>
+      </Card>
+
       {/* Services */}
       <Card className="overflow-hidden">
         <Collapsible open={openSections.services} onOpenChange={() => toggleSection('services')}>
@@ -240,6 +266,14 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                               value={service.price}
                               onChange={(e) => handleServiceChange(index, 'price', e.target.value)}
                               placeholder="e.g., $150/session or $500/package"
+                            />
+                            
+                            <ImageUploader
+                              value={service.imageUrl}
+                              onChange={(url) => handleServiceChange(index, 'imageUrl', url || '')}
+                              label="Service Icon/Image"
+                              section="service"
+                              serviceIndex={index}
                             />
                           </div>
                         </motion.div>

@@ -18,7 +18,14 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
     <div className="bg-cream-50" style={{ fontFamily: `${fontFamily}, serif` }}>
       {/* Classic Centered Hero */}
       <section className={`relative ${heroPadding} bg-gradient-to-b from-amber-50 to-white`}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+        {customizationData.headerImageUrl && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-20"
+            style={{ backgroundImage: `url(${customizationData.headerImageUrl})` }}
+          ></div>
+        )}
+        
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -47,7 +54,15 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-3 lg:gap-12 items-center">
             <div className="lg:col-span-1 order-2 lg:order-1">
-              <div className="w-full h-32 sm:h-48 lg:h-64 bg-gradient-to-br from-purple-200 to-pink-200 rounded-lg"></div>
+              {customizationData.aboutImageUrl ? (
+                <img
+                  src={customizationData.aboutImageUrl}
+                  alt="Philosophy"
+                  className="w-full h-32 sm:h-48 lg:h-64 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="w-full h-32 sm:h-48 lg:h-64 bg-gradient-to-br from-purple-200 to-pink-200 rounded-lg"></div>
+              )}
             </div>
             <div className="lg:col-span-2 order-1 lg:order-2 text-center lg:text-left">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6 text-gray-900">My Philosophy</h2>
@@ -81,7 +96,15 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
                 className={`grid gap-6 lg:gap-8 lg:grid-cols-2 items-center ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}
               >
                 <div className={index % 2 === 1 ? 'lg:order-2' : 'order-2 lg:order-1'}>
-                  <div className="w-full h-24 sm:h-32 lg:h-48 bg-gradient-to-br from-purple-200 to-blue-200 rounded-lg"></div>
+                  {service.imageUrl ? (
+                    <img
+                      src={service.imageUrl}
+                      alt={service.title}
+                      className="w-full h-24 sm:h-32 lg:h-48 object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-full h-24 sm:h-32 lg:h-48 bg-gradient-to-br from-purple-200 to-blue-200 rounded-lg"></div>
+                  )}
                 </div>
                 <div className={`text-center lg:text-left ${index % 2 === 1 ? 'lg:order-1' : 'order-1 lg:order-2'}`}>
                   <h3 className="text-lg sm:text-xl lg:text-2xl font-serif font-semibold mb-3 sm:mb-4 text-gray-900 break-words">{service.title}</h3>
