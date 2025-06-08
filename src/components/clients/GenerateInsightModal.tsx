@@ -2,10 +2,13 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Client } from '@/types/database';
 import { insightsService } from '@/services/insights';
 import { Loader2 } from 'lucide-react';
+import { Pencil } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface GenerateInsightModalProps {
   open: boolean;
@@ -28,6 +31,8 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
   onInsightGenerated
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [customTitle, setCustomTitle] = useState('');
+  const [showTitleInput, setShowTitleInput] = useState(false);
   const { toast } = useToast();
 
   const generateDateTitle = () => {
@@ -52,7 +57,7 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         journalEntries: journalEntries
       };
 
-      const title = generateDateTitle();
+      const title = customTitle.trim() || generateDateTitle();
 
       const response = await insightsService.generateInsight({
         clientId: client.id,
@@ -69,6 +74,8 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         });
         onInsightGenerated();
         onOpenChange(false);
+        setCustomTitle('');
+        setShowTitleInput(false);
       } else {
         throw new Error(response.error || 'Failed to generate insight');
       }
@@ -87,7 +94,13 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
   const handleClose = () => {
     if (!isGenerating) {
       onOpenChange(false);
+      setCustomTitle('');
+      setShowTitleInput(false);
     }
+  };
+
+  const handleAddTitle = () => {
+    setShowTitleInput(true);
   };
 
   return (
@@ -102,7 +115,57 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
           </div>
           
           <div className="text-sm text-muted-foreground">
-            Insight will be titled: <strong>{generateDateTitle()}</strong>
+            Insight will be titled: <strong>{customTitle.trim() || generateDateTitle()}</strong>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Popover open={showTitleInput} onOpenChange={setShowTitleInput}>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-sm text-muted-foreground hover:text-foreground p-0 h-auto"
+                  onClick={handleAddTitle}
+                >
+                  <Pencil className="w-3 h-3 mr-1" />
+                  Add title
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="start">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Custom Title</label>
+                  <Input
+                    placeholder="Enter custom title..."
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setShowTitleInput(false);
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setCustomTitle('');
+                        setShowTitleInput(false);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={() => setShowTitleInput(false)}
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         
