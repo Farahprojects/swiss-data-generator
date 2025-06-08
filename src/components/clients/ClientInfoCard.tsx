@@ -147,7 +147,7 @@ export const ClientInfoCard: React.FC<ClientInfoCardProps> = ({
         {client.notes && (
           <div className="mt-6 pt-6 border-t">
             <div className="mb-2">
-              <h4 className="font-medium text-gray-900">Notes</h4>
+              <h4 className="font-medium text-gray-900">Goals</h4>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-gray-700 leading-relaxed">{client.notes}</p>

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
 import { clientReportsService } from '@/services/clientReports';
-import { Client, JournalEntry } from '@/types/database';
+import { Client, JournalEntry, InsightEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
 interface ClientReport {
@@ -20,6 +20,7 @@ export const useClientData = (clientId: string | undefined) => {
   const [client, setClient] = useState<Client | null>(null);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [clientReports, setClientReports] = useState<ClientReport[]>([]);
+  const [insightEntries, setInsightEntries] = useState<InsightEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadClientData = async () => {
@@ -36,6 +37,7 @@ export const useClientData = (clientId: string | undefined) => {
       setClient(clientData);
       setJournalEntries(journalData);
       setClientReports(reportsData);
+      setInsightEntries([]); // Empty for now until we implement the service
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
@@ -58,6 +60,7 @@ export const useClientData = (clientId: string | undefined) => {
     client,
     journalEntries,
     clientReports,
+    insightEntries,
     loading,
     loadClientData
   };
