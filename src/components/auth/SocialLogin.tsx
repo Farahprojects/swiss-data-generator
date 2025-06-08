@@ -7,33 +7,20 @@ import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface SocialLoginProps {
   onGoogleSignIn: () => void;
-  onAppleSignIn: () => void; // Add Apple sign-in handler prop
+  onAppleSignIn: () => void;
 }
 
 const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn }) => {
   const handleGoogleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
-    
-    logToSupabase('Google sign in attempt', {
-      page: 'SocialLogin',
-      level: 'info'
-    });
-    
-    // Call the Google sign-in function provided via props
-    onGoogleSignIn();
+    // Disabled for now
+    return;
   };
   
   const handleAppleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
-    
-    logToSupabase('Apple sign in attempt', {
-      page: 'SocialLogin',
-      level: 'info',
-      data: { feature: 'implemented' }
-    });
-    
-    // Call the Apple sign-in function provided via props
-    onAppleSignIn();
+    // Disabled for now
+    return;
   };
 
   return (
@@ -52,7 +39,8 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn
           type="button" 
           variant="outline" 
           onClick={handleGoogleSignIn}
-          className="flex items-center justify-center"
+          disabled={true}
+          className="flex items-center justify-center opacity-50 cursor-not-allowed"
         >
           <FcGoogle className="mr-2 h-5 w-5" />
           Google
@@ -62,7 +50,8 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn
           type="button" 
           variant="outline" 
           onClick={handleAppleSignIn}
-          className="flex items-center justify-center"
+          disabled={true}
+          className="flex items-center justify-center opacity-50 cursor-not-allowed"
         >
           <FaApple className="mr-2 h-5 w-5" />
           Apple

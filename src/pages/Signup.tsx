@@ -44,228 +44,96 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailValid || !passwordValid || !passwordsMatch || loading) return;
-
-    setLoading(true);
-    setErrorMsg('');
-
-    try {
-      logToSupabase('User signup attempt', {
-        level: 'info',
-        page: 'Signup',
-        data: { email: email }
-      });
-
-      // Create user without email confirmation (we'll handle it manually)
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/email`
-        }
-      });
-      
-      if (error) {
-        debug('Signup error', error);
-        if (error.message.includes('already registered')) {
-          setErrorMsg('This email is already in use.');
-        } else {
-          setErrorMsg(error.message);
-        }
-        
-        logToSupabase('User signup failed', {
-          level: 'error',
-          page: 'Signup',
-          data: { error: error.message }
-        });
-
-        setLoading(false);
-        return;
-      }
-
-      // If user was created but needs verification
-      if (data.user && !data.user.email_confirmed_at) {
-        try {
-          // Call the signup_token edge function
-          const { error: functionError } = await supabase.functions.invoke('signup_token', {
-            body: { user_id: data.user.id }
-          });
-          
-          if (functionError) {
-            throw new Error(functionError.message);
-          }
-          
-          logToSupabase('User signup successful - verification email sent', {
-            level: 'info',
-            page: 'Signup',
-            data: { email: email }
-          });
-
-          setVerificationEmail(email);
-          setCurrentUserId(data.user.id);
-          setSignupSuccess(true);
-        } catch (emailError) {
-          toast({ 
-            title: 'Account Created', 
-            description: 'Account created but verification email failed to send. Please contact support.', 
-            variant: 'destructive' 
-          });
-        }
-      }
-      
-      setLoading(false);
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message ?? 'Failed to sign up', variant: 'destructive' });
-      setLoading(false);
-    }
+    // Disabled signup functionality
+    toast({
+      title: 'Registration Disabled',
+      description: 'New account registration is temporarily disabled.',
+      variant: 'destructive'
+    });
+    return;
   };
 
   const handleGoogleSignIn = async () => {
-    try {
-      const { error } = await signInWithGoogle();
-      if (error) {
-        toast({ 
-          title: 'Google Sign-In Failed', 
-          description: error.message, 
-          variant: 'destructive' 
-        });
-      }
-    } catch (err: any) {
-      toast({ 
-        title: 'Error', 
-        description: err.message ?? 'Failed to sign in with Google', 
-        variant: 'destructive' 
-      });
-    }
+    // Disabled for now
+    return;
   };
   
   const handleAppleSignIn = async () => {
-    try {
-      logToSupabase('Apple sign in initiated from signup', {
-        page: 'Signup',
-        level: 'info'
-      });
-      
-      const { error } = await signInWithApple();
-      
-      if (error) {
-        logToSupabase('Apple sign in failed from signup', {
-          page: 'Signup',
-          level: 'error',
-          data: { errorMessage: error.message }
-        });
-        
-        toast({ 
-          title: 'Apple Sign-In Failed', 
-          description: error.message, 
-          variant: 'destructive' 
-        });
-      }
-    } catch (err: any) {
-      toast({ 
-        title: 'Error', 
-        description: err.message ?? 'Failed to sign in with Apple', 
-        variant: 'destructive' 
-      });
-    }
+    // Disabled for now
+    return;
   };
 
   const handleResendVerification = async () => {
-    try {
-      setLoading(true);
-      
-      // Use the same signup_token edge function with the current user ID
-      const { error: functionError } = await supabase.functions.invoke('signup_token', {
-        body: { user_id: currentUserId }
-      });
-      
-      if (functionError) {
-        throw new Error(functionError.message);
-      }
-      
-      toast({ 
-        title: 'Verification Email Sent', 
-        description: 'A new verification email has been sent to your inbox', 
-        variant: 'default' 
-      });
-      
-      logToSupabase('Verification email resent', {
-        level: 'info',
-        page: 'Signup',
-        data: { email: verificationEmail }
-      });
-    } catch (err: any) {
-      toast({ 
-        title: 'Error', 
-        description: err.message ?? 'Failed to resend verification email', 
-        variant: 'destructive' 
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Disabled for now
+    return;
   };
 
   const renderSignupForm = () => (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <EmailInput 
-          email={email}
-          isValid={emailValid}
-          onChange={setEmail}
-          onFocus={() => setErrorMsg('')}
-          placeholder="Enter your email"
-        />
-        
-        <PasswordInput
-          password={password}
-          isValid={passwordValid}
-          showRequirements={false}
-          onChange={setPassword}
-          onFocus={() => setErrorMsg('')}
-        />
-        
-        {passwordValid && (
-          <p className="text-sm text-green-600">✓ Password meets requirements (8+ characters)</p>
-        )}
-        
-        {showConfirmPassword && (
-          <PasswordInput
-            password={confirmPassword}
-            isValid={passwordValid && passwordsMatch}
-            showRequirements={false}
-            onChange={setConfirmPassword}
+    <div className="space-y-6 opacity-50">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-4">
+          <EmailInput 
+            email={email}
+            isValid={emailValid}
+            onChange={setEmail}
             onFocus={() => setErrorMsg('')}
-            label="Confirm Password"
-            placeholder="Re-enter your password"
-            showMatchError={password.length > 0 && confirmPassword.length > 0 && !passwordsMatch}
+            placeholder="Enter your email"
+            disabled={true}
           />
-        )}
-      </div>
+          
+          <PasswordInput
+            password={password}
+            isValid={passwordValid}
+            showRequirements={false}
+            onChange={setPassword}
+            onFocus={() => setErrorMsg('')}
+            disabled={true}
+          />
+          
+          {passwordValid && (
+            <p className="text-sm text-green-600">✓ Password meets requirements (8+ characters)</p>
+          )}
+          
+          {showConfirmPassword && (
+            <PasswordInput
+              password={confirmPassword}
+              isValid={passwordValid && passwordsMatch}
+              showRequirements={false}
+              onChange={setConfirmPassword}
+              onFocus={() => setErrorMsg('')}
+              label="Confirm Password"
+              placeholder="Re-enter your password"
+              showMatchError={password.length > 0 && confirmPassword.length > 0 && !passwordsMatch}
+              disabled={true}
+            />
+          )}
+        </div>
 
-      {errorMsg && (
-        <p className="text-center text-sm font-medium text-red-600">{errorMsg}</p>
-      )}
+        <div className="text-center text-sm font-medium text-amber-600 bg-amber-50 p-3 rounded-md">
+          Registration is temporarily disabled
+        </div>
 
-      <Button 
-        type="submit" 
-        className="w-full"
-        disabled={loading || !emailValid || !passwordValid || (showConfirmPassword && !passwordsMatch)}
-      >
-        {loading ? 'Creating account…' : 'Sign up'}
-      </Button>
+        <Button 
+          type="submit" 
+          className="w-full"
+          disabled={true}
+        >
+          Sign up
+        </Button>
 
-      <SocialLogin 
-        onGoogleSignIn={handleGoogleSignIn} 
-        onAppleSignIn={handleAppleSignIn}
-      />
+        <SocialLogin 
+          onGoogleSignIn={handleGoogleSignIn} 
+          onAppleSignIn={handleAppleSignIn}
+        />
 
-      <p className="text-center text-sm">
-        Already have an account?{' '}
-        <Link to="/login" className="font-medium text-primary hover:underline">
-          Sign in
-        </Link>
-      </p>
-    </form>
+        <p className="text-center text-sm text-gray-400">
+          Already have an account?{' '}
+          <Link to="/login" className="font-medium text-primary hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </form>
+    </div>
   );
 
   const renderSuccessMessage = () => (
@@ -326,7 +194,7 @@ const Signup = () => {
             <p className="mt-2 text-gray-600">
               {signupSuccess 
                 ? 'One more step to complete your registration' 
-                : 'Create an Account'}
+                : 'Registration Temporarily Disabled'}
             </p>
           </header>
 

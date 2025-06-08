@@ -184,31 +184,13 @@ const Login = () => {
   // OAuth helpers
   // ──────────────────────────────────────────
   const handleGoogleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.message,
-        variant: 'destructive',
-      });
-    }
+    // Disabled for now
+    return;
   };
 
   const handleAppleSignIn = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: { redirectTo: `${window.location.origin}/dashboard` },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err.message ?? 'Failed to sign in with Apple',
-        variant: 'destructive',
-      });
-    }
+    // Disabled for now
+    return;
   };
 
   const handleVerificationFinished = () => {
@@ -288,11 +270,11 @@ const Login = () => {
                   onAppleSignIn={handleAppleSignIn}
                 />
 
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 opacity-50">
                   Don't have an account?{' '}
-                  <Link to="/signup" className="text-blue-600 hover:text-blue-500">
+                  <span className="text-gray-400 cursor-not-allowed">
                     Sign up
-                  </Link>
+                  </span>
                 </p>
               </div>
             </>
