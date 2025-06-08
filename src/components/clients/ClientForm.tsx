@@ -166,11 +166,11 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">Goals</Label>
             <Textarea
               id="notes"
               {...register('notes')}
-              placeholder="Additional notes about the client..."
+              placeholder="What are the client's main goals and aspirations..."
               rows={4}
             />
           </div>
