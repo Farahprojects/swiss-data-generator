@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +9,7 @@ import { PublishingModal } from "@/components/website-builder/PublishingModal";
 import { Button } from "@/components/ui/button";
 import { Eye, Save, Globe } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
+import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 
 interface WebsiteTemplate {
   id: string;
@@ -72,6 +72,9 @@ export default function WebsiteBuilder() {
         if (template) {
           setSelectedTemplate(template);
         }
+      } else {
+        // No existing website, but let's check for images in storage
+        await loadImagesFromStorageAndPopulate();
       }
 
     } catch (error: any) {
@@ -86,9 +89,59 @@ export default function WebsiteBuilder() {
           title: "Error",
           description: "Failed to load website builder data."
         });
+      } else {
+        // User doesn't have a website yet, load images from storage
+        await loadImagesFromStorageAndPopulate();
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadImagesFromStorageAndPopulate = async () => {
+    if (!user) return;
+
+    try {
+      const storageImages = await loadImagesFromStorage(user.id);
+      
+      // Update customization data with images from storage
+      setCustomizationData(prev => {
+        const updated = { ...prev };
+        
+        if (storageImages.headerImageUrl) {
+          updated.headerImageUrl = storageImages.headerImageUrl;
+        }
+        
+        if (storageImages.aboutImageUrl) {
+          updated.aboutImageUrl = storageImages.aboutImageUrl;
+        }
+        
+        // Handle service images
+        if (Object.keys(storageImages.serviceImages).length > 0) {
+          if (!updated.services) {
+            updated.services = [];
+          }
+          
+          Object.entries(storageImages.serviceImages).forEach(([index, imageUrl]) => {
+            const serviceIndex = parseInt(index);
+            if (!updated.services[serviceIndex]) {
+              updated.services[serviceIndex] = {
+                title: '',
+                description: '',
+                price: '',
+                imageUrl: ''
+              };
+            }
+            updated.services[serviceIndex].imageUrl = imageUrl;
+          });
+        }
+        
+        return updated;
+      });
+      
+      console.log('Auto-populated customization data with storage images');
+    } catch (error) {
+      console.error('Error loading images from storage:', error);
     }
   };
 
@@ -108,7 +161,9 @@ export default function WebsiteBuilder() {
         buttonText: 'Book a Consultation',
         themeColor: '#3B82F6',
         fontFamily: 'Inter',
-        backgroundStyle: 'solid'
+        backgroundStyle: 'solid',
+        // Preserve any existing images from storage
+        ...customizationData
       };
       setCustomizationData(defaultData);
     }
