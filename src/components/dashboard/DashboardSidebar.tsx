@@ -47,7 +47,7 @@ export function SimpleSidebarMenu() {
                       className={`peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 ${
                         isActive 
                           ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground' 
-                          : 'text-black hover:text-white'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                       }`}
                     >
                       <item.icon />
@@ -61,7 +61,7 @@ export function SimpleSidebarMenu() {
         </div>
       </div>
       <div className="flex flex-col gap-2 p-2">
-        <div className="p-2 text-xs text-gray-600 text-center">
+        <div className="p-2 text-xs text-sidebar-foreground/70 text-center">
           <div>© {new Date().getFullYear()} Therai Astro.</div>
           <div>All rights reserved.</div>
         </div>
@@ -85,7 +85,7 @@ export function DashboardSidebar() {
                 return (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link to={item.href} className="text-black hover:text-white">
+                      <Link to={item.href}>
                         <item.icon />
                         <span>{item.name}</span>
                       </Link>
@@ -98,7 +98,7 @@ export function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="p-2 text-xs text-gray-600 text-center">
+        <div className="p-2 text-xs text-sidebar-foreground/70 text-center">
           <div>© {new Date().getFullYear()} Therai Astro.</div>
           <div>All rights reserved.</div>
         </div>
