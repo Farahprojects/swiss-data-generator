@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -122,13 +123,13 @@ const ClientDetailPage = () => {
     const diffInYears = Math.floor(diffInDays / 365);
 
     if (diffInYears > 0) {
-      return `${diffInYears} year${diffInYears > 1 ? 's' : ''}`;
+      return `${diffInYears} year${diffInYears > 1 ? 's' : ''} ago`;
     } else if (diffInMonths > 0) {
-      return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''}`;
+      return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
     } else if (diffInWeeks > 0) {
-      return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''}`;
+      return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`;
     } else if (diffInDays > 0) {
-      return `${diffInDays} day${diffInDays > 1 ? 's' : ''}`;
+      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
     } else {
       return 'Today';
     }
