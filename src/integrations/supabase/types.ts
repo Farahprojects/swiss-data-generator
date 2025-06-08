@@ -458,6 +458,80 @@ export type Database = {
         }
         Relationships: []
       }
+      insight_entries: {
+        Row: {
+          client_id: string
+          coach_id: string
+          confidence_score: number | null
+          content: string
+          created_at: string
+          id: string
+          title: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          coach_id: string
+          confidence_score?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          title?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          coach_id?: string
+          confidence_score?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          title?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_insight_entries_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insight_prompts: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          prompt_text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          prompt_text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          prompt_text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       journal_entries: {
         Row: {
           client_id: string

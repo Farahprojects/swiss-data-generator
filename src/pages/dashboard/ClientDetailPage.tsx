@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,7 @@ const ClientDetailPage = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
-  const { client, journalEntries, clientReports, loading, loadClientData } = useClientData(id);
+  const { client, journalEntries, clientReports, insightEntries, loading, loadClientData } = useClientData(id);
   
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateJournalModal, setShowCreateJournalModal] = useState(false);
@@ -148,7 +147,9 @@ const ClientDetailPage = () => {
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-4">
-            <ClientInsightsTab />
+            <ClientInsightsTab 
+              insightEntries={insightEntries}
+            />
           </TabsContent>
         </Tabs>
 
