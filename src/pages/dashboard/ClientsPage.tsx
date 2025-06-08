@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Calendar } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
@@ -51,42 +51,52 @@ const ClientsPage = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
-      year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 
   const ClientCard = ({ client }: { client: Client }) => (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+    <Card className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-border/50 hover:border-primary/20">
       <Link to={`/dashboard/clients/${client.id}`}>
-        <CardHeader className="pb-2">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+        <CardHeader className="pb-3 pt-4 px-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm flex-shrink-0">
               {client.avatar_url ? (
-                <img src={client.avatar_url} alt={client.full_name} className="w-12 h-12 rounded-full object-cover" />
+                <img src={client.avatar_url} alt={client.full_name} className="w-10 h-10 rounded-full object-cover" />
               ) : (
                 client.full_name.split(' ').map(n => n[0]).join('')
               )}
             </div>
-            <div className="flex-1">
-              <CardTitle className="text-lg">{client.full_name}</CardTitle>
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-lg font-semibold text-foreground leading-tight">
+                {client.full_name}
+              </CardTitle>
+              <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                <Calendar className="w-3 h-3" />
+                <span>Added {formatDate(client.created_at)}</span>
+              </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 pb-4 px-4">
           <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Created</span>
-              <span className="font-medium">{formatDate(client.created_at)}</span>
-            </div>
-            {client.birth_location && (
-              <div className="pt-2">
-                <Badge variant="secondary" className="text-xs">
-                  {client.birth_location}
-                </Badge>
+            {client.email && (
+              <div className="text-sm text-muted-foreground truncate">
+                {client.email}
               </div>
             )}
+            <div className="flex items-center justify-between">
+              {client.birth_location && (
+                <Badge variant="secondary" className="text-xs font-normal">
+                  {client.birth_location}
+                </Badge>
+              )}
+              <div className="text-xs text-muted-foreground">
+                {client.birth_date && `Born ${formatDate(client.birth_date)}`}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Link>
@@ -104,12 +114,12 @@ const ClientsPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-          <p className="text-gray-600">Manage your client relationships and their journeys</p>
+          <h1 className="text-2xl font-bold text-foreground">Clients</h1>
+          <p className="text-muted-foreground">Manage your client relationships and their journeys</p>
         </div>
         <Button 
           onClick={() => setShowNewClientModal(true)}
@@ -122,7 +132,7 @@ const ClientsPage = () => {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
         <Input
           placeholder="Search clients by name or email..."
           value={searchTerm}
@@ -132,12 +142,12 @@ const ClientsPage = () => {
       </div>
 
       {/* Client Count */}
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-muted-foreground">
         {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} found
       </div>
 
       {/* Clients Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredClients.map(client => (
           <ClientCard key={client.id} client={client} />
         ))}
@@ -146,8 +156,8 @@ const ClientsPage = () => {
       {/* Empty State */}
       {filteredClients.length === 0 && !loading && (
         <div className="text-center py-12">
-          <div className="text-gray-400 text-lg mb-2">No clients found</div>
-          <p className="text-gray-600 mb-4">
+          <div className="text-muted-foreground text-lg mb-2">No clients found</div>
+          <p className="text-muted-foreground mb-4">
             {searchTerm ? 'Try adjusting your search terms' : 'Start by adding your first client'}
           </p>
           <Button onClick={() => setShowNewClientModal(true)}>
