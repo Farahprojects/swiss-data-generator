@@ -4,7 +4,7 @@ import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
 import { clientReportsService } from '@/services/clientReports';
 import { insightsService } from '@/services/insights';
-import { Client, JournalEntry, InsightEntry } from '@/types/database';
+import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
 interface ClientReport {
@@ -14,6 +14,18 @@ interface ClientReport {
   created_at: string;
   response_status: number;
   report_name?: string;
+}
+
+interface InsightEntry {
+  id: string;
+  client_id: string;
+  coach_id: string;
+  title: string;
+  content: string;
+  type: 'pattern' | 'recommendation' | 'trend' | 'milestone';
+  confidence_score?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export const useClientData = (clientId: string | undefined) => {
@@ -39,7 +51,7 @@ export const useClientData = (clientId: string | undefined) => {
       setClient(clientData);
       setJournalEntries(journalData);
       setClientReports(reportsData);
-      setInsightEntries(insightsData);
+      setInsightEntries(insightsData as InsightEntry[]);
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({

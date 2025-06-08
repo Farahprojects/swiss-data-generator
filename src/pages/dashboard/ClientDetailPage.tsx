@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useParams } from 'react-router-dom';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
 import { ClientDetailHeader } from '@/components/clients/ClientDetailHeader';
@@ -8,16 +9,15 @@ import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import { ClientReportsTab } from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useMobile } from '@/hooks/use-mobile';
-import { CreateReportModal } from '@/components/reports/CreateReportModal';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useClientData } from '@/hooks/useClientData';
-import { CreateClientModal } from '@/components/clients/CreateClientModal';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
-export const ClientDetailPage = () => {
-  const router = useRouter();
-  const { clientId } = router.query;
-  const isMobile = useMobile();
+const ClientDetailPage = () => {
+  const { clientId } = useParams();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
 
   const {
@@ -27,7 +27,7 @@ export const ClientDetailPage = () => {
     insightEntries,
     loading,
     loadClientData
-  } = useClientData(clientId as string | undefined);
+  } = useClientData(clientId);
 
   const [expandedSections, setExpandedSections] = useState({
     info: true,
@@ -35,15 +35,7 @@ export const ClientDetailPage = () => {
     reports: false,
     insights: false,
   });
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [showClientModal, setShowClientModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  useEffect(() => {
-    if (router.isReady) {
-      loadClientData();
-    }
-  }, [router.isReady, loadClientData]);
 
   const handleSectionToggle = (section: string) => {
     setExpandedSections(prev => ({
@@ -53,23 +45,19 @@ export const ClientDetailPage = () => {
   };
 
   const handleCreateJournal = () => {
-    router.push(`/dashboard/clients/${clientId}/create-journal`);
-  };
-
-  const handleEditClient = () => {
-    setShowClientModal(true);
+    navigate(`/dashboard/clients/${clientId}/create-journal`);
   };
 
   const handleDeleteClient = async () => {
     if (!clientId) return;
 
     try {
-      await clientsService.deleteClient(clientId as string);
+      await clientsService.deleteClient(clientId);
       toast({
         title: "Success",
         description: "Client deleted successfully!",
       });
-      router.push('/dashboard/clients');
+      navigate('/dashboard/clients');
     } catch (error) {
       console.error("Error deleting client:", error);
       toast({
@@ -96,14 +84,12 @@ export const ClientDetailPage = () => {
         <>
           <ClientDetailHeader 
             client={client} 
-            onEdit={handleEditClient}
             isMobile={isMobile}
           />
 
           <ClientInfoCard
             client={client}
             isOpen={expandedSections.info}
-            onEditClick={handleEditClient}
             onDeleteClient={handleDeleteClient}
             showDeleteDialog={showDeleteDialog}
             setShowDeleteDialog={setShowDeleteDialog}
@@ -127,7 +113,8 @@ export const ClientDetailPage = () => {
             <TabsContent value="reports" className="space-y-4">
               <ClientReportsTab
                 clientReports={clientReports}
-                onCreateReport={() => setShowReportModal(true)}
+                onCreateReport={() => {}}
+                onViewReport={() => {}}
               />
             </TabsContent>
 
@@ -144,19 +131,8 @@ export const ClientDetailPage = () => {
           </Tabs>
         </>
       )}
-
-      <CreateReportModal
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        clientId={clientId as string | undefined}
-      />
-
-      <CreateClientModal
-        isOpen={showClientModal}
-        onClose={() => setShowClientModal(false)}
-        client={client}
-        onClientUpdated={loadClientData}
-      />
     </div>
   );
 };
+
+export default ClientDetailPage;
