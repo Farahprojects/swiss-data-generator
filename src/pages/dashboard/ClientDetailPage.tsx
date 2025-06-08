@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Plus, Edit, Trash2, FileText } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Plus, Edit, Trash2, FileText, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
 import { clientReportsService } from '@/services/clientReports';
@@ -38,6 +39,7 @@ const ClientDetailPage = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showReportDrawer, setShowReportDrawer] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
+  const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -186,9 +188,9 @@ const ClientDetailPage = () => {
         
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Client: {client.full_name}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{client.full_name}</h1>
           </div>
-          <div className="flex gap-3">
+          <div className="hidden md:flex gap-3">
             <Button variant="outline" onClick={() => setShowEditModal(true)}>
               <Edit className="w-4 h-4 mr-2" />
               Edit Client
@@ -201,86 +203,137 @@ const ClientDetailPage = () => {
         </div>
       </div>
 
-      {/* Client Information Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Client Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {client.email && (
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="flex-shrink-0 mt-0.5">
-                  <Mail className="w-5 h-5 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm text-gray-500 mb-1">Email</div>
-                  <div className="font-medium break-words break-all">{client.email}</div>
-                </div>
-              </div>
-            )}
-            
-            {client.phone && (
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="flex-shrink-0 mt-0.5">
-                  <Phone className="w-5 h-5 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm text-gray-500 mb-1">Phone</div>
-                  <div className="font-medium">{client.phone}</div>
-                </div>
-              </div>
-            )}
-            
-            {client.birth_date && (
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="flex-shrink-0 mt-0.5">
-                  <Calendar className="w-5 h-5 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm text-gray-500 mb-1">Birth Date</div>
-                  <div className="font-medium">{formatDate(client.birth_date)}</div>
-                </div>
-              </div>
-            )}
-            
-            {client.birth_time && (
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="flex-shrink-0 mt-0.5">
-                  <Clock className="w-5 h-5 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm text-gray-500 mb-1">Birth Time</div>
-                  <div className="font-medium">{client.birth_time}</div>
+      {/* Collapsible Client Information Card */}
+      <Collapsible open={isClientInfoOpen} onOpenChange={setIsClientInfoOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  {client.full_name}
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowEditModal(true);
+                    }}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {/* Mobile edit/delete buttons */}
+                  <div className="md:hidden flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowEditModal(true);
+                      }}
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClient();
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  {isClientInfoOpen ? (
+                    <ChevronUp className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-500" />
+                  )}
                 </div>
               </div>
-            )}
-            
-            {client.birth_location && (
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="flex-shrink-0 mt-0.5">
-                  <MapPin className="w-5 h-5 text-primary" />
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {client.email && (
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <Mail className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-gray-500 mb-1">Email</div>
+                      <div className="font-medium break-words break-all">{client.email}</div>
+                    </div>
+                  </div>
+                )}
+                
+                {client.phone && (
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <Phone className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-gray-500 mb-1">Phone</div>
+                      <div className="font-medium">{client.phone}</div>
+                    </div>
+                  </div>
+                )}
+                
+                {client.birth_date && (
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <Calendar className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-gray-500 mb-1">Birth Date</div>
+                      <div className="font-medium">{formatDate(client.birth_date)}</div>
+                    </div>
+                  </div>
+                )}
+                
+                {client.birth_time && (
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <Clock className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-gray-500 mb-1">Birth Time</div>
+                      <div className="font-medium">{client.birth_time}</div>
+                    </div>
+                  </div>
+                )}
+                
+                {client.birth_location && (
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <MapPin className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-gray-500 mb-1">Birth Location</div>
+                      <div className="font-medium break-words">{client.birth_location}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {client.notes && (
+                <div className="mt-6 pt-6 border-t">
+                  <div className="mb-2">
+                    <h4 className="font-medium text-gray-900">Notes</h4>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-gray-700 leading-relaxed">{client.notes}</p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm text-gray-500 mb-1">Birth Location</div>
-                  <div className="font-medium break-words">{client.birth_location}</div>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {client.notes && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="mb-2">
-                <h4 className="font-medium text-gray-900">Notes</h4>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-700 leading-relaxed">{client.notes}</p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Tabs */}
       <Tabs defaultValue="journal" className="space-y-4">
