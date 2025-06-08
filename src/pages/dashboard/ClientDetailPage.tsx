@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -70,6 +69,12 @@ const ClientDetailPage = () => {
     setShowReportDrawer(true);
   };
 
+  const handleGenerateInsight = () => {
+    setShowCreateJournalModal(false); // Close any other modals
+    setShowReportModal(false);
+    // The insights modal will be handled by the ClientInsightsTab component
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -113,6 +118,7 @@ const ClientDetailPage = () => {
           setIsClientInfoOpen={setIsClientInfoOpen}
           onCreateJournal={() => setShowCreateJournalModal(true)}
           onCreateReport={() => setShowReportModal(true)}
+          onGenerateInsight={handleGenerateInsight}
           isMobile={isMobile}
         />
 
@@ -153,6 +159,9 @@ const ClientDetailPage = () => {
           <TabsContent value="insights" className="space-y-4">
             <ClientInsightsTab 
               insightEntries={insightEntries}
+              client={client}
+              journalEntries={journalEntries}
+              onInsightGenerated={loadClientData}
             />
           </TabsContent>
         </Tabs>

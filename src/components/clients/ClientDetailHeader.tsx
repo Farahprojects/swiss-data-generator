@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ interface ClientDetailHeaderProps {
   setIsClientInfoOpen: (open: boolean) => void;
   onCreateJournal: () => void;
   onCreateReport: () => void;
+  onGenerateInsight?: () => void;
   isMobile: boolean;
 }
 
@@ -41,6 +41,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
   setIsClientInfoOpen,
   onCreateJournal,
   onCreateReport,
+  onGenerateInsight,
   isMobile
 }) => {
   const navigate = useNavigate();
@@ -132,13 +133,14 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                 <Button 
                   variant="ghost" 
                   size="sm"
+                  onClick={onGenerateInsight}
                   className="text-foreground hover:bg-primary/10 hover:text-primary"
                 >
                   <Lightbulb className="w-4 h-4 mr-1" />
                   Insight
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Add Insight</TooltipContent>
+              <TooltipContent>Generate AI Insight</TooltipContent>
             </Tooltip>
           </div>
         </div>

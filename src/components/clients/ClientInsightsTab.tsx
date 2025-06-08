@@ -1,15 +1,23 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Brain, TrendingUp, Calendar, Target } from 'lucide-react';
 import { formatDateTime } from '@/utils/dateFormatters';
-import { InsightEntry } from '@/types/database';
+import { InsightEntry, Client } from '@/types/database';
+import { GenerateInsightModal } from './GenerateInsightModal';
 
 interface ClientInsightsTabProps {
   insightEntries?: InsightEntry[];
-  onGenerateInsight?: () => void;
+  client?: Client;
+  journalEntries?: Array<{
+    id: string;
+    title?: string;
+    entry_text: string;
+    created_at: string;
+  }>;
+  onInsightGenerated?: () => void;
 }
 
 const getInsightIcon = (type: string) => {
@@ -54,13 +62,28 @@ const getInsightBadgeVariant = (type: string) => {
 
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   insightEntries = [],
-  onGenerateInsight
+  client,
+  journalEntries = [],
+  onInsightGenerated
 }) => {
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+
+  const handleGenerateInsight = () => {
+    if (!client) return;
+    setShowGenerateModal(true);
+  };
+
+  const handleInsightGenerated = () => {
+    if (onInsightGenerated) {
+      onInsightGenerated();
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Insights</h3>
-        <Button onClick={onGenerateInsight}>
+        <Button onClick={handleGenerateInsight} disabled={!client}>
           <Plus className="w-4 h-4 mr-2" />
           Generate Insight
         </Button>
@@ -72,7 +95,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
             <div className="text-center">
               <div className="text-gray-400 text-lg mb-2">No insights available</div>
               <p className="text-gray-600 mb-4">AI insights will appear here based on client data and patterns</p>
-              <Button onClick={onGenerateInsight}>
+              <Button onClick={handleGenerateInsight} disabled={!client}>
                 <Plus className="w-4 h-4 mr-2" />
                 Generate First Insight
               </Button>
@@ -112,6 +135,16 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
             </Card>
           ))}
         </div>
+      )}
+
+      {client && (
+        <GenerateInsightModal
+          open={showGenerateModal}
+          onOpenChange={setShowGenerateModal}
+          client={client}
+          journalEntries={journalEntries}
+          onInsightGenerated={handleInsightGenerated}
+        />
       )}
     </div>
   );

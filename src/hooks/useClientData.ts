@@ -5,6 +5,7 @@ import { journalEntriesService } from '@/services/journalEntries';
 import { clientReportsService } from '@/services/clientReports';
 import { Client, JournalEntry, InsightEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientReport {
   id: string;
@@ -28,16 +29,21 @@ export const useClientData = (clientId: string | undefined) => {
     
     try {
       setLoading(true);
-      const [clientData, journalData, reportsData] = await Promise.all([
+      const [clientData, journalData, reportsData, insightsData] = await Promise.all([
         clientsService.getClient(clientId),
         journalEntriesService.getJournalEntries(clientId),
-        clientReportsService.getClientReports(clientId)
+        clientReportsService.getClientReports(clientId),
+        supabase
+          .from('insight_entries')
+          .select('*')
+          .eq('client_id', clientId)
+          .order('created_at', { ascending: false })
       ]);
       
       setClient(clientData);
       setJournalEntries(journalData);
       setClientReports(reportsData);
-      setInsightEntries([]); // Empty for now until we implement the service
+      setInsightEntries(insightsData.data || []);
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
