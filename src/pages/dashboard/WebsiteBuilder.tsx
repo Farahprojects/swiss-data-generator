@@ -10,7 +10,6 @@ import { PublishingModal } from "@/components/website-builder/PublishingModal";
 import { Button } from "@/components/ui/button";
 import { Eye, Save, Globe } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
-import { useAutoSave } from "@/hooks/useAutoSave";
 
 interface WebsiteTemplate {
   id: string;
@@ -35,17 +34,9 @@ export default function WebsiteBuilder() {
   const [website, setWebsite] = useState<CoachWebsite | null>(null);
   const [customizationData, setCustomizationData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
-
-  // Auto-save hook
-  useAutoSave({
-    customizationData,
-    selectedTemplate,
-    website,
-    onWebsiteUpdate: setWebsite
-  });
 
   useEffect(() => {
     loadTemplatesAndWebsite();
@@ -81,19 +72,6 @@ export default function WebsiteBuilder() {
         if (template) {
           setSelectedTemplate(template);
         }
-      } else {
-        // Initialize with default customization data for new users
-        const defaultData = {
-          coachName: user?.email?.split('@')[0] || 'Your Name',
-          tagline: 'Professional Coach',
-          bio: 'I help people transform their lives through personalized coaching.',
-          services: [],
-          buttonText: 'Book a Consultation',
-          themeColor: '#3B82F6',
-          fontFamily: 'Inter',
-          backgroundStyle: 'solid'
-        };
-        setCustomizationData(defaultData);
       }
 
     } catch (error: any) {
@@ -114,87 +92,77 @@ export default function WebsiteBuilder() {
     }
   };
 
-  const createWebsiteIfNeeded = async () => {
-    if (!user || website) return website;
-
-    try {
-      const slug = user.email?.split('@')[0]?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'coach';
-      
-      const { data, error } = await supabase
-        .from('coach_websites')
-        .insert({
-          coach_id: user.id,
-          template_id: selectedTemplate?.id || null,
-          site_slug: slug,
-          customization_data: customizationData
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      setWebsite(data);
-      return data;
-    } catch (error: any) {
-      console.error('Failed to create website:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save changes."
-      });
-      return null;
-    }
-  };
-
   const handleTemplateSelect = (template: WebsiteTemplate) => {
     setSelectedTemplate(template);
     
-    // Merge template defaults with existing customization data
-    const templateDefaults = {
-      tagline: template.template_data?.defaultContent?.hero?.subtitle || 'Professional Coach',
-    };
-    
-    setCustomizationData(prev => ({
-      ...templateDefaults,
-      ...prev, // Keep existing customizations
-      coachName: prev.coachName || user?.email?.split('@')[0] || 'Your Name',
-    }));
+    // Set default customization data if no existing website
+    if (!website) {
+      const defaultData = {
+        coachName: user?.email?.split('@')[0] || 'Your Name',
+        tagline: template.template_data?.defaultContent?.hero?.subtitle || 'Professional Coach',
+        bio: 'I help people transform their lives through personalized coaching.',
+        services: [
+          { title: 'Life Coaching', description: '1-on-1 sessions to help you achieve your goals', price: '$150/session' },
+          { title: 'Career Coaching', description: 'Navigate your career path with confidence', price: '$120/session' }
+        ],
+        buttonText: 'Book a Consultation',
+        themeColor: '#3B82F6',
+        fontFamily: 'Inter',
+        backgroundStyle: 'solid'
+      };
+      setCustomizationData(defaultData);
+    }
   };
 
-  const handleCustomizationChange = async (field: string, value: any) => {
+  const handleCustomizationChange = (field: string, value: any) => {
     setCustomizationData(prev => ({
       ...prev,
       [field]: value
     }));
-
-    // Create website record immediately if it doesn't exist
-    await createWebsiteIfNeeded();
   };
 
-  const handlePublish = async () => {
-    if (!user || !selectedTemplate || !website) return;
+  const handleSave = async () => {
+    if (!user || !selectedTemplate) return;
 
-    setIsPublishing(true);
+    setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('coach_websites')
-        .update({
-          is_published: true,
-          published_at: new Date().toISOString()
-        })
-        .eq('id', website.id);
+      const slug = user.email?.split('@')[0]?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'coach';
+      
+      if (website) {
+        // Update existing website
+        const { error } = await supabase
+          .from('coach_websites')
+          .update({
+            template_id: selectedTemplate.id,
+            customization_data: customizationData
+          })
+          .eq('id', website.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // Create new website
+        const { data, error } = await supabase
+          .from('coach_websites')
+          .insert({
+            coach_id: user.id,
+            template_id: selectedTemplate.id,
+            site_slug: slug,
+            customization_data: customizationData
+          })
+          .select()
+          .single();
 
-      setWebsite(prev => prev ? { ...prev, is_published: true } : null);
+        if (error) throw error;
+        setWebsite(data);
+      }
 
       toast({
-        title: "Website Published",
-        description: "Your website is now live and publicly accessible."
+        title: "Website Saved",
+        description: "Your website has been saved successfully."
       });
 
     } catch (error: any) {
-      logToSupabase("Error publishing website", {
+      logToSupabase("Error saving website", {
         level: 'error',
         page: 'WebsiteBuilder',
         data: { error: error.message }
@@ -202,10 +170,10 @@ export default function WebsiteBuilder() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to publish website."
+        description: "Failed to save website changes."
       });
     } finally {
-      setIsPublishing(false);
+      setIsSaving(false);
     }
   };
 
@@ -246,10 +214,6 @@ export default function WebsiteBuilder() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Website Builder</h1>
               <p className="text-gray-600">Template: {selectedTemplate.name}</p>
-              <div className="flex items-center space-x-2 mt-1">
-                <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-500">Auto-saving changes</span>
-              </div>
             </div>
             
             <div className="flex items-center space-x-3">
@@ -262,14 +226,22 @@ export default function WebsiteBuilder() {
                 <span>Preview</span>
               </Button>
               
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center space-x-2"
+              >
+                <Save className="h-4 w-4" />
+                <span>{isSaving ? 'Saving...' : 'Save'}</span>
+              </Button>
+              
               {website && (
                 <Button
                   onClick={() => setShowPublishModal(true)}
-                  disabled={isPublishing}
                   className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
                 >
                   <Globe className="h-4 w-4" />
-                  <span>{isPublishing ? 'Publishing...' : website.is_published ? 'Update Live Site' : 'Publish Website'}</span>
+                  <span>{website.is_published ? 'Update Site' : 'Publish'}</span>
                 </Button>
               )}
             </div>
