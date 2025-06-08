@@ -407,7 +407,7 @@ const ClientDetailPage = () => {
 
           {/* Desktop Sticky Action Bar */}
           {!isMobile && (
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/40 p-4 -mx-6 px-6">
+            <div className="sticky top-16 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/40 p-4 -mx-6 px-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
                   <span className="flex items-center gap-2">
