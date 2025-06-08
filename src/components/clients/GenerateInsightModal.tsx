@@ -2,8 +2,6 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Client } from '@/types/database';
 import { insightsService } from '@/services/insights';
@@ -29,20 +27,19 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
   journalEntries,
   onInsightGenerated
 }) => {
-  const [title, setTitle] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const handleGenerate = async () => {
-    if (!title.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide a title for the insight.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const generateDateTitle = () => {
+    const now = new Date();
+    return now.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
 
+  const handleGenerate = async () => {
     setIsGenerating(true);
 
     try {
@@ -55,11 +52,13 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         journalEntries: journalEntries
       };
 
+      const title = generateDateTitle();
+
       const response = await insightsService.generateInsight({
         clientId: client.id,
         coachId: client.coach_id,
         insightType: 'general',
-        title: title.trim(),
+        title,
         clientData
       });
 
@@ -70,7 +69,6 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         });
         onInsightGenerated();
         onOpenChange(false);
-        setTitle('');
       } else {
         throw new Error(response.error || 'Failed to generate insight');
       }
@@ -89,7 +87,6 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
   const handleClose = () => {
     if (!isGenerating) {
       onOpenChange(false);
-      setTitle('');
     }
   };
 
@@ -100,19 +97,12 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
           <DialogTitle>Generate Insight</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="insight-title">Insight Title</Label>
-            <Input
-              id="insight-title"
-              placeholder="Enter a title for this insight..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={isGenerating}
-            />
-          </div>
-
           <div className="text-sm text-foreground">
             This will analyze {client.full_name}'s profile, birth chart data, goals, and {journalEntries.length} journal {journalEntries.length === 1 ? 'entry' : 'entries'} to generate personalized insights.
+          </div>
+          
+          <div className="text-sm text-muted-foreground">
+            Insight will be titled: <strong>{generateDateTitle()}</strong>
           </div>
         </div>
         
@@ -120,7 +110,7 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
           <Button variant="outline" onClick={handleClose} disabled={isGenerating}>
             Cancel
           </Button>
-          <Button onClick={handleGenerate} disabled={isGenerating || !title.trim()}>
+          <Button onClick={handleGenerate} disabled={isGenerating}>
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
