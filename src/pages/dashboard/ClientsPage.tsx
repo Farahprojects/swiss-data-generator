@@ -114,40 +114,50 @@ const ClientsPage = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
+    <div className="space-y-4 max-w-7xl mx-auto">
+      {/* Improved Header Section */}
+      <div className="mt-8 space-y-4">
+        {/* Title with Count Badge */}
+        <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">Clients</h1>
-          <p className="text-muted-foreground">Manage your client relationships and their journeys</p>
+          <Badge variant="secondary" className="text-sm font-medium">
+            {clients.length}
+          </Badge>
         </div>
-        <Button 
-          onClick={() => setShowNewClientModal(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          New Client
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input
-          placeholder="Search clients by name or email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Client Count */}
-      <div className="text-sm text-muted-foreground">
-        {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''} found
+        
+        {/* Subtitle */}
+        <p className="text-muted-foreground -mt-1">Manage your client relationships and their journeys</p>
+        
+        {/* Controls Row - Search and Button */}
+        <div className="flex items-center gap-3 max-w-lg">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search clients by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button 
+            onClick={() => setShowNewClientModal(true)}
+            className="flex items-center gap-2 flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            New Client
+          </Button>
+        </div>
+        
+        {/* Search Results Count */}
+        {searchTerm && (
+          <div className="text-sm text-muted-foreground">
+            {filteredClients.length} result{filteredClients.length !== 1 ? 's' : ''} found
+          </div>
+        )}
       </div>
 
       {/* Clients Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {filteredClients.map(client => (
           <ClientCard key={client.id} client={client} />
         ))}
