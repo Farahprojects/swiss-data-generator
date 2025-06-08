@@ -211,7 +211,7 @@ const UnifiedNavigation = () => {
       {/* Sidebar Sheet for Dashboard Pages with Burger Menu */}
       {isDashboardPage && (
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-          <SheetContent side="left" className="w-[240px] p-0">
+          <SheetContent side="left" className="w-[240px] p-0 [&>button]:hidden">
             <SimpleSidebarMenu />
           </SheetContent>
         </Sheet>
