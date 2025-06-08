@@ -44,10 +44,10 @@ export function SimpleSidebarMenu() {
                   <li key={item.name} className="group/menu-item relative">
                     <Link
                       to={item.href}
-                      className={`peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 ${
+                      className={`peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none transition-all duration-200 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 ${
                         isActive 
-                          ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground' 
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                          ? 'bg-accent text-accent-foreground font-medium' 
+                          : 'text-foreground hover:bg-accent hover:text-accent-foreground'
                       }`}
                     >
                       <item.icon />
@@ -61,7 +61,7 @@ export function SimpleSidebarMenu() {
         </div>
       </div>
       <div className="flex flex-col gap-2 p-2">
-        <div className="p-2 text-xs text-sidebar-foreground/70 text-center">
+        <div className="p-2 text-xs text-muted-foreground text-center">
           <div>© {new Date().getFullYear()} Therai Astro.</div>
           <div>All rights reserved.</div>
         </div>
@@ -84,7 +84,7 @@ export function DashboardSidebar() {
                 const isActive = location.pathname === item.href;
                 return (
                   <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton asChild isActive={isActive}>
+                    <SidebarMenuButton asChild isActive={isActive} className="hover:bg-accent hover:text-accent-foreground data-[active=true]:bg-accent data-[active=true]:text-accent-foreground">
                       <Link to={item.href}>
                         <item.icon />
                         <span>{item.name}</span>
@@ -98,7 +98,7 @@ export function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="p-2 text-xs text-sidebar-foreground/70 text-center">
+        <div className="p-2 text-xs text-muted-foreground text-center">
           <div>© {new Date().getFullYear()} Therai Astro.</div>
           <div>All rights reserved.</div>
         </div>
