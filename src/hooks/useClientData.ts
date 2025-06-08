@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
 import { clientReportsService } from '@/services/clientReports';
+import { insightsService } from '@/services/insights';
 import { Client, JournalEntry, InsightEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,16 +29,17 @@ export const useClientData = (clientId: string | undefined) => {
     
     try {
       setLoading(true);
-      const [clientData, journalData, reportsData] = await Promise.all([
+      const [clientData, journalData, reportsData, insightsData] = await Promise.all([
         clientsService.getClient(clientId),
         journalEntriesService.getJournalEntries(clientId),
-        clientReportsService.getClientReports(clientId)
+        clientReportsService.getClientReports(clientId),
+        insightsService.getInsightEntries(clientId)
       ]);
       
       setClient(clientData);
       setJournalEntries(journalData);
       setClientReports(reportsData);
-      setInsightEntries([]); // Empty for now until we implement the service
+      setInsightEntries(insightsData);
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
