@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -150,6 +149,16 @@ const ClientDetailPage = () => {
     return typeMap[reportType] || reportType;
   };
 
+  const getAbbreviatedName = (fullName: string) => {
+    const nameParts = fullName.trim().split(' ');
+    if (nameParts.length === 1) {
+      return nameParts[0];
+    }
+    const firstName = nameParts[0];
+    const lastNameInitial = nameParts[nameParts.length - 1].charAt(0);
+    return `${firstName} ${lastNameInitial}.`;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -292,45 +301,23 @@ const ClientDetailPage = () => {
                 <TooltipContent>Back to Clients</TooltipContent>
               </Tooltip>
 
-              <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setActiveTab('journal')}
-                  className={`text-foreground hover:bg-primary/10 hover:text-primary text-xs ${activeTab === 'journal' ? 'bg-primary/10 text-primary' : ''}`}
-                >
-                  J({journalEntries.length})
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setActiveTab('reports')}
-                  className={`text-foreground hover:bg-primary/10 hover:text-primary text-xs ${activeTab === 'reports' ? 'bg-primary/10 text-primary' : ''}`}
-                >
-                  R({clientReports.length})
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setActiveTab('insights')}
-                  className={`text-foreground hover:bg-primary/10 hover:text-primary text-xs ${activeTab === 'insights' ? 'bg-primary/10 text-primary' : ''}`}
-                >
-                  I(0)
-                </Button>
+              <div className="text-sm font-medium truncate flex-1 text-center px-2">
+                {client && getAbbreviatedName(client.full_name)}
+              </div>
 
-                {/* Mobile Action Icons */}
+              <div className="flex items-center gap-1">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => setShowCreateJournalModal(true)}
-                      className="h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary"
+                      onClick={() => setActiveTab('journal')}
+                      className={`h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'journal' ? 'bg-primary/10 text-primary' : ''}`}
                     >
                       <BookOpen className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Add Journal</TooltipContent>
+                  <TooltipContent>Journals ({journalEntries.length})</TooltipContent>
                 </Tooltip>
                 
                 <Tooltip>
@@ -338,13 +325,13 @@ const ClientDetailPage = () => {
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => setShowReportModal(true)}
-                      className="h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary"
+                      onClick={() => setActiveTab('reports')}
+                      className={`h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'reports' ? 'bg-primary/10 text-primary' : ''}`}
                     >
                       <FileText className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Generate Report</TooltipContent>
+                  <TooltipContent>Reports ({clientReports.length})</TooltipContent>
                 </Tooltip>
                 
                 <Tooltip>
@@ -352,12 +339,13 @@ const ClientDetailPage = () => {
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      className="h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary"
+                      onClick={() => setActiveTab('insights')}
+                      className={`h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'insights' ? 'bg-primary/10 text-primary' : ''}`}
                     >
                       <Lightbulb className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Add Insight</TooltipContent>
+                  <TooltipContent>Insights (0)</TooltipContent>
                 </Tooltip>
               </div>
             </div>
@@ -371,7 +359,7 @@ const ClientDetailPage = () => {
               <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
-                    {client.full_name}
+                    {client?.full_name}
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     {/* Edit buttons */}
@@ -414,7 +402,7 @@ const ClientDetailPage = () => {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Client</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete {client.full_name}? This action cannot be undone and will permanently remove all client data, including journal entries and reports.
+                            Are you sure you want to delete {client?.full_name}? This action cannot be undone and will permanently remove all client data, including journal entries and reports.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
