@@ -49,9 +49,9 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     {entry.title && (
-                      <CardTitle className="text-lg">{entry.title}</CardTitle>
+                      <CardTitle className="text-lg mb-2">{entry.title}</CardTitle>
                     )}
-                    <div className="text-sm text-gray-600 mt-1">
+                    <div className="text-sm text-gray-600">
                       {isMobile ? getRelativeTime(entry.created_at) : formatDateTime(entry.created_at)}
                     </div>
                   </div>
