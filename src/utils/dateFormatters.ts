@@ -4,7 +4,16 @@ export const formatDate = (dateString: string) => {
 };
 
 export const formatDateTime = (dateString: string) => {
-  return new Date(dateString).toLocaleString();
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  }) + ' at ' + date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit', 
+    hour12: true 
+  });
 };
 
 export const getRelativeTime = (dateString: string): string => {
