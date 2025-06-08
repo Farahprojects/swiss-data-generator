@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -164,8 +165,7 @@ const ClientDetailPage = () => {
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/clients')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Clients
+            <ArrowLeft className="w-4 h-4" />
           </Button>
         </div>
         <div className="text-center py-12">
@@ -187,15 +187,19 @@ const ClientDetailPage = () => {
           <div className="flex items-center justify-between py-3 px-4">
             {/* Desktop View */}
             <div className="hidden md:flex items-center gap-4 flex-1">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/dashboard/clients')}
-                className="text-foreground hover:bg-primary/10 hover:text-primary"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Clients
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => navigate('/dashboard/clients')}
+                    className="text-foreground hover:bg-primary/10 hover:text-primary"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Back to Clients</TooltipContent>
+              </Tooltip>
               
               <div className="flex items-center gap-2 flex-1">
                 <Button 
@@ -274,15 +278,19 @@ const ClientDetailPage = () => {
 
             {/* Mobile View */}
             <div className="md:hidden flex items-center justify-between w-full">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/dashboard/clients')}
-                className="text-foreground hover:bg-primary/10 hover:text-primary"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => navigate('/dashboard/clients')}
+                    className="text-foreground hover:bg-primary/10 hover:text-primary"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Back to Clients</TooltipContent>
+              </Tooltip>
 
               <div className="flex items-center gap-1">
                 <Button 
