@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Plus, Edit, Trash2, FileText, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Plus, Edit, Trash2, FileText, ChevronDown, ChevronUp, Pencil, BookOpen, Lightbulb } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { clientsService } from '@/services/clients';
@@ -12,6 +13,7 @@ import { journalEntriesService } from '@/services/journalEntries';
 import { clientReportsService } from '@/services/clientReports';
 import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import EditClientForm from '@/components/clients/EditClientForm';
 import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
 import ClientReportModal from '@/components/clients/ClientReportModal';
@@ -30,6 +32,7 @@ const ClientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [client, setClient] = useState<Client | null>(null);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
@@ -197,6 +200,61 @@ const ClientDetailPage = () => {
                   {client.full_name}
                 </CardTitle>
                 <div className="flex items-center gap-2">
+                  {/* Mobile Action Buttons */}
+                  {isMobile && (
+                    <TooltipProvider>
+                      <div className="flex items-center gap-1 mr-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowCreateJournalModal(true);
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <BookOpen className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Add Journal</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowReportModal(true);
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Generate Report</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // TODO: Add insight functionality
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Lightbulb className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Add Insight</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
+                  )}
                   {/* Action buttons grouped together */}
                   <Button 
                     variant="ghost" 
@@ -341,19 +399,68 @@ const ClientDetailPage = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="journal" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="journal">Journals ({journalEntries.length})</TabsTrigger>
-          <TabsTrigger value="reports">Reports ({clientReports.length})</TabsTrigger>
-          <TabsTrigger value="insights">Insights (0)</TabsTrigger>
-        </TabsList>
+        <div className="space-y-2">
+          <TabsList>
+            <TabsTrigger value="journal">Journals ({journalEntries.length})</TabsTrigger>
+            <TabsTrigger value="reports">Reports ({clientReports.length})</TabsTrigger>
+            <TabsTrigger value="insights">Insights (0)</TabsTrigger>
+          </TabsList>
+
+          {/* Desktop Action Bar */}
+          {!isMobile && (
+            <div className="flex items-center justify-between bg-gray-50 px-4 py-2 rounded-lg border">
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <span>← Back to Clients</span>
+                <span className="text-gray-400">|</span>
+                <span>Journals ({journalEntries.length})</span>
+                <span>Reports ({clientReports.length})</span>
+                <span>Insights (0)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => setShowCreateJournalModal(true)}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  New Entry
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => setShowReportModal(true)}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Generate Report
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => {
+                    // TODO: Add insight functionality
+                    toast({
+                      title: "Coming Soon",
+                      description: "Insight functionality will be available soon.",
+                    });
+                  }}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Insight
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
 
         <TabsContent value="journal" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Journals</h3>
-            <Button size="sm" onClick={() => setShowCreateJournalModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Entry
-            </Button>
+            {isMobile && (
+              <Button size="sm" onClick={() => setShowCreateJournalModal(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Entry
+              </Button>
+            )}
           </div>
 
           {journalEntries.length === 0 ? (
@@ -411,10 +518,12 @@ const ClientDetailPage = () => {
         <TabsContent value="reports" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Reports</h3>
-            <Button size="sm" onClick={() => setShowReportModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Generate Report
-            </Button>
+            {isMobile && (
+              <Button size="sm" onClick={() => setShowReportModal(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Generate Report
+              </Button>
+            )}
           </div>
 
           {clientReports.length === 0 ? (
