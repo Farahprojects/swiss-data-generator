@@ -126,7 +126,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     <div className="space-y-3">
       <Label className="text-sm font-medium text-gray-700">{label}</Label>
       
-      {value ? (
+      {value && value.trim() !== '' ? (
         <div className="relative">
           <img
             src={value}
