@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, X, ChevronDown, ChevronUp, Palette, Type, Settings, User, Briefcase, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ImageUploader } from "./ImageUploader";
+import { ImageManager } from "./ImageManager";
 import type { Service, CustomizationData } from "@/types/website-builder";
 
 interface CustomizationPanelProps {
@@ -175,14 +174,14 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   transition={{ duration: 0.2 }}
                 >
                   <CardContent className="space-y-6 pt-0">
-                    <ImageUploader
+                    <ImageManager
                       value={customizationData.headerImageUrl}
                       onChange={(url) => onChange('headerImageUrl', url)}
                       label="Header Background Image"
                       section="header"
                     />
                     
-                    <ImageUploader
+                    <ImageManager
                       value={customizationData.aboutImageUrl}
                       onChange={(url) => onChange('aboutImageUrl', url)}
                       label="About Section Image"
@@ -268,7 +267,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                               placeholder="e.g., $150/session or $500/package"
                             />
                             
-                            <ImageUploader
+                            <ImageManager
                               value={service.imageUrl}
                               onChange={(url) => handleServiceChange(index, 'imageUrl', url || '')}
                               label="Service Icon/Image"

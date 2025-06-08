@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,7 +33,7 @@ export default function WebsiteBuilder() {
   const [website, setWebsite] = useState<CoachWebsite | null>(null);
   const [customizationData, setCustomizationData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
 
@@ -92,6 +91,51 @@ export default function WebsiteBuilder() {
     }
   };
 
+  // Auto-save functionality
+  useEffect(() => {
+    if (!user || !selectedTemplate || isLoading) return;
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const slug = user.email?.split('@')[0]?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'coach';
+        
+        if (website) {
+          // Update existing website
+          const { error } = await supabase
+            .from('coach_websites')
+            .update({
+              template_id: selectedTemplate.id,
+              customization_data: customizationData
+            })
+            .eq('id', website.id);
+
+          if (error) throw error;
+        } else {
+          // Create new website
+          const { data, error } = await supabase
+            .from('coach_websites')
+            .insert({
+              coach_id: user.id,
+              template_id: selectedTemplate.id,
+              site_slug: slug,
+              customization_data: customizationData
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          setWebsite(data);
+        }
+
+        console.log('Auto-saved website changes');
+      } catch (error: any) {
+        console.error('Auto-save failed:', error);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
+  }, [customizationData, selectedTemplate, user, website, isLoading]);
+
   const handleTemplateSelect = (template: WebsiteTemplate) => {
     setSelectedTemplate(template);
     
@@ -121,48 +165,30 @@ export default function WebsiteBuilder() {
     }));
   };
 
-  const handleSave = async () => {
-    if (!user || !selectedTemplate) return;
+  const handlePublish = async () => {
+    if (!user || !selectedTemplate || !website) return;
 
-    setIsSaving(true);
+    setIsPublishing(true);
     try {
-      const slug = user.email?.split('@')[0]?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'coach';
-      
-      if (website) {
-        // Update existing website
-        const { error } = await supabase
-          .from('coach_websites')
-          .update({
-            template_id: selectedTemplate.id,
-            customization_data: customizationData
-          })
-          .eq('id', website.id);
+      const { error } = await supabase
+        .from('coach_websites')
+        .update({
+          is_published: true,
+          published_at: new Date().toISOString()
+        })
+        .eq('id', website.id);
 
-        if (error) throw error;
-      } else {
-        // Create new website
-        const { data, error } = await supabase
-          .from('coach_websites')
-          .insert({
-            coach_id: user.id,
-            template_id: selectedTemplate.id,
-            site_slug: slug,
-            customization_data: customizationData
-          })
-          .select()
-          .single();
+      if (error) throw error;
 
-        if (error) throw error;
-        setWebsite(data);
-      }
+      setWebsite(prev => prev ? { ...prev, is_published: true } : null);
 
       toast({
-        title: "Website Saved",
-        description: "Your website has been saved successfully."
+        title: "Website Published",
+        description: "Your website is now live and publicly accessible."
       });
 
     } catch (error: any) {
-      logToSupabase("Error saving website", {
+      logToSupabase("Error publishing website", {
         level: 'error',
         page: 'WebsiteBuilder',
         data: { error: error.message }
@@ -170,10 +196,10 @@ export default function WebsiteBuilder() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to save website changes."
+        description: "Failed to publish website."
       });
     } finally {
-      setIsSaving(false);
+      setIsPublishing(false);
     }
   };
 
@@ -214,6 +240,12 @@ export default function WebsiteBuilder() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Website Builder</h1>
               <p className="text-gray-600">Template: {selectedTemplate.name}</p>
+              {website && (
+                <div className="flex items-center space-x-2 mt-1">
+                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-500">Auto-saving changes</span>
+                </div>
+              )}
             </div>
             
             <div className="flex items-center space-x-3">
@@ -226,22 +258,14 @@ export default function WebsiteBuilder() {
                 <span>Preview</span>
               </Button>
               
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex items-center space-x-2"
-              >
-                <Save className="h-4 w-4" />
-                <span>{isSaving ? 'Saving...' : 'Save'}</span>
-              </Button>
-              
               {website && (
                 <Button
                   onClick={() => setShowPublishModal(true)}
+                  disabled={isPublishing}
                   className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
                 >
                   <Globe className="h-4 w-4" />
-                  <span>{website.is_published ? 'Update Site' : 'Publish'}</span>
+                  <span>{isPublishing ? 'Publishing...' : website.is_published ? 'Update Live Site' : 'Publish Website'}</span>
                 </Button>
               )}
             </div>
