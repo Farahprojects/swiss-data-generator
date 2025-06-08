@@ -24,6 +24,14 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
           <div className="absolute top-1/2 left-1/2 w-20 h-20 sm:w-32 sm:h-32 lg:w-64 lg:h-64 bg-gradient-to-br from-blue-400 to-teal-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 opacity-50"></div>
         </div>
         
+        {/* Header background image overlay */}
+        {customizationData.headerImageUrl && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-20"
+            style={{ backgroundImage: `url(${customizationData.headerImageUrl})` }}
+          ></div>
+        )}
+        
         <div className={`relative z-10 ${heroSection} flex items-center`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
             <motion.div
@@ -93,6 +101,17 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               Creative Approach
             </h2>
+            
+            {customizationData.aboutImageUrl && (
+              <div className="mb-6 sm:mb-8 text-center">
+                <img
+                  src={customizationData.aboutImageUrl}
+                  alt="About"
+                  className="w-32 h-32 sm:w-48 sm:h-48 object-cover rounded-full mx-auto shadow-xl"
+                />
+              </div>
+            )}
+            
             <p className="text-base sm:text-lg text-gray-700 leading-relaxed text-center max-w-3xl mx-auto">
               {customizationData.bio || "I believe that creativity is the key to unlocking human potential. Through innovative techniques, artistic expression, and out-of-the-box thinking, we'll discover new pathways to growth and success."}
             </p>
@@ -117,10 +136,19 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                 whileHover={{ scale: 1.05, rotate: Math.random() * 6 - 3 }}
                 className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl transform transition-all hover:shadow-2xl"
               >
-                <div 
-                  className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-2xl mb-4 sm:mb-6 bg-gradient-to-br from-current to-purple-500"
-                  style={{ color: themeColor }}
-                ></div>
+                {service.imageUrl ? (
+                  <img
+                    src={service.imageUrl}
+                    alt={service.title}
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-2xl mb-4 sm:mb-6"
+                  />
+                ) : (
+                  <div 
+                    className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-2xl mb-4 sm:mb-6 bg-gradient-to-br from-current to-purple-500"
+                    style={{ color: themeColor }}
+                  ></div>
+                )}
+                
                 <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900 break-words">{service.title}</h3>
                 <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed break-words">{service.description}</p>
                 <div className="flex items-center justify-between flex-wrap gap-3">
