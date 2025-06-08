@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +45,7 @@ const ClientDetailPage = () => {
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
   const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('journal');
 
   useEffect(() => {
     if (id) {
@@ -201,28 +201,26 @@ const ClientDetailPage = () => {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => setShowCreateJournalModal(true)}
-                  className="text-foreground hover:bg-primary/10 hover:text-primary"
+                  onClick={() => setActiveTab('journal')}
+                  className={`text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'journal' ? 'bg-primary/10 text-primary' : ''}`}
                 >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Journal
+                  Journals ({journalEntries.length})
                 </Button>
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => setShowReportModal(true)}
-                  className="text-foreground hover:bg-primary/10 hover:text-primary"
+                  onClick={() => setActiveTab('reports')}
+                  className={`text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'reports' ? 'bg-primary/10 text-primary' : ''}`}
                 >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Report
+                  Reports ({clientReports.length})
                 </Button>
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  className="text-foreground hover:bg-primary/10 hover:text-primary"
+                  onClick={() => setActiveTab('insights')}
+                  className={`text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'insights' ? 'bg-primary/10 text-primary' : ''}`}
                 >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Insight
+                  Insights (0)
                 </Button>
               </div>
             </div>
@@ -450,8 +448,8 @@ const ClientDetailPage = () => {
         </Collapsible>
 
         {/* Tabs */}
-        <Tabs defaultValue="journal" className="space-y-4">
-          <TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="hidden">
             <TabsTrigger value="journal">Journals</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
@@ -459,7 +457,11 @@ const ClientDetailPage = () => {
 
           <TabsContent value="journal" className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Journals ({journalEntries.length})</h3>
+              <h3 className="text-lg font-semibold">Journals</h3>
+              <Button onClick={() => setShowCreateJournalModal(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Entry
+              </Button>
             </div>
 
             {journalEntries.length === 0 ? (
@@ -516,7 +518,11 @@ const ClientDetailPage = () => {
 
           <TabsContent value="reports" className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Reports ({clientReports.length})</h3>
+              <h3 className="text-lg font-semibold">Reports</h3>
+              <Button onClick={() => setShowReportModal(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Generate Report
+              </Button>
             </div>
 
             {clientReports.length === 0 ? (
@@ -575,7 +581,7 @@ const ClientDetailPage = () => {
 
           <TabsContent value="insights" className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Insights (0)</h3>
+              <h3 className="text-lg font-semibold">Insights</h3>
             </div>
             <Card>
               <CardContent className="py-8">
