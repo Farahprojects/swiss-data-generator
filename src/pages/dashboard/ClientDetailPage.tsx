@@ -185,12 +185,6 @@ const ClientDetailPage = () => {
             Back to Clients
           </Button>
         </div>
-        
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{client.full_name}</h1>
-          </div>
-        </div>
       </div>
 
       {/* Collapsible Client Information Card */}
