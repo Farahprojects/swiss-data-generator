@@ -36,6 +36,7 @@ const ClientDetailPage = () => {
     insights: false,
   });
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('journals');
 
   const handleSectionToggle = (section: string) => {
     setExpandedSections(prev => ({
@@ -46,6 +47,16 @@ const ClientDetailPage = () => {
 
   const handleCreateJournal = () => {
     navigate(`/dashboard/clients/${clientId}/create-journal`);
+  };
+
+  const handleCreateReport = () => {
+    // TODO: Implement create report functionality
+    console.log('Create report clicked');
+  };
+
+  const handleEditClient = () => {
+    // TODO: Implement edit client functionality
+    console.log('Edit client clicked');
   };
 
   const handleDeleteClient = async () => {
@@ -85,17 +96,26 @@ const ClientDetailPage = () => {
           <ClientDetailHeader 
             client={client} 
             isMobile={isMobile}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            journalCount={journalEntries.length}
+            reportCount={clientReports.length}
+            isClientInfoOpen={expandedSections.info}
+            setIsClientInfoOpen={(open) => setExpandedSections(prev => ({ ...prev, info: open }))}
+            onCreateJournal={handleCreateJournal}
+            onCreateReport={handleCreateReport}
           />
 
           <ClientInfoCard
             client={client}
             isOpen={expandedSections.info}
+            onEditClick={handleEditClient}
             onDeleteClient={handleDeleteClient}
             showDeleteDialog={showDeleteDialog}
             setShowDeleteDialog={setShowDeleteDialog}
           />
 
-          <Tabs defaultValue="journals" className="w-full">
+          <Tabs defaultValue="journals" className="w-full" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="journals">Journals</TabsTrigger>
               <TabsTrigger value="reports">Reports</TabsTrigger>
@@ -113,7 +133,7 @@ const ClientDetailPage = () => {
             <TabsContent value="reports" className="space-y-4">
               <ClientReportsTab
                 clientReports={clientReports}
-                onCreateReport={() => {}}
+                onCreateReport={handleCreateReport}
                 onViewReport={() => {}}
               />
             </TabsContent>
