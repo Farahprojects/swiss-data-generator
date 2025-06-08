@@ -19,26 +19,6 @@ interface ClientInsightsTabProps {
   onGenerateInsight?: () => void;
 }
 
-// Mock data for demonstration - replace with actual data
-const mockInsights: ClientInsight[] = [
-  {
-    id: '1',
-    title: 'Communication Pattern Detected',
-    content: 'Client shows increased engagement during evening sessions, with 40% higher response rates after 6 PM.',
-    type: 'pattern',
-    created_at: '2024-01-15T18:30:00Z',
-    confidence_score: 85
-  },
-  {
-    id: '2',
-    title: 'Progress Milestone',
-    content: 'Client has completed 80% of their initial goals set during the first session. Consider setting new objectives.',
-    type: 'milestone',
-    created_at: '2024-01-10T14:20:00Z',
-    confidence_score: 92
-  }
-];
-
 const getInsightIcon = (type: string) => {
   switch (type) {
     case 'pattern':
@@ -82,7 +62,7 @@ const getInsightBadgeVariant = (type: string) => {
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   onGenerateInsight
 }) => {
-  const insights = mockInsights; // Replace with actual data
+  const insights: ClientInsight[] = []; // Cleared mock data
 
   return (
     <div className="space-y-4">
