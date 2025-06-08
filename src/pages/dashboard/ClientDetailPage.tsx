@@ -186,7 +186,7 @@ const ClientDetailPage = () => {
         <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
           <div className="flex items-center justify-between py-3 px-4">
             {/* Desktop View */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4 flex-1">
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -197,7 +197,7 @@ const ClientDetailPage = () => {
                 Back to Clients
               </Button>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-1">
                 <Button 
                   variant="ghost" 
                   size="sm"
@@ -223,10 +223,57 @@ const ClientDetailPage = () => {
                   Insights (0)
                 </Button>
               </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setShowCreateJournalModal(true)}
+                      className="text-foreground hover:bg-primary/10 hover:text-primary"
+                    >
+                      <BookOpen className="w-4 h-4 mr-1" />
+                      Journal
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add Journal Entry</TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setShowReportModal(true)}
+                      className="text-foreground hover:bg-primary/10 hover:text-primary"
+                    >
+                      <FileText className="w-4 h-4 mr-1" />
+                      Report
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Generate Report</TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="text-foreground hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Lightbulb className="w-4 h-4 mr-1" />
+                      Insight
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add Insight</TooltipContent>
+                </Tooltip>
+              </div>
             </div>
 
-            {/* Mobile View - Show Back Button */}
-            <div className="md:hidden">
+            {/* Mobile View */}
+            <div className="md:hidden flex items-center justify-between w-full">
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -236,6 +283,75 @@ const ClientDetailPage = () => {
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
+
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setActiveTab('journal')}
+                  className={`text-foreground hover:bg-primary/10 hover:text-primary text-xs ${activeTab === 'journal' ? 'bg-primary/10 text-primary' : ''}`}
+                >
+                  J({journalEntries.length})
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setActiveTab('reports')}
+                  className={`text-foreground hover:bg-primary/10 hover:text-primary text-xs ${activeTab === 'reports' ? 'bg-primary/10 text-primary' : ''}`}
+                >
+                  R({clientReports.length})
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setActiveTab('insights')}
+                  className={`text-foreground hover:bg-primary/10 hover:text-primary text-xs ${activeTab === 'insights' ? 'bg-primary/10 text-primary' : ''}`}
+                >
+                  I(0)
+                </Button>
+
+                {/* Mobile Action Icons */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setShowCreateJournalModal(true)}
+                      className="h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add Journal</TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setShowReportModal(true)}
+                      className="h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Generate Report</TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Lightbulb className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add Insight</TooltipContent>
+                </Tooltip>
+              </div>
             </div>
           </div>
         </div>
@@ -250,61 +366,6 @@ const ClientDetailPage = () => {
                     {client.full_name}
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    {/* Mobile Action Icons */}
-                    {isMobile && (
-                      <>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowCreateJournalModal(true);
-                              }}
-                              className="h-8 w-8 p-0"
-                            >
-                              <BookOpen className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Add Journal</TooltipContent>
-                        </Tooltip>
-                        
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowReportModal(true);
-                              }}
-                              className="h-8 w-8 p-0"
-                            >
-                              <FileText className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Generate Report</TooltipContent>
-                        </Tooltip>
-                        
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Lightbulb className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Add Insight</TooltipContent>
-                        </Tooltip>
-                      </>
-                    )}
-                    
                     {/* Edit buttons */}
                     <Button 
                       variant="ghost" 
