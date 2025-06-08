@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Calendar } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
@@ -89,9 +88,9 @@ const ClientsPage = () => {
             )}
             <div className="flex items-center justify-between">
               {client.birth_location && (
-                <Badge variant="secondary" className="text-xs font-normal">
+                <div className="text-xs text-muted-foreground">
                   {client.birth_location}
-                </Badge>
+                </div>
               )}
               <div className="text-xs text-muted-foreground">
                 {client.birth_date && `Born ${formatDate(client.birth_date)}`}
@@ -117,12 +116,12 @@ const ClientsPage = () => {
     <div className="space-y-4 max-w-7xl mx-auto">
       {/* Improved Header Section */}
       <div className="mt-8 space-y-4">
-        {/* Title with Count Badge */}
+        {/* Title with Count */}
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">Clients</h1>
-          <Badge variant="secondary" className="text-sm font-medium">
+          <span className="text-sm text-muted-foreground font-medium">
             {clients.length}
-          </Badge>
+          </span>
         </div>
         
         {/* Subtitle */}
