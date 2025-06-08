@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Plus, Edit, Trash2, FileText, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Plus, Edit, Trash2, FileText, ChevronDown, ChevronUp, Pencil, BookOpen, Lightbulb } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { clientsService } from '@/services/clients';
@@ -12,6 +13,7 @@ import { journalEntriesService } from '@/services/journalEntries';
 import { clientReportsService } from '@/services/clientReports';
 import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import EditClientForm from '@/components/clients/EditClientForm';
 import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
 import ClientReportModal from '@/components/clients/ClientReportModal';
@@ -30,6 +32,7 @@ const ClientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [client, setClient] = useState<Client | null>(null);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
@@ -176,363 +179,464 @@ const ClientDetailPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/clients')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Clients
-          </Button>
-        </div>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Sticky Action Bar */}
+        <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div className="flex items-center justify-between py-3 px-4">
+            {/* Desktop View */}
+            <div className="hidden md:flex items-center gap-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/dashboard/clients')}
+                className="bg-primary/5 border-primary/20 hover:bg-primary/10"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Clients
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => setShowCreateJournalModal(true)}
+                  className="bg-primary/10 text-primary hover:bg-primary/20"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Journal
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => setShowReportModal(true)}
+                  className="bg-secondary/80 text-secondary-foreground hover:bg-secondary"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Report
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  className="bg-accent hover:bg-accent/80"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Insight
+                </Button>
+              </div>
+            </div>
 
-      {/* Collapsible Client Information Card */}
-      <Collapsible open={isClientInfoOpen} onOpenChange={setIsClientInfoOpen}>
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  {client.full_name}
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  {/* Action buttons grouped together */}
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowEditModal(true);
-                    }}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowEditModal(true);
-                    }}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Client</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete {client.full_name}? This action cannot be undone and will permanently remove all client data, including journal entries and reports.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={handleDeleteClient}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            {/* Mobile View - Show Back Button */}
+            <div className="md:hidden">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/dashboard/clients')}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Collapsible Client Information Card */}
+        <Collapsible open={isClientInfoOpen} onOpenChange={setIsClientInfoOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    {client.full_name}
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    {/* Mobile Action Icons */}
+                    {isMobile && (
+                      <>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowCreateJournalModal(true);
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <BookOpen className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Add Journal</TooltipContent>
+                        </Tooltip>
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowReportModal(true);
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Generate Report</TooltipContent>
+                        </Tooltip>
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Lightbulb className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Add Insight</TooltipContent>
+                        </Tooltip>
+                      </>
+                    )}
+                    
+                    {/* Edit buttons */}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowEditModal(true);
+                      }}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowEditModal(true);
+                      }}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                          className="h-8 w-8 p-0"
                         >
-                          Delete Client
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  {isClientInfoOpen ? (
-                    <ChevronUp className="w-5 h-5 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-500" />
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Client</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete {client.full_name}? This action cannot be undone and will permanently remove all client data, including journal entries and reports.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleDeleteClient}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete Client
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    {isClientInfoOpen ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {client.email && (
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <Mail className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-gray-500 mb-1">Email</div>
+                        <div className="font-medium break-words break-all">{client.email}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {client.phone && (
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <Phone className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-gray-500 mb-1">Phone</div>
+                        <div className="font-medium">{client.phone}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {client.birth_date && (
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <Calendar className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-gray-500 mb-1">Birth Date</div>
+                        <div className="font-medium">{formatDate(client.birth_date)}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {client.birth_time && (
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <Clock className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-gray-500 mb-1">Birth Time</div>
+                        <div className="font-medium">{client.birth_time}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {client.birth_location && (
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <MapPin className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-gray-500 mb-1">Birth Location</div>
+                        <div className="font-medium break-words">{client.birth_location}</div>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {client.email && (
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="flex-shrink-0 mt-0.5">
-                      <Mail className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm text-gray-500 mb-1">Email</div>
-                      <div className="font-medium break-words break-all">{client.email}</div>
-                    </div>
-                  </div>
-                )}
                 
-                {client.phone && (
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="flex-shrink-0 mt-0.5">
-                      <Phone className="w-5 h-5 text-primary" />
+                {client.notes && (
+                  <div className="mt-6 pt-6 border-t">
+                    <div className="mb-2">
+                      <h4 className="font-medium text-gray-900">Notes</h4>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm text-gray-500 mb-1">Phone</div>
-                      <div className="font-medium">{client.phone}</div>
-                    </div>
-                  </div>
-                )}
-                
-                {client.birth_date && (
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="flex-shrink-0 mt-0.5">
-                      <Calendar className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm text-gray-500 mb-1">Birth Date</div>
-                      <div className="font-medium">{formatDate(client.birth_date)}</div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700 leading-relaxed">{client.notes}</p>
                     </div>
                   </div>
                 )}
-                
-                {client.birth_time && (
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="flex-shrink-0 mt-0.5">
-                      <Clock className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm text-gray-500 mb-1">Birth Time</div>
-                      <div className="font-medium">{client.birth_time}</div>
-                    </div>
-                  </div>
-                )}
-                
-                {client.birth_location && (
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="flex-shrink-0 mt-0.5">
-                      <MapPin className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm text-gray-500 mb-1">Birth Location</div>
-                      <div className="font-medium break-words">{client.birth_location}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {client.notes && (
-                <div className="mt-6 pt-6 border-t">
-                  <div className="mb-2">
-                    <h4 className="font-medium text-gray-900">Notes</h4>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-gray-700 leading-relaxed">{client.notes}</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
-      {/* Tabs */}
-      <Tabs defaultValue="journal" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="journal">Journals ({journalEntries.length})</TabsTrigger>
-          <TabsTrigger value="reports">Reports ({clientReports.length})</TabsTrigger>
-          <TabsTrigger value="insights">Insights (0)</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="journal" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Journals</h3>
-            <Button size="sm" onClick={() => setShowCreateJournalModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Entry
-            </Button>
-          </div>
-
-          {journalEntries.length === 0 ? (
-            <Card>
-              <CardContent className="py-8">
-                <div className="text-center">
-                  <div className="text-gray-400 text-lg mb-2">No journal entries yet</div>
-                  <p className="text-gray-600 mb-4">Start documenting your sessions and insights</p>
-                  <Button onClick={() => setShowCreateJournalModal(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create First Entry
-                  </Button>
-                </div>
               </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {journalEntries.map((entry) => (
-                <Card key={entry.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        {entry.title && (
-                          <CardTitle className="text-lg">{entry.title}</CardTitle>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-700 whitespace-pre-wrap">{entry.entry_text}</p>
-                    {entry.tags && entry.tags.length > 0 && (
-                      <div className="flex gap-1 mt-3 pt-3 border-t">
-                        {entry.tags.map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="reports" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Reports</h3>
-            <Button size="sm" onClick={() => setShowReportModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Generate Report
-            </Button>
-          </div>
-
-          {clientReports.length === 0 ? (
-            <Card>
-              <CardContent className="py-8">
-                <div className="text-center">
-                  <div className="text-gray-400 text-lg mb-2">No reports generated yet</div>
-                  <p className="text-gray-600 mb-4">Generate astrological reports for this client</p>
-                  <Button onClick={() => setShowReportModal(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Generate Report
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {clientReports.map((report) => (
-                <Card key={report.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">
-                          {getDisplayName(report)}
-                        </CardTitle>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {getReportTypeLabel(report.request_type)}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-sm text-gray-600">
-                            Generated on {formatDateTime(report.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <Badge variant={report.response_status >= 200 && report.response_status < 300 ? 'default' : 'destructive'}>
-                          {report.response_status >= 200 && report.response_status < 300 ? 'success' : 'failed'}
-                        </Badge>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleViewReport(report)}
-                          disabled={!(report.response_status >= 200 && report.response_status < 300)}
-                        >
-                          <FileText className="w-3 h-3 mr-1" />
-                          View Report
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="insights" className="space-y-4">
-          <Card>
-            <CardContent className="py-8">
-              <div className="text-center">
-                <div className="text-gray-400 text-lg mb-2">No insights available</div>
-                <p className="text-gray-600 mb-4">AI insights will appear here based on client data and patterns</p>
-              </div>
-            </CardContent>
+            </CollapsibleContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </Collapsible>
 
-      {/* Edit Client Modal */}
-      {client && (
-        <EditClientForm
-          client={client}
-          open={showEditModal}
-          onOpenChange={setShowEditModal}
-          onClientUpdated={loadClientData}
+        {/* Tabs */}
+        <Tabs defaultValue="journal" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="journal">Journals</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="insights">Insights</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="journal" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Journals ({journalEntries.length})</h3>
+            </div>
+
+            {journalEntries.length === 0 ? (
+              <Card>
+                <CardContent className="py-8">
+                  <div className="text-center">
+                    <div className="text-gray-400 text-lg mb-2">No journal entries yet</div>
+                    <p className="text-gray-600 mb-4">Start documenting your sessions and insights</p>
+                    <Button onClick={() => setShowCreateJournalModal(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create First Entry
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {journalEntries.map((entry) => (
+                  <Card key={entry.id}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          {entry.title && (
+                            <CardTitle className="text-lg">{entry.title}</CardTitle>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 whitespace-pre-wrap">{entry.entry_text}</p>
+                      {entry.tags && entry.tags.length > 0 && (
+                        <div className="flex gap-1 mt-3 pt-3 border-t">
+                          {entry.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Reports ({clientReports.length})</h3>
+            </div>
+
+            {clientReports.length === 0 ? (
+              <Card>
+                <CardContent className="py-8">
+                  <div className="text-center">
+                    <div className="text-gray-400 text-lg mb-2">No reports generated yet</div>
+                    <p className="text-gray-600 mb-4">Generate astrological reports for this client</p>
+                    <Button onClick={() => setShowReportModal(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Generate Report
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {clientReports.map((report) => (
+                  <Card key={report.id}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">
+                            {getDisplayName(report)}
+                          </CardTitle>
+                          <div className="text-sm text-gray-600 mt-1">
+                            {getReportTypeLabel(report.request_type)}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm text-gray-600">
+                              Generated on {formatDateTime(report.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <Badge variant={report.response_status >= 200 && report.response_status < 300 ? 'default' : 'destructive'}>
+                            {report.response_status >= 200 && report.response_status < 300 ? 'success' : 'failed'}
+                          </Badge>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewReport(report)}
+                            disabled={!(report.response_status >= 200 && report.response_status < 300)}
+                          >
+                            <FileText className="w-3 h-3 mr-1" />
+                            View Report
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="insights" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Insights (0)</h3>
+            </div>
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center">
+                  <div className="text-gray-400 text-lg mb-2">No insights available</div>
+                  <p className="text-gray-600 mb-4">AI insights will appear here based on client data and patterns</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Edit Client Modal */}
+        {client && (
+          <EditClientForm
+            client={client}
+            open={showEditModal}
+            onOpenChange={setShowEditModal}
+            onClientUpdated={loadClientData}
+          />
+        )}
+
+        {/* Create Journal Entry Modal */}
+        {client && (
+          <CreateJournalEntryForm
+            clientId={client.id}
+            open={showCreateJournalModal}
+            onOpenChange={setShowCreateJournalModal}
+            onEntryCreated={loadClientData}
+          />
+        )}
+
+        {/* Generate Report Modal */}
+        {client && (
+          <ClientReportModal
+            client={client}
+            open={showReportModal}
+            onOpenChange={setShowReportModal}
+            onReportGenerated={loadClientData}
+          />
+        )}
+
+        {/* Report Viewer Drawer */}
+        <ActivityLogDrawer
+          isOpen={showReportDrawer}
+          onClose={() => setShowReportDrawer(false)}
+          logData={selectedReport ? {
+            id: selectedReport.id,
+            created_at: selectedReport.created_at,
+            response_status: selectedReport.response_status,
+            request_type: selectedReport.request_type,
+            endpoint: selectedReport.request_type,
+            report_tier: null,
+            total_cost_usd: 0,
+            processing_time_ms: null,
+            response_payload: selectedReport.response_payload,
+            request_payload: null,
+            error_message: null,
+            google_geo: false
+          } : null}
         />
-      )}
-
-      {/* Create Journal Entry Modal */}
-      {client && (
-        <CreateJournalEntryForm
-          clientId={client.id}
-          open={showCreateJournalModal}
-          onOpenChange={setShowCreateJournalModal}
-          onEntryCreated={loadClientData}
-        />
-      )}
-
-      {/* Generate Report Modal */}
-      {client && (
-        <ClientReportModal
-          client={client}
-          open={showReportModal}
-          onOpenChange={setShowReportModal}
-          onReportGenerated={loadClientData}
-        />
-      )}
-
-      {/* Report Viewer Drawer */}
-      <ActivityLogDrawer
-        isOpen={showReportDrawer}
-        onClose={() => setShowReportDrawer(false)}
-        logData={selectedReport ? {
-          id: selectedReport.id,
-          created_at: selectedReport.created_at,
-          response_status: selectedReport.response_status,
-          request_type: selectedReport.request_type,
-          endpoint: selectedReport.request_type,
-          report_tier: null,
-          total_cost_usd: 0,
-          processing_time_ms: null,
-          response_payload: selectedReport.response_payload,
-          request_payload: null,
-          error_message: null,
-          google_geo: false
-        } : null}
-      />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
 
