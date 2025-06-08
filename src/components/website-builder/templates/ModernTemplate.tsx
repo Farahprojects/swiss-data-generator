@@ -12,7 +12,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
   const fontFamily = customizationData.fontFamily || 'Inter';
 
   // Only adjust section height for preview, use responsive padding
-  const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
+  const sectionPadding = isPreview ? 'py-6' : 'py-8 sm:py-12 lg:py-16';
   const heroSection = isPreview ? 'py-8' : 'min-h-screen';
 
   return (
@@ -22,44 +22,27 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-blue-600 opacity-20"></div>
         
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 grid gap-6 lg:grid-cols-2 lg:gap-8 items-center">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
             className="text-white text-center lg:text-left"
           >
-            <h1 className="text-3xl sm:text-4xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight">
               {customizationData.coachName || "Alex Johnson"}
             </h1>
-            <p className="text-lg sm:text-xl lg:text-2xl mb-6 sm:mb-8 text-gray-300 leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 text-gray-300 leading-relaxed">
               {customizationData.tagline || "Transforming Lives Through Modern Coaching"}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <div className="flex justify-center lg:justify-start">
               <Button 
-                className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full min-h-[44px]"
+                className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
                 style={{ backgroundColor: themeColor }}
               >
                 {customizationData.buttonText || "Start Your Journey"}
               </Button>
-              <Button 
-                variant="outline" 
-                className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full border-white text-white hover:bg-white hover:text-gray-900 min-h-[44px]"
-              >
-                Learn More
-              </Button>
             </div>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative mt-8 lg:mt-0"
-          >
-            <div className="w-full h-48 sm:h-64 lg:h-96 bg-gradient-to-br from-blue-400 to-purple-600 rounded-2xl shadow-2xl"></div>
-            <div className="absolute -bottom-4 -left-4 sm:-bottom-6 sm:-left-6 w-12 h-12 sm:w-16 sm:h-16 lg:w-32 lg:h-32 bg-yellow-400 rounded-full opacity-80"></div>
-            <div className="absolute -top-4 -right-4 sm:-top-6 sm:-right-6 w-8 h-8 sm:w-12 sm:h-12 lg:w-24 lg:h-24 bg-pink-400 rounded-full opacity-60"></div>
           </motion.div>
         </div>
       </section>
@@ -67,8 +50,8 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
       {/* About Section */}
       <section className={`${sectionPadding} bg-white`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-8 text-gray-900">About Me</h2>
-          <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">About Me</h2>
+          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
             {customizationData.bio || "I'm passionate about helping individuals unlock their full potential through personalized coaching approaches that blend modern techniques with timeless wisdom."}
           </p>
         </div>
@@ -76,21 +59,21 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
 
       {/* Services Grid */}
       <section className={`${sectionPadding} bg-gray-50`}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-12 sm:mb-16 text-gray-900">Services</h2>
-          <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-8 sm:mb-12 text-gray-900">Services</h2>
+          <div className="space-y-4 sm:space-y-6">
             {(customizationData.services || []).map((service: any, index: number) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-xl p-4 sm:p-6 lg:p-8 shadow-lg hover:shadow-xl transition-shadow"
+                className="bg-white rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-shadow"
               >
-                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-lg mb-4 sm:mb-6" style={{ backgroundColor: themeColor }}></div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 break-words">{service.title}</h3>
-                <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed break-words">{service.description}</p>
-                <div className="text-xl sm:text-2xl font-bold" style={{ color: themeColor }}>{service.price}</div>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg mb-3 sm:mb-4" style={{ backgroundColor: themeColor }}></div>
+                <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-gray-900 break-words">{service.title}</h3>
+                <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed break-words">{service.description}</p>
+                <div className="text-lg sm:text-xl font-bold" style={{ color: themeColor }}>{service.price}</div>
               </motion.div>
             ))}
           </div>
@@ -100,9 +83,9 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
       {/* CTA Section */}
       <section className={sectionPadding} style={{ backgroundColor: themeColor }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">Ready to Transform Your Life?</h2>
-          <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">Take the first step towards achieving your goals.</p>
-          <Button className="bg-white text-gray-900 hover:bg-gray-100 py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full min-h-[44px]">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">Ready to Transform Your Life?</h2>
+          <p className="text-sm sm:text-base mb-4 sm:mb-6 opacity-90">Take the first step towards achieving your goals.</p>
+          <Button className="bg-white text-gray-900 hover:bg-gray-100 py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]">
             {customizationData.buttonText || "Book Consultation"}
           </Button>
         </div>
