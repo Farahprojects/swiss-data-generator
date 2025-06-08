@@ -8,7 +8,6 @@ import { Client } from '@/types/database';
 import { insightsService } from '@/services/insights';
 import { Loader2 } from 'lucide-react';
 import { Pencil } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface GenerateInsightModalProps {
   open: boolean;
@@ -118,55 +117,53 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
             Insight will be titled: <strong>{customTitle.trim() || generateDateTitle()}</strong>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Popover open={showTitleInput} onOpenChange={setShowTitleInput}>
-              <PopoverTrigger asChild>
+          {!showTitleInput && (
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-sm text-muted-foreground hover:text-foreground p-0 h-auto"
+                onClick={handleAddTitle}
+              >
+                <Pencil className="w-3 h-3 mr-1" />
+                Add title
+              </Button>
+            </div>
+          )}
+
+          {showTitleInput && (
+            <div className="space-y-2">
+              <Input
+                placeholder="Enter Title..."
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setShowTitleInput(false);
+                  }
+                }}
+                autoFocus
+              />
+              <div className="flex gap-2 justify-end">
                 <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-sm text-muted-foreground hover:text-foreground p-0 h-auto"
-                  onClick={handleAddTitle}
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setCustomTitle('');
+                    setShowTitleInput(false);
+                  }}
                 >
-                  <Pencil className="w-3 h-3 mr-1" />
-                  Add title
+                  Clear
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80" align="start">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Custom Title</label>
-                  <Input
-                    placeholder="Enter custom title..."
-                    value={customTitle}
-                    onChange={(e) => setCustomTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        setShowTitleInput(false);
-                      }
-                    }}
-                    autoFocus
-                  />
-                  <div className="flex gap-2 justify-end">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        setCustomTitle('');
-                        setShowTitleInput(false);
-                      }}
-                    >
-                      Clear
-                    </Button>
-                    <Button 
-                      size="sm"
-                      onClick={() => setShowTitleInput(false)}
-                    >
-                      Done
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+                <Button 
+                  size="sm"
+                  onClick={() => setShowTitleInput(false)}
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="flex justify-end space-x-2">
