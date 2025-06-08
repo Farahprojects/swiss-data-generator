@@ -348,14 +348,14 @@ const ClientDetailPage = () => {
       {/* Tabs */}
       <Tabs defaultValue="journal" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="journal">Journal Entries ({journalEntries.length})</TabsTrigger>
+          <TabsTrigger value="journal">Journals ({journalEntries.length})</TabsTrigger>
           <TabsTrigger value="reports">Reports ({clientReports.length})</TabsTrigger>
           <TabsTrigger value="insights">Insights (0)</TabsTrigger>
         </TabsList>
 
         <TabsContent value="journal" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Journal Entries</h3>
+            <h3 className="text-lg font-semibold">Journals</h3>
             <Button size="sm" onClick={() => setShowCreateJournalModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
               New Entry
