@@ -17,16 +17,8 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Ultra Minimal Hero */}
-      <section className={`${heroSection} flex items-center justify-center bg-white relative overflow-hidden`}>
-        {/* Header background image overlay */}
-        {customizationData.headerImageUrl && (
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-10"
-            style={{ backgroundImage: `url(${customizationData.headerImageUrl})` }}
-          ></div>
-        )}
-        
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center relative z-10">
+      <section className={`${heroSection} flex items-center justify-center bg-white`}>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -59,17 +51,6 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             className="text-center"
           >
             <h2 className="text-2xl sm:text-3xl font-light mb-8 sm:mb-12 text-gray-900">About</h2>
-            
-            {customizationData.aboutImageUrl && (
-              <div className="mb-8 sm:mb-12">
-                <img
-                  src={customizationData.aboutImageUrl}
-                  alt="About"
-                  className="w-32 h-32 sm:w-48 sm:h-48 object-cover rounded-full mx-auto shadow-lg"
-                />
-              </div>
-            )}
-            
             <p className="text-base sm:text-lg text-gray-600 leading-relaxed font-light">
               {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
             </p>
@@ -90,21 +71,10 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
                 transition={{ duration: 0.6, delay: index * 0.2 }}
                 className="border-b border-gray-100 pb-6 sm:pb-8 lg:pb-12 last:border-b-0"
               >
-                <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-4 items-start lg:items-center">
-                  <div className="lg:col-span-1">
-                    {service.imageUrl ? (
-                      <img
-                        src={service.imageUrl}
-                        alt={service.title}
-                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg mx-auto lg:mx-0"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-lg mx-auto lg:mx-0"></div>
-                    )}
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-light text-gray-900 break-words text-center lg:text-left lg:col-span-1">{service.title}</h3>
-                  <p className="text-sm sm:text-base text-gray-600 font-light lg:col-span-1 leading-relaxed break-words text-center lg:text-left">{service.description}</p>
-                  <div className="flex items-center justify-between lg:justify-end gap-4 flex-wrap lg:col-span-1">
+                <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3 items-start lg:items-center">
+                  <h3 className="text-lg sm:text-xl font-light text-gray-900 break-words">{service.title}</h3>
+                  <p className="text-sm sm:text-base text-gray-600 font-light lg:col-span-1 leading-relaxed break-words">{service.description}</p>
+                  <div className="flex items-center justify-between lg:justify-end gap-4 flex-wrap">
                     <span className="text-base sm:text-lg font-light text-gray-900">{service.price}</span>
                     <Button 
                       variant="ghost" 
