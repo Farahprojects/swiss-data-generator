@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -32,6 +31,7 @@ const UnifiedNavigation = () => {
   const isLoggedIn = !!user;
   const isMainDashboard = location.pathname === '/dashboard';
   const isDashboardPageWithBurgerMenu = location.pathname.startsWith('/dashboard') && !isMainDashboard;
+  const isDashboardPage = location.pathname.startsWith('/dashboard');
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -62,7 +62,7 @@ const UnifiedNavigation = () => {
           <div className="flex justify-between items-center h-full">
             {/* Left section */}
             <div className="flex items-center">
-              {isLoggedIn && isDashboardPageWithBurgerMenu ? (
+              {isLoggedIn && (isDashboardPageWithBurgerMenu || (isMainDashboard && isMobile)) ? (
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -209,7 +209,7 @@ const UnifiedNavigation = () => {
       </nav>
 
       {/* Sidebar Sheet for Dashboard Pages with Burger Menu */}
-      {isDashboardPageWithBurgerMenu && (
+      {isDashboardPage && (
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetContent side="left" className="w-[240px] p-0">
             <SimpleSidebarMenu />
