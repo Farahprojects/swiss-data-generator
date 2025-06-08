@@ -12,7 +12,6 @@ interface ClientDetailHeaderProps {
   setActiveTab: (tab: string) => void;
   journalCount: number;
   reportCount: number;
-  insightCount: number;
   isClientInfoOpen: boolean;
   setIsClientInfoOpen: (open: boolean) => void;
   onCreateJournal: () => void;
@@ -36,7 +35,6 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
   setActiveTab,
   journalCount,
   reportCount,
-  insightCount,
   isClientInfoOpen,
   setIsClientInfoOpen,
   onCreateJournal,
@@ -77,8 +75,8 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => setActiveTab('journals')}
-              className={`text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'journals' ? 'bg-primary/10 text-primary' : ''}`}
+              onClick={() => setActiveTab('journal')}
+              className={`text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'journal' ? 'bg-primary/10 text-primary' : ''}`}
             >
               Journals ({journalCount})
             </Button>
@@ -96,7 +94,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
               onClick={() => setActiveTab('insights')}
               className={`text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'insights' ? 'bg-primary/10 text-primary' : ''}`}
             >
-              Insights ({insightCount})
+              Insights (0)
             </Button>
           </div>
 
@@ -179,8 +177,8 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => setActiveTab('journals')}
-                  className={`h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'journals' ? 'bg-primary/10 text-primary' : ''}`}
+                  onClick={() => setActiveTab('journal')}
+                  className={`h-8 w-8 p-0 text-foreground hover:bg-primary/10 hover:text-primary ${activeTab === 'journal' ? 'bg-primary/10 text-primary' : ''}`}
                 >
                   <BookOpen className="w-4 h-4" />
                 </Button>
@@ -213,7 +211,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                   <Lightbulb className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Insights ({insightCount})</TooltipContent>
+              <TooltipContent>Insights (0)</TooltipContent>
             </Tooltip>
           </div>
         </div>

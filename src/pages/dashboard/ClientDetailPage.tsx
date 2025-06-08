@@ -1,153 +1,209 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { ArrowLeft } from 'lucide-react';
 import { clientsService } from '@/services/clients';
-import { Client } from '@/types/database';
+import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useClientData } from '@/hooks/useClientData';
+import EditClientForm from '@/components/clients/EditClientForm';
+import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
+import ClientReportModal from '@/components/clients/ClientReportModal';
+import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { ClientDetailHeader } from '@/components/clients/ClientDetailHeader';
 import { ClientInfoCard } from '@/components/clients/ClientInfoCard';
 import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import { ClientReportsTab } from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useClientData } from '@/hooks/useClientData';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+
+interface ClientReport {
+  id: string;
+  request_type: string;
+  response_payload: any;
+  created_at: string;
+  response_status: number;
+  report_name?: string;
+}
 
 const ClientDetailPage = () => {
-  const { clientId } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const { toast } = useToast();
-
-  const {
-    client,
-    journalEntries,
-    clientReports,
-    insightEntries,
-    loading,
-    loadClientData
-  } = useClientData(clientId);
-
-  const [expandedSections, setExpandedSections] = useState({
-    info: true,
-    journals: false,
-    reports: false,
-    insights: false,
-  });
+  const isMobile = useIsMobile();
+  
+  const { client, journalEntries, clientReports, insightEntries, loading, loadClientData } = useClientData(id);
+  
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateJournalModal, setShowCreateJournalModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showReportDrawer, setShowReportDrawer] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
+  const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('journals');
-
-  const handleSectionToggle = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
-  };
-
-  const handleCreateJournal = () => {
-    navigate(`/dashboard/clients/${clientId}/create-journal`);
-  };
-
-  const handleCreateReport = () => {
-    // TODO: Implement create report functionality
-    console.log('Create report clicked');
-  };
-
-  const handleEditClient = () => {
-    // TODO: Implement edit client functionality
-    console.log('Edit client clicked');
-  };
+  const [activeTab, setActiveTab] = useState('journal');
 
   const handleDeleteClient = async () => {
-    if (!clientId) return;
-
+    if (!client) return;
+    
     try {
-      await clientsService.deleteClient(clientId);
+      await clientsService.deleteClient(client.id);
       toast({
         title: "Success",
-        description: "Client deleted successfully!",
+        description: "Client deleted successfully.",
       });
       navigate('/dashboard/clients');
     } catch (error) {
-      console.error("Error deleting client:", error);
+      console.error('Error deleting client:', error);
       toast({
         title: "Error",
         description: "Failed to delete client. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setShowDeleteDialog(false);
     }
   };
 
+  const handleViewReport = (report: ClientReport) => {
+    setSelectedReport(report);
+    setShowReportDrawer(true);
+  };
+
   if (loading) {
-    return <div className="container mx-auto px-4 py-6">Loading client details...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-lg">Loading client details...</div>
+        </div>
+      </div>
+    );
   }
 
   if (!client) {
-    return <div className="container mx-auto px-4 py-6">Client not found</div>;
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/clients')}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-lg mb-2">Client not found</div>
+          <p className="text-gray-600 mb-4">The client you're looking for doesn't exist or you don't have access to it.</p>
+          <Button onClick={() => navigate('/dashboard/clients')}>
+            Return to Clients
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <ClientDetailHeader 
-        client={client} 
-        isMobile={isMobile}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        journalCount={journalEntries.length}
-        reportCount={clientReports.length}
-        insightCount={insightEntries.length}
-        isClientInfoOpen={expandedSections.info}
-        setIsClientInfoOpen={(open) => setExpandedSections(prev => ({ ...prev, info: open }))}
-        onCreateJournal={handleCreateJournal}
-        onCreateReport={handleCreateReport}
-      />
+    <TooltipProvider>
+      <div className="space-y-6">
+        <ClientDetailHeader
+          client={client}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          journalCount={journalEntries.length}
+          reportCount={clientReports.length}
+          isClientInfoOpen={isClientInfoOpen}
+          setIsClientInfoOpen={setIsClientInfoOpen}
+          onCreateJournal={() => setShowCreateJournalModal(true)}
+          onCreateReport={() => setShowReportModal(true)}
+          isMobile={isMobile}
+        />
 
-      <ClientInfoCard
-        client={client}
-        isOpen={expandedSections.info}
-        onEditClick={handleEditClient}
-        onDeleteClient={handleDeleteClient}
-        showDeleteDialog={showDeleteDialog}
-        setShowDeleteDialog={setShowDeleteDialog}
-      />
+        <ClientInfoCard
+          client={client}
+          isOpen={isClientInfoOpen}
+          onEditClick={() => setShowEditModal(true)}
+          onDeleteClient={handleDeleteClient}
+          showDeleteDialog={showDeleteDialog}
+          setShowDeleteDialog={setShowDeleteDialog}
+        />
 
-      <Tabs defaultValue="journals" className="w-full" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="journals">Journals</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="journals" className="space-y-4">
-          <ClientJournalTab
-            journalEntries={journalEntries}
-            onCreateJournal={handleCreateJournal}
-            isMobile={isMobile}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="hidden">
+            <TabsTrigger value="journal">Journals</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="insights">Insights</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="journal" className="space-y-4">
+            <ClientJournalTab
+              journalEntries={journalEntries}
+              onCreateJournal={() => setShowCreateJournalModal(true)}
+              isMobile={isMobile}
+            />
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-4">
+            <ClientReportsTab
+              clientReports={clientReports}
+              onCreateReport={() => setShowReportModal(true)}
+              onViewReport={handleViewReport}
+            />
+          </TabsContent>
+
+          <TabsContent value="insights" className="space-y-4">
+            <ClientInsightsTab 
+              insightEntries={insightEntries}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {/* Edit Client Modal */}
+        {client && (
+          <EditClientForm
+            client={client}
+            open={showEditModal}
+            onOpenChange={setShowEditModal}
+            onClientUpdated={loadClientData}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="reports" className="space-y-4">
-          <ClientReportsTab
-            clientReports={clientReports}
-            onCreateReport={handleCreateReport}
-            onViewReport={() => {}}
-          />
-        </TabsContent>
-
-        <TabsContent value="insights" className="space-y-4">
-          <ClientInsightsTab
-            insightEntries={insightEntries}
+        {/* Create Journal Entry Modal */}
+        {client && (
+          <CreateJournalEntryForm
             clientId={client.id}
-            clientGoals={client.notes}
-            journalEntries={journalEntries}
-            clientReports={clientReports}
-            onInsightGenerated={loadClientData}
+            open={showCreateJournalModal}
+            onOpenChange={setShowCreateJournalModal}
+            onEntryCreated={loadClientData}
           />
-        </TabsContent>
-      </Tabs>
-    </div>
+        )}
+
+        {/* Generate Report Modal */}
+        {client && (
+          <ClientReportModal
+            client={client}
+            open={showReportModal}
+            onOpenChange={setShowReportModal}
+            onReportGenerated={loadClientData}
+          />
+        )}
+
+        {/* Report Viewer Drawer */}
+        <ActivityLogDrawer
+          isOpen={showReportDrawer}
+          onClose={() => setShowReportDrawer(false)}
+          logData={selectedReport ? {
+            id: selectedReport.id,
+            created_at: selectedReport.created_at,
+            response_status: selectedReport.response_status,
+            request_type: selectedReport.request_type,
+            endpoint: selectedReport.request_type,
+            report_tier: null,
+            total_cost_usd: 0,
+            processing_time_ms: null,
+            response_payload: selectedReport.response_payload,
+            request_payload: null,
+            error_message: null,
+            google_geo: false
+          } : null}
+        />
+      </div>
+    </TooltipProvider>
   );
 };
 
