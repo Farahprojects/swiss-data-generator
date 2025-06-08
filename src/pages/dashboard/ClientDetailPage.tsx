@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, Clock, Plus, Edit, Trash2, FileText, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
 import { clientReportsService } from '@/services/clientReports';
@@ -40,6 +41,7 @@ const ClientDetailPage = () => {
   const [showReportDrawer, setShowReportDrawer] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
   const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -76,22 +78,20 @@ const ClientDetailPage = () => {
   const handleDeleteClient = async () => {
     if (!client) return;
     
-    if (confirm(`Are you sure you want to delete ${client.full_name}? This action cannot be undone.`)) {
-      try {
-        await clientsService.deleteClient(client.id);
-        toast({
-          title: "Success",
-          description: "Client deleted successfully.",
-        });
-        navigate('/dashboard/clients');
-      } catch (error) {
-        console.error('Error deleting client:', error);
-        toast({
-          title: "Error",
-          description: "Failed to delete client. Please try again.",
-          variant: "destructive",
-        });
-      }
+    try {
+      await clientsService.deleteClient(client.id);
+      toast({
+        title: "Success",
+        description: "Client deleted successfully.",
+      });
+      navigate('/dashboard/clients');
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete client. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -226,17 +226,37 @@ const ClientDetailPage = () => {
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteClient();
-                    }}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Client</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete {client.full_name}? This action cannot be undone and will permanently remove all client data, including journal entries and reports.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDeleteClient}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete Client
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   {isClientInfoOpen ? (
                     <ChevronUp className="w-5 h-5 text-gray-500" />
                   ) : (
