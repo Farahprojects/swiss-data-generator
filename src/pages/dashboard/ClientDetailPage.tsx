@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -42,7 +43,7 @@ const ClientDetailPage = () => {
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
   const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('journal');
+  const [activeTab, setActiveTab] = useState('journals');
 
   const handleDeleteClient = async () => {
     if (!client) return;
@@ -107,6 +108,7 @@ const ClientDetailPage = () => {
           setActiveTab={setActiveTab}
           journalCount={journalEntries.length}
           reportCount={clientReports.length}
+          insightCount={insightEntries.length}
           isClientInfoOpen={isClientInfoOpen}
           setIsClientInfoOpen={setIsClientInfoOpen}
           onCreateJournal={() => setShowCreateJournalModal(true)}
@@ -121,16 +123,18 @@ const ClientDetailPage = () => {
           onDeleteClient={handleDeleteClient}
           showDeleteDialog={showDeleteDialog}
           setShowDeleteDialog={setShowDeleteDialog}
+          alwaysShowOnDesktop={true}
+          isMobile={isMobile}
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="hidden">
-            <TabsTrigger value="journal">Journals</TabsTrigger>
+            <TabsTrigger value="journals">Journals</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="journal" className="space-y-4">
+          <TabsContent value="journals" className="space-y-4">
             <ClientJournalTab
               journalEntries={journalEntries}
               onCreateJournal={() => setShowCreateJournalModal(true)}
