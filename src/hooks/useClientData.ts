@@ -43,7 +43,14 @@ export const useClientData = (clientId: string | undefined) => {
       setClient(clientData);
       setJournalEntries(journalData);
       setClientReports(reportsData);
-      setInsightEntries(insightsData.data || []);
+      
+      // Cast the insight entries to match our TypeScript interface
+      const typedInsights: InsightEntry[] = (insightsData.data || []).map(insight => ({
+        ...insight,
+        type: insight.type as 'pattern' | 'recommendation' | 'trend' | 'milestone'
+      }));
+      
+      setInsightEntries(typedInsights);
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
