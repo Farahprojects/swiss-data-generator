@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Client } from '@/types/database';
 import { insightsService } from '@/services/insights';
@@ -23,13 +22,6 @@ interface GenerateInsightModalProps {
   onInsightGenerated: () => void;
 }
 
-const insightTypes = [
-  { value: 'pattern', label: 'Pattern Analysis' },
-  { value: 'recommendation', label: 'Recommendation' },
-  { value: 'trend', label: 'Trend Analysis' },
-  { value: 'milestone', label: 'Milestone Assessment' }
-];
-
 export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
   open,
   onOpenChange,
@@ -38,15 +30,14 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
   onInsightGenerated
 }) => {
   const [title, setTitle] = useState('');
-  const [insightType, setInsightType] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
-    if (!title.trim() || !insightType) {
+    if (!title.trim()) {
       toast({
         title: "Missing Information",
-        description: "Please provide both a title and select an insight type.",
+        description: "Please provide a title for the insight.",
         variant: "destructive",
       });
       return;
@@ -67,7 +58,7 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
       const response = await insightsService.generateInsight({
         clientId: client.id,
         coachId: client.coach_id,
-        insightType,
+        insightType: 'general',
         title: title.trim(),
         clientData
       });
@@ -80,7 +71,6 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         onInsightGenerated();
         onOpenChange(false);
         setTitle('');
-        setInsightType('');
       } else {
         throw new Error(response.error || 'Failed to generate insight');
       }
@@ -100,7 +90,6 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
     if (!isGenerating) {
       onOpenChange(false);
       setTitle('');
-      setInsightType('');
     }
   };
 
@@ -108,7 +97,7 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Generate AI Insight</DialogTitle>
+          <DialogTitle>Generate Insight</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -121,24 +110,8 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
               disabled={isGenerating}
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="insight-type">Insight Type</Label>
-            <Select value={insightType} onValueChange={setInsightType} disabled={isGenerating}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select insight type..." />
-              </SelectTrigger>
-              <SelectContent>
-                {insightTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
-          <div className="bg-muted p-3 rounded-lg text-sm text-muted-foreground">
+          <div className="text-sm text-foreground">
             This will analyze {client.full_name}'s profile, birth chart data, goals, and {journalEntries.length} journal {journalEntries.length === 1 ? 'entry' : 'entries'} to generate personalized insights.
           </div>
         </div>
@@ -147,14 +120,14 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
           <Button variant="outline" onClick={handleClose} disabled={isGenerating}>
             Cancel
           </Button>
-          <Button onClick={handleGenerate} disabled={isGenerating || !title.trim() || !insightType}>
+          <Button onClick={handleGenerate} disabled={isGenerating || !title.trim()}>
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Generating...
               </>
             ) : (
-              'Generate Insight ($7.50)'
+              'Generate Insight'
             )}
           </Button>
         </div>
