@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,7 +19,7 @@ import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useTypeAnimation } from '@/hooks/useTypeAnimation';
 import { useToast } from '@/hooks/use-toast';
 import { X, Mic } from 'lucide-react';
-import { CreateJournalEntryData } from '@/types/database';
+import { CreateJournalEntryData, JournalEntry } from '@/types/database';
 import { journalEntriesService } from '@/services/journalEntries';
 
 const journalEntrySchema = z.object({
@@ -33,13 +33,15 @@ interface CreateJournalEntryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEntryCreated: () => void;
+  existingEntry?: JournalEntry;
 }
 
 const CreateJournalEntryForm = ({ 
   clientId, 
   open, 
   onOpenChange, 
-  onEntryCreated 
+  onEntryCreated,
+  existingEntry
 }: CreateJournalEntryFormProps) => {
   const { toast } = useToast();
   const [processingState, setProcessingState] = useState<'idle' | 'processing' | 'typing'>('idle');
@@ -59,6 +61,15 @@ const CreateJournalEntryForm = ({
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema),
   });
+
+  // Pre-populate form when editing
+  useEffect(() => {
+    if (existingEntry && open) {
+      setValue('entry_text', existingEntry.entry_text);
+    } else if (!existingEntry && open) {
+      setValue('entry_text', '');
+    }
+  }, [existingEntry, open, setValue]);
 
   // Handle when silence is detected - show immediate feedback
   const handleSilenceDetected = () => {
@@ -146,26 +157,39 @@ const CreateJournalEntryForm = ({
 
   const onSubmit = async (data: JournalEntryFormData) => {
     try {
-      const entryData: CreateJournalEntryData = {
-        client_id: clientId,
-        title: getDefaultTitle(),
-        entry_text: data.entry_text,
-      };
+      if (existingEntry) {
+        // Update existing entry
+        await journalEntriesService.updateJournalEntry(existingEntry.id, {
+          entry_text: data.entry_text,
+        });
+        
+        toast({
+          title: "Success",
+          description: "Journal entry updated successfully!",
+        });
+      } else {
+        // Create new entry
+        const entryData: CreateJournalEntryData = {
+          client_id: clientId,
+          title: getDefaultTitle(),
+          entry_text: data.entry_text,
+        };
 
-      await journalEntriesService.createJournalEntry(entryData);
-      
-      toast({
-        title: "Success",
-        description: "Journal entry created successfully!",
-      });
+        await journalEntriesService.createJournalEntry(entryData);
+        
+        toast({
+          title: "Success",
+          description: "Journal entry created successfully!",
+        });
+      }
 
       handleClose();
       onEntryCreated();
     } catch (error) {
-      console.error('Error creating journal entry:', error);
+      console.error('Error saving journal entry:', error);
       toast({
         title: "Error",
-        description: "Failed to create journal entry. Please try again.",
+        description: `Failed to ${existingEntry ? 'update' : 'create'} journal entry. Please try again.`,
         variant: "destructive",
       });
     }
@@ -196,7 +220,9 @@ const CreateJournalEntryForm = ({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>Write Your Journal Entry</DialogTitle>
+            <DialogTitle>
+              {existingEntry ? 'Edit Journal Entry' : 'Write Your Journal Entry'}
+            </DialogTitle>
             <Button variant="ghost" size="sm" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
@@ -282,7 +308,7 @@ const CreateJournalEntryForm = ({
               type="submit" 
               disabled={isRecording || isProcessing || processingState === 'typing' || isSubmitting}
             >
-              {isSubmitting ? 'Saving...' : 'Save Entry'}
+              {isSubmitting ? 'Saving...' : existingEntry ? 'Update Entry' : 'Save Entry'}
             </Button>
           </DialogFooter>
         </form>
