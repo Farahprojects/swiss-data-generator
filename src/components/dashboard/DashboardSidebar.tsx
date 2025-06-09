@@ -34,7 +34,7 @@ export function SimpleSidebarMenu() {
 
   return (
     <div className="flex h-full w-full flex-col bg-sidebar">
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-2">
+      <div className="flex flex-1 flex-col gap-2 overflow-auto p-2">
         <div className="relative flex w-full min-w-0 flex-col p-2">
           <div className="w-full text-sm">
             <ul className="flex w-full min-w-0 flex-col gap-1">
@@ -60,7 +60,7 @@ export function SimpleSidebarMenu() {
           </div>
         </div>
       </div>
-      <div className="mt-auto flex flex-col gap-2 p-2">
+      <div className="flex flex-col gap-2 p-2">
         <div className="p-2 text-xs text-muted-foreground text-center">
           <div>© {new Date().getFullYear()} Therai Astro.</div>
           <div>All rights reserved.</div>
