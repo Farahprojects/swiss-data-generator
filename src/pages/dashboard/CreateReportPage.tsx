@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -249,7 +250,7 @@ const CreateReportPage = () => {
                     type="single" 
                     value={formData.relationshipType}
                     onValueChange={(value) => handleInputChange('relationshipType', value || '')}
-                    className="justify-start"
+                    className="flex flex-row gap-2"
                   >
                     <ToggleGroupItem 
                       value="personal" 
