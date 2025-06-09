@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ import { Client, CreateClientData } from '@/types/database';
 import { clientsService } from '@/services/clients';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
+import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 
 const clientFormSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -40,10 +42,14 @@ interface EditClientFormProps {
 
 const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditClientFormProps) => {
   const { toast } = useToast();
+  const [selectedPlaceData, setSelectedPlaceData] = useState<PlaceData | null>(null);
+  
   const {
     register,
     handleSubmit,
     reset,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ClientFormData>({
     resolver: zodResolver(clientFormSchema),
@@ -91,7 +97,13 @@ const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditCli
 
   const handleClose = () => {
     reset();
+    setSelectedPlaceData(null);
     onOpenChange(false);
+  };
+
+  const handlePlaceSelect = (placeData: PlaceData) => {
+    setSelectedPlaceData(placeData);
+    setValue('birth_location', placeData.name);
   };
 
   return (
@@ -139,7 +151,7 @@ const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditCli
             <Input
               id="phone"
               {...register('phone')}
-              placeholder="+1 (555) 123-4567"
+              placeholder="Enter phone number"
             />
           </div>
 
@@ -165,11 +177,20 @@ const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditCli
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="birth_location">Birth Location</Label>
-            <Input
-              id="birth_location"
-              {...register('birth_location')}
-              placeholder="City, State, Country"
+            <Controller
+              name="birth_location"
+              control={control}
+              render={({ field }) => (
+                <PlaceAutocomplete
+                  label="Birth Location"
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  onPlaceSelect={handlePlaceSelect}
+                  placeholder="Enter birth city, state, country"
+                  id="birth_location"
+                  error={errors.birth_location?.message}
+                />
+              )}
             />
           </div>
 
