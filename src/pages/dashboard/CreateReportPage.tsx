@@ -250,7 +250,7 @@ const CreateReportPage = () => {
                     type="single" 
                     value={formData.relationshipType}
                     onValueChange={(value) => handleInputChange('relationshipType', value || '')}
-                    className="flex flex-row gap-2"
+                    className="flex flex-row gap-2 justify-start"
                   >
                     <ToggleGroupItem 
                       value="personal" 
