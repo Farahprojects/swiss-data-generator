@@ -13,6 +13,7 @@ interface ClientReport {
   created_at: string;
   response_status: number;
   report_name?: string;
+  report_tier?: string;
 }
 
 interface ClientReportsTabProps {
@@ -34,21 +35,10 @@ const getDisplayName = (report: ClientReport): string => {
   return `#${report.id.substring(0, 8)}`;
 };
 
-const getReportTypeLabel = (reportType: string) => {
-  const typeMap: { [key: string]: string } = {
-    'natal': 'Natal Report',
-    'composite': 'Composite Report', 
-    'compatibility': 'Compatibility Report',
-    'return': 'Solar/Lunar Return',
-    'positions': 'Planetary Positions',
-    'sync': 'Sync Report',
-    'essence': 'Essence Report',
-    'flow': 'Flow Report',
-    'mindset': 'Mindset Report',
-    'monthly': 'Monthly Report',
-    'focus': 'Focus Report',
-  };
-  return typeMap[reportType] || reportType;
+const formatReportTier = (tier: string | null): string => {
+  if (!tier) return 'Unknown';
+  // Replace underscores with spaces and capitalize properly
+  return tier.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
 export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
@@ -90,7 +80,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                       {getDisplayName(report)}
                     </CardTitle>
                     <div className="text-sm text-gray-600 mt-1">
-                      {getReportTypeLabel(report.request_type)}
+                      {formatReportTier(report.report_tier)}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-sm text-gray-600">

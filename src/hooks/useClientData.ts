@@ -14,6 +14,7 @@ interface ClientReport {
   created_at: string;
   response_status: number;
   report_name?: string;
+  report_tier?: string;
 }
 
 export const useClientData = (clientId: string | undefined) => {
@@ -29,10 +30,22 @@ export const useClientData = (clientId: string | undefined) => {
     
     try {
       setLoading(true);
-      const [clientData, journalData, reportsData, insightsData] = await Promise.all([
+      
+      // Load client reports with report_tier field
+      const { data: reportsData, error: reportsError } = await supabase
+        .from('translator_logs')
+        .select('id, request_type, response_payload, created_at, response_status, report_name, report_tier')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (reportsError) {
+        console.error('Error fetching client reports:', reportsError);
+        throw reportsError;
+      }
+
+      const [clientData, journalData, insightsData] = await Promise.all([
         clientsService.getClient(clientId),
         journalEntriesService.getJournalEntries(clientId),
-        clientReportsService.getClientReports(clientId),
         supabase
           .from('insight_entries')
           .select('*')
@@ -42,7 +55,7 @@ export const useClientData = (clientId: string | undefined) => {
       
       setClient(clientData);
       setJournalEntries(journalData);
-      setClientReports(reportsData);
+      setClientReports(reportsData || []);
       
       // Cast the insight entries to match our TypeScript interface
       const typedInsights: InsightEntry[] = (insightsData.data || []).map(insight => ({

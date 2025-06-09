@@ -26,6 +26,7 @@ interface ClientReport {
   created_at: string;
   response_status: number;
   report_name?: string;
+  report_tier?: string;
 }
 
 const ClientDetailPage = () => {
