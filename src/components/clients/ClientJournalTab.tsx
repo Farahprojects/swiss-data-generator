@@ -1,46 +1,23 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { JournalEntry } from '@/types/database';
 import { formatDateTime, getRelativeTime } from '@/utils/dateFormatters';
-import CreateJournalEntryForm from './CreateJournalEntryForm';
 
 interface ClientJournalTabProps {
   journalEntries: JournalEntry[];
   onCreateJournal: () => void;
-  onJournalUpdated: () => void;
-  clientId: string;
   isMobile: boolean;
 }
 
 export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
   journalEntries,
   onCreateJournal,
-  onJournalUpdated,
-  clientId,
   isMobile
 }) => {
-  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-
-  const handleEditEntry = (entry: JournalEntry) => {
-    setEditingEntry(entry);
-    setShowEditModal(true);
-  };
-
-  const handleEditModalClose = () => {
-    setShowEditModal(false);
-    setEditingEntry(null);
-  };
-
-  const handleEntryUpdated = () => {
-    onJournalUpdated();
-    handleEditModalClose();
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -79,11 +56,7 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleEditEntry(entry)}
-                    >
+                    <Button variant="outline" size="sm">
                       <Edit className="w-3 h-3" />
                     </Button>
                     <Button variant="outline" size="sm">
@@ -108,15 +81,6 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
           ))}
         </div>
       )}
-
-      {/* Edit Journal Entry Modal */}
-      <CreateJournalEntryForm
-        clientId={clientId}
-        open={showEditModal}
-        onOpenChange={setShowEditModal}
-        onEntryCreated={handleEntryUpdated}
-        existingEntry={editingEntry || undefined}
-      />
     </div>
   );
 };

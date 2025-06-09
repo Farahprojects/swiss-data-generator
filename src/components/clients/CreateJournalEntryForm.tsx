@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,7 +19,7 @@ import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useTypeAnimation } from '@/hooks/useTypeAnimation';
 import { useToast } from '@/hooks/use-toast';
 import { X, Mic } from 'lucide-react';
-import { CreateJournalEntryData, JournalEntry } from '@/types/database';
+import { CreateJournalEntryData } from '@/types/database';
 import { journalEntriesService } from '@/services/journalEntries';
 
 const journalEntrySchema = z.object({
@@ -33,15 +33,13 @@ interface CreateJournalEntryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEntryCreated: () => void;
-  existingEntry?: JournalEntry;
 }
 
 const CreateJournalEntryForm = ({ 
   clientId, 
   open, 
   onOpenChange, 
-  onEntryCreated,
-  existingEntry
+  onEntryCreated 
 }: CreateJournalEntryFormProps) => {
   const { toast } = useToast();
   const [processingState, setProcessingState] = useState<'idle' | 'processing' | 'typing'>('idle');
@@ -60,19 +58,7 @@ const CreateJournalEntryForm = ({
     formState: { errors, isSubmitting },
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema),
-    defaultValues: {
-      entry_text: existingEntry?.entry_text || ''
-    }
   });
-
-  // Reset form when existingEntry changes
-  useEffect(() => {
-    if (existingEntry) {
-      setValue('entry_text', existingEntry.entry_text);
-    } else {
-      reset();
-    }
-  }, [existingEntry, setValue, reset]);
 
   // Handle when silence is detected - show immediate feedback
   const handleSilenceDetected = () => {
@@ -160,39 +146,26 @@ const CreateJournalEntryForm = ({
 
   const onSubmit = async (data: JournalEntryFormData) => {
     try {
-      if (existingEntry) {
-        // Update existing entry
-        await journalEntriesService.updateJournalEntry(existingEntry.id, {
-          entry_text: data.entry_text,
-        });
-        
-        toast({
-          title: "Success",
-          description: "Journal entry updated successfully!",
-        });
-      } else {
-        // Create new entry
-        const entryData: CreateJournalEntryData = {
-          client_id: clientId,
-          title: getDefaultTitle(),
-          entry_text: data.entry_text,
-        };
+      const entryData: CreateJournalEntryData = {
+        client_id: clientId,
+        title: getDefaultTitle(),
+        entry_text: data.entry_text,
+      };
 
-        await journalEntriesService.createJournalEntry(entryData);
-        
-        toast({
-          title: "Success",
-          description: "Journal entry created successfully!",
-        });
-      }
+      await journalEntriesService.createJournalEntry(entryData);
+      
+      toast({
+        title: "Success",
+        description: "Journal entry created successfully!",
+      });
 
       handleClose();
       onEntryCreated();
     } catch (error) {
-      console.error('Error saving journal entry:', error);
+      console.error('Error creating journal entry:', error);
       toast({
         title: "Error",
-        description: `Failed to ${existingEntry ? 'update' : 'create'} journal entry. Please try again.`,
+        description: "Failed to create journal entry. Please try again.",
         variant: "destructive",
       });
     }
@@ -223,9 +196,7 @@ const CreateJournalEntryForm = ({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle>
-              {existingEntry ? 'Edit Journal Entry' : 'Write Your Journal Entry'}
-            </DialogTitle>
+            <DialogTitle>Write Your Journal Entry</DialogTitle>
             <Button variant="ghost" size="sm" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
@@ -239,6 +210,7 @@ const CreateJournalEntryForm = ({
               <Controller
                 control={control}
                 name="entry_text"
+                defaultValue=""
                 render={({ field }) => (
                   <Textarea
                     {...field}
@@ -283,25 +255,23 @@ const CreateJournalEntryForm = ({
               </div>
             )}
             
-            {/* Mic button - only show for new entries or when not editing */}
-            {!existingEntry && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={toggleRecording}
-                  disabled={isProcessing || processingState !== 'idle'}
-                  className={`p-2.5 rounded-full transition-colors ${
-                    isRecording 
-                      ? 'bg-indigo-100 text-indigo-600' 
-                      : 'text-gray-500 hover:bg-gray-100'
-                  } ${(isProcessing || processingState !== 'idle') ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-                  title={isRecording ? 'Stop recording' : 'Start voice recording'}
-                >
-                  <Mic className="w-5 h-5" />
-                </button>
-              </div>
-            )}
+            {/* Mic button */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={toggleRecording}
+                disabled={isProcessing || processingState !== 'idle'}
+                className={`p-2.5 rounded-full transition-colors ${
+                  isRecording 
+                    ? 'bg-indigo-100 text-indigo-600' 
+                    : 'text-gray-500 hover:bg-gray-100'
+                } ${(isProcessing || processingState !== 'idle') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+                title={isRecording ? 'Stop recording' : 'Start voice recording'}
+              >
+                <Mic className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <DialogFooter>
@@ -312,7 +282,7 @@ const CreateJournalEntryForm = ({
               type="submit" 
               disabled={isRecording || isProcessing || processingState === 'typing' || isSubmitting}
             >
-              {isSubmitting ? 'Saving...' : existingEntry ? 'Update Entry' : 'Save Entry'}
+              {isSubmitting ? 'Saving...' : 'Save Entry'}
             </Button>
           </DialogFooter>
         </form>

@@ -147,8 +147,6 @@ const ClientDetailPage = () => {
               <ClientJournalTab
                 journalEntries={journalEntries}
                 onCreateJournal={() => setShowCreateJournalModal(true)}
-                onJournalUpdated={loadClientData}
-                clientId={client.id}
                 isMobile={isMobile}
               />
             </TabsContent>
