@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -111,12 +110,9 @@ const ClientsPage = () => {
     <div className="space-y-4 max-w-7xl mx-auto">
       {/* Improved Header Section */}
       <div className="mt-8 space-y-4">
-        {/* Title with Count */}
+        {/* Title without Count */}
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">Clients</h1>
-          <span className="text-sm text-muted-foreground font-medium">
-            {clients.length}
-          </span>
         </div>
         
         {/* Subtitle */}
