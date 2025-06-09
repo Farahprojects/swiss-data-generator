@@ -141,23 +141,26 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[90vh] max-w-[60vw] mx-auto">
+      <DrawerContent className="h-[95vh] md:h-[90vh] w-full md:max-w-[60vw] md:mx-auto">
         <DrawerHeader className="flex flex-row items-center justify-between border-b p-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <ToggleGroup 
               type="single" 
               value={viewMode} 
               onValueChange={(value) => value && setViewMode(value as 'report' | 'payload')}
+              className="flex-wrap"
             >
               <ToggleGroupItem 
                 value="report" 
                 disabled={!logData?.response_payload?.report}
+                className="text-xs md:text-sm"
               >
                 Report
               </ToggleGroupItem>
               <ToggleGroupItem 
                 value="payload" 
                 disabled={!logData?.response_payload && !logData?.request_payload}
+                className="text-xs md:text-sm"
               >
                 Payload
               </ToggleGroupItem>
@@ -166,9 +169,9 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="text-sm font-normal p-0 h-auto hover:bg-transparent">
-                  <Download className="h-4 w-4 mr-1" />
-                  Download
+                <Button variant="ghost" className="text-xs md:text-sm font-normal p-0 h-auto hover:bg-transparent">
+                  <Download className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  <span className="hidden sm:inline">Download</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-white">
@@ -188,9 +191,9 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
           </div>
         </DrawerHeader>
         
-        <div className="p-4">
+        <div className="p-3 md:p-4 flex-1 overflow-hidden">
           {logData && (
-            <div className="mb-4">
+            <div className="h-full flex flex-col">
               {logData.error_message && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                   <p className="text-sm font-medium text-red-600">Error</p>
@@ -198,10 +201,10 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 </div>
               )}
               
-              <div className="w-full">
+              <div className="flex-1 min-h-0">
                 {viewMode === 'report' && (
-                  <ScrollArea className="h-[65vh]">
-                    <div className="p-4 bg-gray-50 rounded-md">
+                  <ScrollArea className="h-full">
+                    <div className="p-3 md:p-4 bg-gray-50 rounded-md">
                       {logData.response_payload?.report ? (
                         renderReport(logData.response_payload.report)
                       ) : (
@@ -214,14 +217,14 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 )}
                 
                 {viewMode === 'payload' && (
-                  <ScrollArea className="h-[65vh]">
-                    <div className="p-4 bg-gray-50 rounded-md">
+                  <ScrollArea className="h-full">
+                    <div className="p-3 md:p-4 bg-gray-50 rounded-md">
                       {(logData.response_payload || logData.request_payload) ? (
                         <div>
                           {logData.request_payload && (
                             <div className="mb-4">
                               <h4 className="text-sm font-medium mb-2">Request Payload</h4>
-                              <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto bg-gray-100 p-2 rounded">
+                              <pre className="whitespace-pre-wrap font-mono text-xs md:text-sm overflow-x-auto bg-gray-100 p-2 rounded">
                                 {JSON.stringify(logData.request_payload, null, 2)}
                               </pre>
                             </div>
@@ -230,7 +233,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                           {logData.response_payload && (
                             <div>
                               <h4 className="text-sm font-medium mb-2">Response Payload</h4>
-                              <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto bg-gray-100 p-2 rounded">
+                              <pre className="whitespace-pre-wrap font-mono text-xs md:text-sm overflow-x-auto bg-gray-100 p-2 rounded">
                                 {JSON.stringify(getFilteredResponsePayload(logData.response_payload), null, 2)}
                               </pre>
                             </div>
