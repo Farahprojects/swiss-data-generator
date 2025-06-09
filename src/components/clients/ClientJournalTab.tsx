@@ -69,9 +69,6 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
                     {entry.title && (
                       <CardTitle className="text-lg mb-2">{entry.title}</CardTitle>
                     )}
-                    <div className="text-sm text-gray-600">
-                      {isMobile ? getRelativeTime(entry.created_at) : formatDateTime(entry.created_at)}
-                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Button 
