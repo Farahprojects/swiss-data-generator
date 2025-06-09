@@ -8,6 +8,8 @@ const corsHeaders = {
 
 serve(async (req) => {
   console.log('🔍 get-google-maps-key function called');
+  console.log('📋 Request method:', req.method);
+  console.log('📋 Request URL:', req.url);
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -23,15 +25,16 @@ serve(async (req) => {
     
     console.log('🔍 API key exists:', !!googleMapsApiKey);
     console.log('🔍 API key length:', googleMapsApiKey?.length || 0);
+    console.log('📋 Available env vars:', Object.keys(Deno.env.toObject()));
     
     if (!googleMapsApiKey) {
       console.error('❌ Google Maps API key not found in environment variables');
-      console.log('📋 Available env vars:', Object.keys(Deno.env.toObject()));
       
       return new Response(
         JSON.stringify({ 
           error: 'Google Maps API key not configured',
-          debug: 'GOOGLE_MAPS_API_KEY environment variable is missing'
+          debug: 'GOOGLE_MAPS_API_KEY environment variable is missing',
+          availableEnvVars: Object.keys(Deno.env.toObject())
         }),
         { 
           status: 500, 

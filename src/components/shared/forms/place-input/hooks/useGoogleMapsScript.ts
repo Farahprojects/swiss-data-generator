@@ -26,7 +26,7 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       if (error) {
         console.error('❌ Supabase function error:', error);
         setIsError(true);
-        setErrorMessage(`Supabase error: ${error.message}`);
+        setErrorMessage(`Function error: ${error.message}`);
         return;
       }
       
@@ -34,7 +34,6 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       
       if (!data?.apiKey) {
         console.error('❌ No API key returned from edge function');
-        console.log('📋 Full response data:', data);
         setIsError(true);
         setErrorMessage('No API key in response');
         return;
@@ -43,19 +42,28 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       console.log('✅ Successfully retrieved Google Maps API key');
       setApiKey(data.apiKey);
       
-      if (window) {
+      // Store globally for reference
+      if (typeof window !== 'undefined') {
         window.GOOGLE_MAPS_API_KEY = data.apiKey;
       }
     } catch (error) {
-      console.error('❌ Error in fetchApiKey:', error);
+      console.error('❌ Error fetching API key:', error);
       setIsError(true);
-      setErrorMessage(`Fetch error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setErrorMessage(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, []);
 
   const loadGoogleMapsScript = useCallback((key: string) => {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      console.error('❌ Not in browser environment');
+      setIsError(true);
+      setErrorMessage('Browser environment required');
+      return;
+    }
+
     if (window.google?.maps) {
-      console.log('Google Maps script already loaded');
+      console.log('✅ Google Maps script already loaded');
       setIsLoaded(true);
       return;
     }
@@ -88,6 +96,9 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
 
   useEffect(() => {
     const loadMaps = async () => {
+      // Only run in browser environment
+      if (typeof window === 'undefined') return;
+      
       if (!apiKey) {
         await fetchApiKey();
       } else if (!isLoaded && !isError) {
