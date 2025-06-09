@@ -51,8 +51,10 @@ serve(async (req) => {
       data: { bodyLength: rawBody.length } 
     });
     
-    // Parse the body again since we consumed it
-    const { to, subject, html, text, from } = JSON.parse(rawBody) as EmailPayload;
+    // Parse the body and handle optional text field properly
+    const parsed = JSON.parse(rawBody);
+    const { to, subject, html, from } = parsed;
+    const text = parsed.text || "";
     
     logMessage("Processing email request", { 
       level: 'info',
