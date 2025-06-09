@@ -94,14 +94,16 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-sm text-gray-600">
-                        Generated on {formatDateTime(report.created_at)}
+                        {formatDateTime(report.created_at)}
                       </span>
                     </div>
                   </div>
                   <div className="flex gap-2 items-center">
-                    <Badge variant={report.response_status >= 200 && report.response_status < 300 ? 'default' : 'destructive'}>
-                      {report.response_status >= 200 && report.response_status < 300 ? 'success' : 'failed'}
-                    </Badge>
+                    {!(report.response_status >= 200 && report.response_status < 300) && (
+                      <Badge variant="destructive">
+                        failed
+                      </Badge>
+                    )}
                     <Button 
                       variant="outline" 
                       size="sm"
