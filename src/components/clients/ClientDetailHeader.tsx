@@ -64,7 +64,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Back to Clients</TooltipContent>
+              <TooltipContent side="bottom">Back to Clients</TooltipContent>
             </Tooltip>
             
             <div className="text-sm font-medium text-foreground">
@@ -112,7 +112,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                     Journal
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Add Journal Entry</TooltipContent>
+                <TooltipContent side="bottom">Add Journal Entry</TooltipContent>
               </Tooltip>
               
               <Tooltip>
@@ -127,7 +127,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                     Report
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Generate Report</TooltipContent>
+                <TooltipContent side="bottom">Generate Report</TooltipContent>
               </Tooltip>
               
               <Tooltip>
@@ -142,7 +142,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                     Insight
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Generate AI Insight</TooltipContent>
+                <TooltipContent side="bottom">Generate AI Insight</TooltipContent>
               </Tooltip>
             </div>
           </div>
@@ -160,7 +160,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Back to Clients</TooltipContent>
+              <TooltipContent side="bottom">Back to Clients</TooltipContent>
             </Tooltip>
 
             <Button
@@ -184,7 +184,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                     <BookOpen className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Journals ({journalCount})</TooltipContent>
+                <TooltipContent side="bottom">Journals ({journalCount})</TooltipContent>
               </Tooltip>
               
               <Tooltip>
@@ -198,7 +198,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                     <FileText className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Reports ({reportCount})</TooltipContent>
+                <TooltipContent side="bottom">Reports ({reportCount})</TooltipContent>
               </Tooltip>
               
               <Tooltip>
@@ -212,7 +212,7 @@ export const ClientDetailHeader: React.FC<ClientDetailHeaderProps> = ({
                     <Lightbulb className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Insights ({insightCount})</TooltipContent>
+                <TooltipContent side="bottom">Insights ({insightCount})</TooltipContent>
               </Tooltip>
             </div>
           </div>
