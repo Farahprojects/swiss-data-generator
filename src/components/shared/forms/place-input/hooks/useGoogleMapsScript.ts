@@ -6,12 +6,14 @@ interface UseGoogleMapsScriptResult {
   isLoaded: boolean;
   isError: boolean;
   apiKey: string | null;
+  errorMessage?: string;
 }
 
 export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const fetchApiKey = useCallback(async () => {
     try {
@@ -22,14 +24,19 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       });
       
       if (error) {
-        console.error('❌ Error fetching Google Maps API key:', error);
+        console.error('❌ Supabase function error:', error);
         setIsError(true);
+        setErrorMessage(`Supabase error: ${error.message}`);
         return;
       }
       
+      console.log('📋 Function response:', data);
+      
       if (!data?.apiKey) {
         console.error('❌ No API key returned from edge function');
+        console.log('📋 Full response data:', data);
         setIsError(true);
+        setErrorMessage('No API key in response');
         return;
       }
       
@@ -42,6 +49,7 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     } catch (error) {
       console.error('❌ Error in fetchApiKey:', error);
       setIsError(true);
+      setErrorMessage(`Fetch error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, []);
 
@@ -67,12 +75,14 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       script.onerror = () => {
         console.error('❌ Error loading Google Maps script');
         setIsError(true);
+        setErrorMessage('Failed to load Google Maps script');
       };
       
       document.head.appendChild(script);
     } catch (error) {
       console.error('❌ Error in loadGoogleMapsScript:', error);
       setIsError(true);
+      setErrorMessage(`Script loading error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, []);
 
@@ -88,5 +98,5 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     loadMaps();
   }, [apiKey, isLoaded, isError, fetchApiKey, loadGoogleMapsScript]);
 
-  return { isLoaded, isError, apiKey };
+  return { isLoaded, isError, apiKey, errorMessage };
 };

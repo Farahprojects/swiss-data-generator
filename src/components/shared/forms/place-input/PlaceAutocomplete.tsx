@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, forwardRef } from 'react';
 import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
 import { extractPlaceData, PlaceData } from './utils/extractPlaceData';
@@ -35,7 +34,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     disabled = false,
     error
   }, ref) => {
-    const { isLoaded, isError, apiKey } = useGoogleMapsScript();
+    const { isLoaded, isError, apiKey, errorMessage } = useGoogleMapsScript();
     const autocompleteRef = useRef<HTMLGmpPlaceAutocompleteElement | null>(null);
     const [localValue, setLocalValue] = useState(value);
     const [showFallback, setShowFallback] = useState(false);
@@ -57,6 +56,8 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           container.removeChild(container.firstChild);
         }
       }
+      // Force reload the page to retry the API key fetch
+      window.location.reload();
     };
 
     useEffect(() => {
@@ -178,6 +179,9 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <AlertCircle className="h-4 w-4 text-amber-500" />
                 <span>Location autocomplete unavailable</span>
+                {errorMessage && (
+                  <span className="text-xs text-red-500">({errorMessage})</span>
+                )}
                 <Button
                   type="button"
                   variant="ghost"
