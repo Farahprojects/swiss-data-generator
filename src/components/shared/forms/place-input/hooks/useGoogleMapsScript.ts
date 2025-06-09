@@ -13,7 +13,6 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isError, setIsError] = useState(false);
 
-  // Get Google Maps API key from edge function
   const fetchApiKey = useCallback(async () => {
     try {
       console.log('🔍 Fetching Google Maps API key from edge function...');
@@ -37,7 +36,6 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       console.log('✅ Successfully retrieved Google Maps API key');
       setApiKey(data.apiKey);
       
-      // Set global API key for any components that might need it
       if (window) {
         window.GOOGLE_MAPS_API_KEY = data.apiKey;
       }
@@ -47,7 +45,6 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     }
   }, []);
 
-  // Load Google Maps script
   const loadGoogleMapsScript = useCallback((key: string) => {
     if (window.google?.maps) {
       console.log('Google Maps script already loaded');
@@ -58,13 +55,11 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     try {
       console.log('🔄 Loading Google Maps script...');
       
-      // Define callback function
       window.initGooglePlacesCallback = () => {
         console.log('✅ Google Maps script loaded successfully');
         setIsLoaded(true);
       };
       
-      // Create script element
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geocoding&callback=initGooglePlacesCallback&v=weekly`;
       script.async = true;
@@ -74,7 +69,6 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
         setIsError(true);
       };
       
-      // Add script to document
       document.head.appendChild(script);
     } catch (error) {
       console.error('❌ Error in loadGoogleMapsScript:', error);
@@ -82,7 +76,6 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     }
   }, []);
 
-  // Fetch API key and load script
   useEffect(() => {
     const loadMaps = async () => {
       if (!apiKey) {

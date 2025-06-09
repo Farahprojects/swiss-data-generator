@@ -4,8 +4,9 @@ import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
 import { extractPlaceData, PlaceData } from './utils/extractPlaceData';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import type { HTMLGmpPlaceAutocompleteElement } from '@/types/googleMaps';
 
 export interface PlaceAutocompleteProps {
@@ -34,13 +35,32 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     disabled = false,
     error
   }, ref) => {
-    const { isLoaded, isError } = useGoogleMapsScript();
+    const { isLoaded, isError, apiKey } = useGoogleMapsScript();
     const autocompleteRef = useRef<HTMLGmpPlaceAutocompleteElement | null>(null);
     const [localValue, setLocalValue] = useState(value);
     const [showFallback, setShowFallback] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
+
+    const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setLocalValue(newValue);
+      onChange(newValue);
+    };
+
+    const handleRetry = () => {
+      setRetryCount(prev => prev + 1);
+      setShowFallback(false);
+      // Force re-initialization by clearing the container
+      const container = document.getElementById(`${id}-container`);
+      if (container) {
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
+      }
+    };
 
     useEffect(() => {
-      if (!isLoaded || showFallback || !window.google) {
+      if (!isLoaded || showFallback || !window.google || disabled) {
         return;
       }
       
@@ -66,7 +86,6 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           container.appendChild(autocompleteElement);
           autocompleteRef.current = autocompleteElement;
           
-          // Updated to use gmp-select event and proper conversion to Place
           autocompleteElement.addEventListener('gmp-select', async (event: Event) => {
             const customEvent = event as any;
             const prediction = customEvent.placePrediction;
@@ -79,17 +98,14 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
             try {
               console.log('🔍 Place prediction selected:', prediction);
               
-              // Convert prediction to actual Place object
               const place = await prediction.toPlace();
               
-              // Fetch necessary fields including location (which contains coordinates)
               await place.fetchFields({
                 fields: ['displayName', 'formattedAddress', 'location']
               });
               
               console.log('🌍 Place details fetched:', place);
               
-              // Extract data using our utility
               const placeData = extractPlaceData(place);
               console.log('📊 Extracted place data:', placeData);
               
@@ -100,7 +116,6 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
                 onPlaceSelect(placeData);
               }
               
-              // Log coordinates if available
               if (placeData.latitude && placeData.longitude) {
                 console.log(`📍 Coordinates: ${placeData.latitude}, ${placeData.longitude}`);
               } else {
@@ -112,16 +127,18 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
             }
           });
         } else {
+          console.error('Container not found, falling back to manual input');
           setShowFallback(true);
         }
       } catch (error) {
         console.error('Error setting up place autocomplete:', error);
         setShowFallback(true);
       }
-    }, [isLoaded, localValue, id, placeholder, onChange, onPlaceSelect, showFallback]);
+    }, [isLoaded, localValue, id, placeholder, onChange, onPlaceSelect, showFallback, disabled, retryCount]);
 
     useEffect(() => {
       if (isError) {
+        console.error('Google Maps failed to load, using fallback input');
         setShowFallback(true);
       }
     }, [isError]);
@@ -135,6 +152,8 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       }
     }, [value]);
 
+    const shouldShowFallback = showFallback || isError || disabled;
+
     return (
       <div ref={ref} className={`space-y-2 ${className}`}>
         {label && (
@@ -144,22 +163,45 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           </Label>
         )}
         
-        {showFallback ? (
-          <Input
-            id={id}
-            value={localValue}
-            onChange={() => {}}
-            placeholder="Location input not available"
-            disabled={true}
-            className="flex-1"
-            required={required}
-          />
+        {shouldShowFallback ? (
+          <div className="space-y-2">
+            <Input
+              id={id}
+              value={localValue}
+              onChange={handleManualInput}
+              placeholder={placeholder}
+              disabled={disabled}
+              className="flex-1"
+              required={required}
+            />
+            {isError && !disabled && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+                <span>Location autocomplete unavailable</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRetry}
+                  className="h-6 px-2"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Retry
+                </Button>
+              </div>
+            )}
+          </div>
         ) : (
           <div 
             id={`${id}-container`} 
             className="min-h-[40px] border rounded-md bg-background px-3 py-2"
           >
-            {!isLoaded && <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading places...</div>}
+            {!isLoaded && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> 
+                Loading location services...
+              </div>
+            )}
           </div>
         )}
         
