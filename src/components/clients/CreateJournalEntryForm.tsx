@@ -15,10 +15,10 @@ import {
 } from '@/components/ui/dialog';
 import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
 import { TypingCursor } from '@/components/ui/TypingCursor';
-import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useSpeechToTextOptimized } from '@/hooks/useSpeechToTextOptimized';
 import { useTypeAnimation } from '@/hooks/useTypeAnimation';
 import { useToast } from '@/hooks/use-toast';
-import { X, Mic } from 'lucide-react';
+import { X, Mic, MicIcon } from 'lucide-react';
 import { CreateJournalEntryData, JournalEntry } from '@/types/database';
 import { journalEntriesService } from '@/services/journalEntries';
 
@@ -71,18 +71,17 @@ const CreateJournalEntryForm = ({
     }
   }, [existingEntry, open, setValue]);
 
-  // Handle when silence is detected - show immediate feedback
-  const handleSilenceDetected = () => {
+  // Optimized silence detection callback
+  const handleSilenceDetected = React.useCallback(() => {
     console.log('Silence detected, showing processing state');
     setProcessingState('processing');
-  };
+  }, []);
 
-  // Handle when transcript is ready - prepare for type animation
-  const handleTranscriptReady = (transcript: string) => {
+  // Optimized transcript ready callback
+  const handleTranscriptReady = React.useCallback((transcript: string) => {
     console.log('Transcript ready:', transcript);
     const currentText = getValues('entry_text') || '';
     
-    // Store existing text and new transcript separately
     setExistingText(currentText);
     const newTranscript = currentText ? ` ${transcript}` : transcript;
     setNewTranscriptToType(newTranscript);
@@ -90,17 +89,28 @@ const CreateJournalEntryForm = ({
     setProcessingState('typing');
     animationKeyRef.current++;
     setStartTyping(true);
-  };
+  }, [getValues]);
 
-  // Type animation configuration
+  // Use optimized speech-to-text hook with performance config
+  const { isRecording, isProcessing, audioLevel, toggleRecording } = useSpeechToTextOptimized(
+    handleTranscriptReady,
+    handleSilenceDetected,
+    {
+      silenceThreshold: 10, // Slightly higher threshold for less sensitive detection
+      silenceTimeout: 2500, // Slightly shorter timeout for faster response
+      maxRecordingTime: 45000, // 45 seconds max
+      audioAnalysisInterval: 150 // Less frequent analysis for better performance
+    }
+  );
+
+  // Type animation configuration with optimized settings
   const { displayText, isTyping, showCursor, stopTyping } = useTypeAnimation(
     newTranscriptToType,
     startTyping,
     {
-      speed: 50,
-      punctuationDelay: 200,
+      speed: 30, // Faster typing for better UX
+      punctuationDelay: 150, // Shorter delays
       onComplete: () => {
-        console.log('Type animation complete');
         const finalText = existingText + newTranscriptToType;
         setValue('entry_text', finalText, { 
           shouldDirty: true, 
@@ -113,7 +123,6 @@ const CreateJournalEntryForm = ({
         setExistingText('');
       },
       onInterrupt: () => {
-        console.log('Type animation interrupted by user');
         const finalText = existingText + newTranscriptToType;
         setValue('entry_text', finalText, { 
           shouldDirty: true, 
@@ -128,19 +137,13 @@ const CreateJournalEntryForm = ({
     }
   );
 
-  const { isRecording, isProcessing, toggleRecording } = useSpeechToText(
-    handleTranscriptReady,
-    handleSilenceDetected
-  );
-
-  // Handle user typing during animation
-  const handleTextareaChange = (value: string) => {
+  // Optimized textarea change handler
+  const handleTextareaChange = React.useCallback((value: string) => {
     if (isTyping) {
-      console.log('User typing detected during animation, stopping animation');
       stopTyping();
     }
     return value;
-  };
+  }, [isTyping, stopTyping]);
 
   // Generate today's date and time as title
   const getDefaultTitle = () => {
@@ -158,7 +161,6 @@ const CreateJournalEntryForm = ({
   const onSubmit = async (data: JournalEntryFormData) => {
     try {
       if (existingEntry) {
-        // Update existing entry
         await journalEntriesService.updateJournalEntry(existingEntry.id, {
           entry_text: data.entry_text,
         });
@@ -168,7 +170,6 @@ const CreateJournalEntryForm = ({
           description: "Journal entry updated successfully!",
         });
       } else {
-        // Create new entry
         const entryData: CreateJournalEntryData = {
           client_id: clientId,
           title: getDefaultTitle(),
@@ -207,13 +208,13 @@ const CreateJournalEntryForm = ({
     onOpenChange(false);
   };
 
-  // Compute the display value for the textarea
-  const getTextareaDisplayValue = () => {
+  // Optimized display value computation
+  const getTextareaDisplayValue = React.useMemo(() => {
     if (processingState === 'typing') {
       return existingText + displayText;
     }
     return getValues('entry_text') || '';
-  };
+  }, [processingState, existingText, displayText, getValues]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -247,7 +248,7 @@ const CreateJournalEntryForm = ({
                       const newValue = handleTextareaChange(e.target.value);
                       field.onChange(newValue);
                     }}
-                    value={getTextareaDisplayValue()}
+                    value={getTextareaDisplayValue}
                     disabled={processingState === 'typing'}
                     className={processingState === 'typing' ? 'bg-gray-50' : ''}
                   />
@@ -266,7 +267,7 @@ const CreateJournalEntryForm = ({
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
             )}
             
-            {/* Processing indicator */}
+            {/* Optimized processing indicators */}
             {processingState === 'processing' && (
               <ProcessingIndicator 
                 message="Processing speech..." 
@@ -281,15 +282,30 @@ const CreateJournalEntryForm = ({
               </div>
             )}
             
-            {/* Mic button */}
-            <div className="flex justify-end">
+            {/* Enhanced mic button with visual feedback */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {/* Audio level indicator */}
+                {isRecording && (
+                  <div className="flex items-center gap-1">
+                    <div className="text-xs text-muted-foreground">Level:</div>
+                    <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-indigo-500 transition-all duration-100"
+                        style={{ width: `${audioLevel}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <button
                 type="button"
                 onClick={toggleRecording}
                 disabled={isProcessing || processingState !== 'idle'}
-                className={`p-2.5 rounded-full transition-colors ${
+                className={`p-2.5 rounded-full transition-all duration-200 ${
                   isRecording 
-                    ? 'bg-indigo-100 text-indigo-600' 
+                    ? 'bg-red-100 text-red-600 animate-pulse' 
                     : 'text-gray-500 hover:bg-gray-100'
                 } ${(isProcessing || processingState !== 'idle') ? 'opacity-50 cursor-not-allowed' : ''}`}
                 aria-label={isRecording ? 'Stop recording' : 'Start recording'}

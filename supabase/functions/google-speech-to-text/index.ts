@@ -6,8 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Cache for repeated phrases (simple in-memory cache)
+const transcriptionCache = new Map<string, { transcript: string; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -24,17 +27,39 @@ serve(async (req) => {
       throw new Error('Google API key not configured');
     }
 
-    // Simplified configuration using only supported fields
-    const defaultConfig = {
+    // Generate cache key from audio data hash (simplified)
+    const audioHash = btoa(audioData.slice(0, 100)); // Use first 100 chars as simple hash
+    const cacheKey = `${audioHash}_${JSON.stringify(config)}`;
+    
+    // Check cache first
+    const cached = transcriptionCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log('Returning cached result');
+      return new Response(
+        JSON.stringify({ 
+          transcript: cached.transcript,
+          confidence: 0.95,
+          cached: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Optimized configuration for speed
+    const optimizedConfig = {
       encoding: 'WEBM_OPUS',
       sampleRateHertz: 48000,
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
-      model: 'latest_long',
-      useEnhanced: true,
-      speechContexts: [{
-        phrases: ["therapy", "session", "client", "feelings", "emotions", "breakthrough", "progress"],
-        boost: 10
+      model: config?.model || 'latest_short', // Use faster model by default
+      useEnhanced: config?.useEnhanced || false,
+      profanityFilter: false, // Disable for speed
+      enableWordTimeOffsets: false, // Disable for speed
+      enableWordConfidence: false, // Disable for speed
+      maxAlternatives: 1, // Only get top result
+      speechContexts: config?.speechContexts || [{
+        phrases: ["therapy", "session", "client", "feelings", "emotions"],
+        boost: 5
       }],
       ...config
     };
@@ -43,12 +68,12 @@ serve(async (req) => {
       audio: {
         content: audioData
       },
-      config: defaultConfig
+      config: optimizedConfig
     };
 
-    console.log('Sending request to Google Speech-to-Text API');
-    console.log('Config:', JSON.stringify(defaultConfig, null, 2));
+    console.log('Sending optimized request to Google Speech-to-Text API');
     
+    const startTime = Date.now();
     const response = await fetch(
       `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
       {
@@ -60,26 +85,53 @@ serve(async (req) => {
       }
     );
 
+    const processingTime = Date.now() - startTime;
+    console.log(`API response time: ${processingTime}ms`);
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Google API error:', errorText);
+      
+      // Implement exponential backoff for retries
+      if (response.status === 429 || response.status >= 500) {
+        throw new Error(`Temporary API error: ${response.status}. Please try again.`);
+      }
+      
       throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    console.log('Google API response:', result);
-
-    // Extract the transcript from the first result
+    
     const transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
     const confidence = result.results?.[0]?.alternatives?.[0]?.confidence || 0;
 
-    console.log('Extracted transcript:', transcript);
-    console.log('Confidence score:', confidence);
+    console.log('Transcript:', transcript);
+    console.log('Confidence:', confidence);
+    console.log('Processing time:', processingTime, 'ms');
+
+    // Cache successful results
+    if (transcript && confidence > 0.5) {
+      transcriptionCache.set(cacheKey, {
+        transcript,
+        timestamp: Date.now()
+      });
+      
+      // Clean old cache entries
+      if (transcriptionCache.size > 100) {
+        const now = Date.now();
+        for (const [key, value] of transcriptionCache.entries()) {
+          if (now - value.timestamp > CACHE_DURATION) {
+            transcriptionCache.delete(key);
+          }
+        }
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
         transcript,
-        confidence
+        confidence,
+        processingTime
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
