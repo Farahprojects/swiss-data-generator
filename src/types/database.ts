@@ -8,6 +8,8 @@ export interface Client {
   birth_date?: string;
   birth_time?: string;
   birth_location?: string;
+  latitude?: number;
+  longitude?: number;
   notes?: string;
   avatar_url?: string;
   created_at: string;
@@ -55,6 +57,8 @@ export interface CreateClientData {
   birth_date?: string;
   birth_time?: string;
   birth_location?: string;
+  latitude?: number;
+  longitude?: number;
   notes?: string;
   avatar_url?: string;
 }

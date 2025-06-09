@@ -64,6 +64,8 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
         birth_date: data.birth_date || undefined,
         birth_time: data.birth_time || undefined,
         birth_location: data.birth_location || undefined,
+        latitude: selectedPlaceData?.latitude,
+        longitude: selectedPlaceData?.longitude,
         notes: data.notes || undefined,
       };
 
@@ -95,6 +97,7 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
   };
 
   const handlePlaceSelect = (placeData: PlaceData) => {
+    console.log('Place selected with coordinates:', placeData);
     setSelectedPlaceData(placeData);
     setValue('birth_location', placeData.name);
   };

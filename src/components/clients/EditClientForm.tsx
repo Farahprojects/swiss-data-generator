@@ -42,7 +42,15 @@ interface EditClientFormProps {
 
 const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditClientFormProps) => {
   const { toast } = useToast();
-  const [selectedPlaceData, setSelectedPlaceData] = useState<PlaceData | null>(null);
+  const [selectedPlaceData, setSelectedPlaceData] = useState<PlaceData | null>(
+    client.latitude && client.longitude 
+      ? { 
+          name: client.birth_location || '', 
+          latitude: client.latitude, 
+          longitude: client.longitude 
+        }
+      : null
+  );
   
   const {
     register,
@@ -73,6 +81,8 @@ const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditCli
         birth_date: data.birth_date || undefined,
         birth_time: data.birth_time || undefined,
         birth_location: data.birth_location || undefined,
+        latitude: selectedPlaceData?.latitude,
+        longitude: selectedPlaceData?.longitude,
         notes: data.notes || undefined,
       };
 
@@ -102,6 +112,7 @@ const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditCli
   };
 
   const handlePlaceSelect = (placeData: PlaceData) => {
+    console.log('Place selected with coordinates:', placeData);
     setSelectedPlaceData(placeData);
     setValue('birth_location', placeData.name);
   };
