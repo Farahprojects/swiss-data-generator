@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Plus, Search, Calendar } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { TheraLoader } from '@/components/ui/TheraLoader';
 import ClientForm from '@/components/clients/ClientForm';
 
 const ClientsPage = () => {
@@ -103,13 +103,7 @@ const ClientsPage = () => {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="text-lg">Loading clients...</div>
-        </div>
-      </div>
-    );
+    return <TheraLoader message="Loading clients..." size="lg" />;
   }
 
   return (

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { clientsService } from '@/services/clients';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useClientData } from '@/hooks/useClientData';
+import { TheraLoader } from '@/components/ui/TheraLoader';
 import EditClientForm from '@/components/clients/EditClientForm';
 import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
 import ClientReportModal from '@/components/clients/ClientReportModal';
@@ -72,19 +72,12 @@ const ClientDetailPage = () => {
   };
 
   const handleGenerateInsight = () => {
-    setShowCreateJournalModal(false); // Close any other modals
+    setShowCreateJournalModal(false);
     setShowReportModal(false);
-    // The insights modal will be handled by the ClientInsightsTab component
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="text-lg">Loading client details...</div>
-        </div>
-      </div>
-    );
+    return <TheraLoader message="Loading client details..." size="lg" />;
   }
 
   if (!client) {

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Client } from '@/types/database';
 import { insightsService } from '@/services/insights';
-import { Loader2 } from 'lucide-react';
+import { TheraLoader } from '@/components/ui/TheraLoader';
 import { Pencil } from 'lucide-react';
 
 interface GenerateInsightModalProps {
@@ -102,6 +102,16 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
     setShowTitleInput(true);
   };
 
+  if (isGenerating) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[425px]">
+          <TheraLoader message="Generating insights..." size="md" />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -171,14 +181,7 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
             Cancel
           </Button>
           <Button onClick={handleGenerate} disabled={isGenerating}>
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              'Generate Insight'
-            )}
+            Generate Insight
           </Button>
         </div>
       </DialogContent>
