@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -36,6 +35,63 @@ function jsonResponse(body: unknown, init: ResponseInit = {}, requestId?: string
       ...(init.headers ?? {}),
     },
   });
+}
+
+async function validateApiKey(apiKey: string, requestId: string): Promise<string | null> {
+  const logPrefix = `[generate-insights][${requestId}]`;
+  console.log(`${logPrefix} Validating API key: ${apiKey.substring(0, 8)}...`);
+
+  try {
+    const { data, error } = await supabase
+      .from("api_keys")
+      .select("user_id, is_active")
+      .eq("api_key", apiKey)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (error) {
+      console.error(`${logPrefix} Error validating API key:`, error);
+      return null;
+    }
+
+    if (!data) {
+      console.error(`${logPrefix} API key not found or inactive`);
+      return null;
+    }
+
+    console.log(`${logPrefix} API key validated for user: ${data.user_id}`);
+    return data.user_id;
+  } catch (err) {
+    console.error(`${logPrefix} Exception validating API key:`, err);
+    return null;
+  }
+}
+
+async function checkUserCredits(userId: string, requestId: string): Promise<{ hasCredits: boolean; balance: number }> {
+  const logPrefix = `[generate-insights][${requestId}]`;
+  console.log(`${logPrefix} Checking credits for user: ${userId}`);
+
+  try {
+    const { data, error } = await supabase
+      .from("v_api_key_balance")
+      .select("balance_usd")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error(`${logPrefix} Error checking user credits:`, error);
+      return { hasCredits: false, balance: 0 };
+    }
+
+    const balance = data?.balance_usd || 0;
+    const hasCredits = balance > 0;
+    
+    console.log(`${logPrefix} User balance: ${balance}, has credits: ${hasCredits}`);
+    return { hasCredits, balance };
+  } catch (err) {
+    console.error(`${logPrefix} Exception checking user credits:`, err);
+    return { hasCredits: false, balance: 0 };
+  }
 }
 
 async function retryWithBackoff<T>(
@@ -287,6 +343,41 @@ serve(async (req) => {
   }
 
   try {
+    // Extract API key from Authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.error(`${logPrefix} Missing or invalid Authorization header`);
+      return jsonResponse(
+        { error: "Missing or invalid Authorization header", requestId },
+        { status: 401 },
+        requestId
+      );
+    }
+
+    const apiKey = authHeader.replace("Bearer ", "");
+
+    // Validate API key and get user ID
+    const userId = await validateApiKey(apiKey, requestId);
+    if (!userId) {
+      console.error(`${logPrefix} Invalid API key`);
+      return jsonResponse(
+        { error: "Invalid API key", requestId },
+        { status: 401 },
+        requestId
+      );
+    }
+
+    // Check user credits
+    const { hasCredits, balance } = await checkUserCredits(userId, requestId);
+    if (!hasCredits) {
+      console.error(`${logPrefix} Insufficient credits. Balance: ${balance}`);
+      return jsonResponse(
+        { error: "Insufficient credits", balance, requestId },
+        { status: 402 },
+        requestId
+      );
+    }
+
     let payload;
     try {
       payload = await req.json();
@@ -300,7 +391,7 @@ serve(async (req) => {
       );
     }
 
-    const { clientId, coachId, insightType, clientData, title, apiKey, userId } = payload;
+    const { clientId, coachId, insightType, clientData, title } = payload;
 
     if (!clientId || !coachId || !insightType || !clientData || !title) {
       console.error(`${logPrefix} Missing required fields in request payload`);
@@ -328,29 +419,26 @@ serve(async (req) => {
       requestId
     );
 
-    // Record API usage if we have the necessary data
-    if (apiKey && userId) {
-      try {
-        // Fetch dynamic pricing
-        const costUsd = await getInsightPrice(requestId);
-        
-        const { error: usageError } = await supabase.rpc('record_api_usage', {
-          _user_id: userId,
-          _endpoint: 'generate-insights',
-          _cost_usd: costUsd,
-          _request_params: { insightType, clientId },
-          _response_status: 200,
-          _processing_time_ms: Date.now() - startTime
-        });
+    // Record API usage with dynamic pricing
+    try {
+      const costUsd = await getInsightPrice(requestId);
+      
+      const { error: usageError } = await supabase.rpc('record_api_usage', {
+        _user_id: userId,
+        _endpoint: 'generate-insights',
+        _cost_usd: costUsd,
+        _request_params: { insightType, clientId },
+        _response_status: 200,
+        _processing_time_ms: Date.now() - startTime
+      });
 
-        if (usageError) {
-          console.error(`${logPrefix} Error recording API usage:`, usageError);
-        } else {
-          console.log(`${logPrefix} Successfully recorded API usage with cost: $${costUsd}`);
-        }
-      } catch (usageErr) {
-        console.error(`${logPrefix} Failed to record API usage:`, usageErr);
+      if (usageError) {
+        console.error(`${logPrefix} Error recording API usage:`, usageError);
+      } else {
+        console.log(`${logPrefix} Successfully recorded API usage with cost: $${costUsd}`);
       }
+    } catch (usageErr) {
+      console.error(`${logPrefix} Failed to record API usage:`, usageErr);
     }
 
     console.log(`${logPrefix} Successfully processed insight request in ${Date.now() - startTime}ms`);

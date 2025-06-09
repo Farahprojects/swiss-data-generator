@@ -32,23 +32,28 @@ export interface GenerateInsightResponse {
 export const insightsService = {
   async generateInsight(request: GenerateInsightRequest): Promise<GenerateInsightResponse> {
     try {
-      // Get current user for API usage tracking
+      // Get current user's API key
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
       const { data: apiKeyData } = await supabase
         .from('api_keys')
         .select('api_key')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .eq('is_active', true)
         .single();
 
-      const payload = {
-        ...request,
-        apiKey: apiKeyData?.api_key,
-        userId: user?.id
-      };
+      if (!apiKeyData?.api_key) {
+        throw new Error('No active API key found');
+      }
 
       const { data, error } = await supabase.functions.invoke('generate-insights', {
-        body: payload
+        body: request,
+        headers: {
+          Authorization: `Bearer ${apiKeyData.api_key}`
+        }
       });
 
       if (error) {
