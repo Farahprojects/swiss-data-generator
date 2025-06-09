@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,16 +19,23 @@ import {
   TrendingUp,
   AlertTriangle
 } from 'lucide-react';
-import { mockClients, mockClientReports, mockJournalEntries, mockClientInsights } from '@/data/mockClients';
+import { useClientData } from '@/hooks/useClientData';
 
 const ClientDashboard = () => {
   const { clientId } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
   
-  const client = mockClients.find(c => c.id === clientId);
-  const clientReports = mockClientReports.filter(r => r.clientId === clientId);
-  const journalEntries = mockJournalEntries.filter(j => j.clientId === clientId);
-  const insights = mockClientInsights.filter(i => i.clientId === clientId);
+  const { client, journalEntries, clientReports, insightEntries, loading } = useClientData(clientId);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-lg">Loading client data...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!client) {
     return (
@@ -50,9 +58,10 @@ const ClientDashboard = () => {
 
   const getInsightIcon = (type: string) => {
     switch (type) {
-      case 'opportunity': return <TrendingUp className="w-4 h-4 text-green-600" />;
-      case 'warning': return <AlertTriangle className="w-4 h-4 text-red-600" />;
+      case 'trend': return <TrendingUp className="w-4 h-4 text-green-600" />;
+      case 'milestone': return <AlertTriangle className="w-4 h-4 text-red-600" />;
       case 'recommendation': return <Lightbulb className="w-4 h-4 text-blue-600" />;
+      case 'pattern': return <Lightbulb className="w-4 h-4 text-purple-600" />;
       default: return <Lightbulb className="w-4 h-4 text-gray-600" />;
     }
   };
@@ -69,19 +78,21 @@ const ClientDashboard = () => {
         </Link>
         <div className="flex items-center gap-4 flex-1">
           <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-xl">
-            {client.avatar ? (
-              <img src={client.avatar} alt={client.name} className="w-16 h-16 rounded-full object-cover" />
+            {client.avatar_url ? (
+              <img src={client.avatar_url} alt={client.full_name} className="w-16 h-16 rounded-full object-cover" />
             ) : (
-              client.name.split(' ').map(n => n[0]).join('')
+              client.full_name.split(' ').map(n => n[0]).join('')
             )}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{client.full_name}</h1>
             <div className="flex items-center gap-4 text-gray-600 mt-1">
-              <div className="flex items-center gap-1">
-                <Mail className="w-4 h-4" />
-                {client.email}
-              </div>
+              {client.email && (
+                <div className="flex items-center gap-1">
+                  <Mail className="w-4 h-4" />
+                  {client.email}
+                </div>
+              )}
               {client.phone && (
                 <div className="flex items-center gap-1">
                   <Phone className="w-4 h-4" />
@@ -104,47 +115,37 @@ const ClientDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {client.birthDate && (
+            {client.birth_date && (
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-600">Birth Date</div>
-                  <div className="font-medium">{formatDate(client.birthDate)}</div>
+                  <div className="font-medium">{formatDate(client.birth_date)}</div>
                 </div>
               </div>
             )}
-            {client.birthTime && (
+            {client.birth_time && (
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-600">Birth Time</div>
-                  <div className="font-medium">{client.birthTime}</div>
+                  <div className="font-medium">{client.birth_time}</div>
                 </div>
               </div>
             )}
-            {client.birthLocation && (
+            {client.birth_location && (
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-gray-500" />
                 <div>
                   <div className="text-sm text-gray-600">Birth Location</div>
-                  <div className="font-medium">{client.birthLocation}</div>
+                  <div className="font-medium">{client.birth_location}</div>
                 </div>
               </div>
             )}
           </div>
-          {client.tags && client.tags.length > 0 && (
-            <div className="mt-4">
-              <div className="text-sm text-gray-600 mb-2">Tags</div>
-              <div className="flex flex-wrap gap-2">
-                {client.tags.map(tag => (
-                  <Badge key={tag} variant="secondary">{tag}</Badge>
-                ))}
-              </div>
-            </div>
-          )}
           {client.notes && (
             <div className="mt-4">
-              <div className="text-sm text-gray-600 mb-2">Notes</div>
+              <div className="text-sm text-gray-600 mb-2">Goals</div>
               <p className="text-gray-800">{client.notes}</p>
             </div>
           )}
@@ -170,7 +171,7 @@ const ClientDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-primary">{client.reportsCount}</div>
+                <div className="text-3xl font-bold text-primary">{clientReports.length}</div>
               </CardContent>
             </Card>
             <Card>
@@ -192,7 +193,7 @@ const ClientDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-primary">{insights.length}</div>
+                <div className="text-3xl font-bold text-primary">{insightEntries.length}</div>
               </CardContent>
             </Card>
           </div>
@@ -206,10 +207,13 @@ const ClientDashboard = () => {
               <div className="space-y-3">
                 {journalEntries.slice(0, 3).map(entry => (
                   <div key={entry.id} className="border-l-2 border-blue-200 pl-3">
-                    <div className="font-medium">{entry.title}</div>
-                    <div className="text-sm text-gray-600">{formatDate(entry.createdAt)}</div>
+                    <div className="font-medium">{entry.title || 'Journal Entry'}</div>
+                    <div className="text-sm text-gray-600">{formatDate(entry.created_at)}</div>
                   </div>
                 ))}
+                {journalEntries.length === 0 && (
+                  <div className="text-gray-500 text-sm">No recent activity</div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -229,17 +233,22 @@ const ClientDashboard = () => {
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-semibold">{report.title}</h4>
-                      <p className="text-sm text-gray-600">{report.type}</p>
-                      <p className="text-sm text-gray-500">{formatDate(report.createdAt)}</p>
+                      <h4 className="font-semibold">{report.report_name || report.request_type}</h4>
+                      <p className="text-sm text-gray-600">{report.request_type}</p>
+                      <p className="text-sm text-gray-500">{formatDate(report.created_at)}</p>
                     </div>
-                    <Badge variant={report.status === 'completed' ? 'default' : 'secondary'}>
-                      {report.status}
+                    <Badge variant={report.response_status === 200 ? 'default' : 'secondary'}>
+                      {report.response_status === 200 ? 'completed' : 'processing'}
                     </Badge>
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {clientReports.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No reports generated yet
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -257,44 +266,58 @@ const ClientDashboard = () => {
                 <CardContent className="pt-6">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-semibold">{entry.title}</h4>
-                      <span className="text-sm text-gray-500">{formatDate(entry.createdAt)}</span>
+                      <h4 className="font-semibold">{entry.title || 'Journal Entry'}</h4>
+                      <span className="text-sm text-gray-500">{formatDate(entry.created_at)}</span>
                     </div>
-                    <p className="text-gray-700">{entry.content}</p>
-                    <div className="flex gap-2">
-                      {entry.tags.map(tag => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
+                    <p className="text-gray-700">{entry.entry_text}</p>
+                    {entry.tags && entry.tags.length > 0 && (
+                      <div className="flex gap-2">
+                        {entry.tags.map(tag => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {journalEntries.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No journal entries yet
+              </div>
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="insights" className="space-y-6">
           <h3 className="text-lg font-semibold">AI-Generated Insights</h3>
           <div className="space-y-4">
-            {insights.map(insight => (
+            {insightEntries.map(insight => (
               <Card key={insight.id}>
                 <CardContent className="pt-6">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         {getInsightIcon(insight.type)}
-                        <h4 className="font-semibold">{insight.title}</h4>
+                        <h4 className="font-semibold">{insight.title || 'Insight'}</h4>
                       </div>
-                      <Badge variant="secondary">{insight.confidence}% confidence</Badge>
+                      {insight.confidence_score && (
+                        <Badge variant="secondary">{insight.confidence_score}% confidence</Badge>
+                      )}
                     </div>
-                    <p className="text-gray-700">{insight.description}</p>
-                    <div className="text-sm text-gray-500">{formatDate(insight.createdAt)}</div>
+                    <p className="text-gray-700">{insight.content}</p>
+                    <div className="text-sm text-gray-500">{formatDate(insight.created_at)}</div>
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {insightEntries.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No insights generated yet
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
