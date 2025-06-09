@@ -1,1 +1,5 @@
+
 project_id = "wrvqqvqvwqmfdqvqmaar"
+
+[functions.swiss]
+verify_jwt = false
