@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -203,13 +204,13 @@ async function callSwissAPI(payload: any, userId: string, apiKey: string): Promi
     console.log('[create-report] Using user_id:', userId);
     console.log('[create-report] Using api_key:', apiKey.substring(0, 10) + '...');
     
-    // Make direct HTTP request to Swiss function with API key in headers (like curl)
+    // Make direct HTTP request to Swiss function with API key in Authorization header (like curl)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const response = await fetch(`${supabaseUrl}/functions/v1/swiss`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(payload)
     });
