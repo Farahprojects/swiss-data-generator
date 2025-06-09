@@ -60,7 +60,7 @@ export function SimpleSidebarMenu() {
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-2 p-2">
+      <div className="mt-auto flex flex-col gap-2 p-2">
         <div className="p-2 text-xs text-muted-foreground text-center">
           <div>© {new Date().getFullYear()} Therai Astro.</div>
           <div>All rights reserved.</div>
