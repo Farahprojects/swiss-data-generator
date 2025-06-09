@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -106,7 +107,7 @@ const ClientDetailPage = () => {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
+      <div className="min-h-screen">
         <ClientDetailHeader
           client={client}
           activeTab={activeTab}
@@ -122,49 +123,52 @@ const ClientDetailPage = () => {
           isMobile={isMobile}
         />
 
-        <ClientInfoCard
-          client={client}
-          isOpen={isClientInfoOpen}
-          onEditClick={() => setShowEditModal(true)}
-          onDeleteClient={handleDeleteClient}
-          showDeleteDialog={showDeleteDialog}
-          setShowDeleteDialog={setShowDeleteDialog}
-          alwaysShowOnDesktop={true}
-          isMobile={isMobile}
-        />
+        {/* Content with proper spacing for fixed header */}
+        <div className="pt-20 space-y-6 px-4 md:px-6">
+          <ClientInfoCard
+            client={client}
+            isOpen={isClientInfoOpen}
+            onEditClick={() => setShowEditModal(true)}
+            onDeleteClient={handleDeleteClient}
+            showDeleteDialog={showDeleteDialog}
+            setShowDeleteDialog={setShowDeleteDialog}
+            alwaysShowOnDesktop={true}
+            isMobile={isMobile}
+          />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="hidden">
-            <TabsTrigger value="journals">Journals</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-            <TabsTrigger value="insights">Insights</TabsTrigger>
-          </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="hidden">
+              <TabsTrigger value="journals">Journals</TabsTrigger>
+              <TabsTrigger value="reports">Reports</TabsTrigger>
+              <TabsTrigger value="insights">Insights</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="journals" className="space-y-4">
-            <ClientJournalTab
-              journalEntries={journalEntries}
-              onCreateJournal={() => setShowCreateJournalModal(true)}
-              isMobile={isMobile}
-            />
-          </TabsContent>
+            <TabsContent value="journals" className="space-y-4">
+              <ClientJournalTab
+                journalEntries={journalEntries}
+                onCreateJournal={() => setShowCreateJournalModal(true)}
+                isMobile={isMobile}
+              />
+            </TabsContent>
 
-          <TabsContent value="reports" className="space-y-4">
-            <ClientReportsTab
-              clientReports={clientReports}
-              onCreateReport={() => setShowReportModal(true)}
-              onViewReport={handleViewReport}
-            />
-          </TabsContent>
+            <TabsContent value="reports" className="space-y-4">
+              <ClientReportsTab
+                clientReports={clientReports}
+                onCreateReport={() => setShowReportModal(true)}
+                onViewReport={handleViewReport}
+              />
+            </TabsContent>
 
-          <TabsContent value="insights" className="space-y-4">
-            <ClientInsightsTab 
-              insightEntries={insightEntries}
-              client={client}
-              journalEntries={journalEntries}
-              onInsightGenerated={loadClientData}
-            />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="insights" className="space-y-4">
+              <ClientInsightsTab 
+                insightEntries={insightEntries}
+                client={client}
+                journalEntries={journalEntries}
+                onInsightGenerated={loadClientData}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
 
         {/* Edit Client Modal */}
         {client && (
