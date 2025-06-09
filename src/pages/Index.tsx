@@ -104,29 +104,34 @@ const Index = () => {
           />
 
           <div className="container relative z-10 mx-auto flex h-full flex-col items-center justify-center px-4 text-center">
-            <div className="mx-auto max-w-5xl">
+            <div className="mx-auto max-w-xl">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold leading-tight"
+                className="bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-5xl font-extrabold text-transparent md:text-6xl lg:text-7xl"
               >
-                <span className="text-gray-800">Turn Self-Insight</span>
-                <br />
-                <span className="bg-gradient-to-r from-[#7c3aed] to-[#a855f7] bg-clip-text text-transparent">
-                  into Relentless Momentum
-                </span>
+                Astro
               </motion.h1>
+
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
+                className="mt-1 text-2xl font-normal text-gray-600 md:text-3xl"
+              >
+                The Intelligent Engine Behind the Stars
+              </motion.h2>
 
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-                className="mt-8 text-lg md:text-xl text-gray-600 leading-relaxed max-w-4xl mx-auto"
+                className="mt-4 text-lg text-gray-500 leading-relaxed max-w-xl mx-auto"
               >
-                Theria merges deep psychological mapping with high-impact coaching to diagnose
-                <br />
-                your core block and convert it into daily action—in less than 15 minutes.
+                Astrology intelligence for platforms, advisors, and visionary teams.
+                Powered by Swiss Ephemeris with 0.001″ precision, global time-zones,
+                and blazing-fast responses.
               </motion.p>
             </div>
 
@@ -134,14 +139,25 @@ const Index = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="mt-12 flex flex-row items-center justify-center gap-4"
+              className="mt-6 flex flex-row items-center justify-center gap-4"
             >
               <Button 
+                disabled
                 size="lg" 
-                className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white px-8 py-4 text-lg font-semibold rounded-lg"
+                className="opacity-50 cursor-not-allowed"
+                title="Signup temporarily disabled"
               >
-                Free Insight
+                Start Free Trial
               </Button>
+              <Link to="/documentation">
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  className="transform transition duration-200 hover:scale-105 hover:bg-accent"
+                >
+                  View Docs
+                </Button>
+              </Link>
             </motion.div>
           </div>
         </section>
