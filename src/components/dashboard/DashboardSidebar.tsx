@@ -6,7 +6,8 @@ import {
   FileText, 
   Globe,
   FilePlus,
-  Mail
+  Mail,
+  Settings
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,6 +27,7 @@ const sidebarItems = [
   { name: "Reports", href: "/dashboard/reports", icon: FileText },
   { name: "Create Report", href: "/dashboard/reports/create", icon: FilePlus },
   { name: "Website Builder", href: "/dashboard/website-builder", icon: Globe },
+  { name: "Landing Page Settings", href: "/dashboard/landing-page-settings", icon: Settings },
 ];
 
 // Simple navigation menu for mobile use (without Sidebar context)

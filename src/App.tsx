@@ -17,11 +17,9 @@ import Legal from "./pages/Legal";
 import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Documentation from "./pages/Documentation";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import UserSettings from "./pages/UserSettings";
-import ApiProducts from "./pages/ApiProducts";
 import UpgradePlan from "./pages/UpgradePlan";
 import PaymentReturn from "./pages/PaymentReturn";
 import ActivityLogs from "./pages/ActivityLogs";
@@ -41,8 +39,8 @@ const UsagePage = lazy(() => import("./pages/dashboard/UsagePage"));
 const ApiKeys = lazy(() => import("./pages/dashboard/ApiKeys"));
 const BillingPage = lazy(() => import("./pages/dashboard/BillingPage"));
 const PricingPage = lazy(() => import("./pages/dashboard/PricingPage"));
-const ApiDocs = lazy(() => import("./pages/dashboard/ApiDocs"));
 const WebsiteBuilder = lazy(() => import("./pages/dashboard/WebsiteBuilder"));
+const LandingPageSettings = lazy(() => import("./pages/dashboard/LandingPageSettings"));
 
 import "./App.css";
 
@@ -67,8 +65,6 @@ function App() {
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
-                  <Route path="/documentation" element={<Documentation />} />
-                  <Route path="/api-products" element={<ApiProducts />} />
                   <Route path="/upgrade-plan" element={<UpgradePlan />} />
                   <Route path="/payment-return" element={<PaymentReturn />} />
                   <Route path="/auth/password" element={<PasswordReset />} />
@@ -150,9 +146,9 @@ function App() {
                         <PricingPage />
                       </Suspense>
                     } />
-                    <Route path="api-docs" element={
+                    <Route path="landing-page-settings" element={
                       <Suspense fallback={<div>Loading...</div>}>
-                        <ApiDocs />
+                        <LandingPageSettings />
                       </Suspense>
                     } />
                   </Route>
