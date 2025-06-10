@@ -16,17 +16,11 @@ import { motion } from "framer-motion";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLandingPageImages } from "@/hooks/useLandingPageImages";
 
 const Features = () => {
   const { user } = useAuth();
-  const { data: imageConfig } = useLandingPageImages();
 
-  // Get image for feature by index, with fallback to default
-  const getFeatureImage = (index: number): string => {
-    return imageConfig?.feature_images?.[index.toString()] || 
-           `https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop`;
-  };
+  console.log("Features page is loading...");
 
   const workflowSteps = [
     {
@@ -61,39 +55,6 @@ const Features = () => {
       premium: true,
     },
   ];
-
-  const appFeatures = [
-    {
-      title: "Client Management",
-      description: "Comprehensive CRM system to track client progress, insights, and breakthrough moments.",
-      icon: Users,
-      image: getFeatureImage(0),
-      free: true,
-    },
-    {
-      title: "Report Generation",
-      description: "Automated psychological reports with deep insights and momentum tracking.",
-      icon: FileText,
-      image: getFeatureImage(1),
-      premium: true,
-    },
-    {
-      title: "Instant Insights",
-      description: "AI-powered analysis that turns journal entries into breakthrough moments.",
-      icon: Zap,
-      image: getFeatureImage(2),
-      premium: true,
-    },
-  ];
-
-  const fadeUp = {
-    hidden: { opacity: 0, y: 40 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { delay: i * 0.1, duration: 0.6, ease: "easeOut" },
-    }),
-  };
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
@@ -302,80 +263,6 @@ const Features = () => {
                   </li>
                 </ul>
               </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* Feature Showcase */}
-        <section className="py-20 bg-gray-50/50">
-          <div className="container mx-auto px-4">
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.6 }}
-              className="text-center mb-16"
-            >
-              <h2 className="text-3xl font-bold md:text-4xl mb-4">
-                Explore Our Features
-              </h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Experience the complete toolkit that transforms how you understand and guide your clients.
-              </p>
-            </motion.div>
-
-            <div className="grid gap-12 lg:gap-16">
-              {appFeatures.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 60 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.8, delay: index * 0.2 }}
-                  className={`grid gap-8 items-center lg:grid-cols-2 ${
-                    index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''
-                  }`}
-                >
-                  {/* Image */}
-                  <div className={`relative group ${index % 2 === 1 ? 'lg:col-start-2' : ''}`}>
-                    <div className="relative overflow-hidden rounded-2xl shadow-xl">
-                      <img 
-                        src={feature.image}
-                        alt={feature.title}
-                        className="w-full h-[280px] lg:h-[320px] object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className={`space-y-6 ${index % 2 === 1 ? 'lg:col-start-1' : ''}`}>
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="rounded-full bg-primary/10 p-3">
-                        <feature.icon className="h-8 w-8 text-primary" />
-                      </div>
-                      {feature.free && (
-                        <div className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                          FREE
-                        </div>
-                      )}
-                      {feature.premium && (
-                        <div className="px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
-                          PREMIUM
-                        </div>
-                      )}
-                    </div>
-                    
-                    <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">
-                      {feature.title}
-                    </h3>
-                    
-                    <p className="text-lg text-gray-600 leading-relaxed">
-                      {feature.description}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
             </div>
           </div>
         </section>
