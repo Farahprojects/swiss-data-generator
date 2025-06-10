@@ -124,24 +124,24 @@ const HowItWorksSection = () => {
 
 const enhancedFaqs = [
   {
-    question: "What will I learn from these reports?",
-    answer: "Each report provides specific insights about different aspects of your life - from personality traits and relationship compatibility to optimal timing for decisions and life purpose guidance. You'll get practical wisdom you can immediately apply."
+    question: "What value will these insights add to my business application?",
+    answer: "Each API endpoint provides specific astrological insights that can enhance user engagement in your application - from personality analysis and relationship compatibility to timing guidance and life purpose insights. This data helps create personalized experiences that keep users coming back."
   },
   {
-    question: "How accurate are the insights?",
-    answer: "Our calculations use Swiss Ephemeris data, the gold standard for astronomical accuracy. The astrological interpretations are based on traditional and modern astrological principles, refined through years of practice."
+    question: "How accurate are the astrological calculations?",
+    answer: "Our calculations use Swiss Ephemeris data, the gold standard for astronomical accuracy used by professional astrologers worldwide. The API provides precise planetary positions and aspects, ensuring your application delivers reliable astrological insights."
   },
   {
-    question: "Which report should I start with?",
-    answer: "For beginners, we recommend the Essence Report to understand your core personality, or the Sync Report if you're curious about relationships. The Planetary Positions report is perfect if you need raw data for your own analysis."
+    question: "Which API endpoint should developers start with?",
+    answer: "For most applications, we recommend starting with Planetary Positions for basic chart data, or the Essence Report for personality insights. The Sync Report is ideal if your application focuses on relationships or compatibility features."
   },
   {
-    question: "Can I get multiple reports?",
-    answer: "Absolutely! Each report focuses on different life areas. Many users combine the Essence Report with Flow or Monthly reports for comprehensive guidance."
+    question: "Can I integrate multiple report types into my application?",
+    answer: "Absolutely! Each API endpoint serves different use cases. Many businesses combine multiple endpoints - for example, using Essence Reports for user profiles alongside Flow Reports for daily guidance features, creating comprehensive astrological experiences."
   },
   {
-    question: "How is this different from free horoscopes?",
-    answer: "Generic horoscopes are based only on your sun sign. Our reports use your complete birth data (date, time, location) to create personalized insights specific to your unique astrological makeup."
+    question: "How is this different from basic horoscope APIs?",
+    answer: "Generic horoscope APIs provide only sun-sign generalizations. Our API uses complete birth data (date, time, location) to generate personalized insights specific to each user's unique astrological profile, delivering much higher engagement and user satisfaction."
   }
 ];
 
@@ -337,15 +337,15 @@ const Pricing = () => {
       {/* CTA Section */}
       <section className="bg-primary py-16 text-center text-white">
         <h2 className="mb-6 text-3xl font-bold">
-          Ready to discover your cosmic truth?
+          Ready to enhance your application with astrological insights?
         </h2>
         <p className="mx-auto mb-8 max-w-2xl text-xl">
-          Start with any insight that calls to you. No subscriptions, no commitments — 
-          just profound wisdom when you need it.
+          Start integrating powerful astrological data into your business application. 
+          No subscriptions, no commitments — just precise insights when you need them.
         </p>
         <Link to={user ? "/dashboard" : "/login"}>
           <Button className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100">
-            {user ? "Get Your First Insight" : "Start Exploring"}
+            {user ? "Get API Access" : "Start Building"}
           </Button>
         </Link>
       </section>
