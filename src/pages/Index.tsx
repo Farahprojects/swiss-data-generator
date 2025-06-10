@@ -54,7 +54,7 @@ const appFeatures: AppFeature[] = [
 
 // Animation helpers --------------------------------------------------------
 const fadeUp = {
-  hidden: { opacity: 0, y: 40 },
+  hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
@@ -133,10 +133,9 @@ const Index = () => {
         {/* Stats */}
         <section className="bg-white py-12">
           <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={fadeUp}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6, ease: "easeOut" }}
             className="container mx-auto px-4"
           >
             <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 md:flex-row md:justify-between">
@@ -160,10 +159,9 @@ const Index = () => {
         <section className="py-20">
           <div className="container mx-auto px-4">
             <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.6 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
               className="mx-auto mb-16 max-w-3xl text-center"
             >
               <h2 className="mb-4 text-3xl font-bold md:text-4xl">
@@ -178,10 +176,9 @@ const Index = () => {
               {appFeatures.map((feature, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 60 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.8, delay: i * 0.2 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.0 + (i * 0.2), duration: 0.6, ease: "easeOut" }}
                   className={`grid gap-12 items-center lg:grid-cols-2 ${
                     i % 2 === 1 ? 'lg:grid-flow-col-dense' : ''
                   }`}
@@ -238,10 +235,9 @@ const Index = () => {
           
           <div className="relative container mx-auto px-4 text-center">
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.8 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.8, duration: 0.6, ease: "easeOut" }}
               className="max-w-3xl mx-auto"
             >
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
@@ -254,9 +250,8 @@ const Index = () => {
               
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 2.0, duration: 0.6, ease: "easeOut" }}
               >
                 <Link to="/dashboard">
                   <Button 
