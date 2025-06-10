@@ -29,6 +29,7 @@ const Features = () => {
       description: "Get started in seconds with our simple registration process. No complex setup required.",
       icon: UserPlus,
       features: ["Instant account creation", "No credit card required", "Quick onboarding"],
+      imageUrl: null,
     },
     {
       step: "02", 
@@ -37,6 +38,7 @@ const Features = () => {
       icon: Users,
       features: ["Client profiles & notes", "Progress tracking", "Session history"],
       free: true,
+      imageUrl: "https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/feature-images/client-management.png",
     },
     {
       step: "03",
@@ -45,6 +47,7 @@ const Features = () => {
       icon: MessageSquare,
       features: ["Rich text editing", "Voice-to-text", "Session notes"],
       free: true,
+      imageUrl: null,
     },
     {
       step: "04",
@@ -53,6 +56,7 @@ const Features = () => {
       icon: Zap,
       features: ["AI-powered analysis", "Breakthrough detection", "Professional reports"],
       premium: true,
+      imageUrl: null,
     },
   ];
 
@@ -159,9 +163,17 @@ const Features = () => {
                   {/* Visual */}
                   <div className={`relative ${index % 2 === 1 ? 'lg:col-start-1' : ''}`}>
                     <div className="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-br from-primary/5 to-primary/10 p-8 h-80">
-                      <div className="flex items-center justify-center h-full">
-                        <step.icon className="h-24 w-24 text-primary/30" />
-                      </div>
+                      {step.imageUrl ? (
+                        <img 
+                          src={step.imageUrl} 
+                          alt={step.title}
+                          className="w-full h-full object-cover rounded-2xl"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <step.icon className="h-24 w-24 text-primary/30" />
+                        </div>
+                      )}
                       <div className="absolute top-4 right-4 text-6xl font-bold text-primary/10">
                         {step.step}
                       </div>
