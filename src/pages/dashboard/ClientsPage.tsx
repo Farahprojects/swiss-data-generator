@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,12 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Search, Calendar, Grid, List, MoreHorizontal, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Search, Calendar, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import ClientForm from '@/components/clients/ClientForm';
+import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
+import GenerateInsightModal from '@/components/clients/GenerateInsightModal';
+import ClientReportModal from '@/components/clients/ClientReportModal';
+import EditClientForm from '@/components/clients/EditClientForm';
+import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 
 type ViewMode = 'grid' | 'list';
 type SortField = 'full_name' | 'email' | 'birth_date' | 'birth_location' | 'created_at';
@@ -24,6 +28,11 @@ const ClientsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
+  const [showJournalModal, setShowJournalModal] = useState(false);
+  const [showInsightModal, setShowInsightModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -56,6 +65,12 @@ const ClientsPage = () => {
     loadClients();
   };
 
+  const handleClientUpdated = () => {
+    loadClients();
+    setShowEditModal(false);
+    setSelectedClient(null);
+  };
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -68,6 +83,65 @@ const ClientsPage = () => {
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
+  };
+
+  // Action handlers
+  const handleCreateJournal = (client: Client) => {
+    setSelectedClient(client);
+    setShowJournalModal(true);
+  };
+
+  const handleGenerateInsight = (client: Client) => {
+    setSelectedClient(client);
+    setShowInsightModal(true);
+  };
+
+  const handleGenerateReport = (client: Client) => {
+    setSelectedClient(client);
+    setShowReportModal(true);
+  };
+
+  const handleEditClient = (client: Client) => {
+    setSelectedClient(client);
+    setShowEditModal(true);
+  };
+
+  const handleArchiveClient = async (client: Client) => {
+    if (window.confirm(`Are you sure you want to archive ${client.full_name}? This action cannot be undone.`)) {
+      try {
+        await clientsService.deleteClient(client.id);
+        toast({
+          title: "Client Archived",
+          description: `${client.full_name} has been archived successfully.`,
+        });
+        loadClients();
+      } catch (error) {
+        console.error('Error archiving client:', error);
+        toast({
+          title: "Error",
+          description: "Failed to archive client. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleJournalCreated = () => {
+    setShowJournalModal(false);
+    setSelectedClient(null);
+    loadClients();
+  };
+
+  const handleInsightGenerated = () => {
+    setShowInsightModal(false);
+    setSelectedClient(null);
+    loadClients();
+  };
+
+  const handleReportGenerated = () => {
+    setShowReportModal(false);
+    setSelectedClient(null);
+    loadClients();
   };
 
   const filteredAndSortedClients = useMemo(() => {
@@ -216,9 +290,14 @@ const ClientsPage = () => {
         {formatDate(client.created_at)}
       </TableCell>
       <TableCell>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
+        <ClientActionsDropdown
+          client={client}
+          onCreateJournal={handleCreateJournal}
+          onGenerateInsight={handleGenerateInsight}
+          onGenerateReport={handleGenerateReport}
+          onEditClient={handleEditClient}
+          onArchiveClient={handleArchiveClient}
+        />
       </TableCell>
     </TableRow>
   );
@@ -395,12 +474,44 @@ const ClientsPage = () => {
         </div>
       )}
 
-      {/* Client Form Modal */}
+      {/* Modals */}
       <ClientForm
         open={showNewClientModal}
         onOpenChange={setShowNewClientModal}
         onClientCreated={handleClientCreated}
       />
+
+      {selectedClient && (
+        <>
+          <CreateJournalEntryForm
+            open={showJournalModal}
+            onOpenChange={setShowJournalModal}
+            client={selectedClient}
+            onJournalCreated={handleJournalCreated}
+          />
+
+          <GenerateInsightModal
+            open={showInsightModal}
+            onOpenChange={setShowInsightModal}
+            client={selectedClient}
+            onInsightGenerated={handleInsightGenerated}
+          />
+
+          <ClientReportModal
+            open={showReportModal}
+            onOpenChange={setShowReportModal}
+            client={selectedClient}
+            onReportGenerated={handleReportGenerated}
+          />
+
+          <EditClientForm
+            open={showEditModal}
+            onOpenChange={setShowEditModal}
+            client={selectedClient}
+            onClientUpdated={handleClientUpdated}
+          />
+        </>
+      )}
     </div>
   );
 };
