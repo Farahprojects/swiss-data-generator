@@ -251,5 +251,3 @@ const Pricing = () => {
 };
 
 export default Pricing;
-
-</edits_to_apply>
