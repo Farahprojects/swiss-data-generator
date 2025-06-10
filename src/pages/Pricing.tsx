@@ -129,7 +129,7 @@ const Pricing = () => {
 
       <main className="flex-grow">
         <section className="container mx-auto py-20 px-4">
-          <section className="rounded-xl bg-gray-50 py-16">
+          <section className="py-16">
             <div className="container mx-auto px-4">
               <h2 className="mb-4 text-center text-4xl font-bold text-primary">
                 Deep Insights to Unlock the Subconscious
@@ -251,3 +251,5 @@ const Pricing = () => {
 };
 
 export default Pricing;
+
+</edits_to_apply>
