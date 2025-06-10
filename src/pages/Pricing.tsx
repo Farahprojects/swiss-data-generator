@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Check, Loader2 } from "lucide-react";
-import { plans, faqs } from "@/utils/pricing";
+import { faqs } from "@/utils/pricing";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -20,72 +20,6 @@ type PriceItem = {
   report_tier: string | null;
   endpoint: string | null;
   unit_price_usd: number;
-};
-
-const PricingPlanCard = ({
-  name,
-  price,
-  description,
-  features,
-  highlight = false,
-  icon,
-  onSubscribe,
-  isLoading = false,
-}: {
-  name: React.ReactNode;
-  price: string;
-  description: string;
-  features: string[];
-  highlight?: boolean;
-  icon?: React.ReactNode;
-  onSubscribe: () => void;
-  isLoading?: boolean;
-}) => {
-  return (
-    <div
-      className={`flex h-full flex-col rounded-xl overflow-hidden border-2 ${
-        highlight ? "border-primary" : "border-gray-100"
-      } bg-white shadow-sm transition-shadow hover:shadow-md`}
-    >
-      <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
-      <div className="p-6">
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            {icon && <span className="text-2xl text-primary">{icon}</span>}
-            <h3 className="text-2xl font-bold text-gray-900">{name}</h3>
-          </div>
-          <p className="text-gray-600">{description}</p>
-          <p className="text-4xl font-bold text-primary">{price}</p>
-        </div>
-
-        <div className="mt-6 flex-grow space-y-3">
-          {features.map((f, i) => (
-            <div key={i} className="flex items-start gap-2 text-gray-700">
-              <Check className="h-5 w-5 shrink-0 text-primary" />
-              <span>{f}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8">
-          <Button 
-            className="w-full bg-primary py-6 text-lg font-medium hover:bg-primary/90"
-            onClick={onSubscribe}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              "Start Free Trial"
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 const FAQSection = ({ items }: { items: { question: string; answer: string }[] }) => {
@@ -120,7 +54,6 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
 
 const Pricing = () => {
   const { user } = useAuth();
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [prices, setPrices] = useState<PriceItem[]>([]);
   const [pricesLoading, setPricesLoading] = useState(true);
   const [pricesError, setPricesError] = useState<string | null>(null);
@@ -207,63 +140,6 @@ const Pricing = () => {
     }
   };
 
-  const handleSubscribe = async (planType: string) => {
-    try {
-      setLoadingPlan(planType);
-      
-      if (!user) {
-        // If user is not logged in, redirect to login
-        window.location.href = `/login?redirect=${encodeURIComponent('/pricing')}&plan=${planType}`;
-        return;
-      }
-      
-      // Store current path for return after Stripe checkout
-      storeStripeReturnPath(window.location.pathname);
-      
-      // Get price information based on plan type
-      let priceId = '';
-      switch(planType.toLowerCase()) {
-        case 'starter':
-          priceId = 'price_starter123'; // Replace with your actual price ID
-          break;
-        case 'growth':
-          priceId = 'price_growth123'; // Replace with your actual price ID
-          break;
-        case 'professional':
-          priceId = 'price_pro123'; // Replace with your actual price ID
-          break;
-        default:
-          priceId = 'price_starter123'; // Default price ID
-      }
-      
-      // Use the create-checkout edge function directly
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          mode: "subscription",
-          priceId: priceId,
-          successUrl: window.location.origin + '/payment-return?status=success',
-          cancelUrl: window.location.origin + '/payment-return?status=cancelled'
-        },
-      });
-      
-      if (error || !data?.url) {
-        toast.error(`Could not create checkout session for ${planType} plan`);
-        console.error("Checkout error:", error || "No URL returned");
-        return;
-      }
-      
-      console.log(`Created checkout for ${planType} plan:`, data);
-      
-      // Redirect to the Stripe Checkout URL
-      window.location.href = data.url;
-    } catch (err) {
-      console.error("Failed to start subscription:", err);
-      toast.error("There was a problem starting your subscription. Please try again.");
-    } finally {
-      setLoadingPlan(null);
-    }
-  };
-
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -281,18 +157,7 @@ const Pricing = () => {
 
       <main className="flex-grow">
         <section className="container mx-auto -mt-10 py-20 px-4">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {plans.map((p) => (
-              <PricingPlanCard 
-                key={p.name.toString()} 
-                {...p} 
-                onSubscribe={() => handleSubscribe(typeof p.name === 'string' ? p.name : 'Starter')}
-                isLoading={loadingPlan === (typeof p.name === 'string' ? p.name : 'Starter')}
-              />
-            ))}
-          </div>
-
-          <section className="mt-20 rounded-xl bg-gray-50 py-16">
+          <section className="rounded-xl bg-gray-50 py-16">
             <div className="container mx-auto px-4">
               <h2 className="mb-4 text-center text-4xl font-bold text-primary">
                 API Pricing
@@ -400,22 +265,13 @@ const Pricing = () => {
           Ready to launch cosmic features?
         </h2>
         <p className="mx-auto mb-8 max-w-2xl text-xl">
-          Start your free 14-day trial now — no credit card required.
+          Start building with our API today — pay only for what you use.
         </p>
-        <Button 
-          className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100"
-          onClick={() => handleSubscribe('Starter')}
-          disabled={loadingPlan === 'Starter'}
-        >
-          {loadingPlan === 'Starter' ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            "Start Free Trial"
-          )}
-        </Button>
+        <Link to={user ? "/dashboard" : "/login"}>
+          <Button className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100">
+            {user ? "Go to Dashboard" : "Get Started"}
+          </Button>
+        </Link>
       </section>
 
       <Footer />
