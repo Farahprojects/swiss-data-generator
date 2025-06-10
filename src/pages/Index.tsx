@@ -1,3 +1,4 @@
+
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,21 +42,21 @@ const appFeatures: AppFeature[] = [
     title: "Client Management",
     description: "Comprehensive CRM system to track client progress, insights, and breakthrough moments.",
     Icon: Users,
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop",
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop",
     route: "/dashboard/clients",
   },
   {
     title: "Report Generation",
     description: "Automated psychological reports with deep insights and momentum tracking.",
     Icon: FileText,
-    image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=600&h=400&fit=crop",
+    image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=800&h=600&fit=crop",
     route: "/dashboard/reports",
   },
   {
     title: "Instant Insights",
     description: "AI-powered analysis that turns journal entries into breakthrough moments.",
     Icon: Zap,
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop",
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop",
     route: "/dashboard/insights",
   },
 ];
@@ -193,7 +194,7 @@ const Index = () => {
               </p>
             </motion.div>
 
-            <div className="grid gap-8 sm:grid-cols-1 lg:grid-cols-3">
+            <div className="grid gap-12 lg:grid-cols-3">
               {appFeatures.map((feature, i) => (
                 <motion.div
                   key={i}
@@ -202,25 +203,25 @@ const Index = () => {
                   whileInView="visible"
                   viewport={{ once: true, amount: 0.2 }}
                   variants={fadeUp}
-                  className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                  className="group relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-2"
                 >
-                  <div className="relative h-48 overflow-hidden">
+                  <div className="relative h-80 overflow-hidden">
                     <img 
                       src={feature.image} 
                       alt={feature.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                    <div className="absolute top-4 right-4 rounded-full bg-white/90 p-2">
-                      <feature.Icon className="h-6 w-6 text-primary" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+                    <div className="absolute top-6 right-6 rounded-full bg-white/95 backdrop-blur-sm p-3 shadow-lg">
+                      <feature.Icon className="h-7 w-7 text-primary" />
                     </div>
                   </div>
-                  <div className="p-6">
-                    <h3 className="mb-2 text-xl font-semibold">{feature.title}</h3>
-                    <p className="text-sm text-gray-600 mb-4">{feature.description}</p>
-                    <Link to={feature.route} className="inline-flex items-center text-primary hover:text-primary-hover transition-colors">
-                      <span className="text-sm font-medium">Explore Feature</span>
-                      <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-8">
+                    <h3 className="mb-3 text-2xl font-bold">{feature.title}</h3>
+                    <p className="text-gray-600 mb-6 leading-relaxed">{feature.description}</p>
+                    <Link to={feature.route} className="inline-flex items-center text-primary hover:text-primary-hover transition-colors font-semibold">
+                      <span>Explore Feature</span>
+                      <svg className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </Link>
