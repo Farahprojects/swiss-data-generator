@@ -1,4 +1,5 @@
 
+
 // deno-lint-ignore-file no-explicit-any email setup 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -154,11 +155,11 @@ serve(async (req) => {
       }
     });
 
-    // Call our send-email function to send the email with a timeout
-    logMessage("Calling send-email function", { level: 'info', data: { recipientEmail } });
+    // Call our verification-emailer function to send the email with a timeout
+    logMessage("Calling verification-emailer function", { level: 'info', data: { recipientEmail } });
     
     const emailPromise = fetch(
-      `${supabaseUrl}/functions/v1/send-email`,
+      `${supabaseUrl}/functions/v1/verification-emailer`,
       {
         method: "POST",
         headers: {
@@ -226,3 +227,4 @@ serve(async (req) => {
     );
   }
 });
+

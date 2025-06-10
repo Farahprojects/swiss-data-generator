@@ -1,4 +1,5 @@
 
+
 // deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -38,9 +39,8 @@ serve(async (req) => {
 
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const smtpEndpoint = Deno.env.get("THERIA_SMTP_ENDPOINT");
 
-  if (!url || !key || !smtpEndpoint) {
+  if (!url || !key) {
     return respond(500, { error: "Missing environment variables" });
   }
 
@@ -93,22 +93,22 @@ serve(async (req) => {
     .replace(/\{\{\s*\.Link\s*\}\}/g, tokenLink)
     .replace(/\{\{\s*\.OTP\s*\}\}/g, emailOtp);
 
-  const send = await fetch(smtpEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  // Use the verification-emailer function instead of direct SMTP call
+  const { error: emailError } = await supabase.functions.invoke('verification-emailer', {
+    body: {
       to: email,
       subject: templateData.subject,
       html,
       from: "Theria Astro <no-reply@theraiastro.com>",
-    }),
+    }
   });
 
-  if (!send.ok) {
-    const errTxt = await send.text();
-    return respond(500, { error: "Email sending failed", details: errTxt });
+  if (emailError) {
+    log("Email sending failed:", emailError.message);
+    return respond(500, { error: "Email sending failed", details: emailError.message });
   }
 
   log(`✔ Sent password reset to ${email}`);
   return respond(200, { status: "sent", template_type: "password_reset" });
 });
+
