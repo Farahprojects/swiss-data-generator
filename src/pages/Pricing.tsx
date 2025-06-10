@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -446,5 +447,3 @@ const Pricing = () => {
 };
 
 export default Pricing;
-
-```
