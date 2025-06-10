@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -161,22 +162,22 @@ const Features = () => {
 
                   {/* Visual */}
                   <div className={`relative ${index % 2 === 1 ? 'lg:col-start-1' : ''}`}>
-                    <div className="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-br from-primary/5 to-primary/10 p-8 h-80">
-                      {step.imageUrl ? (
-                        <img 
-                          src={step.imageUrl} 
-                          alt={step.title}
-                          className="w-full h-full object-cover rounded-2xl"
-                        />
-                      ) : (
+                    {step.imageUrl ? (
+                      <img 
+                        src={step.imageUrl} 
+                        alt={step.title}
+                        className="w-full h-80 object-cover rounded-3xl shadow-2xl"
+                      />
+                    ) : (
+                      <div className="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-br from-primary/5 to-primary/10 p-8 h-80">
                         <div className="flex items-center justify-center h-full">
                           <step.icon className="h-24 w-24 text-primary/30" />
                         </div>
-                      )}
-                      <div className="absolute top-4 right-4 text-6xl font-bold text-primary/10">
-                        {step.step}
+                        <div className="absolute top-4 right-4 text-6xl font-bold text-primary/10">
+                          {step.step}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </motion.div>
               ))}
