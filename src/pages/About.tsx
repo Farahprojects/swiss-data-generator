@@ -31,14 +31,13 @@ const About = () => {
             <div className="max-w-3xl mx-auto backdrop-blur-sm bg-white/50 rounded-2xl p-8 shadow-lg border border-white/20">
               <h2 className="text-3xl font-bold mb-8 text-center text-primary">Our Mission</h2>
               <p className="text-lg mb-6 text-gray-700">
-                At Theraiapi, we're dedicated to providing the most precise astrological calculations
-                available. Built on the Swiss Ephemeris, we ensure every planetary position, aspect,
-                and transit is calculated with unmatched accuracy.
+                My mission is to restore clarity through rhythm.
               </p>
               <p className="text-lg mb-6 text-gray-700">
-                Our vision extends beyond just providing data – we're creating a platform that empowers
-                developers and businesses to build innovative applications that bring ancient astrological
-                wisdom into the modern digital age.
+                We believe that behind every breakthrough lies a pattern an energetic signature waiting to be decoded. By blending journaled experience with the deeper intelligence of cycles and resonance, we help people reconnect with their natural flow where insight, action, and timing align.
+              </p>
+              <p className="text-lg mb-6 text-gray-700">
+                At the heart of Therai is the belief that understanding yourself isn't about overthinking. it's about tuning in to the frequency that was already guiding you.
               </p>
             </div>
           </div>
@@ -101,7 +100,7 @@ const About = () => {
                 <div className="backdrop-blur-sm bg-white/50 rounded-xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all">
                   <h3 className="font-semibold text-xl mb-4 text-primary">Innovation</h3>
                   <p className="text-gray-700">
-                    We continuously work to improve our API and add new features that enable
+                    We continuously work to improve Therai and add new features that enable
                     innovative applications of astrological wisdom.
                   </p>
                 </div>
@@ -133,15 +132,10 @@ const About = () => {
             <p className="text-xl mb-8 max-w-2xl mx-auto">
               Start building your astrological applications with the most accurate data available.
             </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <div className="flex justify-center">
               <Link to="/signup">
                 <Button className="bg-white text-primary hover:bg-gray-100 text-lg px-8 py-6">
                   Get Started
-                </Button>
-              </Link>
-              <Link to="/contact">
-                <Button variant="outline" className="border-white text-white hover:bg-white/10 text-lg px-8 py-6">
-                  Contact Us
                 </Button>
               </Link>
             </div>
