@@ -582,6 +582,27 @@ export type Database = {
           },
         ]
       }
+      landing_page_config: {
+        Row: {
+          created_at: string
+          feature_images: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          feature_images?: Json
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          feature_images?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       legal_documents: {
         Row: {
           content: string

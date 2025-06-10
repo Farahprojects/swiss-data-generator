@@ -1,13 +1,6 @@
-
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Star as StarIcon,
-  Moon,
-  Globe,
-  HeartHandshake,
-  Clock3,
-  CalendarRange,
   Users,
   MessageSquare,
   BarChart3,
@@ -19,6 +12,7 @@ import { motion } from "framer-motion";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLandingPageImages } from "@/hooks/useLandingPageImages";
 
 /**
  * Landing / Index page – 2025‑04‑26 refresh
@@ -33,7 +27,6 @@ interface AppFeature {
   title: string;
   description: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  image: string;
   route: string;
 }
 
@@ -42,21 +35,18 @@ const appFeatures: AppFeature[] = [
     title: "Client Management",
     description: "Comprehensive CRM system to track client progress, insights, and breakthrough moments.",
     Icon: Users,
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop",
     route: "/dashboard/clients",
   },
   {
     title: "Report Generation",
     description: "Automated psychological reports with deep insights and momentum tracking.",
     Icon: FileText,
-    image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=800&h=600&fit=crop",
     route: "/dashboard/reports",
   },
   {
     title: "Instant Insights",
     description: "AI-powered analysis that turns journal entries into breakthrough moments.",
     Icon: Zap,
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop",
     route: "/dashboard/insights",
   },
 ];
@@ -73,11 +63,18 @@ const fadeUp = {
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { data: imageConfig } = useLandingPageImages();
 
   // Redirect authenticated users to dashboard
   if (!loading && user) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  // Get image for feature by index, with fallback to default
+  const getFeatureImage = (index: number): string => {
+    return imageConfig?.feature_images?.[index.toString()] || 
+           `https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop`;
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
@@ -192,7 +189,7 @@ const Index = () => {
                     <div className={`relative group ${i % 2 === 1 ? 'lg:col-start-2' : ''}`}>
                       <div className="relative overflow-hidden rounded-3xl shadow-2xl">
                         <img 
-                          src={feature.image} 
+                          src={getFeatureImage(i)} 
                           alt={feature.title}
                           className="w-full h-[280px] lg:h-[320px] object-cover transition-transform duration-700 group-hover:scale-105"
                         />
