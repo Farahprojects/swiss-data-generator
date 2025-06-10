@@ -61,8 +61,6 @@ const appFeatures: AppFeature[] = [
   },
 ];
 
-const clients = ["AstroApp", "MoonTracker", "ZodiacTech", "StarGuide", "CosmicSoft"];
-
 // Animation helpers --------------------------------------------------------
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -160,22 +158,6 @@ const Index = () => {
           </motion.div>
         </section>
 
-        {/* Client strip */}
-        <section className="bg-gray-50 py-10">
-          <div className="container mx-auto px-4">
-            <p className="mb-6 text-center text-sm font-semibold tracking-wide text-gray-500">
-              Trusted by innovators&nbsp;→
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-10 opacity-80">
-              {clients.map((client, i) => (
-                <span key={i} className="text-lg font-medium text-gray-400">
-                  {client}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* App Features Showcase */}
         <section className="py-20">
           <div className="container mx-auto px-4">
@@ -212,19 +194,21 @@ const Index = () => {
                         <img 
                           src={feature.image} 
                           alt={feature.title}
-                          className="w-full h-[320px] lg:h-[380px] object-cover transition-transform duration-700 group-hover:scale-105"
+                          className="w-full h-[280px] lg:h-[320px] object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-                        <div className="absolute top-6 right-6 rounded-full bg-white/95 backdrop-blur-sm p-4 shadow-lg">
-                          <feature.Icon className="h-8 w-8 text-primary" />
-                        </div>
                       </div>
                     </div>
 
                     {/* Content */}
                     <div className={`space-y-6 ${i % 2 === 1 ? 'lg:col-start-1' : ''}`}>
                       <div className="space-y-4">
-                        <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">{feature.title}</h3>
+                        <div className="flex items-center gap-4">
+                          <div className="rounded-full bg-primary/10 p-3">
+                            <feature.Icon className="h-8 w-8 text-primary" />
+                          </div>
+                          <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">{feature.title}</h3>
+                        </div>
                         <p className="text-lg text-gray-600 leading-relaxed">{feature.description}</p>
                       </div>
                       
@@ -243,7 +227,20 @@ const Index = () => {
                   {/* Visual Disruption */}
                   {i < appFeatures.length - 1 && (
                     <div className="mt-20 flex justify-center">
-                      <div className="w-32 h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent rounded-full"></div>
+                      <div className="relative w-full max-w-2xl">
+                        <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                          <div className="bg-white border-2 border-primary/20 rounded-full p-4">
+                            <div className="w-3 h-3 bg-primary rounded-full"></div>
+                          </div>
+                        </div>
+                        <div className="absolute left-1/4 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                          <div className="w-2 h-2 bg-primary/40 rounded-full"></div>
+                        </div>
+                        <div className="absolute right-1/4 top-1/2 translate-x-1/2 -translate-y-1/2">
+                          <div className="w-2 h-2 bg-primary/40 rounded-full"></div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
