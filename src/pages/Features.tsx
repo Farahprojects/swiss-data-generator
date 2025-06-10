@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,7 +37,7 @@ const Features = () => {
       icon: Users,
       features: ["Client profiles & notes", "Progress tracking", "Session history"],
       free: true,
-      imageUrl: "https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/feature-images/client-management.png",
+      imageUrl: "https://auth.theraiastro.com/storage/v1/object/public/feature-images/Imagine2/Screenshot%202025-06-10%20at%206.57.31%20PM.png",
     },
     {
       step: "03",
