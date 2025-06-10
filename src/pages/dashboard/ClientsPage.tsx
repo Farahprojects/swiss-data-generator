@@ -1,20 +1,25 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Search, Calendar } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Search, Calendar, Grid, List, MoreHorizontal } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import ClientForm from '@/components/clients/ClientForm';
 
+type ViewMode = 'grid' | 'list';
+
 const ClientsPage = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -102,15 +107,49 @@ const ClientsPage = () => {
     </Card>
   );
 
+  const ClientTableRow = ({ client }: { client: Client }) => (
+    <TableRow className="hover:bg-muted/50 cursor-pointer">
+      <TableCell className="font-medium">
+        <Link to={`/dashboard/clients/${client.id}`} className="flex items-center gap-3 hover:text-primary">
+          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-xs flex-shrink-0">
+            {client.avatar_url ? (
+              <img src={client.avatar_url} alt={client.full_name} className="w-8 h-8 rounded-full object-cover" />
+            ) : (
+              client.full_name.split(' ').map(n => n[0]).join('')
+            )}
+          </div>
+          <span>{client.full_name}</span>
+        </Link>
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {client.email || '-'}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {client.birth_date ? formatDate(client.birth_date) : '-'}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {client.birth_location || '-'}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {formatDate(client.created_at)}
+      </TableCell>
+      <TableCell>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+
   if (loading) {
     return <TheraLoader message="Loading clients..." size="lg" />;
   }
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto">
-      {/* Improved Header Section */}
+      {/* Header Section */}
       <div className="mt-8 space-y-4">
-        {/* Title without Count */}
+        {/* Title */}
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">Clients</h1>
         </div>
@@ -118,7 +157,7 @@ const ClientsPage = () => {
         {/* Subtitle */}
         <p className="text-muted-foreground -mt-1">Manage your client relationships and their journeys</p>
         
-        {/* Controls Row - Search and Button */}
+        {/* Controls Row - Search, View Toggle and Button */}
         <div className="flex items-center gap-3 max-w-lg">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -129,6 +168,27 @@ const ClientsPage = () => {
               className="pl-10"
             />
           </div>
+          
+          {/* View Toggle */}
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="rounded-r-none"
+            >
+              <Grid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="rounded-l-none"
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
+          
           <Button 
             onClick={() => setShowNewClientModal(true)}
             className="flex items-center gap-2 flex-shrink-0"
@@ -146,12 +206,36 @@ const ClientsPage = () => {
         )}
       </div>
 
-      {/* Clients Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {filteredClients.map(client => (
-          <ClientCard key={client.id} client={client} />
-        ))}
-      </div>
+      {/* Content based on view mode */}
+      {viewMode === 'grid' ? (
+        /* Clients Grid */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {filteredClients.map(client => (
+            <ClientCard key={client.id} client={client} />
+          ))}
+        </div>
+      ) : (
+        /* Clients Table */
+        <div className="bg-background border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="font-semibold">🧠 Name</TableHead>
+                <TableHead className="font-semibold">📧 Email</TableHead>
+                <TableHead className="font-semibold">🗓️ DOB</TableHead>
+                <TableHead className="font-semibold">🌍 Location</TableHead>
+                <TableHead className="font-semibold">🔮 Last Insight</TableHead>
+                <TableHead className="font-semibold">⚡ Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredClients.map(client => (
+                <ClientTableRow key={client.id} client={client} />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Empty State */}
       {filteredClients.length === 0 && !loading && (
