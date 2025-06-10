@@ -1,3 +1,4 @@
+
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -173,90 +174,55 @@ const Index = () => {
               </p>
             </motion.div>
 
-            <div className="space-y-32">
+            <div className="space-y-20">
               {appFeatures.map((feature, i) => (
-                <div key={i}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 60 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.3 }}
-                    transition={{ duration: 0.8, delay: i * 0.2 }}
-                    className={`grid gap-12 items-center lg:grid-cols-2 ${
-                      i % 2 === 1 ? 'lg:grid-flow-col-dense' : ''
-                    }`}
-                  >
-                    {/* Image */}
-                    <div className={`relative group ${i % 2 === 1 ? 'lg:col-start-2' : ''}`}>
-                      <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-                        <img 
-                          src={getFeatureImage(i)} 
-                          alt={feature.title}
-                          className="w-full h-[280px] lg:h-[320px] object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-                      </div>
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 60 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.8, delay: i * 0.2 }}
+                  className={`grid gap-12 items-center lg:grid-cols-2 ${
+                    i % 2 === 1 ? 'lg:grid-flow-col-dense' : ''
+                  }`}
+                >
+                  {/* Image */}
+                  <div className={`relative group ${i % 2 === 1 ? 'lg:col-start-2' : ''}`}>
+                    <div className="relative overflow-hidden rounded-3xl shadow-2xl">
+                      <img 
+                        src={getFeatureImage(i)} 
+                        alt={feature.title}
+                        className="w-full h-[280px] lg:h-[320px] object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
                     </div>
+                  </div>
 
-                    {/* Content */}
-                    <div className={`space-y-6 ${i % 2 === 1 ? 'lg:col-start-1' : ''}`}>
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-4">
-                          <div className="rounded-full bg-primary/10 p-3">
-                            <feature.Icon className="h-8 w-8 text-primary" />
-                          </div>
-                          <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">{feature.title}</h3>
+                  {/* Content */}
+                  <div className={`space-y-6 ${i % 2 === 1 ? 'lg:col-start-1' : ''}`}>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <div className="rounded-full bg-primary/10 p-3">
+                          <feature.Icon className="h-8 w-8 text-primary" />
                         </div>
-                        <p className="text-lg text-gray-600 leading-relaxed">{feature.description}</p>
+                        <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">{feature.title}</h3>
                       </div>
-                      
-                      <Link 
-                        to={feature.route} 
-                        className="inline-flex items-center gap-3 text-primary hover:text-primary-hover transition-colors font-semibold text-lg group"
-                      >
-                        <span>Explore Feature</span>
-                        <svg className="h-6 w-6 transition-transform group-hover:translate-x-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
+                      <p className="text-lg text-gray-600 leading-relaxed">{feature.description}</p>
                     </div>
-                  </motion.div>
-                  
-                  {/* Visual Disruption */}
-                  {i < appFeatures.length - 1 && (
-                    <div className="mt-20 flex justify-center">
-                      <div className="relative w-full max-w-2xl">
-                        <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                          <div className="bg-white border-2 border-primary/20 rounded-full p-4">
-                            <div className="w-3 h-3 bg-primary rounded-full"></div>
-                          </div>
-                        </div>
-                        <div className="absolute left-1/4 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                          <div className="w-2 h-2 bg-primary/40 rounded-full"></div>
-                        </div>
-                        <div className="absolute right-1/4 top-1/2 translate-x-1/2 -translate-y-1/2">
-                          <div className="w-2 h-2 bg-primary/40 rounded-full"></div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    
+                    <Link 
+                      to={feature.route} 
+                      className="inline-flex items-center gap-3 text-primary hover:text-primary-hover transition-colors font-semibold text-lg group"
+                    >
+                      <span>Explore Feature</span>
+                      <svg className="h-6 w-6 transition-transform group-hover:translate-x-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                </motion.div>
               ))}
             </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.6 }}
-              className="mt-20 text-center"
-            >
-              <Link to="/dashboard">
-                <Button variant="outline" size="lg">
-                  Try the Full Platform
-                </Button>
-              </Link>
-            </motion.div>
           </div>
         </section>
 
