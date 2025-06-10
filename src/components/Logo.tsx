@@ -15,37 +15,18 @@ const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProp
   const homePath = user ? '/dashboard' : '/';
   
   const sizeClasses = {
-    sm: 'text-xl',
-    md: 'text-2xl',
-    lg: 'text-3xl',
+    sm: 'h-6',
+    md: 'h-8',
+    lg: 'h-10',
   };
 
   const logoElement = (
     <div className={cn('flex items-center', className)}>
-      <span 
-        className={cn(
-          'font-gt-sectra font-medium text-black tracking-wide', 
-          sizeClasses[size]
-        )}
-      >
-        Therai
-      </span>
-      <span 
-        className={cn(
-          'font-gt-sectra font-medium text-black mr-0.5', 
-          sizeClasses[size]
-        )}
-      >
-        .
-      </span>
-      <span 
-        className={cn(
-          'font-sans font-medium text-[#7B61FF]', 
-          sizeClasses[size]
-        )}
-      >
-        Astro
-      </span>
+      <img 
+        src="/lovable-uploads/2863844c-4cd8-4c50-baec-7935ff281e9c.png"
+        alt="Therai"
+        className={cn('object-contain', sizeClasses[size])}
+      />
     </div>
   );
 
