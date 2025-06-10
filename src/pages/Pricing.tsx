@@ -127,19 +127,8 @@ const Pricing = () => {
     <div className="flex min-h-screen flex-col">
       <Navbar />
 
-      <header className="py-20 text-center">
-        <h1 className="mb-6 text-4xl font-bold text-primary">
-          All The Cosmos in one API key
-        </h1>
-        <p className="mx-auto max-w-3xl text-xl text-gray-700">
-          Predict. Match. Innovate. Our Swiss-Ephemeris engine delivers every
-          astrological calculation through a single, developer-friendly endpoint.
-          Choose the usage tier that fits today and scale effortlessly tomorrow.
-        </p>
-      </header>
-
       <main className="flex-grow">
-        <section className="container mx-auto -mt-10 py-20 px-4">
+        <section className="container mx-auto py-20 px-4">
           <section className="rounded-xl bg-gray-50 py-16">
             <div className="container mx-auto px-4">
               <h2 className="mb-4 text-center text-4xl font-bold text-primary">
