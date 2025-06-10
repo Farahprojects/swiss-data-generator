@@ -194,34 +194,46 @@ const Index = () => {
               </p>
             </motion.div>
 
-            <div className="grid gap-12 lg:grid-cols-3">
+            <div className="space-y-24">
               {appFeatures.map((feature, i) => (
                 <motion.div
                   key={i}
-                  custom={i}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, amount: 0.2 }}
-                  variants={fadeUp}
-                  className="group relative overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-2"
+                  initial={{ opacity: 0, y: 60 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.8, delay: i * 0.2 }}
+                  className={`grid gap-12 items-center lg:grid-cols-2 ${
+                    i % 2 === 1 ? 'lg:grid-flow-col-dense' : ''
+                  }`}
                 >
-                  <div className="relative h-80 overflow-hidden">
-                    <img 
-                      src={feature.image} 
-                      alt={feature.title}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
-                    <div className="absolute top-6 right-6 rounded-full bg-white/95 backdrop-blur-sm p-3 shadow-lg">
-                      <feature.Icon className="h-7 w-7 text-primary" />
+                  {/* Image */}
+                  <div className={`relative group ${i % 2 === 1 ? 'lg:col-start-2' : ''}`}>
+                    <div className="relative overflow-hidden rounded-3xl shadow-2xl">
+                      <img 
+                        src={feature.image} 
+                        alt={feature.title}
+                        className="w-full h-[400px] lg:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                      <div className="absolute top-6 right-6 rounded-full bg-white/95 backdrop-blur-sm p-4 shadow-lg">
+                        <feature.Icon className="h-8 w-8 text-primary" />
+                      </div>
                     </div>
                   </div>
-                  <div className="p-8">
-                    <h3 className="mb-3 text-2xl font-bold">{feature.title}</h3>
-                    <p className="text-gray-600 mb-6 leading-relaxed">{feature.description}</p>
-                    <Link to={feature.route} className="inline-flex items-center text-primary hover:text-primary-hover transition-colors font-semibold">
+
+                  {/* Content */}
+                  <div className={`space-y-6 ${i % 2 === 1 ? 'lg:col-start-1' : ''}`}>
+                    <div className="space-y-4">
+                      <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">{feature.title}</h3>
+                      <p className="text-lg text-gray-600 leading-relaxed">{feature.description}</p>
+                    </div>
+                    
+                    <Link 
+                      to={feature.route} 
+                      className="inline-flex items-center gap-3 text-primary hover:text-primary-hover transition-colors font-semibold text-lg group"
+                    >
                       <span>Explore Feature</span>
-                      <svg className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-6 w-6 transition-transform group-hover:translate-x-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </Link>
@@ -235,7 +247,7 @@ const Index = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.6 }}
-              className="mt-16 text-center"
+              className="mt-20 text-center"
             >
               <Link to="/dashboard">
                 <Button variant="outline" size="lg">
