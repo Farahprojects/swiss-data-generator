@@ -15,9 +15,9 @@ const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProp
   const homePath = user ? '/dashboard' : '/';
   
   const sizeClasses = {
-    sm: 'h-12',
-    md: 'h-16', 
-    lg: 'h-20',
+    sm: 'h-6',
+    md: 'h-8',
+    lg: 'h-10',
   };
 
   const logoElement = (
