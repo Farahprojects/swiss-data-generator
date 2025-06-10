@@ -8,6 +8,12 @@ import {
   HeartHandshake,
   Clock3,
   CalendarRange,
+  Users,
+  MessageSquare,
+  BarChart3,
+  FileText,
+  Palette,
+  Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
@@ -23,44 +29,56 @@ import { useAuth } from "@/contexts/AuthContext";
  * ✦  Updated stats & logo strip for Therai
  */
 
-interface Feature {
+interface AppFeature {
   title: string;
   description: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  image: string;
+  route: string;
 }
 
-const features: Feature[] = [
+const appFeatures: AppFeature[] = [
   {
-    title: "Natal Charts",
-    description:
-      "Precise Western & Vedic natal calculations delivered in milliseconds.",
-    Icon: Globe,
+    title: "Client Management",
+    description: "Comprehensive CRM system to track client progress, insights, and breakthrough moments.",
+    Icon: Users,
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop",
+    route: "/dashboard/clients",
   },
   {
-    title: "Vedic Charts",
-    description:
-      "Divisional charts, dashas, yogas & strength scoring in one call.",
-    Icon: CalendarRange,
+    title: "Smart Messaging",
+    description: "AI-powered communication tools for deeper client engagement and automated insights.",
+    Icon: MessageSquare,
+    image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=600&h=400&fit=crop",
+    route: "/dashboard/messages",
   },
   {
-    title: "Transits",
-    description: "Real‑time planetary motion & ingress alerts, time‑zone ready.",
-    Icon: Clock3,
+    title: "Analytics Dashboard",
+    description: "Real-time insights and progress tracking with beautiful, actionable visualizations.",
+    Icon: BarChart3,
+    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=400&fit=crop",
+    route: "/dashboard",
   },
   {
-    title: "Synastry",
-    description: "Composite & inter‑aspect reports with instant compatibility scoring.",
-    Icon: HeartHandshake,
+    title: "Report Generation",
+    description: "Automated psychological reports with deep insights and momentum tracking.",
+    Icon: FileText,
+    image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=600&h=400&fit=crop",
+    route: "/dashboard/reports",
   },
   {
-    title: "Progressions",
-    description: "Secondary progressions & solar‑arc directions (NASA‑grade maths).",
-    Icon: StarIcon,
+    title: "Website Builder",
+    description: "Professional websites that showcase your practice and attract ideal clients.",
+    Icon: Palette,
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&h=400&fit=crop",
+    route: "/dashboard/website-builder",
   },
   {
-    title: "Moon Phases",
-    description: "Exact lunar phases, eclipses & void‑of‑course windows.",
-    Icon: Moon,
+    title: "Instant Insights",
+    description: "AI-powered analysis that turns journal entries into breakthrough moments.",
+    Icon: Zap,
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop",
+    route: "/dashboard/insights",
   },
 ];
 
@@ -90,7 +108,7 @@ const Index = () => {
 
       <main className="flex-grow overflow-hidden">
         {/* Hero */}
-        <section className="relative h-[90vh] w-full overflow-hidden bg-gradient-to-b from-primary/5 via-white to-white pt-20">
+        <section className="relative h-[90vh] w-full overflow-hidden bg-white pt-20">
           <div className="container relative z-10 mx-auto flex h-full flex-col items-center justify-center px-4 text-center">
             <div className="mx-auto max-w-4xl">
               <motion.h1
@@ -179,7 +197,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Features */}
+        {/* App Features Showcase */}
         <section className="py-20">
           <div className="container mx-auto px-4">
             <motion.div
@@ -190,16 +208,15 @@ const Index = () => {
               className="mx-auto mb-16 max-w-3xl text-center"
             >
               <h2 className="mb-4 text-3xl font-bold md:text-4xl">
-                Comprehensive Celestial Toolkit
+                See Therai in Action
               </h2>
               <p className="text-lg text-gray-600">
-                Mix and match endpoints to craft horoscopes, coaching dashboards
-                or crypto‑trading algos &mdash; all through one key.
+                Experience the complete toolkit that transforms how you understand and guide your clients toward breakthrough moments.
               </p>
             </motion.div>
 
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {features.map((feature, i) => (
+              {appFeatures.map((feature, i) => (
                 <motion.div
                   key={i}
                   custom={i}
@@ -207,11 +224,29 @@ const Index = () => {
                   whileInView="visible"
                   viewport={{ once: true, amount: 0.2 }}
                   variants={fadeUp}
-                  className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+                  className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
                 >
-                  <feature.Icon className="mb-4 h-8 w-8 text-primary" />
-                  <h3 className="mb-2 text-xl font-semibold">{feature.title}</h3>
-                  <p className="text-sm text-gray-600">{feature.description}</p>
+                  <div className="relative h-48 overflow-hidden">
+                    <img 
+                      src={feature.image} 
+                      alt={feature.title}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    <div className="absolute top-4 right-4 rounded-full bg-white/90 p-2">
+                      <feature.Icon className="h-6 w-6 text-primary" />
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <h3 className="mb-2 text-xl font-semibold">{feature.title}</h3>
+                    <p className="text-sm text-gray-600 mb-4">{feature.description}</p>
+                    <Link to={feature.route} className="inline-flex items-center text-primary hover:text-primary-hover transition-colors">
+                      <span className="text-sm font-medium">Explore Feature</span>
+                      <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
                 </motion.div>
               ))}
             </div>
@@ -223,9 +258,9 @@ const Index = () => {
               transition={{ duration: 0.6 }}
               className="mt-16 text-center"
             >
-              <Link to="/api-products">
+              <Link to="/dashboard">
                 <Button variant="outline" size="lg">
-                  Explore All Modules
+                  Try the Full Platform
                 </Button>
               </Link>
             </motion.div>
@@ -242,7 +277,7 @@ const Index = () => {
               transition={{ duration: 0.6 }}
               className="mb-6 text-3xl font-bold md:text-4xl"
             >
-              Bring next‑level astrology to your users today
+              Ready to transform your practice?
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -251,8 +286,7 @@ const Index = () => {
               transition={{ delay: 0.1, duration: 0.6 }}
               className="mx-auto mb-8 max-w-2xl text-xl opacity-90"
             >
-              Get a free key &mdash; no credit‑card required. Scale to millions of
-              calls when you're ready.
+              Join thousands of professionals who are already using Therai to create breakthrough moments with their clients.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -265,11 +299,11 @@ const Index = () => {
                 size="lg" 
                 className="bg-white text-primary hover:bg-gray-100"
               >
-                Claim Free Key
+                Start Free Trial
               </Button>
               <Link to="/contact">
                 <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
-                  Talk to Sales
+                  Schedule Demo
                 </Button>
               </Link>
             </motion.div>
