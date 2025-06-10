@@ -143,30 +143,32 @@ const Pricing = () => {
           <section className="rounded-xl bg-gray-50 py-16">
             <div className="container mx-auto px-4">
               <h2 className="mb-4 text-center text-4xl font-bold text-primary">
-                API Pricing
+                Deep Insights to Unlock the Subconscious
               </h2>
               <p className="mx-auto mb-12 max-w-3xl text-center text-lg text-gray-600">
-                Our transparent pricing ensures you only pay for what you use, with no hidden fees or charges.
+                Transform data into profound understanding with our astrological insights API. 
+                Access the hidden patterns that reveal personality depths, relationship dynamics, 
+                and life purpose through precise cosmic calculations.
               </p>
 
               <div className="mt-4 mb-8">
-                <h3 className="font-medium text-lg mb-2 text-center">All prices include:</h3>
+                <h3 className="font-medium text-lg mb-2 text-center">Every insight includes:</h3>
                 <ul className="grid gap-y-2 gap-x-6 sm:grid-cols-2 max-w-2xl mx-auto">
                   <li className="flex items-center gap-2">
                     <span className="text-primary">•</span>
-                    <span>Pay-as-you-go billing</span>
+                    <span>Subconscious pattern analysis</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-primary">•</span>
-                    <span>Direct API access</span>
+                    <span>Precision Swiss-Ephemeris data</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-primary">•</span>
-                    <span>Usage-based pricing</span>
+                    <span>Pay-per-insight pricing</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-primary">•</span>
-                    <span>No long-term commitments</span>
+                    <span>No subscriptions required</span>
                   </li>
                 </ul>
               </div>
@@ -242,10 +244,10 @@ const Pricing = () => {
 
       <section className="bg-primary py-16 text-center text-white">
         <h2 className="mb-6 text-3xl font-bold">
-          Ready to launch cosmic features?
+          Ready to unlock cosmic insights?
         </h2>
         <p className="mx-auto mb-8 max-w-2xl text-xl">
-          Start building with our API today — pay only for what you use.
+          Start revealing the hidden patterns that shape personality and destiny — pay only for the insights you generate.
         </p>
         <Link to={user ? "/dashboard" : "/login"}>
           <Button className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100">
