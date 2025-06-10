@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -26,7 +27,7 @@ const About = () => {
         </section>
 
         {/* Mission Section with White Background */}
-        <section className="py-24 bg-gradient-to-b from-accent to-background">
+        <section className="py-24 bg-white">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
               <h2 className="text-3xl font-bold mb-8 text-center text-primary">My mission is to restore clarity through rhythm.</h2>
@@ -121,17 +122,17 @@ const About = () => {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-gradient-to-r from-primary to-secondary text-white">
+        <section className="py-16 bg-white">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-6">
+            <h2 className="text-3xl font-bold mb-6 text-gray-900">
               Join us in revolutionizing astrology software
             </h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto">
+            <p className="text-xl mb-8 max-w-2xl mx-auto text-gray-700">
               Start your journey with the best astrological applications with the most accurate data available.
             </p>
             <div className="flex justify-center">
               <Link to="/signup">
-                <Button className="bg-white text-primary hover:bg-gray-100 text-lg px-8 py-6">
+                <Button className="bg-primary text-white hover:bg-primary/90 text-lg px-8 py-6">
                   Get Started
                 </Button>
               </Link>
