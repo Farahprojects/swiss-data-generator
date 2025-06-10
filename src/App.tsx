@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SettingsModalProvider } from "@/contexts/SettingsModalContext";
+import { SettingsModal } from "@/components/settings/SettingsModal";
 import NavigationStateProvider from "@/contexts/NavigationStateContext";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -55,6 +56,7 @@ function App() {
           <NavigationStateProvider>
             <AuthProvider>
               <SettingsModalProvider>
+                <SettingsModal />
                 <Toaster />
                 <Sonner />
                 <Routes>
