@@ -1,3 +1,4 @@
+
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,10 +17,10 @@ import { useAuth } from "@/contexts/AuthContext";
 /**
  * Landing / Index page – 2025‑04‑26 refresh
  * ------------------------------------------------------------------
- * ✦  Animated hero with subtle star‑field overlay
+ * ✦  Animated hero with clean background
  * ✦  Lucide icons (no more random emojis)
  * ✦  Framer‑motion fade‑ups for sections
- * ✦  Cleaner stat cards & logo strip
+ * ✦  Updated stats & logo strip for Therai
  */
 
 interface Feature {
@@ -90,12 +91,6 @@ const Index = () => {
       <main className="flex-grow overflow-hidden">
         {/* Hero */}
         <section className="relative h-[90vh] w-full overflow-hidden bg-gradient-to-b from-primary/5 via-white to-white pt-20">
-          {/* Enhanced radial glow behind the title */}
-          <div 
-            aria-hidden
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-gradient-to-r from-[#9b87f5]/20 to-[#D3E4FD]/20 blur-3xl opacity-70"
-          />
-
           <div className="container relative z-10 mx-auto flex h-full flex-col items-center justify-center px-4 text-center">
             <div className="mx-auto max-w-4xl">
               <motion.h1
@@ -138,15 +133,6 @@ const Index = () => {
               >
                 Free Insight
               </Button>
-              <Link to="/documentation">
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  className="transform transition duration-200 hover:scale-105 hover:bg-accent px-8 py-4 text-lg"
-                >
-                  View Docs
-                </Button>
-              </Link>
             </motion.div>
           </div>
         </section>
@@ -162,16 +148,16 @@ const Index = () => {
           >
             <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 md:flex-row md:justify-between">
               <div className="text-center">
-                <p className="text-3xl font-bold text-primary">99.99%+</p>
-                <p className="text-gray-600">Uptime SLA*</p>
+                <p className="text-3xl font-bold text-primary">95%+</p>
+                <p className="text-gray-600">Client breakthrough rate</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-primary">0.001″</p>
-                <p className="text-gray-600">Arc‑second precision</p>
+                <p className="text-3xl font-bold text-primary">15 min</p>
+                <p className="text-gray-600">Average session time</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-primary">10M+</p>
-                <p className="text-gray-600">Monthly calls served</p>
+                <p className="text-3xl font-bold text-primary">7 days</p>
+                <p className="text-gray-600">To see real momentum</p>
               </div>
             </div>
           </motion.div>
