@@ -60,6 +60,7 @@ function App() {
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<Index />} />
+                  <Route path="/features" element={<Features />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/legal" element={<Legal />} />
