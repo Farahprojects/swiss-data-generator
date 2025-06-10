@@ -23,7 +23,7 @@ const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProp
   const logoElement = (
     <div className={cn('flex items-center', className)}>
       <img 
-        src="/lovable-uploads/2863844c-4cd8-4c50-baec-7935ff281e9c.png"
+        src="/lovable-uploads/199b30cd-9776-433c-bd35-ba9230edd913.png"
         alt="Therai"
         className={cn('object-contain', sizeClasses[size])}
       />
