@@ -1,3 +1,4 @@
+
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -260,45 +261,50 @@ const Index = () => {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="bg-primary py-20 text-white">
-          <div className="container mx-auto px-4 text-center">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.6 }}
-              className="mb-6 text-3xl font-bold md:text-4xl"
-            >
-              Ready to transform your practice?
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ delay: 0.1, duration: 0.6 }}
-              className="mx-auto mb-8 max-w-2xl text-xl opacity-90"
-            >
-              Join thousands of professionals who are already using Therai to create breakthrough moments with their clients.
-            </motion.p>
+        {/* CTA - Redesigned */}
+        <section className="relative py-32 overflow-hidden">
+          {/* Background with gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-hover to-primary"></div>
+          
+          {/* Subtle pattern overlay */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full blur-3xl"></div>
+            <div className="absolute bottom-10 right-10 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+          </div>
+          
+          <div className="relative container mx-auto px-4 text-center">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="flex flex-col items-center justify-center gap-4 sm:flex-row"
+              transition={{ duration: 0.8 }}
+              className="max-w-4xl mx-auto"
             >
-              <Button 
-                size="lg" 
-                className="bg-white text-primary hover:bg-gray-100"
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                Ready to transform
+                <br />
+                <span className="text-white/90">your practice?</span>
+              </h2>
+              
+              <p className="text-xl md:text-2xl text-white/90 mb-12 max-w-2xl mx-auto leading-relaxed">
+                Join thousands of professionals creating breakthrough moments with their clients.
+              </p>
+              
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
               >
-                Start Free Trial
-              </Button>
-              <Link to="/contact">
-                <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
-                  Schedule Demo
-                </Button>
-              </Link>
+                <Link to="/dashboard">
+                  <Button 
+                    size="lg" 
+                    className="bg-white text-primary hover:bg-gray-50 text-lg px-12 py-6 rounded-full font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105"
+                  >
+                    Start Now
+                  </Button>
+                </Link>
+              </motion.div>
             </motion.div>
           </div>
         </section>
