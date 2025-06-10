@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -94,6 +93,7 @@ const UnifiedNavigation = () => {
             <div className="hidden md:flex items-center space-x-8">
               {!isLoggedIn && (
                 <>
+                  <Link to="/features" className="text-gray-700 hover:text-primary text-sm font-medium">Features</Link>
                   <Link to="/pricing" className="text-gray-700 hover:text-primary text-sm font-medium">Pricing</Link>
                   <Link to="/about" className="text-gray-700 hover:text-primary text-sm font-medium">About</Link>
                   <Link to="/contact" className="text-gray-700 hover:text-primary text-sm font-medium">Contact</Link>
@@ -189,6 +189,7 @@ const UnifiedNavigation = () => {
         {isMenuOpen && !isLoggedIn && (
           <div className="absolute top-full left-0 right-0 md:hidden bg-white border-t shadow-lg z-40">
             <div className="px-4 py-4 space-y-2">
+              <Link to="/features" className="block text-gray-700 hover:text-primary py-2">Features</Link>
               <Link to="/pricing" className="block text-gray-700 hover:text-primary py-2">Pricing</Link>
               <Link to="/about" className="block text-gray-700 hover:text-primary py-2">About</Link>
               <Link to="/contact" className="block text-gray-700 hover:text-primary py-2">Contact</Link>
@@ -229,3 +230,5 @@ const UnifiedNavigation = () => {
 };
 
 export default UnifiedNavigation;
+
+</edits_to_apply>

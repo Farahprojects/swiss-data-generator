@@ -11,6 +11,7 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Suspense, lazy } from "react";
 import Index from "./pages/Index";
+import Features from "./pages/Features";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Legal from "./pages/Legal";
