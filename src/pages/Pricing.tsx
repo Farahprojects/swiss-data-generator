@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Star, Users, TrendingUp } from "lucide-react";
 import { faqs } from "@/utils/pricing";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,11 +23,133 @@ type PriceItem = {
   unit_price_usd: number;
 };
 
+// Enhanced report data with descriptions and use cases
+const reportDetails: Record<string, {
+  title: string;
+  description: string;
+  useCase: string;
+  sampleInsight: string;
+  isPopular?: boolean;
+}> = {
+  'return': {
+    title: 'Solar/Lunar Return Report',
+    description: 'Yearly and monthly astrological forecasts based on planetary returns',
+    useCase: 'Perfect for life planning and understanding upcoming cycles',
+    sampleInsight: '"This solar return emphasizes career transformation with Jupiter in your 10th house..."',
+    isPopular: true
+  },
+  'positions': {
+    title: 'Planetary Positions',
+    description: 'Precise astronomical positions of all celestial bodies at any given time',
+    useCase: 'Essential for creating natal charts and astrological calculations',
+    sampleInsight: '"Sun at 15° Gemini, Moon at 3° Pisces, Mercury retrograde in Taurus..."'
+  },
+  'sync': {
+    title: 'Sync Report',
+    description: 'Relationship compatibility analysis between two people',
+    useCase: 'Understand romantic partnerships, friendships, and business relationships',
+    sampleInsight: '"Your Venus conjunct their Mars creates instant attraction and passion..."',
+    isPopular: true
+  },
+  'essence': {
+    title: 'Essence Report',
+    description: 'Deep personality analysis revealing core traits and motivations',
+    useCase: 'Self-discovery and understanding your fundamental nature',
+    sampleInsight: '"Your Scorpio Moon reveals a need for emotional depth and transformation..."'
+  },
+  'flow': {
+    title: 'Flow Report',
+    description: 'Current energy patterns and optimal timing for decisions',
+    useCase: 'Daily guidance and understanding present moment energies',
+    sampleInsight: '"Today\'s Mars trine Jupiter brings opportunities for bold action..."'
+  },
+  'mindset': {
+    title: 'Mindset Report',
+    description: 'Mental patterns, communication style, and learning preferences',
+    useCase: 'Improve how you think, learn, and communicate with others',
+    sampleInsight: '"Mercury in Virgo gives you analytical thinking and attention to detail..."'
+  },
+  'monthly': {
+    title: 'Monthly Report',
+    description: 'Detailed forecast for the upcoming month with key dates',
+    useCase: 'Monthly planning and understanding cyclical influences',
+    sampleInsight: '"Mid-month Venus transit brings relationship opportunities on the 15th..."'
+  },
+  'focus': {
+    title: 'Focus Report',
+    description: 'Life purpose, career direction, and key areas for growth',
+    useCase: 'Career guidance and understanding your life\'s mission',
+    sampleInsight: '"Your North Node in Capricorn points toward leadership and achievement..."'
+  }
+};
+
+const HowItWorksSection = () => {
+  const steps = [
+    {
+      icon: <Users className="w-8 h-8 text-primary" />,
+      title: "Choose Your Insight",
+      description: "Select the type of astrological report that matches your needs"
+    },
+    {
+      icon: <TrendingUp className="w-8 h-8 text-primary" />,
+      title: "Get Deep Analysis",
+      description: "Receive detailed, personalized insights based on precise calculations"
+    },
+    {
+      icon: <Star className="w-8 h-8 text-primary" />,
+      title: "Apply & Transform",
+      description: "Use the wisdom to make better decisions and understand yourself deeply"
+    }
+  ];
+
+  return (
+    <section className="py-16 bg-gray-50">
+      <div className="container mx-auto px-4">
+        <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">How It Works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          {steps.map((step, index) => (
+            <div key={index} className="text-center">
+              <div className="bg-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-md">
+                {step.icon}
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-900">{step.title}</h3>
+              <p className="text-gray-600">{step.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const enhancedFaqs = [
+  {
+    question: "What will I learn from these reports?",
+    answer: "Each report provides specific insights about different aspects of your life - from personality traits and relationship compatibility to optimal timing for decisions and life purpose guidance. You'll get practical wisdom you can immediately apply."
+  },
+  {
+    question: "How accurate are the insights?",
+    answer: "Our calculations use Swiss Ephemeris data, the gold standard for astronomical accuracy. The astrological interpretations are based on traditional and modern astrological principles, refined through years of practice."
+  },
+  {
+    question: "Which report should I start with?",
+    answer: "For beginners, we recommend the Essence Report to understand your core personality, or the Sync Report if you're curious about relationships. The Planetary Positions report is perfect if you need raw data for your own analysis."
+  },
+  {
+    question: "Can I get multiple reports?",
+    answer: "Absolutely! Each report focuses on different life areas. Many users combine the Essence Report with Flow or Monthly reports for comprehensive guidance."
+  },
+  {
+    question: "How is this different from free horoscopes?",
+    answer: "Generic horoscopes are based only on your sun sign. Our reports use your complete birth data (date, time, location) to create personalized insights specific to your unique astrological makeup."
+  }
+];
+
 const FAQSection = ({ items }: { items: { question: string; answer: string }[] }) => {
   return (
     <section className="py-20 bg-white">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-12 text-center">Frequently Asked Questions</h2>
+        <h2 className="text-3xl font-bold mb-12 text-center">Common Questions</h2>
         
         <div className="max-w-3xl mx-auto">
           <div className="space-y-6">
@@ -40,7 +163,7 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
           
           <div className="mt-12 text-center">
             <p className="text-gray-600 mb-6">
-              Have more questions about our API or pricing?
+              Still have questions about what you'll discover?
             </p>
             <Link to="/contact">
               <Button variant="outline">Contact Us</Button>
@@ -65,7 +188,7 @@ const Pricing = () => {
         const { data, error } = await supabase
           .from('price_list')
           .select('*')
-          .not('report_tier', 'is', null) // Only get items that have a report_tier (reports only)
+          .not('report_tier', 'is', null)
           .order('unit_price_usd', { ascending: true });
 
         if (error) {
@@ -84,41 +207,12 @@ const Pricing = () => {
     fetchPrices();
   }, []);
 
-  // Function to format report names to match dropdown list
-  const formatReportName = (name: string): string => {
-    const nameMap: Record<string, string> = {
-      'return': 'Solar/Lunar Return Report',
-      'positions': 'Planetary Positions',
-      'sync': 'Sync Report',
-      'essence': 'Essence Report',
-      'flow': 'Flow Report',
-      'mindset': 'Mindset Report',
-      'monthly': 'Monthly Report',
-      'focus': 'Focus Report'
-    };
-    
-    // If the name exists in our map, use the formatted version
-    if (nameMap[name.toLowerCase()]) {
-      return nameMap[name.toLowerCase()];
-    }
-    
-    // Otherwise, just replace underscores with spaces and capitalize
-    return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  // Format price to correctly display dollar amounts
   const formatPrice = (price: number): string => {
-    // If price is a whole dollar amount (e.g., 1, 5, 10)
     if (price >= 1 && price % 1 === 0) {
       return `$${price.toFixed(0)}`;
-    }
-    // For prices with cents like 0.05, show up to 2 decimal places (e.g., $0.05)
-    else if (price < 1) {
-      // Ensure we show 2 decimal places for cents but remove trailing zeros
+    } else if (price < 1) {
       return `$${price.toFixed(2).replace(/\.?0+$/, '')}`;
-    }
-    // For prices with dollars and cents (e.g., 1.50)
-    else {
+    } else {
       return `$${price.toFixed(2).replace(/\.?0+$/, '')}`;
     }
   };
@@ -129,43 +223,44 @@ const Pricing = () => {
 
       <main className="flex-grow">
         <section className="container mx-auto py-20 px-4">
+          {/* Hero Section */}
           <section className="py-16">
             <div className="container mx-auto px-4">
               <h2 className="mb-4 text-center text-4xl font-bold text-primary">
-                Deep Insights to Unlock the Subconscious
+                Unlock Your Cosmic Blueprint
               </h2>
               <p className="mx-auto mb-12 max-w-3xl text-center text-lg text-gray-600">
-                Transform data into profound understanding with our astrological insights API. 
-                Access the hidden patterns that reveal personality depths, relationship dynamics, 
-                and life purpose through precise cosmic calculations.
+                Get personalized astrological insights that reveal who you are, why you're here, 
+                and how to navigate life's opportunities. Pay only for the wisdom you need.
               </p>
 
               <div className="mt-4 mb-8">
-                <h3 className="font-medium text-lg mb-2 text-center">Every insight includes:</h3>
+                <h3 className="font-medium text-lg mb-2 text-center">Every report includes:</h3>
                 <ul className="grid gap-y-2 gap-x-6 sm:grid-cols-2 max-w-2xl mx-auto">
                   <li className="flex items-center gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Subconscious pattern analysis</span>
+                    <Check className="w-5 h-5 text-primary" />
+                    <span>Personalized to your birth data</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Precision Swiss-Ephemeris data</span>
+                    <Check className="w-5 h-5 text-primary" />
+                    <span>Precise Swiss-Ephemeris calculations</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Pay-per-insight pricing</span>
+                    <Check className="w-5 h-5 text-primary" />
+                    <span>Instant delivery via API</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-primary">•</span>
-                    <span>No subscriptions required</span>
+                    <Check className="w-5 h-5 text-primary" />
+                    <span>No subscriptions or commitments</span>
                   </li>
                 </ul>
               </div>
 
+              {/* Reports Grid */}
               {pricesLoading ? (
                 <div className="flex justify-center items-center h-64">
                   <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                  <span className="ml-2">Loading pricing information...</span>
+                  <span className="ml-2">Loading insights...</span>
                 </div>
               ) : pricesError ? (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
@@ -174,73 +269,83 @@ const Pricing = () => {
                 </div>
               ) : prices.length === 0 ? (
                 <div className="p-6 text-center text-gray-500">
-                  No pricing information available at this time.
+                  No insights available at this time.
                 </div>
               ) : (
-                <div className="space-y-8">
-                  <Card className="overflow-hidden border-2 border-gray-100">
-                    <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
-                    <CardHeader className="border-b pb-3">
-                      <CardTitle>Reports & Insights</CardTitle>
-                      <CardDescription>
-                        Pricing for different astrological reports and insights
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {prices.map((price) => (
-                          <div key={price.id} className="bg-white p-5 rounded-lg border-2 border-gray-100 hover:shadow-md transition-shadow duration-200 flex flex-col h-full overflow-hidden">
-                            <div className="bg-gradient-to-r from-primary/10 to-transparent p-1 -mx-5 -mt-5 mb-4"></div>
-                            <div className="flex-grow">
-                              <h3 className="text-lg font-medium text-gray-900">{formatReportName(price.name)}</h3>
-                              <p className="text-sm text-gray-500 mt-1">{price.description || 'Standard pricing'}</p>
-                            </div>
-                            
-                            <Separator className="my-4" />
-                            
-                            <div className="text-center mt-auto">
-                              <Badge variant="outline" className="text-primary border-primary text-lg px-4 py-1">
-                                {formatPrice(price.unit_price_usd)}
-                              </Badge>
-                            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+                  {prices.map((price) => {
+                    const details = reportDetails[price.name.toLowerCase()] || {
+                      title: price.name,
+                      description: price.description || 'Astrological insight',
+                      useCase: 'Personal guidance',
+                      sampleInsight: 'Deep astrological wisdom awaits...'
+                    };
+
+                    return (
+                      <Card key={price.id} className="relative overflow-hidden border-2 hover:shadow-lg transition-all duration-200 h-full">
+                        {details.isPopular && (
+                          <div className="absolute top-4 right-4">
+                            <Badge className="bg-primary text-white">
+                              <Star className="w-3 h-3 mr-1" />
+                              Popular
+                            </Badge>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="overflow-hidden border-2 border-gray-100">
-                    <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
-                    <CardHeader className="pb-3">
-                      <CardTitle>Volume Discounts</CardTitle>
-                      <CardDescription>Benefit from reduced pricing with higher usage volumes</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-600">
-                        Contact our sales team to discuss custom pricing for high-volume API usage. 
-                        We offer customized solutions and volume discounts for enterprise customers.
-                      </p>
-                    </CardContent>
-                  </Card>
+                        )}
+                        
+                        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+                        
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-xl text-gray-900">{details.title}</CardTitle>
+                          <CardDescription className="text-gray-600">
+                            {details.description}
+                          </CardDescription>
+                        </CardHeader>
+                        
+                        <CardContent className="flex-grow flex flex-col">
+                          <div className="mb-4">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Best for:</p>
+                            <p className="text-sm text-gray-600">{details.useCase}</p>
+                          </div>
+                          
+                          <div className="mb-6 bg-gray-50 p-3 rounded-lg">
+                            <p className="text-xs font-medium text-gray-700 mb-1">Sample insight:</p>
+                            <p className="text-sm italic text-gray-600">{details.sampleInsight}</p>
+                          </div>
+                          
+                          <Separator className="my-4" />
+                          
+                          <div className="text-center mt-auto">
+                            <div className="text-3xl font-bold text-primary mb-2">
+                              {formatPrice(price.unit_price_usd)}
+                            </div>
+                            <p className="text-sm text-gray-500">per insight</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </section>
 
-          <FAQSection items={faqs} />
+          <HowItWorksSection />
+          <FAQSection items={enhancedFaqs} />
         </section>
       </main>
 
+      {/* CTA Section */}
       <section className="bg-primary py-16 text-center text-white">
         <h2 className="mb-6 text-3xl font-bold">
-          Ready to unlock cosmic insights?
+          Ready to discover your cosmic truth?
         </h2>
         <p className="mx-auto mb-8 max-w-2xl text-xl">
-          Start revealing the hidden patterns that shape personality and destiny — pay only for the insights you generate.
+          Start with any insight that calls to you. No subscriptions, no commitments — 
+          just profound wisdom when you need it.
         </p>
         <Link to={user ? "/dashboard" : "/login"}>
           <Button className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100">
-            {user ? "Go to Dashboard" : "Get Started"}
+            {user ? "Get Your First Insight" : "Start Exploring"}
           </Button>
         </Link>
       </section>
