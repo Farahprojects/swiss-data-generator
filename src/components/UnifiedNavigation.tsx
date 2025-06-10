@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -230,5 +231,3 @@ const UnifiedNavigation = () => {
 };
 
 export default UnifiedNavigation;
-
-</edits_to_apply>
