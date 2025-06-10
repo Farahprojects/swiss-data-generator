@@ -1,11 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Calendar, Grid, List, MoreHorizontal } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Plus, Search, Calendar, Grid, List, MoreHorizontal, ChevronUp, ChevronDown } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { Client } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +15,9 @@ import { TheraLoader } from '@/components/ui/TheraLoader';
 import ClientForm from '@/components/clients/ClientForm';
 
 type ViewMode = 'grid' | 'list';
+type SortField = 'full_name' | 'email' | 'birth_date' | 'birth_location' | 'created_at';
+type SortDirection = 'asc' | 'desc';
+type FilterType = 'all' | 'most_active' | 'report_ready' | 'has_journal_no_report';
 
 const ClientsPage = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -20,6 +25,10 @@ const ClientsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,10 +56,83 @@ const ClientsPage = () => {
     loadClients();
   };
 
-  const filteredClients = clients.filter(client =>
-    client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
+  };
+
+  const filteredAndSortedClients = useMemo(() => {
+    let filtered = clients.filter(client =>
+      client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    // Apply filters (placeholder logic - you'll need to implement based on your data structure)
+    switch (filterType) {
+      case 'most_active':
+        // Filter logic for most active clients
+        break;
+      case 'report_ready':
+        // Filter logic for report-ready clients
+        break;
+      case 'has_journal_no_report':
+        // Filter logic for clients with journals but no reports
+        break;
+      default:
+        break;
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'full_name':
+          aValue = a.full_name;
+          bValue = b.full_name;
+          break;
+        case 'email':
+          aValue = a.email || '';
+          bValue = b.email || '';
+          break;
+        case 'birth_date':
+          aValue = a.birth_date ? new Date(a.birth_date) : new Date(0);
+          bValue = b.birth_date ? new Date(b.birth_date) : new Date(0);
+          break;
+        case 'birth_location':
+          aValue = a.birth_location || '';
+          bValue = b.birth_location || '';
+          break;
+        case 'created_at':
+          aValue = new Date(a.created_at);
+          bValue = new Date(b.created_at);
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [clients, searchTerm, filterType, sortField, sortDirection]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -121,13 +203,13 @@ const ClientsPage = () => {
           <span>{client.full_name}</span>
         </Link>
       </TableCell>
-      <TableCell className="text-muted-foreground">
+      <TableCell className="text-muted-foreground text-left">
         {client.email || '-'}
       </TableCell>
       <TableCell className="text-muted-foreground">
         {client.birth_date ? formatDate(client.birth_date) : '-'}
       </TableCell>
-      <TableCell className="text-muted-foreground">
+      <TableCell className="text-muted-foreground text-left">
         {client.birth_location || '-'}
       </TableCell>
       <TableCell className="text-muted-foreground">
@@ -157,16 +239,38 @@ const ClientsPage = () => {
         {/* Subtitle */}
         <p className="text-muted-foreground -mt-1">Manage your client relationships and their journeys</p>
         
-        {/* Controls Row - Search, View Toggle and Button */}
-        <div className="flex items-center gap-3 max-w-lg">
-          <div className="relative flex-1">
+        {/* Controls Row - Search, Filters, View Toggle and Button */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               placeholder="Search clients by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 w-64"
             />
+          </div>
+
+          {/* Filter Dropdown */}
+          <Select value={filterType} onValueChange={(value: FilterType) => setFilterType(value)}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filter by..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              <SelectItem value="most_active">Most Active</SelectItem>
+              <SelectItem value="report_ready">Report-Ready</SelectItem>
+              <SelectItem value="has_journal_no_report">Has Journal, No Report</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* AI Insights Toggle */}
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={aiInsightsEnabled}
+              onCheckedChange={setAiInsightsEnabled}
+            />
+            <span className="text-sm text-muted-foreground">AI Insights</span>
           </div>
           
           {/* View Toggle */}
@@ -201,7 +305,7 @@ const ClientsPage = () => {
         {/* Search Results Count */}
         {searchTerm && (
           <div className="text-sm text-muted-foreground">
-            {filteredClients.length} result{filteredClients.length !== 1 ? 's' : ''} found
+            {filteredAndSortedClients.length} result{filteredAndSortedClients.length !== 1 ? 's' : ''} found
           </div>
         )}
       </div>
@@ -210,7 +314,7 @@ const ClientsPage = () => {
       {viewMode === 'grid' ? (
         /* Clients Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {filteredClients.map(client => (
+          {filteredAndSortedClients.map(client => (
             <ClientCard key={client.id} client={client} />
           ))}
         </div>
@@ -220,16 +324,56 @@ const ClientsPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-semibold">🧠 Name</TableHead>
-                <TableHead className="font-semibold">📧 Email</TableHead>
-                <TableHead className="font-semibold">🗓️ DOB</TableHead>
-                <TableHead className="font-semibold">🌍 Location</TableHead>
-                <TableHead className="font-semibold">🔮 Last Insight</TableHead>
-                <TableHead className="font-semibold">⚡ Actions</TableHead>
+                <TableHead 
+                  className="font-semibold cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('full_name')}
+                >
+                  <div className="flex items-center gap-1">
+                    Name
+                    {getSortIcon('full_name')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
+                  onClick={() => handleSort('email')}
+                >
+                  <div className="flex items-center gap-1">
+                    Email
+                    {getSortIcon('email')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-semibold cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('birth_date')}
+                >
+                  <div className="flex items-center gap-1">
+                    Birthdate
+                    {getSortIcon('birth_date')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
+                  onClick={() => handleSort('birth_location')}
+                >
+                  <div className="flex items-center gap-1">
+                    Location
+                    {getSortIcon('birth_location')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-semibold cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('created_at')}
+                >
+                  <div className="flex items-center gap-1">
+                    Last Insight
+                    {getSortIcon('created_at')}
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredClients.map(client => (
+              {filteredAndSortedClients.map(client => (
                 <ClientTableRow key={client.id} client={client} />
               ))}
             </TableBody>
@@ -238,7 +382,7 @@ const ClientsPage = () => {
       )}
 
       {/* Empty State */}
-      {filteredClients.length === 0 && !loading && (
+      {filteredAndSortedClients.length === 0 && !loading && (
         <div className="text-center py-12">
           <div className="text-muted-foreground text-lg mb-2">No clients found</div>
           <p className="text-muted-foreground mb-4">
