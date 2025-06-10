@@ -28,7 +28,6 @@ interface AppFeature {
   title: string;
   description: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  route: string;
 }
 
 const appFeatures: AppFeature[] = [
@@ -36,19 +35,16 @@ const appFeatures: AppFeature[] = [
     title: "Client Management",
     description: "Comprehensive CRM system to track client progress, insights, and breakthrough moments.",
     Icon: Users,
-    route: "/dashboard/clients",
   },
   {
     title: "Report Generation",
     description: "Automated psychological reports with deep insights and momentum tracking.",
     Icon: FileText,
-    route: "/dashboard/reports",
   },
   {
     title: "Instant Insights",
     description: "AI-powered analysis that turns journal entries into breakthrough moments.",
     Icon: Zap,
-    route: "/dashboard/insights",
   },
 ];
 
@@ -208,7 +204,7 @@ const Index = () => {
                     </div>
                     
                     <Link 
-                      to={feature.route} 
+                      to="/features" 
                       className="inline-flex items-center gap-3 text-primary hover:text-primary-hover transition-colors font-semibold text-lg group"
                     >
                       <span>Explore Feature</span>
