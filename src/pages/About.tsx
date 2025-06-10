@@ -25,14 +25,11 @@ const About = () => {
           </div>
         </section>
 
-        {/* Mission Section with Glass Effect */}
+        {/* Mission Section with White Background */}
         <section className="py-24 bg-gradient-to-b from-accent to-background">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto backdrop-blur-sm bg-white/50 rounded-2xl p-8 shadow-lg border border-white/20">
-              <h2 className="text-3xl font-bold mb-8 text-center text-primary">Our Mission</h2>
-              <p className="text-lg mb-6 text-gray-700">
-                My mission is to restore clarity through rhythm.
-              </p>
+            <div className="max-w-3xl mx-auto bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+              <h2 className="text-3xl font-bold mb-8 text-center text-primary">My mission is to restore clarity through rhythm.</h2>
               <p className="text-lg mb-6 text-gray-700">
                 We believe that behind every breakthrough lies a pattern an energetic signature waiting to be decoded. By blending journaled experience with the deeper intelligence of cycles and resonance, we help people reconnect with their natural flow where insight, action, and timing align.
               </p>
@@ -130,7 +127,7 @@ const About = () => {
               Join us in revolutionizing astrology software
             </h2>
             <p className="text-xl mb-8 max-w-2xl mx-auto">
-              Start building your astrological applications with the most accurate data available.
+              Start your journey with the best astrological applications with the most accurate data available.
             </p>
             <div className="flex justify-center">
               <Link to="/signup">
