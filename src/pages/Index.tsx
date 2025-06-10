@@ -104,34 +104,32 @@ const Index = () => {
           />
 
           <div className="container relative z-10 mx-auto flex h-full flex-col items-center justify-center px-4 text-center">
-            <div className="mx-auto max-w-xl">
+            <div className="mx-auto max-w-4xl">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-5xl font-extrabold text-transparent md:text-6xl lg:text-7xl"
+                className="text-5xl font-bold text-gray-900 md:text-6xl lg:text-7xl mb-2"
               >
-                Astro
+                Turn Self-Insight
               </motion.h1>
 
               <motion.h2
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
-                className="mt-1 text-2xl font-normal text-gray-600 md:text-3xl"
+                className="bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-5xl font-bold text-transparent md:text-6xl lg:text-7xl mb-6"
               >
-                The Intelligent Engine Behind the Stars
+                into Relentless Momentum
               </motion.h2>
 
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-                className="mt-4 text-lg text-gray-500 leading-relaxed max-w-xl mx-auto"
+                className="text-lg text-gray-600 leading-relaxed max-w-3xl mx-auto mb-8"
               >
-                Astrology intelligence for platforms, advisors, and visionary teams.
-                Powered by Swiss Ephemeris with 0.001″ precision, global time-zones,
-                and blazing-fast responses.
+                Theria merges deep psychological mapping with high-impact coaching to diagnose your core block and convert it into daily action—in less than 15 minutes.
               </motion.p>
             </div>
 
@@ -139,21 +137,19 @@ const Index = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="mt-6 flex flex-row items-center justify-center gap-4"
+              className="flex flex-row items-center justify-center gap-4"
             >
               <Button 
-                disabled
                 size="lg" 
-                className="opacity-50 cursor-not-allowed"
-                title="Signup temporarily disabled"
+                className="px-8 py-4 text-lg"
               >
-                Start Free Trial
+                Free Insight
               </Button>
               <Link to="/documentation">
                 <Button 
                   variant="outline" 
                   size="lg"
-                  className="transform transition duration-200 hover:scale-105 hover:bg-accent"
+                  className="transform transition duration-200 hover:scale-105 hover:bg-accent px-8 py-4 text-lg"
                 >
                   View Docs
                 </Button>
@@ -287,10 +283,8 @@ const Index = () => {
               className="flex flex-col items-center justify-center gap-4 sm:flex-row"
             >
               <Button 
-                disabled
                 size="lg" 
-                className="bg-white text-primary opacity-50 cursor-not-allowed"
-                title="Signup temporarily disabled"
+                className="bg-white text-primary hover:bg-gray-100"
               >
                 Claim Free Key
               </Button>
