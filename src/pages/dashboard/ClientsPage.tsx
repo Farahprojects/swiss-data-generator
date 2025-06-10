@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import ClientForm from '@/components/clients/ClientForm';
 import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
-import GenerateInsightModal from '@/components/clients/GenerateInsightModal';
+import { GenerateInsightModal } from '@/components/clients/GenerateInsightModal';
 import ClientReportModal from '@/components/clients/ClientReportModal';
 import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
@@ -486,14 +487,15 @@ const ClientsPage = () => {
           <CreateJournalEntryForm
             open={showJournalModal}
             onOpenChange={setShowJournalModal}
-            client={selectedClient}
-            onJournalCreated={handleJournalCreated}
+            clientId={selectedClient.id}
+            onEntryCreated={handleJournalCreated}
           />
 
           <GenerateInsightModal
             open={showInsightModal}
             onOpenChange={setShowInsightModal}
             client={selectedClient}
+            journalEntries={[]}
             onInsightGenerated={handleInsightGenerated}
           />
 
