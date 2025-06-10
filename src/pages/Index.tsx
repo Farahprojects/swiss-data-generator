@@ -1,4 +1,3 @@
-
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -261,15 +260,14 @@ const Index = () => {
           </div>
         </section>
 
-        {/* CTA - Redesigned */}
-        <section className="relative py-32 overflow-hidden">
-          {/* Background with gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-hover to-primary"></div>
-          
-          {/* Subtle pattern overlay */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full blur-3xl"></div>
-            <div className="absolute bottom-10 right-10 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+        {/* CTA - Minimalist & Elegant */}
+        <section className="relative py-24 overflow-hidden bg-gradient-to-b from-gray-50/50 to-white">
+          {/* Subtle decorative elements */}
+          <div className="absolute inset-0">
+            <div className="absolute top-1/4 left-8 w-2 h-2 bg-primary/20 rounded-full"></div>
+            <div className="absolute top-1/3 right-12 w-1 h-1 bg-primary/30 rounded-full"></div>
+            <div className="absolute bottom-1/4 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full"></div>
+            <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-primary/15 rounded-full"></div>
           </div>
           
           <div className="relative container mx-auto px-4 text-center">
@@ -278,20 +276,18 @@ const Index = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.8 }}
-              className="max-w-4xl mx-auto"
+              className="max-w-3xl mx-auto"
             >
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-                Ready to transform
-                <br />
-                <span className="text-white/90">your practice?</span>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                Ready to transform your practice?
               </h2>
               
-              <p className="text-xl md:text-2xl text-white/90 mb-12 max-w-2xl mx-auto leading-relaxed">
-                Join thousands of professionals creating breakthrough moments with their clients.
+              <p className="text-xl text-gray-600 mb-12 leading-relaxed">
+                Join professionals creating breakthrough moments with their clients
               </p>
               
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ delay: 0.2, duration: 0.6 }}
@@ -299,7 +295,7 @@ const Index = () => {
                 <Link to="/dashboard">
                   <Button 
                     size="lg" 
-                    className="bg-white text-primary hover:bg-gray-50 text-lg px-12 py-6 rounded-full font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105"
+                    className="text-lg px-12 py-6 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-primary/20"
                   >
                     Start Now
                   </Button>
