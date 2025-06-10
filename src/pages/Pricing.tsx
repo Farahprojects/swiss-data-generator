@@ -180,7 +180,7 @@ const Pricing = () => {
                 <div className="space-y-8">
                   <Card className="overflow-hidden border-2 border-gray-100">
                     <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
-                    <CardHeader className="bg-gray-50 border-b pb-3">
+                    <CardHeader className="border-b pb-3">
                       <CardTitle>Reports & Insights</CardTitle>
                       <CardDescription>
                         Pricing for different astrological reports and insights
