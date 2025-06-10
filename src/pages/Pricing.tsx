@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -13,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { motion } from "framer-motion";
 
 type PriceItem = {
   id: string;
@@ -105,16 +105,29 @@ const HowItWorksSection = () => {
   return (
     <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">How It Works</h2>
+        <motion.h2 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.6, ease: "easeOut" }}
+          className="text-3xl font-bold text-center mb-12 text-gray-900"
+        >
+          How It Works
+        </motion.h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           {steps.map((step, index) => (
-            <div key={index} className="text-center">
+            <motion.div 
+              key={index} 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 + (index * 0.2), duration: 0.6, ease: "easeOut" }}
+              className="text-center"
+            >
               <div className="bg-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-md">
                 {step.icon}
               </div>
               <h3 className="text-xl font-semibold mb-2 text-gray-900">{step.title}</h3>
               <p className="text-gray-600">{step.description}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -149,26 +162,44 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
   return (
     <section className="py-20 bg-white">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-12 text-center">Common Questions</h2>
+        <motion.h2 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.4, duration: 0.6, ease: "easeOut" }}
+          className="text-3xl font-bold mb-12 text-center"
+        >
+          Common Questions
+        </motion.h2>
         
         <div className="max-w-3xl mx-auto">
           <div className="space-y-6">
             {items.map((faq, index) => (
-              <div key={index} className="border-b border-gray-200 pb-6">
+              <motion.div 
+                key={index} 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.6 + (index * 0.1), duration: 0.6, ease: "easeOut" }}
+                className="border-b border-gray-200 pb-6"
+              >
                 <h3 className="text-xl font-semibold mb-2">{faq.question}</h3>
                 <p className="text-gray-600">{faq.answer}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
           
-          <div className="mt-12 text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 2.2, duration: 0.6, ease: "easeOut" }}
+            className="mt-12 text-center"
+          >
             <p className="text-gray-600 mb-6">
               Still have questions about what you'll discover?
             </p>
             <Link to="/contact">
               <Button variant="outline">Contact Us</Button>
             </Link>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
@@ -226,15 +257,30 @@ const Pricing = () => {
           {/* Hero Section */}
           <section className="py-16">
             <div className="container mx-auto px-4">
-              <h2 className="mb-4 text-center text-4xl font-bold text-primary">
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="mb-4 text-center text-4xl font-bold text-primary"
+              >
                 Unlock Your Cosmic Blueprint
-              </h2>
-              <p className="mx-auto mb-12 max-w-3xl text-center text-lg text-gray-600">
+              </motion.h2>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
+                className="mx-auto mb-12 max-w-3xl text-center text-lg text-gray-600"
+              >
                 Get personalized astrological insights that reveal who you are, why you're here, 
                 and how to navigate life's opportunities. Pay only for the wisdom you need.
-              </p>
+              </motion.p>
 
-              <div className="mt-4 mb-8">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
+                className="mt-4 mb-8"
+              >
                 <h3 className="font-medium text-lg mb-2 text-center">Every report includes:</h3>
                 <ul className="grid gap-y-2 gap-x-6 sm:grid-cols-2 max-w-2xl mx-auto">
                   <li className="flex items-center gap-2">
@@ -254,26 +300,47 @@ const Pricing = () => {
                     <span>No subscriptions or commitments</span>
                   </li>
                 </ul>
-              </div>
+              </motion.div>
 
               {/* Reports Grid */}
               {pricesLoading ? (
-                <div className="flex justify-center items-center h-64">
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                  className="flex justify-center items-center h-64"
+                >
                   <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   <span className="ml-2">Loading insights...</span>
-                </div>
+                </motion.div>
               ) : pricesError ? (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" 
+                  role="alert"
+                >
                   <strong className="font-bold">Error: </strong> 
                   <span className="block sm:inline">{pricesError}</span>
-                </div>
+                </motion.div>
               ) : prices.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                  className="p-6 text-center text-gray-500"
+                >
                   No insights available at this time.
-                </div>
+                </motion.div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-                  {prices.map((price) => {
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16"
+                >
+                  {prices.map((price, index) => {
                     const details = reportDetails[price.name.toLowerCase()] || {
                       title: price.name,
                       description: price.description || 'Astrological insight',
@@ -282,49 +349,56 @@ const Pricing = () => {
                     };
 
                     return (
-                      <Card key={price.id} className="relative overflow-hidden border-2 hover:shadow-lg transition-all duration-200 h-full">
-                        {details.isPopular && (
-                          <div className="absolute top-4 right-4">
-                            <Badge className="bg-primary text-white">
-                              <Star className="w-3 h-3 mr-1" />
-                              Popular
-                            </Badge>
-                          </div>
-                        )}
-                        
-                        <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
-                        
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-xl text-gray-900">{details.title}</CardTitle>
-                          <CardDescription className="text-gray-600">
-                            {details.description}
-                          </CardDescription>
-                        </CardHeader>
-                        
-                        <CardContent className="flex-grow flex flex-col">
-                          <div className="mb-4">
-                            <p className="text-sm font-medium text-gray-700 mb-2">Best for:</p>
-                            <p className="text-sm text-gray-600">{details.useCase}</p>
-                          </div>
-                          
-                          <div className="mb-6 bg-gray-50 p-3 rounded-lg">
-                            <p className="text-xs font-medium text-gray-700 mb-1">Sample insight:</p>
-                            <p className="text-sm italic text-gray-600">{details.sampleInsight}</p>
-                          </div>
-                          
-                          <Separator className="my-4" />
-                          
-                          <div className="text-center mt-auto">
-                            <div className="text-3xl font-bold text-primary mb-2">
-                              {formatPrice(price.unit_price_usd)}
+                      <motion.div
+                        key={price.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 + (index * 0.1), duration: 0.6, ease: "easeOut" }}
+                      >
+                        <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-all duration-200 h-full">
+                          {details.isPopular && (
+                            <div className="absolute top-4 right-4">
+                              <Badge className="bg-primary text-white">
+                                <Star className="w-3 h-3 mr-1" />
+                                Popular
+                              </Badge>
                             </div>
-                            <p className="text-sm text-gray-500">per insight</p>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          )}
+                          
+                          <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+                          
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-xl text-gray-900">{details.title}</CardTitle>
+                            <CardDescription className="text-gray-600">
+                              {details.description}
+                            </CardDescription>
+                          </CardHeader>
+                          
+                          <CardContent className="flex-grow flex flex-col">
+                            <div className="mb-4">
+                              <p className="text-sm font-medium text-gray-700 mb-2">Best for:</p>
+                              <p className="text-sm text-gray-600">{details.useCase}</p>
+                            </div>
+                            
+                            <div className="mb-6 bg-gray-50 p-3 rounded-lg">
+                              <p className="text-xs font-medium text-gray-700 mb-1">Sample insight:</p>
+                              <p className="text-sm italic text-gray-600">{details.sampleInsight}</p>
+                            </div>
+                            
+                            <Separator className="my-4" />
+                            
+                            <div className="text-center mt-auto">
+                              <div className="text-3xl font-bold text-primary mb-2">
+                                {formatPrice(price.unit_price_usd)}
+                              </div>
+                              <p className="text-sm text-gray-500">per insight</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
                     );
                   })}
-                </div>
+                </motion.div>
               )}
             </div>
           </section>
@@ -336,18 +410,34 @@ const Pricing = () => {
 
       {/* CTA Section */}
       <section className="bg-primary py-16 text-center text-white">
-        <h2 className="mb-6 text-3xl font-bold">
+        <motion.h2 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2.4, duration: 0.6, ease: "easeOut" }}
+          className="mb-6 text-3xl font-bold"
+        >
           Ready to enhance your application with astrological insights?
-        </h2>
-        <p className="mx-auto mb-8 max-w-2xl text-xl">
+        </motion.h2>
+        <motion.p 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2.5, duration: 0.6, ease: "easeOut" }}
+          className="mx-auto mb-8 max-w-2xl text-xl"
+        >
           Start integrating powerful astrological data into your business application. 
           No subscriptions, no commitments — just precise insights when you need them.
-        </p>
-        <Link to={user ? "/dashboard" : "/login"}>
-          <Button className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100">
-            {user ? "Get API Access" : "Start Building"}
-          </Button>
-        </Link>
+        </motion.p>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 2.6, duration: 0.6, ease: "easeOut" }}
+        >
+          <Link to={user ? "/dashboard" : "/login"}>
+            <Button className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100">
+              {user ? "Get API Access" : "Start Building"}
+            </Button>
+          </Link>
+        </motion.div>
       </section>
 
       <Footer />
@@ -356,3 +446,5 @@ const Pricing = () => {
 };
 
 export default Pricing;
+
+```
