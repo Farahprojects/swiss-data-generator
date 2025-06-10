@@ -1,4 +1,3 @@
-
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,32 +45,11 @@ const appFeatures: AppFeature[] = [
     route: "/dashboard/clients",
   },
   {
-    title: "Smart Messaging",
-    description: "AI-powered communication tools for deeper client engagement and automated insights.",
-    Icon: MessageSquare,
-    image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=600&h=400&fit=crop",
-    route: "/dashboard/messages",
-  },
-  {
-    title: "Analytics Dashboard",
-    description: "Real-time insights and progress tracking with beautiful, actionable visualizations.",
-    Icon: BarChart3,
-    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=400&fit=crop",
-    route: "/dashboard",
-  },
-  {
     title: "Report Generation",
     description: "Automated psychological reports with deep insights and momentum tracking.",
     Icon: FileText,
     image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=600&h=400&fit=crop",
     route: "/dashboard/reports",
-  },
-  {
-    title: "Website Builder",
-    description: "Professional websites that showcase your practice and attract ideal clients.",
-    Icon: Palette,
-    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&h=400&fit=crop",
-    route: "/dashboard/website-builder",
   },
   {
     title: "Instant Insights",
@@ -215,7 +193,7 @@ const Index = () => {
               </p>
             </motion.div>
 
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-8 sm:grid-cols-1 lg:grid-cols-3">
               {appFeatures.map((feature, i) => (
                 <motion.div
                   key={i}
