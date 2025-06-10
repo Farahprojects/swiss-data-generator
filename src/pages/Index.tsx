@@ -1,4 +1,3 @@
-
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,12 +90,6 @@ const Index = () => {
       <main className="flex-grow overflow-hidden">
         {/* Hero */}
         <section className="relative h-[90vh] w-full overflow-hidden bg-gradient-to-b from-primary/5 via-white to-white pt-20">
-          {/* Starfield overlay */}
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[url('/svg/stars.svg')] bg-repeat opacity-5 [mask-image:radial-gradient(white,transparent)]"
-          />
-
           {/* Enhanced radial glow behind the title */}
           <div 
             aria-hidden
@@ -129,7 +122,7 @@ const Index = () => {
                 transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
                 className="text-lg text-gray-600 leading-relaxed max-w-3xl mx-auto mb-8"
               >
-                Theria merges deep psychological mapping with high-impact coaching to diagnose your core block and convert it into daily action—in less than 15 minutes.
+                Therai merges deep psychological mapping by analyzing journal entries and overlaying subtle psychological and energetic patterns. Whether you're guiding clients, building teams, or deepening relationships, get clarity that sticks.
               </motion.p>
             </div>
 
