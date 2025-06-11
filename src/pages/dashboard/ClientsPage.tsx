@@ -20,7 +20,7 @@ import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useClientViewMode } from '@/hooks/useClientViewMode';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 type ViewMode = 'grid' | 'list';
@@ -63,14 +63,14 @@ const ClientsPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const { toast } = useToast();
-  const { preferences, updateClientViewMode } = useUserPreferences();
+  const { viewMode: savedViewMode, loading: viewModeLoading, updateViewMode } = useClientViewMode();
   const isMobile = useIsMobile();
   
-  // Get view mode from user preferences
-  const viewMode = preferences?.client_view_mode || 'grid';
+  // Use the saved view mode or default to 'grid' if none is set
+  const viewMode = savedViewMode || 'grid';
 
   const setViewMode = async (newViewMode: ViewMode) => {
-    await updateClientViewMode(newViewMode);
+    await updateViewMode(newViewMode);
   };
 
   useEffect(() => {
@@ -465,7 +465,8 @@ const ClientsPage = () => {
     </TableRow>
   );
 
-  if (loading) {
+  // Show loading while fetching both clients and view mode preference
+  if (loading || viewModeLoading) {
     return <TheraLoader message="Loading clients..." size="lg" />;
   }
 
