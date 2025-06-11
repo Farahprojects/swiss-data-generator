@@ -3,8 +3,9 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, FileText } from 'lucide-react';
-import { formatDateTime } from '@/utils/dateFormatters';
+import { formatDate } from '@/utils/dateFormatters';
 
 interface ClientReport {
   id: string;
@@ -70,45 +71,55 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {clientReports.map((report) => (
-            <Card key={report.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Report Type</TableHead>
+                <TableHead className="w-[120px]">Date</TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clientReports.map((report) => (
+                <TableRow key={report.id}>
+                  <TableCell>
+                    <div className="font-medium">
                       {getDisplayName(report)}
-                    </CardTitle>
-                    <div className="text-sm text-gray-600 mt-1">
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-gray-600">
                       {formatReportTier(report.report_tier)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm text-gray-600">
-                        {formatDateTime(report.created_at)}
-                      </span>
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    {formatDate(report.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {!(report.response_status >= 200 && report.response_status < 300) && (
+                        <Badge variant="destructive" className="text-xs">
+                          Failed
+                        </Badge>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => onViewReport(report)}
+                        disabled={!(report.response_status >= 200 && report.response_status < 300)}
+                      >
+                        <FileText className="w-3 h-3 mr-1" />
+                        View
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    {!(report.response_status >= 200 && report.response_status < 300) && (
-                      <Badge variant="destructive">
-                        failed
-                      </Badge>
-                    )}
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => onViewReport(report)}
-                      disabled={!(report.response_status >= 200 && report.response_status < 300)}
-                    >
-                      <FileText className="w-3 h-3 mr-1" />
-                      View Report
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   );
