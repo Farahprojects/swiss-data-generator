@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,29 +74,29 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-4">Name</TableHead>
-                <TableHead className="pl-4">Report Type</TableHead>
-                <TableHead className="w-[120px] pl-4">Date</TableHead>
-                <TableHead className="w-[120px] pl-4">Actions</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Report Type</TableHead>
+                <TableHead className="w-[120px]">Date</TableHead>
+                <TableHead className="w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clientReports.map((report) => (
                 <TableRow key={report.id}>
-                  <TableCell className="pl-4">
+                  <TableCell>
                     <div className="font-medium">
                       {getDisplayName(report)}
                     </div>
                   </TableCell>
-                  <TableCell className="pl-4">
+                  <TableCell>
                     <div className="text-sm text-gray-600">
                       {formatReportTier(report.report_tier)}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600 pl-4">
+                  <TableCell className="text-sm text-gray-600">
                     {formatDate(report.created_at)}
                   </TableCell>
-                  <TableCell className="pl-4">
+                  <TableCell>
                     <div className="flex items-center gap-2">
                       {!(report.response_status >= 200 && report.response_status < 300) && (
                         <Badge variant="destructive" className="text-xs">
@@ -124,3 +123,5 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
     </div>
   );
 };
+
+export default ClientReportsTab;
