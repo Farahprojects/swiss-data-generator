@@ -28,7 +28,7 @@ export const useSpeechToText = (
 
     try {
       setIsProcessing(true);
-      log('info', 'Starting audio processing', { chunks: audioChunksRef.current.length });
+      log('debug', 'Starting audio processing', { chunks: audioChunksRef.current.length });
       
       const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' });
       log('debug', 'Audio blob created', { size: audioBlob.size });
@@ -65,7 +65,7 @@ export const useSpeechToText = (
             }
 
             const transcript = data?.transcript || '';
-            log('info', 'Transcript received', { length: transcript.length });
+            log('debug', 'Transcript received', { length: transcript.length });
             
             if (transcript && onTranscriptReady) {
               onTranscriptReady(transcript);
@@ -133,7 +133,7 @@ export const useSpeechToText = (
           silenceStart = now;
           log('debug', 'Silence started');
         } else if (now - silenceStart >= 3000) { // 3 seconds of silence
-          log('info', '3 seconds of silence detected, stopping recording');
+          log('debug', '3 seconds of silence detected, stopping recording');
           monitoringRef.current = false;
           
           // Trigger silence detected callback immediately
@@ -162,7 +162,7 @@ export const useSpeechToText = (
 
   const startRecording = useCallback(async () => {
     try {
-      log('info', 'Starting recording');
+      log('debug', 'Starting recording');
       
       // Enhanced audio constraints for better quality
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -230,7 +230,7 @@ export const useSpeechToText = (
         return;
       }
 
-      log('info', 'Stopping recording');
+      log('debug', 'Stopping recording');
       isRecordingRef.current = false;
       monitoringRef.current = false;
 
@@ -248,7 +248,7 @@ export const useSpeechToText = (
 
       mediaRecorderRef.current.onstop = async () => {
         try {
-          log('info', 'Recording stopped, processing audio');
+          log('debug', 'Recording stopped, processing audio');
           const transcript = await processAudio();
           resolve(transcript);
         } catch (error) {

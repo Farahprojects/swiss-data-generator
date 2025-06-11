@@ -79,7 +79,7 @@ const CreateJournalEntryForm = ({
 
   // Handle when transcript is ready - prepare for type animation
   const handleTranscriptReady = (transcript: string) => {
-    log('info', 'Transcript ready for typing animation', { length: transcript.length });
+    log('debug', 'Transcript ready for typing animation', { length: transcript.length });
     const currentText = getValues('entry_text') || '';
     
     // Store existing text and new transcript separately
