@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
@@ -26,25 +25,23 @@ interface UpdateOptions {
   showToast?: boolean;
 }
 
-// Default preferences for optimistic loading
-const getDefaultPreferences = (userId: string): UserPreferences => ({
+// Default preferences for optimistic loading - but NO client_view_mode default
+const getDefaultPreferences = (userId: string): Partial<UserPreferences> => ({
   id: '',
   user_id: userId,
   email_notifications_enabled: true,
   password_change_notifications: true,
   email_change_notifications: true,
   security_alert_notifications: true,
-  client_view_mode: 'grid',
+  // Don't set client_view_mode here - let it come from database
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 });
 
 export function useUserPreferences() {
   const { user } = useAuth();
-  const [preferences, setPreferences] = useState<UserPreferences | null>(
-    user ? getDefaultPreferences(user.id) : null
-  );
-  const [loading, setLoading] = useState(false); // Start with false for optimistic loading
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [loading, setLoading] = useState(true); // Start with true since we need to load from database
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -77,6 +74,7 @@ export function useUserPreferences() {
       if (!user?.id) {
         if (isMounted()) {
           setError("Authentication required");
+          setLoading(false);
         }
         return;
       }
@@ -85,6 +83,7 @@ export function useUserPreferences() {
         loadTimeout = setTimeout(() => {
           if (isMounted()) {
             setError("Request timed out. Please try again.");
+            setLoading(false);
             logToSupabase("Loading user preferences timed out", {
               level: "error",
               page: "useUserPreferences",
@@ -119,6 +118,7 @@ export function useUserPreferences() {
 
         if (isMounted()) {
           setError(errorMessage);
+          setLoading(false);
           logToSupabase("Error loading user preferences", {
             level: "error",
             page: "useUserPreferences",
@@ -141,6 +141,10 @@ export function useUserPreferences() {
               loadUserPreferences();
             }, retryDelay);
           }
+        }
+      } finally {
+        if (isMounted()) {
+          setLoading(false);
         }
       }
     };

@@ -63,24 +63,13 @@ const ClientsPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const { toast } = useToast();
-  const { preferences, updateClientViewMode } = useUserPreferences();
+  const { preferences, loading: preferencesLoading, updateClientViewMode } = useUserPreferences();
   const isMobile = useIsMobile();
   
-  // Initialize viewMode state - start with null to indicate loading
-  const [viewMode, setViewModeState] = useState<ViewMode | null>(null);
-
-  // Update viewMode when preferences load
-  useEffect(() => {
-    if (preferences?.client_view_mode) {
-      setViewModeState(preferences.client_view_mode);
-    } else if (preferences) {
-      // Preferences loaded but no client_view_mode set, use default
-      setViewModeState('grid');
-    }
-  }, [preferences]);
+  // Get view mode from preferences - wait for loading to complete
+  const viewMode = preferencesLoading ? null : (preferences?.client_view_mode || 'grid');
 
   const setViewMode = async (newViewMode: ViewMode) => {
-    setViewModeState(newViewMode);
     await updateClientViewMode(newViewMode);
   };
 
@@ -476,13 +465,9 @@ const ClientsPage = () => {
     </TableRow>
   );
 
-  if (loading) {
-    return <TheraLoader message="Loading clients..." size="lg" />;
-  }
-
-  // Show loading if viewMode hasn't been determined yet
-  if (viewMode === null) {
-    return <TheraLoader message="Loading preferences..." size="lg" />;
+  // Show loading while either clients or preferences are loading
+  if (loading || preferencesLoading || viewMode === null) {
+    return <TheraLoader message="Loading..." size="lg" />;
   }
 
   return (
