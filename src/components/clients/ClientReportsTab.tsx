@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,10 +76,10 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px]">Date</TableHead>
+                <TableHead>Date</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Report Type</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -126,3 +127,4 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
 };
 
 export default ClientReportsTab;
+
