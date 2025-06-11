@@ -23,7 +23,7 @@ import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { supabase } from '@/integrations/supabase/client';
 
 type ViewMode = 'grid' | 'list';
-type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'created_at';
+type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'latest_insight' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 type FilterType = 'all' | 'most_active' | 'report_ready' | 'has_journal_no_report';
 
@@ -91,17 +91,20 @@ const ClientsPage = () => {
             
             const latestJournalEntry = journalEntries.length > 0 ? journalEntries[0] : undefined;
             const latestReport = clientReports.length > 0 ? clientReports[0] : undefined;
-            const latestInsight = insightEntries.length > 0 ? insightEntries[0] : undefined;
+            const latestInsight = insightEntries.length > 0 ? {
+              ...insightEntries[0],
+              type: insightEntries[0].type as 'pattern' | 'recommendation' | 'trend' | 'milestone'
+            } as InsightEntry : undefined;
             
             return {
               ...client,
               latestJournalEntry,
               latestReport,
               latestInsight
-            };
+            } as ClientWithJournal;
           } catch (error) {
             console.error(`Error loading data for client ${client.id}:`, error);
-            return client;
+            return client as ClientWithJournal;
           }
         })
       );
@@ -311,6 +314,10 @@ const ClientsPage = () => {
         case 'latest_report':
           aValue = a.latestReport ? new Date(a.latestReport.created_at) : new Date(0);
           bValue = b.latestReport ? new Date(b.latestReport.created_at) : new Date(0);
+          break;
+        case 'latest_insight':
+          aValue = a.latestInsight ? new Date(a.latestInsight.created_at) : new Date(0);
+          bValue = b.latestInsight ? new Date(b.latestInsight.created_at) : new Date(0);
           break;
         case 'created_at':
           aValue = new Date(a.created_at);
@@ -578,7 +585,7 @@ const ClientsPage = () => {
                   onClick={() => handleSort('latest_insight')}
                 >
                   <div className="flex items-center gap-1">
-                    Insights
+                    Insight
                     {getSortIcon('latest_insight')}
                   </div>
                 </TableHead>
