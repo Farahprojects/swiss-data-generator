@@ -75,7 +75,7 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[120px]">Date</TableHead>
-                <TableHead>Summary</TableHead>
+                <TableHead className="hidden md:table-cell">Summary</TableHead>
                 <TableHead className="w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -85,7 +85,7 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
                   <TableCell className="text-sm text-gray-600">
                     {formatDate(entry.created_at)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
                         {entry.title || 'Journal Entry'}

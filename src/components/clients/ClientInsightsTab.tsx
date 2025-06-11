@@ -129,7 +129,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[120px]">Date</TableHead>
-                  <TableHead>Summary</TableHead>
+                  <TableHead className="hidden md:table-cell">Summary</TableHead>
                   <TableHead className="w-[120px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -139,7 +139,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                     <TableCell className="text-sm text-gray-600">
                       {formatDate(insight.created_at)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <Tooltip>
                           <TooltipTrigger asChild>
