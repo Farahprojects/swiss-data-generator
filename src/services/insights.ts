@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface GenerateInsightRequest {
@@ -101,8 +102,8 @@ export const insightsService = {
         return `Report Type: ${report.type}\nDate: ${date}\nKey Insights: ${report.key_insights || 'No insights available'}`;
       }).join('\n\n---\n\n') || 'No previous reports available.';
 
-      // Create simplified request with plain text
-      const simplifiedRequest: GenerateInsightRequest = {
+      // Create the payload that matches what the edge function expects
+      const edgeFunctionPayload = {
         clientId: request.clientId,
         coachId: request.coachId,
         insightType: request.insightType,
@@ -115,11 +116,11 @@ export const insightsService = {
         }
       };
 
-      console.log('Making insight generation request with simplified data structure');
+      console.log('Making insight generation request with payload:', edgeFunctionPayload);
 
       // Call the edge function with proper authentication
       const { data, error } = await supabase.functions.invoke('generate-insights', {
-        body: simplifiedRequest,
+        body: edgeFunctionPayload,
         headers: {
           Authorization: `Bearer ${apiKeyData.api_key}`,
           'Content-Type': 'application/json'
