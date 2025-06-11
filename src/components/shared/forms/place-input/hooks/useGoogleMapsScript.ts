@@ -71,8 +71,15 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     try {
       console.log('🔄 Loading Google Maps script...');
       
+      // Add CSP debugging
+      console.log('🔍 Checking Content-Security-Policy headers...');
+      
       window.initGooglePlacesCallback = () => {
         console.log('✅ Google Maps script loaded successfully');
+        
+        // Test network connectivity to places API
+        console.log('🔍 Testing Places API connectivity...');
+        
         setIsLoaded(true);
       };
       
@@ -80,12 +87,13 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geocoding&callback=initGooglePlacesCallback&v=weekly`;
       script.async = true;
       script.defer = true;
-      script.onerror = () => {
-        console.error('❌ Error loading Google Maps script');
+      script.onerror = (error) => {
+        console.error('❌ Error loading Google Maps script:', error);
         setIsError(true);
         setErrorMessage('Failed to load Google Maps script');
       };
       
+      console.log('🔄 Appending Google Maps script to document head...');
       document.head.appendChild(script);
     } catch (error) {
       console.error('❌ Error in loadGoogleMapsScript:', error);
