@@ -1,12 +1,11 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Brain, TrendingUp, Calendar, Target } from 'lucide-react';
 import { formatDateTime } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
-import { GenerateInsightModal } from './GenerateInsightModal';
 
 interface ClientInsightsTabProps {
   insightEntries?: InsightEntry[];
@@ -17,6 +16,7 @@ interface ClientInsightsTabProps {
     entry_text: string;
     created_at: string;
   }>;
+  onGenerateInsight: () => void;
   onInsightGenerated?: () => void;
 }
 
@@ -64,19 +64,12 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   insightEntries = [],
   client,
   journalEntries = [],
+  onGenerateInsight,
   onInsightGenerated
 }) => {
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-
   const handleGenerateInsight = () => {
     if (!client) return;
-    setShowGenerateModal(true);
-  };
-
-  const handleInsightGenerated = () => {
-    if (onInsightGenerated) {
-      onInsightGenerated();
-    }
+    onGenerateInsight();
   };
 
   return (
@@ -135,16 +128,6 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
             </Card>
           ))}
         </div>
-      )}
-
-      {client && (
-        <GenerateInsightModal
-          open={showGenerateModal}
-          onOpenChange={setShowGenerateModal}
-          client={client}
-          journalEntries={journalEntries}
-          onInsightGenerated={handleInsightGenerated}
-        />
       )}
     </div>
   );
