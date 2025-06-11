@@ -586,18 +586,21 @@ export type Database = {
         Row: {
           created_at: string
           feature_images: Json
+          features_images: Json
           id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           feature_images?: Json
+          features_images?: Json
           id?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           feature_images?: Json
+          features_images?: Json
           id?: string
           updated_at?: string
         }

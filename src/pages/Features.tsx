@@ -16,9 +16,11 @@ import { motion } from "framer-motion";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLandingPageImages } from "@/hooks/useLandingPageImages";
 
 const Features = () => {
   const { user } = useAuth();
+  const { data: config } = useLandingPageImages();
 
   console.log("Features page is loading...");
 
@@ -29,7 +31,7 @@ const Features = () => {
       description: "Get started in seconds with our simple registration process. No complex setup required.",
       icon: UserPlus,
       features: ["Instant account creation", "No credit card required", "Quick onboarding"],
-      imageUrl: null,
+      imageUrl: config?.features_images?.["0"] || null,
     },
     {
       step: "02", 
@@ -38,7 +40,7 @@ const Features = () => {
       icon: Users,
       features: ["Client profiles & notes", "Progress tracking", "Session history"],
       free: true,
-      imageUrl: "https://auth.theraiastro.com/storage/v1/object/public/feature-images/Imagine2/Screenshot%202025-06-10%20at%206.57.31%20PM.png",
+      imageUrl: config?.features_images?.["1"] || "https://auth.theraiastro.com/storage/v1/object/public/feature-images/Imagine2/Screenshot%202025-06-10%20at%206.57.31%20PM.png",
     },
     {
       step: "03",
@@ -47,7 +49,7 @@ const Features = () => {
       icon: MessageSquare,
       features: ["Rich text editing", "Voice-to-text", "Session notes"],
       free: true,
-      imageUrl: null,
+      imageUrl: config?.features_images?.["2"] || null,
     },
     {
       step: "04",
@@ -56,7 +58,7 @@ const Features = () => {
       icon: Zap,
       features: ["AI-powered analysis", "Breakthrough detection", "Professional reports"],
       premium: true,
-      imageUrl: null,
+      imageUrl: config?.features_images?.["3"] || null,
     },
   ];
 

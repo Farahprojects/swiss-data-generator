@@ -11,10 +11,17 @@ import { useToast } from '@/hooks/use-toast';
 import { useLandingPageImages } from '@/hooks/useLandingPageImages';
 import { useQueryClient } from '@tanstack/react-query';
 
-const featureNames = [
+const indexPageImages = [
+  'Index Feature 1',
+  'Index Feature 2', 
+  'Index Feature 3'
+];
+
+const featuresPageImages = [
+  'Easy Sign Up',
   'Client Management',
-  'Report Generation', 
-  'Instant Insights'
+  'Journal Entries',
+  'AI Insights & Reports'
 ];
 
 export const LandingPageImageManager: React.FC = () => {
@@ -23,18 +30,23 @@ export const LandingPageImageManager: React.FC = () => {
   const queryClient = useQueryClient();
   const { data: config, isLoading } = useLandingPageImages();
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
-  const [images, setImages] = useState<Record<string, string>>({});
+  const [indexImages, setIndexImages] = useState<Record<string, string>>({});
+  const [featuresImages, setFeaturesImages] = useState<Record<string, string>>({});
 
   React.useEffect(() => {
     if (config?.feature_images) {
-      setImages(config.feature_images);
+      setIndexImages(config.feature_images);
+    }
+    if (config?.features_images) {
+      setFeaturesImages(config.features_images);
     }
   }, [config]);
 
-  const handleImageUpload = async (index: number, file: File) => {
+  const handleImageUpload = async (pageType: 'index' | 'features', index: number, file: File) => {
     if (!user) return;
 
-    setUploading(prev => ({ ...prev, [index]: true }));
+    const uploadKey = `${pageType}-${index}`;
+    setUploading(prev => ({ ...prev, [uploadKey]: true }));
 
     try {
       // Validate file
@@ -46,30 +58,40 @@ export const LandingPageImageManager: React.FC = () => {
         throw new Error('Image must be under 5MB');
       }
 
+      // Determine bucket based on page type
+      const bucketName = pageType === 'index' ? 'landing-images' : 'feature-images';
+      
       // Upload to storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `feature-${index}-${Date.now()}.${fileExt}`;
-      const filePath = `features/${fileName}`;
+      const fileName = `${pageType}-${index}-${Date.now()}.${fileExt}`;
+      const filePath = `${pageType}/${fileName}`;
 
       const { data, error } = await supabase.storage
-        .from('landing-images')
+        .from(bucketName)
         .upload(filePath, file);
 
       if (error) throw error;
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('landing-images')
+        .from(bucketName)
         .getPublicUrl(data.path);
 
-      setImages(prev => ({
-        ...prev,
-        [index]: urlData.publicUrl
-      }));
+      if (pageType === 'index') {
+        setIndexImages(prev => ({
+          ...prev,
+          [index]: urlData.publicUrl
+        }));
+      } else {
+        setFeaturesImages(prev => ({
+          ...prev,
+          [index]: urlData.publicUrl
+        }));
+      }
 
       toast({
         title: 'Image uploaded',
-        description: `Feature image ${index + 1} has been uploaded successfully.`
+        description: `${pageType === 'index' ? 'Index' : 'Features'} page image ${index + 1} has been uploaded successfully.`
       });
 
     } catch (error: any) {
@@ -80,7 +102,7 @@ export const LandingPageImageManager: React.FC = () => {
         description: error.message || 'Failed to upload image.'
       });
     } finally {
-      setUploading(prev => ({ ...prev, [index]: false }));
+      setUploading(prev => ({ ...prev, [uploadKey]: false }));
     }
   };
 
@@ -91,7 +113,8 @@ export const LandingPageImageManager: React.FC = () => {
       const { error } = await supabase
         .from('landing_page_config')
         .upsert({
-          feature_images: images
+          feature_images: indexImages,
+          features_images: featuresImages
         });
 
       if (error) throw error;
@@ -135,43 +158,89 @@ export const LandingPageImageManager: React.FC = () => {
           Landing Page Images
         </CardTitle>
         <CardDescription>
-          Manage the feature images displayed on your landing page. Upload your own images to customize the appearance.
+          Manage the images displayed on your Index and Features pages. Upload your own images to customize the appearance.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {featureNames.map((name, index) => (
-          <div key={index} className="border rounded-lg p-4 space-y-3">
-            <Label className="text-sm font-medium">{name}</Label>
-            
-            {images[index] && (
-              <div className="relative">
-                <img
-                  src={images[index]}
-                  alt={name}
-                  className="w-full h-32 object-cover rounded-lg border"
-                />
-              </div>
-            )}
+      <CardContent className="space-y-8">
+        {/* Index Page Images */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Index Page (3 images)</h3>
+          <div className="space-y-6">
+            {indexPageImages.map((name, index) => (
+              <div key={index} className="border rounded-lg p-4 space-y-3">
+                <Label className="text-sm font-medium">{name}</Label>
+                
+                {indexImages[index] && (
+                  <div className="relative">
+                    <img
+                      src={indexImages[index]}
+                      alt={name}
+                      className="w-full h-32 object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
 
-            <div className="flex items-center gap-2">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    handleImageUpload(index, file);
-                  }
-                }}
-                disabled={uploading[index]}
-                className="flex-1"
-              />
-              {uploading[index] && (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              )}
-            </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleImageUpload('index', index, file);
+                      }
+                    }}
+                    disabled={uploading[`index-${index}`]}
+                    className="flex-1"
+                  />
+                  {uploading[`index-${index}`] && (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Features Page Images */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Features Page (4 images)</h3>
+          <div className="space-y-6">
+            {featuresPageImages.map((name, index) => (
+              <div key={index} className="border rounded-lg p-4 space-y-3">
+                <Label className="text-sm font-medium">{name}</Label>
+                
+                {featuresImages[index] && (
+                  <div className="relative">
+                    <img
+                      src={featuresImages[index]}
+                      alt={name}
+                      className="w-full h-32 object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleImageUpload('features', index, file);
+                      }
+                    }}
+                    disabled={uploading[`features-${index}`]}
+                    className="flex-1"
+                  />
+                  {uploading[`features-${index}`] && (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="flex justify-end pt-4">
           <Button onClick={handleSaveConfiguration} className="flex items-center gap-2">
