@@ -122,7 +122,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
@@ -191,7 +191,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
               ))}
             </TableBody>
           </Table>
-        </Card>
+        </div>
       )}
     </div>
   );
