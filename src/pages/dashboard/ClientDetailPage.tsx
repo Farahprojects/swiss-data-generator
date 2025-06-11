@@ -11,7 +11,7 @@ import { useClientData } from '@/hooks/useClientData';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import EditClientForm from '@/components/clients/EditClientForm';
 import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
-import UnifiedGenerateModal from '@/components/clients/UnifiedGenerateModal';
+import ClientReportModal from '@/components/clients/ClientReportModal';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { ClientDetailHeader } from '@/components/clients/ClientDetailHeader';
 import { ClientInfoCard } from '@/components/clients/ClientInfoCard';
@@ -39,8 +39,7 @@ const ClientDetailPage = () => {
   
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateJournalModal, setShowCreateJournalModal] = useState(false);
-  const [showUnifiedModal, setShowUnifiedModal] = useState(false);
-  const [unifiedModalMode, setUnifiedModalMode] = useState<'insight' | 'report'>('insight');
+  const [showReportModal, setShowReportModal] = useState(false);
   const [showReportDrawer, setShowReportDrawer] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
   const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
@@ -73,18 +72,8 @@ const ClientDetailPage = () => {
   };
 
   const handleGenerateInsight = () => {
-    setUnifiedModalMode('insight');
-    setShowUnifiedModal(true);
-  };
-
-  const handleGenerateReport = () => {
-    setUnifiedModalMode('report');
-    setShowUnifiedModal(true);
-  };
-
-  const handleModalGenerated = () => {
-    setShowUnifiedModal(false);
-    loadClientData();
+    setShowCreateJournalModal(false);
+    setShowReportModal(false);
   };
 
   if (loading) {
@@ -123,7 +112,7 @@ const ClientDetailPage = () => {
           isClientInfoOpen={isClientInfoOpen}
           setIsClientInfoOpen={setIsClientInfoOpen}
           onCreateJournal={() => setShowCreateJournalModal(true)}
-          onCreateReport={handleGenerateReport}
+          onCreateReport={() => setShowReportModal(true)}
           onGenerateInsight={handleGenerateInsight}
           isMobile={isMobile}
         />
@@ -161,7 +150,7 @@ const ClientDetailPage = () => {
             <TabsContent value="reports" className="space-y-4">
               <ClientReportsTab
                 clientReports={clientReports}
-                onCreateReport={handleGenerateReport}
+                onCreateReport={() => setShowReportModal(true)}
                 onViewReport={handleViewReport}
               />
             </TabsContent>
@@ -171,7 +160,6 @@ const ClientDetailPage = () => {
                 insightEntries={insightEntries}
                 client={client}
                 journalEntries={journalEntries}
-                onGenerateInsight={handleGenerateInsight}
                 onInsightGenerated={loadClientData}
               />
             </TabsContent>
@@ -198,15 +186,13 @@ const ClientDetailPage = () => {
           />
         )}
 
-        {/* Unified Generate Modal for both insights and reports */}
+        {/* Generate Report Modal */}
         {client && (
-          <UnifiedGenerateModal
-            mode={unifiedModalMode}
-            open={showUnifiedModal}
-            onOpenChange={setShowUnifiedModal}
+          <ClientReportModal
             client={client}
-            journalEntries={journalEntries}
-            onGenerated={handleModalGenerated}
+            open={showReportModal}
+            onOpenChange={setShowReportModal}
+            onReportGenerated={loadClientData}
           />
         )}
 
