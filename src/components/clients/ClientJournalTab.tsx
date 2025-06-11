@@ -17,6 +17,13 @@ interface ClientJournalTabProps {
   isMobile: boolean;
 }
 
+const formatDateForMobile = (dateString: string): string => {
+  const date = new Date(dateString);
+  const monthShort = date.toLocaleDateString('en-US', { month: 'short' });
+  const day = date.getDate();
+  return `${monthShort} ${day}`;
+};
+
 export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
   journalEntries,
   onCreateJournal,
@@ -83,7 +90,8 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
               {journalEntries.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell className="text-sm text-gray-600">
-                    {formatDate(entry.created_at)}
+                    <span className="hidden md:inline">{formatDate(entry.created_at)}</span>
+                    <span className="md:hidden">{formatDateForMobile(entry.created_at)}</span>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="flex items-center gap-2">

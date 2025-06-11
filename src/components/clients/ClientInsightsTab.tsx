@@ -23,6 +23,13 @@ interface ClientInsightsTabProps {
   onViewInsight?: (insight: InsightEntry) => void;
 }
 
+const formatDateForMobile = (dateString: string): string => {
+  const date = new Date(dateString);
+  const monthShort = date.toLocaleDateString('en-US', { month: 'short' });
+  const day = date.getDate();
+  return `${monthShort} ${day}`;
+};
+
 const getInsightTypeLabel = (type: string) => {
   const typeMap: { [key: string]: string } = {
     'pattern': 'Pattern',
@@ -137,7 +144,8 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                 {insightEntries.map((insight) => (
                   <TableRow key={insight.id}>
                     <TableCell className="text-sm text-gray-600">
-                      {formatDate(insight.created_at)}
+                      <span className="hidden md:inline">{formatDate(insight.created_at)}</span>
+                      <span className="md:hidden">{formatDateForMobile(insight.created_at)}</span>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
