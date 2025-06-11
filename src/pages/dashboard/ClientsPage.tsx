@@ -63,11 +63,11 @@ const ClientsPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const { toast } = useToast();
-  const { preferences, loading: preferencesLoading, updateClientViewMode } = useUserPreferences();
+  const { preferences, updateClientViewMode } = useUserPreferences();
   const isMobile = useIsMobile();
   
-  // Get view mode from preferences - wait for loading to complete
-  const viewMode = preferencesLoading ? null : (preferences?.client_view_mode || 'grid');
+  // Get view mode from user preferences
+  const viewMode = preferences?.client_view_mode || 'grid';
 
   const setViewMode = async (newViewMode: ViewMode) => {
     await updateClientViewMode(newViewMode);
@@ -465,9 +465,8 @@ const ClientsPage = () => {
     </TableRow>
   );
 
-  // Show loading while either clients or preferences are loading
-  if (loading || preferencesLoading || viewMode === null) {
-    return <TheraLoader message="Loading..." size="lg" />;
+  if (loading) {
+    return <TheraLoader message="Loading clients..." size="lg" />;
   }
 
   return (
