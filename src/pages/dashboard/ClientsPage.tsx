@@ -10,7 +10,7 @@ import { Plus, Search, Calendar, Grid, List, ChevronUp, ChevronDown } from 'luci
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
 import { clientReportsService } from '@/services/clientReports';
-import { Client, JournalEntry } from '@/types/database';
+import { Client, JournalEntry, InsightEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import ClientForm from '@/components/clients/ClientForm';
@@ -20,6 +20,7 @@ import ClientReportModal from '@/components/clients/ClientReportModal';
 import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
+import { supabase } from '@/integrations/supabase/client';
 
 type ViewMode = 'grid' | 'list';
 type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'created_at';
@@ -39,6 +40,7 @@ interface ClientReport {
 interface ClientWithJournal extends Client {
   latestJournalEntry?: JournalEntry;
   latestReport?: ClientReport;
+  latestInsight?: InsightEntry;
 }
 
 const ClientsPage = () => {
@@ -72,22 +74,30 @@ const ClientsPage = () => {
       setLoading(true);
       const clientsData = await clientsService.getClients();
       
-      // Load journal entries and reports for each client
+      // Load journal entries, reports and insights for each client
       const clientsWithJournals = await Promise.all(
         clientsData.map(async (client) => {
           try {
-            const [journalEntries, clientReports] = await Promise.all([
+            const [journalEntries, clientReports, insightEntries] = await Promise.all([
               journalEntriesService.getJournalEntries(client.id),
-              clientReportsService.getClientReports(client.id)
+              clientReportsService.getClientReports(client.id),
+              supabase
+                .from('insight_entries')
+                .select('*')
+                .eq('client_id', client.id)
+                .order('created_at', { ascending: false })
+                .then(({ data }) => data || [])
             ]);
             
             const latestJournalEntry = journalEntries.length > 0 ? journalEntries[0] : undefined;
             const latestReport = clientReports.length > 0 ? clientReports[0] : undefined;
+            const latestInsight = insightEntries.length > 0 ? insightEntries[0] : undefined;
             
             return {
               ...client,
               latestJournalEntry,
-              latestReport
+              latestReport,
+              latestInsight
             };
           } catch (error) {
             console.error(`Error loading data for client ${client.id}:`, error);
@@ -225,20 +235,17 @@ const ClientsPage = () => {
     };
   };
 
-  const transformInsightForDrawer = (client: ClientWithJournal) => {
-    // Create a mock insight report structure for the drawer
-    const insightContent = `Latest insight for ${client.full_name}`;
-    
+  const transformInsightForDrawer = (insight: InsightEntry) => {
     return {
-      id: `insight-${client.id}`,
-      created_at: client.created_at, // Use client creation date as fallback
+      id: insight.id,
+      created_at: insight.created_at,
       response_status: 200,
       request_type: 'insight',
       report_tier: 'insight',
       total_cost_usd: 0,
       processing_time_ms: null,
       response_payload: {
-        report: insightContent
+        report: insight.content
       },
       request_payload: null,
       error_message: undefined,
@@ -255,9 +262,11 @@ const ClientsPage = () => {
   };
 
   const handleViewInsight = (client: ClientWithJournal) => {
-    const transformedData = transformInsightForDrawer(client);
-    setSelectedInsightData(transformedData);
-    setShowInsightDrawer(true);
+    if (client.latestInsight) {
+      const transformedData = transformInsightForDrawer(client.latestInsight);
+      setSelectedInsightData(transformedData);
+      setShowInsightDrawer(true);
+    }
   };
 
   const filteredAndSortedClients = useMemo(() => {
@@ -409,10 +418,10 @@ const ClientsPage = () => {
         {client.latestReport ? formatReportType(client.latestReport) : '-'}
       </TableCell>
       <TableCell 
-        className="text-muted-foreground cursor-pointer hover:text-primary"
-        onClick={() => handleViewInsight(client)}
+        className={`text-muted-foreground ${client.latestInsight ? 'cursor-pointer hover:text-primary' : ''}`}
+        onClick={() => client.latestInsight && handleViewInsight(client)}
       >
-        {formatDate(client.created_at)}
+        {client.latestInsight ? formatDate(client.latestInsight.created_at) : '-'}
       </TableCell>
       <TableCell>
         <ClientActionsDropdown
@@ -565,12 +574,12 @@ const ClientsPage = () => {
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="font-semibold cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('created_at')}
+                  className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
+                  onClick={() => handleSort('latest_insight')}
                 >
                   <div className="flex items-center gap-1">
-                    Insight
-                    {getSortIcon('created_at')}
+                    Insights
+                    {getSortIcon('latest_insight')}
                   </div>
                 </TableHead>
                 <TableHead className="font-semibold">Actions</TableHead>
