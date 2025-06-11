@@ -47,7 +47,12 @@ const getDisplayName = (report: ClientReport): string => {
 
 const formatReportTier = (tier: string | null | undefined): string => {
   if (!tier) return 'Unknown';
-  return tier.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  // Remove "Report" from the tier name and format
+  return tier
+    .replace(/_/g, ' ')
+    .replace(/\breport\b/gi, '')
+    .replace(/\b\w/g, l => l.toUpperCase())
+    .trim();
 };
 
 export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
@@ -149,7 +154,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                   onClick={() => handleSort('report_tier')}
                 >
                   <div className="flex items-center gap-1">
-                    Report Type
+                    Type
                     {getSortIcon('report_tier')}
                   </div>
                 </TableHead>
@@ -177,13 +182,13 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                         </Badge>
                       )}
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => onViewReport(report)}
                         disabled={!(report.response_status >= 200 && report.response_status < 300)}
+                        className="text-primary hover:text-primary/80 hover:bg-primary/10 p-2 h-auto"
                       >
-                        <FileText className="mr-1 h-3 w-3" />
-                        View
+                        <FileText className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
