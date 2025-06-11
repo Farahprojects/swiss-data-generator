@@ -30,33 +30,48 @@ const ClientActionsDropdown = ({
 }: ClientActionsDropdownProps) => {
   const handleCreateJournal = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('📝 Journal action clicked for:', client.full_name);
     onCreateJournal(client);
   };
 
   const handleGenerateInsight = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('💡 Insight action clicked for:', client.full_name);
     onGenerateInsight(client);
   };
 
   const handleGenerateReport = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('📊 Report action clicked for:', client.full_name);
     onGenerateReport(client);
   };
 
   const handleEditClient = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('✏️ Edit action clicked for:', client.full_name);
     onEditClient(client);
   };
 
   const handleArchiveClient = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('🗄️ Archive action clicked for:', client.full_name);
     onArchiveClient(client);
+  };
+
+  const handleDropdownTriggerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('🔽 Actions dropdown opened for:', client.full_name);
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8 w-8 p-0"
+          onClick={handleDropdownTriggerClick}
+        >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
