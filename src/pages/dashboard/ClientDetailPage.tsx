@@ -134,127 +134,125 @@ const ClientDetailPage = () => {
   }
 
   return (
-    <DashboardLayout>
-      <TooltipProvider>
-        <div className="min-h-screen">
-          <ClientDetailHeader
+    <TooltipProvider>
+      <div className="min-h-screen">
+        <ClientDetailHeader
+          client={client}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          journalCount={journalEntries.length}
+          reportCount={clientReports.length}
+          insightCount={insightEntries.length}
+          isClientInfoOpen={isClientInfoOpen}
+          setIsClientInfoOpen={setIsClientInfoOpen}
+          onCreateJournal={() => setShowCreateJournalModal(true)}
+          onCreateReport={() => setShowReportModal(true)}
+          onGenerateInsight={handleGenerateInsight}
+          isMobile={isMobile}
+        />
+
+        {/* Content with proper spacing for fixed header */}
+        <div className="pt-20 space-y-6 px-4 md:px-6">
+          <ClientInfoCard
             client={client}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            journalCount={journalEntries.length}
-            reportCount={clientReports.length}
-            insightCount={insightEntries.length}
-            isClientInfoOpen={isClientInfoOpen}
-            setIsClientInfoOpen={setIsClientInfoOpen}
-            onCreateJournal={() => setShowCreateJournalModal(true)}
-            onCreateReport={() => setShowReportModal(true)}
-            onGenerateInsight={handleGenerateInsight}
+            isOpen={isClientInfoOpen}
+            onEditClick={() => setShowEditModal(true)}
+            onDeleteClient={handleDeleteClient}
+            showDeleteDialog={showDeleteDialog}
+            setShowDeleteDialog={setShowDeleteDialog}
+            alwaysShowOnDesktop={true}
             isMobile={isMobile}
           />
 
-          {/* Content with proper spacing for fixed header */}
-          <div className="pt-20 space-y-6 px-4 md:px-6">
-            <ClientInfoCard
-              client={client}
-              isOpen={isClientInfoOpen}
-              onEditClick={() => setShowEditModal(true)}
-              onDeleteClient={handleDeleteClient}
-              showDeleteDialog={showDeleteDialog}
-              setShowDeleteDialog={setShowDeleteDialog}
-              alwaysShowOnDesktop={true}
-              isMobile={isMobile}
-            />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="hidden">
+              <TabsTrigger value="journals">Journals</TabsTrigger>
+              <TabsTrigger value="reports">Reports</TabsTrigger>
+              <TabsTrigger value="insights">Insights</TabsTrigger>
+            </TabsList>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="hidden">
-                <TabsTrigger value="journals">Journals</TabsTrigger>
-                <TabsTrigger value="reports">Reports</TabsTrigger>
-                <TabsTrigger value="insights">Insights</TabsTrigger>
-              </TabsList>
+            <TabsContent value="journals" className="space-y-4">
+              <ClientJournalTab
+                journalEntries={journalEntries}
+                onCreateJournal={() => setShowCreateJournalModal(true)}
+                onEntryUpdated={loadClientData}
+                clientId={client?.id || ''}
+                isMobile={isMobile}
+              />
+            </TabsContent>
 
-              <TabsContent value="journals" className="space-y-4">
-                <ClientJournalTab
-                  journalEntries={journalEntries}
-                  onCreateJournal={() => setShowCreateJournalModal(true)}
-                  onEntryUpdated={loadClientData}
-                  clientId={client?.id || ''}
-                  isMobile={isMobile}
-                />
-              </TabsContent>
+            <TabsContent value="reports" className="space-y-4">
+              <ClientReportsTab
+                clientReports={clientReports}
+                onCreateReport={() => setShowReportModal(true)}
+                onViewReport={handleViewReport}
+              />
+            </TabsContent>
 
-              <TabsContent value="reports" className="space-y-4">
-                <ClientReportsTab
-                  clientReports={clientReports}
-                  onCreateReport={() => setShowReportModal(true)}
-                  onViewReport={handleViewReport}
-                />
-              </TabsContent>
-
-              <TabsContent value="insights" className="space-y-4">
-                <ClientInsightsTab 
-                  insightEntries={insightEntries}
-                  client={client}
-                  journalEntries={journalEntries}
-                  onInsightGenerated={loadClientData}
-                  onViewInsight={handleViewInsight}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Edit Client Modal */}
-          {client && (
-            <EditClientForm
-              client={client}
-              open={showEditModal}
-              onOpenChange={setShowEditModal}
-              onClientUpdated={loadClientData}
-            />
-          )}
-
-          {/* Create Journal Entry Modal */}
-          {client && (
-            <CreateJournalEntryForm
-              clientId={client.id}
-              open={showCreateJournalModal}
-              onOpenChange={setShowCreateJournalModal}
-              onEntryCreated={loadClientData}
-            />
-          )}
-
-          {/* Generate Report Modal */}
-          {client && (
-            <ClientReportModal
-              client={client}
-              open={showReportModal}
-              onOpenChange={setShowReportModal}
-              onReportGenerated={handleReportGenerated}
-              clientReports={clientReports}
-            />
-          )}
-
-          {/* Report Viewer Drawer */}
-          <ActivityLogDrawer
-            isOpen={showReportDrawer}
-            onClose={() => setShowReportDrawer(false)}
-            logData={selectedReport ? {
-              id: selectedReport.id,
-              created_at: selectedReport.created_at,
-              response_status: selectedReport.response_status,
-              request_type: selectedReport.request_type,
-              endpoint: selectedReport.request_type,
-              report_tier: selectedReport.report_tier,
-              total_cost_usd: 0,
-              processing_time_ms: null,
-              response_payload: selectedReport.response_payload,
-              request_payload: null,
-              error_message: null,
-              google_geo: false
-            } : null}
-          />
+            <TabsContent value="insights" className="space-y-4">
+              <ClientInsightsTab 
+                insightEntries={insightEntries}
+                client={client}
+                journalEntries={journalEntries}
+                onInsightGenerated={loadClientData}
+                onViewInsight={handleViewInsight}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
-      </TooltipProvider>
-    </DashboardLayout>
+
+        {/* Edit Client Modal */}
+        {client && (
+          <EditClientForm
+            client={client}
+            open={showEditModal}
+            onOpenChange={setShowEditModal}
+            onClientUpdated={loadClientData}
+          />
+        )}
+
+        {/* Create Journal Entry Modal */}
+        {client && (
+          <CreateJournalEntryForm
+            clientId={client.id}
+            open={showCreateJournalModal}
+            onOpenChange={setShowCreateJournalModal}
+            onEntryCreated={loadClientData}
+          />
+        )}
+
+        {/* Generate Report Modal */}
+        {client && (
+          <ClientReportModal
+            client={client}
+            open={showReportModal}
+            onOpenChange={setShowReportModal}
+            onReportGenerated={handleReportGenerated}
+            clientReports={clientReports}
+          />
+        )}
+
+        {/* Report Viewer Drawer */}
+        <ActivityLogDrawer
+          isOpen={showReportDrawer}
+          onClose={() => setShowReportDrawer(false)}
+          logData={selectedReport ? {
+            id: selectedReport.id,
+            created_at: selectedReport.created_at,
+            response_status: selectedReport.response_status,
+            request_type: selectedReport.request_type,
+            endpoint: selectedReport.request_type,
+            report_tier: selectedReport.report_tier,
+            total_cost_usd: 0,
+            processing_time_ms: null,
+            response_payload: selectedReport.response_payload,
+            request_payload: null,
+            error_message: null,
+            google_geo: false
+          } : null}
+        />
+      </div>
+    </TooltipProvider>
   );
 };
 

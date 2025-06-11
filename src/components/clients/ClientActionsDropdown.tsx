@@ -28,6 +28,31 @@ const ClientActionsDropdown = ({
   onEditClient,
   onArchiveClient,
 }: ClientActionsDropdownProps) => {
+  const handleCreateJournal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCreateJournal(client);
+  };
+
+  const handleGenerateInsight = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onGenerateInsight(client);
+  };
+
+  const handleGenerateReport = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onGenerateReport(client);
+  };
+
+  const handleEditClient = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditClient(client);
+  };
+
+  const handleArchiveClient = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onArchiveClient(client);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -36,25 +61,25 @@ const ClientActionsDropdown = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={() => onCreateJournal(client)}>
+        <DropdownMenuItem onClick={handleCreateJournal}>
           <Plus className="mr-2 h-4 w-4" />
           Journal
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onGenerateInsight(client)}>
+        <DropdownMenuItem onClick={handleGenerateInsight}>
           <Lightbulb className="mr-2 h-4 w-4" />
           Insight
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onGenerateReport(client)}>
+        <DropdownMenuItem onClick={handleGenerateReport}>
           <FileText className="mr-2 h-4 w-4" />
           Report
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => onEditClient(client)}>
+        <DropdownMenuItem onClick={handleEditClient}>
           <Edit className="mr-2 h-4 w-4" />
           Edit Client
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={() => onArchiveClient(client)}
+          onClick={handleArchiveClient}
           className="text-destructive focus:text-destructive"
         >
           <Archive className="mr-2 h-4 w-4" />
