@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -20,6 +19,7 @@ import { GenerateInsightModal } from '@/components/clients/GenerateInsightModal'
 import ClientReportModal from '@/components/clients/ClientReportModal';
 import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
+import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 
 type ViewMode = 'grid' | 'list';
 type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'created_at';
@@ -50,8 +50,10 @@ const ClientsPage = () => {
   const [showInsightModal, setShowInsightModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showReportDrawer, setShowReportDrawer] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
+  const [selectedReportData, setSelectedReportData] = useState<any>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -205,6 +207,30 @@ const ClientsPage = () => {
     return report.request_type || 'Report';
   };
 
+  const transformReportForDrawer = (report: ClientReport) => {
+    return {
+      id: report.id,
+      created_at: report.created_at,
+      response_status: report.response_status,
+      request_type: report.request_type,
+      report_tier: report.report_tier,
+      total_cost_usd: 0, // Default value since not needed on clients page
+      processing_time_ms: null, // Default value since not needed on clients page
+      response_payload: report.response_payload,
+      request_payload: null,
+      error_message: undefined,
+      google_geo: false
+    };
+  };
+
+  const handleViewReport = (client: ClientWithJournal) => {
+    if (client.latestReport) {
+      const transformedData = transformReportForDrawer(client.latestReport);
+      setSelectedReportData(transformedData);
+      setShowReportDrawer(true);
+    }
+  };
+
   const filteredAndSortedClients = useMemo(() => {
     let filtered = clients.filter(client =>
       client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -349,7 +375,7 @@ const ClientsPage = () => {
       </TableCell>
       <TableCell 
         className={`text-muted-foreground ${client.latestReport ? 'cursor-pointer hover:text-primary' : ''}`}
-        onClick={() => client.latestReport && handleGenerateReport(client)}
+        onClick={() => client.latestReport && handleViewReport(client)}
       >
         {client.latestReport ? formatReportType(client.latestReport) : '-'}
       </TableCell>
@@ -581,6 +607,13 @@ const ClientsPage = () => {
           />
         </>
       )}
+
+      {/* Report Viewer Drawer */}
+      <ActivityLogDrawer
+        isOpen={showReportDrawer}
+        onClose={() => setShowReportDrawer(false)}
+        logData={selectedReportData}
+      />
     </div>
   );
 };
