@@ -19,7 +19,6 @@ import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import { ClientReportsTab } from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
 import { InsightEntry } from '@/types/database';
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 interface ClientReport {
   id: string;
@@ -100,14 +99,6 @@ const ClientDetailPage = () => {
   const handleGenerateInsight = () => {
     setShowCreateJournalModal(false);
     setShowReportModal(false);
-  };
-
-  const handleCreateReport = () => {
-    setShowReportModal(true);
-  };
-
-  const handleReportGenerated = () => {
-    loadClientData();
   };
 
   if (loading) {
@@ -227,8 +218,7 @@ const ClientDetailPage = () => {
             client={client}
             open={showReportModal}
             onOpenChange={setShowReportModal}
-            onReportGenerated={handleReportGenerated}
-            clientReports={clientReports}
+            onReportGenerated={loadClientData}
           />
         )}
 

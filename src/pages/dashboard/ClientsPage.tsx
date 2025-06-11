@@ -157,19 +157,8 @@ const ClientsPage = () => {
     return <ChevronUp className="w-4 h-4 opacity-30" />;
   };
 
-  // Action handlers with improved modal state management
-  const closeAllModals = () => {
-    setShowJournalModal(false);
-    setShowInsightModal(false);
-    setShowReportModal(false);
-    setShowEditModal(false);
-    setSelectedClient(null);
-    setSelectedJournalEntry(null);
-  };
-
+  // Action handlers
   const handleCreateJournal = (client: Client) => {
-    console.log('📝 Creating journal for client:', client.full_name);
-    closeAllModals();
     setSelectedClient(client);
     setSelectedJournalEntry(null);
     setShowJournalModal(true);
@@ -177,8 +166,6 @@ const ClientsPage = () => {
 
   const handleEditJournal = (client: ClientWithJournal) => {
     if (client.latestJournalEntry) {
-      console.log('✏️ Editing journal for client:', client.full_name);
-      closeAllModals();
       setSelectedClient(client);
       setSelectedJournalEntry(client.latestJournalEntry);
       setShowJournalModal(true);
@@ -186,22 +173,16 @@ const ClientsPage = () => {
   };
 
   const handleGenerateInsight = (client: Client) => {
-    console.log('💡 Generating insight for client:', client.full_name);
-    closeAllModals();
     setSelectedClient(client);
     setShowInsightModal(true);
   };
 
   const handleGenerateReport = (client: Client) => {
-    console.log('📊 Generating report for client:', client.full_name);
-    closeAllModals();
     setSelectedClient(client);
     setShowReportModal(true);
   };
 
   const handleEditClient = (client: Client) => {
-    console.log('👤 Editing client:', client.full_name);
-    closeAllModals();
     setSelectedClient(client);
     setShowEditModal(true);
   };

@@ -28,73 +28,33 @@ const ClientActionsDropdown = ({
   onEditClient,
   onArchiveClient,
 }: ClientActionsDropdownProps) => {
-  const handleCreateJournal = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('📝 Journal action clicked for:', client.full_name);
-    onCreateJournal(client);
-  };
-
-  const handleGenerateInsight = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('💡 Insight action clicked for:', client.full_name);
-    onGenerateInsight(client);
-  };
-
-  const handleGenerateReport = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('📊 Report action clicked for:', client.full_name);
-    onGenerateReport(client);
-  };
-
-  const handleEditClient = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('✏️ Edit action clicked for:', client.full_name);
-    onEditClient(client);
-  };
-
-  const handleArchiveClient = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('🗄️ Archive action clicked for:', client.full_name);
-    onArchiveClient(client);
-  };
-
-  const handleDropdownTriggerClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log('🔽 Actions dropdown opened for:', client.full_name);
-  };
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-8 w-8 p-0"
-          onClick={handleDropdownTriggerClick}
-        >
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem onClick={handleCreateJournal}>
+        <DropdownMenuItem onClick={() => onCreateJournal(client)}>
           <Plus className="mr-2 h-4 w-4" />
           Journal
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleGenerateInsight}>
+        <DropdownMenuItem onClick={() => onGenerateInsight(client)}>
           <Lightbulb className="mr-2 h-4 w-4" />
           Insight
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleGenerateReport}>
+        <DropdownMenuItem onClick={() => onGenerateReport(client)}>
           <FileText className="mr-2 h-4 w-4" />
           Report
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleEditClient}>
+        <DropdownMenuItem onClick={() => onEditClient(client)}>
           <Edit className="mr-2 h-4 w-4" />
           Edit Client
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={handleArchiveClient}
+          onClick={() => onArchiveClient(client)}
           className="text-destructive focus:text-destructive"
         >
           <Archive className="mr-2 h-4 w-4" />
