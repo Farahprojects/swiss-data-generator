@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Plus, Search, Calendar, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { clientsService } from '@/services/clients';
-import { Client } from '@/types/database';
+import { journalEntriesService } from '@/services/journalEntries';
+import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import ClientForm from '@/components/clients/ClientForm';
@@ -20,12 +20,16 @@ import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 
 type ViewMode = 'grid' | 'list';
-type SortField = 'full_name' | 'email' | 'birth_date' | 'birth_location' | 'created_at';
+type SortField = 'full_name' | 'email' | 'latest_journal' | 'birth_location' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 type FilterType = 'all' | 'most_active' | 'report_ready' | 'has_journal_no_report';
 
+interface ClientWithJournal extends Client {
+  latestJournalEntry?: JournalEntry;
+}
+
 const ClientsPage = () => {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<ClientWithJournal[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
@@ -34,6 +38,7 @@ const ClientsPage = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -48,8 +53,26 @@ const ClientsPage = () => {
   const loadClients = async () => {
     try {
       setLoading(true);
-      const data = await clientsService.getClients();
-      setClients(data);
+      const clientsData = await clientsService.getClients();
+      
+      // Load journal entries for each client
+      const clientsWithJournals = await Promise.all(
+        clientsData.map(async (client) => {
+          try {
+            const journalEntries = await journalEntriesService.getJournalEntries(client.id);
+            const latestJournalEntry = journalEntries.length > 0 ? journalEntries[0] : undefined;
+            return {
+              ...client,
+              latestJournalEntry
+            };
+          } catch (error) {
+            console.error(`Error loading journal entries for client ${client.id}:`, error);
+            return client;
+          }
+        })
+      );
+      
+      setClients(clientsWithJournals);
     } catch (error) {
       console.error('Error loading clients:', error);
       toast({
@@ -89,7 +112,16 @@ const ClientsPage = () => {
   // Action handlers
   const handleCreateJournal = (client: Client) => {
     setSelectedClient(client);
+    setSelectedJournalEntry(null);
     setShowJournalModal(true);
+  };
+
+  const handleEditJournal = (client: ClientWithJournal) => {
+    if (client.latestJournalEntry) {
+      setSelectedClient(client);
+      setSelectedJournalEntry(client.latestJournalEntry);
+      setShowJournalModal(true);
+    }
   };
 
   const handleGenerateInsight = (client: Client) => {
@@ -130,6 +162,7 @@ const ClientsPage = () => {
   const handleJournalCreated = () => {
     setShowJournalModal(false);
     setSelectedClient(null);
+    setSelectedJournalEntry(null);
     loadClients();
   };
 
@@ -180,9 +213,9 @@ const ClientsPage = () => {
           aValue = a.email || '';
           bValue = b.email || '';
           break;
-        case 'birth_date':
-          aValue = a.birth_date ? new Date(a.birth_date) : new Date(0);
-          bValue = b.birth_date ? new Date(b.birth_date) : new Date(0);
+        case 'latest_journal':
+          aValue = a.latestJournalEntry ? new Date(a.latestJournalEntry.created_at) : new Date(0);
+          bValue = b.latestJournalEntry ? new Date(b.latestJournalEntry.created_at) : new Date(0);
           break;
         case 'birth_location':
           aValue = a.birth_location || '';
@@ -218,7 +251,7 @@ const ClientsPage = () => {
     });
   };
 
-  const ClientCard = ({ client }: { client: Client }) => (
+  const ClientCard = ({ client }: { client: ClientWithJournal }) => (
     <Card className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-border/50 hover:border-primary/20">
       <Link to={`/dashboard/clients/${client.id}`}>
         <CardHeader className="pb-3 pt-4 px-4">
@@ -264,7 +297,7 @@ const ClientsPage = () => {
     </Card>
   );
 
-  const ClientTableRow = ({ client }: { client: Client }) => (
+  const ClientTableRow = ({ client }: { client: ClientWithJournal }) => (
     <TableRow className="hover:bg-muted/50 cursor-pointer">
       <TableCell className="font-medium">
         <Link to={`/dashboard/clients/${client.id}`} className="flex items-center gap-3 hover:text-primary">
@@ -281,8 +314,11 @@ const ClientsPage = () => {
       <TableCell className="text-muted-foreground text-left">
         {client.email || '-'}
       </TableCell>
-      <TableCell className="text-muted-foreground">
-        {client.birth_date ? formatDate(client.birth_date) : '-'}
+      <TableCell 
+        className={`text-muted-foreground ${client.latestJournalEntry ? 'cursor-pointer hover:text-primary' : ''}`}
+        onClick={() => client.latestJournalEntry && handleEditJournal(client)}
+      >
+        {client.latestJournalEntry ? formatDate(client.latestJournalEntry.created_at) : '-'}
       </TableCell>
       <TableCell className="text-muted-foreground text-left">
         {client.birth_location || '-'}
@@ -424,11 +460,11 @@ const ClientsPage = () => {
                 </TableHead>
                 <TableHead 
                   className="font-semibold cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('birth_date')}
+                  onClick={() => handleSort('latest_journal')}
                 >
                   <div className="flex items-center gap-1">
-                    Birthdate
-                    {getSortIcon('birth_date')}
+                    Journal
+                    {getSortIcon('latest_journal')}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -489,6 +525,7 @@ const ClientsPage = () => {
             onOpenChange={setShowJournalModal}
             clientId={selectedClient.id}
             onEntryCreated={handleJournalCreated}
+            existingEntry={selectedJournalEntry || undefined}
           />
 
           <GenerateInsightModal
