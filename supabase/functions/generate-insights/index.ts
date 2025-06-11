@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -410,6 +409,13 @@ serve(async (req) => {
         requestId
       );
     }
+
+    // Set request-scoped coach ID for RLS to work
+    await supabase.rpc('set_config', {
+      key: 'request.coach_id',
+      value: coachId,
+      is_local: true
+    });
 
     // Fetch the insight prompt
     const systemPrompt = await getInsightPrompt(insightType, requestId);
