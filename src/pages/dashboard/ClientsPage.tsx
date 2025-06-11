@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,6 @@ import { Switch } from '@/components/ui/switch';
 import { Plus, Search, Calendar, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
-import { clientReportsService } from '@/services/clientReports';
 import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { TheraLoader } from '@/components/ui/TheraLoader';
@@ -22,23 +20,12 @@ import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 
 type ViewMode = 'grid' | 'list';
-type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'created_at';
+type SortField = 'full_name' | 'email' | 'latest_journal' | 'birth_location' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 type FilterType = 'all' | 'most_active' | 'report_ready' | 'has_journal_no_report';
 
-interface ClientReport {
-  id: string;
-  request_type: string;
-  response_payload: any;
-  created_at: string;
-  response_status: number;
-  report_name?: string;
-  report_tier?: string;
-}
-
 interface ClientWithJournal extends Client {
   latestJournalEntry?: JournalEntry;
-  latestReport?: ClientReport;
 }
 
 const ClientsPage = () => {
@@ -68,25 +55,18 @@ const ClientsPage = () => {
       setLoading(true);
       const clientsData = await clientsService.getClients();
       
-      // Load journal entries and reports for each client
+      // Load journal entries for each client
       const clientsWithJournals = await Promise.all(
         clientsData.map(async (client) => {
           try {
-            const [journalEntries, clientReports] = await Promise.all([
-              journalEntriesService.getJournalEntries(client.id),
-              clientReportsService.getClientReports(client.id)
-            ]);
-            
+            const journalEntries = await journalEntriesService.getJournalEntries(client.id);
             const latestJournalEntry = journalEntries.length > 0 ? journalEntries[0] : undefined;
-            const latestReport = clientReports.length > 0 ? clientReports[0] : undefined;
-            
             return {
               ...client,
-              latestJournalEntry,
-              latestReport
+              latestJournalEntry
             };
           } catch (error) {
-            console.error(`Error loading data for client ${client.id}:`, error);
+            console.error(`Error loading journal entries for client ${client.id}:`, error);
             return client;
           }
         })
@@ -198,13 +178,6 @@ const ClientsPage = () => {
     loadClients();
   };
 
-  const formatReportType = (report: ClientReport): string => {
-    if (report.report_tier) {
-      return report.report_tier.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-    return report.request_type || 'Report';
-  };
-
   const filteredAndSortedClients = useMemo(() => {
     let filtered = clients.filter(client =>
       client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -244,9 +217,9 @@ const ClientsPage = () => {
           aValue = a.latestJournalEntry ? new Date(a.latestJournalEntry.created_at) : new Date(0);
           bValue = b.latestJournalEntry ? new Date(b.latestJournalEntry.created_at) : new Date(0);
           break;
-        case 'latest_report':
-          aValue = a.latestReport ? new Date(a.latestReport.created_at) : new Date(0);
-          bValue = b.latestReport ? new Date(b.latestReport.created_at) : new Date(0);
+        case 'birth_location':
+          aValue = a.birth_location || '';
+          bValue = b.birth_location || '';
           break;
         case 'created_at':
           aValue = new Date(a.created_at);
@@ -347,11 +320,8 @@ const ClientsPage = () => {
       >
         {client.latestJournalEntry ? formatDate(client.latestJournalEntry.created_at) : '-'}
       </TableCell>
-      <TableCell 
-        className={`text-muted-foreground ${client.latestReport ? 'cursor-pointer hover:text-primary' : ''}`}
-        onClick={() => client.latestReport && handleGenerateReport(client)}
-      >
-        {client.latestReport ? formatReportType(client.latestReport) : '-'}
+      <TableCell className="text-muted-foreground text-left">
+        {client.birth_location || '-'}
       </TableCell>
       <TableCell className="text-muted-foreground">
         {formatDate(client.created_at)}
@@ -499,11 +469,11 @@ const ClientsPage = () => {
                 </TableHead>
                 <TableHead 
                   className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
-                  onClick={() => handleSort('latest_report')}
+                  onClick={() => handleSort('birth_location')}
                 >
                   <div className="flex items-center gap-1">
-                    Reports
-                    {getSortIcon('latest_report')}
+                    Location
+                    {getSortIcon('birth_location')}
                   </div>
                 </TableHead>
                 <TableHead 
