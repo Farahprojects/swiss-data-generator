@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Brain, TrendingUp, Calendar, Target } from 'lucide-react';
+import { Plus, Brain, TrendingUp, Calendar, Target, FileText } from 'lucide-react';
 import { formatDateTime } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
@@ -18,6 +18,7 @@ interface ClientInsightsTabProps {
     created_at: string;
   }>;
   onInsightGenerated?: () => void;
+  onViewInsight?: (insight: InsightEntry) => void;
 }
 
 const getInsightIcon = (type: string) => {
@@ -45,26 +46,12 @@ const getInsightTypeLabel = (type: string) => {
   return typeMap[type] || type;
 };
 
-const getInsightBadgeVariant = (type: string) => {
-  switch (type) {
-    case 'pattern':
-      return 'default';
-    case 'recommendation':
-      return 'secondary';
-    case 'trend':
-      return 'outline';
-    case 'milestone':
-      return 'default';
-    default:
-      return 'secondary';
-  }
-};
-
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   insightEntries = [],
   client,
   journalEntries = [],
-  onInsightGenerated
+  onInsightGenerated,
+  onViewInsight
 }) => {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
 
@@ -76,6 +63,12 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   const handleInsightGenerated = () => {
     if (onInsightGenerated) {
       onInsightGenerated();
+    }
+  };
+
+  const handleViewInsight = (insight: InsightEntry) => {
+    if (onViewInsight) {
+      onViewInsight(insight);
     }
   };
 
@@ -108,30 +101,36 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
             <Card key={insight.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {getInsightIcon(insight.type)}
+                  <div>
+                    <CardTitle className="text-lg">
                       {insight.title}
                     </CardTitle>
                     <div className="text-sm text-gray-600 mt-1">
-                      Generated on {formatDateTime(insight.created_at)}
+                      {getInsightTypeLabel(insight.type)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm text-gray-600">
+                        {formatDateTime(insight.created_at)}
+                      </span>
+                      {insight.confidence_score && (
+                        <Badge variant="outline">
+                          {insight.confidence_score}% confidence
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2 items-center">
-                    <Badge variant={getInsightBadgeVariant(insight.type)}>
-                      {getInsightTypeLabel(insight.type)}
-                    </Badge>
-                    {insight.confidence_score && (
-                      <Badge variant="outline">
-                        {insight.confidence_score}% confidence
-                      </Badge>
-                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewInsight(insight)}
+                    >
+                      <FileText className="w-3 h-3 mr-1" />
+                      View Insight
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 leading-relaxed">{insight.content}</p>
-              </CardContent>
             </Card>
           ))}
         </div>
