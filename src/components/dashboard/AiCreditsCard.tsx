@@ -57,33 +57,33 @@ export const AiCreditsCard = () => {
     : "No top-ups yet";
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden border-2 border-gray-100">
-      <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+    <Card className="flex flex-col h-full overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+      <div className="bg-gradient-to-r from-primary to-secondary p-1"></div>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-medium flex items-center gap-2">
+        <CardTitle className="text-lg font-medium flex items-center gap-2 text-foreground">
           <Wallet className="h-5 w-5 text-primary" />
           Wallet Balance
         </CardTitle>
-        <CardDescription>Available for services and features</CardDescription>
+        <CardDescription className="text-muted-foreground">Available for services and features</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="flex items-center justify-between mb-4">
-          <span className="text-gray-600">Current Balance:</span>
+          <span className="text-muted-foreground">Current Balance:</span>
           <span className="text-2xl font-bold text-primary">
             ${isLoading ? "..." : balance.toFixed(2)} USD
           </span>
         </div>
         <div className="space-y-3 text-sm">
-          <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-            <span className="text-gray-600">Last Updated:</span>
-            <span className="font-medium">{formattedLastTopUp}</span>
+          <div className="flex justify-between items-center pb-2 border-b border-primary/10">
+            <span className="text-muted-foreground">Last Updated:</span>
+            <span className="font-medium text-foreground">{formattedLastTopUp}</span>
           </div>
           <div className="flex justify-between items-center pb-2">
-            <span className="text-gray-600">Auto Top-up Trigger:</span>
-            <span className="font-medium text-gray-800">$45.00</span>
+            <span className="text-muted-foreground">Auto Top-up Trigger:</span>
+            <span className="font-medium text-foreground">$45.00</span>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3 mt-2">
-            <p className="text-gray-800 text-sm">
+          <div className="bg-accent rounded-lg p-3 mt-2 border border-primary/10">
+            <p className="text-foreground text-sm">
               Your wallet will automatically top up when the balance falls below $45. Visit the billing section to update your payment method or manage auto top-up settings.
             </p>
           </div>

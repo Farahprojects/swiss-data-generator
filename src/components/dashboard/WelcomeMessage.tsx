@@ -23,12 +23,12 @@ export const WelcomeMessage = () => {
   };
 
   return (
-    <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-6 mb-6">
-      <h1 className="text-2xl font-semibold text-gray-900">
+    <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-6 border border-primary/20">
+      <h1 className="text-2xl font-semibold text-foreground">
         {getGreeting()}, {user?.email?.split('@')[0] || 'Coach'}!
       </h1>
-      <p className="text-gray-600 mt-1">{getCurrentTime()}</p>
-      <p className="text-gray-700 mt-2">Ready to help your clients today?</p>
+      <p className="text-muted-foreground mt-1">{getCurrentTime()}</p>
+      <p className="text-foreground/80 mt-2">Ready to help your clients today?</p>
     </div>
   );
 };
