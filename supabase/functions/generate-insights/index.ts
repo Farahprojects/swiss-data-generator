@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -200,9 +201,11 @@ async function generateInsight(systemPrompt: string, clientData: any, requestId:
   const logPrefix = `[generate-insights][${requestId}]`;
   console.log(`${logPrefix} Generating insight with Gemini`);
 
-  // Create a simple text message with the client data
+  // Create clean, consistent plain text structure
   const userMessage = `Client Name: ${clientData.fullName}
-${clientData.goals ? `Goals: ${clientData.goals}` : ''}
+
+Goals:
+${clientData.goals || 'No specific goals listed'}
 
 Journal Entries:
 ${clientData.journalText}
