@@ -34,30 +34,30 @@ export const dashboardService = {
 
     try {
       // Get active clients this week (clients with journal entries or reports)
-      const { data: activeClientsData } = await supabase
+      const activeClientsResult = await supabase
         .from('journal_entries')
         .select('client_id')
         .eq('coach_id', user.id)
         .gte('created_at', weekAgoISO);
 
-      const uniqueActiveClients = new Set(activeClientsData?.map(entry => entry.client_id) || []);
+      const uniqueActiveClients = new Set((activeClientsResult.data || []).map(entry => entry.client_id));
 
       // Get insights generated this week
-      const { data: insightsData } = await supabase
+      const insightsResult = await supabase
         .from('insight_entries')
         .select('id')
         .eq('coach_id', user.id)
         .gte('created_at', weekAgoISO);
 
       // Get journals received this week
-      const { data: journalsData } = await supabase
+      const journalsResult = await supabase
         .from('journal_entries')
         .select('id')
         .eq('coach_id', user.id)
         .gte('created_at', weekAgoISO);
 
       // Get reports delivered this week
-      const { data: reportsData } = await supabase
+      const reportsResult = await supabase
         .from('translator_logs')
         .select('id')
         .eq('coach_id', user.id)
@@ -66,9 +66,9 @@ export const dashboardService = {
 
       return {
         activeClientsThisWeek: uniqueActiveClients.size,
-        insightsGeneratedThisWeek: insightsData?.length || 0,
-        journalsReceivedThisWeek: journalsData?.length || 0,
-        reportsDeliveredThisWeek: reportsData?.length || 0,
+        insightsGeneratedThisWeek: insightsResult.data?.length || 0,
+        journalsReceivedThisWeek: journalsResult.data?.length || 0,
+        reportsDeliveredThisWeek: reportsResult.data?.length || 0,
       };
     } catch (error) {
       console.error('Error fetching dashboard KPIs:', error);
@@ -93,23 +93,23 @@ export const dashboardService = {
 
       for (const client of clients) {
         // Check for new journal entries without insights
-        const { data: recentJournals } = await supabase
+        const recentJournalsResult = await supabase
           .from('journal_entries')
           .select('id, created_at')
           .eq('client_id', client.id)
           .order('created_at', { ascending: false })
           .limit(5);
 
-        if (recentJournals && recentJournals.length > 0) {
+        if (recentJournalsResult.data && recentJournalsResult.data.length > 0) {
           // Check if the most recent journal has a corresponding insight
-          const { data: insights } = await supabase
+          const insightsResult = await supabase
             .from('insight_entries')
             .select('id')
             .eq('client_id', client.id)
-            .gte('created_at', recentJournals[0].created_at);
+            .gte('created_at', recentJournalsResult.data[0].created_at);
 
-          if (!insights || insights.length === 0) {
-            const daysAgo = Math.floor((Date.now() - new Date(recentJournals[0].created_at).getTime()) / (1000 * 60 * 60 * 24));
+          if (!insightsResult.data || insightsResult.data.length === 0) {
+            const daysAgo = Math.floor((Date.now() - new Date(recentJournalsResult.data[0].created_at).getTime()) / (1000 * 60 * 60 * 24));
             actionItems.push({
               id: `new_journal_${client.id}`,
               type: 'new_journal',
@@ -120,7 +120,7 @@ export const dashboardService = {
               description: `${client.full_name} has a new journal entry ready for insight generation.`,
               actionLabel: 'Generate Insight',
               daysAgo,
-              createdAt: recentJournals[0].created_at,
+              createdAt: recentJournalsResult.data[0].created_at,
             });
           }
         }
@@ -129,24 +129,24 @@ export const dashboardService = {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        const { data: recentActivity } = await supabase
+        const recentActivityResult = await supabase
           .from('journal_entries')
           .select('created_at')
           .eq('client_id', client.id)
           .gte('created_at', sevenDaysAgo.toISOString())
           .limit(1);
 
-        if (!recentActivity || recentActivity.length === 0) {
+        if (!recentActivityResult.data || recentActivityResult.data.length === 0) {
           // Get their last journal entry to calculate days since
-          const { data: lastJournal } = await supabase
+          const lastJournalResult = await supabase
             .from('journal_entries')
             .select('created_at')
             .eq('client_id', client.id)
             .order('created_at', { ascending: false })
             .limit(1);
 
-          const daysSinceLastEntry = lastJournal && lastJournal.length > 0 
-            ? Math.floor((Date.now() - new Date(lastJournal[0].created_at).getTime()) / (1000 * 60 * 60 * 24))
+          const daysSinceLastEntry = lastJournalResult.data && lastJournalResult.data.length > 0 
+            ? Math.floor((Date.now() - new Date(lastJournalResult.data[0].created_at).getTime()) / (1000 * 60 * 60 * 24))
             : null;
 
           if (daysSinceLastEntry && daysSinceLastEntry >= 7) {
@@ -160,7 +160,7 @@ export const dashboardService = {
               description: `${client.full_name} hasn't journaled in ${daysSinceLastEntry} days.`,
               actionLabel: 'Send Reminder',
               daysAgo: daysSinceLastEntry,
-              createdAt: lastJournal[0].created_at,
+              createdAt: lastJournalResult.data[0].created_at,
             });
           }
         }
