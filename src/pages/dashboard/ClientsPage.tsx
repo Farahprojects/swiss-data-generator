@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import ClientForm from '@/components/clients/ClientForm';
 import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
-import UnifiedGenerateModal from '@/components/clients/UnifiedGenerateModal';
+import { GenerateInsightModal } from '@/components/clients/GenerateInsightModal';
+import ClientReportModal from '@/components/clients/ClientReportModal';
 import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 
@@ -28,8 +30,8 @@ const ClientsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [showJournalModal, setShowJournalModal] = useState(false);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [generateModalMode, setGenerateModalMode] = useState<'insight' | 'report'>('insight');
+  const [showInsightModal, setShowInsightModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -84,7 +86,7 @@ const ClientsPage = () => {
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
-  // Updated action handlers
+  // Action handlers
   const handleCreateJournal = (client: Client) => {
     setSelectedClient(client);
     setShowJournalModal(true);
@@ -92,14 +94,12 @@ const ClientsPage = () => {
 
   const handleGenerateInsight = (client: Client) => {
     setSelectedClient(client);
-    setGenerateModalMode('insight');
-    setShowGenerateModal(true);
+    setShowInsightModal(true);
   };
 
   const handleGenerateReport = (client: Client) => {
     setSelectedClient(client);
-    setGenerateModalMode('report');
-    setShowGenerateModal(true);
+    setShowReportModal(true);
   };
 
   const handleEditClient = (client: Client) => {
@@ -133,8 +133,14 @@ const ClientsPage = () => {
     loadClients();
   };
 
-  const handleGenerated = () => {
-    setShowGenerateModal(false);
+  const handleInsightGenerated = () => {
+    setShowInsightModal(false);
+    setSelectedClient(null);
+    loadClients();
+  };
+
+  const handleReportGenerated = () => {
+    setShowReportModal(false);
     setSelectedClient(null);
     loadClients();
   };
@@ -485,13 +491,19 @@ const ClientsPage = () => {
             onEntryCreated={handleJournalCreated}
           />
 
-          <UnifiedGenerateModal
-            mode={generateModalMode}
-            open={showGenerateModal}
-            onOpenChange={setShowGenerateModal}
+          <GenerateInsightModal
+            open={showInsightModal}
+            onOpenChange={setShowInsightModal}
             client={selectedClient}
             journalEntries={[]}
-            onGenerated={handleGenerated}
+            onInsightGenerated={handleInsightGenerated}
+          />
+
+          <ClientReportModal
+            open={showReportModal}
+            onOpenChange={setShowReportModal}
+            client={selectedClient}
+            onReportGenerated={handleReportGenerated}
           />
 
           <EditClientForm
