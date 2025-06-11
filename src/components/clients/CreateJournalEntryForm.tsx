@@ -13,10 +13,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { StreamingProgressIndicator } from '@/components/ui/StreamingProgressIndicator';
+import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
 import { TypingCursor } from '@/components/ui/TypingCursor';
-import { useStreamingSpeechToText } from '@/hooks/useStreamingSpeechToText';
-import { useEdgeFunctionWarming } from '@/hooks/useEdgeFunctionWarming';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useTypeAnimation } from '@/hooks/useTypeAnimation';
 import { useToast } from '@/hooks/use-toast';
 import { X, Mic } from 'lucide-react';
@@ -45,15 +44,11 @@ const CreateJournalEntryForm = ({
   existingEntry
 }: CreateJournalEntryFormProps) => {
   const { toast } = useToast();
-  const [processingState, setProcessingState] = useState<'idle' | 'streaming' | 'typing'>('idle');
+  const [processingState, setProcessingState] = useState<'idle' | 'processing' | 'typing'>('idle');
   const [newTranscriptToType, setNewTranscriptToType] = useState('');
   const [existingText, setExistingText] = useState('');
   const [startTyping, setStartTyping] = useState(false);
-  const [currentStreamingText, setCurrentStreamingText] = useState('');
   const animationKeyRef = useRef(0);
-  
-  // Initialize edge function warming
-  useEdgeFunctionWarming();
   
   const {
     register,
@@ -76,42 +71,36 @@ const CreateJournalEntryForm = ({
     }
   }, [existingEntry, open, setValue]);
 
-  // Handle when silence is detected
+  // Handle when silence is detected - show immediate feedback
   const handleSilenceDetected = () => {
-    console.log('Silence detected, finalizing transcript');
-    setProcessingState('typing');
+    console.log('Silence detected, showing processing state');
+    setProcessingState('processing');
   };
 
-  // Handle streaming transcript updates
-  const handleTranscriptUpdate = (transcript: string, isFinal: boolean) => {
-    console.log('Streaming transcript update:', transcript, 'isFinal:', isFinal);
+  // Handle when transcript is ready - prepare for type animation
+  const handleTranscriptReady = (transcript: string) => {
+    console.log('Transcript ready:', transcript);
+    const currentText = getValues('entry_text') || '';
     
-    if (isFinal) {
-      // Final transcript - prepare for typing animation
-      const currentText = getValues('entry_text') || '';
-      setExistingText(currentText);
-      const newTranscript = currentText ? ` ${transcript}` : transcript;
-      setNewTranscriptToType(newTranscript);
-      setCurrentStreamingText('');
-      
-      setProcessingState('typing');
-      animationKeyRef.current++;
-      setStartTyping(true);
-    } else {
-      // Interim results - show in real-time
-      setCurrentStreamingText(transcript);
-    }
+    // Store existing text and new transcript separately
+    setExistingText(currentText);
+    const newTranscript = currentText ? ` ${transcript}` : transcript;
+    setNewTranscriptToType(newTranscript);
+    
+    setProcessingState('typing');
+    animationKeyRef.current++;
+    setStartTyping(true);
   };
 
-  // Fast type animation configuration (reduced from 50ms to 20ms)
+  // Type animation configuration
   const { displayText, isTyping, showCursor, stopTyping } = useTypeAnimation(
     newTranscriptToType,
     startTyping,
     {
-      speed: 20, // Faster typing speed
-      punctuationDelay: 100, // Reduced pause delays
+      speed: 50,
+      punctuationDelay: 200,
       onComplete: () => {
-        console.log('Fast type animation complete');
+        console.log('Type animation complete');
         const finalText = existingText + newTranscriptToType;
         setValue('entry_text', finalText, { 
           shouldDirty: true, 
@@ -124,7 +113,7 @@ const CreateJournalEntryForm = ({
         setExistingText('');
       },
       onInterrupt: () => {
-        console.log('Fast type animation interrupted by user');
+        console.log('Type animation interrupted by user');
         const finalText = existingText + newTranscriptToType;
         setValue('entry_text', finalText, { 
           shouldDirty: true, 
@@ -139,25 +128,10 @@ const CreateJournalEntryForm = ({
     }
   );
 
-  const { 
-    isRecording, 
-    isProcessing, 
-    audioLevel, 
-    processingProgress, 
-    toggleRecording 
-  } = useStreamingSpeechToText(
-    handleTranscriptUpdate,
+  const { isRecording, isProcessing, toggleRecording } = useSpeechToText(
+    handleTranscriptReady,
     handleSilenceDetected
   );
-
-  // Update processing state based on streaming STT
-  useEffect(() => {
-    if (isRecording) {
-      setProcessingState('streaming');
-    } else if (!isProcessing && processingState === 'streaming') {
-      setProcessingState('idle');
-    }
-  }, [isRecording, isProcessing, processingState]);
 
   // Handle user typing during animation
   const handleTextareaChange = (value: string) => {
@@ -184,6 +158,7 @@ const CreateJournalEntryForm = ({
   const onSubmit = async (data: JournalEntryFormData) => {
     try {
       if (existingEntry) {
+        // Update existing entry
         await journalEntriesService.updateJournalEntry(existingEntry.id, {
           entry_text: data.entry_text,
         });
@@ -193,6 +168,7 @@ const CreateJournalEntryForm = ({
           description: "Journal entry updated successfully!",
         });
       } else {
+        // Create new entry
         const entryData: CreateJournalEntryData = {
           client_id: clientId,
           title: getDefaultTitle(),
@@ -227,7 +203,6 @@ const CreateJournalEntryForm = ({
     setStartTyping(false);
     setNewTranscriptToType('');
     setExistingText('');
-    setCurrentStreamingText('');
     reset();
     onOpenChange(false);
   };
@@ -236,9 +211,6 @@ const CreateJournalEntryForm = ({
   const getTextareaDisplayValue = () => {
     if (processingState === 'typing') {
       return existingText + displayText;
-    } else if (processingState === 'streaming' && currentStreamingText) {
-      const currentText = getValues('entry_text') || '';
-      return currentText + (currentText ? ' ' : '') + currentStreamingText;
     }
     return getValues('entry_text') || '';
   };
@@ -294,19 +266,12 @@ const CreateJournalEntryForm = ({
               <p className="text-sm text-destructive">{errors.entry_text.message}</p>
             )}
             
-            {/* Enhanced processing indicators */}
-            {processingState === 'streaming' && (
-              <StreamingProgressIndicator 
-                progress={processingProgress}
-                isProcessing={isProcessing}
+            {/* Processing indicator */}
+            {processingState === 'processing' && (
+              <ProcessingIndicator 
+                message="Processing speech..." 
                 className="mt-2"
               />
-            )}
-            
-            {processingState === 'streaming' && currentStreamingText && (
-              <div className="flex items-center gap-2 text-sm text-blue-600 mt-2">
-                <span>Live transcript: "{currentStreamingText}"</span>
-              </div>
             )}
             
             {processingState === 'typing' && (
@@ -316,30 +281,19 @@ const CreateJournalEntryForm = ({
               </div>
             )}
             
-            {/* Enhanced mic button with audio level indicator */}
-            <div className="flex justify-end items-center gap-2">
-              {isRecording && (
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span>Audio level:</span>
-                  <div className="w-12 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-green-500 transition-all duration-100"
-                      style={{ width: `${audioLevel}%` }}
-                    />
-                  </div>
-                </div>
-              )}
+            {/* Mic button */}
+            <div className="flex justify-end">
               <button
                 type="button"
                 onClick={toggleRecording}
-                disabled={isProcessing || processingState === 'typing'}
+                disabled={isProcessing || processingState !== 'idle'}
                 className={`p-2.5 rounded-full transition-colors ${
                   isRecording 
-                    ? 'bg-red-100 text-red-600' 
+                    ? 'bg-indigo-100 text-indigo-600' 
                     : 'text-gray-500 hover:bg-gray-100'
-                } ${(isProcessing || processingState === 'typing') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                } ${(isProcessing || processingState !== 'idle') ? 'opacity-50 cursor-not-allowed' : ''}`}
                 aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-                title={isRecording ? 'Stop recording' : 'Start streaming voice recording'}
+                title={isRecording ? 'Stop recording' : 'Start voice recording'}
               >
                 <Mic className="w-5 h-5" />
               </button>

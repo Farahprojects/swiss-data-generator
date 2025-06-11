@@ -12,6 +12,3 @@ verify_jwt = false
 
 [functions.get-google-maps-key]
 verify_jwt = false
-
-[functions.streaming-speech-to-text]
-verify_jwt = false
