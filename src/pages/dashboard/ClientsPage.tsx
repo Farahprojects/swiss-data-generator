@@ -51,9 +51,11 @@ const ClientsPage = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportDrawer, setShowReportDrawer] = useState(false);
+  const [showInsightDrawer, setShowInsightDrawer] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
   const [selectedReportData, setSelectedReportData] = useState<any>(null);
+  const [selectedInsightData, setSelectedInsightData] = useState<any>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -223,12 +225,39 @@ const ClientsPage = () => {
     };
   };
 
+  const transformInsightForDrawer = (client: ClientWithJournal) => {
+    // Create a mock insight report structure for the drawer
+    const insightContent = `Latest insight for ${client.full_name}`;
+    
+    return {
+      id: `insight-${client.id}`,
+      created_at: client.created_at, // Use client creation date as fallback
+      response_status: 200,
+      request_type: 'insight',
+      report_tier: 'insight',
+      total_cost_usd: 0,
+      processing_time_ms: null,
+      response_payload: {
+        report: insightContent
+      },
+      request_payload: null,
+      error_message: undefined,
+      google_geo: false
+    };
+  };
+
   const handleViewReport = (client: ClientWithJournal) => {
     if (client.latestReport) {
       const transformedData = transformReportForDrawer(client.latestReport);
       setSelectedReportData(transformedData);
       setShowReportDrawer(true);
     }
+  };
+
+  const handleViewInsight = (client: ClientWithJournal) => {
+    const transformedData = transformInsightForDrawer(client);
+    setSelectedInsightData(transformedData);
+    setShowInsightDrawer(true);
   };
 
   const filteredAndSortedClients = useMemo(() => {
@@ -379,7 +408,10 @@ const ClientsPage = () => {
       >
         {client.latestReport ? formatReportType(client.latestReport) : '-'}
       </TableCell>
-      <TableCell className="text-muted-foreground">
+      <TableCell 
+        className="text-muted-foreground cursor-pointer hover:text-primary"
+        onClick={() => handleViewInsight(client)}
+      >
         {formatDate(client.created_at)}
       </TableCell>
       <TableCell>
@@ -537,7 +569,7 @@ const ClientsPage = () => {
                   onClick={() => handleSort('created_at')}
                 >
                   <div className="flex items-center gap-1">
-                    Last Insight
+                    Insight
                     {getSortIcon('created_at')}
                   </div>
                 </TableHead>
@@ -613,6 +645,13 @@ const ClientsPage = () => {
         isOpen={showReportDrawer}
         onClose={() => setShowReportDrawer(false)}
         logData={selectedReportData}
+      />
+
+      {/* Insight Viewer Drawer */}
+      <ActivityLogDrawer
+        isOpen={showInsightDrawer}
+        onClose={() => setShowInsightDrawer(false)}
+        logData={selectedInsightData}
       />
     </div>
   );
