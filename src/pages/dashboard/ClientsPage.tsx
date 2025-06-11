@@ -59,6 +59,7 @@ const ClientsPage = () => {
   const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
   const [selectedReportData, setSelectedReportData] = useState<any>(null);
   const [selectedInsightData, setSelectedInsightData] = useState<any>(null);
+  const [selectedClientJournalEntries, setSelectedClientJournalEntries] = useState<JournalEntry[]>([]);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -172,9 +173,25 @@ const ClientsPage = () => {
     }
   };
 
-  const handleGenerateInsight = (client: Client) => {
-    setSelectedClient(client);
-    setShowInsightModal(true);
+  const handleGenerateInsight = async (client: Client) => {
+    try {
+      console.log('💡 Generating insight for client:', client.full_name);
+      setSelectedClient(client);
+      
+      // Load journal entries for this specific client
+      const journalEntries = await journalEntriesService.getJournalEntries(client.id);
+      console.log('📔 Loaded journal entries for insight:', journalEntries.length, 'entries');
+      setSelectedClientJournalEntries(journalEntries);
+      
+      setShowInsightModal(true);
+    } catch (error) {
+      console.error('Error loading journal entries for insight:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load journal entries. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleGenerateReport = (client: Client) => {
@@ -217,6 +234,7 @@ const ClientsPage = () => {
   const handleInsightGenerated = () => {
     setShowInsightModal(false);
     setSelectedClient(null);
+    setSelectedClientJournalEntries([]);
     loadClients();
   };
 
@@ -655,7 +673,7 @@ const ClientsPage = () => {
             open={showInsightModal}
             onOpenChange={setShowInsightModal}
             client={selectedClient}
-            journalEntries={[]}
+            journalEntries={selectedClientJournalEntries}
             onInsightGenerated={handleInsightGenerated}
           />
 
