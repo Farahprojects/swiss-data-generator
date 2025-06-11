@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,7 +29,7 @@ const getDisplayName = (report: ClientReport): string => {
       .split(' | ')[0]
       .split(' (')[0]
       .trim();
-    
+
     return cleanName || `#${report.id.substring(0, 8)}`;
   }
   return `#${report.id.substring(0, 8)}`;
@@ -73,33 +73,33 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Report Type</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead className="w-1/6">Date</TableHead>
+                <TableHead className="w-1/4">Name</TableHead>
+                <TableHead className="w-1/3">Report Type</TableHead>
+                <TableHead className="w-1/6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clientReports.map((report) => (
                 <TableRow key={report.id}>
-                  <TableCell className="text-sm text-gray-600 align-middle">
+                  <TableCell className="w-1/6 text-sm text-gray-600 align-middle">
                     {formatDate(report.created_at)}
                   </TableCell>
-                  <TableCell className="font-medium align-middle">
+                  <TableCell className="w-1/4 font-medium text-gray-900 align-middle">
                     {getDisplayName(report)}
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600 align-middle">
+                  <TableCell className="w-1/3 text-sm text-gray-600 align-middle">
                     {formatReportTier(report.report_tier)}
                   </TableCell>
-                  <TableCell className="align-middle">
+                  <TableCell className="w-1/6 align-middle">
                     <div className="flex items-center gap-2">
                       {!(report.response_status >= 200 && report.response_status < 300) && (
                         <Badge variant="destructive" className="text-xs">
                           Failed
                         </Badge>
                       )}
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => onViewReport(report)}
                         disabled={!(report.response_status >= 200 && report.response_status < 300)}
