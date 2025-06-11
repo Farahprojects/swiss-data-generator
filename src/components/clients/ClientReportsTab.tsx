@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,10 +90,10 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
             {/* Table Head */}
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px] pl-4 text-left">Date</TableHead>
-                <TableHead className="w-[200px] pl-4 text-left">Name</TableHead>
-                <TableHead className="w-[240px] pl-4 text-left">Reports Type</TableHead>
-                <TableHead className="w-[160px] pl-4 text-left">Actions</TableHead>
+                <TableHead className="w-[120px] p-0 pl-4 text-left">Date</TableHead>
+                <TableHead className="w-[200px] p-0 pl-4 text-left">Name</TableHead>
+                <TableHead className="w-[240px] p-0 pl-4 text-left">Reports Type</TableHead>
+                <TableHead className="w-[160px] p-0 pl-4 text-left">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -100,16 +101,16 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
             <TableBody>
               {clientReports.map(report => (
                 <TableRow key={report.id}>
-                  <TableCell className="w-[120px] pl-4 py-3 align-middle text-sm text-gray-600">
+                  <TableCell className="w-[120px] p-0 pl-4 py-3 align-middle text-sm text-gray-600">
                     {formatDate(report.created_at)}
                   </TableCell>
-                  <TableCell className="w-[200px] pl-4 py-3 align-middle truncate text-sm font-medium text-gray-900">
+                  <TableCell className="w-[200px] p-0 pl-4 py-3 align-middle truncate text-sm font-medium text-gray-900">
                     {getDisplayName(report)}
                   </TableCell>
-                  <TableCell className="w-[240px] pl-4 py-3 align-middle text-sm text-gray-600">
+                  <TableCell className="w-[240px] p-0 pl-4 py-3 align-middle text-sm text-gray-600">
                     {formatReportTier(report.report_tier)}
                   </TableCell>
-                  <TableCell className="w-[160px] pl-4 py-3 align-middle">
+                  <TableCell className="w-[160px] p-0 pl-4 py-3 align-middle">
                     <div className="flex items-center gap-2">
                       {!(report.response_status >= 200 && report.response_status < 300) && (
                         <Badge variant="destructive" className="text-xs">
