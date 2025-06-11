@@ -66,10 +66,21 @@ const ClientsPage = () => {
   const { preferences, updateClientViewMode } = useUserPreferences();
   const isMobile = useIsMobile();
   
-  // Get view mode from user preferences
-  const viewMode = preferences?.client_view_mode || 'grid';
+  // Initialize viewMode state - start with null to indicate loading
+  const [viewMode, setViewModeState] = useState<ViewMode | null>(null);
+
+  // Update viewMode when preferences load
+  useEffect(() => {
+    if (preferences?.client_view_mode) {
+      setViewModeState(preferences.client_view_mode);
+    } else if (preferences) {
+      // Preferences loaded but no client_view_mode set, use default
+      setViewModeState('grid');
+    }
+  }, [preferences]);
 
   const setViewMode = async (newViewMode: ViewMode) => {
+    setViewModeState(newViewMode);
     await updateClientViewMode(newViewMode);
   };
 
@@ -467,6 +478,11 @@ const ClientsPage = () => {
 
   if (loading) {
     return <TheraLoader message="Loading clients..." size="lg" />;
+  }
+
+  // Show loading if viewMode hasn't been determined yet
+  if (viewMode === null) {
+    return <TheraLoader message="Loading preferences..." size="lg" />;
   }
 
   return (
