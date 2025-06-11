@@ -1,6 +1,5 @@
 
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +11,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { Plus, FileText } from 'lucide-react';
+import { Plus, FileText, ChevronUp, ChevronDown } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 
 interface ClientReport {
@@ -30,6 +29,9 @@ interface ClientReportsTabProps {
   onCreateReport: () => void;
   onViewReport: (report: ClientReport) => void;
 }
+
+type SortField = 'created_at' | 'report_name' | 'report_tier';
+type SortDirection = 'asc' | 'desc';
 
 const getDisplayName = (report: ClientReport): string => {
   if (report.report_name) {
@@ -53,6 +55,49 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
   onCreateReport,
   onViewReport
 }) => {
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
+  };
+
+  const sortedReports = [...clientReports].sort((a, b) => {
+    let aValue: any;
+    let bValue: any;
+
+    switch (sortField) {
+      case 'created_at':
+        aValue = new Date(a.created_at);
+        bValue = new Date(b.created_at);
+        break;
+      case 'report_name':
+        aValue = getDisplayName(a).toLowerCase();
+        bValue = getDisplayName(b).toLowerCase();
+        break;
+      case 'report_tier':
+        aValue = formatReportTier(a.report_tier).toLowerCase();
+        bValue = formatReportTier(b.report_tier).toLowerCase();
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -68,8 +113,8 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
       {clientReports.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
-            <div className="text-lg text-gray-400 mb-2">No reports generated yet</div>
-            <p className="mb-4 text-gray-600">Generate astrological reports for this client</p>
+            <div className="text-lg text-muted-foreground mb-2">No reports generated yet</div>
+            <p className="mb-4 text-muted-foreground">Generate astrological reports for this client</p>
             <Button onClick={onCreateReport}>
               <Plus className="mr-2 h-4 w-4" />
               Generate Report
@@ -78,40 +123,53 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
         </Card>
       ) : (
         <Card>
-          {/* Table */}
-          <Table className="min-w-full">
-            {/* Define explicit column widths so header & body stay aligned */}
-            <colgroup>
-              <col className="w-[120px]" />
-              <col className="w-[200px]" />
-              <col className="w-[240px]" />
-              <col className="w-[160px]" />
-            </colgroup>
-
-            {/* Table Head */}
+          <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px] px-0 pl-4 text-left">Date</TableHead>
-                <TableHead className="w-[200px] px-0 pl-4 text-left">Name</TableHead>
-                <TableHead className="w-[240px] px-0 pl-4 text-left">Reports Type</TableHead>
-                <TableHead className="w-[160px] px-0 pl-4 text-left">Actions</TableHead>
+                <TableHead 
+                  className="font-semibold cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('created_at')}
+                >
+                  <div className="flex items-center gap-1">
+                    Date
+                    {getSortIcon('created_at')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-semibold cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('report_name')}
+                >
+                  <div className="flex items-center gap-1">
+                    Name
+                    {getSortIcon('report_name')}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="font-semibold cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('report_tier')}
+                >
+                  <div className="flex items-center gap-1">
+                    Report Type
+                    {getSortIcon('report_tier')}
+                  </div>
+                </TableHead>
+                <TableHead className="font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
-            {/* Table Body */}
             <TableBody>
-              {clientReports.map(report => (
-                <TableRow key={report.id}>
-                  <TableCell className="w-[120px] px-0 pl-4 py-3 align-middle text-sm text-gray-600">
+              {sortedReports.map(report => (
+                <TableRow key={report.id} className="hover:bg-muted/50">
+                  <TableCell className="text-sm text-muted-foreground">
                     {formatDate(report.created_at)}
                   </TableCell>
-                  <TableCell className="w-[200px] px-0 pl-4 py-3 align-middle truncate text-sm font-medium text-gray-900">
+                  <TableCell className="font-medium">
                     {getDisplayName(report)}
                   </TableCell>
-                  <TableCell className="w-[240px] px-0 pl-4 py-3 align-middle text-sm text-gray-600">
+                  <TableCell className="text-muted-foreground">
                     {formatReportTier(report.report_tier)}
                   </TableCell>
-                  <TableCell className="w-[160px] px-0 pl-4 py-3 align-middle">
+                  <TableCell>
                     <div className="flex items-center gap-2">
                       {!(report.response_status >= 200 && report.response_status < 300) && (
                         <Badge variant="destructive" className="text-xs">
@@ -140,4 +198,3 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
 };
 
 export default ClientReportsTab;
-
