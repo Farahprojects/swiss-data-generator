@@ -386,17 +386,24 @@ serve(async (req) => {
     }
 
     let payload;
+    const rawBody = await req.text();
+    if (!rawBody || rawBody.trim() === '') {
+      console.error(`${logPrefix} Request body is empty`);
+      return jsonResponse({ error: "Request body is empty", requestId }, { status: 400 }, requestId);
+    }
+
     try {
-      payload = await req.json();
+      payload = JSON.parse(rawBody);
       console.log(`${logPrefix} Successfully parsed request payload`);
       console.log(`${logPrefix} Payload keys:`, Object.keys(payload));
-    } catch (parseError) {
-      console.error(`${logPrefix} Invalid JSON payload:`, parseError);
-      return jsonResponse(
-        { error: "Invalid JSON payload", details: parseError.message, requestId },
-        { status: 400 },
+    } catch (err) {
+      console.error(`${logPrefix} Failed to parse JSON:`, err.message);
+      console.error(`${logPrefix} Raw body preview:`, rawBody.slice(0, 300));
+      return jsonResponse({
+        error: "Invalid JSON payload",
+        details: err.message,
         requestId
-      );
+      }, { status: 400 }, requestId);
     }
 
     const { clientId, coachId, insightType, clientData, title } = payload;
