@@ -75,29 +75,29 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Report Type</TableHead>
-                <TableHead className="w-[120px]">Date</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
+                <TableHead className="pl-4">Name</TableHead>
+                <TableHead className="pl-4">Report Type</TableHead>
+                <TableHead className="w-[120px] pl-4">Date</TableHead>
+                <TableHead className="w-[120px] pl-4">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clientReports.map((report) => (
                 <TableRow key={report.id}>
-                  <TableCell>
+                  <TableCell className="pl-4">
                     <div className="font-medium">
                       {getDisplayName(report)}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="pl-4">
                     <div className="text-sm text-gray-600">
                       {formatReportTier(report.report_tier)}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600">
+                  <TableCell className="text-sm text-gray-600 pl-4">
                     {formatDate(report.created_at)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="pl-4">
                     <div className="flex items-center gap-2">
                       {!(report.response_status >= 200 && report.response_status < 300) && (
                         <Badge variant="destructive" className="text-xs">
