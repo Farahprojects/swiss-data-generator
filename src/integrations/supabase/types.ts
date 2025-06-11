@@ -1140,6 +1140,7 @@ export type Database = {
       }
       user_preferences: {
         Row: {
+          client_view_mode: string | null
           created_at: string
           email_change_notifications: boolean | null
           email_notifications_enabled: boolean | null
@@ -1150,6 +1151,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_view_mode?: string | null
           created_at?: string
           email_change_notifications?: boolean | null
           email_notifications_enabled?: boolean | null
@@ -1160,6 +1162,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_view_mode?: string | null
           created_at?: string
           email_change_notifications?: boolean | null
           email_notifications_enabled?: boolean | null

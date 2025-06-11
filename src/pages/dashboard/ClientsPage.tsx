@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Plus, Search, Calendar, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
@@ -21,6 +21,7 @@ import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 
 type ViewMode = 'grid' | 'list';
 type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'latest_insight' | 'created_at';
@@ -58,12 +59,18 @@ const ClientsPage = () => {
   const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
   const [selectedReportData, setSelectedReportData] = useState<any>(null);
   const [selectedInsightData, setSelectedInsightData] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterType, setFilterType] = useState<FilterType>('all');
-  const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
   const { toast } = useToast();
+  const { preferences, updateClientViewMode } = useUserPreferences();
+  
+  // Get view mode from user preferences
+  const viewMode = preferences?.client_view_mode || 'grid';
+
+  const setViewMode = async (newViewMode: ViewMode) => {
+    await updateClientViewMode(newViewMode);
+  };
 
   useEffect(() => {
     loadClients();
@@ -274,8 +281,7 @@ const ClientsPage = () => {
 
   const filteredAndSortedClients = useMemo(() => {
     let filtered = clients.filter(client =>
-      client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      client.full_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Apply filters (placeholder logic - you'll need to implement based on your data structure)
@@ -464,7 +470,7 @@ const ClientsPage = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Search clients by name or email..."
+              placeholder="Search clients by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 w-64"
@@ -483,15 +489,6 @@ const ClientsPage = () => {
               <SelectItem value="has_journal_no_report">Has Journal, No Report</SelectItem>
             </SelectContent>
           </Select>
-
-          {/* AI Insights Toggle */}
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={aiInsightsEnabled}
-              onCheckedChange={setAiInsightsEnabled}
-            />
-            <span className="text-sm text-muted-foreground">AI Insights</span>
-          </div>
           
           {/* View Toggle */}
           <div className="flex items-center border rounded-md">

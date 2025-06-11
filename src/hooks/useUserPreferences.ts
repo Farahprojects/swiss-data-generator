@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logToSupabase } from "@/utils/batchedLogManager";
@@ -11,6 +12,7 @@ export interface UserPreferences {
   password_change_notifications: boolean;
   email_change_notifications: boolean;
   security_alert_notifications: boolean;
+  client_view_mode: 'grid' | 'list';
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +34,7 @@ const getDefaultPreferences = (userId: string): UserPreferences => ({
   password_change_notifications: true,
   email_change_notifications: true,
   security_alert_notifications: true,
+  client_view_mode: 'grid',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 });
@@ -48,7 +51,7 @@ export function useUserPreferences() {
   const { toast } = useToast();
   
   // Track user initiated changes to prevent real-time updates from overriding them
-  const pendingChangesRef = useRef<Map<string, boolean>>(new Map());
+  const pendingChangesRef = useRef<Map<string, boolean | string>>(new Map());
   // Track the timestamp of the last user update to ignore real-time events too close to it
   const lastUpdateTimestampRef = useRef<number>(0);
   // Track if component is mounted
@@ -246,6 +249,7 @@ export function useUserPreferences() {
         password_change_notifications: true,
         email_change_notifications: true,
         security_alert_notifications: true,
+        client_view_mode: 'grid',
       };
 
       const { data, error } = await supabase
@@ -306,6 +310,7 @@ export function useUserPreferences() {
           email_change_notifications: preferences.email_change_notifications,
           security_alert_notifications:
             preferences.security_alert_notifications,
+          client_view_mode: preferences.client_view_mode,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -404,6 +409,7 @@ export function useUserPreferences() {
             type === "security_alert_notifications"
               ? enabled
               : preferences.security_alert_notifications,
+          client_view_mode: preferences.client_view_mode,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -457,6 +463,92 @@ export function useUserPreferences() {
     }
   };
 
+  const updateClientViewMode = async (
+    viewMode: 'grid' | 'list',
+    options: UpdateOptions = {}
+  ) => {
+    if (!user?.id || !preferences) return false;
+
+    const { showToast = false } = options;
+
+    // Record this change as pending
+    pendingChangesRef.current.set("client_view_mode", viewMode);
+    // Record the timestamp of this update
+    lastUpdateTimestampRef.current = Date.now();
+
+    // Optimistically update UI
+    setPreferences((prev) =>
+      prev
+        ? {
+            ...prev,
+            client_view_mode: viewMode,
+          }
+        : null
+    );
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase.from("user_preferences").upsert(
+        {
+          user_id: user.id,
+          email_notifications_enabled: preferences.email_notifications_enabled,
+          password_change_notifications: preferences.password_change_notifications,
+          email_change_notifications: preferences.email_change_notifications,
+          security_alert_notifications: preferences.security_alert_notifications,
+          client_view_mode: viewMode,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
+
+      if (error) throw error;
+
+      if (showToast) {
+        toast({
+          title: "View Preference Saved",
+          description: `Client view mode set to ${viewMode}`,
+        });
+      }
+      
+      // After successful update, we can remove this change from pending
+      pendingChangesRef.current.delete("client_view_mode");
+      
+      return true;
+    } catch (err: any) {
+      console.error("Error updating client view mode:", err);
+      
+      // Revert optimistic update on error
+      if (isMounted()) {
+        setPreferences((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev, 
+            client_view_mode: viewMode === 'grid' ? 'list' : 'grid'
+          };
+        });
+        
+        if (showToast) {
+          toast({
+            title: "Error",
+            description: "There was an issue saving your view preference.",
+            variant: "destructive",
+          });
+        }
+      }
+      
+      // Remove from pending changes on error
+      pendingChangesRef.current.delete("client_view_mode");
+      
+      return false;
+    } finally {
+      if (isMounted()) {
+        setSaving(false);
+      }
+    }
+  };
+
   const formatNotificationTypeName = (type: string): string => {
     switch (type) {
       case "password_change_notifications":
@@ -480,6 +572,7 @@ export function useUserPreferences() {
     error,
     updateMainNotificationsToggle,
     updateNotificationToggle,
+    updateClientViewMode,
     formatNotificationTypeName,
   };
 }
