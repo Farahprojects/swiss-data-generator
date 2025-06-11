@@ -19,7 +19,7 @@ import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import { ClientReportsTab } from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
 import { InsightEntry } from '@/types/database';
-import { DashboardLayout } from '@/components/layouts/DashboardLayout';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 interface ClientReport {
   id: string;
