@@ -48,46 +48,18 @@ export const useStreamingSpeechToText = (
     }
   }, []);
 
-  // Process audio chunk with preprocessing
-  const preprocessAudioChunk = useCallback((audioBlob: Blob): Promise<string> => {
+  // Convert audio blob to base64 (removed faulty preprocessing)
+  const convertAudioToBase64 = useCallback((audioBlob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const arrayBuffer = reader.result as ArrayBuffer;
-        
-        // Apply audio preprocessing (noise gate, normalization)
-        const audioData = new Float32Array(arrayBuffer);
-        const processedData = applyAudioPreprocessing(audioData);
-        
-        // Convert to base64 with optimized bitrate
-        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(processedData)));
+        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
         resolve(base64Audio);
       };
       reader.onerror = reject;
       reader.readAsArrayBuffer(audioBlob);
     });
-  }, []);
-
-  // Simple audio preprocessing
-  const applyAudioPreprocessing = useCallback((audioData: Float32Array): ArrayBuffer => {
-    // Noise gate: remove low-level noise
-    const noiseThreshold = 0.01;
-    for (let i = 0; i < audioData.length; i++) {
-      if (Math.abs(audioData[i]) < noiseThreshold) {
-        audioData[i] = 0;
-      }
-    }
-    
-    // Simple normalization
-    const maxAmplitude = Math.max(...audioData.map(Math.abs));
-    if (maxAmplitude > 0) {
-      const normalizationFactor = 0.8 / maxAmplitude;
-      for (let i = 0; i < audioData.length; i++) {
-        audioData[i] *= normalizationFactor;
-      }
-    }
-    
-    return audioData.buffer;
   }, []);
 
   // Process streaming chunk
@@ -254,8 +226,8 @@ export const useStreamingSpeechToText = (
           audioChunksRef.current.push(event.data);
           
           try {
-            // Preprocess and convert chunk in parallel
-            const base64Audio = await preprocessAudioChunk(event.data);
+            // Convert chunk to base64 (no preprocessing)
+            const base64Audio = await convertAudioToBase64(event.data);
             
             // Process chunk immediately (streaming)
             const chunk: StreamingChunk = {
@@ -292,7 +264,7 @@ export const useStreamingSpeechToText = (
         variant: "destructive",
       });
     }
-  }, [toast, monitorSilence, warmupEdgeFunction, preprocessAudioChunk, processStreamingChunk]);
+  }, [toast, monitorSilence, warmupEdgeFunction, convertAudioToBase64, processStreamingChunk]);
 
   const stopRecording = useCallback((): Promise<string> => {
     return new Promise(async (resolve) => {
@@ -320,7 +292,7 @@ export const useStreamingSpeechToText = (
             const lastChunk = audioChunksRef.current[audioChunksRef.current.length - 1];
             
             if (lastChunk) {
-              const base64Audio = await preprocessAudioChunk(lastChunk);
+              const base64Audio = await convertAudioToBase64(lastChunk);
               const finalChunk: StreamingChunk = {
                 audioData: base64Audio,
                 chunkIndex: lastChunkIndex,
@@ -374,7 +346,7 @@ export const useStreamingSpeechToText = (
       setIsRecording(false);
       setAudioLevel(0);
     });
-  }, [preprocessAudioChunk, processStreamingChunk, toast]);
+  }, [convertAudioToBase64, processStreamingChunk, toast]);
 
   const toggleRecording = useCallback(async () => {
     if (isRecordingRef.current) {
