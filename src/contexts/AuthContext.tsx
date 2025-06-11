@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
-import { cleanupAuthState, checkForAuthRemnants } from '@/utils/authCleanup';
+import { useNavigate } from 'react-router-dom';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { logToSupabase } from '@/utils/batchedLogManager';
@@ -73,26 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authInitialized, setAuthInitialized] = useState(false);
   const [pendingEmailAddress, setPendingEmailAddress] = useState<string | null>(null);
   const [isPendingEmailCheck, setIsPendingEmailCheck] = useState(false);
   const { clearNavigationState } = useNavigationState();
 
   /* ─────────────────────────────────────────────────────────────
-   * Initial mount – scan for dangling auth state (localStorage)
-   * ────────────────────────────────────────────────────────────*/
-  useEffect(() => {
-    logToSupabase('Auth context initialization', {
-      page: 'AuthContext',
-      level: 'info',
-      data: {
-        authRemnantsCount: checkForAuthRemnants()
-      }
-    });
-  }, []);
-
-  /* ─────────────────────────────────────────────────────────────
-   * Register Supabase auth listener *before* requesting session
+   * Register Supabase auth listener and get initial session
    * ────────────────────────────────────────────────────────────*/
   useEffect(() => {
     logToSupabase('Setting up auth state listener', {
@@ -100,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       level: 'debug'
     });
 
+    // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, supaSession) => {
@@ -121,60 +109,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check for pending email change after successful sign-in
         setIsPendingEmailCheck(true);
         
-        try {
-          const emailCheckData = await checkForPendingEmailChange(
-            supaSession.access_token, 
-            supaSession.user.email || ''
-          );
-          
-          logToSupabase('email-check response in AuthContext', {
-            level: 'debug',
-            page: 'AuthContext',
-            data: emailCheckData,
-          });
-
-          if (emailCheckData?.status === 'pending') {
-            setPendingEmailAddress(emailCheckData.pending_to);
-            logToSupabase('Pending email change detected, setting pendingEmailAddress', {
-              level: 'info',
-              page: 'AuthContext',
-              data: { pendingTo: emailCheckData.pending_to }
-            });
-          } else {
-            setPendingEmailAddress(null);
-          }
-        } catch (error) {
-          logToSupabase('Error checking for pending email change', {
-            level: 'error',
-            page: 'AuthContext',
-            data: { error: error instanceof Error ? error.message : String(error) }
-          });
-          setPendingEmailAddress(null);
-        } finally {
-          setIsPendingEmailCheck(false);
-        }
-
-        setTimeout(() => {
-          // Check if we're on password reset route before suggesting redirect
-          const isOnPasswordResetRoute = window.location.pathname.includes('/auth/password');
-          const onAuthPage = ['/login', '/signup'].includes(window.location.pathname);
-          
-          if (onAuthPage && !isOnPasswordResetRoute) {
-            logToSupabase('Signed-in user still on auth page', {
-              page: 'AuthContext',
+        // Defer the email check to avoid blocking the auth flow
+        setTimeout(async () => {
+          try {
+            const emailCheckData = await checkForPendingEmailChange(
+              supaSession.access_token, 
+              supaSession.user.email || ''
+            );
+            
+            logToSupabase('email-check response in AuthContext', {
               level: 'debug',
-              data: {
-                page: window.location.pathname,
-                shouldRedirect: true
-              }
-            });
-          }
-          
-          if (isOnPasswordResetRoute) {
-            logToSupabase('On password reset route, not redirecting', {
               page: 'AuthContext',
-              level: 'debug'
+              data: emailCheckData,
             });
+
+            if (emailCheckData?.status === 'pending') {
+              setPendingEmailAddress(emailCheckData.pending_to);
+              logToSupabase('Pending email change detected, setting pendingEmailAddress', {
+                level: 'info',
+                page: 'AuthContext',
+                data: { pendingTo: emailCheckData.pending_to }
+              });
+            } else {
+              setPendingEmailAddress(null);
+            }
+          } catch (error) {
+            logToSupabase('Error checking for pending email change', {
+              level: 'error',
+              page: 'AuthContext',
+              data: { error: error instanceof Error ? error.message : String(error) }
+            });
+            setPendingEmailAddress(null);
+          } finally {
+            setIsPendingEmailCheck(false);
           }
         }, 0);
       }
@@ -182,14 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setPendingEmailAddress(null);
         setIsPendingEmailCheck(false);
-        setTimeout(() => {
-          const remnantsCount = checkForAuthRemnants();
-          logToSupabase('Auth remnants after signout', {
-            page: 'AuthContext',
-            level: 'debug',
-            data: { remnantsCount }
-          });
-        }, 100);
       }
     });
 
@@ -209,7 +168,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(supaSession);
       setUser(supaSession?.user ?? null);
       setLoading(false);
-      setAuthInitialized(true);
     });
 
     return () => subscription.unsubscribe();
@@ -229,13 +187,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         level: 'info',
         data: { email }
       });
-      
-      setLoading(true);
-      cleanupAuthState(supabase);
-
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (_) {/* ignore */}
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
@@ -273,8 +224,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       return { error, data: null };
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -285,9 +234,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         level: 'info',
         data: { email }
       });
-      
-      setLoading(true);
-      cleanupAuthState(supabase);
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -329,17 +275,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       return { error };
-    } finally {
-      setLoading(false);
     }
   };
 
   const signInWithGoogle = async () => {
-    cleanupAuthState(supabase);
     const baseUrl = window.location.origin;
 
     try {
-      await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${baseUrl}/dashboard` },
@@ -351,7 +293,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithApple = async () => {
-    cleanupAuthState(supabase);
     const baseUrl = window.location.origin;
 
     try {
@@ -360,7 +301,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         level: 'info',
       });
       
-      await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: { redirectTo: `${baseUrl}/dashboard` },
@@ -390,20 +330,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       debug('========== SIGN‑OUT ==========');
       setLoading(true);
+      
+      // Clear local state
       setUser(null);
       setSession(null);
       setPendingEmailAddress(null);
       setIsPendingEmailCheck(false);
       clearNavigationState();
-      cleanupAuthState(supabase);
 
-      await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
-      /* Clear any lingering sb‑ cookies */
-      document.cookie.split(';').forEach((c) => {
-        const n = c.split('=')[0].trim();
-        if (n.match(/^(sb-|supabase)/i)) document.cookie = `${n}=; Max‑Age=0; path=/;`;
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      logToSupabase('User signed out successfully', {
+        page: 'AuthContext',
+        level: 'info'
       });
-      window.location.href = '/login';
+      
+    } catch (error) {
+      logToSupabase('Error during sign out', {
+        page: 'AuthContext',
+        level: 'error',
+        data: { error: error instanceof Error ? error.message : String(error) }
+      });
     } finally {
       setLoading(false);
     }

@@ -35,41 +35,75 @@ export interface GenerateInsightResponse {
 export const insightsService = {
   async generateInsight(request: GenerateInsightRequest): Promise<GenerateInsightResponse> {
     try {
-      // Get current user's API key
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.id) {
-        throw new Error('User not authenticated');
+      // Get current session with better error handling
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        return {
+          success: false,
+          error: 'Authentication session error. Please try signing in again.'
+        };
       }
 
-      const { data: apiKeyData } = await supabase
+      if (!session?.user?.id) {
+        console.error('No authenticated user found');
+        return {
+          success: false,
+          error: 'You must be signed in to generate insights. Please sign in and try again.'
+        };
+      }
+
+      // Get user's API key using the session
+      const { data: apiKeyData, error: apiKeyError } = await supabase
         .from('api_keys')
         .select('api_key')
-        .eq('user_id', user.id)
+        .eq('user_id', session.user.id)
         .eq('is_active', true)
         .single();
 
-      if (!apiKeyData?.api_key) {
-        throw new Error('No active API key found');
+      if (apiKeyError) {
+        console.error('Error fetching API key:', apiKeyError);
+        return {
+          success: false,
+          error: 'Failed to retrieve API credentials. Please contact support.'
+        };
       }
 
+      if (!apiKeyData?.api_key) {
+        console.error('No active API key found for user');
+        return {
+          success: false,
+          error: 'No active API key found. Please contact support to activate your account.'
+        };
+      }
+
+      console.log('Making insight generation request with auth token and API key');
+
+      // Call the edge function with proper authentication
       const { data, error } = await supabase.functions.invoke('generate-insights', {
         body: request,
         headers: {
-          Authorization: `Bearer ${apiKeyData.api_key}`
+          Authorization: `Bearer ${apiKeyData.api_key}`,
+          'Content-Type': 'application/json'
         }
       });
 
       if (error) {
-        console.error('Error calling generate-insights function:', error);
-        throw new Error(error.message || 'Failed to generate insight');
+        console.error('Edge function error:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to generate insight. Please try again.'
+        };
       }
 
+      console.log('Insight generation response:', data);
       return data;
     } catch (error) {
       console.error('Error in generateInsight:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'An unexpected error occurred'
+        error: error instanceof Error ? error.message : 'An unexpected error occurred while generating the insight.'
       };
     }
   }

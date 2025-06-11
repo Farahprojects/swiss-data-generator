@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -73,7 +74,7 @@ const Login = () => {
     !isPendingEmailCheck &&
     !window.location.pathname.includes('/auth/password')
   ) {
-    const from = (location.state as any)?.from?.pathname || '/';
+    const from = (location.state as any)?.from?.pathname || '/dashboard';
     return <Navigate to={from} replace />;
   }
 
@@ -159,14 +160,14 @@ const Login = () => {
         return openVerificationModal();
       }
 
-      // STEP 3: The AuthContext will handle pending email checks via onAuthStateChange
-      // If there's a pending email change, the AuthGuard will redirect back here
-      // with the verification modal shown
-
-      logToSupabase('Login successful, waiting for AuthContext to handle navigation', {
+      // STEP 3: Successful login - navigate to dashboard
+      logToSupabase('Login successful, navigating to dashboard', {
         level: 'info',
         page: 'Login'
       });
+      
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
 
     } catch (err: any) {
       toast({
@@ -200,7 +201,8 @@ const Login = () => {
       title: 'Email verified!',
       description: 'You can now continue to your dashboard.',
     });
-    navigate((location.state as any)?.from?.pathname || '/', { replace: true });
+    const from = (location.state as any)?.from?.pathname || '/dashboard';
+    navigate(from, { replace: true });
   };
 
   const handleVerificationCancelled = () => {

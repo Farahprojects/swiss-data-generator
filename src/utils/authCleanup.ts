@@ -25,7 +25,7 @@ export const detectAndCleanPhantomAuth = async (supabase: SupabaseClient): Promi
     // If we have supabase items but no valid session, clean up
     if (!hasValidSession) {
       logAuth("Found auth items without a valid session, cleaning up");
-      await forceAuthReset(supabase);
+      await gentleAuthCleanup(supabase);
       return true;
     }
 
@@ -38,9 +38,47 @@ export const detectAndCleanPhantomAuth = async (supabase: SupabaseClient): Promi
 };
 
 /**
+ * Gentle cleanup that only removes obviously stale tokens
+ * Used when session is definitely invalid
+ */
+export const gentleAuthCleanup = async (supabase: SupabaseClient): Promise<void> => {
+  try {
+    // Try a standard signout first
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      log('warn', "Could not perform standard signout, continuing with gentle cleanup", e);
+    }
+
+    // Only clean up clearly invalid tokens
+    Object.keys(localStorage).forEach(key => {
+      // Only remove expired or malformed tokens, not all auth data
+      if (key.includes('supabase.auth.token') || key.includes('sb-auth-token')) {
+        try {
+          const item = localStorage.getItem(key);
+          if (item) {
+            const parsed = JSON.parse(item);
+            // Check if token is expired
+            if (parsed.expires_at && new Date(parsed.expires_at * 1000) < new Date()) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch {
+          // If we can't parse it, it's probably corrupted
+          localStorage.removeItem(key);
+        }
+      }
+    });
+
+    logAuth("Gentle auth cleanup completed");
+  } catch (error) {
+    log('error', "Error during gentle auth cleanup", error);
+  }
+};
+
+/**
  * Performs a thorough cleanup of all auth state
- * Use this when regular signOut doesn't work
- * or when auth state is inconsistent
+ * Use this ONLY on explicit logout
  */
 export const forceAuthReset = async (supabase: SupabaseClient): Promise<void> => {
   try {
@@ -72,12 +110,12 @@ export const forceAuthReset = async (supabase: SupabaseClient): Promise<void> =>
 };
 
 /**
- * Alias for forceAuthReset for backward compatibility
- * This is the function imported in AuthContext.tsx
- * Now requires a supabase client instance as parameter
+ * Updated cleanup function that doesn't aggressively clear on every operation
+ * Only use on explicit logout
  */
 export const cleanupAuthState = (supabase: SupabaseClient): void => {
-  forceAuthReset(supabase).catch(error => {
+  // Only do gentle cleanup, not forced reset
+  gentleAuthCleanup(supabase).catch(error => {
     console.error("Failed to clean up auth state:", error);
   });
 };
