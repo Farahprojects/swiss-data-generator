@@ -86,46 +86,46 @@ export const QuickStats = () => {
       title: "Total Clients",
       value: stats.totalClients,
       icon: Users,
-      color: "text-primary"
+      color: "text-blue-600"
     },
     {
       title: "Recent Entries",
       value: stats.recentJournalEntries,
       subtitle: "Last 7 days",
       icon: BookOpen,
-      color: "text-secondary"
+      color: "text-green-600"
     },
     {
       title: "Active This Month",
       value: stats.activeThisMonth,
       icon: TrendingUp,
-      color: "text-primary"
+      color: "text-purple-600"
     },
     {
       title: "Reports Generated",
       value: stats.reportsGenerated,
       subtitle: "This month",
       icon: FileText,
-      color: "text-secondary"
+      color: "text-orange-600"
     }
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {statCards.map((stat, index) => (
-        <Card key={index} className="border-primary/20 bg-gradient-to-br from-background to-accent/30">
+        <Card key={index} className="border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-gray-600">
               {stat.title}
             </CardTitle>
             <stat.icon className={`h-4 w-4 ${stat.color}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold text-gray-900">
               {loading ? "..." : stat.value}
             </div>
             {stat.subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{stat.subtitle}</p>
+              <p className="text-xs text-gray-500 mt-1">{stat.subtitle}</p>
             )}
           </CardContent>
         </Card>
