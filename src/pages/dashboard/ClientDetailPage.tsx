@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ArrowLeft } from 'lucide-react';
 import { clientsService } from '@/services/clients';
+import { journalEntriesService } from '@/services/journalEntries';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useClientData } from '@/hooks/useClientData';
@@ -19,7 +19,7 @@ import { ClientInfoCard } from '@/components/clients/ClientInfoCard';
 import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import { ClientReportsTab } from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
-import { InsightEntry } from '@/types/database';
+import { InsightEntry, JournalEntry } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ClientReport {
@@ -49,11 +49,17 @@ const ClientDetailPage = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('journals');
   const [localInsightEntries, setLocalInsightEntries] = useState<InsightEntry[]>([]);
+  const [localJournalEntries, setLocalJournalEntries] = useState<JournalEntry[]>([]);
 
   // Update local insights when data changes
   React.useEffect(() => {
     setLocalInsightEntries(insightEntries);
   }, [insightEntries]);
+
+  // Update local journal entries when data changes
+  React.useEffect(() => {
+    setLocalJournalEntries(journalEntries);
+  }, [journalEntries]);
 
   const handleDeleteClient = async () => {
     if (!client) return;
@@ -130,6 +136,22 @@ const ClientDetailPage = () => {
     }
   };
 
+  const refreshJournals = async () => {
+    if (!id) return;
+    
+    try {
+      const journalData = await journalEntriesService.getJournalEntries(id);
+      setLocalJournalEntries(journalData);
+    } catch (error) {
+      console.error('Error refreshing journal entries:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh journal entries. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleGenerateInsight = () => {
     setShowCreateJournalModal(false);
     setShowReportModal(false);
@@ -165,7 +187,7 @@ const ClientDetailPage = () => {
           client={client}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          journalCount={journalEntries.length}
+          journalCount={localJournalEntries.length}
           reportCount={clientReports.length}
           insightCount={localInsightEntries.length}
           isClientInfoOpen={isClientInfoOpen}
@@ -198,9 +220,9 @@ const ClientDetailPage = () => {
 
             <TabsContent value="journals" className="space-y-4">
               <ClientJournalTab
-                journalEntries={journalEntries}
+                journalEntries={localJournalEntries}
                 onCreateJournal={() => setShowCreateJournalModal(true)}
-                onEntryUpdated={loadClientData}
+                onEntryUpdated={refreshJournals}
                 clientId={client?.id || ''}
                 isMobile={isMobile}
               />
@@ -218,7 +240,7 @@ const ClientDetailPage = () => {
               <ClientInsightsTab 
                 insightEntries={localInsightEntries}
                 client={client}
-                journalEntries={journalEntries}
+                journalEntries={localJournalEntries}
                 onInsightGenerated={refreshInsights}
                 onViewInsight={handleViewInsight}
               />
@@ -242,7 +264,7 @@ const ClientDetailPage = () => {
             clientId={client.id}
             open={showCreateJournalModal}
             onOpenChange={setShowCreateJournalModal}
-            onEntryCreated={loadClientData}
+            onEntryCreated={refreshJournals}
           />
         )}
 
