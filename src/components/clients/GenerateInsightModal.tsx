@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Client } from '@/types/database';
 import { insightsService } from '@/services/insights';
+import { clientReportsService } from '@/services/clientReports';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import { Pencil } from 'lucide-react';
 
@@ -22,6 +23,14 @@ interface GenerateInsightModalProps {
   onInsightGenerated: () => void;
 }
 
+interface ClientReport {
+  id: string;
+  request_type: string;
+  report_tier?: string;
+  response_payload: any;
+  created_at: string;
+}
+
 export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
   open,
   onOpenChange,
@@ -32,6 +41,8 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [customTitle, setCustomTitle] = useState('');
   const [showTitleInput, setShowTitleInput] = useState(false);
+  const [previousReports, setPreviousReports] = useState<ClientReport[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
   const { toast } = useToast();
 
   const generateDateTitle = () => {
@@ -43,17 +54,61 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
     });
   };
 
+  // Load previous reports when modal opens
+  useEffect(() => {
+    if (open && client.id) {
+      loadPreviousReports();
+    }
+  }, [open, client.id]);
+
+  const loadPreviousReports = async () => {
+    try {
+      setLoadingReports(true);
+      const reports = await clientReportsService.getClientReports(client.id);
+      setPreviousReports(reports);
+    } catch (error) {
+      console.error('Error loading previous reports:', error);
+      // Continue without reports - not critical for insight generation
+      setPreviousReports([]);
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
+  const formatReportForInsight = (report: ClientReport) => {
+    const reportType = report.report_tier || report.request_type || 'Report';
+    
+    // Extract key insights from response payload if available
+    let keyInsights = '';
+    try {
+      if (report.response_payload?.report) {
+        // Try to extract a summary or first few lines
+        const content = report.response_payload.report;
+        if (typeof content === 'string') {
+          keyInsights = content.substring(0, 200) + '...';
+        }
+      }
+    } catch (error) {
+      console.error('Error extracting insights from report:', error);
+    }
+
+    return {
+      id: report.id,
+      type: reportType,
+      created_at: report.created_at,
+      key_insights: keyInsights
+    };
+  };
+
   const handleGenerate = async () => {
     setIsGenerating(true);
 
     try {
       const clientData = {
         fullName: client.full_name,
-        birthDate: client.birth_date || undefined,
-        birthTime: client.birth_time || undefined,
-        birthLocation: client.birth_location || undefined,
-        notes: client.notes || undefined,
-        journalEntries: journalEntries
+        goals: client.notes || undefined,
+        journalEntries: journalEntries,
+        previousReports: previousReports.map(formatReportForInsight)
       };
 
       const title = customTitle.trim() || generateDateTitle();
@@ -120,8 +175,14 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="text-sm text-foreground">
-            This will analyze {client.full_name}'s profile, birth chart data, goals, and {journalEntries.length} journal {journalEntries.length === 1 ? 'entry' : 'entries'} to generate personalized insights.
+            This will analyze {client.full_name}'s goals, progress through {previousReports.length} previous report{previousReports.length !== 1 ? 's' : ''}, and {journalEntries.length} journal {journalEntries.length === 1 ? 'entry' : 'entries'} to generate personalized coaching insights.
           </div>
+          
+          {loadingReports && (
+            <div className="text-xs text-muted-foreground">
+              Loading previous reports...
+            </div>
+          )}
           
           <div className="text-sm text-muted-foreground">
             Insight will be titled: <strong>{customTitle.trim() || generateDateTitle()}</strong>
@@ -180,7 +241,7 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
           <Button variant="outline" onClick={handleClose} disabled={isGenerating}>
             Cancel
           </Button>
-          <Button onClick={handleGenerate} disabled={isGenerating}>
+          <Button onClick={handleGenerate} disabled={isGenerating || loadingReports}>
             Generate Insight
           </Button>
         </div>

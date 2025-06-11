@@ -45,7 +45,9 @@ export function useClientViewMode(): UseClientViewModeReturn {
           throw fetchError;
         }
       } else {
-        setViewMode(data?.client_view_mode || null);
+        // Properly type the client_view_mode value
+        const savedMode = data?.client_view_mode as ViewMode | null;
+        setViewMode(savedMode);
       }
     } catch (err: any) {
       const errorMessage = err.message || "Failed to load view preference";

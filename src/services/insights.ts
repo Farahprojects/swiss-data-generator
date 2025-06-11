@@ -8,15 +8,18 @@ export interface GenerateInsightRequest {
   title: string;
   clientData: {
     fullName: string;
-    birthDate?: string;
-    birthTime?: string;
-    birthLocation?: string;
-    notes?: string;
+    goals?: string;
     journalEntries?: Array<{
       id: string;
       title?: string;
       entry_text: string;
       created_at: string;
+    }>;
+    previousReports?: Array<{
+      id: string;
+      type: string;
+      created_at: string;
+      key_insights?: string;
     }>;
   };
 }
