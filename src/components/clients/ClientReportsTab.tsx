@@ -1,9 +1,15 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
 import { Plus, FileText } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 
@@ -35,7 +41,7 @@ const getDisplayName = (report: ClientReport): string => {
   return `#${report.id.substring(0, 8)}`;
 };
 
-const formatReportTier = (tier: string | null): string => {
+const formatReportTier = (tier: string | null | undefined): string => {
   if (!tier) return 'Unknown';
   return tier.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
@@ -47,30 +53,41 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
 }) => {
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Reports</h3>
         <Button onClick={onCreateReport}>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           Generate Report
         </Button>
       </div>
 
+      {/* Empty State */}
       {clientReports.length === 0 ? (
         <Card>
-          <CardContent className="py-8">
-            <div className="text-center">
-              <div className="text-gray-400 text-lg mb-2">No reports generated yet</div>
-              <p className="text-gray-600 mb-4">Generate astrological reports for this client</p>
-              <Button onClick={onCreateReport}>
-                <Plus className="w-4 h-4 mr-2" />
-                Generate Report
-              </Button>
-            </div>
+          <CardContent className="py-8 text-center">
+            <div className="text-lg text-gray-400 mb-2">No reports generated yet</div>
+            <p className="mb-4 text-gray-600">Generate astrological reports for this client</p>
+            <Button onClick={onCreateReport}>
+              <Plus className="mr-2 h-4 w-4" />
+              Generate Report
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <Card>
-          <Table>
+          {/* Table */}
+          {/* Using `table-fixed` ensures the column widths declared on the first row propagate consistently */}
+          <Table className="min-w-full table-fixed">
+            {/* Define explicit column widths so header & body stay aligned */}
+            <colgroup>
+              <col className="w-[120px]" />
+              <col className="w-[200px]" />
+              <col className="w-[240px]" />
+              <col className="w-[160px]" />
+            </colgroup>
+
+            {/* Table Head */}
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[120px]">Date</TableHead>
@@ -79,19 +96,21 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                 <TableHead className="w-[160px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
+
+            {/* Table Body */}
             <TableBody>
-              {clientReports.map((report) => (
+              {clientReports.map(report => (
                 <TableRow key={report.id}>
-                  <TableCell className="text-sm text-gray-600">
+                  <TableCell className="w-[120px] text-sm text-gray-600">
                     {formatDate(report.created_at)}
                   </TableCell>
-                  <TableCell className="text-sm font-medium text-gray-900">
+                  <TableCell className="w-[200px] truncate text-sm font-medium text-gray-900">
                     {getDisplayName(report)}
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600">
+                  <TableCell className="w-[240px] text-sm text-gray-600">
                     {formatReportTier(report.report_tier)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="w-[160px]">
                     <div className="flex items-center gap-2">
                       {!(report.response_status >= 200 && report.response_status < 300) && (
                         <Badge variant="destructive" className="text-xs">
@@ -104,7 +123,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                         onClick={() => onViewReport(report)}
                         disabled={!(report.response_status >= 200 && report.response_status < 300)}
                       >
-                        <FileText className="w-3 h-3 mr-1" />
+                        <FileText className="mr-1 h-3 w-3" />
                         View
                       </Button>
                     </div>
