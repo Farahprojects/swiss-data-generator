@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,7 +37,6 @@ const getDisplayName = (report: ClientReport): string => {
 
 const formatReportTier = (tier: string | null): string => {
   if (!tier) return 'Unknown';
-  // Replace underscores with spaces and capitalize properly
   return tier.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
@@ -85,20 +82,16 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
             <TableBody>
               {clientReports.map((report) => (
                 <TableRow key={report.id}>
-                  <TableCell className="text-sm text-gray-600">
+                  <TableCell className="text-sm text-gray-600 align-middle">
                     {formatDate(report.created_at)}
                   </TableCell>
-                  <TableCell>
-                    <div className="font-medium">
-                      {getDisplayName(report)}
-                    </div>
+                  <TableCell className="font-medium align-middle">
+                    {getDisplayName(report)}
                   </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-gray-600">
-                      {formatReportTier(report.report_tier)}
-                    </div>
+                  <TableCell className="text-sm text-gray-600 align-middle">
+                    {formatReportTier(report.report_tier)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="align-middle">
                     <div className="flex items-center gap-2">
                       {!(report.response_status >= 200 && report.response_status < 300) && (
                         <Badge variant="destructive" className="text-xs">
@@ -127,4 +120,3 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
 };
 
 export default ClientReportsTab;
-
