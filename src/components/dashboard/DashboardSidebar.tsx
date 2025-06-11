@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from "react-router-dom";
 import { 
   Home, 
@@ -6,8 +5,7 @@ import {
   FileText, 
   Globe,
   FilePlus,
-  Mail,
-  Settings
+  Mail
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,7 +25,6 @@ const sidebarItems = [
   { name: "Reports", href: "/dashboard/reports", icon: FileText },
   { name: "Create Report", href: "/dashboard/reports/create", icon: FilePlus },
   { name: "Website Builder", href: "/dashboard/website-builder", icon: Globe },
-  { name: "Landing Page Settings", href: "/dashboard/landing-page-settings", icon: Settings },
 ];
 
 // Simple navigation menu for mobile use (without Sidebar context)

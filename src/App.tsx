@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -41,7 +42,6 @@ const ApiKeys = lazy(() => import("./pages/dashboard/ApiKeys"));
 const BillingPage = lazy(() => import("./pages/dashboard/BillingPage"));
 const PricingPage = lazy(() => import("./pages/dashboard/PricingPage"));
 const WebsiteBuilder = lazy(() => import("./pages/dashboard/WebsiteBuilder"));
-const LandingPageSettings = lazy(() => import("./pages/dashboard/LandingPageSettings"));
 
 import "./App.css";
 
@@ -147,11 +147,6 @@ function App() {
                     <Route path="pricing" element={
                       <Suspense fallback={<div>Loading...</div>}>
                         <PricingPage />
-                      </Suspense>
-                    } />
-                    <Route path="landing-page-settings" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <LandingPageSettings />
                       </Suspense>
                     } />
                   </Route>
