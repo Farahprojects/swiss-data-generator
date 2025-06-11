@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import { 
@@ -35,31 +34,14 @@ type ActivityLogItem = {
   google_geo?: boolean;
 };
 
-// Updated type to accept either ActivityLogItem or ClientReport
-type LogData = ActivityLogItem | {
-  id: string;
-  request_type: string;
-  response_payload: any;
-  created_at: string;
-  response_status: number;
-  report_name?: string;
-  report_tier?: string;
-};
-
 interface ActivityLogDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  logData: LogData | null;
+  logData: ActivityLogItem | null;
 }
 
 const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps) => {
   const [viewMode, setViewMode] = useState<'report' | 'payload'>('report');
-
-  // Helper to safely get values with defaults for missing properties
-  const getLogValue = <T,>(key: keyof ActivityLogItem, defaultValue: T): T => {
-    if (!logData || !(key in logData)) return defaultValue;
-    return (logData as any)[key] ?? defaultValue;
-  };
 
   // Handle download as CSV
   const handleDownloadCSV = () => {
@@ -70,10 +52,10 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     const row = [
       new Date(logData.created_at).toLocaleString(),
       logData.response_status,
-      getLogValue('endpoint', '') || getLogValue('request_type', '') || 'N/A',
-      getLogValue('report_tier', '') || 'None',
-      getLogValue('total_cost_usd', 0).toFixed(2),
-      getLogValue('processing_time_ms', null) ? `${(getLogValue('processing_time_ms', 0) / 1000).toFixed(2)}s` : 'N/A'
+      logData.endpoint || logData.request_type || 'N/A',
+      logData.report_tier || 'None',
+      logData.total_cost_usd.toFixed(2),
+      logData.processing_time_ms ? `${(logData.processing_time_ms / 1000).toFixed(2)}s` : 'N/A'
     ].join(',');
     
     const content = headers + row;
@@ -177,7 +159,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
               </ToggleGroupItem>
               <ToggleGroupItem 
                 value="payload" 
-                disabled={!logData?.response_payload && !getLogValue('request_payload', null)}
+                disabled={!logData?.response_payload && !logData?.request_payload}
                 className="text-xs md:text-sm"
               >
                 Payload
@@ -212,10 +194,10 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
         <div className="p-3 md:p-4 flex-1 overflow-hidden">
           {logData && (
             <div className="h-full flex flex-col">
-              {getLogValue('error_message', null) && (
+              {logData.error_message && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                   <p className="text-sm font-medium text-red-600">Error</p>
-                  <p className="text-red-600">{getLogValue('error_message', '')}</p>
+                  <p className="text-red-600">{logData.error_message}</p>
                 </div>
               )}
               
@@ -237,13 +219,13 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
                 {viewMode === 'payload' && (
                   <ScrollArea className="h-full">
                     <div className="p-3 md:p-4 bg-gray-50 rounded-md">
-                      {(logData.response_payload || getLogValue('request_payload', null)) ? (
+                      {(logData.response_payload || logData.request_payload) ? (
                         <div>
-                          {getLogValue('request_payload', null) && (
+                          {logData.request_payload && (
                             <div className="mb-4">
                               <h4 className="text-sm font-medium mb-2">Request Payload</h4>
                               <pre className="whitespace-pre-wrap font-mono text-xs md:text-sm overflow-x-auto bg-gray-100 p-2 rounded">
-                                {JSON.stringify(getLogValue('request_payload', {}), null, 2)}
+                                {JSON.stringify(logData.request_payload, null, 2)}
                               </pre>
                             </div>
                           )}
