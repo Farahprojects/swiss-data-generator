@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -435,19 +436,19 @@ const ClientsPage = () => {
         </TableCell>
       )}
       <TableCell 
-        className={`text-muted-foreground ${client.latestJournalEntry ? 'cursor-pointer hover:text-primary' : ''}`}
+        className={`${client.latestJournalEntry ? 'text-primary cursor-pointer hover:text-primary/80 font-medium' : 'text-muted-foreground'}`}
         onClick={() => client.latestJournalEntry && handleEditJournal(client)}
       >
         {client.latestJournalEntry ? formatDate(client.latestJournalEntry.created_at) : '-'}
       </TableCell>
       <TableCell 
-        className={`text-muted-foreground ${client.latestReport ? 'cursor-pointer hover:text-primary' : ''}`}
+        className={`${client.latestReport ? 'text-primary cursor-pointer hover:text-primary/80 font-medium' : 'text-muted-foreground'} text-left`}
         onClick={() => client.latestReport && handleViewReport(client)}
       >
         {client.latestReport ? formatReportType(client.latestReport) : '-'}
       </TableCell>
       <TableCell 
-        className={`text-muted-foreground ${client.latestInsight ? 'cursor-pointer hover:text-primary' : ''}`}
+        className={`${client.latestInsight ? 'text-primary cursor-pointer hover:text-primary/80 font-medium' : 'text-muted-foreground'} text-left`}
         onClick={() => client.latestInsight && handleViewInsight(client)}
       >
         {client.latestInsight ? formatDate(client.latestInsight.created_at) : '-'}
