@@ -62,9 +62,9 @@ export const AiCreditsCard = () => {
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
           <Wallet className="h-5 w-5 text-primary" />
-          API Wallet Balance
+          Wallet Balance
         </CardTitle>
-        <CardDescription>Available for API requests</CardDescription>
+        <CardDescription>Available for services and features</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="flex items-center justify-between mb-4">
@@ -84,7 +84,7 @@ export const AiCreditsCard = () => {
           </div>
           <div className="bg-gray-50 rounded-lg p-3 mt-2">
             <p className="text-gray-800 text-sm">
-              Your API wallet will automatically top up when the balance falls below $45. Visit the billing section to update your payment method or manage auto top-up settings.
+              Your wallet will automatically top up when the balance falls below $45. Visit the billing section to update your payment method or manage auto top-up settings.
             </p>
           </div>
         </div>
