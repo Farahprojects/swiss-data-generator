@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type ViewMode = 'grid' | 'list';
 type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'latest_insight' | 'created_at';
@@ -64,6 +64,7 @@ const ClientsPage = () => {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const { toast } = useToast();
   const { preferences, updateClientViewMode } = useUserPreferences();
+  const isMobile = useIsMobile();
   
   // Get view mode from user preferences
   const viewMode = preferences?.client_view_mode || 'grid';
@@ -355,21 +356,32 @@ const ClientsPage = () => {
     });
   };
 
+  const formatClientNameForMobile = (fullName: string) => {
+    const names = fullName.trim().split(' ');
+    if (names.length === 1) return names[0];
+    
+    const firstName = names[0];
+    const lastNameInitial = names[names.length - 1][0];
+    return `${firstName} ${lastNameInitial}.`;
+  };
+
   const ClientCard = ({ client }: { client: ClientWithJournal }) => (
     <Card className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-border/50 hover:border-primary/20">
       <Link to={`/dashboard/clients/${client.id}`}>
         <CardHeader className="pb-3 pt-4 px-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm flex-shrink-0">
-              {client.avatar_url ? (
-                <img src={client.avatar_url} alt={client.full_name} className="w-10 h-10 rounded-full object-cover" />
-              ) : (
-                client.full_name.split(' ').map(n => n[0]).join('')
-              )}
-            </div>
+            {!isMobile && (
+              <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm flex-shrink-0">
+                {client.avatar_url ? (
+                  <img src={client.avatar_url} alt={client.full_name} className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  client.full_name.split(' ').map(n => n[0]).join('')
+                )}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <CardTitle className="text-lg font-semibold text-foreground leading-tight">
-                {client.full_name}
+                {isMobile ? formatClientNameForMobile(client.full_name) : client.full_name}
               </CardTitle>
               <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                 <Calendar className="w-3 h-3" />
@@ -380,7 +392,7 @@ const ClientsPage = () => {
         </CardHeader>
         <CardContent className="pt-0 pb-4 px-4">
           <div className="space-y-2">
-            {client.email && (
+            {!isMobile && client.email && (
               <div className="text-sm text-muted-foreground truncate">
                 {client.email}
               </div>
@@ -405,19 +417,23 @@ const ClientsPage = () => {
     <TableRow className="hover:bg-muted/50 cursor-pointer">
       <TableCell className="font-medium">
         <Link to={`/dashboard/clients/${client.id}`} className="flex items-center gap-3 hover:text-primary">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-xs flex-shrink-0">
-            {client.avatar_url ? (
-              <img src={client.avatar_url} alt={client.full_name} className="w-8 h-8 rounded-full object-cover" />
-            ) : (
-              client.full_name.split(' ').map(n => n[0]).join('')
-            )}
-          </div>
-          <span>{client.full_name}</span>
+          {!isMobile && (
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-xs flex-shrink-0">
+              {client.avatar_url ? (
+                <img src={client.avatar_url} alt={client.full_name} className="w-8 h-8 rounded-full object-cover" />
+              ) : (
+                client.full_name.split(' ').map(n => n[0]).join('')
+              )}
+            </div>
+          )}
+          <span>{isMobile ? formatClientNameForMobile(client.full_name) : client.full_name}</span>
         </Link>
       </TableCell>
-      <TableCell className="text-muted-foreground text-left">
-        {client.email || '-'}
-      </TableCell>
+      {!isMobile && (
+        <TableCell className="text-muted-foreground text-left">
+          {client.email || '-'}
+        </TableCell>
+      )}
       <TableCell 
         className={`text-muted-foreground ${client.latestJournalEntry ? 'cursor-pointer hover:text-primary' : ''}`}
         onClick={() => client.latestJournalEntry && handleEditJournal(client)}
@@ -550,15 +566,17 @@ const ClientsPage = () => {
                     {getSortIcon('full_name')}
                   </div>
                 </TableHead>
-                <TableHead 
-                  className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
-                  onClick={() => handleSort('email')}
-                >
-                  <div className="flex items-center gap-1">
-                    Email
-                    {getSortIcon('email')}
-                  </div>
-                </TableHead>
+                {!isMobile && (
+                  <TableHead 
+                    className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
+                    onClick={() => handleSort('email')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Email
+                      {getSortIcon('email')}
+                    </div>
+                  </TableHead>
+                )}
                 <TableHead 
                   className="font-semibold cursor-pointer hover:bg-muted/50"
                   onClick={() => handleSort('latest_journal')}
