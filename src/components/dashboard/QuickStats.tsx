@@ -86,42 +86,43 @@ export const QuickStats = () => {
       title: "Total Clients",
       value: stats.totalClients,
       icon: Users,
-      color: "text-blue-600"
+      color: "text-primary"
     },
     {
       title: "Recent Entries",
       value: stats.recentJournalEntries,
       subtitle: "Last 7 days",
       icon: BookOpen,
-      color: "text-green-600"
+      color: "text-primary"
     },
     {
       title: "Active This Month",
       value: stats.activeThisMonth,
       icon: TrendingUp,
-      color: "text-purple-600"
+      color: "text-primary"
     },
     {
       title: "Reports Generated",
       value: stats.reportsGenerated,
       subtitle: "This month",
       icon: FileText,
-      color: "text-orange-600"
+      color: "text-primary"
     }
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {statCards.map((stat, index) => (
-        <Card key={index} className="border-gray-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+        <Card key={index} className="flex flex-col h-full overflow-hidden border-2 border-gray-100 shadow-sm">
+          <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <stat.icon className={`h-5 w-5 ${stat.color}`} />
               {stat.title}
             </CardTitle>
-            <stat.icon className={`h-4 w-4 ${stat.color}`} />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
+          <CardContent className="flex-grow">
+            <div className="text-2xl font-bold text-primary">
               {loading ? "..." : stat.value}
             </div>
             {stat.subtitle && (

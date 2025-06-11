@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 type TopupRequest = {
@@ -102,11 +102,15 @@ export const TopupQueueStatus = () => {
   };
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">Auto Top-up History</CardTitle>
+    <Card className="flex flex-col h-full overflow-hidden border-2 border-gray-100 shadow-sm">
+      <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-medium flex items-center gap-2">
+          <Clock className="h-5 w-5 text-primary" />
+          Auto Top-up History
+        </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-grow">
         {isLoading ? (
           <div className="flex justify-center p-4">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />

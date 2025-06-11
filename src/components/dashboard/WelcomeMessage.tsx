@@ -23,7 +23,7 @@ export const WelcomeMessage = () => {
   };
 
   return (
-    <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-6 mb-6">
+    <div className="bg-white rounded-lg border-2 border-gray-100 p-6 mb-6 shadow-sm">
       <h1 className="text-2xl font-semibold text-gray-900">
         {getGreeting()}, {user?.email?.split('@')[0] || 'Coach'}!
       </h1>
