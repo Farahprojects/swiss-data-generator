@@ -55,6 +55,13 @@ const formatReportTier = (tier: string | null | undefined): string => {
     .trim();
 };
 
+const formatDateForMobile = (dateString: string): string => {
+  const date = new Date(dateString);
+  const monthShort = date.toLocaleDateString('en-US', { month: 'short' });
+  const day = date.getDate();
+  return `${monthShort} ${day}`;
+};
+
 export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
   clientReports,
   onCreateReport,
@@ -166,7 +173,8 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
               {sortedReports.map(report => (
                 <TableRow key={report.id} className="hover:bg-muted/50">
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(report.created_at)}
+                    <span className="hidden md:inline">{formatDate(report.created_at)}</span>
+                    <span className="md:hidden">{formatDateForMobile(report.created_at)}</span>
                   </TableCell>
                   <TableCell className="font-medium hidden md:table-cell">
                     {getDisplayName(report)}
