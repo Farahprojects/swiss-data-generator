@@ -18,6 +18,7 @@ import { ClientInfoCard } from '@/components/clients/ClientInfoCard';
 import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import { ClientReportsTab } from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
+import { InsightEntry } from '@/types/database';
 
 interface ClientReport {
   id: string;
@@ -68,6 +69,30 @@ const ClientDetailPage = () => {
 
   const handleViewReport = (report: ClientReport) => {
     setSelectedReport(report);
+    setShowReportDrawer(true);
+  };
+
+  const handleViewInsight = (insight: InsightEntry) => {
+    // Transform insight into report format for unified viewing
+    const insightAsReport: ClientReport = {
+      id: insight.id,
+      request_type: 'insight',
+      response_payload: {
+        report: {
+          title: insight.title || `${insight.type} Insight`,
+          content: insight.content,
+          generated_at: insight.created_at,
+          type: insight.type,
+          confidence_score: insight.confidence_score
+        }
+      },
+      created_at: insight.created_at,
+      response_status: 200,
+      report_name: insight.title || `${insight.type} Insight`,
+      report_tier: 'insight'
+    };
+    
+    setSelectedReport(insightAsReport);
     setShowReportDrawer(true);
   };
 
@@ -161,6 +186,7 @@ const ClientDetailPage = () => {
                 client={client}
                 journalEntries={journalEntries}
                 onInsightGenerated={loadClientData}
+                onViewInsight={handleViewInsight}
               />
             </TabsContent>
           </Tabs>
@@ -206,7 +232,7 @@ const ClientDetailPage = () => {
             response_status: selectedReport.response_status,
             request_type: selectedReport.request_type,
             endpoint: selectedReport.request_type,
-            report_tier: null,
+            report_tier: selectedReport.report_tier,
             total_cost_usd: 0,
             processing_time_ms: null,
             response_payload: selectedReport.response_payload,
