@@ -1,5 +1,5 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { log } from '@/utils/logUtils';
 
 interface UseTypeAnimationOptions {
   speed?: number;
@@ -60,11 +60,15 @@ export const useTypeAnimation = (
 
   const startTyping = useCallback(() => {
     if (!targetText || isInterruptedRef.current || animationRunningRef.current) {
-      console.log('startTyping aborted:', { targetText: !!targetText, interrupted: isInterruptedRef.current, running: animationRunningRef.current });
+      log('debug', 'startTyping aborted', { 
+        hasTargetText: !!targetText, 
+        interrupted: isInterruptedRef.current, 
+        running: animationRunningRef.current 
+      });
       return;
     }
 
-    console.log('Starting type animation for:', targetText.substring(0, 50) + '...');
+    log('debug', 'Starting type animation', { textLength: targetText.length });
     animationRunningRef.current = true;
     setIsTyping(true);
     setDisplayText('');
@@ -73,7 +77,7 @@ export const useTypeAnimation = (
 
     const typeNextCharacter = () => {
       if (isInterruptedRef.current || !animationRunningRef.current) {
-        console.log('Animation stopped');
+        log('debug', 'Animation stopped');
         return;
       }
 
@@ -88,7 +92,7 @@ export const useTypeAnimation = (
         timeoutRef.current = setTimeout(typeNextCharacter, delay);
       } else {
         // Animation complete
-        console.log('Type animation complete');
+        log('debug', 'Type animation complete');
         animationRunningRef.current = false;
         setIsTyping(false);
         setShowCursor(false);
@@ -100,7 +104,7 @@ export const useTypeAnimation = (
   }, [targetText, speed, punctuationDelay, onComplete]);
 
   const stopTyping = useCallback(() => {
-    console.log('Stopping type animation');
+    log('debug', 'Stopping type animation');
     isInterruptedRef.current = true;
     animationRunningRef.current = false;
     setIsTyping(false);
@@ -110,7 +114,7 @@ export const useTypeAnimation = (
   }, [onInterrupt, clearTimeouts]);
 
   const resetAnimation = useCallback(() => {
-    console.log('Resetting type animation');
+    log('debug', 'Resetting type animation');
     isInterruptedRef.current = false;
     animationRunningRef.current = false;
     setDisplayText('');

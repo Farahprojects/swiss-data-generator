@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { X, Mic } from 'lucide-react';
 import { CreateJournalEntryData, JournalEntry } from '@/types/database';
 import { journalEntriesService } from '@/services/journalEntries';
+import { log } from '@/utils/logUtils';
 
 const journalEntrySchema = z.object({
   entry_text: z.string().min(1, 'Entry text is required'),
@@ -73,13 +73,13 @@ const CreateJournalEntryForm = ({
 
   // Handle when silence is detected - show immediate feedback
   const handleSilenceDetected = () => {
-    console.log('Silence detected, showing processing state');
+    log('debug', 'Silence detected, showing processing state');
     setProcessingState('processing');
   };
 
   // Handle when transcript is ready - prepare for type animation
   const handleTranscriptReady = (transcript: string) => {
-    console.log('Transcript ready:', transcript);
+    log('info', 'Transcript ready for typing animation', { length: transcript.length });
     const currentText = getValues('entry_text') || '';
     
     // Store existing text and new transcript separately
@@ -100,7 +100,7 @@ const CreateJournalEntryForm = ({
       speed: 50,
       punctuationDelay: 200,
       onComplete: () => {
-        console.log('Type animation complete');
+        log('debug', 'Type animation complete');
         const finalText = existingText + newTranscriptToType;
         setValue('entry_text', finalText, { 
           shouldDirty: true, 
@@ -113,7 +113,7 @@ const CreateJournalEntryForm = ({
         setExistingText('');
       },
       onInterrupt: () => {
-        console.log('Type animation interrupted by user');
+        log('debug', 'Type animation interrupted by user');
         const finalText = existingText + newTranscriptToType;
         setValue('entry_text', finalText, { 
           shouldDirty: true, 
@@ -136,7 +136,7 @@ const CreateJournalEntryForm = ({
   // Handle user typing during animation
   const handleTextareaChange = (value: string) => {
     if (isTyping) {
-      console.log('User typing detected during animation, stopping animation');
+      log('debug', 'User typing detected during animation, stopping animation');
       stopTyping();
     }
     return value;
@@ -186,7 +186,7 @@ const CreateJournalEntryForm = ({
       handleClose();
       onEntryCreated();
     } catch (error) {
-      console.error('Error saving journal entry:', error);
+      log('error', 'Error saving journal entry', error);
       toast({
         title: "Error",
         description: `Failed to ${existingEntry ? 'update' : 'create'} journal entry. Please try again.`,
