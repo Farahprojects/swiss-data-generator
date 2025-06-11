@@ -130,7 +130,6 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                 <TableRow>
                   <TableHead className="w-[120px]">Date</TableHead>
                   <TableHead>Summary</TableHead>
-                  <TableHead className="w-[100px]">Type</TableHead>
                   <TableHead className="w-[120px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -193,11 +192,6 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                           </div>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getInsightBadgeVariant(insight.type)}>
-                        {getInsightTypeLabel(insight.type)}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Button 
