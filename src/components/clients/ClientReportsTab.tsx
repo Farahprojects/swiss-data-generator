@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,27 +75,24 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Report Type</TableHead>
                 <TableHead className="w-[120px]">Date</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead className="w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clientReports.map((report) => (
                 <TableRow key={report.id}>
+                  <TableCell className="text-sm text-gray-600">
+                    {formatDate(report.created_at)}
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium">
                       {getDisplayName(report)}
                     </div>
-                  </TableCell>
-                  <TableCell>
                     <div className="text-sm text-gray-600">
                       {formatReportTier(report.report_tier)}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-600">
-                    {formatDate(report.created_at)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
