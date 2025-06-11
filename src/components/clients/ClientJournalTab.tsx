@@ -4,9 +4,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Plus, FileText, Edit, Trash2 } from 'lucide-react';
 import { JournalEntry } from '@/types/database';
 import { formatDate } from '@/utils/dateFormatters';
+import { journalEntriesService } from '@/services/journalEntries';
+import { useToast } from '@/hooks/use-toast';
 import CreateJournalEntryForm from './CreateJournalEntryForm';
 
 interface ClientJournalTabProps {
@@ -33,6 +36,8 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
 }) => {
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleEditEntry = (entry: JournalEntry) => {
     setEditingEntry(entry);
@@ -44,9 +49,25 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
     setEditingEntry(null);
   };
 
-  const handleDeleteEntry = (entry: JournalEntry) => {
-    // TODO: Implement delete functionality
-    console.log('Delete entry:', entry.id);
+  const handleDeleteEntry = async (entryId: string) => {
+    try {
+      setDeletingEntryId(entryId);
+      await journalEntriesService.deleteJournalEntry(entryId);
+      toast({
+        title: "Success",
+        description: "Journal entry deleted successfully.",
+      });
+      onEntryUpdated();
+    } catch (error) {
+      console.error('Error deleting journal entry:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete journal entry. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingEntryId(null);
+    }
   };
 
   const getSummary = (entry: JournalEntry) => {
@@ -121,13 +142,34 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
                       >
                         <Edit className="w-3 h-3" />
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleDeleteEntry(entry)}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            disabled={deletingEntryId === entry.id}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Journal Entry</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this journal entry? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteEntry(entry.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
