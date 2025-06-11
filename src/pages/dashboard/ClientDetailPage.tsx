@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import { ClientReportsTab } from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
 import { InsightEntry } from '@/types/database';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientReport {
   id: string;
@@ -46,6 +48,12 @@ const ClientDetailPage = () => {
   const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('journals');
+  const [localInsightEntries, setLocalInsightEntries] = useState<InsightEntry[]>([]);
+
+  // Update local insights when data changes
+  React.useEffect(() => {
+    setLocalInsightEntries(insightEntries);
+  }, [insightEntries]);
 
   const handleDeleteClient = async () => {
     if (!client) return;
@@ -96,6 +104,32 @@ const ClientDetailPage = () => {
     setShowReportDrawer(true);
   };
 
+  const refreshInsights = async () => {
+    if (!id) return;
+    
+    try {
+      const { data: insightsData } = await supabase
+        .from('insight_entries')
+        .select('*')
+        .eq('client_id', id)
+        .order('created_at', { ascending: false });
+      
+      const typedInsights: InsightEntry[] = (insightsData || []).map(insight => ({
+        ...insight,
+        type: insight.type as 'pattern' | 'recommendation' | 'trend' | 'milestone'
+      }));
+      
+      setLocalInsightEntries(typedInsights);
+    } catch (error) {
+      console.error('Error refreshing insights:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh insights. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleGenerateInsight = () => {
     setShowCreateJournalModal(false);
     setShowReportModal(false);
@@ -133,7 +167,7 @@ const ClientDetailPage = () => {
           setActiveTab={setActiveTab}
           journalCount={journalEntries.length}
           reportCount={clientReports.length}
-          insightCount={insightEntries.length}
+          insightCount={localInsightEntries.length}
           isClientInfoOpen={isClientInfoOpen}
           setIsClientInfoOpen={setIsClientInfoOpen}
           onCreateJournal={() => setShowCreateJournalModal(true)}
@@ -182,10 +216,10 @@ const ClientDetailPage = () => {
 
             <TabsContent value="insights" className="space-y-4">
               <ClientInsightsTab 
-                insightEntries={insightEntries}
+                insightEntries={localInsightEntries}
                 client={client}
                 journalEntries={journalEntries}
-                onInsightGenerated={loadClientData}
+                onInsightGenerated={refreshInsights}
                 onViewInsight={handleViewInsight}
               />
             </TabsContent>
