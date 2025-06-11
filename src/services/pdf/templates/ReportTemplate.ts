@@ -37,7 +37,7 @@ export class ReportTemplate extends BaseTemplate {
     this.doc.setFontSize(20);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(40, 40, 60);
-    this.doc.text('Essence Professional', this.pageWidth / 2, logoY + logoHeight + 10, { align: 'center' });
+    this.doc.text(' Intelligence Report ', this.pageWidth / 2, logoY + logoHeight + 10, { align: 'center' });
 
     // Metadata section
     let y = logoY + logoHeight + 25;
