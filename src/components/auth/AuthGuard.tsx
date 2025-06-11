@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { log } from '@/utils/logUtils';
 
 export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, pendingEmailAddress, isPendingEmailCheck } = useAuth();
@@ -16,28 +17,27 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const hasRecoveryToken = searchParams.get('type') === 'recovery';
   
   useEffect(() => {
-    // We can add debug logging here to see when AuthGuard is evaluating
-    console.log('AuthGuard evaluating:', {
-      path: location.pathname,
-      search: location.search,
-      hasUser: !!user,
-      loading,
-      isPasswordReset: isPasswordResetRoute,
-      hasRecoveryToken,
-      pendingEmailAddress,
-      isPendingEmailCheck
-    });
-  }, [location.pathname, location.search, user, loading, isPasswordResetRoute, hasRecoveryToken, pendingEmailAddress, isPendingEmailCheck]);
+    // Only log significant auth state changes, not every evaluation
+    if (!loading) {
+      log('debug', 'AuthGuard auth state settled', {
+        path: location.pathname,
+        hasUser: !!user,
+        isPasswordReset: isPasswordResetRoute,
+        hasRecoveryToken,
+        pendingEmailAddress: !!pendingEmailAddress
+      });
+    }
+  }, [location.pathname, user, loading, isPasswordResetRoute, hasRecoveryToken, pendingEmailAddress]);
   
   // If user is on password reset route, don't apply auth guard
   if (isPasswordResetRoute) {
-    console.log('Password reset route detected, bypassing auth guard');
+    log('debug', 'Password reset route detected, bypassing auth guard');
     return <>{children}</>;
   }
   
   // If there's a recovery token anywhere, redirect to password reset page
   if (hasRecoveryToken && !isPasswordResetRoute) {
-    console.log('Recovery token detected on non-password reset route, redirecting');
+    log('info', 'Recovery token detected on non-password reset route, redirecting');
     return <Navigate to={`/auth/password${location.search}`} replace />;
   }
   
@@ -53,7 +53,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   // If user has pending email verification, redirect to login to show verification modal
   if (pendingEmailAddress) {
-    console.log('User has pending email verification, redirecting to login');
+    log('info', 'User has pending email verification, redirecting to login');
     return <Navigate to="/login" state={{ from: location, showVerification: true, pendingEmail: pendingEmailAddress }} replace />;
   }
   
