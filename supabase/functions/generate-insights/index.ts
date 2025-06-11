@@ -180,7 +180,7 @@ async function getInsightPrice(requestId: string): Promise<number> {
 
     if (!data || data.unit_price_usd == null) {
       console.warn(`${logPrefix} No price found for insights-generation, using fallback`);
-      return 7.50; // Fallback to previous hardcoded value
+      return 7.50;
     }
 
     const price = parseFloat(String(data.unit_price_usd));
@@ -192,7 +192,7 @@ async function getInsightPrice(requestId: string): Promise<number> {
     return await retryWithBackoff(fetchPrice, logPrefix, 2, 500, 2, "price fetch");
   } catch (err) {
     console.error(`${logPrefix} Error fetching price, using fallback:`, err);
-    return 7.50; // Fallback price
+    return 7.50;
   }
 }
 
@@ -200,10 +200,15 @@ async function generateInsight(systemPrompt: string, clientData: any, requestId:
   const logPrefix = `[generate-insights][${requestId}]`;
   console.log(`${logPrefix} Generating insight with Gemini`);
 
-  const userMessage = JSON.stringify({
-    clientData: clientData,
-    ...clientData
-  });
+  // Create a simple text message with the client data
+  const userMessage = `Client Name: ${clientData.fullName}
+${clientData.goals ? `Goals: ${clientData.goals}` : ''}
+
+Journal Entries:
+${clientData.journalText}
+
+Previous Reports:
+${clientData.previousReportsText}`;
 
   console.log(`${logPrefix} Calling Gemini API with model: ${GOOGLE_MODEL}`);
 
@@ -382,6 +387,7 @@ serve(async (req) => {
     try {
       payload = await req.json();
       console.log(`${logPrefix} Successfully parsed request payload`);
+      console.log(`${logPrefix} Payload keys:`, Object.keys(payload));
     } catch (parseError) {
       console.error(`${logPrefix} Invalid JSON payload:`, parseError);
       return jsonResponse(
