@@ -91,7 +91,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
               <TableRow>
                 <TableHead className="w-[120px] pl-4 text-left">Date</TableHead>
                 <TableHead className="w-[200px] pl-4 text-left">Name</TableHead>
-                <TableHead className="w-[240px] pl-4 text-left">Report Type</TableHead>
+                <TableHead className="w-[240px] pl-4 text-left">Reports Type</TableHead>
                 <TableHead className="w-[160px] pl-4 text-left">Actions</TableHead>
               </TableRow>
             </TableHeader>
