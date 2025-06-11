@@ -1,14 +1,16 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, FileText, Edit2, Check, X } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Plus, FileText, Edit2, Check, X, Trash2 } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
+import { insightsService } from '@/services/insights';
+import { useToast } from '@/hooks/use-toast';
 
 interface ClientInsightsTabProps {
   insightEntries?: InsightEntry[];
@@ -65,6 +67,8 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [editingSummary, setEditingSummary] = useState<string | null>(null);
   const [editSummaryValue, setEditSummaryValue] = useState('');
+  const [deletingInsightId, setDeletingInsightId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleGenerateInsight = () => {
     if (!client) return;
@@ -80,6 +84,29 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   const handleViewInsight = (insight: InsightEntry) => {
     if (onViewInsight) {
       onViewInsight(insight);
+    }
+  };
+
+  const handleDeleteInsight = async (insightId: string) => {
+    try {
+      setDeletingInsightId(insightId);
+      await insightsService.deleteInsight(insightId);
+      toast({
+        title: "Success",
+        description: "Insight deleted successfully.",
+      });
+      if (onInsightGenerated) {
+        onInsightGenerated();
+      }
+    } catch (error) {
+      console.error('Error deleting insight:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete insight. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingInsightId(null);
     }
   };
 
@@ -202,14 +229,44 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleViewInsight(insight)}
-                      >
-                        <FileText className="w-3 h-3 mr-1" />
-                        View
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleViewInsight(insight)}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          View
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              disabled={deletingInsightId === insight.id}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Insight</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this insight? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteInsight(insight.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface GenerateInsightRequest {
@@ -143,6 +142,18 @@ export const insightsService = {
         success: false,
         error: error instanceof Error ? error.message : 'An unexpected error occurred while generating the insight.'
       };
+    }
+  },
+
+  async deleteInsight(insightId: string): Promise<void> {
+    const { error } = await supabase
+      .from('insight_entries')
+      .delete()
+      .eq('id', insightId);
+
+    if (error) {
+      console.error('Error deleting insight:', error);
+      throw new Error('Failed to delete insight');
     }
   }
 };
