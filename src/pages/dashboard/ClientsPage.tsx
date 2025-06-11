@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,6 @@ import { GenerateInsightModal } from '@/components/clients/GenerateInsightModal'
 import ClientReportModal from '@/components/clients/ClientReportModal';
 import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
-import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 
 type ViewMode = 'grid' | 'list';
 type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'created_at';
@@ -57,11 +57,6 @@ const ClientsPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [aiInsightsEnabled, setAiInsightsEnabled] = useState(true);
-  
-  // ActivityLogDrawer state
-  const [showReportViewer, setShowReportViewer] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
-  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -157,11 +152,6 @@ const ClientsPage = () => {
   const handleGenerateReport = (client: Client) => {
     setSelectedClient(client);
     setShowReportModal(true);
-  };
-
-  const handleViewReport = (report: ClientReport) => {
-    setSelectedReport(report);
-    setShowReportViewer(true);
   };
 
   const handleEditClient = (client: Client) => {
@@ -359,7 +349,7 @@ const ClientsPage = () => {
       </TableCell>
       <TableCell 
         className={`text-muted-foreground ${client.latestReport ? 'cursor-pointer hover:text-primary' : ''}`}
-        onClick={() => client.latestReport && handleViewReport(client.latestReport)}
+        onClick={() => client.latestReport && handleGenerateReport(client)}
       >
         {client.latestReport ? formatReportType(client.latestReport) : '-'}
       </TableCell>
@@ -591,13 +581,6 @@ const ClientsPage = () => {
           />
         </>
       )}
-
-      {/* Report Viewer Drawer */}
-      <ActivityLogDrawer
-        isOpen={showReportViewer}
-        onClose={() => setShowReportViewer(false)}
-        logData={selectedReport}
-      />
     </div>
   );
 };
