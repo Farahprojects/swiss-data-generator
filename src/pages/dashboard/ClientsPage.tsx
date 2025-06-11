@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -28,9 +29,11 @@ type FilterType = 'all' | 'most_active' | 'report_ready' | 'has_journal_no_repor
 interface ClientReport {
   id: string;
   request_type: string;
-  report_tier?: string;
+  response_payload: any;
   created_at: string;
   response_status: number;
+  report_name?: string;
+  report_tier?: string;
 }
 
 interface ClientWithJournal extends Client {
@@ -47,7 +50,6 @@ const ClientsPage = () => {
   const [showInsightModal, setShowInsightModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showReportsViewModal, setShowReportsViewModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -67,16 +69,16 @@ const ClientsPage = () => {
       const clientsData = await clientsService.getClients();
       
       // Load journal entries and reports for each client
-      const clientsWithData = await Promise.all(
+      const clientsWithJournals = await Promise.all(
         clientsData.map(async (client) => {
           try {
-            const [journalEntries, reports] = await Promise.all([
+            const [journalEntries, clientReports] = await Promise.all([
               journalEntriesService.getJournalEntries(client.id),
               clientReportsService.getClientReports(client.id)
             ]);
             
             const latestJournalEntry = journalEntries.length > 0 ? journalEntries[0] : undefined;
-            const latestReport = reports.length > 0 ? reports[0] : undefined;
+            const latestReport = clientReports.length > 0 ? clientReports[0] : undefined;
             
             return {
               ...client,
@@ -90,7 +92,7 @@ const ClientsPage = () => {
         })
       );
       
-      setClients(clientsWithData);
+      setClients(clientsWithJournals);
     } catch (error) {
       console.error('Error loading clients:', error);
       toast({
@@ -140,11 +142,6 @@ const ClientsPage = () => {
       setSelectedJournalEntry(client.latestJournalEntry);
       setShowJournalModal(true);
     }
-  };
-
-  const handleViewReports = (client: Client) => {
-    setSelectedClient(client);
-    setShowReportsViewModal(true);
   };
 
   const handleGenerateInsight = (client: Client) => {
@@ -201,9 +198,11 @@ const ClientsPage = () => {
     loadClients();
   };
 
-  const handleReportsViewClosed = () => {
-    setShowReportsViewModal(false);
-    setSelectedClient(null);
+  const formatReportType = (report: ClientReport): string => {
+    if (report.report_tier) {
+      return report.report_tier.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+    return report.request_type || 'Report';
   };
 
   const filteredAndSortedClients = useMemo(() => {
@@ -279,10 +278,6 @@ const ClientsPage = () => {
     });
   };
 
-  const formatReportType = (reportType: string) => {
-    return reportType.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
-
   const ClientCard = ({ client }: { client: ClientWithJournal }) => (
     <Card className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-border/50 hover:border-primary/20">
       <Link to={`/dashboard/clients/${client.id}`}>
@@ -353,10 +348,10 @@ const ClientsPage = () => {
         {client.latestJournalEntry ? formatDate(client.latestJournalEntry.created_at) : '-'}
       </TableCell>
       <TableCell 
-        className={`text-muted-foreground text-left ${client.latestReport ? 'cursor-pointer hover:text-primary' : ''}`}
-        onClick={() => client.latestReport && handleViewReports(client)}
+        className={`text-muted-foreground ${client.latestReport ? 'cursor-pointer hover:text-primary' : ''}`}
+        onClick={() => client.latestReport && handleGenerateReport(client)}
       >
-        {client.latestReport ? formatReportType(client.latestReport.request_type) : '-'}
+        {client.latestReport ? formatReportType(client.latestReport) : '-'}
       </TableCell>
       <TableCell className="text-muted-foreground">
         {formatDate(client.created_at)}
@@ -584,26 +579,6 @@ const ClientsPage = () => {
             client={selectedClient}
             onClientUpdated={handleClientUpdated}
           />
-
-          {/* Reports View Modal - Simple dialog to show we're viewing, not generating */}
-          {showReportsViewModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                <h3 className="text-lg font-semibold mb-4">Reports for {selectedClient.full_name}</h3>
-                <p className="text-gray-600 mb-4">
-                  This will open the reports viewing interface for this client.
-                </p>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={handleReportsViewClosed}>
-                    Close
-                  </Button>
-                  <Button onClick={handleReportsViewClosed}>
-                    View Reports
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       )}
     </div>
