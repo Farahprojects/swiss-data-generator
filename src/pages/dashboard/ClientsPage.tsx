@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -151,8 +150,11 @@ const ClientsPage = () => {
   };
 
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
+    if (sortField === field) {
+      return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
+    }
+    // Always show a default sort icon to indicate sortability
+    return <ChevronUp className="w-4 h-4 opacity-30" />;
   };
 
   // Action handlers
@@ -381,7 +383,7 @@ const ClientsPage = () => {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg font-semibold text-foreground leading-tight">
+              <CardTitle className="text-lg font-semibold text-primary leading-tight hover:text-primary/80 transition-colors">
                 {isMobile ? formatClientNameForMobile(client.full_name) : client.full_name}
               </CardTitle>
               <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
@@ -417,7 +419,7 @@ const ClientsPage = () => {
   const ClientTableRow = ({ client }: { client: ClientWithJournal }) => (
     <TableRow className="hover:bg-muted/50 cursor-pointer">
       <TableCell className="font-medium">
-        <Link to={`/dashboard/clients/${client.id}`} className="flex items-center gap-3 hover:text-primary">
+        <Link to={`/dashboard/clients/${client.id}`} className="flex items-center gap-3 text-primary hover:text-primary/80 transition-colors">
           {!isMobile && (
             <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-xs flex-shrink-0">
               {client.avatar_url ? (
