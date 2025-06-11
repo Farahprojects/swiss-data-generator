@@ -29,7 +29,6 @@ const getDisplayName = (report: ClientReport): string => {
       .split(' | ')[0]
       .split(' (')[0]
       .trim();
-
     return cleanName || `#${report.id.substring(0, 8)}`;
   }
   return `#${report.id.substring(0, 8)}`;
@@ -70,28 +69,28 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
         </Card>
       ) : (
         <Card>
-          <Table>
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-1/6">Date</TableHead>
-                <TableHead className="w-1/4">Name</TableHead>
-                <TableHead className="w-1/3">Report Type</TableHead>
-                <TableHead className="w-1/6">Actions</TableHead>
+                <TableHead className="w-[120px]">Date</TableHead>
+                <TableHead className="w-[200px]">Name</TableHead>
+                <TableHead className="w-[240px]">Report Type</TableHead>
+                <TableHead className="w-[160px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clientReports.map((report) => (
                 <TableRow key={report.id}>
-                  <TableCell className="w-1/6 text-sm text-gray-600 align-middle">
+                  <TableCell className="w-[120px] text-sm text-gray-600 align-middle">
                     {formatDate(report.created_at)}
                   </TableCell>
-                  <TableCell className="w-1/4 font-medium text-gray-900 align-middle">
+                  <TableCell className="w-[200px] text-sm font-medium text-gray-900 align-middle">
                     {getDisplayName(report)}
                   </TableCell>
-                  <TableCell className="w-1/3 text-sm text-gray-600 align-middle">
+                  <TableCell className="w-[240px] text-sm text-gray-600 align-middle">
                     {formatReportTier(report.report_tier)}
                   </TableCell>
-                  <TableCell className="w-1/6 align-middle">
+                  <TableCell className="w-[160px] align-middle">
                     <div className="flex items-center gap-2">
                       {!(report.response_status >= 200 && report.response_status < 300) && (
                         <Badge variant="destructive" className="text-xs">
