@@ -136,7 +136,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="font-semibold cursor-pointer hover:bg-muted/50"
+                  className="font-semibold cursor-pointer hover:bg-muted/50 hidden md:table-cell"
                   onClick={() => handleSort('report_name')}
                 >
                   <div className="flex items-center gap-1">
@@ -163,7 +163,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDate(report.created_at)}
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium hidden md:table-cell">
                     {getDisplayName(report)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
