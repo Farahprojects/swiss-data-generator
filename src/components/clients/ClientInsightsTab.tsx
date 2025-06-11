@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Brain, TrendingUp, Calendar, Target } from 'lucide-react';
+import { Plus, Brain, FileText } from 'lucide-react';
 import { formatDateTime } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
@@ -18,22 +18,8 @@ interface ClientInsightsTabProps {
     created_at: string;
   }>;
   onInsightGenerated?: () => void;
+  onViewInsight?: (insight: InsightEntry) => void;
 }
-
-const getInsightIcon = (type: string) => {
-  switch (type) {
-    case 'pattern':
-      return <TrendingUp className="w-4 h-4" />;
-    case 'recommendation':
-      return <Target className="w-4 h-4" />;
-    case 'trend':
-      return <Calendar className="w-4 h-4" />;
-    case 'milestone':
-      return <Brain className="w-4 h-4" />;
-    default:
-      return <Brain className="w-4 h-4" />;
-  }
-};
 
 const getInsightTypeLabel = (type: string) => {
   const typeMap: { [key: string]: string } = {
@@ -64,7 +50,8 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   insightEntries = [],
   client,
   journalEntries = [],
-  onInsightGenerated
+  onInsightGenerated,
+  onViewInsight
 }) => {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
 
@@ -76,6 +63,12 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   const handleInsightGenerated = () => {
     if (onInsightGenerated) {
       onInsightGenerated();
+    }
+  };
+
+  const handleViewInsight = (insight: InsightEntry) => {
+    if (onViewInsight) {
+      onViewInsight(insight);
     }
   };
 
@@ -109,29 +102,32 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {getInsightIcon(insight.type)}
-                      {insight.title}
+                    <CardTitle className="text-lg">
+                      {insight.title || `${getInsightTypeLabel(insight.type)} Insight`}
                     </CardTitle>
                     <div className="text-sm text-gray-600 mt-1">
-                      Generated on {formatDateTime(insight.created_at)}
+                      {getInsightTypeLabel(insight.type)}
+                      {insight.confidence_score && ` • ${insight.confidence_score}% confidence`}
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      {formatDateTime(insight.created_at)}
                     </div>
                   </div>
                   <div className="flex gap-2 items-center">
                     <Badge variant={getInsightBadgeVariant(insight.type)}>
                       {getInsightTypeLabel(insight.type)}
                     </Badge>
-                    {insight.confidence_score && (
-                      <Badge variant="outline">
-                        {insight.confidence_score}% confidence
-                      </Badge>
-                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewInsight(insight)}
+                    >
+                      <FileText className="w-3 h-3 mr-1" />
+                      View Insight
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 leading-relaxed">{insight.content}</p>
-              </CardContent>
             </Card>
           ))}
         </div>
