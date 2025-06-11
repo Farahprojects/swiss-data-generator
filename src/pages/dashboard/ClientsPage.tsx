@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Plus, Search, Calendar, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
+import { clientReportsService } from '@/services/clientReports';
 import { Client, JournalEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { TheraLoader } from '@/components/ui/TheraLoader';
@@ -20,12 +21,21 @@ import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 
 type ViewMode = 'grid' | 'list';
-type SortField = 'full_name' | 'email' | 'latest_journal' | 'birth_location' | 'created_at';
+type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 type FilterType = 'all' | 'most_active' | 'report_ready' | 'has_journal_no_report';
 
+interface ClientReport {
+  id: string;
+  request_type: string;
+  report_tier?: string;
+  created_at: string;
+  response_status: number;
+}
+
 interface ClientWithJournal extends Client {
   latestJournalEntry?: JournalEntry;
+  latestReport?: ClientReport;
 }
 
 const ClientsPage = () => {
@@ -37,6 +47,7 @@ const ClientsPage = () => {
   const [showInsightModal, setShowInsightModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showReportsViewModal, setShowReportsViewModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -55,24 +66,31 @@ const ClientsPage = () => {
       setLoading(true);
       const clientsData = await clientsService.getClients();
       
-      // Load journal entries for each client
-      const clientsWithJournals = await Promise.all(
+      // Load journal entries and reports for each client
+      const clientsWithData = await Promise.all(
         clientsData.map(async (client) => {
           try {
-            const journalEntries = await journalEntriesService.getJournalEntries(client.id);
+            const [journalEntries, reports] = await Promise.all([
+              journalEntriesService.getJournalEntries(client.id),
+              clientReportsService.getClientReports(client.id)
+            ]);
+            
             const latestJournalEntry = journalEntries.length > 0 ? journalEntries[0] : undefined;
+            const latestReport = reports.length > 0 ? reports[0] : undefined;
+            
             return {
               ...client,
-              latestJournalEntry
+              latestJournalEntry,
+              latestReport
             };
           } catch (error) {
-            console.error(`Error loading journal entries for client ${client.id}:`, error);
+            console.error(`Error loading data for client ${client.id}:`, error);
             return client;
           }
         })
       );
       
-      setClients(clientsWithJournals);
+      setClients(clientsWithData);
     } catch (error) {
       console.error('Error loading clients:', error);
       toast({
@@ -122,6 +140,11 @@ const ClientsPage = () => {
       setSelectedJournalEntry(client.latestJournalEntry);
       setShowJournalModal(true);
     }
+  };
+
+  const handleViewReports = (client: Client) => {
+    setSelectedClient(client);
+    setShowReportsViewModal(true);
   };
 
   const handleGenerateInsight = (client: Client) => {
@@ -178,6 +201,11 @@ const ClientsPage = () => {
     loadClients();
   };
 
+  const handleReportsViewClosed = () => {
+    setShowReportsViewModal(false);
+    setSelectedClient(null);
+  };
+
   const filteredAndSortedClients = useMemo(() => {
     let filtered = clients.filter(client =>
       client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -217,9 +245,9 @@ const ClientsPage = () => {
           aValue = a.latestJournalEntry ? new Date(a.latestJournalEntry.created_at) : new Date(0);
           bValue = b.latestJournalEntry ? new Date(b.latestJournalEntry.created_at) : new Date(0);
           break;
-        case 'birth_location':
-          aValue = a.birth_location || '';
-          bValue = b.birth_location || '';
+        case 'latest_report':
+          aValue = a.latestReport ? new Date(a.latestReport.created_at) : new Date(0);
+          bValue = b.latestReport ? new Date(b.latestReport.created_at) : new Date(0);
           break;
         case 'created_at':
           aValue = new Date(a.created_at);
@@ -249,6 +277,10 @@ const ClientsPage = () => {
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const formatReportType = (reportType: string) => {
+    return reportType.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const ClientCard = ({ client }: { client: ClientWithJournal }) => (
@@ -320,8 +352,11 @@ const ClientsPage = () => {
       >
         {client.latestJournalEntry ? formatDate(client.latestJournalEntry.created_at) : '-'}
       </TableCell>
-      <TableCell className="text-muted-foreground text-left">
-        {client.birth_location || '-'}
+      <TableCell 
+        className={`text-muted-foreground text-left ${client.latestReport ? 'cursor-pointer hover:text-primary' : ''}`}
+        onClick={() => client.latestReport && handleViewReports(client)}
+      >
+        {client.latestReport ? formatReportType(client.latestReport.request_type) : '-'}
       </TableCell>
       <TableCell className="text-muted-foreground">
         {formatDate(client.created_at)}
@@ -469,11 +504,11 @@ const ClientsPage = () => {
                 </TableHead>
                 <TableHead 
                   className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
-                  onClick={() => handleSort('birth_location')}
+                  onClick={() => handleSort('latest_report')}
                 >
                   <div className="flex items-center gap-1">
-                    Location
-                    {getSortIcon('birth_location')}
+                    Reports
+                    {getSortIcon('latest_report')}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -549,6 +584,26 @@ const ClientsPage = () => {
             client={selectedClient}
             onClientUpdated={handleClientUpdated}
           />
+
+          {/* Reports View Modal - Simple dialog to show we're viewing, not generating */}
+          {showReportsViewModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <h3 className="text-lg font-semibold mb-4">Reports for {selectedClient.full_name}</h3>
+                <p className="text-gray-600 mb-4">
+                  This will open the reports viewing interface for this client.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={handleReportsViewClosed}>
+                    Close
+                  </Button>
+                  <Button onClick={handleReportsViewClosed}>
+                    View Reports
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
