@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +21,8 @@ import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { useClientViewMode } from '@/hooks/useClientViewMode';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOptimizedClients } from '@/hooks/useOptimizedClients';
+import { useModalState } from '@/contexts/ModalStateContext';
+import { useTabVisibility } from '@/hooks/useTabVisibility';
 
 type ViewMode = 'grid' | 'list';
 type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'latest_insight' | 'created_at';
@@ -44,8 +45,11 @@ interface ClientWithJournal extends Client {
   latestInsight?: InsightEntry;
 }
 
-const ClientsPage = () => {
+const ClientsPage = React.memo(() => {
   const { clients, loading, initialLoad, invalidateCache } = useOptimizedClients();
+  const { modalState, setModalState, preserveModalState } = useModalState();
+  const { isVisible, wasHidden } = useTabVisibility();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [showJournalModal, setShowJournalModal] = useState(false);
@@ -69,52 +73,59 @@ const ClientsPage = () => {
   // Use the saved view mode or default to 'grid' if none is set
   const viewMode = savedViewMode || 'grid';
 
-  const setViewMode = async (newViewMode: ViewMode) => {
+  // Preserve modal state when tab becomes hidden
+  React.useEffect(() => {
+    if (!isVisible) {
+      preserveModalState();
+    }
+  }, [isVisible, preserveModalState]);
+
+  const setViewMode = useCallback(async (newViewMode: ViewMode) => {
     await updateViewMode(newViewMode);
-  };
+  }, [updateViewMode]);
 
-  const handleClientCreated = () => {
+  const handleClientCreated = useCallback(() => {
     invalidateCache();
-  };
+  }, [invalidateCache]);
 
-  const handleClientUpdated = () => {
+  const handleClientUpdated = useCallback(() => {
     invalidateCache();
-    setShowEditModal(false);
+    setModalState('showEditModal', false);
     setSelectedClient(null);
-  };
+  }, [invalidateCache, setModalState]);
 
-  const handleSort = (field: SortField) => {
+  const handleSort = useCallback((field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
-  };
+  }, [sortField, sortDirection]);
 
-  const getSortIcon = (field: SortField) => {
+  const getSortIcon = useCallback((field: SortField) => {
     if (sortField === field) {
       return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
     }
     return <ChevronUp className="w-4 h-4 opacity-30" />;
-  };
+  }, [sortField, sortDirection]);
 
-  // Action handlers
-  const handleCreateJournal = (client: Client) => {
+  // Memoized action handlers
+  const handleCreateJournal = useCallback((client: Client) => {
     setSelectedClient(client);
     setSelectedJournalEntry(null);
-    setShowJournalModal(true);
-  };
+    setModalState('showJournalModal', true);
+  }, [setModalState]);
 
-  const handleEditJournal = (client: ClientWithJournal) => {
+  const handleEditJournal = useCallback((client: ClientWithJournal) => {
     if (client.latestJournalEntry) {
       setSelectedClient(client);
       setSelectedJournalEntry(client.latestJournalEntry);
-      setShowJournalModal(true);
+      setModalState('showJournalModal', true);
     }
-  };
+  }, [setModalState]);
 
-  const handleGenerateInsight = async (client: Client) => {
+  const handleGenerateInsight = useCallback(async (client: Client) => {
     try {
       console.log('💡 Generating insight for client:', client.full_name);
       setSelectedClient(client);
@@ -123,7 +134,7 @@ const ClientsPage = () => {
       console.log('📔 Loaded journal entries for insight:', journalEntries.length, 'entries');
       setSelectedClientJournalEntries(journalEntries);
       
-      setShowInsightModal(true);
+      setModalState('showInsightModal', true);
     } catch (error) {
       console.error('Error loading journal entries for insight:', error);
       toast({
@@ -132,19 +143,19 @@ const ClientsPage = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [setModalState, toast]);
 
-  const handleGenerateReport = (client: Client) => {
+  const handleGenerateReport = useCallback((client: Client) => {
     setSelectedClient(client);
-    setShowReportModal(true);
-  };
+    setModalState('showReportModal', true);
+  }, [setModalState]);
 
-  const handleEditClient = (client: Client) => {
+  const handleEditClient = useCallback((client: Client) => {
     setSelectedClient(client);
-    setShowEditModal(true);
-  };
+    setModalState('showEditModal', true);
+  }, [setModalState]);
 
-  const handleArchiveClient = async (client: Client) => {
+  const handleArchiveClient = useCallback(async (client: Client) => {
     if (window.confirm(`Are you sure you want to archive ${client.full_name}? This action cannot be undone.`)) {
       try {
         await clientsService.deleteClient(client.id);
@@ -162,27 +173,27 @@ const ClientsPage = () => {
         });
       }
     }
-  };
+  }, [toast, invalidateCache]);
 
-  const handleJournalCreated = () => {
-    setShowJournalModal(false);
+  const handleJournalCreated = useCallback(() => {
+    setModalState('showJournalModal', false);
     setSelectedClient(null);
     setSelectedJournalEntry(null);
     invalidateCache();
-  };
+  }, [setModalState, invalidateCache]);
 
-  const handleInsightGenerated = () => {
-    setShowInsightModal(false);
+  const handleInsightGenerated = useCallback(() => {
+    setModalState('showInsightModal', false);
     setSelectedClient(null);
     setSelectedClientJournalEntries([]);
     invalidateCache();
-  };
+  }, [setModalState, invalidateCache]);
 
-  const handleReportGenerated = () => {
-    setShowReportModal(false);
+  const handleReportGenerated = useCallback(() => {
+    setModalState('showReportModal', false);
     setSelectedClient(null);
     invalidateCache();
-  };
+  }, [setModalState, invalidateCache]);
 
   const formatReportType = (report: ClientReport): string => {
     if (report.report_tier) {
@@ -323,7 +334,7 @@ const ClientsPage = () => {
     return `${firstName} ${lastNameInitial}.`;
   };
 
-  const ClientCard = ({ client }: { client: ClientWithJournal }) => (
+  const ClientCard = useCallback(({ client }: { client: ClientWithJournal }) => (
     <Card className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-border/50 hover:border-primary/20">
       <Link to={`/dashboard/clients/${client.id}`}>
         <CardHeader className="pb-3 pt-4 px-4">
@@ -369,9 +380,9 @@ const ClientsPage = () => {
         </CardContent>
       </Link>
     </Card>
-  );
+  ), [isMobile, formatDate, formatClientNameForMobile]);
 
-  const ClientTableRow = ({ client }: { client: ClientWithJournal }) => (
+  const ClientTableRow = useCallback(({ client }: { client: ClientWithJournal }) => (
     <TableRow className="hover:bg-muted/50 cursor-pointer">
       <TableCell className="font-medium">
         <Link to={`/dashboard/clients/${client.id}`} className="flex items-center gap-3 text-primary hover:text-primary/80 transition-colors">
@@ -421,7 +432,7 @@ const ClientsPage = () => {
         />
       </TableCell>
     </TableRow>
-  );
+  ), [isMobile, formatClientNameForMobile, handleEditJournal, formatDate, formatReportType, handleViewReport, handleViewInsight]);
 
   // Show loading only for initial load or when view mode is loading
   if (initialLoad && (loading || viewModeLoading)) {
@@ -482,7 +493,7 @@ const ClientsPage = () => {
           </div>
           
           <Button 
-            onClick={() => setShowNewClientModal(true)}
+            onClick={() => setModalState('showNewClientModal', true)}
             className="flex items-center gap-2 flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
@@ -575,7 +586,7 @@ const ClientsPage = () => {
           <p className="text-muted-foreground mb-4">
             {searchTerm ? 'Try adjusting your search terms' : 'Start by adding your first client'}
           </p>
-          <Button onClick={() => setShowNewClientModal(true)}>
+          <Button onClick={() => setModalState('showNewClientModal', true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Client
           </Button>
@@ -584,39 +595,39 @@ const ClientsPage = () => {
 
       {/* Modals */}
       <ClientForm
-        open={showNewClientModal}
-        onOpenChange={setShowNewClientModal}
+        open={modalState.showNewClientModal}
+        onOpenChange={(open) => setModalState('showNewClientModal', open)}
         onClientCreated={handleClientCreated}
       />
 
       {selectedClient && (
         <>
           <CreateJournalEntryForm
-            open={showJournalModal}
-            onOpenChange={setShowJournalModal}
+            open={modalState.showJournalModal}
+            onOpenChange={(open) => setModalState('showJournalModal', open)}
             clientId={selectedClient.id}
             onEntryCreated={handleJournalCreated}
             existingEntry={selectedJournalEntry || undefined}
           />
 
           <GenerateInsightModal
-            open={showInsightModal}
-            onOpenChange={setShowInsightModal}
+            open={modalState.showInsightModal}
+            onOpenChange={(open) => setModalState('showInsightModal', open)}
             client={selectedClient}
             journalEntries={selectedClientJournalEntries}
             onInsightGenerated={handleInsightGenerated}
           />
 
           <ClientReportModal
-            open={showReportModal}
-            onOpenChange={setShowReportModal}
+            open={modalState.showReportModal}
+            onOpenChange={(open) => setModalState('showReportModal', open)}
             client={selectedClient}
             onReportGenerated={handleReportGenerated}
           />
 
           <EditClientForm
-            open={showEditModal}
-            onOpenChange={setShowEditModal}
+            open={modalState.showEditModal}
+            onOpenChange={(open) => setModalState('showEditModal', open)}
             client={selectedClient}
             onClientUpdated={handleClientUpdated}
           />
@@ -636,6 +647,8 @@ const ClientsPage = () => {
       />
     </div>
   );
-};
+});
+
+ClientsPage.displayName = 'ClientsPage';
 
 export default ClientsPage;

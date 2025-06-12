@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -20,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
+import { useFormPersistence } from '@/hooks/useFormPersistence';
+import { useTabVisibility } from '@/hooks/useTabVisibility';
 
 const clientFormSchema = z.object({
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -41,7 +42,22 @@ interface ClientFormProps {
 
 const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) => {
   const { toast } = useToast();
+  const { isVisible } = useTabVisibility();
   const [selectedPlaceData, setSelectedPlaceData] = useState<PlaceData | null>(null);
+  
+  // Form persistence
+  const { formData, updateFormData, clearFormData, autoSave } = useFormPersistence(
+    'newClientForm',
+    {
+      full_name: '',
+      email: '',
+      phone: '',
+      birth_date: '',
+      birth_time: '',
+      birth_location: '',
+      notes: ''
+    }
+  );
   
   const {
     register,
@@ -49,10 +65,44 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
     reset,
     control,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ClientFormData>({
     resolver: zodResolver(clientFormSchema),
+    defaultValues: formData
   });
+
+  // Watch form values and auto-save when tab is not visible
+  const watchedValues = watch();
+  
+  useEffect(() => {
+    if (!isVisible && open) {
+      // Auto-save form data when tab becomes hidden
+      updateFormData(watchedValues);
+    }
+  }, [isVisible, open, watchedValues, updateFormData]);
+
+  // Auto-save on form field changes with debouncing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (open) {
+        updateFormData(watchedValues);
+      }
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [watchedValues, open, updateFormData]);
+
+  // Restore form data when modal opens
+  useEffect(() => {
+    if (open && formData) {
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value) {
+          setValue(key as keyof ClientFormData, value);
+        }
+      });
+    }
+  }, [open, formData, setValue]);
 
   const onSubmit = async (data: ClientFormData) => {
     try {
@@ -78,6 +128,7 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
 
       reset();
       setSelectedPlaceData(null);
+      clearFormData(); // Clear persisted form data
       onOpenChange(false);
       onClientCreated();
     } catch (error) {
@@ -93,6 +144,7 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
   const handleClose = () => {
     reset();
     setSelectedPlaceData(null);
+    clearFormData(); // Clear persisted form data
     onOpenChange(false);
   };
 
@@ -100,6 +152,7 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
     console.log('Place selected with coordinates:', placeData);
     setSelectedPlaceData(placeData);
     setValue('birth_location', placeData.name);
+    autoSave('birth_location', placeData.name);
   };
 
   return (
@@ -122,6 +175,10 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
                 id="full_name"
                 {...register('full_name')}
                 placeholder="Enter client's full name"
+                onChange={(e) => {
+                  register('full_name').onChange(e);
+                  autoSave('full_name', e.target.value);
+                }}
               />
               {errors.full_name && (
                 <p className="text-sm text-destructive">{errors.full_name.message}</p>
@@ -135,6 +192,10 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
                 type="email"
                 {...register('email')}
                 placeholder="client@example.com"
+                onChange={(e) => {
+                  register('email').onChange(e);
+                  autoSave('email', e.target.value);
+                }}
               />
               {errors.email && (
                 <p className="text-sm text-destructive">{errors.email.message}</p>
@@ -148,6 +209,10 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
               id="phone"
               {...register('phone')}
               placeholder="Enter phone number"
+              onChange={(e) => {
+                register('phone').onChange(e);
+                autoSave('phone', e.target.value);
+              }}
             />
           </div>
 
@@ -158,6 +223,10 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
                 id="birth_date"
                 type="date"
                 {...register('birth_date')}
+                onChange={(e) => {
+                  register('birth_date').onChange(e);
+                  autoSave('birth_date', e.target.value);
+                }}
               />
             </div>
 
@@ -168,6 +237,10 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
                 type="time"
                 {...register('birth_time')}
                 step="60"
+                onChange={(e) => {
+                  register('birth_time').onChange(e);
+                  autoSave('birth_time', e.target.value);
+                }}
               />
             </div>
           </div>
@@ -197,6 +270,10 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
               {...register('notes')}
               placeholder="What are the client's main goals and aspirations..."
               rows={4}
+              onChange={(e) => {
+                register('notes').onChange(e);
+                autoSave('notes', e.target.value);
+              }}
             />
           </div>
 
