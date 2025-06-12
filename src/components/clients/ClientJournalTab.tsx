@@ -74,6 +74,10 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
     return entry.entry_text.substring(0, 100) + (entry.entry_text.length > 100 ? '...' : '');
   };
 
+  const handleSummaryClick = (entry: JournalEntry) => {
+    handleEditEntry(entry);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -120,7 +124,10 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
                         {entry.title || 'Journal Entry'}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">
+                    <div 
+                      className="text-sm text-primary cursor-pointer hover:text-primary/80 transition-colors mt-1"
+                      onClick={() => handleSummaryClick(entry)}
+                    >
                       {getSummary(entry)}
                     </div>
                     {entry.tags && entry.tags.length > 0 && (
