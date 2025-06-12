@@ -148,7 +148,7 @@ const PublicReport = () => {
 
       {/* Main Form Section */}
       <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
             {/* Step 1: Report Type Selection */}
             <div className="space-y-6">
@@ -276,13 +276,14 @@ const PublicReport = () => {
                     </div>
                     
                     <div className="pl-12">
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid lg:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="name">Full Name *</Label>
                           <Input
                             id="name"
                             {...register('name')}
                             placeholder="Enter your full name"
+                            className="h-12"
                           />
                           {errors.name && (
                             <p className="text-sm text-destructive">{errors.name.message}</p>
@@ -295,6 +296,7 @@ const PublicReport = () => {
                             type="email"
                             {...register('email')}
                             placeholder="your@email.com"
+                            className="h-12"
                           />
                           {errors.email && (
                             <p className="text-sm text-destructive">{errors.email.message}</p>
@@ -313,14 +315,15 @@ const PublicReport = () => {
                       <h2 className="text-2xl font-semibold">Your Birth Details</h2>
                     </div>
                     
-                    <div className="pl-12 space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
+                    <div className="pl-12 space-y-6 birth-details-container" data-testid="birth-details">
+                      <div className="grid lg:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="birthDate">Birth Date *</Label>
                           <Input
                             id="birthDate"
                             type="date"
                             {...register('birthDate')}
+                            className="h-12"
                           />
                           {errors.birthDate && (
                             <p className="text-sm text-destructive">{errors.birthDate.message}</p>
@@ -333,6 +336,7 @@ const PublicReport = () => {
                             type="time"
                             {...register('birthTime')}
                             step="60"
+                            className="h-12"
                           />
                           {errors.birthTime && (
                             <p className="text-sm text-destructive">{errors.birthTime.message}</p>
@@ -365,25 +369,27 @@ const PublicReport = () => {
                     <h2 className="text-2xl font-semibold">Second Person Details</h2>
                   </div>
                   
-                  <div className="pl-12 space-y-4">
+                  <div className="pl-12 space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="secondPersonName">Name *</Label>
                       <Input
                         id="secondPersonName"
                         {...register('secondPersonName')}
                         placeholder="Enter second person's name"
+                        className="h-12"
                       />
                       {errors.secondPersonName && (
                         <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>
                       )}
                     </div>
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid lg:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="secondPersonBirthDate">Birth Date *</Label>
                         <Input
                           id="secondPersonBirthDate"
                           type="date"
                           {...register('secondPersonBirthDate')}
+                          className="h-12"
                         />
                         {errors.secondPersonBirthDate && (
                           <p className="text-sm text-destructive">{errors.secondPersonBirthDate.message}</p>
@@ -396,6 +402,7 @@ const PublicReport = () => {
                           type="time"
                           {...register('secondPersonBirthTime')}
                           step="60"
+                          className="h-12"
                         />
                         {errors.secondPersonBirthTime && (
                           <p className="text-sm text-destructive">{errors.secondPersonBirthTime.message}</p>
