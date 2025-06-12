@@ -149,9 +149,9 @@ const PublicReport = () => {
       {/* Main Form Section */}
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
             {/* Step 1: Report Type Selection */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               <button
                 type="button"
                 onClick={() => setShowReportGuide(true)}
@@ -160,14 +160,13 @@ const PublicReport = () => {
                 Not sure which report to choose? Click here.
               </button>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                    Choose Your Report Type
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">1</div>
+                  <h2 className="text-2xl font-semibold">Choose Your Report Type</h2>
+                </div>
+                
+                <div className="pl-12 space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="reportType">Report Type *</Label>
                     <Controller
@@ -195,7 +194,7 @@ const PublicReport = () => {
 
                   {/* Conditional Fields for Report Options */}
                   {requiresEssenceType && (
-                    <div className="space-y-2 mt-4">
+                    <div className="space-y-2">
                       <Label htmlFor="essenceType">Essence Focus *</Label>
                       <Controller
                         control={control}
@@ -205,13 +204,13 @@ const PublicReport = () => {
                             type="single"
                             value={field.value}
                             onValueChange={field.onChange}
-                            className="justify-start"
+                            className="justify-start flex-wrap gap-2"
                           >
                             {essenceTypes.map((type) => (
                               <ToggleGroupItem 
                                 key={type.value} 
                                 value={type.value}
-                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
+                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0"
                               >
                                 {type.label}
                               </ToggleGroupItem>
@@ -223,7 +222,7 @@ const PublicReport = () => {
                   )}
 
                   {requiresReturnYear && (
-                    <div className="space-y-2 mt-4">
+                    <div className="space-y-2">
                       <Label htmlFor="returnYear">Return Year *</Label>
                       <Input
                         {...register('returnYear')}
@@ -236,7 +235,7 @@ const PublicReport = () => {
                   )}
 
                   {requiresRelationshipType && (
-                    <div className="space-y-2 mt-4">
+                    <div className="space-y-2">
                       <Label htmlFor="relationshipType">Relationship Type *</Label>
                       <Controller
                         control={control}
@@ -246,13 +245,13 @@ const PublicReport = () => {
                             type="single"
                             value={field.value}
                             onValueChange={field.onChange}
-                            className="justify-start"
+                            className="justify-start flex-wrap gap-2"
                           >
                             {relationshipTypes.map((type) => (
                               <ToggleGroupItem 
                                 key={type.value} 
                                 value={type.value}
-                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
+                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0"
                               >
                                 {type.label}
                               </ToggleGroupItem>
@@ -262,163 +261,166 @@ const PublicReport = () => {
                       />
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Step 2: Contact Information */}
             {selectedReportType && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                    Contact Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input
-                        id="name"
-                        {...register('name')}
-                        placeholder="Enter your full name"
-                      />
-                      {errors.name && (
-                        <p className="text-sm text-destructive">{errors.name.message}</p>
-                      )}
+              <>
+                <div className="border-t pt-8">
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">2</div>
+                      <h2 className="text-2xl font-semibold">Contact Information</h2>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        {...register('email')}
-                        placeholder="your@email.com"
-                      />
-                      {errors.email && (
-                        <p className="text-sm text-destructive">{errors.email.message}</p>
-                      )}
+                    
+                    <div className="pl-12">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Full Name *</Label>
+                          <Input
+                            id="name"
+                            {...register('name')}
+                            placeholder="Enter your full name"
+                          />
+                          {errors.name && (
+                            <p className="text-sm text-destructive">{errors.name.message}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email Address *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            {...register('email')}
+                            placeholder="your@email.com"
+                          />
+                          {errors.email && (
+                            <p className="text-sm text-destructive">{errors.email.message}</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </div>
 
-            {/* Step 3: Birth Details */}
-            {selectedReportType && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
-                    Your Birth Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="birthDate">Birth Date *</Label>
-                      <Input
-                        id="birthDate"
-                        type="date"
-                        {...register('birthDate')}
-                      />
-                      {errors.birthDate && (
-                        <p className="text-sm text-destructive">{errors.birthDate.message}</p>
-                      )}
+                {/* Step 3: Birth Details */}
+                <div className="border-t pt-8">
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">3</div>
+                      <h2 className="text-2xl font-semibold">Your Birth Details</h2>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="birthTime">Birth Time *</Label>
-                      <Input
-                        id="birthTime"
-                        type="time"
-                        {...register('birthTime')}
-                        step="60"
-                      />
-                      {errors.birthTime && (
-                        <p className="text-sm text-destructive">{errors.birthTime.message}</p>
-                      )}
+                    
+                    <div className="pl-12 space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="birthDate">Birth Date *</Label>
+                          <Input
+                            id="birthDate"
+                            type="date"
+                            {...register('birthDate')}
+                          />
+                          {errors.birthDate && (
+                            <p className="text-sm text-destructive">{errors.birthDate.message}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="birthTime">Birth Time *</Label>
+                          <Input
+                            id="birthTime"
+                            type="time"
+                            {...register('birthTime')}
+                            step="60"
+                          />
+                          {errors.birthTime && (
+                            <p className="text-sm text-destructive">{errors.birthTime.message}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <PlaceAutocomplete
+                          label="Birth Location *"
+                          value={watch('birthLocation') || ''}
+                          onChange={(value) => setValue('birthLocation', value)}
+                          onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'birthLocation')}
+                          placeholder="Enter birth city, state, country"
+                          id="birthLocation"
+                          error={errors.birthLocation?.message}
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <PlaceAutocomplete
-                      label="Birth Location *"
-                      value={watch('birthLocation') || ''}
-                      onChange={(value) => setValue('birthLocation', value)}
-                      onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'birthLocation')}
-                      placeholder="Enter birth city, state, country"
-                      id="birthLocation"
-                      error={errors.birthLocation?.message}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </>
             )}
 
             {/* Step 4: Second Person Details (for compatibility/sync reports) */}
             {requiresSecondPerson && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">4</span>
-                    Second Person Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="secondPersonName">Name *</Label>
-                    <Input
-                      id="secondPersonName"
-                      {...register('secondPersonName')}
-                      placeholder="Enter second person's name"
-                    />
-                    {errors.secondPersonName && (
-                      <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>
-                    )}
+              <div className="border-t pt-8">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">4</div>
+                    <h2 className="text-2xl font-semibold">Second Person Details</h2>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
+                  
+                  <div className="pl-12 space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="secondPersonBirthDate">Birth Date *</Label>
+                      <Label htmlFor="secondPersonName">Name *</Label>
                       <Input
-                        id="secondPersonBirthDate"
-                        type="date"
-                        {...register('secondPersonBirthDate')}
+                        id="secondPersonName"
+                        {...register('secondPersonName')}
+                        placeholder="Enter second person's name"
                       />
-                      {errors.secondPersonBirthDate && (
-                        <p className="text-sm text-destructive">{errors.secondPersonBirthDate.message}</p>
+                      {errors.secondPersonName && (
+                        <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>
                       )}
                     </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="secondPersonBirthDate">Birth Date *</Label>
+                        <Input
+                          id="secondPersonBirthDate"
+                          type="date"
+                          {...register('secondPersonBirthDate')}
+                        />
+                        {errors.secondPersonBirthDate && (
+                          <p className="text-sm text-destructive">{errors.secondPersonBirthDate.message}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="secondPersonBirthTime">Birth Time *</Label>
+                        <Input
+                          id="secondPersonBirthTime"
+                          type="time"
+                          {...register('secondPersonBirthTime')}
+                          step="60"
+                        />
+                        {errors.secondPersonBirthTime && (
+                          <p className="text-sm text-destructive">{errors.secondPersonBirthTime.message}</p>
+                        )}
+                      </div>
+                    </div>
                     <div className="space-y-2">
-                      <Label htmlFor="secondPersonBirthTime">Birth Time *</Label>
-                      <Input
-                        id="secondPersonBirthTime"
-                        type="time"
-                        {...register('secondPersonBirthTime')}
-                        step="60"
+                      <PlaceAutocomplete
+                        label="Birth Location *"
+                        value={watch('secondPersonBirthLocation') || ''}
+                        onChange={(value) => setValue('secondPersonBirthLocation', value)}
+                        onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'secondPersonBirthLocation')}
+                        placeholder="Enter birth city, state, country"
+                        id="secondPersonBirthLocation"
+                        error={errors.secondPersonBirthLocation?.message}
                       />
-                      {errors.secondPersonBirthTime && (
-                        <p className="text-sm text-destructive">{errors.secondPersonBirthTime.message}</p>
-                      )}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <PlaceAutocomplete
-                      label="Birth Location *"
-                      value={watch('secondPersonBirthLocation') || ''}
-                      onChange={(value) => setValue('secondPersonBirthLocation', value)}
-                      onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'secondPersonBirthLocation')}
-                      placeholder="Enter birth city, state, country"
-                      id="secondPersonBirthLocation"
-                      error={errors.secondPersonBirthLocation?.message}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
             {/* Generate Report Button and Promo Code Section */}
             {selectedReportType && (
-              <div className="flex flex-col items-center space-y-4">
+              <div className="border-t pt-8 flex flex-col items-center space-y-4">
                 <Button 
                   type="submit"
                   size="lg" 
