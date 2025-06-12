@@ -113,8 +113,8 @@ const ClientDetailPage = () => {
   return (
     <div className="min-h-screen">
       {/* Sticky Header - positioned under global navigation */}
-      <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container mx-auto px-6 py-4">
+      <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b w-full">
+        <div className="w-full px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Client Name */}
             <button
@@ -125,7 +125,7 @@ const ClientDetailPage = () => {
             </button>
 
             {/* Tab Navigation - as text with icons */}
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-8 ml-8">
               <button
                 onClick={() => setActiveTab('journal')}
                 className={`flex items-center gap-2 text-sm transition-colors ${
@@ -135,7 +135,7 @@ const ClientDetailPage = () => {
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
-                Journal Entries ({journalEntries.length})
+                Journal ({journalEntries.length})
               </button>
               <button
                 onClick={() => setActiveTab('reports')}
