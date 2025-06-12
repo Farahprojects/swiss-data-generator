@@ -1,6 +1,6 @@
 
 import { supabaseWithAuth } from '@/utils/supabaseWithAuth';
-import { Client } from '@/types/database';
+import { Client, CreateClientData } from '@/types/database';
 import { logToSupabase } from '@/utils/batchedLogManager';
 import { authService } from '@/services/authService';
 
@@ -46,7 +46,7 @@ export const clientsService = {
     return data;
   },
 
-  async createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
+  async createClient(clientData: CreateClientData): Promise<Client> {
     // Ensure we have the current user's ID for coach_id
     const session = await authService.ensureValidSession();
     if (!session?.user?.id) {

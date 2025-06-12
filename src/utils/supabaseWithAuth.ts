@@ -9,7 +9,7 @@ import { logToSupabase } from '@/utils/batchedLogManager';
 class SupabaseWithAuth {
   async query<T>(
     tableName: string,
-    queryFn: (client: typeof supabase) => Promise<{ data: T | null; error: any }>
+    queryFn: (client: typeof supabase) => any
   ): Promise<{ data: T | null; error: any }> {
     try {
       // Ensure we have valid authentication
@@ -26,7 +26,7 @@ class SupabaseWithAuth {
         };
       }
 
-      // Execute the query
+      // Execute the query and await the result
       const result = await queryFn(supabase);
       
       // Handle potential auth-related errors
