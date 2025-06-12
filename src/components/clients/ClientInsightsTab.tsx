@@ -77,6 +77,28 @@ const parseInsightSections = (content: string) => {
   return sections.slice(0, 2); // Take first 2 meaningful sections
 };
 
+const categorizeInsightTerms = (content: string) => {
+  const negativeTerms = ['Fear of Vulnerability', 'Self-Judgment', 'Emotional Suppression'];
+  const positiveTerms = ['Self-Awareness', 'Emotional Responsiveness', 'Courageous Inquiry'];
+  
+  const foundNegative: string[] = [];
+  const foundPositive: string[] = [];
+  
+  negativeTerms.forEach(term => {
+    if (content.includes(term)) {
+      foundNegative.push(term);
+    }
+  });
+  
+  positiveTerms.forEach(term => {
+    if (content.includes(term)) {
+      foundPositive.push(term);
+    }
+  });
+  
+  return { negative: foundNegative, positive: foundPositive };
+};
+
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   insightEntries = [],
   client,
@@ -167,6 +189,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
             {insightEntries.map((insight) => {
               const sections = parseInsightSections(insight.content);
               const mainText = getMainInsightText(insight);
+              const { negative, positive } = categorizeInsightTerms(insight.content);
               
               return (
                 <Card key={insight.id} className="p-6 hover:shadow-md transition-all duration-200 border border-gray-100">
@@ -197,16 +220,25 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                         {mainText}
                       </p>
                       
-                      {/* Insight Sections */}
-                      {sections.length > 0 && (
+                      {/* Categorized Terms */}
+                      {(negative.length > 0 || positive.length > 0) && (
                         <div className="flex flex-wrap gap-2">
-                          {sections.map((section, index) => (
+                          {negative.map((term, index) => (
                             <Badge 
-                              key={index}
+                              key={`negative-${index}`}
                               variant="outline" 
-                              className="bg-accent/30 text-primary border-primary/30 text-xs px-2 py-1"
+                              className="bg-red-50 text-red-700 border-red-200 text-xs px-2 py-1"
                             >
-                              {section}
+                              {term}
+                            </Badge>
+                          ))}
+                          {positive.map((term, index) => (
+                            <Badge 
+                              key={`positive-${index}`}
+                              variant="outline" 
+                              className="bg-green-50 text-green-700 border-green-200 text-xs px-2 py-1"
+                            >
+                              {term}
                             </Badge>
                           ))}
                         </div>
