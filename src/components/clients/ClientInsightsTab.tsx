@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, FileText, Edit2, Check, X, Trash2, Lightbulb } from 'lucide-react';
+import { Plus, FileText, Edit2, Check, X, Trash2 } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
@@ -233,12 +233,14 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                       <div className="flex items-center gap-2">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleViewInsight(insight)}
-                              className="text-black hover:text-primary transition-colors p-1"
+                              className="text-primary hover:text-primary/80 hover:bg-primary/10 p-2 h-auto"
                             >
-                              <Lightbulb className="w-5 h-5" />
-                            </button>
+                              <FileText className="h-4 w-4" />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>
                             <span>View insight</span>
@@ -252,7 +254,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                                   disabled={deletingInsightId === insight.id}
                                   className="text-black hover:text-destructive transition-colors p-1 disabled:opacity-50"
                                 >
-                                  <Trash2 className="w-5 h-5" />
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent>
