@@ -426,13 +426,13 @@ const PublicReport = () => {
                 </Button>
                 
                 {/* Promo Code Section */}
-                <div className="w-full max-w-md">
+                <div className="w-full max-w-[240px]">
                   <button
                     type="button"
                     onClick={() => setShowPromoCode(!showPromoCode)}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
+                    className="flex items-center justify-center gap-2 text-sm font-bold text-primary hover:text-primary/80 transition-colors w-full"
                   >
-                    👋 Have a promo code? 
+                    Have a promo code? 
                     <span className="underline">Enter it here</span>
                     {showPromoCode ? (
                       <ChevronUp className="h-4 w-4" />
@@ -448,7 +448,7 @@ const PublicReport = () => {
                       <Input
                         {...register('promoCode')}
                         placeholder="Enter promo code"
-                        className="text-center"
+                        className="text-center w-full"
                       />
                       {watch('promoCode') && (
                         <p className="text-xs text-center text-muted-foreground">
