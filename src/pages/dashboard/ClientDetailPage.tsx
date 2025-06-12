@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
@@ -8,6 +9,7 @@ import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import ClientReportsTab from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
 import EditClientForm from '@/components/clients/EditClientForm';
+import ClientReportModal from '@/components/clients/ClientReportModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, BookOpen, FileText, Lightbulb } from 'lucide-react';
@@ -17,6 +19,7 @@ const ClientDetailPage = () => {
   const { isReady, hasValidAuth, error: authError } = useAuthGuard('ClientDetailPage');
   const [activeTab, setActiveTab] = useState('journal');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const isMobile = useIsMobile();
   
   const {
@@ -92,7 +95,7 @@ const ClientDetailPage = () => {
         return (
           <ClientReportsTab 
             clientReports={clientReports}
-            onCreateReport={() => {}}
+            onCreateReport={() => setShowReportModal(true)}
             onViewReport={() => {}}
           />
         );
@@ -177,6 +180,16 @@ const ClientDetailPage = () => {
           open={showEditModal}
           onOpenChange={setShowEditModal}
           onClientUpdated={loadClientData}
+        />
+      )}
+
+      {/* Report Modal */}
+      {client && (
+        <ClientReportModal
+          client={client}
+          open={showReportModal}
+          onOpenChange={setShowReportModal}
+          onReportGenerated={loadClientData}
         />
       )}
     </div>
