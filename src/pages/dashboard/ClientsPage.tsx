@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,7 @@ import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { useClientViewMode } from '@/hooks/useClientViewMode';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOptimizedClients } from '@/hooks/useOptimizedClients';
-import { useModalState } from '@/contexts/ModalStateContext';
+import { useModalState } from '@/contexts/ModalStateProvider';
 import { useTabVisibility } from '@/hooks/useTabVisibility';
 
 type ViewMode = 'grid' | 'list';
@@ -48,14 +49,9 @@ interface ClientWithJournal extends Client {
 const ClientsPage = React.memo(() => {
   const { clients, loading, initialLoad, invalidateCache } = useOptimizedClients();
   const { modalState, setModalState, preserveModalState } = useModalState();
-  const { isVisible, wasHidden } = useTabVisibility();
+  const { isVisible } = useTabVisibility();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [showNewClientModal, setShowNewClientModal] = useState(false);
-  const [showJournalModal, setShowJournalModal] = useState(false);
-  const [showInsightModal, setShowInsightModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showReportDrawer, setShowReportDrawer] = useState(false);
   const [showInsightDrawer, setShowInsightDrawer] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -606,7 +602,12 @@ const ClientsPage = React.memo(() => {
             open={modalState.showJournalModal}
             onOpenChange={(open) => setModalState('showJournalModal', open)}
             clientId={selectedClient.id}
-            onEntryCreated={handleJournalCreated}
+            onEntryCreated={() => {
+              setModalState('showJournalModal', false);
+              setSelectedClient(null);
+              setSelectedJournalEntry(null);
+              invalidateCache();
+            }}
             existingEntry={selectedJournalEntry || undefined}
           />
 
@@ -615,14 +616,23 @@ const ClientsPage = React.memo(() => {
             onOpenChange={(open) => setModalState('showInsightModal', open)}
             client={selectedClient}
             journalEntries={selectedClientJournalEntries}
-            onInsightGenerated={handleInsightGenerated}
+            onInsightGenerated={() => {
+              setModalState('showInsightModal', false);
+              setSelectedClient(null);
+              setSelectedClientJournalEntries([]);
+              invalidateCache();
+            }}
           />
 
           <ClientReportModal
             open={modalState.showReportModal}
             onOpenChange={(open) => setModalState('showReportModal', open)}
             client={selectedClient}
-            onReportGenerated={handleReportGenerated}
+            onReportGenerated={() => {
+              setModalState('showReportModal', false);
+              setSelectedClient(null);
+              invalidateCache();
+            }}
           />
 
           <EditClientForm

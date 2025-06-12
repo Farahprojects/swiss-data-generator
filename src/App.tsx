@@ -2,7 +2,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
-import { ModalStateProvider } from './contexts/ModalStateContext';
+import { ModalStateProvider } from './contexts/ModalStateProvider';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import { Toaster } from "@/components/ui/toaster";
@@ -21,6 +21,7 @@ import Contact from './pages/Contact';
 import About from './pages/About';
 import Legal from './pages/Legal';
 import NotFound from './pages/NotFound';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,41 +35,43 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ModalStateProvider>
-          <SettingsModalProvider>
-            <Router>
-              <NavigationStateProvider>
-                <div className="min-h-screen bg-background">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/pricing" element={<Pricing />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/legal" element={<Legal />} />
-                    
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    
-                    <Route path="/dashboard" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
-                      <Route index element={<ClientsPage />} />
-                      <Route path="clients" element={<ClientsPage />} />
-                      <Route path="clients/:clientId" element={<ClientDetailPage />} />
-                      <Route path="reports" element={<ReportsPage />} />
-                      <Route path="settings" element={<UserSettings />} />
-                    </Route>
-                    
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </div>
-                <Toaster />
-              </NavigationStateProvider>
-            </Router>
-          </SettingsModalProvider>
-        </ModalStateProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <NavigationStateProvider>
+            <AuthProvider>
+              <ModalStateProvider>
+                <SettingsModalProvider>
+                  <div className="min-h-screen bg-background">
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/pricing" element={<Pricing />} />
+                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/legal" element={<Legal />} />
+                      
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/signup" element={<Signup />} />
+                      
+                      <Route path="/dashboard" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
+                        <Route index element={<ClientsPage />} />
+                        <Route path="clients" element={<ClientsPage />} />
+                        <Route path="clients/:clientId" element={<ClientDetailPage />} />
+                        <Route path="reports" element={<ReportsPage />} />
+                        <Route path="settings" element={<UserSettings />} />
+                      </Route>
+                      
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </div>
+                  <Toaster />
+                </SettingsModalProvider>
+              </ModalStateProvider>
+            </AuthProvider>
+          </NavigationStateProvider>
+        </Router>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
