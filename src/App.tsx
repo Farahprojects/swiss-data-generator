@@ -38,8 +38,8 @@ function App() {
       <AuthProvider>
         <ModalStateProvider>
           <SettingsModalProvider>
-            <NavigationStateProvider>
-              <Router>
+            <Router>
+              <NavigationStateProvider>
                 <div className="min-h-screen bg-background">
                   <Routes>
                     <Route path="/" element={<Index />} />
@@ -63,8 +63,8 @@ function App() {
                   </Routes>
                 </div>
                 <Toaster />
-              </Router>
-            </NavigationStateProvider>
+              </NavigationStateProvider>
+            </Router>
           </SettingsModalProvider>
         </ModalStateProvider>
       </AuthProvider>
