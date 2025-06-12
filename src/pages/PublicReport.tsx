@@ -97,7 +97,7 @@ const PublicReport = () => {
   const requiresEssenceType = selectedReportType === 'essence';
   const requiresReturnYear = selectedReportType === 'return';
 
-  const handlePlaceSelect = (placeData: PlaceData, fieldName: string = 'birthLocation') => {
+  const handlePlaceSelect = (placeData: PlaceData, fieldName: keyof ReportFormData = 'birthLocation') => {
     setValue(fieldName, placeData.name);
   };
 
