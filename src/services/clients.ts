@@ -2,6 +2,7 @@
 import { supabaseWithAuth } from '@/utils/supabaseWithAuth';
 import { Client } from '@/types/database';
 import { logToSupabase } from '@/utils/batchedLogManager';
+import { authService } from '@/services/authService';
 
 export const clientsService = {
   async getClients(): Promise<Client[]> {
@@ -46,10 +47,21 @@ export const clientsService = {
   },
 
   async createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
+    // Ensure we have the current user's ID for coach_id
+    const session = await authService.ensureValidSession();
+    if (!session?.user?.id) {
+      throw new Error('Authentication required to create client');
+    }
+
+    const dataWithCoachId = {
+      ...clientData,
+      coach_id: session.user.id
+    };
+
     const { data, error } = await supabaseWithAuth.query('clients', (client) =>
       client
         .from('clients')
-        .insert(clientData)
+        .insert(dataWithCoachId)
         .select()
         .single()
     );
