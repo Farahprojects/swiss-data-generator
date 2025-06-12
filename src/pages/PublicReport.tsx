@@ -432,7 +432,7 @@ const PublicReport = () => {
                     onClick={() => setShowPromoCode(!showPromoCode)}
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
                   >
-                    👋 Have a promo code? 
+                    Have a promo code? 
                     <span className="underline">Enter it here</span>
                     {showPromoCode ? (
                       <ChevronUp className="h-4 w-4" />
@@ -448,7 +448,7 @@ const PublicReport = () => {
                       <Input
                         {...register('promoCode')}
                         placeholder="Enter promo code"
-                        className="text-center"
+                        className="text-center px-12 py-6 text-lg"
                       />
                       {watch('promoCode') && (
                         <p className="text-xs text-center text-muted-foreground">
