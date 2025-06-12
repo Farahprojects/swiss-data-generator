@@ -58,6 +58,11 @@ const getInsightBadgeVariant = (type: string) => {
   }
 };
 
+// Clean text function similar to PDF generator
+const cleanTextContent = (content: string): string => {
+  return content.replace(/\*\*(.*?)\*\*/g, '$1').replace(/[_`]/g, '');
+};
+
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   insightEntries = [],
   client,
@@ -114,7 +119,8 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   const handleEditSummary = (insight: InsightEntry) => {
     setEditingSummary(insight.id);
     // For now, use the first line of content as summary or create a placeholder
-    const summary = insight.content.split('\n')[0].substring(0, 100) + '...';
+    const cleanContent = cleanTextContent(insight.content);
+    const summary = cleanContent.split('\n')[0].substring(0, 100) + '...';
     setEditSummaryValue(summary);
   };
 
@@ -130,8 +136,9 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   };
 
   const getSummary = (insight: InsightEntry) => {
-    // For now, extract first line or first 100 characters as summary
-    return insight.content.split('\n')[0].substring(0, 100) + (insight.content.length > 100 ? '...' : '');
+    // Clean the content and extract first line or first 100 characters as summary
+    const cleanContent = cleanTextContent(insight.content);
+    return cleanContent.split('\n')[0].substring(0, 100) + (cleanContent.length > 100 ? '...' : '');
   };
 
   return (
@@ -190,8 +197,8 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                                 {getInsightTypeLabel(insight.type)}
                                 {insight.confidence_score && ` • ${insight.confidence_score}% confidence`}
                               </div>
-                              <div className="text-sm max-h-32 overflow-y-auto">
-                                {insight.content}
+                              <div className="text-sm max-h-32 overflow-y-auto whitespace-pre-wrap">
+                                {cleanTextContent(insight.content)}
                               </div>
                             </div>
                           </TooltipContent>
