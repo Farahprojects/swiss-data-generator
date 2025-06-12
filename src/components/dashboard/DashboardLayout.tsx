@@ -8,7 +8,7 @@ import UnifiedNavigation from "@/components/UnifiedNavigation";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardBreadcrumb } from "@/components/dashboard/DashboardBreadcrumb";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 /**
  * Professional DashboardLayout with proper nested routing
@@ -62,23 +62,25 @@ const DashboardLayout = () => {
     );
   }
 
-  // Main dashboard layout with traditional sidebar (no toggle button)
+  // Main dashboard layout with traditional sidebar (wrapped in SidebarProvider)
   return (
     <div className="min-h-screen flex flex-col w-full">
       <UnifiedNavigation />
       
       <div className="flex flex-1 w-full pt-16">
-        <DashboardSidebar />
-        
-        <SidebarInset className="flex flex-col flex-1">
-          <main className="flex-1 p-4 md:p-6">
-            <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
-              <DashboardErrorBoundary>
-                <Outlet />
-              </DashboardErrorBoundary>
-            </div>
-          </main>
-        </SidebarInset>
+        <SidebarProvider defaultOpen={true}>
+          <DashboardSidebar />
+          
+          <SidebarInset className="flex flex-col flex-1">
+            <main className="flex-1 p-4 md:p-6">
+              <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
+                <DashboardErrorBoundary>
+                  <Outlet />
+                </DashboardErrorBoundary>
+              </div>
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
       </div>
     </div>
   );
