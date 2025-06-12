@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -165,7 +166,7 @@ const PublicReport = () => {
                   <h2 className="text-2xl font-semibold">Choose Your Report Type</h2>
                 </div>
                 
-                <div className="pl-4 md:pl-12 space-y-4">
+                <div className="pl-2 md:pl-12 space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="reportType">Report Type *</Label>
                     <Controller
@@ -274,8 +275,8 @@ const PublicReport = () => {
                       <h2 className="text-2xl font-semibold">Contact Information</h2>
                     </div>
                     
-                    <div className="pl-4 md:pl-12">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <div className="pl-2 md:pl-12">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="name">Full Name *</Label>
                           <Input
@@ -314,8 +315,8 @@ const PublicReport = () => {
                       <h2 className="text-2xl font-semibold">Your Birth Details</h2>
                     </div>
                     
-                    <div className="pl-4 md:pl-12 space-y-6 birth-details-container" data-testid="birth-details">
-                      <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="pl-2 md:pl-12 space-y-6 birth-details-container" data-testid="birth-details">
+                      <div className="grid grid-cols-2 gap-2 md:gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="birthDate">Birth Date *</Label>
                           <Input
@@ -368,7 +369,7 @@ const PublicReport = () => {
                     <h2 className="text-2xl font-semibold">Second Person Details</h2>
                   </div>
                   
-                  <div className="pl-4 md:pl-12 space-y-6">
+                  <div className="pl-2 md:pl-12 space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="secondPersonName">Name *</Label>
                       <Input
@@ -381,7 +382,7 @@ const PublicReport = () => {
                         <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="grid grid-cols-2 gap-2 md:gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="secondPersonBirthDate">Birth Date *</Label>
                         <Input
