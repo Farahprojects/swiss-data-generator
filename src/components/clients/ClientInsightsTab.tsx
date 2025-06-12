@@ -62,45 +62,19 @@ const getInsightBadgeVariant = (type: string) => {
 
 const parseInsightSections = (content: string) => {
   const lines = content.split('\n').filter(line => line.trim());
-  const sections: Array<{text: string, sentiment: 'positive' | 'negative' | 'neutral'}> = [];
-  
-  // Keywords that suggest positive insights
-  const positiveKeywords = ['improvement', 'progress', 'success', 'achievement', 'strength', 'growth', 'positive', 'better', 'excellent', 'good', 'breakthrough', 'milestone'];
-  
-  // Keywords that suggest negative/concern insights
-  const negativeKeywords = ['concern', 'issue', 'problem', 'difficulty', 'challenge', 'struggle', 'negative', 'decline', 'worse', 'setback', 'barrier', 'obstacle'];
+  const sections: string[] = [];
   
   for (const line of lines) {
     if (line.includes(':') && line.length > 10) {
       const [key, ...valueParts] = line.split(':');
       const value = valueParts.join(':').trim();
       if (value) {
-        const lowerValue = value.toLowerCase();
-        let sentiment: 'positive' | 'negative' | 'neutral' = 'neutral';
-        
-        if (positiveKeywords.some(keyword => lowerValue.includes(keyword))) {
-          sentiment = 'positive';
-        } else if (negativeKeywords.some(keyword => lowerValue.includes(keyword))) {
-          sentiment = 'negative';
-        }
-        
-        sections.push({ text: value, sentiment });
+        sections.push(value);
       }
     }
   }
   
-  return sections.slice(0, 4); // Take first 4 meaningful sections
-};
-
-const getSentimentBadgeStyle = (sentiment: 'positive' | 'negative' | 'neutral') => {
-  switch (sentiment) {
-    case 'positive':
-      return 'bg-green-100 text-green-700 border-green-200 hover:bg-green-150';
-    case 'negative':
-      return 'bg-red-100 text-red-700 border-red-200 hover:bg-red-150';
-    default:
-      return 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-150';
-  }
+  return sections.slice(0, 2); // Take first 2 meaningful sections
 };
 
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
@@ -201,7 +175,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-primary" />
+                          <User className="w-5 h-5 text-primary" />
                         </div>
                         <div>
                           <div className="text-sm text-gray-600 font-medium">
@@ -223,16 +197,16 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                         {mainText}
                       </p>
                       
-                      {/* Individual Insight Tags */}
+                      {/* Insight Sections */}
                       {sections.length > 0 && (
                         <div className="flex flex-wrap gap-2">
                           {sections.map((section, index) => (
                             <Badge 
                               key={index}
                               variant="outline" 
-                              className={`text-xs px-3 py-1 font-medium border ${getSentimentBadgeStyle(section.sentiment)}`}
+                              className="bg-accent/30 text-primary border-primary/30 text-xs px-2 py-1"
                             >
-                              {section.text}
+                              {section}
                             </Badge>
                           ))}
                         </div>
