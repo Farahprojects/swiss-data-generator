@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, FileText, Edit2, Check, X, Trash2, Eye } from 'lucide-react';
+import { Plus, FileText, Edit2, Check, X, Trash2, Lightbulb } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
@@ -237,7 +237,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                               onClick={() => handleViewInsight(insight)}
                               className="text-primary hover:text-primary/80 transition-colors p-1"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Lightbulb className="w-4 h-4" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
