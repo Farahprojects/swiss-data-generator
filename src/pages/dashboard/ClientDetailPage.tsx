@@ -4,10 +4,10 @@ import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 import { useClientData } from '@/hooks/useClientData';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import ClientReportsTab from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
+import EditClientForm from '@/components/clients/EditClientForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, BookOpen, FileText, Lightbulb } from 'lucide-react';
@@ -16,7 +16,7 @@ const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const { isReady, hasValidAuth, error: authError } = useAuthGuard('ClientDetailPage');
   const [activeTab, setActiveTab] = useState('journal');
-  const [showClientModal, setShowClientModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   
   const {
     client,
@@ -118,14 +118,14 @@ const ClientDetailPage = () => {
           <div className="flex items-center justify-between">
             {/* Client Name */}
             <button
-              onClick={() => setShowClientModal(true)}
+              onClick={() => setShowEditModal(true)}
               className="text-lg font-semibold text-foreground hover:text-primary transition-colors"
             >
               {client.full_name}
             </button>
 
             {/* Tab Navigation - as text with icons */}
-            <div className="flex items-center gap-8 ml-8">
+            <div className="flex items-center gap-6 ml-4 flex-shrink-0">
               <button
                 onClick={() => setActiveTab('journal')}
                 className={`flex items-center gap-2 text-sm transition-colors ${
@@ -173,56 +173,15 @@ const ClientDetailPage = () => {
         </Card>
       </div>
 
-      {/* Client Details Modal */}
-      <Dialog open={showClientModal} onOpenChange={setShowClientModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Client Details</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-              <p className="text-sm">{client.full_name}</p>
-            </div>
-            {client.email && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Email</label>
-                <p className="text-sm">{client.email}</p>
-              </div>
-            )}
-            {client.phone && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                <p className="text-sm">{client.phone}</p>
-              </div>
-            )}
-            {client.birth_date && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Birth Date</label>
-                <p className="text-sm">{new Date(client.birth_date).toLocaleDateString()}</p>
-              </div>
-            )}
-            {client.birth_time && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Birth Time</label>
-                <p className="text-sm">{client.birth_time}</p>
-              </div>
-            )}
-            {client.birth_location && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Birth Location</label>
-                <p className="text-sm">{client.birth_location}</p>
-              </div>
-            )}
-            {client.notes && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Notes</label>
-                <p className="text-sm">{client.notes}</p>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Client Modal */}
+      {client && (
+        <EditClientForm
+          client={client}
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          onClientUpdated={loadClientData}
+        />
+      )}
     </div>
   );
 };
