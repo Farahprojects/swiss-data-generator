@@ -104,7 +104,23 @@ const extractActions = (content: string) => {
   
   for (const line of lines) {
     const trimmedLine = line.trim();
-    // Look for action-oriented keywords
+    
+    // Look for numbered actions (1. 2. 3. etc.)
+    const numberedActionMatch = trimmedLine.match(/^\d+\.\s*(.+)/);
+    if (numberedActionMatch) {
+      let cleanAction = numberedActionMatch[1]
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markdown
+        .replace(/\*(.*?)\*/g, '$1') // Remove italic markdown
+        .replace(/`(.*?)`/g, '$1') // Remove code markdown
+        .trim();
+      
+      if (cleanAction && cleanAction.length > 10) {
+        actions.push(cleanAction);
+      }
+      continue;
+    }
+    
+    // Look for action-oriented keywords (fallback)
     if (trimmedLine.includes('Recommend') || 
         trimmedLine.includes('Suggest') || 
         trimmedLine.includes('Consider') || 
@@ -129,7 +145,7 @@ const extractActions = (content: string) => {
     }
   }
   
-  return actions.slice(0, 3); // Limit to 3 actions for clean display
+  return actions; // Remove the slice limit to show all actions
 };
 
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
