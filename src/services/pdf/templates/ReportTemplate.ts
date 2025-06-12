@@ -1,4 +1,3 @@
-
 import { BaseTemplate } from './BaseTemplate';
 import { ReportPdfData, PdfGenerationOptions, PdfMetadata } from '../types';
 
@@ -12,18 +11,18 @@ export class ReportTemplate extends BaseTemplate {
     };
     this.setMetadata(metadata);
 
-    // Logo as text instead of image
+    // Logo as text using serif font to match GT Sectra
     const logoY = 20;
-    this.doc.setFontSize(24);
-    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(26);
+    this.doc.setFont('times', 'bold'); // Using Times as it's closer to GT Sectra serif style
     this.doc.setTextColor(40, 40, 60);
-    this.doc.text('Therai.', this.pageWidth / 2, logoY + 10, { align: 'center' });
+    this.doc.text('Therai.', this.pageWidth / 2, logoY + 12, { align: 'center' });
 
     // Title
     this.doc.setFontSize(20);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(40, 40, 60);
-    this.doc.text(' Intelligence Report ', this.pageWidth / 2, logoY + 25, { align: 'center' });
+    this.doc.text(' Intelligence Report ', this.pageWidth / 2, logoY + 28, { align: 'center' });
 
     // Metadata section
     let y = logoY + 40;
