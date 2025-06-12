@@ -139,7 +139,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead 
-                  className="font-semibold cursor-pointer hover:bg-muted/50"
+                  className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
                   onClick={() => handleSort('created_at')}
                 >
                   <div className="flex items-center gap-1">
@@ -148,7 +148,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="font-semibold cursor-pointer hover:bg-muted/50 hidden md:table-cell"
+                  className="font-semibold cursor-pointer hover:bg-muted/50 hidden md:table-cell text-left"
                   onClick={() => handleSort('report_name')}
                 >
                   <div className="flex items-center gap-1">
@@ -157,7 +157,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="font-semibold cursor-pointer hover:bg-muted/50"
+                  className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
                   onClick={() => handleSort('report_tier')}
                 >
                   <div className="flex items-center gap-1">
@@ -165,24 +165,24 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                     {getSortIcon('report_tier')}
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold">Actions</TableHead>
+                <TableHead className="font-semibold text-left">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody>
               {sortedReports.map(report => (
                 <TableRow key={report.id} className="hover:bg-muted/50">
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground text-left">
                     <span className="hidden md:inline">{formatDate(report.created_at)}</span>
                     <span className="md:hidden">{formatDateForMobile(report.created_at)}</span>
                   </TableCell>
-                  <TableCell className="font-medium hidden md:table-cell">
+                  <TableCell className="font-medium hidden md:table-cell text-left">
                     {getDisplayName(report)}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground text-left">
                     {formatReportTier(report.report_tier)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-left">
                     <div className="flex items-center gap-2">
                       {!(report.response_status >= 200 && report.response_status < 300) && (
                         <Badge variant="destructive" className="text-xs">
