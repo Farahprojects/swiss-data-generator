@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -430,7 +429,7 @@ const PublicReport = () => {
                   <button
                     type="button"
                     onClick={() => setShowPromoCode(!showPromoCode)}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
+                    className="flex items-center gap-2 text-base font-bold text-muted-foreground hover:text-foreground transition-colors mx-auto"
                   >
                     Have a promo code? 
                     <span className="underline">Enter it here</span>
