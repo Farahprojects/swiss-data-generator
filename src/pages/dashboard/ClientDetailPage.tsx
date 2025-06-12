@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
@@ -168,11 +167,7 @@ const ClientDetailPage = () => {
 
       {/* Content */}
       <div className={`mx-auto ${isMobile ? 'px-2' : 'container px-6'} py-6`}>
-        <Card>
-          <CardContent className="p-3 md:p-6">
-            {renderTabContent()}
-          </CardContent>
-        </Card>
+        {renderTabContent()}
       </div>
 
       {/* Edit Client Modal */}
