@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
@@ -12,12 +13,6 @@ import ClientReportModal from '@/components/clients/ClientReportModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, BookOpen, FileText, Lightbulb } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { PdfGenerator } from '@/services/pdf/PdfGenerator';
-import { transformLogDataToPdfData } from '@/services/pdf/utils/reportDataTransformer';
-import { useToast } from '@/hooks/use-toast';
 
 const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -25,9 +20,7 @@ const ClientDetailPage = () => {
   const [activeTab, setActiveTab] = useState('journal');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [viewingInsight, setViewingInsight] = useState<any>(null);
   const isMobile = useIsMobile();
-  const { toast } = useToast();
   
   const {
     client,
@@ -86,32 +79,6 @@ const ClientDetailPage = () => {
     );
   }
 
-  const handleViewReport = async (report: any) => {
-    try {
-      // Transform the report data to PDF format
-      const pdfData = transformLogDataToPdfData(report);
-      
-      // Generate and download the PDF
-      await PdfGenerator.generateReportPdf(pdfData);
-      
-      toast({
-        title: "Success",
-        description: "Report PDF generated and downloaded successfully.",
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate PDF. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleViewInsight = (insight: any) => {
-    setViewingInsight(insight);
-  };
-
   const renderTabContent = () => {
     switch (activeTab) {
       case 'journal':
@@ -129,7 +96,7 @@ const ClientDetailPage = () => {
           <ClientReportsTab 
             clientReports={clientReports}
             onCreateReport={() => setShowReportModal(true)}
-            onViewReport={handleViewReport}
+            onViewReport={() => {}}
           />
         );
       case 'insights':
@@ -139,7 +106,7 @@ const ClientDetailPage = () => {
             client={client}
             journalEntries={journalEntries}
             onInsightGenerated={loadClientData}
-            onViewInsight={handleViewInsight}
+            onViewInsight={() => {}}
           />
         );
       default:
@@ -224,37 +191,6 @@ const ClientDetailPage = () => {
           onOpenChange={setShowReportModal}
           onReportGenerated={loadClientData}
         />
-      )}
-
-      {/* Insight View Modal */}
-      {viewingInsight && (
-        <Dialog open={!!viewingInsight} onOpenChange={() => setViewingInsight(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>
-                {viewingInsight.title || `${viewingInsight.type} Insight`}
-              </DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="max-h-[60vh] pr-4">
-              <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  Generated on {new Date(viewingInsight.created_at).toLocaleDateString()}
-                  {viewingInsight.confidence_score && 
-                    ` • ${viewingInsight.confidence_score}% confidence`
-                  }
-                </div>
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {viewingInsight.content}
-                </div>
-              </div>
-            </ScrollArea>
-            <div className="flex justify-end pt-4">
-              <Button variant="outline" onClick={() => setViewingInsight(null)}>
-                Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   );
