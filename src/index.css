@@ -198,20 +198,25 @@ nav.fixed {
 /* Mobile-specific fixes for Google Maps autocomplete */
 @media (max-width: 768px) {
   .pac-container {
-    max-width: calc(100vw - 2rem) !important;
-    width: auto !important;
-    left: 1rem !important;
-    right: 1rem !important;
+    position: absolute !important;
+    max-width: 90vw !important;
+    width: calc(100% - 2rem) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
     margin: 0 !important;
-    position: fixed !important;
-    transform: none !important;
+    top: auto !important;
+    bottom: auto !important;
+    max-height: 250px !important;
+    overflow-y: auto !important;
   }
   
   .pac-item {
-    padding: 12px 16px !important;
+    padding: 16px !important;
     border-bottom: 1px solid hsl(var(--border)) !important;
-    font-size: 14px !important;
-    line-height: 1.4 !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+    cursor: pointer !important;
+    touch-action: manipulation !important;
   }
   
   .pac-item:hover,
@@ -229,21 +234,26 @@ nav.fixed {
     color: hsl(var(--primary)) !important;
   }
   
-  /* Ensure form sections can expand for autocomplete dropdown */
+  /* Ensure the birth details container can accommodate the dropdown */
+  .birth-details-container,
+  [data-testid="birth-details"],
   .form-step-container {
-    min-height: auto !important;
+    position: relative !important;
     overflow: visible !important;
+    min-height: 400px !important;
   }
   
-  /* Ensure birth details container doesn't clip the dropdown */
-  .birth-details-container {
-    overflow: visible !important;
-    padding-bottom: 200px !important;
+  /* Style the Google Maps autocomplete input container */
+  [id$="-container"] {
+    position: relative !important;
+    z-index: 1 !important;
   }
   
-  /* Reset padding when autocomplete is not active */
-  .birth-details-container:not(:has(.pac-container-visible)) {
-    padding-bottom: 0 !important;
+  /* Ensure proper stacking for the autocomplete dropdown */
+  gmp-place-autocomplete {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
   }
 }
 
