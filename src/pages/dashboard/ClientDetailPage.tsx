@@ -115,20 +115,20 @@ const ClientDetailPage = () => {
       {/* Sticky Header - positioned under global navigation */}
       <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b w-full">
         <div className="w-full px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between max-w-full">
             {/* Client Name */}
             <button
               onClick={() => setShowEditModal(true)}
-              className="text-lg font-semibold text-foreground hover:text-primary transition-colors"
+              className="text-lg font-semibold text-foreground hover:text-primary transition-colors flex-shrink-0"
             >
               {client.full_name}
             </button>
 
-            {/* Tab Navigation - as text with icons */}
-            <div className="flex items-center gap-6 ml-4 flex-shrink-0">
+            {/* Tab Navigation - with proper spacing and overflow protection */}
+            <div className="flex items-center gap-8 ml-8 overflow-hidden">
               <button
                 onClick={() => setActiveTab('journal')}
-                className={`flex items-center gap-2 text-sm transition-colors ${
+                className={`flex items-center gap-2 text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'journal' 
                     ? 'text-primary font-medium' 
                     : 'text-muted-foreground hover:text-foreground'
@@ -139,7 +139,7 @@ const ClientDetailPage = () => {
               </button>
               <button
                 onClick={() => setActiveTab('reports')}
-                className={`flex items-center gap-2 text-sm transition-colors ${
+                className={`flex items-center gap-2 text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'reports' 
                     ? 'text-primary font-medium' 
                     : 'text-muted-foreground hover:text-foreground'
@@ -150,7 +150,7 @@ const ClientDetailPage = () => {
               </button>
               <button
                 onClick={() => setActiveTab('insights')}
-                className={`flex items-center gap-2 text-sm transition-colors ${
+                className={`flex items-center gap-2 text-sm transition-colors whitespace-nowrap ${
                   activeTab === 'insights' 
                     ? 'text-primary font-medium' 
                     : 'text-muted-foreground hover:text-foreground'
