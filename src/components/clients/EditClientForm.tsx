@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,8 +42,6 @@ interface EditClientFormProps {
 
 const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditClientFormProps) => {
   const { toast } = useToast();
-  
-  // Initialize with existing coordinates if they exist, otherwise null
   const [selectedPlaceData, setSelectedPlaceData] = useState<PlaceData | null>(
     client.latitude && client.longitude 
       ? { 
@@ -82,9 +81,8 @@ const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditCli
         birth_date: data.birth_date || undefined,
         birth_time: data.birth_time || undefined,
         birth_location: data.birth_location || undefined,
-        // Only update coordinates if we have selectedPlaceData, otherwise keep existing ones
-        latitude: selectedPlaceData?.latitude || client.latitude,
-        longitude: selectedPlaceData?.longitude || client.longitude,
+        latitude: selectedPlaceData?.latitude,
+        longitude: selectedPlaceData?.longitude,
         notes: data.notes || undefined,
       };
 
@@ -109,21 +107,12 @@ const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditCli
 
   const handleClose = () => {
     reset();
-    // Reset to original client data
-    setSelectedPlaceData(
-      client.latitude && client.longitude 
-        ? { 
-            name: client.birth_location || '', 
-            latitude: client.latitude, 
-            longitude: client.longitude 
-          }
-        : null
-    );
+    setSelectedPlaceData(null);
     onOpenChange(false);
   };
 
   const handlePlaceSelect = (placeData: PlaceData) => {
-    console.log('New place selected with coordinates:', placeData);
+    console.log('Place selected with coordinates:', placeData);
     setSelectedPlaceData(placeData);
     setValue('birth_location', placeData.name);
   };
@@ -214,11 +203,6 @@ const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditCli
                 />
               )}
             />
-            {selectedPlaceData && selectedPlaceData.latitude && selectedPlaceData.longitude && (
-              <p className="text-xs text-muted-foreground">
-                Coordinates: {selectedPlaceData.latitude.toFixed(4)}, {selectedPlaceData.longitude.toFixed(4)}
-              </p>
-            )}
           </div>
 
           <div className="space-y-2">
