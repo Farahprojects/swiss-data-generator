@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Star, Clock, Shield, CheckCircle } from 'lucide-react';
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import PublicReportForm from '@/components/public-report/PublicReportForm';
-import OrderSummary from '@/components/public-report/OrderSummary';
 
 const reportSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
@@ -97,62 +96,52 @@ const PublicReport = () => {
 
       {/* Main Form Section */}
       <div className="container mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {/* Form Column */}
-          <div className="lg:col-span-2 space-y-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
+                Choose Your Report Type
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ReportTypeSelector 
+                value={selectedReportType}
+                onChange={(value) => form.setValue('reportType', value)}
+                error={form.formState.errors.reportType?.message}
+              />
+            </CardContent>
+          </Card>
+
+          {selectedReportType && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                  Choose Your Report Type
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
+                  Enter Your Birth Details
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ReportTypeSelector 
-                  value={selectedReportType}
-                  onChange={(value) => form.setValue('reportType', value)}
-                  error={form.formState.errors.reportType?.message}
+                <PublicReportForm 
+                  form={form}
+                  reportType={selectedReportType}
                 />
               </CardContent>
             </Card>
+          )}
 
-            {selectedReportType && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                    Enter Your Birth Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PublicReportForm 
-                    form={form}
-                    reportType={selectedReportType}
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            {selectedReportType && (
-              <div className="flex justify-center">
-                <Button 
-                  size="lg" 
-                  className="px-12 py-6 text-lg"
-                  onClick={form.handleSubmit(handleSubmit)}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? 'Processing...' : 'Generate My Report - $29'}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Order Summary Column */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-8">
-              <OrderSummary reportType={selectedReportType} />
+          {selectedReportType && (
+            <div className="flex justify-center">
+              <Button 
+                size="lg" 
+                className="px-12 py-6 text-lg"
+                onClick={form.handleSubmit(handleSubmit)}
+                disabled={isProcessing}
+              >
+                {isProcessing ? 'Processing...' : 'Generate My Report - $29'}
+              </Button>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
