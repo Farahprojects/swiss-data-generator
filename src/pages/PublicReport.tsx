@@ -41,8 +41,6 @@ const reportSchema = z.object({
 type ReportFormData = z.infer<typeof reportSchema>;
 
 const reportTypes = [
-  { value: 'return', label: 'Solar/Lunar Return Report' },
-  { value: 'positions', label: 'Planetary Positions' },
   { value: 'sync', label: 'Sync Report' },
   { value: 'essence', label: 'Essence Report' },
   { value: 'flow', label: 'Flow Report' },
