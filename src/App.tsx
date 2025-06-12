@@ -8,6 +8,7 @@ import NavigationStateProvider from './contexts/NavigationStateContext';
 import { Toaster } from "@/components/ui/toaster";
 import "./App.css";
 import DashboardLayout from './components/dashboard/DashboardLayout';
+import DashboardHome from './pages/dashboard/DashboardHome';
 import ClientsPage from './pages/dashboard/ClientsPage';
 import ClientDetailPage from './pages/dashboard/ClientDetailPage';
 import ReportsPage from './pages/dashboard/ReportsPage';
@@ -54,7 +55,7 @@ function App() {
                       <Route path="/signup" element={<Signup />} />
                       
                       <Route path="/dashboard" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
-                        <Route index element={<ClientsPage />} />
+                        <Route index element={<DashboardHome />} />
                         <Route path="clients" element={<ClientsPage />} />
                         <Route path="clients/:clientId" element={<ClientDetailPage />} />
                         <Route path="reports" element={<ReportsPage />} />

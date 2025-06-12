@@ -1,22 +1,23 @@
 
-import { AiCreditsCard } from "@/components/dashboard/AiCreditsCard";
-import { TopupQueueStatus } from "@/components/dashboard/TopupQueueStatus";
-import { WelcomeMessage } from "@/components/dashboard/WelcomeMessage";
-import { QuickStats } from "@/components/dashboard/QuickStats";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Main dashboard overview page - appears at /dashboard
  */
 const DashboardHome = () => {
+  const { user } = useAuth();
+  
+  const firstName = user?.email?.split('@')[0] || 'there';
+  
   return (
-    <div className="space-y-6">
-      <WelcomeMessage />
-      
-      <QuickStats />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AiCreditsCard />
-        <TopupQueueStatus />
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-foreground mb-4">
+          Hello {firstName}! 👋
+        </h1>
+        <p className="text-lg text-muted-foreground">
+          Welcome to your dashboard
+        </p>
       </div>
     </div>
   );
