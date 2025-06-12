@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -316,7 +315,7 @@ const PublicReport = () => {
                     </div>
                     
                     <div className="pl-12 space-y-6 birth-details-container" data-testid="birth-details">
-                      <div className="grid lg:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="birthDate">Birth Date *</Label>
                           <Input
@@ -382,7 +381,7 @@ const PublicReport = () => {
                         <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>
                       )}
                     </div>
-                    <div className="grid lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="secondPersonBirthDate">Birth Date *</Label>
                         <Input
