@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 import { useClientData } from '@/hooks/useClientData';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
@@ -113,48 +112,53 @@ const ClientDetailPage = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+      {/* Sticky Header - positioned under global navigation */}
+      <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Client Name */}
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setShowClientModal(true)}
-              className="text-lg font-semibold hover:bg-primary/10 hover:text-primary"
+              className="text-lg font-semibold text-foreground hover:text-primary transition-colors"
             >
               {client.full_name}
-            </Button>
+            </button>
 
-            {/* Tab Navigation */}
-            <div className="flex items-center gap-1">
-              <Button
-                variant={activeTab === 'journal' ? 'default' : 'ghost'}
-                size="sm"
+            {/* Tab Navigation - as text with icons */}
+            <div className="flex items-center gap-8">
+              <button
                 onClick={() => setActiveTab('journal')}
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 text-sm transition-colors ${
+                  activeTab === 'journal' 
+                    ? 'text-primary font-medium' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
                 <BookOpen className="w-4 h-4" />
                 Journal Entries ({journalEntries.length})
-              </Button>
-              <Button
-                variant={activeTab === 'reports' ? 'default' : 'ghost'}
-                size="sm"
+              </button>
+              <button
                 onClick={() => setActiveTab('reports')}
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 text-sm transition-colors ${
+                  activeTab === 'reports' 
+                    ? 'text-primary font-medium' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
                 <FileText className="w-4 h-4" />
                 Reports ({clientReports.length})
-              </Button>
-              <Button
-                variant={activeTab === 'insights' ? 'default' : 'ghost'}
-                size="sm"
+              </button>
+              <button
                 onClick={() => setActiveTab('insights')}
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 text-sm transition-colors ${
+                  activeTab === 'insights' 
+                    ? 'text-primary font-medium' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
                 <Lightbulb className="w-4 h-4" />
                 Insights ({insightEntries.length})
-              </Button>
+              </button>
             </div>
           </div>
         </div>
