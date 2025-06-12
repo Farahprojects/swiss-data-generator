@@ -106,6 +106,7 @@ export default {
 				'opensans': ['Open Sans', 'sans-serif'],
 				'lato': ['Lato', 'sans-serif'],
 				'montserrat': ['Montserrat', 'sans-serif'],
+				'gt-sectra': ['GT Sectra', 'serif'],
 			}
 		}
 	},

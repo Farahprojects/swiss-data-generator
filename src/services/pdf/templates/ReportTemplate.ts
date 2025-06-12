@@ -12,35 +12,21 @@ export class ReportTemplate extends BaseTemplate {
     };
     this.setMetadata(metadata);
 
-    // Fetch and embed logo
-    const fetchImageAsBase64 = async (url: string): Promise<string> => {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    };
-
-    const logo = await fetchImageAsBase64('https://auth.theraiastro.com/storage/v1/object/public/therai-assets//therai-logo.png');
-
-    // Logo placement
-    const logoWidth = 55;
-    const logoHeight = 55;
+    // Logo as text instead of image
     const logoY = 20;
-    const centerX = this.pageWidth / 2 - logoWidth / 2;
-    this.doc.addImage(logo, 'PNG', centerX, logoY, logoWidth, logoHeight);
+    this.doc.setFontSize(24);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setTextColor(40, 40, 60);
+    this.doc.text('Therai.', this.pageWidth / 2, logoY + 10, { align: 'center' });
 
     // Title
     this.doc.setFontSize(20);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(40, 40, 60);
-    this.doc.text(' Intelligence Report ', this.pageWidth / 2, logoY + logoHeight + 10, { align: 'center' });
+    this.doc.text(' Intelligence Report ', this.pageWidth / 2, logoY + 25, { align: 'center' });
 
     // Metadata section
-    let y = logoY + logoHeight + 25;
+    let y = logoY + 40;
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'normal');
     this.doc.setTextColor(100);
