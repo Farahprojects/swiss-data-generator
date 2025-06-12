@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Plus, FileText, Edit2, Check, X, Trash2, User, ChevronRight, Target, ArrowRight } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
@@ -294,24 +296,30 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                         </div>
                       )}
 
-                      {/* Simplified Actions List */}
+                      {/* Collapsible Actions List */}
                       {actions.length > 0 && (
-                        <div className="mt-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Target className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm font-medium text-gray-900">Next Steps</span>
-                          </div>
-                          <div className="space-y-2">
-                            {actions.map((action, index) => (
-                              <div key={index} className="flex items-start gap-3">
-                                <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  <ArrowRight className="w-3 h-3 text-gray-600" />
-                                </div>
-                                <span className="text-sm text-gray-700 leading-relaxed">{action}</span>
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value="actions" className="border-none">
+                            <AccordionTrigger className="py-2 hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <Target className="w-4 h-4 text-gray-600" />
+                                <span className="text-sm font-medium text-gray-900">Actions ({actions.length})</span>
                               </div>
-                            ))}
-                          </div>
-                        </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-2">
+                              <div className="space-y-2">
+                                {actions.map((action, index) => (
+                                  <div key={index} className="flex items-start gap-3">
+                                    <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <ArrowRight className="w-3 h-3 text-gray-600" />
+                                    </div>
+                                    <span className="text-sm text-gray-700 leading-relaxed">{action}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
                       )}
                     </div>
 
