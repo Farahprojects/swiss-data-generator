@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, FileText, Edit2, Check, X, Trash2, User, ChevronRight, CheckCircle } from 'lucide-react';
+import { Plus, FileText, Edit2, Check, X, Trash2, User, ChevronRight, Target, ArrowRight } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
@@ -113,11 +113,14 @@ const extractActions = (content: string) => {
         trimmedLine.includes('Focus on') ||
         trimmedLine.includes('Work on') ||
         trimmedLine.includes('Explore')) {
-      // Clean up the action text
-      const cleanAction = trimmedLine
+      // Clean up the action text - remove markdown and formatting
+      let cleanAction = trimmedLine
         .replace(/^[•\-\*]\s*/, '') // Remove bullet points
         .replace(/^\d+\.\s*/, '') // Remove numbered lists
         .replace(/^(Recommend|Suggest|Consider|Try|Practice|Focus on|Work on|Explore):\s*/i, '') // Remove action prefixes
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markdown
+        .replace(/\*(.*?)\*/g, '$1') // Remove italic markdown
+        .replace(/`(.*?)`/g, '$1') // Remove code markdown
         .trim();
       
       if (cleanAction && cleanAction.length > 10) {
@@ -275,18 +278,22 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                         </div>
                       )}
 
-                      {/* Actions List */}
+                      {/* Enhanced Actions List */}
                       {actions.length > 0 && (
-                        <div className="mt-4 p-3 bg-accent/20 rounded-lg border border-accent/30">
-                          <div className="flex items-center gap-2 mb-3">
-                            <CheckCircle className="w-4 h-4 text-primary" />
-                            <span className="text-sm font-medium text-gray-700">Recommended Actions</span>
+                        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <Target className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <span className="text-base font-semibold text-blue-900">Next Steps</span>
                           </div>
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             {actions.map((action, index) => (
-                              <div key={index} className="flex items-start gap-2 text-sm text-gray-600">
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                                <span className="leading-relaxed">{action}</span>
+                              <div key={index} className="flex items-start gap-3 p-3 bg-white rounded-md border border-blue-100 hover:shadow-sm transition-shadow">
+                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <ArrowRight className="w-3 h-3 text-blue-600" />
+                                </div>
+                                <span className="text-sm text-gray-700 leading-relaxed font-medium">{action}</span>
                               </div>
                             ))}
                           </div>
