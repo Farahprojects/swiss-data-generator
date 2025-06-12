@@ -100,23 +100,21 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
   };
 
   const handleGenerate = async () => {
-    console.log('=== GENERATE INSIGHT MODAL: Starting insight generation ===');
-    console.log('Client object:', {
-      id: client.id,
-      full_name: client.full_name,
-      coach_id: client.coach_id,
-      notes: client.notes,
-      email: client.email
-    });
+    console.log('🔥 === MODAL: STARTING INSIGHT GENERATION ===');
+    console.log('🔥 MODAL: Client object received:', client);
+    console.log('🔥 MODAL: Client ID:', client.id);
+    console.log('🔥 MODAL: Client name:', client.full_name);
+    console.log('🔥 MODAL: Client coach_id:', client.coach_id);
+    console.log('🔥 MODAL: Client notes (goals):', client.notes);
     
     setIsGenerating(true);
 
     try {
       // Log journal entries being processed
-      console.log('Journal entries received:', journalEntries);
-      console.log('Journal entries count:', journalEntries.length);
+      console.log('🔥 MODAL: Journal entries received:', journalEntries);
+      console.log('🔥 MODAL: Journal entries count:', journalEntries.length);
       journalEntries.forEach((entry, index) => {
-        console.log(`Journal entry ${index + 1}:`, {
+        console.log(`🔥 MODAL: Journal entry ${index + 1}:`, {
           id: entry.id,
           title: entry.title,
           entry_text_length: entry.entry_text?.length || 0,
@@ -126,10 +124,10 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
       });
 
       // Log previous reports being processed
-      console.log('Previous reports received:', previousReports);
-      console.log('Previous reports count:', previousReports.length);
+      console.log('🔥 MODAL: Previous reports received:', previousReports);
+      console.log('🔥 MODAL: Previous reports count:', previousReports.length);
       const formattedReports = previousReports.map(formatReportForInsight);
-      console.log('Formatted reports for insight:', formattedReports);
+      console.log('🔥 MODAL: Formatted reports for insight:', formattedReports);
 
       const clientData = {
         fullName: client.full_name,
@@ -138,14 +136,14 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         previousReports: formattedReports
       };
 
-      console.log('=== CLIENT DATA BEING SENT ===');
-      console.log('Full clientData object:', clientData);
-      console.log('Goals field:', clientData.goals);
-      console.log('Journal entries field:', clientData.journalEntries);
-      console.log('Previous reports field:', clientData.previousReports);
+      console.log('🔥 MODAL: === CLIENT DATA BEING CREATED ===');
+      console.log('🔥 MODAL: Full clientData object:', clientData);
+      console.log('🔥 MODAL: Goals field value:', clientData.goals);
+      console.log('🔥 MODAL: Journal entries field:', clientData.journalEntries);
+      console.log('🔥 MODAL: Previous reports field:', clientData.previousReports);
 
       const title = customTitle.trim() || generateDateTitle();
-      console.log('Generated title:', title);
+      console.log('🔥 MODAL: Generated title:', title);
 
       const requestPayload = {
         clientId: client.id,
@@ -155,24 +153,28 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         clientData
       };
 
-      console.log('=== FINAL REQUEST PAYLOAD TO INSIGHTS SERVICE ===');
-      console.log('Complete request payload:', JSON.stringify(requestPayload, null, 2));
-      console.log('Request payload keys:', Object.keys(requestPayload));
-      console.log('Client ID:', requestPayload.clientId);
-      console.log('Coach ID:', requestPayload.coachId);
-      console.log('Insight Type:', requestPayload.insightType);
-      console.log('Title:', requestPayload.title);
+      console.log('🔥 MODAL: === FINAL REQUEST PAYLOAD TO INSIGHTS SERVICE ===');
+      console.log('🔥 MODAL: Complete request payload:', requestPayload);
+      console.log('🔥 MODAL: Payload as JSON string:', JSON.stringify(requestPayload, null, 2));
+      console.log('🔥 MODAL: Request payload keys:', Object.keys(requestPayload));
+      console.log('🔥 MODAL: Client ID in payload:', requestPayload.clientId);
+      console.log('🔥 MODAL: Coach ID in payload:', requestPayload.coachId);
+      console.log('🔥 MODAL: Insight Type in payload:', requestPayload.insightType);
+      console.log('🔥 MODAL: Title in payload:', requestPayload.title);
+      console.log('🔥 MODAL: ClientData keys:', Object.keys(requestPayload.clientData));
 
+      console.log('🔥 MODAL: About to call insightsService.generateInsight...');
+      
       const response = await insightsService.generateInsight(requestPayload);
 
-      console.log('=== INSIGHTS SERVICE RESPONSE ===');
-      console.log('Response received:', response);
-      console.log('Response success:', response.success);
+      console.log('🔥 MODAL: === INSIGHTS SERVICE RESPONSE ===');
+      console.log('🔥 MODAL: Response received:', response);
+      console.log('🔥 MODAL: Response success:', response.success);
       
       if (response.success) {
-        console.log('Insight generated successfully!');
-        console.log('Insight ID:', response.insightId);
-        console.log('Content length:', response.content?.length || 0);
+        console.log('🔥 MODAL: Insight generated successfully!');
+        console.log('🔥 MODAL: Insight ID:', response.insightId);
+        console.log('🔥 MODAL: Content length:', response.content?.length || 0);
         
         toast({
           title: "Success",
@@ -183,17 +185,17 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         setCustomTitle('');
         setShowTitleInput(false);
       } else {
-        console.error('=== INSIGHT GENERATION FAILED ===');
-        console.error('Error from service:', response.error);
-        console.error('Request ID:', response.requestId);
+        console.error('🔥 MODAL: === INSIGHT GENERATION FAILED ===');
+        console.error('🔥 MODAL: Error from service:', response.error);
+        console.error('🔥 MODAL: Request ID:', response.requestId);
         throw new Error(response.error || 'Failed to generate insight');
       }
     } catch (error) {
-      console.error('=== CRITICAL ERROR IN GENERATE INSIGHT MODAL ===');
-      console.error('Error type:', typeof error);
-      console.error('Error message:', error instanceof Error ? error.message : String(error));
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      console.error('Full error object:', error);
+      console.error('🔥 MODAL: === CRITICAL ERROR IN GENERATE INSIGHT MODAL ===');
+      console.error('🔥 MODAL: Error type:', typeof error);
+      console.error('🔥 MODAL: Error message:', error instanceof Error ? error.message : String(error));
+      console.error('🔥 MODAL: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('🔥 MODAL: Full error object:', error);
       
       toast({
         title: "Error",
@@ -202,7 +204,7 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
       });
     } finally {
       setIsGenerating(false);
-      console.log('=== GENERATE INSIGHT MODAL: Finished (success or error) ===');
+      console.log('🔥 MODAL: === MODAL FINISHED (success or error) ===');
     }
   };
 
