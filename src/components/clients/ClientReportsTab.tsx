@@ -3,15 +3,9 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
-import { Plus, FileText, ChevronUp, ChevronDown } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Plus, FileText, ChevronRight, User, Calendar } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 
 interface ClientReport {
@@ -30,9 +24,6 @@ interface ClientReportsTabProps {
   onViewReport: (report: ClientReport) => void;
 }
 
-type SortField = 'created_at' | 'report_name' | 'report_tier';
-type SortDirection = 'asc' | 'desc';
-
 const getDisplayName = (report: ClientReport): string => {
   if (report.report_name) {
     const cleanName = report.report_name
@@ -47,7 +38,6 @@ const getDisplayName = (report: ClientReport): string => {
 
 const formatReportTier = (tier: string | null | undefined): string => {
   if (!tier) return 'Unknown';
-  // Remove "Report" from the tier name and format
   return tier
     .replace(/_/g, ' ')
     .replace(/\breport\b/gi, '')
@@ -55,11 +45,45 @@ const formatReportTier = (tier: string | null | undefined): string => {
     .trim();
 };
 
-const formatDateForMobile = (dateString: string): string => {
+const formatDateForDisplay = (dateString: string): string => {
   const date = new Date(dateString);
-  const monthShort = date.toLocaleDateString('en-US', { month: 'short' });
-  const day = date.getDate();
-  return `${monthShort} ${day}`;
+  return date.toLocaleDateString('en-US', { 
+    day: 'numeric',
+    month: 'long', 
+    year: 'numeric' 
+  });
+};
+
+const getReportBadgeVariant = (tier: string | null | undefined) => {
+  switch (tier?.toLowerCase()) {
+    case 'basic_report':
+      return 'secondary';
+    case 'premium_report':
+      return 'default';
+    case 'detailed_report':
+      return 'outline';
+    default:
+      return 'secondary';
+  }
+};
+
+const getReportSummary = (report: ClientReport) => {
+  if (!report.response_payload?.report) return 'Report generated successfully';
+  
+  const content = report.response_payload.report;
+  if (typeof content === 'string') {
+    // Extract first meaningful paragraph or sentence
+    const sentences = content.split('.').filter(s => s.trim().length > 20);
+    return sentences[0] ? sentences[0].trim() + '.' : content.substring(0, 150) + '...';
+  }
+  
+  return 'Report generated successfully';
+};
+
+const hasExpandableContent = (report: ClientReport) => {
+  if (!report.response_payload?.report) return false;
+  const content = report.response_payload.report;
+  return typeof content === 'string' && content.length > 200;
 };
 
 export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
@@ -67,146 +91,136 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
   onCreateReport,
   onViewReport
 }) => {
-  const [sortField, setSortField] = useState<SortField>('created_at');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
-  };
-
-  const sortedReports = [...clientReports].sort((a, b) => {
-    let aValue: any;
-    let bValue: any;
-
-    switch (sortField) {
-      case 'created_at':
-        aValue = new Date(a.created_at);
-        bValue = new Date(b.created_at);
-        break;
-      case 'report_name':
-        aValue = getDisplayName(a).toLowerCase();
-        bValue = getDisplayName(b).toLowerCase();
-        break;
-      case 'report_tier':
-        aValue = formatReportTier(a.report_tier).toLowerCase();
-        bValue = formatReportTier(b.report_tier).toLowerCase();
-        break;
-      default:
-        return 0;
-    }
-
-    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
-
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Reports</h3>
-        <Button onClick={onCreateReport}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add
-        </Button>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Reports</h3>
+          <Button onClick={onCreateReport}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add
+          </Button>
+        </div>
 
-      {/* Empty State */}
-      {clientReports.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <div className="text-lg text-muted-foreground mb-2">No reports generated yet</div>
-            <p className="mb-4 text-muted-foreground">Generate astrological reports for this client</p>
-            <Button onClick={onCreateReport}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead 
-                  className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
-                  onClick={() => handleSort('created_at')}
-                >
-                  <div className="flex items-center gap-1">
-                    Date
-                    {getSortIcon('created_at')}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="font-semibold cursor-pointer hover:bg-muted/50 hidden md:table-cell text-left"
-                  onClick={() => handleSort('report_name')}
-                >
-                  <div className="flex items-center gap-1">
-                    Name
-                    {getSortIcon('report_name')}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
-                  onClick={() => handleSort('report_tier')}
-                >
-                  <div className="flex items-center gap-1">
-                    Type
-                    {getSortIcon('report_tier')}
-                  </div>
-                </TableHead>
-                <TableHead className="font-semibold text-left">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {sortedReports.map(report => (
-                <TableRow key={report.id} className="hover:bg-muted/50">
-                  <TableCell className="text-sm text-muted-foreground text-left">
-                    <span className="hidden md:inline">{formatDate(report.created_at)}</span>
-                    <span className="md:hidden">{formatDateForMobile(report.created_at)}</span>
-                  </TableCell>
-                  <TableCell className="font-medium hidden md:table-cell text-left">
-                    {getDisplayName(report)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-left">
-                    {formatReportTier(report.report_tier)}
-                  </TableCell>
-                  <TableCell className="text-left">
-                    <div className="flex items-center gap-2">
-                      {!(report.response_status >= 200 && report.response_status < 300) && (
-                        <Badge variant="destructive" className="text-xs">
-                          Failed
+        {clientReports.length === 0 ? (
+          <Card>
+            <CardContent className="py-8">
+              <div className="text-center">
+                <div className="text-gray-400 text-lg mb-2">No reports generated yet</div>
+                <p className="text-gray-600 mb-4">Generate astrological reports for this client</p>
+                <Button onClick={onCreateReport}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {clientReports.map((report) => {
+              const summary = getReportSummary(report);
+              const hasContent = hasExpandableContent(report);
+              const isSuccess = report.response_status >= 200 && report.response_status < 300;
+              
+              return (
+                <Card key={report.id} className="p-6 hover:shadow-md transition-all duration-200 border border-gray-100">
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {getDisplayName(report)}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {formatDateForDisplay(report.created_at)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!isSuccess && (
+                          <Badge variant="destructive" className="text-xs">
+                            Failed
+                          </Badge>
+                        )}
+                        <Badge 
+                          variant={getReportBadgeVariant(report.report_tier)}
+                          className="bg-primary/10 text-primary border-primary/20 font-medium px-3 py-1"
+                        >
+                          {formatReportTier(report.report_tier)}
                         </Badge>
+                      </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="space-y-3">
+                      <p className="text-gray-900 leading-relaxed text-base">
+                        {summary}
+                      </p>
+                      
+                      {/* Expandable Full Report */}
+                      {hasContent && isSuccess && (
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value="full-report" className="border-none">
+                            <AccordionTrigger className="py-2 hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-gray-600" />
+                                <span className="text-sm font-medium text-gray-900">Full Report</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-2">
+                              <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                {report.response_payload.report}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
                       )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onViewReport(report)}
+                              disabled={!isSuccess}
+                              className="text-gray-600 hover:text-primary hover:bg-primary/5 p-2 h-auto"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <span>View report details</span>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewReport(report)}
-                        disabled={!(report.response_status >= 200 && report.response_status < 300)}
-                        className="text-primary hover:text-primary/80 hover:bg-primary/10 p-2 h-auto"
+                        disabled={!isSuccess}
+                        className="text-gray-600 hover:text-primary hover:bg-primary/5 group"
                       >
-                        <FileText className="h-4 w-4" />
+                        <span className="text-sm">View Full Report</span>
+                        <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </TooltipProvider>
   );
 };
 
