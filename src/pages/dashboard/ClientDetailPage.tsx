@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
@@ -10,6 +9,7 @@ import ClientReportsTab from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
 import EditClientForm from '@/components/clients/EditClientForm';
 import ClientReportModal from '@/components/clients/ClientReportModal';
+import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, BookOpen, FileText, Lightbulb } from 'lucide-react';
@@ -20,6 +20,8 @@ const ClientDetailPage = () => {
   const [activeTab, setActiveTab] = useState('journal');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showReportDrawer, setShowReportDrawer] = useState(false);
+  const [selectedReportData, setSelectedReportData] = useState<any>(null);
   const isMobile = useIsMobile();
   
   const {
@@ -79,6 +81,25 @@ const ClientDetailPage = () => {
     );
   }
 
+  const handleViewReport = (report: any) => {
+    // Transform the report data to match ActivityLogDrawer format
+    const transformedData = {
+      id: report.id,
+      created_at: report.created_at,
+      response_status: report.response_status,
+      request_type: report.request_type,
+      report_tier: report.report_tier,
+      total_cost_usd: 0, // This would come from api_usage if available
+      processing_time_ms: null,
+      response_payload: report.response_payload,
+      request_payload: {},
+      error_message: report.response_status >= 200 && report.response_status < 300 ? null : 'Report generation failed'
+    };
+    
+    setSelectedReportData(transformedData);
+    setShowReportDrawer(true);
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'journal':
@@ -96,7 +117,7 @@ const ClientDetailPage = () => {
           <ClientReportsTab 
             clientReports={clientReports}
             onCreateReport={() => setShowReportModal(true)}
-            onViewReport={() => {}}
+            onViewReport={handleViewReport}
           />
         );
       case 'insights':
@@ -192,6 +213,13 @@ const ClientDetailPage = () => {
           onReportGenerated={loadClientData}
         />
       )}
+
+      {/* Report Viewer Drawer */}
+      <ActivityLogDrawer
+        isOpen={showReportDrawer}
+        onClose={() => setShowReportDrawer(false)}
+        logData={selectedReportData}
+      />
     </div>
   );
 };
