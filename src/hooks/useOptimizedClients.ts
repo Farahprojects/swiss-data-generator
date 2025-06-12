@@ -48,18 +48,26 @@ export const useOptimizedClients = () => {
     if (!forceRefresh && clientsCache && (now - clientsCache.timestamp) < CACHE_DURATION) {
       console.log('📦 Using cached client data');
       setClients(clientsCache.data);
-      setLoading(false);
-      setInitialLoad(false);
+      
+      // Only set loading to false if this is the initial load
+      if (initialLoad) {
+        setLoading(false);
+        setInitialLoad(false);
+      }
       return;
     }
 
     try {
       loadingRef.current = true;
+      
+      // Only show loading spinner for initial loads, not for background refreshes
       if (initialLoad) {
+        console.log('🔄 Initial load: Fetching fresh client data');
         setLoading(true);
+      } else {
+        console.log('🔄 Background refresh: Fetching fresh client data');
       }
       
-      console.log('🔄 Fetching fresh client data');
       const clientsData = await clientsService.getClients();
       
       // Load additional data for each client
@@ -104,6 +112,7 @@ export const useOptimizedClients = () => {
       };
       
       setClients(clientsWithJournals);
+      console.log('✅ Clients data loaded successfully:', clientsWithJournals.length, 'clients');
     } catch (error) {
       console.error('Error loading clients:', error);
       toast({
@@ -112,16 +121,20 @@ export const useOptimizedClients = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
-      setInitialLoad(false);
+      // Always update loading state after operation completes
+      if (initialLoad) {
+        setLoading(false);
+        setInitialLoad(false);
+      }
       loadingRef.current = false;
     }
   };
 
-  // Invalidate cache when needed
-  const invalidateCache = () => {
+  // Invalidate cache when needed - this will do a background refresh
+  const invalidateCache = async () => {
+    console.log('🗑️ Invalidating clients cache');
     clientsCache = null;
-    loadClients(true);
+    await loadClients(true);
   };
 
   useEffect(() => {

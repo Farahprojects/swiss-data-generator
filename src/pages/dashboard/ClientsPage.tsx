@@ -62,6 +62,7 @@ const ClientsPage = React.memo(() => {
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterType, setFilterType] = useState<FilterType>('all');
+  const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
   const { toast } = useToast();
   const { viewMode: savedViewMode, loading: viewModeLoading, updateViewMode } = useClientViewMode();
   const isMobile = useIsMobile();
@@ -80,15 +81,28 @@ const ClientsPage = React.memo(() => {
     await updateViewMode(newViewMode);
   }, [updateViewMode]);
 
-  const handleClientCreated = useCallback(() => {
-    invalidateCache();
+  // Optimized cache invalidation with background refresh
+  const refreshClientsData = useCallback(async () => {
+    console.log('🔄 Starting background refresh of clients data');
+    setBackgroundRefreshing(true);
+    try {
+      await invalidateCache();
+    } finally {
+      setBackgroundRefreshing(false);
+    }
   }, [invalidateCache]);
 
+  const handleClientCreated = useCallback(() => {
+    console.log('✅ Client created, refreshing data in background');
+    refreshClientsData();
+  }, [refreshClientsData]);
+
   const handleClientUpdated = useCallback(() => {
-    invalidateCache();
+    console.log('✅ Client updated, refreshing data in background');
+    refreshClientsData();
     setModalState('showEditModal', false);
     setSelectedClient(null);
-  }, [invalidateCache, setModalState]);
+  }, [refreshClientsData, setModalState]);
 
   const handleSort = useCallback((field: SortField) => {
     if (sortField === field) {
@@ -159,7 +173,7 @@ const ClientsPage = React.memo(() => {
           title: "Client Archived",
           description: `${client.full_name} has been archived successfully.`,
         });
-        invalidateCache();
+        refreshClientsData();
       } catch (error) {
         console.error('Error archiving client:', error);
         toast({
@@ -169,27 +183,27 @@ const ClientsPage = React.memo(() => {
         });
       }
     }
-  }, [toast, invalidateCache]);
+  }, [toast, refreshClientsData]);
 
   const handleJournalCreated = useCallback(() => {
     setModalState('showJournalModal', false);
     setSelectedClient(null);
     setSelectedJournalEntry(null);
-    invalidateCache();
-  }, [setModalState, invalidateCache]);
+    refreshClientsData();
+  }, [setModalState, refreshClientsData]);
 
   const handleInsightGenerated = useCallback(() => {
     setModalState('showInsightModal', false);
     setSelectedClient(null);
     setSelectedClientJournalEntries([]);
-    invalidateCache();
-  }, [setModalState, invalidateCache]);
+    refreshClientsData();
+  }, [setModalState, refreshClientsData]);
 
   const handleReportGenerated = useCallback(() => {
     setModalState('showReportModal', false);
     setSelectedClient(null);
-    invalidateCache();
-  }, [setModalState, invalidateCache]);
+    refreshClientsData();
+  }, [setModalState, refreshClientsData]);
 
   const formatReportType = (report: ClientReport): string => {
     if (report.report_tier) {
@@ -430,7 +444,7 @@ const ClientsPage = React.memo(() => {
     </TableRow>
   ), [isMobile, formatClientNameForMobile, handleEditJournal, formatDate, formatReportType, handleViewReport, handleViewInsight]);
 
-  // Show loading only for initial load or when view mode is loading
+  // Show loading only for initial load AND view mode loading (not for background refreshes)
   if (initialLoad && (loading || viewModeLoading)) {
     return <TheraLoader message="Loading clients..." size="lg" />;
   }
@@ -441,6 +455,11 @@ const ClientsPage = React.memo(() => {
       <div className="mt-8 space-y-4">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">Clients</h1>
+          {backgroundRefreshing && (
+            <div className="text-sm text-muted-foreground animate-pulse">
+              Refreshing data...
+            </div>
+          )}
         </div>
         
         <p className="text-muted-foreground -mt-1">Manage your client relationships and their journeys</p>
@@ -606,7 +625,7 @@ const ClientsPage = React.memo(() => {
               setModalState('showJournalModal', false);
               setSelectedClient(null);
               setSelectedJournalEntry(null);
-              invalidateCache();
+              refreshClientsData();
             }}
             existingEntry={selectedJournalEntry || undefined}
           />
@@ -620,7 +639,7 @@ const ClientsPage = React.memo(() => {
               setModalState('showInsightModal', false);
               setSelectedClient(null);
               setSelectedClientJournalEntries([]);
-              invalidateCache();
+              refreshClientsData();
             }}
           />
 
@@ -631,7 +650,7 @@ const ClientsPage = React.memo(() => {
             onReportGenerated={() => {
               setModalState('showReportModal', false);
               setSelectedClient(null);
-              invalidateCache();
+              refreshClientsData();
             }}
           />
 

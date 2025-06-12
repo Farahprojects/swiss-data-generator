@@ -42,6 +42,7 @@ export const ModalStateProvider = ({ children }: ModalStateProviderProps) => {
       const savedState = sessionStorage.getItem('modalState');
       if (savedState) {
         const parsedState = JSON.parse(savedState);
+        console.log('🔄 Restoring modal state from session storage:', parsedState);
         setModalStateInternal(prevState => ({ ...prevState, ...parsedState }));
       }
     } catch (error) {
@@ -50,6 +51,7 @@ export const ModalStateProvider = ({ children }: ModalStateProviderProps) => {
   }, []);
 
   const setModalState = useCallback((key: keyof ModalState, value: boolean | string | null) => {
+    console.log('📝 Setting modal state:', key, '=', value);
     setModalStateInternal(prevState => {
       const newState = { ...prevState, [key]: value };
       try {
@@ -62,6 +64,7 @@ export const ModalStateProvider = ({ children }: ModalStateProviderProps) => {
   }, []);
 
   const resetModalState = useCallback(() => {
+    console.log('🔄 Resetting modal state');
     setModalStateInternal(defaultModalState);
     try {
       sessionStorage.removeItem('modalState');
@@ -72,6 +75,7 @@ export const ModalStateProvider = ({ children }: ModalStateProviderProps) => {
 
   const preserveModalState = useCallback(() => {
     try {
+      console.log('💾 Preserving modal state:', modalState);
       sessionStorage.setItem('modalState', JSON.stringify(modalState));
     } catch (error) {
       console.error('Failed to preserve modal state:', error);
@@ -83,6 +87,7 @@ export const ModalStateProvider = ({ children }: ModalStateProviderProps) => {
       const savedState = sessionStorage.getItem('modalState');
       if (savedState) {
         const parsedState = JSON.parse(savedState);
+        console.log('🔄 Restoring modal state:', parsedState);
         setModalStateInternal(prevState => ({ ...prevState, ...parsedState }));
       }
     } catch (error) {
