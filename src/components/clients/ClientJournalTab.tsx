@@ -250,16 +250,6 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditEntry(entry)}
-                        className="text-gray-600 hover:text-primary hover:bg-primary/5 group"
-                      >
-                        <span className="text-sm">View Full Entry</span>
-                        <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                      </Button>
                     </div>
                   </div>
                 </Card>
