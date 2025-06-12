@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -140,7 +141,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
           <h3 className="text-lg font-semibold">Insights</h3>
           <Button onClick={handleGenerateInsight} disabled={!client}>
             <Plus className="w-4 h-4 mr-2" />
-            Generate Insight
+            Add
           </Button>
         </div>
 
@@ -152,7 +153,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                 <p className="text-gray-600 mb-4">AI insights will appear here based on client data and patterns</p>
                 <Button onClick={handleGenerateInsight} disabled={!client}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Generate First Insight
+                  Add
                 </Button>
               </div>
             </CardContent>

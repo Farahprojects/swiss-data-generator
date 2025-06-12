@@ -117,7 +117,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
         <h3 className="text-lg font-semibold">Reports</h3>
         <Button onClick={onCreateReport}>
           <Plus className="mr-2 h-4 w-4" />
-          Generate Report
+          Add
         </Button>
       </div>
 
@@ -129,7 +129,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
             <p className="mb-4 text-muted-foreground">Generate astrological reports for this client</p>
             <Button onClick={onCreateReport}>
               <Plus className="mr-2 h-4 w-4" />
-              Generate Report
+              Add
             </Button>
           </CardContent>
         </Card>
