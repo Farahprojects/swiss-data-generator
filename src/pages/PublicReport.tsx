@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -150,119 +151,120 @@ const PublicReport = () => {
         <div className="max-w-4xl mx-auto">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Step 1: Report Type Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                  Choose Your Report Type
-                </CardTitle>
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowReportGuide(true)}
-                    className="text-primary hover:text-primary/80 text-sm underline"
-                  >
-                    Not sure which report to choose? Click here.
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label htmlFor="reportType">Report Type *</Label>
-                  <Controller
-                    control={control}
-                    name="reportType"
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a report type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {reportTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() => setShowReportGuide(true)}
+                className="text-foreground hover:text-primary font-bold underline"
+              >
+                Not sure which report to choose? Click here.
+              </button>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
+                    Choose Your Report Type
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Label htmlFor="reportType">Report Type *</Label>
+                    <Controller
+                      control={control}
+                      name="reportType"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a report type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {reportTypes.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.reportType && (
+                      <p className="text-sm text-destructive">{errors.reportType.message}</p>
                     )}
-                  />
-                  {errors.reportType && (
-                    <p className="text-sm text-destructive">{errors.reportType.message}</p>
+                  </div>
+
+                  {/* Conditional Fields for Report Options */}
+                  {requiresEssenceType && (
+                    <div className="space-y-2 mt-4">
+                      <Label htmlFor="essenceType">Essence Focus *</Label>
+                      <Controller
+                        control={control}
+                        name="essenceType"
+                        render={({ field }) => (
+                          <ToggleGroup
+                            type="single"
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="justify-start"
+                          >
+                            {essenceTypes.map((type) => (
+                              <ToggleGroupItem 
+                                key={type.value} 
+                                value={type.value}
+                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
+                              >
+                                {type.label}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        )}
+                      />
+                    </div>
                   )}
-                </div>
 
-                {/* Conditional Fields for Report Options */}
-                {requiresEssenceType && (
-                  <div className="space-y-2 mt-4">
-                    <Label htmlFor="essenceType">Essence Focus *</Label>
-                    <Controller
-                      control={control}
-                      name="essenceType"
-                      render={({ field }) => (
-                        <ToggleGroup
-                          type="single"
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          className="justify-start"
-                        >
-                          {essenceTypes.map((type) => (
-                            <ToggleGroupItem 
-                              key={type.value} 
-                              value={type.value}
-                              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
-                            >
-                              {type.label}
-                            </ToggleGroupItem>
-                          ))}
-                        </ToggleGroup>
-                      )}
-                    />
-                  </div>
-                )}
+                  {requiresReturnYear && (
+                    <div className="space-y-2 mt-4">
+                      <Label htmlFor="returnYear">Return Year *</Label>
+                      <Input
+                        {...register('returnYear')}
+                        type="number"
+                        placeholder={getCurrentYear().toString()}
+                        min="1900"
+                        max="2100"
+                      />
+                    </div>
+                  )}
 
-                {requiresReturnYear && (
-                  <div className="space-y-2 mt-4">
-                    <Label htmlFor="returnYear">Return Year *</Label>
-                    <Input
-                      {...register('returnYear')}
-                      type="number"
-                      placeholder={getCurrentYear().toString()}
-                      min="1900"
-                      max="2100"
-                    />
-                  </div>
-                )}
-
-                {requiresRelationshipType && (
-                  <div className="space-y-2 mt-4">
-                    <Label htmlFor="relationshipType">Relationship Type *</Label>
-                    <Controller
-                      control={control}
-                      name="relationshipType"
-                      render={({ field }) => (
-                        <ToggleGroup
-                          type="single"
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          className="justify-start"
-                        >
-                          {relationshipTypes.map((type) => (
-                            <ToggleGroupItem 
-                              key={type.value} 
-                              value={type.value}
-                              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
-                            >
-                              {type.label}
-                            </ToggleGroupItem>
-                          ))}
-                        </ToggleGroup>
-                      )}
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  {requiresRelationshipType && (
+                    <div className="space-y-2 mt-4">
+                      <Label htmlFor="relationshipType">Relationship Type *</Label>
+                      <Controller
+                        control={control}
+                        name="relationshipType"
+                        render={({ field }) => (
+                          <ToggleGroup
+                            type="single"
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="justify-start"
+                          >
+                            {relationshipTypes.map((type) => (
+                              <ToggleGroupItem 
+                                key={type.value} 
+                                value={type.value}
+                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
+                              >
+                                {type.label}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        )}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Step 2: Contact Information */}
             {selectedReportType && (
