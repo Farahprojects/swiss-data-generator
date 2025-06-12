@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,9 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, Calendar, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
-import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
-import { clientReportsService } from '@/services/clientReports';
+import { clientsService } from '@/services/clients';
 import { Client, JournalEntry, InsightEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { TheraLoader } from '@/components/ui/TheraLoader';
@@ -19,9 +19,9 @@ import ClientReportModal from '@/components/clients/ClientReportModal';
 import EditClientForm from '@/components/clients/EditClientForm';
 import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
-import { supabase } from '@/integrations/supabase/client';
 import { useClientViewMode } from '@/hooks/useClientViewMode';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useOptimizedClients } from '@/hooks/useOptimizedClients';
 
 type ViewMode = 'grid' | 'list';
 type SortField = 'full_name' | 'email' | 'latest_journal' | 'latest_report' | 'latest_insight' | 'created_at';
@@ -45,8 +45,7 @@ interface ClientWithJournal extends Client {
 }
 
 const ClientsPage = () => {
-  const [clients, setClients] = useState<ClientWithJournal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { clients, loading, initialLoad, invalidateCache } = useOptimizedClients();
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [showJournalModal, setShowJournalModal] = useState(false);
@@ -74,69 +73,12 @@ const ClientsPage = () => {
     await updateViewMode(newViewMode);
   };
 
-  useEffect(() => {
-    loadClients();
-  }, []);
-
-  const loadClients = async () => {
-    try {
-      setLoading(true);
-      const clientsData = await clientsService.getClients();
-      
-      // Load journal entries, reports and insights for each client
-      const clientsWithJournals = await Promise.all(
-        clientsData.map(async (client) => {
-          try {
-            const [journalEntries, clientReports, insightEntries] = await Promise.all([
-              journalEntriesService.getJournalEntries(client.id),
-              clientReportsService.getClientReports(client.id),
-              supabase
-                .from('insight_entries')
-                .select('*')
-                .eq('client_id', client.id)
-                .order('created_at', { ascending: false })
-                .then(({ data }) => data || [])
-            ]);
-            
-            const latestJournalEntry = journalEntries.length > 0 ? journalEntries[0] : undefined;
-            const latestReport = clientReports.length > 0 ? clientReports[0] : undefined;
-            const latestInsight = insightEntries.length > 0 ? {
-              ...insightEntries[0],
-              type: insightEntries[0].type as 'pattern' | 'recommendation' | 'trend' | 'milestone'
-            } as InsightEntry : undefined;
-            
-            return {
-              ...client,
-              latestJournalEntry,
-              latestReport,
-              latestInsight
-            } as ClientWithJournal;
-          } catch (error) {
-            console.error(`Error loading data for client ${client.id}:`, error);
-            return client as ClientWithJournal;
-          }
-        })
-      );
-      
-      setClients(clientsWithJournals);
-    } catch (error) {
-      console.error('Error loading clients:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load clients. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleClientCreated = () => {
-    loadClients();
+    invalidateCache();
   };
 
   const handleClientUpdated = () => {
-    loadClients();
+    invalidateCache();
     setShowEditModal(false);
     setSelectedClient(null);
   };
@@ -154,7 +96,6 @@ const ClientsPage = () => {
     if (sortField === field) {
       return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
     }
-    // Always show a default sort icon to indicate sortability
     return <ChevronUp className="w-4 h-4 opacity-30" />;
   };
 
@@ -178,7 +119,6 @@ const ClientsPage = () => {
       console.log('💡 Generating insight for client:', client.full_name);
       setSelectedClient(client);
       
-      // Load journal entries for this specific client
       const journalEntries = await journalEntriesService.getJournalEntries(client.id);
       console.log('📔 Loaded journal entries for insight:', journalEntries.length, 'entries');
       setSelectedClientJournalEntries(journalEntries);
@@ -212,7 +152,7 @@ const ClientsPage = () => {
           title: "Client Archived",
           description: `${client.full_name} has been archived successfully.`,
         });
-        loadClients();
+        invalidateCache();
       } catch (error) {
         console.error('Error archiving client:', error);
         toast({
@@ -228,20 +168,20 @@ const ClientsPage = () => {
     setShowJournalModal(false);
     setSelectedClient(null);
     setSelectedJournalEntry(null);
-    loadClients();
+    invalidateCache();
   };
 
   const handleInsightGenerated = () => {
     setShowInsightModal(false);
     setSelectedClient(null);
     setSelectedClientJournalEntries([]);
-    loadClients();
+    invalidateCache();
   };
 
   const handleReportGenerated = () => {
     setShowReportModal(false);
     setSelectedClient(null);
-    loadClients();
+    invalidateCache();
   };
 
   const formatReportType = (report: ClientReport): string => {
@@ -258,8 +198,8 @@ const ClientsPage = () => {
       response_status: report.response_status,
       request_type: report.request_type,
       report_tier: report.report_tier,
-      total_cost_usd: 0, // Default value since not needed on clients page
-      processing_time_ms: null, // Default value since not needed on clients page
+      total_cost_usd: 0,
+      processing_time_ms: null,
       response_payload: report.response_payload,
       request_payload: null,
       error_message: undefined,
@@ -306,16 +246,13 @@ const ClientsPage = () => {
       client.full_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Apply filters (placeholder logic - you'll need to implement based on your data structure)
+    // Apply filters
     switch (filterType) {
       case 'most_active':
-        // Filter logic for most active clients
         break;
       case 'report_ready':
-        // Filter logic for report-ready clients
         break;
       case 'has_journal_no_report':
-        // Filter logic for clients with journals but no reports
         break;
       default:
         break;
@@ -486,8 +423,8 @@ const ClientsPage = () => {
     </TableRow>
   );
 
-  // Show loading while fetching both clients and view mode preference
-  if (loading || viewModeLoading) {
+  // Show loading only for initial load or when view mode is loading
+  if (initialLoad && (loading || viewModeLoading)) {
     return <TheraLoader message="Loading clients..." size="lg" />;
   }
 
@@ -495,15 +432,13 @@ const ClientsPage = () => {
     <div className="space-y-4 max-w-7xl mx-auto">
       {/* Header Section */}
       <div className="mt-8 space-y-4">
-        {/* Title */}
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">Clients</h1>
         </div>
         
-        {/* Subtitle */}
         <p className="text-muted-foreground -mt-1">Manage your client relationships and their journeys</p>
         
-        {/* Controls Row - Search, Filters, View Toggle and Button */}
+        {/* Controls Row */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -515,7 +450,6 @@ const ClientsPage = () => {
             />
           </div>
 
-          {/* Filter Dropdown */}
           <Select value={filterType} onValueChange={(value: FilterType) => setFilterType(value)}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Filter by..." />
@@ -528,7 +462,6 @@ const ClientsPage = () => {
             </SelectContent>
           </Select>
           
-          {/* View Toggle */}
           <div className="flex items-center border rounded-md">
             <Button
               variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -557,7 +490,6 @@ const ClientsPage = () => {
           </Button>
         </div>
         
-        {/* Search Results Count */}
         {searchTerm && (
           <div className="text-sm text-muted-foreground">
             {filteredAndSortedClients.length} result{filteredAndSortedClients.length !== 1 ? 's' : ''} found
@@ -567,14 +499,12 @@ const ClientsPage = () => {
 
       {/* Content based on view mode */}
       {viewMode === 'grid' ? (
-        /* Clients Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filteredAndSortedClients.map(client => (
             <ClientCard key={client.id} client={client} />
           ))}
         </div>
       ) : (
-        /* Clients Table */
         <div className="bg-background border rounded-lg">
           <Table>
             <TableHeader>
@@ -693,14 +623,12 @@ const ClientsPage = () => {
         </>
       )}
 
-      {/* Report Viewer Drawer */}
       <ActivityLogDrawer
         isOpen={showReportDrawer}
         onClose={() => setShowReportDrawer(false)}
         logData={selectedReportData}
       />
 
-      {/* Insight Viewer Drawer */}
       <ActivityLogDrawer
         isOpen={showInsightDrawer}
         onClose={() => setShowInsightDrawer(false)}
