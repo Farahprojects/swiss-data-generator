@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -334,7 +333,16 @@ serve(async (req) => {
   const logPrefix = `[generate-insights][${requestId}]`;
   const startTime = Date.now();
 
-  console.log(`${logPrefix} Received ${req.method} request for ${req.url}`);
+  console.log(`${logPrefix} ========================================`);
+  console.log(`${logPrefix} NEW REQUEST RECEIVED`);
+  console.log(`${logPrefix} Method: ${req.method}`);
+  console.log(`${logPrefix} URL: ${req.url}`);
+  console.log(`${logPrefix} User-Agent: ${req.headers.get('user-agent')}`);
+  console.log(`${logPrefix} Content-Type: ${req.headers.get('content-type')}`);
+  console.log(`${logPrefix} Content-Length: ${req.headers.get('content-length')}`);
+  console.log(`${logPrefix} Authorization: ${req.headers.get('authorization')?.substring(0, 20)}...`);
+  console.log(`${logPrefix} All Headers:`, Object.fromEntries(req.headers.entries()));
+  console.log(`${logPrefix} ========================================`);
 
   if (req.method === "OPTIONS") {
     console.log(`${logPrefix} Handling OPTIONS request (CORS preflight)`);
@@ -386,82 +394,71 @@ serve(async (req) => {
       );
     }
 
-    // Enhanced request body processing with better debugging
-    console.log(`${logPrefix} === REQUEST BODY PROCESSING ===`);
-    console.log(`${logPrefix} Content-Type header:`, req.headers.get('Content-Type'));
-    console.log(`${logPrefix} Content-Length header:`, req.headers.get('Content-Length'));
-    console.log(`${logPrefix} Request headers:`, Object.fromEntries(req.headers.entries()));
+    // ENHANCED BODY PROCESSING - Let's catch this issue!
+    console.log(`${logPrefix} ========================================`);
+    console.log(`${logPrefix} STARTING BODY PROCESSING`);
+    console.log(`${logPrefix} Request object type:`, typeof req);
+    console.log(`${logPrefix} Request has body property:`, 'body' in req);
+    console.log(`${logPrefix} Request bodyUsed before reading:`, req.bodyUsed);
+    console.log(`${logPrefix} ========================================`);
 
+    // Try multiple approaches to read the body
     let payload;
     let rawBody;
 
     try {
-      // First, try to get the body as text
+      console.log(`${logPrefix} ATTEMPT 1: Using req.text()`);
       rawBody = await req.text();
-      console.log(`${logPrefix} Raw body received, length:`, rawBody?.length || 0);
-      console.log(`${logPrefix} Raw body type:`, typeof rawBody);
-      console.log(`${logPrefix} Raw body preview (first 300 chars):`, rawBody?.slice(0, 300) || 'EMPTY');
+      console.log(`${logPrefix} req.text() returned type:`, typeof rawBody);
+      console.log(`${logPrefix} req.text() returned length:`, rawBody?.length || 0);
+      console.log(`${logPrefix} bodyUsed after text():`, req.bodyUsed);
       
-      if (!rawBody || rawBody.trim() === '') {
-        console.error(`${logPrefix} Request body is empty after text() call`);
-        console.error(`${logPrefix} Raw body value:`, JSON.stringify(rawBody));
-        
-        // Try alternative method - clone the request and try again
-        console.log(`${logPrefix} Attempting alternative body reading method...`);
+      if (rawBody && rawBody.length > 0) {
+        console.log(`${logPrefix} Raw body preview:`, rawBody.substring(0, 500));
         try {
-          const bodyBuffer = await req.clone().arrayBuffer();
-          console.log(`${logPrefix} ArrayBuffer length:`, bodyBuffer.byteLength);
-          
-          if (bodyBuffer.byteLength > 0) {
-            const decoder = new TextDecoder();
-            rawBody = decoder.decode(bodyBuffer);
-            console.log(`${logPrefix} Decoded from ArrayBuffer:`, rawBody?.slice(0, 300));
-          }
-        } catch (cloneError) {
-          console.error(`${logPrefix} Alternative method also failed:`, cloneError);
+          payload = JSON.parse(rawBody);
+          console.log(`${logPrefix} Successfully parsed JSON from req.text()`);
+        } catch (parseError) {
+          console.error(`${logPrefix} Failed to parse JSON from req.text():`, parseError);
+          throw parseError;
         }
+      } else {
+        console.error(`${logPrefix} CRITICAL: req.text() returned empty body!`);
+        console.error(`${logPrefix} This indicates the body was consumed before our handler`);
         
-        if (!rawBody || rawBody.trim() === '') {
-          return jsonResponse({ 
-            error: "Request body is empty", 
-            requestId,
-            debug: {
-              headers: Object.fromEntries(req.headers.entries()),
-              method: req.method,
-              url: req.url
-            }
-          }, { status: 400 }, requestId);
-        }
+        return jsonResponse({
+          error: "Request body is empty - body may have been consumed by middleware",
+          requestId,
+          debug: {
+            method: req.method,
+            url: req.url,
+            headers: Object.fromEntries(req.headers.entries()),
+            bodyUsed: req.bodyUsed,
+            bodyLength: rawBody?.length || 0,
+            contentLength: req.headers.get('content-length')
+          }
+        }, { status: 400 }, requestId);
       }
-
-      // Parse JSON
-      payload = JSON.parse(rawBody);
-      console.log(`${logPrefix} Successfully parsed JSON payload`);
-      console.log(`${logPrefix} Payload keys:`, Object.keys(payload));
-      console.log(`${logPrefix} Payload structure:`, {
-        clientId: payload.clientId,
-        coachId: payload.coachId,
-        insightType: payload.insightType,
-        title: payload.title,
-        clientDataKeys: payload.clientData ? Object.keys(payload.clientData) : 'missing'
-      });
-      
-    } catch (bodyError) {
-      console.error(`${logPrefix} Error processing request body:`, bodyError);
-      console.error(`${logPrefix} Body error type:`, bodyError.constructor.name);
-      console.error(`${logPrefix} Body error message:`, bodyError.message);
-      console.error(`${logPrefix} Raw body that failed to parse:`, rawBody?.slice(0, 500));
+    } catch (error) {
+      console.error(`${logPrefix} CRITICAL ERROR reading request body:`, error);
+      console.error(`${logPrefix} Error type:`, error.constructor.name);
+      console.error(`${logPrefix} Error message:`, error.message);
       
       return jsonResponse({
-        error: "Failed to process request body",
-        details: bodyError.message,
+        error: "Failed to read request body",
+        details: error.message,
         requestId,
         debug: {
-          rawBodyLength: rawBody?.length || 0,
-          rawBodyPreview: rawBody?.slice(0, 200) || 'EMPTY'
+          errorType: error.constructor.name,
+          bodyUsed: req.bodyUsed
         }
       }, { status: 400 }, requestId);
     }
+
+    console.log(`${logPrefix} ========================================`);
+    console.log(`${logPrefix} BODY PROCESSING COMPLETE`);
+    console.log(`${logPrefix} Final payload keys:`, Object.keys(payload || {}));
+    console.log(`${logPrefix} ========================================`);
 
     const { clientId, coachId, insightType, clientData, title } = payload;
 

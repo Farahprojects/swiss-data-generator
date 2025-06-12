@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface GenerateInsightRequest {
@@ -47,15 +46,6 @@ export const insightsService = {
   }): Promise<GenerateInsightResponse> {
     console.log('🚀 === INSIGHTS SERVICE: Starting generateInsight ===');
     console.log('🚀 SERVICE: Raw request received:', request);
-    console.log('🚀 SERVICE: Request JSON:', JSON.stringify(request, null, 2));
-    console.log('🚀 SERVICE: Request keys:', Object.keys(request));
-    console.log('🚀 SERVICE: ClientData keys:', Object.keys(request.clientData));
-    console.log('🚀 SERVICE: ClientId:', request.clientId);
-    console.log('🚀 SERVICE: CoachId:', request.coachId);
-    console.log('🚀 SERVICE: InsightType:', request.insightType);
-    console.log('🚀 SERVICE: Title:', request.title);
-    console.log('🚀 SERVICE: Full name:', request.clientData.fullName);
-    console.log('🚀 SERVICE: Goals:', request.clientData.goals);
     
     try {
       // Get current session with better error handling
@@ -125,7 +115,6 @@ export const insightsService = {
       }).join('\n\n---\n\n') || 'No journal entries available.';
 
       console.log('🚀 SERVICE: Transformed journal text length:', journalText.length);
-      console.log('🚀 SERVICE: Journal text preview (first 200 chars):', journalText.substring(0, 200));
 
       // Extract plain text from previous reports
       console.log('🚀 SERVICE: Processing previous reports:', request.clientData.previousReports?.length || 0);
@@ -143,7 +132,6 @@ export const insightsService = {
       }).join('\n\n---\n\n') || 'No previous reports available.';
 
       console.log('🚀 SERVICE: Transformed reports text length:', previousReportsText.length);
-      console.log('🚀 SERVICE: Reports text preview (first 200 chars):', previousReportsText.substring(0, 200));
 
       // Create the payload that matches what the edge function expects
       const edgeFunctionPayload = {
@@ -159,33 +147,27 @@ export const insightsService = {
         }
       };
 
-      console.log('🚀 SERVICE: === FINAL EDGE FUNCTION PAYLOAD ===');
-      console.log('🚀 SERVICE: Complete payload being sent:', edgeFunctionPayload);
-      console.log('🚀 SERVICE: Payload JSON string:', JSON.stringify(edgeFunctionPayload, null, 2));
-      console.log('🚀 SERVICE: Payload size (stringified):', JSON.stringify(edgeFunctionPayload).length, 'characters');
-      console.log('🚀 SERVICE: Client ID in payload:', edgeFunctionPayload.clientId);
-      console.log('🚀 SERVICE: Coach ID in payload:', edgeFunctionPayload.coachId);
-      console.log('🚀 SERVICE: Insight type in payload:', edgeFunctionPayload.insightType);
-      console.log('🚀 SERVICE: Title in payload:', edgeFunctionPayload.title);
-      console.log('🚀 SERVICE: Full name in payload:', edgeFunctionPayload.clientData.fullName);
-      console.log('🚀 SERVICE: Goals in payload:', edgeFunctionPayload.clientData.goals);
-      console.log('🚀 SERVICE: Journal text length in payload:', edgeFunctionPayload.clientData.journalText.length);
-      console.log('🚀 SERVICE: Reports text length in payload:', edgeFunctionPayload.clientData.previousReportsText.length);
-
-      // Call the edge function with proper authentication
       console.log('🚀 SERVICE: === CALLING EDGE FUNCTION ===');
-      console.log('🚀 SERVICE: Making supabase.functions.invoke call...');
-      console.log('🚀 SERVICE: Function name: generate-insights');
-      console.log('🚀 SERVICE: Authorization header: Bearer', apiKeyData.api_key);
-      console.log('🚀 SERVICE: Payload being sent:', edgeFunctionPayload);
+      console.log('🚀 SERVICE: Final payload being sent:', edgeFunctionPayload);
+      console.log('🚀 SERVICE: Payload size (bytes):', new Blob([JSON.stringify(edgeFunctionPayload)]).size);
+      console.log('🚀 SERVICE: About to call supabase.functions.invoke...');
       
-      const { data, error } = await supabase.functions.invoke('generate-insights', {
+      // ENHANCED: Log the exact request being made
+      const requestOptions = {
         body: edgeFunctionPayload,
         headers: {
           Authorization: `Bearer ${apiKeyData.api_key}`,
           'Content-Type': 'application/json'
         }
+      };
+      
+      console.log('🚀 SERVICE: Request options:', {
+        headers: requestOptions.headers,
+        bodyKeys: Object.keys(requestOptions.body),
+        bodySize: JSON.stringify(requestOptions.body).length
       });
+      
+      const { data, error } = await supabase.functions.invoke('generate-insights', requestOptions);
 
       console.log('🚀 SERVICE: === EDGE FUNCTION RESPONSE ===');
       console.log('🚀 SERVICE: Response data:', data);
