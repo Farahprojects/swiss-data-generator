@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -42,9 +41,6 @@ const reportSchema = z.object({
 type ReportFormData = z.infer<typeof reportSchema>;
 
 const reportTypes = [
-  { value: 'natal', label: 'Natal Report' },
-  { value: 'composite', label: 'Composite Report' },
-  { value: 'compatibility', label: 'Compatibility Report' },
   { value: 'return', label: 'Solar/Lunar Return Report' },
   { value: 'positions', label: 'Planetary Positions' },
   { value: 'sync', label: 'Sync Report' },
@@ -123,9 +119,6 @@ const PublicReport = () => {
       {/* Hero Section */}
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-16 text-center">
-          <Badge variant="secondary" className="mb-4">
-            Instant Personalized Reports
-          </Badge>
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             Get Your Professional
             <span className="text-primary"> Astrology Report</span>
