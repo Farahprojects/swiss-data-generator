@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, FileText, Edit2, Check, X, Trash2 } from 'lucide-react';
+import { Plus, FileText, Edit2, Check, X, Trash2, User, ChevronRight } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
@@ -26,11 +26,13 @@ interface ClientInsightsTabProps {
   onViewInsight?: (insight: InsightEntry) => void;
 }
 
-const formatDateForMobile = (dateString: string): string => {
+const formatDateForDisplay = (dateString: string): string => {
   const date = new Date(dateString);
-  const monthShort = date.toLocaleDateString('en-US', { month: 'short' });
-  const day = date.getDate();
-  return `${monthShort} ${day}`;
+  return date.toLocaleDateString('en-US', { 
+    day: 'numeric',
+    month: 'long', 
+    year: 'numeric' 
+  });
 };
 
 const getInsightTypeLabel = (type: string) => {
@@ -58,6 +60,23 @@ const getInsightBadgeVariant = (type: string) => {
   }
 };
 
+const parseInsightSections = (content: string) => {
+  const lines = content.split('\n').filter(line => line.trim());
+  const sections: string[] = [];
+  
+  for (const line of lines) {
+    if (line.includes(':') && line.length > 10) {
+      const [key, ...valueParts] = line.split(':');
+      const value = valueParts.join(':').trim();
+      if (value) {
+        sections.push(value);
+      }
+    }
+  }
+  
+  return sections.slice(0, 2); // Take first 2 meaningful sections
+};
+
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   insightEntries = [],
   client,
@@ -66,8 +85,6 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
   onViewInsight
 }) => {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [editingSummary, setEditingSummary] = useState<string | null>(null);
-  const [editSummaryValue, setEditSummaryValue] = useState('');
   const [deletingInsightId, setDeletingInsightId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -111,32 +128,19 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
     }
   };
 
-  const handleEditSummary = (insight: InsightEntry) => {
-    setEditingSummary(insight.id);
-    // For now, use the first line of content as summary or create a placeholder
-    const summary = insight.content.split('\n')[0].substring(0, 100) + '...';
-    setEditSummaryValue(summary);
-  };
-
-  const handleSaveSummary = () => {
-    // TODO: Implement actual summary save functionality
-    console.log('Saving summary:', editSummaryValue);
-    setEditingSummary(null);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingSummary(null);
-    setEditSummaryValue('');
-  };
-
-  const getSummary = (insight: InsightEntry) => {
-    // For now, extract first line or first 100 characters as summary
-    return insight.content.split('\n')[0].substring(0, 100) + (insight.content.length > 100 ? '...' : '');
+  const getMainInsightText = (insight: InsightEntry) => {
+    const lines = insight.content.split('\n').filter(line => line.trim());
+    for (const line of lines) {
+      if (line.length > 50 && !line.includes(':')) {
+        return line.trim();
+      }
+    }
+    return lines[0] || insight.content.substring(0, 100) + '...';
   };
 
   return (
     <TooltipProvider>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Insights</h3>
           <Button onClick={handleGenerateInsight} disabled={!client}>
@@ -159,77 +163,58 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[120px]">Date</TableHead>
-                  <TableHead className="hidden md:table-cell">Summary</TableHead>
-                  <TableHead className="w-[120px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {insightEntries.map((insight) => (
-                  <TableRow key={insight.id}>
-                    <TableCell className="text-sm text-gray-600">
-                      <span className="hidden md:inline">{formatDate(insight.created_at)}</span>
-                      <span className="md:hidden">{formatDateForMobile(insight.created_at)}</span>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <div className="flex items-center gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="font-medium hover:text-primary cursor-help">
-                              {insight.title || `${getInsightTypeLabel(insight.type)} Insight`}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-md p-3">
-                            <div className="space-y-1">
-                              <div className="font-medium">{insight.title || `${getInsightTypeLabel(insight.type)} Insight`}</div>
-                              <div className="text-sm text-gray-600">
-                                {getInsightTypeLabel(insight.type)}
-                                {insight.confidence_score && ` • ${insight.confidence_score}% confidence`}
-                              </div>
-                              <div className="text-sm max-h-32 overflow-y-auto">
-                                {insight.content}
-                              </div>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">
-                        {editingSummary === insight.id ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={editSummaryValue}
-                              onChange={(e) => setEditSummaryValue(e.target.value)}
-                              className="flex-1 px-2 py-1 text-xs border rounded"
-                              placeholder="Add a summary..."
-                            />
-                            <Button size="sm" variant="ghost" onClick={handleSaveSummary}>
-                              <Check className="w-3 h-3" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
-                              <X className="w-3 h-3" />
-                            </Button>
+          <div className="space-y-4">
+            {insightEntries.map((insight) => {
+              const sections = parseInsightSections(insight.content);
+              const mainText = getMainInsightText(insight);
+              
+              return (
+                <Card key={insight.id} className="p-6 hover:shadow-md transition-all duration-200 border border-gray-100">
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <User className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-600 font-medium">
+                            {formatDateForDisplay(insight.created_at)}
                           </div>
-                        ) : (
-                          <div className="flex items-center gap-2 group">
-                            <span>{getSummary(insight)}</span>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              onClick={() => handleEditSummary(insight)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto"
+                        </div>
+                      </div>
+                      <Badge 
+                        variant={getInsightBadgeVariant(insight.type)}
+                        className="bg-primary/10 text-primary border-primary/20 font-medium px-3 py-1"
+                      >
+                        {getInsightTypeLabel(insight.type)}
+                      </Badge>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="space-y-3">
+                      <p className="text-gray-900 font-medium leading-relaxed text-base">
+                        {mainText}
+                      </p>
+                      
+                      {/* Insight Sections */}
+                      {sections.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {sections.map((section, index) => (
+                            <Badge 
+                              key={index}
+                              variant="outline" 
+                              className="bg-accent/30 text-primary border-primary/30 text-xs px-2 py-1"
                             >
-                              <Edit2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
+                              {section}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                       <div className="flex items-center gap-2">
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -237,7 +222,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                               variant="ghost"
                               size="sm"
                               onClick={() => handleViewInsight(insight)}
-                              className="text-primary hover:text-primary/80 hover:bg-primary/10 p-2 h-auto"
+                              className="text-gray-600 hover:text-primary hover:bg-primary/5 p-2 h-auto"
                             >
                               <FileText className="h-4 w-4" />
                             </Button>
@@ -246,13 +231,14 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                             <span>View insight</span>
                           </TooltipContent>
                         </Tooltip>
+                        
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button 
                                   disabled={deletingInsightId === insight.id}
-                                  className="text-black hover:text-destructive transition-colors p-1 disabled:opacity-50"
+                                  className="text-gray-600 hover:text-destructive transition-colors p-2 disabled:opacity-50"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -281,12 +267,22 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewInsight(insight)}
+                        className="text-gray-600 hover:text-primary hover:bg-primary/5 group"
+                      >
+                        <span className="text-sm">View Full Insight</span>
+                        <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         )}
 
         {client && (
