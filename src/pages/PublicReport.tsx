@@ -17,6 +17,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
+import ReportGuideModal from '@/components/public-report/ReportGuideModal';
 
 const reportSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
@@ -63,6 +64,7 @@ const essenceTypes = [
 const PublicReport = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPromoCode, setShowPromoCode] = useState(false);
+  const [showReportGuide, setShowReportGuide] = useState(false);
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -154,6 +156,15 @@ const PublicReport = () => {
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
                   Choose Your Report Type
                 </CardTitle>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowReportGuide(true)}
+                    className="text-primary hover:text-primary/80 text-sm underline"
+                  >
+                    Not sure which report to choose? Click here.
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -483,6 +494,12 @@ const PublicReport = () => {
           </div>
         </div>
       </div>
+
+      {/* Report Guide Modal */}
+      <ReportGuideModal 
+        isOpen={showReportGuide} 
+        onClose={() => setShowReportGuide(false)} 
+      />
     </div>
   );
 };
