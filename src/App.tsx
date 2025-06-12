@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
@@ -23,6 +22,7 @@ import About from './pages/About';
 import Legal from './pages/Legal';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
+import PublicReport from './pages/PublicReport';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +50,7 @@ function App() {
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/legal" element={<Legal />} />
+                      <Route path="/report" element={<PublicReport />} />
                       
                       <Route path="/login" element={<Login />} />
                       <Route path="/signup" element={<Signup />} />
