@@ -106,14 +106,19 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Summary</TableHead>
+                <TableHead className="w-[120px]">Date</TableHead>
+                <TableHead className="hidden md:table-cell">Summary</TableHead>
                 <TableHead className="w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {journalEntries.map((entry) => (
                 <TableRow key={entry.id}>
-                  <TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    <span className="hidden md:inline">{formatDate(entry.created_at)}</span>
+                    <span className="md:hidden">{formatDateForMobile(entry.created_at)}</span>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
                         {entry.title || 'Journal Entry'}
