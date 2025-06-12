@@ -1,304 +1,132 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { ArrowLeft } from 'lucide-react';
-import { clientsService } from '@/services/clients';
-import { journalEntriesService } from '@/services/journalEntries';
-import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useClientData } from '@/hooks/useClientData';
-import { TheraLoader } from '@/components/ui/TheraLoader';
-import EditClientForm from '@/components/clients/EditClientForm';
-import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
-import ClientReportModal from '@/components/clients/ClientReportModal';
-import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
-import { ClientDetailHeader } from '@/components/clients/ClientDetailHeader';
-import { ClientInfoCard } from '@/components/clients/ClientInfoCard';
-import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
-import { ClientReportsTab } from '@/components/clients/ClientReportsTab';
-import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
-import { InsightEntry, JournalEntry } from '@/types/database';
-import { supabase } from '@/integrations/supabase/client';
 
-interface ClientReport {
-  id: string;
-  request_type: string;
-  response_payload: any;
-  created_at: string;
-  response_status: number;
-  report_name?: string;
-  report_tier?: string;
-}
+import React from 'react';
+import { useParams } from 'react-router-dom';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
+import { useClientData } from '@/hooks/useClientData';
+import ClientDetailHeader from '@/components/clients/ClientDetailHeader';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
+import ClientJournalTab from '@/components/clients/ClientJournalTab';
+import ClientReportsTab from '@/components/clients/ClientReportsTab';
+import ClientInsightsTab from '@/components/clients/ClientInsightsTab';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const ClientDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const isMobile = useIsMobile();
+  const { clientId } = useParams<{ clientId: string }>();
+  const { isReady, hasValidAuth, error: authError } = useAuthGuard('ClientDetailPage');
   
-  const { client, journalEntries, clientReports, insightEntries, loading, loadClientData } = useClientData(id);
-  
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showCreateJournalModal, setShowCreateJournalModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [showReportDrawer, setShowReportDrawer] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
-  const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('journals');
-  const [localInsightEntries, setLocalInsightEntries] = useState<InsightEntry[]>([]);
-  const [localJournalEntries, setLocalJournalEntries] = useState<JournalEntry[]>([]);
+  const {
+    client,
+    journalEntries,
+    isLoading: clientLoading,
+    error: clientError,
+    refetch
+  } = useClientData(clientId || '', hasValidAuth);
 
-  // Update local insights when data changes
-  React.useEffect(() => {
-    setLocalInsightEntries(insightEntries);
-  }, [insightEntries]);
-
-  // Update local journal entries when data changes
-  React.useEffect(() => {
-    setLocalJournalEntries(journalEntries);
-  }, [journalEntries]);
-
-  const handleDeleteClient = async () => {
-    if (!client) return;
-    
-    try {
-      await clientsService.deleteClient(client.id);
-      toast({
-        title: "Success",
-        description: "Client deleted successfully.",
-      });
-      navigate('/dashboard/clients');
-    } catch (error) {
-      console.error('Error deleting client:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete client. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleViewReport = (report: ClientReport) => {
-    setSelectedReport(report);
-    setShowReportDrawer(true);
-  };
-
-  const handleViewInsight = (insight: InsightEntry) => {
-    // Transform insight into report format for unified viewing
-    const insightAsReport: ClientReport = {
-      id: insight.id,
-      request_type: 'insight',
-      response_payload: {
-        report: {
-          title: insight.title || `${insight.type} Insight`,
-          content: insight.content,
-          generated_at: insight.created_at,
-          type: insight.type,
-          confidence_score: insight.confidence_score
-        }
-      },
-      created_at: insight.created_at,
-      response_status: 200,
-      report_name: insight.title || `${insight.type} Insight`,
-      report_tier: 'insight'
-    };
-    
-    setSelectedReport(insightAsReport);
-    setShowReportDrawer(true);
-  };
-
-  const refreshInsights = async () => {
-    if (!id) return;
-    
-    try {
-      const { data: insightsData } = await supabase
-        .from('insight_entries')
-        .select('*')
-        .eq('client_id', id)
-        .order('created_at', { ascending: false });
-      
-      const typedInsights: InsightEntry[] = (insightsData || []).map(insight => ({
-        ...insight,
-        type: insight.type as 'pattern' | 'recommendation' | 'trend' | 'milestone'
-      }));
-      
-      setLocalInsightEntries(typedInsights);
-    } catch (error) {
-      console.error('Error refreshing insights:', error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh insights. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const refreshJournals = async () => {
-    if (!id) return;
-    
-    try {
-      const journalData = await journalEntriesService.getJournalEntries(id);
-      setLocalJournalEntries(journalData);
-    } catch (error) {
-      console.error('Error refreshing journal entries:', error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh journal entries. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleGenerateInsight = () => {
-    setShowCreateJournalModal(false);
-    setShowReportModal(false);
-  };
-
-  if (loading) {
-    return <TheraLoader message="Loading client details..." size="lg" />;
+  // Show loading while auth is being verified
+  if (!isReady) {
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
   }
 
+  // Show auth error
+  if (!hasValidAuth) {
+    return (
+      <div className="container mx-auto p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Authentication required: {authError || 'Please sign in to view client details'}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Show loading while client data is being fetched
+  if (clientLoading) {
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  // Show client error
+  if (clientError) {
+    return (
+      <div className="container mx-auto p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {clientError}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Show not found if no client
   if (!client) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/clients')}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-        </div>
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-lg mb-2">Client not found</div>
-          <p className="text-gray-600 mb-4">The client you're looking for doesn't exist or you don't have access to it.</p>
-          <Button onClick={() => navigate('/dashboard/clients')}>
-            Return to Clients
-          </Button>
-        </div>
+      <div className="container mx-auto p-6">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Client not found or you don't have permission to view this client.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen">
-        <ClientDetailHeader
-          client={client}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          journalCount={localJournalEntries.length}
-          reportCount={clientReports.length}
-          insightCount={localInsightEntries.length}
-          isClientInfoOpen={isClientInfoOpen}
-          setIsClientInfoOpen={setIsClientInfoOpen}
-          onCreateJournal={() => setShowCreateJournalModal(true)}
-          onCreateReport={() => setShowReportModal(true)}
-          onGenerateInsight={handleGenerateInsight}
-          isMobile={isMobile}
-        />
-
-        {/* Content with proper spacing for fixed header */}
-        <div className="pt-20 space-y-6 px-4 md:px-6">
-          <ClientInfoCard
-            client={client}
-            isOpen={isClientInfoOpen}
-            onEditClick={() => setShowEditModal(true)}
-            onDeleteClient={handleDeleteClient}
-            showDeleteDialog={showDeleteDialog}
-            setShowDeleteDialog={setShowDeleteDialog}
-            alwaysShowOnDesktop={true}
-            isMobile={isMobile}
-          />
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="hidden">
-              <TabsTrigger value="journals">Journals</TabsTrigger>
-              <TabsTrigger value="reports">Reports</TabsTrigger>
-              <TabsTrigger value="insights">Insights</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="journals" className="space-y-4">
-              <ClientJournalTab
-                journalEntries={localJournalEntries}
-                onCreateJournal={() => setShowCreateJournalModal(true)}
-                onEntryUpdated={refreshJournals}
-                clientId={client?.id || ''}
-                isMobile={isMobile}
+    <div className="container mx-auto p-6 space-y-6">
+      <ClientDetailHeader client={client} onUpdate={refetch} />
+      
+      <Tabs defaultValue="journal" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="journal">Journal Entries</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="journal" className="space-y-4">
+          <Card>
+            <CardContent className="p-6">
+              <ClientJournalTab 
+                clientId={client.id} 
+                journalEntries={journalEntries}
+                onUpdate={refetch}
               />
-            </TabsContent>
-
-            <TabsContent value="reports" className="space-y-4">
-              <ClientReportsTab
-                clientReports={clientReports}
-                onCreateReport={() => setShowReportModal(true)}
-                onViewReport={handleViewReport}
-              />
-            </TabsContent>
-
-            <TabsContent value="insights" className="space-y-4">
-              <ClientInsightsTab 
-                insightEntries={localInsightEntries}
-                client={client}
-                journalEntries={localJournalEntries}
-                onInsightGenerated={refreshInsights}
-                onViewInsight={handleViewInsight}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Edit Client Modal */}
-        {client && (
-          <EditClientForm
-            client={client}
-            open={showEditModal}
-            onOpenChange={setShowEditModal}
-            onClientUpdated={loadClientData}
-          />
-        )}
-
-        {/* Create Journal Entry Modal */}
-        {client && (
-          <CreateJournalEntryForm
-            clientId={client.id}
-            open={showCreateJournalModal}
-            onOpenChange={setShowCreateJournalModal}
-            onEntryCreated={refreshJournals}
-          />
-        )}
-
-        {/* Generate Report Modal */}
-        {client && (
-          <ClientReportModal
-            client={client}
-            open={showReportModal}
-            onOpenChange={setShowReportModal}
-            onReportGenerated={loadClientData}
-          />
-        )}
-
-        {/* Report Viewer Drawer */}
-        <ActivityLogDrawer
-          isOpen={showReportDrawer}
-          onClose={() => setShowReportDrawer(false)}
-          logData={selectedReport ? {
-            id: selectedReport.id,
-            created_at: selectedReport.created_at,
-            response_status: selectedReport.response_status,
-            request_type: selectedReport.request_type,
-            endpoint: selectedReport.request_type,
-            report_tier: selectedReport.report_tier,
-            total_cost_usd: 0,
-            processing_time_ms: null,
-            response_payload: selectedReport.response_payload,
-            request_payload: null,
-            error_message: null,
-            google_geo: false
-          } : null}
-        />
-      </div>
-    </TooltipProvider>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="reports" className="space-y-4">
+          <Card>
+            <CardContent className="p-6">
+              <ClientReportsTab clientId={client.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="insights" className="space-y-4">
+          <Card>
+            <CardContent className="p-6">
+              <ClientInsightsTab clientId={client.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

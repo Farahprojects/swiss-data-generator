@@ -1,88 +1,108 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { Client, CreateClientData } from '@/types/database';
+import { supabaseWithAuth } from '@/utils/supabaseWithAuth';
+import { Client } from '@/types/database';
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 export const clientsService = {
-  // Get all clients for the current user
   async getClients(): Promise<Client[]> {
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabaseWithAuth.query('clients', (client) =>
+      client
+        .from('clients')
+        .select('*')
+        .order('created_at', { ascending: false })
+    );
 
     if (error) {
-      console.error('Error fetching clients:', error);
-      throw error;
+      logToSupabase('Failed to fetch clients', {
+        level: 'error',
+        page: 'clientsService',
+        data: { error: error.message }
+      });
+      throw new Error(error.message || 'Failed to fetch clients');
     }
 
     return data || [];
   },
 
-  // Get a single client by ID
-  async getClient(id: string): Promise<Client | null> {
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+  async getClientById(id: string): Promise<Client | null> {
+    const { data, error } = await supabaseWithAuth.query('clients', (client) =>
+      client
+        .from('clients')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+    );
 
     if (error) {
-      console.error('Error fetching client:', error);
-      throw error;
+      logToSupabase('Failed to fetch client by ID', {
+        level: 'error',
+        page: 'clientsService',
+        data: { error: error.message, clientId: id }
+      });
+      throw new Error(error.message || 'Failed to fetch client');
     }
 
     return data;
   },
 
-  // Create a new client
-  async createClient(clientData: CreateClientData): Promise<Client> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
-
-    const { data, error } = await supabase
-      .from('clients')
-      .insert({
-        ...clientData,
-        coach_id: user.id
-      })
-      .select()
-      .single();
+  async createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
+    const { data, error } = await supabaseWithAuth.query('clients', (client) =>
+      client
+        .from('clients')
+        .insert(clientData)
+        .select()
+        .single()
+    );
 
     if (error) {
-      console.error('Error creating client:', error);
-      throw error;
+      logToSupabase('Failed to create client', {
+        level: 'error',
+        page: 'clientsService',
+        data: { error: error.message }
+      });
+      throw new Error(error.message || 'Failed to create client');
     }
 
     return data;
   },
 
-  // Update a client
-  async updateClient(id: string, updates: Partial<CreateClientData>): Promise<Client> {
-    const { data, error } = await supabase
-      .from('clients')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+  async updateClient(id: string, updates: Partial<Client>): Promise<Client> {
+    const { data, error } = await supabaseWithAuth.query('clients', (client) =>
+      client
+        .from('clients')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+    );
 
     if (error) {
-      console.error('Error updating client:', error);
-      throw error;
+      logToSupabase('Failed to update client', {
+        level: 'error',
+        page: 'clientsService',
+        data: { error: error.message, clientId: id }
+      });
+      throw new Error(error.message || 'Failed to update client');
     }
 
     return data;
   },
 
-  // Delete a client
   async deleteClient(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('clients')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabaseWithAuth.query('clients', (client) =>
+      client
+        .from('clients')
+        .delete()
+        .eq('id', id)
+    );
 
     if (error) {
-      console.error('Error deleting client:', error);
-      throw error;
+      logToSupabase('Failed to delete client', {
+        level: 'error',
+        page: 'clientsService',
+        data: { error: error.message, clientId: id }
+      });
+      throw new Error(error.message || 'Failed to delete client');
     }
   }
 };

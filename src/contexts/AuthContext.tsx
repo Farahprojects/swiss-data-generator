@@ -1,10 +1,11 @@
+
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
-import { useNavigate } from 'react-router-dom';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { logToSupabase } from '@/utils/batchedLogManager';
+import { authService } from '@/services/authService';
 
 /**
  * Utility – only logs outside production builds.
@@ -19,18 +20,6 @@ const debug = (...args: any[]) => {
 const SUPABASE_URL = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
-
-// ──────────────────────────────────────────
-// Session cache to prevent unnecessary re-auth
-// ──────────────────────────────────────────
-interface CachedAuthState {
-  user: User | null;
-  session: Session | null;
-  timestamp: number;
-}
-
-let authStateCache: CachedAuthState | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Typed shape for the Auth context.
@@ -90,21 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { clearNavigationState } = useNavigationState();
   const initializedRef = useRef(false);
 
-  // Helper to update auth state from cache or fresh data
-  const updateAuthState = (newUser: User | null, newSession: Session | null, skipCache = false) => {
-    if (!skipCache) {
-      // Update cache
-      authStateCache = {
-        user: newUser,
-        session: newSession,
-        timestamp: Date.now()
-      };
-    }
-    
-    setUser(newUser);
-    setSession(newSession);
-  };
-
   /* ─────────────────────────────────────────────────────────────
    * Register Supabase auth listener and get initial session
    * ────────────────────────────────────────────────────────────*/
@@ -112,15 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
-    console.log('🔐 Initializing AuthContext');
-
-    // Check if we have cached auth state first
-    if (authStateCache && (Date.now() - authStateCache.timestamp) < CACHE_DURATION) {
-      console.log('📦 Using cached auth state');
-      updateAuthState(authStateCache.user, authStateCache.session, true);
-      setLoading(false);
-      return;
-    }
+    console.log('🔐 Initializing AuthContext with enhanced session management');
 
     logToSupabase('Setting up auth state listener', {
       page: 'AuthContext', 
@@ -144,7 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       
-      updateAuthState(supaSession?.user ?? null, supaSession);
+      setUser(supaSession?.user ?? null);
+      setSession(supaSession);
 
       if (event === 'SIGNED_IN' && supaSession) {
         // Check for pending email change after successful sign-in
@@ -190,8 +157,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setPendingEmailAddress(null);
         setIsPendingEmailCheck(false);
-        // Clear cache on signout
-        authStateCache = null;
       }
 
       setLoading(false);
@@ -212,7 +177,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       
-      updateAuthState(supaSession?.user ?? null, supaSession);
+      setUser(supaSession?.user ?? null);
+      setSession(supaSession);
       setLoading(false);
     });
 
@@ -236,6 +202,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         level: 'info',
         data: { email }
       });
+
+      // Ensure we have a clean session before signing in
+      await authService.refreshSession();
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
@@ -380,16 +349,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       debug('========== SIGN‑OUT ==========');
       setLoading(true);
       
-      // Clear cache and local state
-      authStateCache = null;
+      // Clear local state
       setUser(null);
       setSession(null);
       setPendingEmailAddress(null);
       setIsPendingEmailCheck(false);
       clearNavigationState();
 
-      // Sign out from Supabase
-      await supabase.auth.signOut();
+      // Sign out from Supabase with global scope
+      await supabase.auth.signOut({ scope: 'global' });
       
       logToSupabase('User signed out successfully', {
         page: 'AuthContext',
