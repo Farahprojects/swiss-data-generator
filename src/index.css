@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -183,4 +184,94 @@ nav.fixed {
 [data-sidebar="menu-button"][data-active="true"] {
   background-color: #f0edff !important;
   color: #6366f1 !important;
+}
+
+/* Google Maps Autocomplete Mobile Fixes */
+.pac-container {
+  z-index: 9999 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  background-color: hsl(var(--background)) !important;
+}
+
+/* Mobile-specific fixes for Google Maps autocomplete */
+@media (max-width: 768px) {
+  .pac-container {
+    max-width: calc(100vw - 2rem) !important;
+    width: auto !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    margin: 0 !important;
+    position: fixed !important;
+    transform: none !important;
+  }
+  
+  .pac-item {
+    padding: 12px 16px !important;
+    border-bottom: 1px solid hsl(var(--border)) !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+  
+  .pac-item:hover,
+  .pac-item-selected {
+    background-color: hsl(var(--accent)) !important;
+  }
+  
+  .pac-item-query {
+    color: hsl(var(--foreground)) !important;
+    font-weight: 500 !important;
+  }
+  
+  .pac-matched {
+    font-weight: 600 !important;
+    color: hsl(var(--primary)) !important;
+  }
+  
+  /* Ensure form sections can expand for autocomplete dropdown */
+  .form-step-container {
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+  
+  /* Ensure birth details container doesn't clip the dropdown */
+  .birth-details-container {
+    overflow: visible !important;
+    padding-bottom: 200px !important;
+  }
+  
+  /* Reset padding when autocomplete is not active */
+  .birth-details-container:not(:has(.pac-container-visible)) {
+    padding-bottom: 0 !important;
+  }
+}
+
+/* Desktop autocomplete styling improvements */
+@media (min-width: 769px) {
+  .pac-container {
+    border-radius: 8px !important;
+    border: 1px solid hsl(var(--border)) !important;
+    background-color: hsl(var(--background)) !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  }
+  
+  .pac-item {
+    padding: 10px 14px !important;
+    border-bottom: 1px solid hsl(var(--border)) !important;
+  }
+  
+  .pac-item:hover,
+  .pac-item-selected {
+    background-color: hsl(var(--accent)) !important;
+  }
+  
+  .pac-item-query {
+    color: hsl(var(--foreground)) !important;
+  }
+  
+  .pac-matched {
+    color: hsl(var(--primary)) !important;
+    font-weight: 600 !important;
+  }
 }
