@@ -134,7 +134,7 @@ export const insightsService = {
 
       console.log('🚀 SERVICE: Transformed reports text length:', previousReportsText.length);
 
-      // Create the payload object - this is the safe pattern
+      // Create the payload object - this will be sent as a raw object
       const payload = {
         clientId: request.clientId,
         coachId: request.coachId,
@@ -150,19 +150,14 @@ export const insightsService = {
 
       console.log('🚀 SERVICE: === CALLING EDGE FUNCTION ===');
       console.log('🚀 SERVICE: Final payload being sent:', payload);
-      
-      // Convert to string once and log the size - this prevents stream consumption
-      const bodyText = JSON.stringify(payload);
-      console.log('🚀 SERVICE: Payload size (bytes):', bodyText.length);
       console.log('🚀 SERVICE: About to call supabase.functions.invoke...');
       
-      // Use the safe pattern - send fresh string, let Supabase calculate Content-Length
+      // Use the safe pattern - send raw object, let Supabase handle stringification and headers
       const { data, error } = await supabase.functions.invoke('generate-insights', {
-        body: bodyText,  // Fresh string, never read before
+        body: payload,  // ✅ Raw object - Supabase will stringify automatically
         headers: {
           Authorization: `Bearer ${apiKeyData.api_key}`,
-          'Content-Type': 'application/json'
-          // No Content-Length header - let Supabase calculate it
+          // 🚫 Removed Content-Type - let Supabase set it automatically
         }
       });
 
