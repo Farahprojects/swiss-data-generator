@@ -32,7 +32,7 @@ export const ClientTableRow: React.FC<ClientTableRowProps> = React.memo(({
   onEditClient,
   onArchiveClient
 }) => (
-  <TableRow className="hover:bg-muted/50 cursor-pointer">
+  <TableRow className="hover:bg-muted/50">
     <TableCell className="font-medium">
       <Link to={`/dashboard/clients/${client.id}`} className="flex items-center gap-3 text-primary hover:text-primary/80 transition-colors">
         {!isMobile && (
@@ -54,23 +54,38 @@ export const ClientTableRow: React.FC<ClientTableRowProps> = React.memo(({
     )}
     <TableCell 
       className={`${client.latestJournalEntry ? 'text-primary cursor-pointer hover:text-primary/80 font-medium' : 'text-muted-foreground'}`}
-      onClick={() => client.latestJournalEntry && onEditJournal(client)}
+      onClick={(e) => {
+        if (client.latestJournalEntry) {
+          e.stopPropagation();
+          onEditJournal(client);
+        }
+      }}
     >
       {client.latestJournalEntry ? formatDate(client.latestJournalEntry.created_at) : '-'}
     </TableCell>
     <TableCell 
       className={`${client.latestReport ? 'text-primary cursor-pointer hover:text-primary/80 font-medium' : 'text-muted-foreground'} text-left`}
-      onClick={() => client.latestReport && onViewReport(client)}
+      onClick={(e) => {
+        if (client.latestReport) {
+          e.stopPropagation();
+          onViewReport(client);
+        }
+      }}
     >
       {client.latestReport ? formatReportType(client.latestReport) : '-'}
     </TableCell>
     <TableCell 
       className={`${client.latestInsight ? 'text-primary cursor-pointer hover:text-primary/80 font-medium' : 'text-muted-foreground'} text-left`}
-      onClick={() => client.latestInsight && onViewInsight(client)}
+      onClick={(e) => {
+        if (client.latestInsight) {
+          e.stopPropagation();
+          onViewInsight(client);
+        }
+      }}
     >
       {client.latestInsight ? formatDate(client.latestInsight.created_at) : '-'}
     </TableCell>
-    <TableCell>
+    <TableCell onClick={(e) => e.stopPropagation()}>
       <ClientActionsDropdown
         client={client}
         onCreateJournal={onCreateJournal}

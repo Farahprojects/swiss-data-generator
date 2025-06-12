@@ -11,6 +11,7 @@ import { ClientsGrid } from '@/components/clients/ClientsGrid';
 import { ClientsTable } from '@/components/clients/ClientsTable';
 import { ClientsEmptyState } from '@/components/clients/ClientsEmptyState';
 import { ClientsModals } from '@/components/clients/ClientsModals';
+import { ActionConfirmDialog } from '@/components/clients/ActionConfirmDialog';
 
 const ClientsPage = React.memo(() => {
   const { viewMode: savedViewMode, loading: viewModeLoading, updateViewMode } = useClientViewMode();
@@ -62,7 +63,8 @@ const ClientsPage = React.memo(() => {
 
   const gridProps = {
     clients: clientsData.clients,
-    isMobile
+    isMobile,
+    ...commonProps
   };
 
   const tableProps = {
@@ -98,6 +100,36 @@ const ClientsPage = React.memo(() => {
     onReportGenerated: clientsModals.handleReportGenerated
   };
 
+  const getConfirmDialogProps = () => {
+    switch (clientsActions.confirmAction.type) {
+      case 'insight':
+        return {
+          title: 'Generate Insight',
+          description: 'This will analyze {clientName}\'s journal entries and generate an astrological insight. This action will consume AI credits.',
+          actionLabel: 'Generate Insight'
+        };
+      case 'report':
+        return {
+          title: 'Generate Report',
+          description: 'This will create a comprehensive astrological report for {clientName}. This action will consume AI credits.',
+          actionLabel: 'Generate Report'
+        };
+      case 'archive':
+        return {
+          title: 'Archive Client',
+          description: 'Are you sure you want to archive {clientName}? This action cannot be undone.',
+          actionLabel: 'Archive Client',
+          variant: 'destructive' as const
+        };
+      default:
+        return {
+          title: '',
+          description: '',
+          actionLabel: ''
+        };
+    }
+  };
+
   return (
     <div className="space-y-4 max-w-7xl mx-auto">
       <ClientsPageHeader {...headerProps} />
@@ -113,6 +145,14 @@ const ClientsPage = React.memo(() => {
       )}
       
       <ClientsModals {...modalsProps} />
+      
+      <ActionConfirmDialog
+        open={clientsActions.confirmAction.type !== null}
+        onOpenChange={(open) => !open && clientsActions.handleCancelAction()}
+        client={clientsActions.confirmAction.client}
+        onConfirm={clientsActions.handleConfirmAction}
+        {...getConfirmDialogProps()}
+      />
     </div>
   );
 });

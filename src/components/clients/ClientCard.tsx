@@ -4,17 +4,48 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from 'lucide-react';
 import { ClientWithJournal } from '@/types/clients-page';
+import { Client } from '@/types/database';
 import { formatDate, formatClientNameForMobile } from '@/utils/clientsFormatters';
+import ClientActionsDropdown from '@/components/clients/ClientActionsDropdown';
 
 interface ClientCardProps {
   client: ClientWithJournal;
   isMobile: boolean;
+  onEditJournal: (client: ClientWithJournal) => void;
+  onViewReport: (client: ClientWithJournal) => void;
+  onViewInsight: (client: ClientWithJournal) => void;
+  onCreateJournal: (client: Client) => void;
+  onGenerateInsight: (client: Client) => void;
+  onGenerateReport: (client: Client) => void;
+  onEditClient: (client: Client) => void;
+  onArchiveClient: (client: Client) => void;
 }
 
-export const ClientCard: React.FC<ClientCardProps> = React.memo(({ client, isMobile }) => (
-  <Card className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-border/50 hover:border-primary/20">
+export const ClientCard: React.FC<ClientCardProps> = React.memo(({ 
+  client, 
+  isMobile,
+  onEditJournal,
+  onViewReport,
+  onViewInsight,
+  onCreateJournal,
+  onGenerateInsight,
+  onGenerateReport,
+  onEditClient,
+  onArchiveClient
+}) => (
+  <Card className="hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border border-border/50 hover:border-primary/20 relative">
+    <div className="absolute top-3 right-3 z-10">
+      <ClientActionsDropdown
+        client={client}
+        onCreateJournal={onCreateJournal}
+        onGenerateInsight={onGenerateInsight}
+        onGenerateReport={onGenerateReport}
+        onEditClient={onEditClient}
+        onArchiveClient={onArchiveClient}
+      />
+    </div>
     <Link to={`/dashboard/clients/${client.id}`}>
-      <CardHeader className="pb-3 pt-4 px-4">
+      <CardHeader className="pb-3 pt-4 px-4 pr-12">
         <div className="flex items-center gap-3">
           {!isMobile && (
             <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-primary-foreground font-semibold text-sm flex-shrink-0">

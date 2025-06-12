@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { journalEntriesService } from '@/services/journalEntries';
 import { clientsService } from '@/services/clients';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,10 @@ export const useClientsActions = ({
   refreshClientsData
 }: UseClientsActionsProps) => {
   const { toast } = useToast();
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'insight' | 'report' | 'archive' | null;
+    client: Client | null;
+  }>({ type: null, client: null });
 
   const handleCreateJournal = useCallback((client: Client) => {
     setSelectedClient(client);
@@ -37,7 +41,24 @@ export const useClientsActions = ({
     }
   }, [setSelectedClient, setSelectedJournalEntry, setModalState]);
 
-  const handleGenerateInsight = useCallback(async (client: Client) => {
+  const handleGenerateInsight = useCallback((client: Client) => {
+    setConfirmAction({ type: 'insight', client });
+  }, []);
+
+  const handleGenerateReport = useCallback((client: Client) => {
+    setConfirmAction({ type: 'report', client });
+  }, []);
+
+  const handleEditClient = useCallback((client: Client) => {
+    setSelectedClient(client);
+    setModalState('showEditModal', true);
+  }, [setSelectedClient, setModalState]);
+
+  const handleArchiveClient = useCallback((client: Client) => {
+    setConfirmAction({ type: 'archive', client });
+  }, []);
+
+  const executeInsightGeneration = useCallback(async (client: Client) => {
     try {
       console.log('💡 Generating insight for client:', client.full_name);
       setSelectedClient(client);
@@ -47,6 +68,7 @@ export const useClientsActions = ({
       setSelectedClientJournalEntries(journalEntries);
       
       setModalState('showInsightModal', true);
+      setConfirmAction({ type: null, client: null });
     } catch (error) {
       console.error('Error loading journal entries for insight:', error);
       toast({
@@ -54,38 +76,55 @@ export const useClientsActions = ({
         description: "Failed to load journal entries. Please try again.",
         variant: "destructive",
       });
+      setConfirmAction({ type: null, client: null });
     }
   }, [setSelectedClient, setSelectedClientJournalEntries, setModalState, toast]);
 
-  const handleGenerateReport = useCallback((client: Client) => {
+  const executeReportGeneration = useCallback((client: Client) => {
     setSelectedClient(client);
     setModalState('showReportModal', true);
+    setConfirmAction({ type: null, client: null });
   }, [setSelectedClient, setModalState]);
 
-  const handleEditClient = useCallback((client: Client) => {
-    setSelectedClient(client);
-    setModalState('showEditModal', true);
-  }, [setSelectedClient, setModalState]);
-
-  const handleArchiveClient = useCallback(async (client: Client) => {
-    if (window.confirm(`Are you sure you want to archive ${client.full_name}? This action cannot be undone.`)) {
-      try {
-        await clientsService.deleteClient(client.id);
-        toast({
-          title: "Client Archived",
-          description: `${client.full_name} has been archived successfully.`,
-        });
-        refreshClientsData();
-      } catch (error) {
-        console.error('Error archiving client:', error);
-        toast({
-          title: "Error",
-          description: "Failed to archive client. Please try again.",
-          variant: "destructive",
-        });
-      }
+  const executeArchiveClient = useCallback(async (client: Client) => {
+    try {
+      await clientsService.deleteClient(client.id);
+      toast({
+        title: "Client Archived",
+        description: `${client.full_name} has been archived successfully.`,
+      });
+      refreshClientsData();
+      setConfirmAction({ type: null, client: null });
+    } catch (error) {
+      console.error('Error archiving client:', error);
+      toast({
+        title: "Error",
+        description: "Failed to archive client. Please try again.",
+        variant: "destructive",
+      });
+      setConfirmAction({ type: null, client: null });
     }
   }, [toast, refreshClientsData]);
+
+  const handleConfirmAction = useCallback(() => {
+    if (!confirmAction.client) return;
+
+    switch (confirmAction.type) {
+      case 'insight':
+        executeInsightGeneration(confirmAction.client);
+        break;
+      case 'report':
+        executeReportGeneration(confirmAction.client);
+        break;
+      case 'archive':
+        executeArchiveClient(confirmAction.client);
+        break;
+    }
+  }, [confirmAction, executeInsightGeneration, executeReportGeneration, executeArchiveClient]);
+
+  const handleCancelAction = useCallback(() => {
+    setConfirmAction({ type: null, client: null });
+  }, []);
 
   return {
     handleCreateJournal,
@@ -93,6 +132,9 @@ export const useClientsActions = ({
     handleGenerateInsight,
     handleGenerateReport,
     handleEditClient,
-    handleArchiveClient
+    handleArchiveClient,
+    confirmAction,
+    handleConfirmAction,
+    handleCancelAction
   };
 };
