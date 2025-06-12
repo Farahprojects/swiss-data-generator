@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
@@ -100,6 +101,33 @@ const ClientDetailPage = () => {
     setShowReportDrawer(true);
   };
 
+  const handleViewInsight = (insight: any) => {
+    // Transform the insight data to match ActivityLogDrawer format
+    const transformedData = {
+      id: insight.id,
+      created_at: insight.created_at,
+      response_status: 200, // Insights are successfully created if they exist
+      request_type: 'insight',
+      report_tier: insight.type,
+      total_cost_usd: 0,
+      processing_time_ms: null,
+      response_payload: {
+        report: {
+          title: insight.title || `${insight.type} Insight`,
+          content: insight.content,
+          generated_at: insight.created_at,
+          type: insight.type,
+          confidence_score: insight.confidence_score
+        }
+      },
+      request_payload: {},
+      error_message: null
+    };
+    
+    setSelectedReportData(transformedData);
+    setShowReportDrawer(true);
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'journal':
@@ -127,7 +155,7 @@ const ClientDetailPage = () => {
             client={client}
             journalEntries={journalEntries}
             onInsightGenerated={loadClientData}
-            onViewInsight={() => {}}
+            onViewInsight={handleViewInsight}
           />
         );
       default:
@@ -214,7 +242,7 @@ const ClientDetailPage = () => {
         />
       )}
 
-      {/* Report Viewer Drawer */}
+      {/* Report/Insight Viewer Drawer */}
       <ActivityLogDrawer
         isOpen={showReportDrawer}
         onClose={() => setShowReportDrawer(false)}
