@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface GenerateInsightRequest {
@@ -133,8 +134,8 @@ export const insightsService = {
 
       console.log('🚀 SERVICE: Transformed reports text length:', previousReportsText.length);
 
-      // Create the payload that matches what the edge function expects
-      const edgeFunctionPayload = {
+      // Create the payload object - this is the safe pattern
+      const payload = {
         clientId: request.clientId,
         coachId: request.coachId,
         insightType: request.insightType,
@@ -148,26 +149,22 @@ export const insightsService = {
       };
 
       console.log('🚀 SERVICE: === CALLING EDGE FUNCTION ===');
-      console.log('🚀 SERVICE: Final payload being sent:', edgeFunctionPayload);
-      console.log('🚀 SERVICE: Payload size (bytes):', new Blob([JSON.stringify(edgeFunctionPayload)]).size);
+      console.log('🚀 SERVICE: Final payload being sent:', payload);
+      
+      // Convert to string once and log the size - this prevents stream consumption
+      const bodyText = JSON.stringify(payload);
+      console.log('🚀 SERVICE: Payload size (bytes):', bodyText.length);
       console.log('🚀 SERVICE: About to call supabase.functions.invoke...');
       
-      // ENHANCED: Log the exact request being made
-      const requestOptions = {
-        body: edgeFunctionPayload,
+      // Use the safe pattern - send fresh string, let Supabase calculate Content-Length
+      const { data, error } = await supabase.functions.invoke('generate-insights', {
+        body: bodyText,  // Fresh string, never read before
         headers: {
           Authorization: `Bearer ${apiKeyData.api_key}`,
           'Content-Type': 'application/json'
+          // No Content-Length header - let Supabase calculate it
         }
-      };
-      
-      console.log('🚀 SERVICE: Request options:', {
-        headers: requestOptions.headers,
-        bodyKeys: Object.keys(requestOptions.body),
-        bodySize: JSON.stringify(requestOptions.body).length
       });
-      
-      const { data, error } = await supabase.functions.invoke('generate-insights', requestOptions);
 
       console.log('🚀 SERVICE: === EDGE FUNCTION RESPONSE ===');
       console.log('🚀 SERVICE: Response data:', data);
