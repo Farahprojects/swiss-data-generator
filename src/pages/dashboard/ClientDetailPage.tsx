@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 import { useClientData } from '@/hooks/useClientData';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from '@/components/ui/card';
 import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import ClientReportsTab from '@/components/clients/ClientReportsTab';
@@ -17,6 +18,7 @@ const ClientDetailPage = () => {
   const { isReady, hasValidAuth, error: authError } = useAuthGuard('ClientDetailPage');
   const [activeTab, setActiveTab] = useState('journal');
   const [showEditModal, setShowEditModal] = useState(false);
+  const isMobile = useIsMobile();
   
   const {
     client,
@@ -84,7 +86,7 @@ const ClientDetailPage = () => {
             onCreateJournal={() => {}}
             onEntryUpdated={loadClientData}
             clientId={client.id}
-            isMobile={false}
+            isMobile={isMobile}
           />
         );
       case 'reports':
@@ -114,18 +116,18 @@ const ClientDetailPage = () => {
     <div className="min-h-screen">
       {/* Sticky Header - positioned under global navigation */}
       <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b w-full">
-        <div className="w-full px-6 py-4">
-          <div className="flex items-center gap-6">
+        <div className="w-full px-4 md:px-6 py-4">
+          <div className="flex items-center gap-4 md:gap-6">
             {/* Client Name */}
             <button
               onClick={() => setShowEditModal(true)}
               className="text-lg font-semibold text-foreground hover:text-primary transition-colors flex-shrink-0"
             >
-              {client.full_name}
+              {isMobile ? client.full_name.split(' ')[0] : client.full_name}
             </button>
 
-            {/* Tab Navigation - properly spaced */}
-            <div className="flex items-center gap-6 flex-1 min-w-0">
+            {/* Tab Navigation */}
+            <div className="flex items-center gap-4 md:gap-6 flex-1 min-w-0">
               <button
                 onClick={() => setActiveTab('journal')}
                 className={`flex items-center gap-2 text-sm transition-colors whitespace-nowrap ${
@@ -135,7 +137,7 @@ const ClientDetailPage = () => {
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
-                Journal ({journalEntries.length})
+                {!isMobile && `Journal (${journalEntries.length})`}
               </button>
               <button
                 onClick={() => setActiveTab('reports')}
@@ -146,7 +148,7 @@ const ClientDetailPage = () => {
                 }`}
               >
                 <FileText className="w-4 h-4" />
-                Reports ({clientReports.length})
+                {!isMobile && `Reports (${clientReports.length})`}
               </button>
               <button
                 onClick={() => setActiveTab('insights')}
@@ -157,7 +159,7 @@ const ClientDetailPage = () => {
                 }`}
               >
                 <Lightbulb className="w-4 h-4" />
-                Insights ({insightEntries.length})
+                {!isMobile && `Insights (${insightEntries.length})`}
               </button>
             </div>
           </div>
@@ -165,9 +167,9 @@ const ClientDetailPage = () => {
       </div>
 
       {/* Content */}
-      <div className="container mx-auto p-6">
+      <div className={`mx-auto ${isMobile ? 'px-2' : 'container px-6'} py-6`}>
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-3 md:p-6">
             {renderTabContent()}
           </CardContent>
         </Card>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,7 +93,7 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
         <h3 className="text-lg font-semibold">Journals</h3>
         <Button onClick={onCreateJournal}>
           <Plus className="w-4 h-4 mr-2" />
-          Create Entry
+          {isMobile ? 'Add Journal' : 'Create Entry'}
         </Button>
       </div>
 
@@ -104,7 +105,7 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
               <p className="text-gray-600 mb-4">Start documenting your sessions and insights</p>
               <Button onClick={onCreateJournal}>
                 <Plus className="w-4 h-4 mr-2" />
-                Create First Entry
+                {isMobile ? 'Add First Journal' : 'Create First Entry'}
               </Button>
             </div>
           </CardContent>
