@@ -41,12 +41,14 @@ const reportSchema = z.object({
 type ReportFormData = z.infer<typeof reportSchema>;
 
 const reportTypes = [
-  { value: 'sync', label: 'Sync Report', description: 'How your energy aligns with someone connection, tension, and flow.' },
-  { value: 'essence', label: 'Essence Report', description: 'A deep snapshot of who you are and what life\'s asking from you right now.' },
-  { value: 'flow', label: 'Flow Report', description: 'Creative/emotional openness over 7 days' },
-  { value: 'mindset', label: 'Mindset Report', description: 'Mood + mental clarity snapshot' },
-  { value: 'monthly', label: 'Monthly Report', description: 'Your personalized forecast for the current month' },
-  { value: 'focus', label: 'Focus Report', description: 'Best hours today for deep work or rest' },
+  { value: 'return', label: 'Solar/Lunar Return Report' },
+  { value: 'positions', label: 'Planetary Positions' },
+  { value: 'sync', label: 'Sync Report' },
+  { value: 'essence', label: 'Essence Report' },
+  { value: 'flow', label: 'Flow Report' },
+  { value: 'mindset', label: 'Mindset Report' },
+  { value: 'monthly', label: 'Monthly Report' },
+  { value: 'focus', label: 'Focus Report' },
 ];
 
 const relationshipTypes = [
@@ -169,10 +171,7 @@ const PublicReport = () => {
                         <SelectContent>
                           {reportTypes.map((type) => (
                             <SelectItem key={type.value} value={type.value}>
-                              <div className="flex flex-col items-start">
-                                <span className="font-medium">{type.label}</span>
-                                <span className="text-sm text-muted-foreground">{type.description}</span>
-                              </div>
+                              {type.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
