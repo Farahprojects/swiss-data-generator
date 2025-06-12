@@ -294,22 +294,20 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                         </div>
                       )}
 
-                      {/* Enhanced Actions List */}
+                      {/* Simplified Actions List */}
                       {actions.length > 0 && (
-                        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                              <Target className="w-4 h-4 text-blue-600" />
-                            </div>
-                            <span className="text-base font-semibold text-blue-900">Next Steps</span>
+                        <div className="mt-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Target className="w-4 h-4 text-gray-600" />
+                            <span className="text-sm font-medium text-gray-900">Next Steps</span>
                           </div>
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             {actions.map((action, index) => (
-                              <div key={index} className="flex items-start gap-3 p-3 bg-white rounded-md border border-blue-100 hover:shadow-sm transition-shadow">
-                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  <ArrowRight className="w-3 h-3 text-blue-600" />
+                              <div key={index} className="flex items-start gap-3">
+                                <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <ArrowRight className="w-3 h-3 text-gray-600" />
                                 </div>
-                                <span className="text-sm text-gray-700 leading-relaxed font-medium">{action}</span>
+                                <span className="text-sm text-gray-700 leading-relaxed">{action}</span>
                               </div>
                             ))}
                           </div>
