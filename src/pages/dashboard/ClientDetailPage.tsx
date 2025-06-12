@@ -115,7 +115,7 @@ const ClientDetailPage = () => {
       {/* Sticky Header - positioned under global navigation */}
       <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b w-full">
         <div className="w-full px-6 py-4">
-          <div className="flex items-center justify-between max-w-full">
+          <div className="flex items-center gap-6">
             {/* Client Name */}
             <button
               onClick={() => setShowEditModal(true)}
@@ -124,8 +124,8 @@ const ClientDetailPage = () => {
               {client.full_name}
             </button>
 
-            {/* Tab Navigation - with proper spacing and overflow protection */}
-            <div className="flex items-center gap-8 ml-8 overflow-hidden">
+            {/* Tab Navigation - properly spaced */}
+            <div className="flex items-center gap-6 flex-1 min-w-0">
               <button
                 onClick={() => setActiveTab('journal')}
                 className={`flex items-center gap-2 text-sm transition-colors whitespace-nowrap ${
