@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 import { useClientData } from '@/hooks/useClientData';
@@ -11,14 +11,11 @@ import ClientReportsTab from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Layout, Grid } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import ClientDashboard from './ClientDashboard';
+import { AlertCircle } from 'lucide-react';
 
 const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const { isReady, hasValidAuth, error: authError } = useAuthGuard('ClientDetailPage');
-  const [useAlternativeDashboard, setUseAlternativeDashboard] = useState(false);
   
   const {
     client,
@@ -77,28 +74,8 @@ const ClientDetailPage = () => {
     );
   }
 
-  // If using alternative dashboard, render it instead
-  if (useAlternativeDashboard) {
-    return <ClientDashboard />;
-  }
-
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Toggle Switch */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Client Details</h1>
-        <div className="flex items-center gap-3">
-          <Grid className="h-4 w-4" />
-          <span className="text-sm">Current View</span>
-          <Switch
-            checked={useAlternativeDashboard}
-            onCheckedChange={setUseAlternativeDashboard}
-          />
-          <span className="text-sm">Alternative Dashboard</span>
-          <Layout className="h-4 w-4" />
-        </div>
-      </div>
-
       <Tabs defaultValue="journal" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="journal">Journal Entries</TabsTrigger>
