@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { clientsService } from '@/services/clients';
 import { journalEntriesService } from '@/services/journalEntries';
-import { clientReportsService } from '@/services/clientReports';
 import { Client, JournalEntry, InsightEntry } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,7 +43,7 @@ export const useClientData = (clientId: string | undefined) => {
       }
 
       const [clientData, journalData, insightsData] = await Promise.all([
-        clientsService.getClient(clientId),
+        clientsService.getClientById(clientId),
         journalEntriesService.getJournalEntries(clientId),
         supabase
           .from('insight_entries')

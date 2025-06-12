@@ -3,12 +3,12 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
 import { useClientData } from '@/hooks/useClientData';
-import ClientDetailHeader from '@/components/clients/ClientDetailHeader';
+import { ClientDetailHeader } from '@/components/clients/ClientDetailHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import ClientJournalTab from '@/components/clients/ClientJournalTab';
+import { ClientJournalTab } from '@/components/clients/ClientJournalTab';
 import ClientReportsTab from '@/components/clients/ClientReportsTab';
-import ClientInsightsTab from '@/components/clients/ClientInsightsTab';
+import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -20,10 +20,11 @@ const ClientDetailPage = () => {
   const {
     client,
     journalEntries,
-    isLoading: clientLoading,
-    error: clientError,
-    refetch
-  } = useClientData(clientId || '', hasValidAuth);
+    clientReports,
+    insightEntries,
+    loading,
+    loadClientData
+  } = useClientData(clientId);
 
   // Show loading while auth is being verified
   if (!isReady) {
@@ -50,25 +51,11 @@ const ClientDetailPage = () => {
   }
 
   // Show loading while client data is being fetched
-  if (clientLoading) {
+  if (loading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-96 w-full" />
-      </div>
-    );
-  }
-
-  // Show client error
-  if (clientError) {
-    return (
-      <div className="container mx-auto p-6">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {clientError}
-          </AlertDescription>
-        </Alert>
       </div>
     );
   }
@@ -89,8 +76,6 @@ const ClientDetailPage = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <ClientDetailHeader client={client} onUpdate={refetch} />
-      
       <Tabs defaultValue="journal" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="journal">Journal Entries</TabsTrigger>
@@ -102,9 +87,11 @@ const ClientDetailPage = () => {
           <Card>
             <CardContent className="p-6">
               <ClientJournalTab 
-                clientId={client.id} 
                 journalEntries={journalEntries}
-                onUpdate={refetch}
+                onCreateJournal={() => {}}
+                onEntryUpdated={loadClientData}
+                clientId={client.id}
+                isMobile={false}
               />
             </CardContent>
           </Card>
@@ -113,7 +100,11 @@ const ClientDetailPage = () => {
         <TabsContent value="reports" className="space-y-4">
           <Card>
             <CardContent className="p-6">
-              <ClientReportsTab clientId={client.id} />
+              <ClientReportsTab 
+                clientReports={clientReports}
+                onCreateReport={() => {}}
+                onViewReport={() => {}}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -121,7 +112,13 @@ const ClientDetailPage = () => {
         <TabsContent value="insights" className="space-y-4">
           <Card>
             <CardContent className="p-6">
-              <ClientInsightsTab clientId={client.id} />
+              <ClientInsightsTab 
+                insightEntries={insightEntries}
+                client={client}
+                journalEntries={journalEntries}
+                onInsightGenerated={loadClientData}
+                onViewInsight={() => {}}
+              />
             </CardContent>
           </Card>
         </TabsContent>
