@@ -34,7 +34,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
             placeholder="Enter your full name"
           />
           {errors.name && (
-            <p className="text-sm text-destructive">{errors.name.message}</p>
+            <p className="text-sm text-destructive">{errors.name.message as string}</p>
           )}
         </div>
         <div className="space-y-2">
@@ -46,7 +46,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
             placeholder="your@email.com"
           />
           {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
+            <p className="text-sm text-destructive">{errors.email.message as string}</p>
           )}
         </div>
       </div>
@@ -68,7 +68,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
                 {...register('birthDate')}
               />
               {errors.birthDate && (
-                <p className="text-sm text-destructive">{errors.birthDate.message}</p>
+                <p className="text-sm text-destructive">{errors.birthDate.message as string}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -80,7 +80,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
                 step="60"
               />
               {errors.birthTime && (
-                <p className="text-sm text-destructive">{errors.birthTime.message}</p>
+                <p className="text-sm text-destructive">{errors.birthTime.message as string}</p>
               )}
             </div>
           </div>
@@ -92,7 +92,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
               onPlaceSelect={(placeData) => handlePlaceSelect(placeData)}
               placeholder="Enter birth city, state, country"
               id="birthLocation"
-              error={errors.birthLocation?.message}
+              error={errors.birthLocation?.message as string}
             />
           </div>
         </CardContent>
@@ -113,7 +113,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
                 placeholder="Enter partner's full name"
               />
               {errors.name2 && (
-                <p className="text-sm text-destructive">{errors.name2.message}</p>
+                <p className="text-sm text-destructive">{errors.name2.message as string}</p>
               )}
             </div>
             <div className="grid md:grid-cols-2 gap-4">
@@ -125,7 +125,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
                   {...register('birthDate2')}
                 />
                 {errors.birthDate2 && (
-                  <p className="text-sm text-destructive">{errors.birthDate2.message}</p>
+                  <p className="text-sm text-destructive">{errors.birthDate2.message as string}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -137,7 +137,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
                   step="60"
                 />
                 {errors.birthTime2 && (
-                  <p className="text-sm text-destructive">{errors.birthTime2.message}</p>
+                  <p className="text-sm text-destructive">{errors.birthTime2.message as string}</p>
                 )}
               </div>
             </div>
@@ -149,7 +149,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
                 onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'birth2')}
                 placeholder="Enter partner's birth city, state, country"
                 id="birthLocation2"
-                error={errors.birthLocation2?.message}
+                error={errors.birthLocation2?.message as string}
               />
             </div>
           </CardContent>
