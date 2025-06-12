@@ -14,6 +14,11 @@ interface UseClientsActionsProps {
   refreshClientsData: () => Promise<void>;
 }
 
+interface ConfirmAction {
+  type: 'insight' | 'report' | 'archive' | null;
+  client: Client | null;
+}
+
 export const useClientsActions = ({
   setSelectedClient,
   setSelectedJournalEntry,
@@ -22,10 +27,12 @@ export const useClientsActions = ({
   refreshClientsData
 }: UseClientsActionsProps) => {
   const { toast } = useToast();
-  const [confirmAction, setConfirmAction] = useState<{
-    type: 'insight' | 'report' | 'archive' | null;
-    client: Client | null;
-  }>({ type: null, client: null });
+  
+  // Initialize state with proper default values
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(() => ({
+    type: null,
+    client: null
+  }));
 
   const handleCreateJournal = useCallback((client: Client) => {
     setSelectedClient(client);
