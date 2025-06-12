@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, FileText, Edit2, Check, X, Trash2, User, ChevronRight } from 'lucide-react';
+import { Plus, FileText, Edit2, Check, X, Trash2, User, ChevronRight, CheckCircle } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
@@ -97,6 +96,37 @@ const categorizeInsightTerms = (content: string) => {
   });
   
   return { negative: foundNegative, positive: foundPositive };
+};
+
+const extractActions = (content: string) => {
+  const lines = content.split('\n').filter(line => line.trim());
+  const actions: string[] = [];
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    // Look for action-oriented keywords
+    if (trimmedLine.includes('Recommend') || 
+        trimmedLine.includes('Suggest') || 
+        trimmedLine.includes('Consider') || 
+        trimmedLine.includes('Try') ||
+        trimmedLine.includes('Practice') ||
+        trimmedLine.includes('Focus on') ||
+        trimmedLine.includes('Work on') ||
+        trimmedLine.includes('Explore')) {
+      // Clean up the action text
+      const cleanAction = trimmedLine
+        .replace(/^[•\-\*]\s*/, '') // Remove bullet points
+        .replace(/^\d+\.\s*/, '') // Remove numbered lists
+        .replace(/^(Recommend|Suggest|Consider|Try|Practice|Focus on|Work on|Explore):\s*/i, '') // Remove action prefixes
+        .trim();
+      
+      if (cleanAction && cleanAction.length > 10) {
+        actions.push(cleanAction);
+      }
+    }
+  }
+  
+  return actions.slice(0, 3); // Limit to 3 actions for clean display
 };
 
 export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
@@ -190,6 +220,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
               const sections = parseInsightSections(insight.content);
               const mainText = getMainInsightText(insight);
               const { negative, positive } = categorizeInsightTerms(insight.content);
+              const actions = extractActions(insight.content);
               
               return (
                 <Card key={insight.id} className="p-6 hover:shadow-md transition-all duration-200 border border-gray-100">
@@ -241,6 +272,24 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                               {term}
                             </Badge>
                           ))}
+                        </div>
+                      )}
+
+                      {/* Actions List */}
+                      {actions.length > 0 && (
+                        <div className="mt-4 p-3 bg-accent/20 rounded-lg border border-accent/30">
+                          <div className="flex items-center gap-2 mb-3">
+                            <CheckCircle className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-gray-700">Recommended Actions</span>
+                          </div>
+                          <div className="space-y-2">
+                            {actions.map((action, index) => (
+                              <div key={index} className="flex items-start gap-2 text-sm text-gray-600">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                                <span className="leading-relaxed">{action}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
