@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +19,18 @@ const debug = (...args: any[]) => {
 const SUPABASE_URL = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
+
+// ──────────────────────────────────────────
+// Session cache to prevent unnecessary re-auth
+// ──────────────────────────────────────────
+interface CachedAuthState {
+  user: User | null;
+  session: Session | null;
+  timestamp: number;
+}
+
+let authStateCache: CachedAuthState | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Typed shape for the Auth context.
@@ -77,11 +88,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pendingEmailAddress, setPendingEmailAddress] = useState<string | null>(null);
   const [isPendingEmailCheck, setIsPendingEmailCheck] = useState(false);
   const { clearNavigationState } = useNavigationState();
+  const initializedRef = useRef(false);
+
+  // Helper to update auth state from cache or fresh data
+  const updateAuthState = (newUser: User | null, newSession: Session | null, skipCache = false) => {
+    if (!skipCache) {
+      // Update cache
+      authStateCache = {
+        user: newUser,
+        session: newSession,
+        timestamp: Date.now()
+      };
+    }
+    
+    setUser(newUser);
+    setSession(newSession);
+  };
 
   /* ─────────────────────────────────────────────────────────────
    * Register Supabase auth listener and get initial session
    * ────────────────────────────────────────────────────────────*/
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    console.log('🔐 Initializing AuthContext');
+
+    // Check if we have cached auth state first
+    if (authStateCache && (Date.now() - authStateCache.timestamp) < CACHE_DURATION) {
+      console.log('📦 Using cached auth state');
+      updateAuthState(authStateCache.user, authStateCache.session, true);
+      setLoading(false);
+      return;
+    }
+
     logToSupabase('Setting up auth state listener', {
       page: 'AuthContext', 
       level: 'debug'
@@ -91,6 +131,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, supaSession) => {
+      console.log('🔄 Auth state change:', event, !!supaSession);
+      
       logToSupabase('Auth state change event', {
         page: 'AuthContext',
         level: 'info',
@@ -102,8 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       
-      setSession(supaSession);
-      setUser(supaSession?.user ?? null);
+      updateAuthState(supaSession?.user ?? null, supaSession);
 
       if (event === 'SIGNED_IN' && supaSession) {
         // Check for pending email change after successful sign-in
@@ -149,13 +190,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setPendingEmailAddress(null);
         setIsPendingEmailCheck(false);
+        // Clear cache on signout
+        authStateCache = null;
       }
+
+      setLoading(false);
     });
 
     /* ────────────────────────────
-     * Bootstrap existing session
+     * Bootstrap existing session ONLY ONCE
      * ────────────────────────────*/
     supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
+      console.log('📋 Initial session check:', !!supaSession);
+      
       logToSupabase('Initial session check', {
         page: 'AuthContext',
         level: 'info',
@@ -165,12 +212,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       
-      setSession(supaSession);
-      setUser(supaSession?.user ?? null);
+      updateAuthState(supaSession?.user ?? null, supaSession);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('🧹 Cleaning up auth subscription');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const clearPendingEmail = () => {
@@ -331,7 +380,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       debug('========== SIGN‑OUT ==========');
       setLoading(true);
       
-      // Clear local state
+      // Clear cache and local state
+      authStateCache = null;
       setUser(null);
       setSession(null);
       setPendingEmailAddress(null);
