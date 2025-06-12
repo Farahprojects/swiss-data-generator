@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -22,9 +23,8 @@ const CORS_HEADERS = {
 };
 
 function jsonResponse(body: unknown, init: ResponseInit = {}, requestId?: string): Response {
-  const logPrefix = requestId ? `[generate-insights][${requestId}]` : "[generate-insights]";
   if (init.status && init.status >= 400) {
-    console.error(`${logPrefix} Sending error response: ${init.status}`, body);
+    console.error(`[${requestId}] Error response: ${init.status}`, body);
   }
   return new Response(JSON.stringify(body), {
     ...init,
@@ -37,9 +37,6 @@ function jsonResponse(body: unknown, init: ResponseInit = {}, requestId?: string
 }
 
 async function validateApiKey(apiKey: string, requestId: string): Promise<string | null> {
-  const logPrefix = `[generate-insights][${requestId}]`;
-  console.log(`${logPrefix} Validating API key: ${apiKey.substring(0, 8)}...`);
-
   try {
     const { data, error } = await supabase
       .from("api_keys")
@@ -48,28 +45,19 @@ async function validateApiKey(apiKey: string, requestId: string): Promise<string
       .eq("is_active", true)
       .maybeSingle();
 
-    if (error) {
-      console.error(`${logPrefix} Error validating API key:`, error);
+    if (error || !data) {
+      console.error(`[${requestId}] API key validation failed`);
       return null;
     }
 
-    if (!data) {
-      console.error(`${logPrefix} API key not found or inactive`);
-      return null;
-    }
-
-    console.log(`${logPrefix} API key validated for user: ${data.user_id}`);
     return data.user_id;
   } catch (err) {
-    console.error(`${logPrefix} Exception validating API key:`, err);
+    console.error(`[${requestId}] API key validation error:`, err);
     return null;
   }
 }
 
 async function checkUserCredits(userId: string, requestId: string): Promise<{ hasCredits: boolean; balance: number }> {
-  const logPrefix = `[generate-insights][${requestId}]`;
-  console.log(`${logPrefix} Checking credits for user: ${userId}`);
-
   try {
     const { data, error } = await supabase
       .from("v_api_key_balance")
@@ -78,17 +66,14 @@ async function checkUserCredits(userId: string, requestId: string): Promise<{ ha
       .maybeSingle();
 
     if (error) {
-      console.error(`${logPrefix} Error checking user credits:`, error);
+      console.error(`[${requestId}] Credits check failed:`, error);
       return { hasCredits: false, balance: 0 };
     }
 
     const balance = data?.balance_usd || 0;
-    const hasCredits = balance > 0;
-    
-    console.log(`${logPrefix} User balance: ${balance}, has credits: ${hasCredits}`);
-    return { hasCredits, balance };
+    return { hasCredits: balance > 0, balance };
   } catch (err) {
-    console.error(`${logPrefix} Exception checking user credits:`, err);
+    console.error(`[${requestId}] Credits check error:`, err);
     return { hasCredits: false, balance: 0 };
   }
 }
@@ -106,65 +91,41 @@ async function retryWithBackoff<T>(
   while (attempts < maxAttempts) {
     attempts++;
     try {
-      console.log(`${logPrefix} Attempt ${attempts}/${maxAttempts} for ${operationName}...`);
       return await fn();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.warn(`${logPrefix} Attempt ${attempts}/${maxAttempts} for ${operationName} failed: ${errorMessage}.`);
       if (attempts >= maxAttempts) {
-        console.error(`${logPrefix} All ${maxAttempts} attempts for ${operationName} failed. Last error:`, error);
+        console.error(`${logPrefix} ${operationName} failed after ${maxAttempts} attempts:`, error);
         throw error;
       }
       const jitter = delay * 0.2 * (Math.random() > 0.5 ? 1 : -1);
       const actualDelay = Math.max(0, delay + jitter);
-      console.log(`${logPrefix} Retrying ${operationName} in ${actualDelay.toFixed(0)}ms...`);
       await new Promise(resolve => setTimeout(resolve, actualDelay));
       delay *= backoffFactor;
     }
   }
-  throw new Error(`${logPrefix} Retry logic error for ${operationName}: exceeded max attempts without throwing.`);
+  throw new Error(`${logPrefix} Retry logic error for ${operationName}`);
 }
 
 async function getInsightPrompt(insightType: string, requestId: string): Promise<string> {
-  const logPrefix = `[generate-insights][${requestId}]`;
-  console.log(`${logPrefix} Fetching insight prompt for type: ${insightType}`);
-
   const fetchPrompt = async () => {
-    const { data, error, status } = await supabase
+    const { data, error } = await supabase
       .from("insight_prompts")
       .select("prompt_text")
       .eq("name", insightType)
       .eq("is_active", true)
       .maybeSingle();
 
-    if (error) {
-      console.error(`${logPrefix} Error fetching insight prompt (status ${status}):`, error.message);
-      throw new Error(`Failed to fetch insight prompt (status ${status}): ${error.message}`);
-    }
-
-    if (!data || !data.prompt_text) {
-      console.error(`${logPrefix} No insight prompt found for '${insightType}'`);
+    if (error || !data?.prompt_text) {
       throw new Error(`Insight prompt not found for ${insightType}`);
     }
     
-    console.log(`${logPrefix} Retrieved insight prompt for '${insightType}'`);
     return data.prompt_text;
   };
 
-  try {
-    const prompt = await retryWithBackoff(fetchPrompt, logPrefix, 2, 500, 2, "database insight prompt fetch");
-    console.log(`${logPrefix} Successfully retrieved insight prompt for ${insightType}`);
-    return prompt;
-  } catch (err) {
-    console.error(`${logPrefix} Unexpected error after retries fetching insight prompt:`, err);
-    throw err;
-  }
+  return await retryWithBackoff(fetchPrompt, `[${requestId}]`, 2, 500, 2, "prompt fetch");
 }
 
 async function getInsightPrice(requestId: string): Promise<number> {
-  const logPrefix = `[generate-insights][${requestId}]`;
-  console.log(`${logPrefix} Fetching price for insights generation`);
-
   const fetchPrice = async () => {
     const { data, error } = await supabase
       .from("price_list")
@@ -172,34 +133,22 @@ async function getInsightPrice(requestId: string): Promise<number> {
       .eq("id", "insights-generation")
       .maybeSingle();
 
-    if (error) {
-      console.error(`${logPrefix} Error fetching price:`, error.message);
-      throw new Error(`Failed to fetch price: ${error.message}`);
+    if (error || data?.unit_price_usd == null) {
+      return 7.50; // fallback price
     }
 
-    if (!data || data.unit_price_usd == null) {
-      console.warn(`${logPrefix} No price found for insights-generation, using fallback`);
-      return 7.50;
-    }
-
-    const price = parseFloat(String(data.unit_price_usd));
-    console.log(`${logPrefix} Retrieved price for insights generation: $${price}`);
-    return price;
+    return parseFloat(String(data.unit_price_usd));
   };
 
   try {
-    return await retryWithBackoff(fetchPrice, logPrefix, 2, 500, 2, "price fetch");
+    return await retryWithBackoff(fetchPrice, `[${requestId}]`, 2, 500, 2, "price fetch");
   } catch (err) {
-    console.error(`${logPrefix} Error fetching price, using fallback:`, err);
+    console.error(`[${requestId}] Price fetch failed, using fallback:`, err);
     return 7.50;
   }
 }
 
 async function generateInsight(systemPrompt: string, clientData: any, requestId: string): Promise<string> {
-  const logPrefix = `[generate-insights][${requestId}]`;
-  console.log(`${logPrefix} Generating insight with Gemini`);
-
-  // Create clean, consistent plain text structure
   const userMessage = `Client Name: ${clientData.fullName}
 
 Goals:
@@ -210,8 +159,6 @@ ${clientData.journalText}
 
 Previous Reports:
 ${clientData.previousReportsText}`;
-
-  console.log(`${logPrefix} Calling Gemini API with model: ${GOOGLE_MODEL}`);
 
   const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
 
@@ -235,10 +182,7 @@ ${clientData.previousReportsText}`;
 
   const callGeminiApi = async () => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.warn(`${logPrefix} Gemini API call timed out after ${API_TIMEOUT_MS}ms`);
-    }, API_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
     let response;
     try {
@@ -251,18 +195,16 @@ ${clientData.previousReportsText}`;
     } catch (fetchError) {
         clearTimeout(timeoutId);
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-            throw new Error(`Gemini API call aborted due to timeout (${API_TIMEOUT_MS}ms)`);
+            throw new Error(`Gemini API timeout (${API_TIMEOUT_MS}ms)`);
         }
         throw fetchError;
     }
     
     clearTimeout(timeoutId);
 
-    console.log(`${logPrefix} Gemini API response status: ${response.status}`);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`${logPrefix} Gemini API error response: ${response.status} - ${errorText}`);
+      console.error(`[${requestId}] Gemini API error: ${response.status} - ${errorText}`);
       const error = new Error(`Gemini API error: ${response.status} - ${errorText}`);
       if (response.status === 400 || response.status === 404 || response.status === 401 || response.status === 403) {
         throw Object.assign(error, { skipRetry: true });
@@ -272,20 +214,17 @@ ${clientData.previousReportsText}`;
 
     const data = await response.json();
 
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-      console.error(`${logPrefix} No content or parts returned from Gemini API in candidate:`, JSON.stringify(data));
-      throw new Error("Malformed response from Gemini API: No content/parts in candidate");
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error("Malformed response from Gemini API");
     }
 
-    const generatedText = data.candidates[0].content.parts[0].text;
-    console.log(`${logPrefix} Successfully generated insight from Gemini`);
-    return generatedText;
+    return data.candidates[0].content.parts[0].text;
   };
 
   try {
-    return await retryWithBackoff(callGeminiApi, logPrefix, MAX_API_RETRIES, INITIAL_RETRY_DELAY_MS, RETRY_BACKOFF_FACTOR, "Gemini API call");
+    return await retryWithBackoff(callGeminiApi, `[${requestId}]`, MAX_API_RETRIES, INITIAL_RETRY_DELAY_MS, RETRY_BACKOFF_FACTOR, "Gemini API call");
   } catch (err) {
-    console.error(`${logPrefix} Failed to generate insight with Gemini after retries:`, err);
+    console.error(`[${requestId}] Gemini API failed after retries:`, err);
     if ((err as any).skipRetry) {
         throw new Error(`Permanent Gemini API error: ${err.message}`);
     }
@@ -302,9 +241,6 @@ async function saveInsightEntry(
   confidenceScore: number,
   requestId: string
 ): Promise<string> {
-  const logPrefix = `[generate-insights][${requestId}]`;
-  console.log(`${logPrefix} Saving insight entry to database`);
-
   const { data, error } = await supabase
     .from("insight_entries")
     .insert({
@@ -319,37 +255,24 @@ async function saveInsightEntry(
     .single();
 
   if (error) {
-    console.error(`${logPrefix} Error saving insight entry:`, error);
-    throw new Error(`Failed to save insight entry: ${error.message}`);
+    console.error(`[${requestId}] Save insight error:`, error);
+    throw new Error(`Failed to save insight: ${error.message}`);
   }
 
-  console.log(`${logPrefix} Successfully saved insight entry with ID: ${data.id}`);
   return data.id;
 }
 
 serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8);
-  const logPrefix = `[generate-insights][${requestId}]`;
   const startTime = Date.now();
 
-  console.log(`${logPrefix} ========================================`);
-  console.log(`${logPrefix} NEW REQUEST RECEIVED`);
-  console.log(`${logPrefix} Method: ${req.method}`);
-  console.log(`${logPrefix} URL: ${req.url}`);
-  console.log(`${logPrefix} User-Agent: ${req.headers.get('user-agent')}`);
-  console.log(`${logPrefix} Content-Type: ${req.headers.get('content-type')}`);
-  console.log(`${logPrefix} Content-Length: ${req.headers.get('content-length')}`);
-  console.log(`${logPrefix} Authorization: ${req.headers.get('authorization')?.substring(0, 20)}...`);
-  console.log(`${logPrefix} All Headers:`, Object.fromEntries(req.headers.entries()));
-  console.log(`${logPrefix} ========================================`);
+  console.log(`[${requestId}] ${req.method} request received`);
 
   if (req.method === "OPTIONS") {
-    console.log(`${logPrefix} Handling OPTIONS request (CORS preflight)`);
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
 
   if (req.method !== "POST") {
-    console.warn(`${logPrefix} Method not allowed: ${req.method}`);
     return jsonResponse(
       { error: "Method not allowed", requestId },
       { status: 405 },
@@ -358,10 +281,9 @@ serve(async (req) => {
   }
 
   try {
-    // Extract API key from Authorization header
+    // Extract and validate API key
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.error(`${logPrefix} Missing or invalid Authorization header`);
+    if (!authHeader?.startsWith("Bearer ")) {
       return jsonResponse(
         { error: "Missing or invalid Authorization header", requestId },
         { status: 401 },
@@ -370,11 +292,8 @@ serve(async (req) => {
     }
 
     const apiKey = authHeader.replace("Bearer ", "");
-
-    // Validate API key and get user ID
     const userId = await validateApiKey(apiKey, requestId);
     if (!userId) {
-      console.error(`${logPrefix} Invalid API key`);
       return jsonResponse(
         { error: "Invalid API key", requestId },
         { status: 401 },
@@ -385,7 +304,6 @@ serve(async (req) => {
     // Check user credits
     const { hasCredits, balance } = await checkUserCredits(userId, requestId);
     if (!hasCredits) {
-      console.error(`${logPrefix} Insufficient credits. Balance: ${balance}`);
       return jsonResponse(
         { error: "Insufficient credits", balance, requestId },
         { status: 402 },
@@ -393,83 +311,28 @@ serve(async (req) => {
       );
     }
 
-    // ENHANCED BODY PROCESSING - Let's catch this issue!
-    console.log(`${logPrefix} ========================================`);
-    console.log(`${logPrefix} STARTING BODY PROCESSING`);
-    console.log(`${logPrefix} Request object type:`, typeof req);
-    console.log(`${logPrefix} Request has body property:`, 'body' in req);
-    console.log(`${logPrefix} Request bodyUsed before reading:`, req.bodyUsed);
-    console.log(`${logPrefix} ========================================`);
-
-    // Try multiple approaches to read the body
+    // Parse request body
     let payload;
-    let rawBody;
-
     try {
-      console.log(`${logPrefix} ATTEMPT 1: Using req.text()`);
-      rawBody = await req.text();
-      console.log(`${logPrefix} req.text() returned type:`, typeof rawBody);
-      console.log(`${logPrefix} req.text() returned length:`, rawBody?.length || 0);
-      console.log(`${logPrefix} bodyUsed after text():`, req.bodyUsed);
-      
-      if (rawBody && rawBody.length > 0) {
-        console.log(`${logPrefix} Raw body preview:`, rawBody.substring(0, 500));
-        try {
-          payload = JSON.parse(rawBody);
-          console.log(`${logPrefix} Successfully parsed JSON from req.text()`);
-        } catch (parseError) {
-          console.error(`${logPrefix} Failed to parse JSON from req.text():`, parseError);
-          throw parseError;
-        }
-      } else {
-        console.error(`${logPrefix} CRITICAL: req.text() returned empty body!`);
-        console.error(`${logPrefix} This indicates the body was consumed before our handler`);
-        
+      const rawBody = await req.text();
+      if (!rawBody) {
         return jsonResponse({
-          error: "Request body is empty - body may have been consumed by middleware",
-          requestId,
-          debug: {
-            method: req.method,
-            url: req.url,
-            headers: Object.fromEntries(req.headers.entries()),
-            bodyUsed: req.bodyUsed,
-            bodyLength: rawBody?.length || 0,
-            contentLength: req.headers.get('content-length')
-          }
+          error: "Request body is empty",
+          requestId
         }, { status: 400 }, requestId);
       }
+      payload = JSON.parse(rawBody);
     } catch (error) {
-      console.error(`${logPrefix} CRITICAL ERROR reading request body:`, error);
-      console.error(`${logPrefix} Error type:`, error.constructor.name);
-      console.error(`${logPrefix} Error message:`, error.message);
-      
       return jsonResponse({
-        error: "Failed to read request body",
+        error: "Failed to parse request body",
         details: error.message,
-        requestId,
-        debug: {
-          errorType: error.constructor.name,
-          bodyUsed: req.bodyUsed
-        }
+        requestId
       }, { status: 400 }, requestId);
     }
-
-    console.log(`${logPrefix} ========================================`);
-    console.log(`${logPrefix} BODY PROCESSING COMPLETE`);
-    console.log(`${logPrefix} Final payload keys:`, Object.keys(payload || {}));
-    console.log(`${logPrefix} ========================================`);
 
     const { clientId, coachId, insightType, clientData, title } = payload;
 
     if (!clientId || !coachId || !insightType || !clientData || !title) {
-      console.error(`${logPrefix} Missing required fields in request payload`);
-      console.error(`${logPrefix} Received fields:`, {
-        clientId: !!clientId,
-        coachId: !!coachId,
-        insightType: !!insightType,
-        clientData: !!clientData,
-        title: !!title
-      });
       return jsonResponse(
         { error: "Missing required fields: clientId, coachId, insightType, clientData, and title are required", requestId },
         { status: 400 },
@@ -477,31 +340,31 @@ serve(async (req) => {
       );
     }
 
-    // Set request-scoped coach ID for RLS to work
+    // Set request-scoped coach ID for RLS
     await supabase.rpc('set_config', {
       key: 'request.coach_id',
       value: coachId,
       is_local: true
     });
 
-    // Fetch the insight prompt
-    const systemPrompt = await getInsightPrompt(insightType, requestId);
+    console.log(`[${requestId}] Processing insight generation for client: ${clientId}`);
 
-    // Generate the insight
+    // Fetch prompt and generate insight
+    const systemPrompt = await getInsightPrompt(insightType, requestId);
     const insightContent = await generateInsight(systemPrompt, clientData, requestId);
 
-    // Save the insight entry
+    // Save insight entry
     const insightId = await saveInsightEntry(
       clientId,
       coachId,
       title,
       insightContent,
       insightType,
-      85, // Default confidence score
+      85,
       requestId
     );
 
-    // Record API usage with dynamic pricing
+    // Record API usage
     try {
       const costUsd = await getInsightPrice(requestId);
       
@@ -515,15 +378,13 @@ serve(async (req) => {
       });
 
       if (usageError) {
-        console.error(`${logPrefix} Error recording API usage:`, usageError);
-      } else {
-        console.log(`${logPrefix} Successfully recorded API usage with cost: $${costUsd}`);
+        console.error(`[${requestId}] API usage recording failed:`, usageError);
       }
     } catch (usageErr) {
-      console.error(`${logPrefix} Failed to record API usage:`, usageErr);
+      console.error(`[${requestId}] API usage recording error:`, usageErr);
     }
 
-    console.log(`${logPrefix} Successfully processed insight request in ${Date.now() - startTime}ms`);
+    console.log(`[${requestId}] Insight generated successfully in ${Date.now() - startTime}ms`);
     return jsonResponse({
       success: true,
       insightId: insightId,
@@ -533,7 +394,7 @@ serve(async (req) => {
 
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
-    console.error(`${logPrefix} Error processing request: ${errorMessage}`, err instanceof Error ? err.stack : err);
+    console.error(`[${requestId}] Request failed: ${errorMessage}`);
     
     return jsonResponse({
       success: false,
@@ -543,4 +404,4 @@ serve(async (req) => {
   }
 });
 
-console.log(`[generate-insights][init] Function initialized and ready to process requests`);
+console.log(`[generate-insights] Function initialized and ready`);
