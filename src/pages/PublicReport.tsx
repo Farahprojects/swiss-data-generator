@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Star, Clock, Shield, CheckCircle } from 'lucide-react';
+import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 
@@ -37,6 +37,7 @@ const reportSchema = z.object({
   // For return reports
   returnYear: z.string().optional(),
   notes: z.string().optional(),
+  promoCode: z.string().optional(),
 });
 
 type ReportFormData = z.infer<typeof reportSchema>;
@@ -68,6 +69,7 @@ const essenceTypes = [
 
 const PublicReport = () => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPromoCode, setShowPromoCode] = useState(false);
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -86,6 +88,7 @@ const PublicReport = () => {
       secondPersonBirthLocation: '',
       returnYear: '',
       notes: '',
+      promoCode: '',
     },
   });
 
@@ -410,9 +413,9 @@ const PublicReport = () => {
               </Card>
             )}
 
-            {/* Generate Report Button */}
+            {/* Generate Report Button and Promo Code Section */}
             {selectedReportType && (
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center space-y-4">
                 <Button 
                   type="submit"
                   size="lg" 
@@ -421,6 +424,40 @@ const PublicReport = () => {
                 >
                   {isProcessing ? 'Processing...' : 'Generate My Report - $29'}
                 </Button>
+                
+                {/* Promo Code Section */}
+                <div className="w-full max-w-md">
+                  <button
+                    type="button"
+                    onClick={() => setShowPromoCode(!showPromoCode)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
+                  >
+                    👋 Have a promo code? 
+                    <span className="underline">Enter it here</span>
+                    {showPromoCode ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+                  
+                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    showPromoCode ? 'max-h-20 opacity-100 mt-3' : 'max-h-0 opacity-0'
+                  }`}>
+                    <div className="space-y-2">
+                      <Input
+                        {...register('promoCode')}
+                        placeholder="Enter promo code"
+                        className="text-center"
+                      />
+                      {watch('promoCode') && (
+                        <p className="text-xs text-center text-muted-foreground">
+                          Promo code will be applied at checkout
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </form>
