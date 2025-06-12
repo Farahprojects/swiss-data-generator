@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,7 +70,16 @@ export const ClientJournalTab: React.FC<ClientJournalTabProps> = ({
   };
 
   const getSummary = (entry: JournalEntry) => {
-    return entry.entry_text.substring(0, 100) + (entry.entry_text.length > 100 ? '...' : '');
+    let text = entry.entry_text;
+    
+    // Remove dates in the format "Month Day, Year at Time AM/PM" (e.g., "June 12, 2025 at 1:18 PM")
+    const dateTimeRegex = /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\s+at\s+\d{1,2}:\d{2}\s+(?:AM|PM)\b/g;
+    text = text.replace(dateTimeRegex, '').trim();
+    
+    // Clean up any extra whitespace that might be left
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    return text.substring(0, 100) + (text.length > 100 ? '...' : '');
   };
 
   const handleSummaryClick = (entry: JournalEntry) => {
