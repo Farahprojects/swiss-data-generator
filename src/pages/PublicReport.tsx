@@ -1,30 +1,70 @@
 
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Star, Clock, Shield, CheckCircle } from 'lucide-react';
-import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
-import PublicReportForm from '@/components/public-report/PublicReportForm';
+import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 
 const reportSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
+  relationshipType: z.string().optional(),
+  essenceType: z.string().optional(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   birthDate: z.string().min(1, 'Birth date is required'),
   birthTime: z.string().min(1, 'Birth time is required'),
   birthLocation: z.string().min(1, 'Birth location is required'),
-  // Optional fields for compatibility reports
-  name2: z.string().optional(),
-  birthDate2: z.string().optional(),
-  birthTime2: z.string().optional(),
-  birthLocation2: z.string().optional(),
+  // For compatibility/sync reports
+  secondPersonName: z.string().optional(),
+  secondPersonBirthDate: z.string().optional(),
+  secondPersonBirthTime: z.string().optional(),
+  secondPersonBirthLocation: z.string().optional(),
+  // For return reports
+  returnYear: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 type ReportFormData = z.infer<typeof reportSchema>;
+
+const reportTypes = [
+  { value: 'natal', label: 'Natal Report' },
+  { value: 'composite', label: 'Composite Report' },
+  { value: 'compatibility', label: 'Compatibility Report' },
+  { value: 'return', label: 'Solar/Lunar Return Report' },
+  { value: 'positions', label: 'Planetary Positions' },
+  { value: 'sync', label: 'Sync Report' },
+  { value: 'essence', label: 'Essence Report' },
+  { value: 'flow', label: 'Flow Report' },
+  { value: 'mindset', label: 'Mindset Report' },
+  { value: 'monthly', label: 'Monthly Report' },
+  { value: 'focus', label: 'Focus Report' },
+];
+
+const relationshipTypes = [
+  { value: 'personal', label: 'Personal' },
+  { value: 'professional', label: 'Professional' },
+];
+
+const essenceTypes = [
+  { value: 'personal-identity', label: 'Personal' },
+  { value: 'professional', label: 'Professional' },
+  { value: 'relational', label: 'Relational' },
+];
 
 const PublicReport = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,24 +73,38 @@ const PublicReport = () => {
     resolver: zodResolver(reportSchema),
     defaultValues: {
       reportType: '',
+      relationshipType: '',
+      essenceType: '',
       name: '',
       email: '',
       birthDate: '',
       birthTime: '',
       birthLocation: '',
-      name2: '',
-      birthDate2: '',
-      birthTime2: '',
-      birthLocation2: '',
+      secondPersonName: '',
+      secondPersonBirthDate: '',
+      secondPersonBirthTime: '',
+      secondPersonBirthLocation: '',
+      returnYear: '',
+      notes: '',
     },
   });
 
-  const selectedReportType = form.watch('reportType');
+  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = form;
+  const selectedReportType = watch('reportType');
 
-  const handleSubmit = async (data: ReportFormData) => {
+  const requiresSecondPerson = selectedReportType === 'sync' || selectedReportType === 'compatibility';
+  const requiresRelationshipType = requiresSecondPerson;
+  const requiresEssenceType = selectedReportType === 'essence';
+  const requiresReturnYear = selectedReportType === 'return';
+
+  const handlePlaceSelect = (placeData: PlaceData, fieldName: string = 'birthLocation') => {
+    setValue(fieldName, placeData.name);
+  };
+
+  const onSubmit = async (data: ReportFormData) => {
     setIsProcessing(true);
     try {
-      // TODO: Integrate with Stripe checkout
+      // TODO: Integrate with Stripe checkout and report generation
       console.log('Report data:', data);
       alert('Payment integration coming soon! Your report data has been logged to console.');
     } catch (error) {
@@ -59,6 +113,8 @@ const PublicReport = () => {
       setIsProcessing(false);
     }
   };
+
+  const getCurrentYear = () => new Date().getFullYear();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -96,52 +152,278 @@ const PublicReport = () => {
 
       {/* Main Form Section */}
       <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                Choose Your Report Type
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ReportTypeSelector 
-                value={selectedReportType}
-                onChange={(value) => form.setValue('reportType', value)}
-                error={form.formState.errors.reportType?.message}
-              />
-            </CardContent>
-          </Card>
-
-          {selectedReportType && (
+        <div className="max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            {/* Step 1: Report Type Selection */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                  Enter Your Birth Details
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
+                  Choose Your Report Type
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <PublicReportForm 
-                  form={form}
-                  reportType={selectedReportType}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="reportType">Report Type *</Label>
+                  <Controller
+                    control={control}
+                    name="reportType"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a report type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {reportTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.reportType && (
+                    <p className="text-sm text-destructive">{errors.reportType.message}</p>
+                  )}
+                </div>
+
+                {/* Conditional Fields for Report Options */}
+                {requiresEssenceType && (
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="essenceType">Essence Focus *</Label>
+                    <Controller
+                      control={control}
+                      name="essenceType"
+                      render={({ field }) => (
+                        <ToggleGroup
+                          type="single"
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="justify-start"
+                        >
+                          {essenceTypes.map((type) => (
+                            <ToggleGroupItem 
+                              key={type.value} 
+                              value={type.value}
+                              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
+                            >
+                              {type.label}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {requiresReturnYear && (
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="returnYear">Return Year *</Label>
+                    <Input
+                      {...register('returnYear')}
+                      type="number"
+                      placeholder={getCurrentYear().toString()}
+                      min="1900"
+                      max="2100"
+                    />
+                  </div>
+                )}
+
+                {requiresRelationshipType && (
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="relationshipType">Relationship Type *</Label>
+                    <Controller
+                      control={control}
+                      name="relationshipType"
+                      render={({ field }) => (
+                        <ToggleGroup
+                          type="single"
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="justify-start"
+                        >
+                          {relationshipTypes.map((type) => (
+                            <ToggleGroupItem 
+                              key={type.value} 
+                              value={type.value}
+                              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary"
+                            >
+                              {type.label}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
+                      )}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
 
-          {selectedReportType && (
-            <div className="flex justify-center">
-              <Button 
-                size="lg" 
-                className="px-12 py-6 text-lg"
-                onClick={form.handleSubmit(handleSubmit)}
-                disabled={isProcessing}
-              >
-                {isProcessing ? 'Processing...' : 'Generate My Report - $29'}
-              </Button>
-            </div>
-          )}
+            {/* Step 2: Contact Information */}
+            {selectedReportType && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
+                    Contact Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name *</Label>
+                      <Input
+                        id="name"
+                        {...register('name')}
+                        placeholder="Enter your full name"
+                      />
+                      {errors.name && (
+                        <p className="text-sm text-destructive">{errors.name.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        {...register('email')}
+                        placeholder="your@email.com"
+                      />
+                      {errors.email && (
+                        <p className="text-sm text-destructive">{errors.email.message}</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 3: Birth Details */}
+            {selectedReportType && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">3</span>
+                    Your Birth Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="birthDate">Birth Date *</Label>
+                      <Input
+                        id="birthDate"
+                        type="date"
+                        {...register('birthDate')}
+                      />
+                      {errors.birthDate && (
+                        <p className="text-sm text-destructive">{errors.birthDate.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="birthTime">Birth Time *</Label>
+                      <Input
+                        id="birthTime"
+                        type="time"
+                        {...register('birthTime')}
+                        step="60"
+                      />
+                      {errors.birthTime && (
+                        <p className="text-sm text-destructive">{errors.birthTime.message}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <PlaceAutocomplete
+                      label="Birth Location *"
+                      value={watch('birthLocation') || ''}
+                      onChange={(value) => setValue('birthLocation', value)}
+                      onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'birthLocation')}
+                      placeholder="Enter birth city, state, country"
+                      id="birthLocation"
+                      error={errors.birthLocation?.message}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 4: Second Person Details (for compatibility/sync reports) */}
+            {requiresSecondPerson && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">4</span>
+                    Second Person Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="secondPersonName">Name *</Label>
+                    <Input
+                      id="secondPersonName"
+                      {...register('secondPersonName')}
+                      placeholder="Enter second person's name"
+                    />
+                    {errors.secondPersonName && (
+                      <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>
+                    )}
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="secondPersonBirthDate">Birth Date *</Label>
+                      <Input
+                        id="secondPersonBirthDate"
+                        type="date"
+                        {...register('secondPersonBirthDate')}
+                      />
+                      {errors.secondPersonBirthDate && (
+                        <p className="text-sm text-destructive">{errors.secondPersonBirthDate.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="secondPersonBirthTime">Birth Time *</Label>
+                      <Input
+                        id="secondPersonBirthTime"
+                        type="time"
+                        {...register('secondPersonBirthTime')}
+                        step="60"
+                      />
+                      {errors.secondPersonBirthTime && (
+                        <p className="text-sm text-destructive">{errors.secondPersonBirthTime.message}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <PlaceAutocomplete
+                      label="Birth Location *"
+                      value={watch('secondPersonBirthLocation') || ''}
+                      onChange={(value) => setValue('secondPersonBirthLocation', value)}
+                      onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'secondPersonBirthLocation')}
+                      placeholder="Enter birth city, state, country"
+                      id="secondPersonBirthLocation"
+                      error={errors.secondPersonBirthLocation?.message}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Generate Report Button */}
+            {selectedReportType && (
+              <div className="flex justify-center">
+                <Button 
+                  type="submit"
+                  size="lg" 
+                  className="px-12 py-6 text-lg"
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? 'Processing...' : 'Generate My Report - $29'}
+                </Button>
+              </div>
+            )}
+          </form>
         </div>
       </div>
 
