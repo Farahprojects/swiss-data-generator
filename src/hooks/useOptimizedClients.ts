@@ -35,9 +35,10 @@ let clientsCache: ClientCache | null = null;
 export const useOptimizedClients = () => {
   const [clients, setClients] = useState<ClientWithJournal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
+  const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
   const { toast } = useToast();
   const loadingRef = useRef(false);
+  const hasInitiallyLoadedRef = useRef(false);
 
   const loadClients = async (forceRefresh = false) => {
     // Prevent concurrent loads
@@ -50,9 +51,9 @@ export const useOptimizedClients = () => {
       setClients(clientsCache.data);
       
       // Only set loading to false if this is the initial load
-      if (initialLoad) {
+      if (!hasInitiallyLoadedRef.current) {
         setLoading(false);
-        setInitialLoad(false);
+        hasInitiallyLoadedRef.current = true;
       }
       return;
     }
@@ -60,12 +61,13 @@ export const useOptimizedClients = () => {
     try {
       loadingRef.current = true;
       
-      // Only show loading spinner for initial loads, not for background refreshes
-      if (initialLoad) {
+      // Only show loading spinner for initial loads, background indicator for refreshes
+      if (!hasInitiallyLoadedRef.current) {
         console.log('🔄 Initial load: Fetching fresh client data');
         setLoading(true);
       } else {
         console.log('🔄 Background refresh: Fetching fresh client data');
+        setBackgroundRefreshing(true);
       }
       
       const clientsData = await clientsService.getClients();
@@ -122,9 +124,11 @@ export const useOptimizedClients = () => {
       });
     } finally {
       // Always update loading state after operation completes
-      if (initialLoad) {
+      if (!hasInitiallyLoadedRef.current) {
         setLoading(false);
-        setInitialLoad(false);
+        hasInitiallyLoadedRef.current = true;
+      } else {
+        setBackgroundRefreshing(false);
       }
       loadingRef.current = false;
     }
@@ -132,7 +136,7 @@ export const useOptimizedClients = () => {
 
   // Invalidate cache when needed - this will do a background refresh
   const invalidateCache = async () => {
-    console.log('🗑️ Invalidating clients cache');
+    console.log('🗑️ Invalidating clients cache - background refresh only');
     clientsCache = null;
     await loadClients(true);
   };
@@ -143,8 +147,8 @@ export const useOptimizedClients = () => {
 
   return {
     clients,
-    loading,
-    initialLoad,
+    loading: loading && !hasInitiallyLoadedRef.current, // Only show loading during initial load
+    backgroundRefreshing,
     loadClients: () => loadClients(true),
     invalidateCache
   };

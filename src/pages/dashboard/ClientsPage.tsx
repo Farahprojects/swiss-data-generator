@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -47,7 +46,7 @@ interface ClientWithJournal extends Client {
 }
 
 const ClientsPage = React.memo(() => {
-  const { clients, loading, initialLoad, invalidateCache } = useOptimizedClients();
+  const { clients, loading, backgroundRefreshing, invalidateCache } = useOptimizedClients();
   const { modalState, setModalState, preserveModalState } = useModalState();
   const { isVisible } = useTabVisibility();
   
@@ -62,7 +61,6 @@ const ClientsPage = React.memo(() => {
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterType, setFilterType] = useState<FilterType>('all');
-  const [backgroundRefreshing, setBackgroundRefreshing] = useState(false);
   const { toast } = useToast();
   const { viewMode: savedViewMode, loading: viewModeLoading, updateViewMode } = useClientViewMode();
   const isMobile = useIsMobile();
@@ -81,24 +79,19 @@ const ClientsPage = React.memo(() => {
     await updateViewMode(newViewMode);
   }, [updateViewMode]);
 
-  // Optimized cache invalidation with background refresh
+  // Silent cache invalidation - no loading states
   const refreshClientsData = useCallback(async () => {
-    console.log('🔄 Starting background refresh of clients data');
-    setBackgroundRefreshing(true);
-    try {
-      await invalidateCache();
-    } finally {
-      setBackgroundRefreshing(false);
-    }
+    console.log('🔄 Silent background refresh of clients data');
+    await invalidateCache();
   }, [invalidateCache]);
 
   const handleClientCreated = useCallback(() => {
-    console.log('✅ Client created, refreshing data in background');
+    console.log('✅ Client created, refreshing data silently');
     refreshClientsData();
   }, [refreshClientsData]);
 
   const handleClientUpdated = useCallback(() => {
-    console.log('✅ Client updated, refreshing data in background');
+    console.log('✅ Client updated, refreshing data silently');
     refreshClientsData();
     setModalState('showEditModal', false);
     setSelectedClient(null);
@@ -120,7 +113,6 @@ const ClientsPage = React.memo(() => {
     return <ChevronUp className="w-4 h-4 opacity-30" />;
   }, [sortField, sortDirection]);
 
-  // Memoized action handlers
   const handleCreateJournal = useCallback((client: Client) => {
     setSelectedClient(client);
     setSelectedJournalEntry(null);
@@ -444,8 +436,8 @@ const ClientsPage = React.memo(() => {
     </TableRow>
   ), [isMobile, formatClientNameForMobile, handleEditJournal, formatDate, formatReportType, handleViewReport, handleViewInsight]);
 
-  // Show loading only for initial load AND view mode loading (not for background refreshes)
-  if (initialLoad && (loading || viewModeLoading)) {
+  // Show loading ONLY during initial load AND view mode loading
+  if (loading && viewModeLoading) {
     return <TheraLoader message="Loading clients..." size="lg" />;
   }
 
@@ -457,7 +449,7 @@ const ClientsPage = React.memo(() => {
           <h1 className="text-2xl font-bold text-foreground">Clients</h1>
           {backgroundRefreshing && (
             <div className="text-sm text-muted-foreground animate-pulse">
-              Refreshing data...
+              Updating...
             </div>
           )}
         </div>
@@ -621,12 +613,7 @@ const ClientsPage = React.memo(() => {
             open={modalState.showJournalModal}
             onOpenChange={(open) => setModalState('showJournalModal', open)}
             clientId={selectedClient.id}
-            onEntryCreated={() => {
-              setModalState('showJournalModal', false);
-              setSelectedClient(null);
-              setSelectedJournalEntry(null);
-              refreshClientsData();
-            }}
+            onEntryCreated={handleJournalCreated}
             existingEntry={selectedJournalEntry || undefined}
           />
 
@@ -635,23 +622,14 @@ const ClientsPage = React.memo(() => {
             onOpenChange={(open) => setModalState('showInsightModal', open)}
             client={selectedClient}
             journalEntries={selectedClientJournalEntries}
-            onInsightGenerated={() => {
-              setModalState('showInsightModal', false);
-              setSelectedClient(null);
-              setSelectedClientJournalEntries([]);
-              refreshClientsData();
-            }}
+            onInsightGenerated={handleInsightGenerated}
           />
 
           <ClientReportModal
             open={modalState.showReportModal}
             onOpenChange={(open) => setModalState('showReportModal', open)}
             client={selectedClient}
-            onReportGenerated={() => {
-              setModalState('showReportModal', false);
-              setSelectedClient(null);
-              refreshClientsData();
-            }}
+            onReportGenerated={handleReportGenerated}
           />
 
           <EditClientForm
