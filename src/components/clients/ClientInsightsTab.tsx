@@ -235,7 +235,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                           <TooltipTrigger asChild>
                             <button 
                               onClick={() => handleViewInsight(insight)}
-                              className="text-primary hover:text-primary/80 transition-colors p-1"
+                              className="text-black hover:text-primary transition-colors p-1"
                             >
                               <Lightbulb className="w-5 h-5" />
                             </button>
@@ -250,7 +250,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                               <TooltipTrigger asChild>
                                 <button 
                                   disabled={deletingInsightId === insight.id}
-                                  className="text-destructive hover:text-destructive/80 transition-colors p-1 disabled:opacity-50"
+                                  className="text-black hover:text-destructive transition-colors p-1 disabled:opacity-50"
                                 >
                                   <Trash2 className="w-5 h-5" />
                                 </button>
