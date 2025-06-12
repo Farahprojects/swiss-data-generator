@@ -22,7 +22,7 @@ export const clientsService = {
       throw new Error(error.message || 'Failed to fetch clients');
     }
 
-    return data || [];
+    return (data as Client[]) || [];
   },
 
   async getClientById(id: string): Promise<Client | null> {
@@ -43,7 +43,7 @@ export const clientsService = {
       throw new Error(error.message || 'Failed to fetch client');
     }
 
-    return data;
+    return (data as Client) || null;
   },
 
   async createClient(clientData: CreateClientData): Promise<Client> {
@@ -75,7 +75,11 @@ export const clientsService = {
       throw new Error(error.message || 'Failed to create client');
     }
 
-    return data;
+    if (!data) {
+      throw new Error('No data returned from client creation');
+    }
+
+    return data as Client;
   },
 
   async updateClient(id: string, updates: Partial<Client>): Promise<Client> {
@@ -97,7 +101,11 @@ export const clientsService = {
       throw new Error(error.message || 'Failed to update client');
     }
 
-    return data;
+    if (!data) {
+      throw new Error('No data returned from client update');
+    }
+
+    return data as Client;
   },
 
   async deleteClient(id: string): Promise<void> {
