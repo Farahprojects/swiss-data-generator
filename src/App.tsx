@@ -17,6 +17,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { AuthGuard } from './components/auth/AuthGuard';
 import Index from './pages/Index';
+import PublicReport from './pages/PublicReport';
 import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import About from './pages/About';
