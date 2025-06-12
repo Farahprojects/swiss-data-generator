@@ -35,11 +35,11 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ModalStateProvider>
-          <SettingsModalProvider>
-            <Router>
-              <NavigationStateProvider>
+      <NavigationStateProvider>
+        <AuthProvider>
+          <ModalStateProvider>
+            <SettingsModalProvider>
+              <Router>
                 <div className="min-h-screen bg-background">
                   <Routes>
                     <Route path="/" element={<Index />} />
@@ -63,11 +63,11 @@ function App() {
                   </Routes>
                 </div>
                 <Toaster />
-              </NavigationStateProvider>
-            </Router>
-          </SettingsModalProvider>
-        </ModalStateProvider>
-      </AuthProvider>
+              </Router>
+            </SettingsModalProvider>
+          </ModalStateProvider>
+        </AuthProvider>
+      </NavigationStateProvider>
     </QueryClientProvider>
   );
 }
