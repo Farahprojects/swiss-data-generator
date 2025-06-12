@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -385,24 +386,80 @@ serve(async (req) => {
       );
     }
 
+    // Enhanced request body processing with better debugging
+    console.log(`${logPrefix} === REQUEST BODY PROCESSING ===`);
+    console.log(`${logPrefix} Content-Type header:`, req.headers.get('Content-Type'));
+    console.log(`${logPrefix} Content-Length header:`, req.headers.get('Content-Length'));
+    console.log(`${logPrefix} Request headers:`, Object.fromEntries(req.headers.entries()));
+
     let payload;
-    const rawBody = await req.text();
-    if (!rawBody || rawBody.trim() === '') {
-      console.error(`${logPrefix} Request body is empty`);
-      return jsonResponse({ error: "Request body is empty", requestId }, { status: 400 }, requestId);
-    }
+    let rawBody;
 
     try {
+      // First, try to get the body as text
+      rawBody = await req.text();
+      console.log(`${logPrefix} Raw body received, length:`, rawBody?.length || 0);
+      console.log(`${logPrefix} Raw body type:`, typeof rawBody);
+      console.log(`${logPrefix} Raw body preview (first 300 chars):`, rawBody?.slice(0, 300) || 'EMPTY');
+      
+      if (!rawBody || rawBody.trim() === '') {
+        console.error(`${logPrefix} Request body is empty after text() call`);
+        console.error(`${logPrefix} Raw body value:`, JSON.stringify(rawBody));
+        
+        // Try alternative method - clone the request and try again
+        console.log(`${logPrefix} Attempting alternative body reading method...`);
+        try {
+          const bodyBuffer = await req.clone().arrayBuffer();
+          console.log(`${logPrefix} ArrayBuffer length:`, bodyBuffer.byteLength);
+          
+          if (bodyBuffer.byteLength > 0) {
+            const decoder = new TextDecoder();
+            rawBody = decoder.decode(bodyBuffer);
+            console.log(`${logPrefix} Decoded from ArrayBuffer:`, rawBody?.slice(0, 300));
+          }
+        } catch (cloneError) {
+          console.error(`${logPrefix} Alternative method also failed:`, cloneError);
+        }
+        
+        if (!rawBody || rawBody.trim() === '') {
+          return jsonResponse({ 
+            error: "Request body is empty", 
+            requestId,
+            debug: {
+              headers: Object.fromEntries(req.headers.entries()),
+              method: req.method,
+              url: req.url
+            }
+          }, { status: 400 }, requestId);
+        }
+      }
+
+      // Parse JSON
       payload = JSON.parse(rawBody);
-      console.log(`${logPrefix} Successfully parsed request payload`);
+      console.log(`${logPrefix} Successfully parsed JSON payload`);
       console.log(`${logPrefix} Payload keys:`, Object.keys(payload));
-    } catch (err) {
-      console.error(`${logPrefix} Failed to parse JSON:`, err.message);
-      console.error(`${logPrefix} Raw body preview:`, rawBody.slice(0, 300));
+      console.log(`${logPrefix} Payload structure:`, {
+        clientId: payload.clientId,
+        coachId: payload.coachId,
+        insightType: payload.insightType,
+        title: payload.title,
+        clientDataKeys: payload.clientData ? Object.keys(payload.clientData) : 'missing'
+      });
+      
+    } catch (bodyError) {
+      console.error(`${logPrefix} Error processing request body:`, bodyError);
+      console.error(`${logPrefix} Body error type:`, bodyError.constructor.name);
+      console.error(`${logPrefix} Body error message:`, bodyError.message);
+      console.error(`${logPrefix} Raw body that failed to parse:`, rawBody?.slice(0, 500));
+      
       return jsonResponse({
-        error: "Invalid JSON payload",
-        details: err.message,
-        requestId
+        error: "Failed to process request body",
+        details: bodyError.message,
+        requestId,
+        debug: {
+          rawBodyLength: rawBody?.length || 0,
+          rawBodyPreview: rawBody?.slice(0, 200) || 'EMPTY'
+        }
       }, { status: 400 }, requestId);
     }
 
@@ -410,6 +467,13 @@ serve(async (req) => {
 
     if (!clientId || !coachId || !insightType || !clientData || !title) {
       console.error(`${logPrefix} Missing required fields in request payload`);
+      console.error(`${logPrefix} Received fields:`, {
+        clientId: !!clientId,
+        coachId: !!coachId,
+        insightType: !!insightType,
+        clientData: !!clientData,
+        title: !!title
+      });
       return jsonResponse(
         { error: "Missing required fields: clientId, coachId, insightType, clientData, and title are required", requestId },
         { status: 400 },
