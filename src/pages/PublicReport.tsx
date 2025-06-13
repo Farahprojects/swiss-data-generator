@@ -103,37 +103,61 @@ const PublicReport = () => {
     setValue(fieldName, placeData.name);
   };
 
+  // Report pricing configuration - no database lookup needed
+  const getReportPriceAndDescription = (reportType: string, relationshipType?: string, essenceType?: string) => {
+    const baseDescriptions = {
+      'sync': 'Sync Compatibility Report',
+      'essence': 'Personal Essence Report',
+      'flow': 'Life Flow Analysis Report',
+      'mindset': 'Mindset Transformation Report',
+      'monthly': 'Monthly Astrology Forecast',
+      'focus': 'Life Focus Guidance Report',
+    };
+
+    let description = baseDescriptions[reportType as keyof typeof baseDescriptions] || 'Astrology Report';
+    
+    // Add specific details to description
+    if (relationshipType) {
+      description += ` (${relationshipType.charAt(0).toUpperCase() + relationshipType.slice(1)} Focus)`;
+    }
+    if (essenceType) {
+      description += ` - ${essenceType.charAt(0).toUpperCase() + essenceType.slice(1)} Analysis`;
+    }
+
+    // Simple pricing based on report type
+    const pricing = {
+      'sync': 39.99,
+      'essence': 29.99,
+      'flow': 34.99,
+      'mindset': 32.99,
+      'monthly': 24.99,
+      'focus': 27.99,
+    };
+
+    const amount = pricing[reportType as keyof typeof pricing] || 29.99;
+    
+    return { amount, description };
+  };
+
   const onSubmit = async (data: ReportFormData) => {
     setIsProcessing(true);
     try {
       console.log('Report data:', data);
       
-      // Get the appropriate product based on report type
-      const product = await getProductByName(data.reportType);
+      const { amount, description } = getReportPriceAndDescription(
+        data.reportType, 
+        data.relationshipType, 
+        data.essenceType
+      );
       
-      if (product) {
-        // Use the product's price ID for checkout
-        const result = await guestCheckoutWithPrice(data.email, product.price_id);
-        
-        if (!result.success) {
-          toast({
-            title: "Payment Error",
-            description: result.error || "Failed to initiate checkout",
-            variant: "destructive",
-          });
-        }
-      } else {
-        // Fallback to a default amount if no product found
-        const defaultAmount = 29.99; // Default report price
-        const result = await guestCheckoutWithAmount(data.email, defaultAmount);
-        
-        if (!result.success) {
-          toast({
-            title: "Payment Error", 
-            description: result.error || "Failed to initiate checkout",
-            variant: "destructive",
-          });
-        }
+      const result = await guestCheckoutWithAmount(data.email, amount, description);
+      
+      if (!result.success) {
+        toast({
+          title: "Payment Error",
+          description: result.error || "Failed to initiate checkout",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error processing report:', error);

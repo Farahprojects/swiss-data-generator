@@ -2,33 +2,34 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Creates a Stripe checkout session for guest users
+ * Creates a Stripe checkout session for guest users with direct amount
  * @param options Configuration for the guest checkout session
  */
 export const initiateGuestCheckout = async ({
   email,
   amount,
-  priceId,
-  productId,
+  description,
   successUrl,
   cancelUrl,
 }: {
   email: string;
-  amount?: number;
-  priceId?: string;
-  productId?: string;
+  amount: number;
+  description: string;
   successUrl?: string;
   cancelUrl?: string;
 }) => {
   try {
+    // Validate required parameters
+    if (!email || !amount || !description) {
+      throw new Error("Email, amount, and description are required");
+    }
+
     // Call the Supabase Edge Function to create a guest checkout session
     const { data, error } = await supabase.functions.invoke("create-guest-checkout", {
       body: {
-        mode: "payment",
         email,
         amount,
-        priceId,
-        productId,
+        description,
         successUrl: successUrl || window.location.origin + '/payment-return?status=success',
         cancelUrl: cancelUrl || window.location.origin + '/payment-return?status=cancelled',
       },
@@ -56,19 +57,11 @@ export const initiateGuestCheckout = async ({
 };
 
 /**
- * Creates a guest checkout session for a specific price
+ * Creates a guest checkout session for a custom amount with description
  * @param email Guest user's email
- * @param priceId Stripe Price ID for the product
+ * @param amount Amount in dollars
+ * @param description Clear description for the charge
  */
-export const guestCheckoutWithPrice = async (email: string, priceId: string) => {
-  return initiateGuestCheckout({ email, priceId });
-};
-
-/**
- * Creates a guest checkout session for a custom amount
- * @param email Guest user's email
- * @param amount Amount in dollars (will be converted to cents)
- */
-export const guestCheckoutWithAmount = async (email: string, amount: number) => {
-  return initiateGuestCheckout({ email, amount });
+export const guestCheckoutWithAmount = async (email: string, amount: number, description: string) => {
+  return initiateGuestCheckout({ email, amount, description });
 };

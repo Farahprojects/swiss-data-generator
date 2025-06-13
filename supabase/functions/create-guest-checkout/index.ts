@@ -23,21 +23,35 @@ serve(async (req) => {
   try {
     /* -------- Request body -------- */
     const {
-      mode = "payment",
       amount,
-      priceId,
-      productId,
       email,
+      description,
       successUrl,
       cancelUrl,
     } = await req.json();
 
-    if (!email) {
-      throw new Error("Email is required for guest checkout");
+    /* -------- Validation -------- */
+    
+    // 1. Validate amount - must be provided, positive, and reasonable
+    if (!amount || typeof amount !== 'number' || amount <= 0) {
+      throw new Error("Amount must be a positive number");
+    }
+    if (amount < 1 || amount > 500) {
+      throw new Error("Amount must be between $1 and $500");
     }
 
-    if (mode === "payment" && !priceId && !amount) {
-      throw new Error("For payment mode, either priceId or amount must be provided");
+    // 2. Validate email - must be provided and valid format
+    if (!email || typeof email !== 'string') {
+      throw new Error("Email is required");
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new Error("Invalid email format");
+    }
+
+    // 3. Validate description - must be clear and non-empty
+    if (!description || typeof description !== 'string' || description.trim().length < 5) {
+      throw new Error("Description must be at least 5 characters long");
     }
 
     /* -------- Find / create customer -------- */
@@ -55,67 +69,49 @@ serve(async (req) => {
 
     /* -------- Success & cancel URLs -------- */
     const baseOrigin = req.headers.get("origin") || "";
-    const paymentStatus = mode === "payment" ? "success" : "setup-success";
-    const cancelStatus  = mode === "payment" ? "cancelled" : "setup-cancelled";
+    const finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?status=success&amount=${amount}`;
+    const finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=cancelled`;
 
-    const finalSuccessUrl =
-      successUrl ??
-      `${baseOrigin}/payment-return?status=${paymentStatus}` +
-        (mode === "payment" && amount ? `&amount=${amount}` : "");
-    const finalCancelUrl =
-      cancelUrl ?? `${baseOrigin}/payment-return?status=${cancelStatus}`;
-
-    /* -------- Create checkout session -------- */
-    let session: Stripe.Checkout.Session;
-
-    if (mode === "payment") {
-      const common = {
-        payment_method_types: ["card"] as const,
-        mode: "payment" as const,
-        customer: customerId,
-        success_url: finalSuccessUrl,
-        cancel_url: finalCancelUrl,
-        metadata: {
+    /* -------- Create checkout session with direct amount -------- */
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"] as const,
+      mode: "payment" as const,
+      customer: customerId,
+      success_url: finalSuccessUrl,
+      cancel_url: finalCancelUrl,
+      metadata: {
+        guest_checkout: "true",
+        guest_email: email,
+        amount: amount.toString(),
+        description: description,
+      },
+      payment_intent_data: {
+        metadata: { 
           guest_checkout: "true",
           guest_email: email,
+          amount: amount.toString(),
+          description: description,
         },
-        payment_intent_data: {
-          metadata: { 
-            guest_checkout: "true",
-            guest_email: email,
+        setup_future_usage: "off_session" as const,
+      },
+      billing_address_collection: "auto" as const,
+      allow_promotion_codes: true,
+      customer_update: { address: "auto" as const },
+      custom_text: { submit: { message: "Your payment is securely processed by Stripe." } },
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: { 
+              name: description,
+              description: `Direct charge for: ${description}`,
+            },
+            unit_amount: Math.round(amount * 100), // Convert dollars to cents
           },
-          setup_future_usage: "off_session" as const,
+          quantity: 1,
         },
-        billing_address_collection: "auto" as const,
-        allow_promotion_codes: true,
-        customer_update: { address: "auto" as const },
-        custom_text: { submit: { message: "Your payment is securely processed by Stripe." } },
-      };
-
-      session = priceId
-        ? await stripe.checkout.sessions.create({
-            ...common,
-            line_items: [{ price: priceId, quantity: 1 }],
-          })
-        : await stripe.checkout.sessions.create({
-            ...common,
-            line_items: [
-              {
-                price_data: {
-                  currency: "usd",
-                  product_data: { name: "Astrology Report", description: "Professional astrology report" },
-                  unit_amount: Math.round(amount * 100),
-                },
-                quantity: 1,
-              },
-            ],
-          });
-    } else {
-      return new Response(
-        JSON.stringify({ error: "Setup mode not supported for guest checkout" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+      ],
+    });
 
     return new Response(
       JSON.stringify({ sessionId: session.id, url: session.url }),
