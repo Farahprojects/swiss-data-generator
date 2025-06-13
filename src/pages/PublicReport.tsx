@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +18,7 @@ import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp } from 'lucide
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import ReportGuideModal from '@/components/public-report/ReportGuideModal';
+import { getProductByName } from '@/utils/stripe-products';
 import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
 import { useToast } from '@/hooks/use-toast';
 
@@ -68,6 +68,7 @@ const PublicReport = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [showReportGuide, setShowReportGuide] = useState(false);
+  const [isPricingLoading, setIsPricingLoading] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<ReportFormData>({
@@ -104,7 +105,7 @@ const PublicReport = () => {
   };
 
   // Report pricing configuration - no database lookup needed
-  const getReportPriceAndDescription = (reportType: string, relationshipType?: string, essenceType?: string) => {
+  const getReportPriceAndDescription = async (reportType: string, relationshipType?: string, essenceType?: string) => {
     const baseDescriptions = {
       'sync': 'Sync Compatibility Report',
       'essence': 'Personal Essence Report',
@@ -124,8 +125,34 @@ const PublicReport = () => {
       description += ` - ${essenceType.charAt(0).toUpperCase() + essenceType.slice(1)} Analysis`;
     }
 
-    // Simple pricing based on report type
-    const pricing = {
+    // Map report types to product names in the database
+    const reportTypeToProductName = {
+      'sync': 'Sync',
+      'essence': 'Essence',
+      'flow': 'Flow',
+      'mindset': 'Mindset',
+      'monthly': 'Monthly',
+      'focus': 'Focus',
+    };
+
+    const productName = reportTypeToProductName[reportType as keyof typeof reportTypeToProductName];
+    
+    try {
+      if (productName) {
+        const product = await getProductByName(productName);
+        if (product) {
+          return { 
+            amount: product.amount_usd, 
+            description: product.description || description 
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching product price:', error);
+    }
+
+    // Fallback pricing if database query fails
+    const fallbackPricing = {
       'sync': 39.99,
       'essence': 29.99,
       'flow': 34.99,
@@ -134,21 +161,25 @@ const PublicReport = () => {
       'focus': 27.99,
     };
 
-    const amount = pricing[reportType as keyof typeof pricing] || 29.99;
+    const amount = fallbackPricing[reportType as keyof typeof fallbackPricing] || 29.99;
     
     return { amount, description };
   };
 
   const onSubmit = async (data: ReportFormData) => {
     setIsProcessing(true);
+    setIsPricingLoading(true);
+    
     try {
       console.log('Report data:', data);
       
-      const { amount, description } = getReportPriceAndDescription(
+      const { amount, description } = await getReportPriceAndDescription(
         data.reportType, 
         data.relationshipType, 
         data.essenceType
       );
+      
+      setIsPricingLoading(false);
       
       const result = await guestCheckoutWithAmount(data.email, amount, description);
       
@@ -168,6 +199,7 @@ const PublicReport = () => {
       });
     } finally {
       setIsProcessing(false);
+      setIsPricingLoading(false);
     }
   };
 
@@ -490,9 +522,9 @@ const PublicReport = () => {
                   type="submit"
                   size="lg" 
                   className="px-12 py-6 text-lg"
-                  disabled={isProcessing}
+                  disabled={isProcessing || isPricingLoading}
                 >
-                  {isProcessing ? 'Processing...' : 'Generate My Report'}
+                  {isProcessing || isPricingLoading ? 'Processing...' : 'Generate My Report'}
                 </Button>
                 
                 {/* Promo Code Section */}
