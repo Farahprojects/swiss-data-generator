@@ -165,7 +165,7 @@ const PublicReport = () => {
                   <h2 className="text-2xl font-semibold">Choose Your Report Type</h2>
                 </div>
                 
-                <div className="pl-1 md:pl-12 space-y-4">
+                <div className="pl-1 md:pl-8 space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="reportType">Report Type *</Label>
                     <Controller
@@ -274,7 +274,7 @@ const PublicReport = () => {
                       <h2 className="text-2xl font-semibold">Contact Information</h2>
                     </div>
                     
-                    <div className="pl-1 md:pl-12">
+                    <div className="pl-1 md:pl-8">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="name">Full Name *</Label>
@@ -314,7 +314,7 @@ const PublicReport = () => {
                       <h2 className="text-2xl font-semibold">Your Birth Details</h2>
                     </div>
                     
-                    <div className="pl-1 md:pl-12 space-y-6 birth-details-container" data-testid="birth-details">
+                    <div className="pl-1 md:pl-8 space-y-6 birth-details-container" data-testid="birth-details">
                       <div className="grid grid-cols-2 gap-2 md:gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="birthDate">Birth Date *</Label>
@@ -368,7 +368,7 @@ const PublicReport = () => {
                     <h2 className="text-2xl font-semibold">Second Person Details</h2>
                   </div>
                   
-                  <div className="pl-1 md:pl-12 space-y-6">
+                  <div className="pl-1 md:pl-8 space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="secondPersonName">Name *</Label>
                       <Input
