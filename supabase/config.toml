@@ -128,11 +128,6 @@ source = "./supabase/functions/process-credits"
 verify_jwt = false
 
 [[edge-runtime.functions]]
-name = "process-swiss-ephemeris"
-source = "./supabase/functions/process-swiss-ephemeris"
-verify_jwt = false
-
-[[edge-runtime.functions]]
 name = "process-topup-queue"
 source = "./supabase/functions/process-topup-queue"
 verify_jwt = false
