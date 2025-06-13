@@ -26,6 +26,13 @@ serve(async (req) => {
       apiVersion: "2024-04-10",
     });
 
+    // Initialize Supabase with service role for database operations
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") || "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+      { auth: { persistSession: false } }
+    );
+
     console.log("Verifying payment for session:", sessionId);
 
     // Retrieve the checkout session from Stripe
@@ -56,7 +63,28 @@ serve(async (req) => {
 
     console.log("Payment verified successfully:", reportData);
 
-    // Return verified payment details
+    // Insert into guest_reports table to track this payment and report generation
+    const { data: guestReportData, error: insertError } = await supabase
+      .from("guest_reports")
+      .insert({
+        stripe_session_id: session.id,
+        email: reportData.email,
+        report_type: reportData.reportType || "unknown",
+        amount_paid: (session.amount_total || 0) / 100, // Convert cents to dollars
+        report_data: reportData,
+        payment_status: "paid",
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Error inserting guest report record:", insertError);
+      throw new Error(`Failed to create guest report record: ${insertError.message}`);
+    }
+
+    console.log("Guest report record created:", guestReportData);
+
+    // Return verified payment details along with guest report ID
     return new Response(
       JSON.stringify({
         success: true,
@@ -65,6 +93,7 @@ serve(async (req) => {
         amountPaid: session.amount_total,
         currency: session.currency,
         reportData,
+        guestReportId: guestReportData.id,
       }),
       {
         status: 200,

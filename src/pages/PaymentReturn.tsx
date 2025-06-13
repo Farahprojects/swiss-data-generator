@@ -42,7 +42,7 @@ const PaymentReturn = () => {
           return;
         }
         
-        // Verify payment with Stripe
+        // Verify payment with Stripe and create guest report record
         setStatus('verifying');
         setMessage('Verifying your payment...');
         
@@ -53,7 +53,7 @@ const PaymentReturn = () => {
           throw new Error(verificationResult.error || 'Payment verification failed');
         }
         
-        // Payment verified, now generate report
+        // Payment verified and guest report record created
         setStatus('generating');
         setMessage('Payment confirmed! Generating your report...');
         setReportDetails(verificationResult.reportData);
@@ -67,13 +67,31 @@ const PaymentReturn = () => {
           throw new Error(`Report generation failed: ${reportError.message}`);
         }
         
+        // Update the guest_reports table with the generated report content
+        if (verificationResult.guestReportId && reportData?.report) {
+          const { error: updateError } = await supabase
+            .from('guest_reports')
+            .update({
+              report_content: reportData.report,
+              has_report: true,
+            })
+            .eq('id', verificationResult.guestReportId);
+          
+          if (updateError) {
+            console.error('Error updating guest report with content:', updateError);
+            // Don't throw here as the report was generated successfully
+          } else {
+            console.log('Guest report updated with generated content');
+          }
+        }
+        
         // Success!
         setStatus('success');
-        setMessage('Report generated and sent to your email!');
+        setMessage('Report generated and will be sent to your email shortly!');
         
         toast({
           title: "Success!",
-          description: `Your ${verificationResult.reportData.reportType} report has been generated and sent to ${verificationResult.reportData.email}`,
+          description: `Your ${verificationResult.reportData.reportType} report has been generated and will be sent to ${verificationResult.reportData.email}`,
         });
         
       } catch (error) {
