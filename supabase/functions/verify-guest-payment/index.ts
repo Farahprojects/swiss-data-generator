@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
@@ -6,6 +5,108 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Map frontend report types to Swiss API request types
+const mapReportTypeToSwissRequest = (reportType: string): string => {
+  const mapping: { [key: string]: string } = {
+    'essence': 'natal',
+    'flow': 'natal',
+    'mindset': 'natal',
+    'monthly': 'transit',
+    'focus': 'natal',
+    'sync': 'synastry',
+    'compatibility': 'synastry',
+  };
+  return mapping[reportType] || 'natal';
+};
+
+// Format date for Swiss API (assuming it expects YYYY-MM-DD format)
+const formatDateForSwiss = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+  } catch (error) {
+    console.error('❌ Error formatting date:', error);
+    return dateString; // Return original if parsing fails
+  }
+};
+
+// Call Swiss Ephemeris API directly
+const callSwissEphemerisAPI = async (reportData: any): Promise<any> => {
+  const swissUrl = Deno.env.get("SWISS_EPHEMERIS_URL");
+  
+  if (!swissUrl) {
+    throw new Error("SWISS_EPHEMERIS_URL environment variable not set");
+  }
+
+  // Validate required fields
+  if (!reportData.birthDate || !reportData.birthLatitude || !reportData.birthLongitude) {
+    throw new Error("Missing required birth data: date, latitude, or longitude");
+  }
+
+  // Map frontend fields to Swiss API expected fields
+  const swissPayload = {
+    request: mapReportTypeToSwissRequest(reportData.reportType),
+    birth_day: formatDateForSwiss(reportData.birthDate),
+    latitude: parseFloat(reportData.birthLatitude),
+    longitude: parseFloat(reportData.birthLongitude),
+  };
+
+  // Add second person data for synastry reports
+  if (['sync', 'compatibility'].includes(reportData.reportType)) {
+    if (reportData.secondPersonBirthDate && reportData.secondPersonLatitude && reportData.secondPersonLongitude) {
+      swissPayload.birth_day2 = formatDateForSwiss(reportData.secondPersonBirthDate);
+      swissPayload.latitude2 = parseFloat(reportData.secondPersonLatitude);
+      swissPayload.longitude2 = parseFloat(reportData.secondPersonLongitude);
+    }
+  }
+
+  console.log("🔄 Calling Swiss Ephemeris API with payload:", JSON.stringify(swissPayload, null, 2));
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+  try {
+    const response = await fetch(swissUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(swissPayload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log(`📡 Swiss API Response Status: ${response.status}`);
+
+    const responseText = await response.text();
+    console.log("📋 Swiss API Response Body:", responseText);
+
+    if (!response.ok) {
+      throw new Error(`Swiss API error: ${response.status} - ${responseText}`);
+    }
+
+    // Try to parse as JSON, fallback to text if parsing fails
+    let swissData;
+    try {
+      swissData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.warn("⚠️ Swiss API response is not valid JSON, storing as text");
+      swissData = { raw_response: responseText };
+    }
+
+    return swissData;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      throw new Error('Swiss API request timed out after 30 seconds');
+    }
+    
+    throw error;
+  }
 };
 
 serve(async (req) => {
@@ -56,6 +157,7 @@ serve(async (req) => {
           paymentStatus: existingRecord.payment_status,
           reportData: existingRecord.report_data,
           guestReportId: existingRecord.id,
+          swissData: existingRecord.swiss_data,
           message: "Payment already verified and recorded"
         }),
         {
@@ -93,14 +195,34 @@ serve(async (req) => {
       description: session.metadata?.description,
       reportType: session.metadata?.reportType,
       sessionId: session.id,
-      // Add any other metadata we stored during checkout
-      ...session.metadata,
+      // Birth data
+      birthDate: session.metadata?.birthDate,
+      birthTime: session.metadata?.birthTime,
+      birthLocation: session.metadata?.birthLocation,
+      birthLatitude: session.metadata?.birthLatitude,
+      birthLongitude: session.metadata?.birthLongitude,
+      birthPlaceId: session.metadata?.birthPlaceId,
+      // Second person data (for compatibility reports)
+      secondPersonName: session.metadata?.secondPersonName,
+      secondPersonBirthDate: session.metadata?.secondPersonBirthDate,
+      secondPersonBirthTime: session.metadata?.secondPersonBirthTime,
+      secondPersonBirthLocation: session.metadata?.secondPersonBirthLocation,
+      secondPersonLatitude: session.metadata?.secondPersonLatitude,
+      secondPersonLongitude: session.metadata?.secondPersonLongitude,
+      secondPersonPlaceId: session.metadata?.secondPersonPlaceId,
+      // Other metadata
+      relationshipType: session.metadata?.relationshipType,
+      essenceType: session.metadata?.essenceType,
+      returnYear: session.metadata?.returnYear,
+      notes: session.metadata?.notes,
+      promoCode: session.metadata?.promoCode,
     };
 
     console.log("📊 Extracted report data:", {
       email: reportData.email,
       reportType: reportData.reportType,
       amount: reportData.amount,
+      hasBirthData: !!(reportData.birthDate && reportData.birthLatitude && reportData.birthLongitude),
       metadataFields: Object.keys(reportData).length
     });
 
@@ -136,25 +258,49 @@ serve(async (req) => {
       amountPaid: guestReportData.amount_paid
     });
 
-    // Automatically call process-swiss-ephemeris function
-    console.log("🔄 Automatically triggering Swiss ephemeris processing...");
-    try {
-      const { data: swissResult, error: swissError } = await supabase.functions.invoke(
-        "process-swiss-ephemeris",
-        {
-          body: { guestReportId: guestReportData.id },
-        }
-      );
+    // Call Swiss Ephemeris API directly
+    let swissData = null;
+    let swissError = null;
 
-      if (swissError) {
-        console.error("❌ Error calling Swiss ephemeris function:", swissError);
-        // Don't fail the whole request, just log the error
-      } else {
-        console.log("✅ Swiss ephemeris processing triggered successfully:", swissResult);
-      }
-    } catch (swissCallError) {
-      console.error("❌ Exception calling Swiss ephemeris function:", swissCallError);
-      // Don't fail the whole request, just log the error
+    console.log("🔄 Starting Swiss Ephemeris API call...");
+    try {
+      swissData = await callSwissEphemerisAPI(reportData);
+      console.log("✅ Swiss Ephemeris API call successful");
+      console.log("📊 Swiss data keys:", Object.keys(swissData || {}));
+    } catch (error) {
+      swissError = error.message;
+      console.error("❌ Swiss Ephemeris API call failed:", error);
+      
+      // Create error object to store in swiss_data
+      swissData = {
+        error: true,
+        error_message: error.message,
+        timestamp: new Date().toISOString(),
+        attempted_payload: {
+          request: mapReportTypeToSwissRequest(reportData.reportType),
+          birth_day: reportData.birthDate,
+          latitude: reportData.birthLatitude,
+          longitude: reportData.birthLongitude,
+        }
+      };
+    }
+
+    // Update the guest report with Swiss data (success or error)
+    console.log("💾 Updating guest report with Swiss data...");
+    const { error: updateError } = await supabase
+      .from("guest_reports")
+      .update({
+        swiss_data: swissData,
+        has_report: !swissError, // Set to true only if Swiss API succeeded
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", guestReportData.id);
+
+    if (updateError) {
+      console.error("❌ Error updating guest report with Swiss data:", updateError);
+      // Don't throw here - the payment is still valid even if we can't save Swiss data
+    } else {
+      console.log("✅ Guest report updated with Swiss data successfully");
     }
 
     // Return verified payment details along with guest report ID
@@ -166,6 +312,9 @@ serve(async (req) => {
       currency: session.currency,
       reportData: guestReportData.report_data,
       guestReportId: guestReportData.id,
+      swissData: swissData,
+      swissProcessed: !swissError,
+      swissError: swissError,
     };
 
     console.log("🎉 Payment verification completed successfully");
