@@ -136,6 +136,26 @@ serve(async (req) => {
       amountPaid: guestReportData.amount_paid
     });
 
+    // Now trigger the guest report processing
+    console.log("🚀 Triggering guest report processing...");
+    
+    try {
+      const { data: processResponse, error: processError } = await supabase.functions.invoke("process-guest-report", {
+        body: { guestReportId: guestReportData.id },
+      });
+
+      if (processError) {
+        console.error("❌ Error processing guest report:", processError);
+        // Don't fail the whole verification - we can retry report generation later
+        console.log("⚠️ Report processing failed, but payment verification succeeded");
+      } else {
+        console.log("✅ Guest report processing initiated successfully:", processResponse);
+      }
+    } catch (processErr) {
+      console.error("❌ Exception during guest report processing:", processErr);
+      // Don't fail the whole verification - we can retry report generation later
+    }
+
     // Return verified payment details along with guest report ID
     const response = {
       success: true,
