@@ -480,6 +480,7 @@ export type Database = {
           report_data: Json
           report_type: string
           stripe_session_id: string
+          swiss_data: Json | null
           updated_at: string
         }
         Insert: {
@@ -494,6 +495,7 @@ export type Database = {
           report_data?: Json
           report_type: string
           stripe_session_id: string
+          swiss_data?: Json | null
           updated_at?: string
         }
         Update: {
@@ -508,6 +510,7 @@ export type Database = {
           report_data?: Json
           report_type?: string
           stripe_session_id?: string
+          swiss_data?: Json | null
           updated_at?: string
         }
         Relationships: []
