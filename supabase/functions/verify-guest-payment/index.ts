@@ -29,11 +29,15 @@ const formatDateForSwiss = (dateString: string): string => {
 };
 
 const callSwissEphemerisAPI = async (reportData: any): Promise<any> => {
-  const swissUrl = Deno.env.get("SWISS_EPHEMERIS_URL");
-  if (!swissUrl) throw new Error("SWISS_EPHEMERIS_URL env var not set");
-
   const requestType = mapReportTypeToSwissRequest(reportData.reportType);
-  if (requestType === "unknown") throw new Error(`Invalid report type: ${reportData.reportType}`);
+  if (requestType === "unknown") {
+    throw new Error(`Invalid report type: ${reportData.reportType}`);
+  }
+
+  const swissUrl = `${Deno.env.get("SWISS_EPHEMERIS_URL")}/${requestType}`;
+  if (!Deno.env.get("SWISS_EPHEMERIS_URL")) {
+    throw new Error("SWISS_EPHEMERIS_URL environment variable not set");
+  }
 
   const payload: any = {
     birth_day: formatDateForSwiss(reportData.birthDate),
