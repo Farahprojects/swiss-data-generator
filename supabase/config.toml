@@ -128,6 +128,11 @@ source = "./supabase/functions/process-credits"
 verify_jwt = false
 
 [[edge-runtime.functions]]
+name = "process-swiss-ephemeris"
+source = "./supabase/functions/process-swiss-ephemeris"
+verify_jwt = false
+
+[[edge-runtime.functions]]
 name = "process-topup-queue"
 source = "./supabase/functions/process-topup-queue"
 verify_jwt = false
@@ -165,4 +170,9 @@ verify_jwt = true
 [[edge-runtime.functions]]
 name = "verification-emailer"
 source = "./supabase/functions/verification-emailer"
+verify_jwt = false
+
+[[edge-runtime.functions]]
+name = "verify-guest-payment"
+source = "./supabase/functions/verify-guest-payment"
 verify_jwt = false
