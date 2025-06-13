@@ -18,6 +18,7 @@ import Signup from './pages/Signup';
 import { AuthGuard } from './components/auth/AuthGuard';
 import Index from './pages/Index';
 import PublicReport from './pages/PublicReport';
+import PaymentReturn from './pages/PaymentReturn';
 import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import About from './pages/About';
@@ -48,6 +49,7 @@ function App() {
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/report" element={<PublicReport />} />
+                      <Route path="/payment-return" element={<PaymentReturn />} />
                       <Route path="/pricing" element={<Pricing />} />
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/about" element={<About />} />
