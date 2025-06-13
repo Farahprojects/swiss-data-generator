@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -36,8 +35,7 @@ const reportGuides = [
     details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
     subTypes: [
       'Personal Sync – Romantic, emotional, or close social connection',
-      'Professional Sync – Team dynamics, leadership compatibility, working styles',
-      'Each uses the same underlying chart, but the AI interprets it through that specific lens.'
+      'Professional Sync – Team dynamics, leadership compatibility, working styles'
     ]
   },
   {
@@ -106,7 +104,7 @@ const ReportGuideModal = ({ isOpen, onClose }: ReportGuideModalProps) => {
                 {report.subTypes && (
                   <div className="space-y-1">
                     {report.subTypes.map((subType, index) => (
-                      <p key={index} className="text-xs text-muted-foreground">
+                      <p key={index} className="text-xs text-muted-foreground font-bold">
                         • {subType}
                       </p>
                     ))}
