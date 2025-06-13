@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface StripeProduct {
@@ -38,7 +37,7 @@ export const fetchStripeProducts = async (): Promise<StripeProduct[]> => {
 export const getProductByName = async (name: string): Promise<StripeProduct | null> => {
   try {
     console.log(`Searching for product with name: ${name}`);
-    // First try exact match
+    // Try exact match first
     let { data, error } = await supabase
       .from('stripe_products')
       .select('*')
@@ -91,6 +90,14 @@ export const getProductByType = async (type: string): Promise<StripeProduct[]> =
     console.error(`Failed to fetch products with type ${type}:`, err);
     return [];
   }
+};
+
+export const getReportProducts = async (): Promise<StripeProduct[]> => {
+  return getProductByType('report');
+};
+
+export const getCreditProducts = async (): Promise<StripeProduct[]> => {
+  return getProductByType('credit');
 };
 
 export const getActiveCreditProduct = async (): Promise<StripeProduct | null> => {
