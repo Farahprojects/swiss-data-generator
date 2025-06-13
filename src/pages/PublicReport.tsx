@@ -433,7 +433,7 @@ const PublicReport = () => {
                   className="px-12 py-6 text-lg"
                   disabled={isProcessing}
                 >
-                  {isProcessing ? 'Processing...' : 'Generate My Report - $29'}
+                  {isProcessing ? 'Processing...' : 'Generate My Report'}
                 </Button>
                 
                 {/* Promo Code Section */}
@@ -441,15 +441,17 @@ const PublicReport = () => {
                   <button
                     type="button"
                     onClick={() => setShowPromoCode(!showPromoCode)}
-                    className="flex items-center gap-2 text-base font-bold text-muted-foreground hover:text-foreground transition-colors mx-auto"
+                    className="flex flex-col md:flex-row items-center gap-1 md:gap-2 text-base font-bold text-muted-foreground hover:text-foreground transition-colors mx-auto"
                   >
-                    Have a promo code? 
-                    <span className="underline">Enter it here</span>
-                    {showPromoCode ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
+                    <span>Have a promo code?</span>
+                    <div className="flex items-center gap-1">
+                      <span className="underline">Enter it here</span>
+                      {showPromoCode ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
                   </button>
                   
                   <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
