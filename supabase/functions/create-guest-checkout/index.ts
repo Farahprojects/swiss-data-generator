@@ -88,8 +88,8 @@ serve(async (req) => {
     /* -------- Success & cancel URLs with session ID -------- */
     const baseOrigin = req.headers.get("origin") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
     
-    // FIXED: Use the correct Stripe parameter format for session ID
-    const finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}&status=success`;
+    // FIXED: Use the correct Stripe format without extra parameters
+    const finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}`;
     const finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=cancelled`;
     
     console.log("🔗 Success URL:", finalSuccessUrl);

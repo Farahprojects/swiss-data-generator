@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { verifyGuestPayment } from "@/utils/guest-checkout";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const PaymentReturn = () => {
   const location = useLocation();
@@ -38,7 +37,39 @@ const PaymentReturn = () => {
           allParams: Object.fromEntries(params.entries())
         });
         
-        // If payment was cancelled
+        // If we have a session_id, it means successful payment from Stripe
+        if (sessionId) {
+          console.log("✅ Session ID found - payment was successful:", sessionId);
+          
+          // Verify payment with Stripe and create guest report record
+          setStatus('verifying');
+          setMessage('Verifying your payment and saving your order...');
+          
+          console.log("🔄 Starting payment verification with session ID:", sessionId);
+          const verificationResult = await verifyGuestPayment(sessionId);
+          console.log("📊 Verification result:", verificationResult);
+          
+          if (!verificationResult.success || !verificationResult.verified) {
+            console.error("❌ Payment verification failed:", verificationResult.error);
+            throw new Error(verificationResult.error || 'Payment verification failed');
+          }
+          
+          // Payment verified and guest report record created
+          setStatus('success');
+          setMessage('Payment confirmed! Your order has been processed and saved to our database.');
+          setReportDetails(verificationResult.reportData);
+          
+          console.log("✅ Payment verification completed successfully");
+          
+          toast({
+            title: "Success!",
+            description: `Your payment for ${verificationResult.reportData.reportType} has been processed successfully.`,
+          });
+          
+          return;
+        }
+        
+        // If payment was cancelled (status=cancelled but no session_id)
         if (urlStatus === 'cancelled') {
           console.log("❌ Payment was cancelled by user");
           setStatus('error');
@@ -46,53 +77,10 @@ const PaymentReturn = () => {
           return;
         }
         
-        // If no session ID, try to find recent payment by checking URL params
-        if (!sessionId) {
-          console.error("❌ No session ID found in URL parameters");
-          console.log("🔍 Available URL params:", Object.fromEntries(params.entries()));
-          
-          // Try to extract any session-like parameter
-          const allParams = Object.fromEntries(params.entries());
-          const possibleSessionId = Object.entries(allParams).find(([key, value]) => 
-            key.toLowerCase().includes('session') || 
-            (typeof value === 'string' && value.startsWith('cs_'))
-          );
-          
-          if (possibleSessionId) {
-            console.log("🔍 Found possible session ID:", possibleSessionId);
-            setMessage(`Found session parameter: ${possibleSessionId[0]}=${possibleSessionId[1]}. Attempting verification...`);
-            // You could try to verify with this ID
-          } else {
-            setStatus('error');
-            setMessage('No payment session found. The payment may not have completed properly.');
-            return;
-          }
-        }
-        
-        // Verify payment with Stripe and create guest report record
-        setStatus('verifying');
-        setMessage('Verifying your payment and saving your order...');
-        
-        console.log("🔄 Starting payment verification with session ID:", sessionId);
-        const verificationResult = await verifyGuestPayment(sessionId);
-        console.log("📊 Verification result:", verificationResult);
-        
-        if (!verificationResult.success || !verificationResult.verified) {
-          console.error("❌ Payment verification failed:", verificationResult.error);
-          throw new Error(verificationResult.error || 'Payment verification failed');
-        }
-        
-        // Payment verified and guest report record created
-        setStatus('success');
-        setMessage('Payment confirmed! Your order has been processed and saved to our database.');
-        setReportDetails(verificationResult.reportData);
-        
-        console.log("✅ Payment verification completed successfully");
-        
-        toast({
-          title: "Success!",
-          description: `Your payment for ${verificationResult.reportData.reportType} has been processed successfully.`,
-        });
+        // If we get here, something unexpected happened
+        console.error("❌ Unexpected payment return state - no session ID and no cancel status");
+        setStatus('error');
+        setMessage('Payment status unclear. Please check your email for confirmation or contact support.');
         
       } catch (error: any) {
         console.error('❌ Error processing payment return:', {
