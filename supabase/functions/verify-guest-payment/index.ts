@@ -16,6 +16,9 @@ const mapReportTypeToSwissRequest = (reportType: string): string => {
     'monthly': 'monthly',
     'focus': 'focus',
     'sync': 'sync',
+  };
+
+  return mapping[reportType] || 'unknown';
 };
 
 // Format date for Swiss API (assuming it expects YYYY-MM-DD format)
@@ -103,6 +106,52 @@ const callSwissEphemerisAPI = async (reportData: any): Promise<any> => {
     }
     
     throw error;
+  }
+};
+
+// Background task to process Swiss API
+const processSwissDataInBackground = async (guestReportId: string, reportData: any, supabase: any) => {
+  console.log("🔄 Starting background Swiss API processing for report:", guestReportId);
+  
+  let swissData = null;
+  let swissError = null;
+
+  try {
+    swissData = await callSwissEphemerisAPI(reportData);
+    console.log("✅ Background Swiss API call successful");
+  } catch (error) {
+    swissError = error.message;
+    console.error("❌ Background Swiss API call failed:", error);
+    
+    // Create error object to store in swiss_data
+    swissData = {
+      error: true,
+      error_message: error.message,
+      timestamp: new Date().toISOString(),
+      attempted_payload: {
+        request: mapReportTypeToSwissRequest(reportData.reportType),
+        birth_day: reportData.birthDate,
+        latitude: reportData.birthLatitude,
+        longitude: reportData.birthLongitude,
+      }
+    };
+  }
+
+  // Update the guest report with Swiss data
+  console.log("💾 Updating guest report with Swiss data in background...");
+  const { error: updateError } = await supabase
+    .from("guest_reports")
+    .update({
+      swiss_data: swissData,
+      has_report: !swissError,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", guestReportId);
+
+  if (updateError) {
+    console.error("❌ Error updating guest report with Swiss data:", updateError);
+  } else {
+    console.log("✅ Background Swiss data processing completed for report:", guestReportId);
   }
 };
 
@@ -255,52 +304,14 @@ serve(async (req) => {
       amountPaid: guestReportData.amount_paid
     });
 
-    // Call Swiss Ephemeris API directly
-    let swissData = null;
-    let swissError = null;
+    // Start Swiss API processing in the background (don't await)
+    EdgeRuntime.waitUntil(
+      processSwissDataInBackground(guestReportData.id, reportData, supabase)
+    );
 
-    console.log("🔄 Starting Swiss Ephemeris API call...");
-    try {
-      swissData = await callSwissEphemerisAPI(reportData);
-      console.log("✅ Swiss Ephemeris API call successful");
-      console.log("📊 Swiss data keys:", Object.keys(swissData || {}));
-    } catch (error) {
-      swissError = error.message;
-      console.error("❌ Swiss Ephemeris API call failed:", error);
-      
-      // Create error object to store in swiss_data
-      swissData = {
-        error: true,
-        error_message: error.message,
-        timestamp: new Date().toISOString(),
-        attempted_payload: {
-          request: mapReportTypeToSwissRequest(reportData.reportType),
-          birth_day: reportData.birthDate,
-          latitude: reportData.birthLatitude,
-          longitude: reportData.birthLongitude,
-        }
-      };
-    }
+    console.log("🎉 Payment verification completed successfully - Swiss processing started in background");
 
-    // Update the guest report with Swiss data (success or error)
-    console.log("💾 Updating guest report with Swiss data...");
-    const { error: updateError } = await supabase
-      .from("guest_reports")
-      .update({
-        swiss_data: swissData,
-        has_report: !swissError, // Set to true only if Swiss API succeeded
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", guestReportData.id);
-
-    if (updateError) {
-      console.error("❌ Error updating guest report with Swiss data:", updateError);
-      // Don't throw here - the payment is still valid even if we can't save Swiss data
-    } else {
-      console.log("✅ Guest report updated with Swiss data successfully");
-    }
-
-    // Return verified payment details along with guest report ID
+    // Return verified payment details immediately
     const response = {
       success: true,
       verified: true,
@@ -309,12 +320,9 @@ serve(async (req) => {
       currency: session.currency,
       reportData: guestReportData.report_data,
       guestReportId: guestReportData.id,
-      swissData: swissData,
-      swissProcessed: !swissError,
-      swissError: swissError,
+      swissProcessing: true, // Indicate that Swiss processing is happening in background
+      message: "Payment verified and Swiss data processing started"
     };
-
-    console.log("🎉 Payment verification completed successfully");
 
     return new Response(
       JSON.stringify(response),
