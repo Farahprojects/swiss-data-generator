@@ -15,7 +15,6 @@ const mapReportTypeToSwissRequest = (reportType: string): string => {
     'monthly': 'monthly',
     'focus': 'focus',
     'sync': 'sync',
-    'natal': 'natal',
   };
   return mapping[reportType] || 'unknown';
 };
