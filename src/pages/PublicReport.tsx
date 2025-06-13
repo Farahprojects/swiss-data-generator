@@ -65,9 +65,9 @@ const relationshipTypes = [
 ];
 
 const essenceTypes = [
-  { value: 'essence_personal', label: 'Personal' },
-  { value: 'essence_professional', label: 'Professional' },
-  { value: 'essence_relational', label: 'Relational' },
+  { value: 'personal', label: 'Personal' },
+  { value: 'professional', label: 'Professional' },
+  { value: 'relational', label: 'Relational' },
 ];
 
 const PublicReport = () => {
@@ -131,6 +131,18 @@ const PublicReport = () => {
     }
   };
 
+  // Function to build the complete report type
+  const buildCompleteReportType = (data: ReportFormData) => {
+    if (data.reportType === 'essence' && data.essenceType) {
+      return `essence_${data.essenceType}`;
+    }
+    if (data.reportType === 'sync' && data.relationshipType) {
+      return `sync_${data.relationshipType}`;
+    }
+    // For other report types that don't have subtypes
+    return data.reportType;
+  };
+
   // Report pricing configuration - database lookup only
   const getReportPriceAndDescription = async (reportType: string, relationshipType?: string, essenceType?: string) => {
     const baseDescriptions = {
@@ -186,6 +198,10 @@ const PublicReport = () => {
     try {
       console.log('Report data:', data);
       
+      // Build the complete report type
+      const completeReportType = buildCompleteReportType(data);
+      console.log('Complete report type:', completeReportType);
+      
       const { amount, description } = await getReportPriceAndDescription(
         data.reportType, 
         data.relationshipType, 
@@ -196,7 +212,7 @@ const PublicReport = () => {
 
       // Prepare report data for storage in payment metadata
       const reportData = {
-        reportType: data.reportType,
+        reportType: completeReportType, // Use the complete report type here
         relationshipType: data.relationshipType,
         essenceType: data.essenceType,
         name: data.name,

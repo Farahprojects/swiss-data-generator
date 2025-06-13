@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
@@ -8,13 +9,17 @@ const corsHeaders = {
 };
 
 const mapReportTypeToSwissRequest = (reportType: string): string => {
+  // Map complete report types to swiss request types
   const mapping: { [key: string]: string } = {
-    'essence': 'essence',
+    'essence_personal': 'essence',
+    'essence_professional': 'essence',
+    'essence_relational': 'essence',
+    'sync_personal': 'sync',
+    'sync_professional': 'sync',
     'flow': 'flow',
     'mindset': 'mindset',
     'monthly': 'monthly',
     'focus': 'focus',
-    'sync': 'sync',
   };
   return mapping[reportType] || 'unknown';
 };
@@ -45,7 +50,7 @@ const callSwissEphemerisAPI = async (reportData: any): Promise<any> => {
     longitude: parseFloat(reportData.birthLongitude),
   };
 
-  if (['sync', 'compatibility'].includes(reportData.reportType)) {
+  if (['sync_personal', 'sync_professional'].includes(reportData.reportType)) {
     if (reportData.secondPersonBirthDate && reportData.secondPersonLatitude && reportData.secondPersonLongitude) {
       payload.birth_day2 = formatDateForSwiss(reportData.secondPersonBirthDate);
       payload.latitude2 = parseFloat(reportData.secondPersonLatitude);
@@ -156,7 +161,7 @@ serve(async (req) => {
       email: session.metadata?.guest_email || session.customer_details?.email,
       amount: session.metadata?.amount,
       description: session.metadata?.description,
-      reportType: session.metadata?.reportType,
+      reportType: session.metadata?.reportType, // This now contains the complete report type
       sessionId: session.id,
       birthDate: session.metadata?.birthDate,
       birthTime: session.metadata?.birthTime,
@@ -181,7 +186,7 @@ serve(async (req) => {
       .insert({
         stripe_session_id: session.id,
         email: reportData.email,
-        report_type: reportData.reportType || "unknown",
+        report_type: reportData.reportType, // Save the complete report type here
         amount_paid: (session.amount_total || 0) / 100,
         report_data: reportData,
         payment_status: "paid",
