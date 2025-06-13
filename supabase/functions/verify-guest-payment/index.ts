@@ -136,6 +136,27 @@ serve(async (req) => {
       amountPaid: guestReportData.amount_paid
     });
 
+    // Automatically call process-swiss-ephemeris function
+    console.log("🔄 Automatically triggering Swiss ephemeris processing...");
+    try {
+      const { data: swissResult, error: swissError } = await supabase.functions.invoke(
+        "process-swiss-ephemeris",
+        {
+          body: { guestReportId: guestReportData.id },
+        }
+      );
+
+      if (swissError) {
+        console.error("❌ Error calling Swiss ephemeris function:", swissError);
+        // Don't fail the whole request, just log the error
+      } else {
+        console.log("✅ Swiss ephemeris processing triggered successfully:", swissResult);
+      }
+    } catch (swissCallError) {
+      console.error("❌ Exception calling Swiss ephemeris function:", swissCallError);
+      // Don't fail the whole request, just log the error
+    }
+
     // Return verified payment details along with guest report ID
     const response = {
       success: true,
