@@ -44,6 +44,7 @@ export type Database = {
           api_key: string
           created_at: string | null
           email: string | null
+          guest_bypass: boolean
           id: string
           is_active: boolean | null
           pending_email_change: boolean
@@ -58,6 +59,7 @@ export type Database = {
           api_key: string
           created_at?: string | null
           email?: string | null
+          guest_bypass?: boolean
           id?: string
           is_active?: boolean | null
           pending_email_change?: boolean
@@ -72,6 +74,7 @@ export type Database = {
           api_key?: string
           created_at?: string | null
           email?: string | null
+          guest_bypass?: boolean
           id?: string
           is_active?: boolean | null
           pending_email_change?: boolean

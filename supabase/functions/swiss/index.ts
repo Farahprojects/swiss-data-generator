@@ -156,53 +156,85 @@ serve(async (req) => {
     }, 401);
   }
 
-  // DETAILED BALANCE LOOKUP LOGGING
-  console.log("[swiss] 🔍 Starting balance lookup with API key:", apiKey);
+  // ENHANCED BALANCE LOOKUP - Now includes guest_bypass check
+  console.log("[swiss] 🔍 Starting enhanced balance lookup with API key:", apiKey);
   console.log("[swiss] 🔍 Auth method:", authMethod);
-  console.log("[swiss] 🔍 Using v_api_key_balance view to get balance");
+  console.log("[swiss] 🔍 Using api_keys table to get balance and guest_bypass status");
 
-  // Proceed with balance check using the API key (regardless of how it was obtained)
-  const { data: row, error } = await sb
-    .from("v_api_key_balance")
-    .select("user_id, balance_usd")
+  // Get API key info including guest_bypass flag
+  const { data: apiKeyRow, error: apiKeyError } = await sb
+    .from("api_keys")
+    .select("user_id, guest_bypass")
     .eq("api_key", apiKey)
+    .eq("is_active", true)
     .maybeSingle();
 
-  console.log("[swiss] 🔍 Raw balance query response:");
-  console.log("[swiss] 🔍 - data:", row);
-  console.log("[swiss] 🔍 - error:", error);
+  console.log("[swiss] 🔍 API key query response:");
+  console.log("[swiss] 🔍 - data:", apiKeyRow);
+  console.log("[swiss] 🔍 - error:", apiKeyError);
 
-  if (error) {
-    console.error("[swiss] ❌ Balance lookup query failed:", error);
-    return json({ success: false, message: "Balance lookup failed." }, 500);
+  if (apiKeyError) {
+    console.error("[swiss] ❌ API key lookup query failed:", apiKeyError);
+    return json({ success: false, message: "API key lookup failed." }, 500);
   }
 
-  if (!row) {
-    console.log("[swiss] ❌ No row returned from v_api_key_balance for API key:", apiKey);
+  if (!apiKeyRow) {
+    console.log("[swiss] ❌ No API key record found for:", apiKey);
     return json({
       success: false,
       message: "Invalid API key. Log in at theraiapi.com to check your credentials.",
     }, 401);
   }
 
-  console.log("[swiss] 🔍 Found user_id:", row.user_id);
-  console.log("[swiss] 🔍 Raw balance_usd from DB:", row.balance_usd);
-  console.log("[swiss] 🔍 Type of balance_usd:", typeof row.balance_usd);
+  const isGuestBypass = apiKeyRow.guest_bypass;
+  console.log("[swiss] 🔍 Guest bypass enabled:", isGuestBypass);
 
-  const balance = parseFloat(String(row.balance_usd));
-  console.log("[swiss] 🔍 Parsed balance:", balance);
-  console.log("[swiss] 🔍 Is balance finite?", Number.isFinite(balance));
-  console.log("[swiss] 🔍 Balance > 0?", balance > 0);
+  let balance = 0;
 
-  if (!Number.isFinite(balance) || balance <= 0) {
-    console.log("[swiss] ❌ Insufficient balance - User:", row.user_id, "Balance:", balance);
-    return json({
-      success: false,
-      message: `Your account is active, but your balance is $${balance}. Please top up to continue.`,
-    }, 402);
+  // Only check balance if guest_bypass is false
+  if (!isGuestBypass) {
+    console.log("[swiss] 🔍 Checking user balance (guest_bypass = false)");
+    
+    const { data: balanceRow, error: balanceError } = await sb
+      .from("v_api_key_balance")
+      .select("balance_usd")
+      .eq("api_key", apiKey)
+      .maybeSingle();
+
+    console.log("[swiss] 🔍 Balance query response:");
+    console.log("[swiss] 🔍 - data:", balanceRow);
+    console.log("[swiss] 🔍 - error:", balanceError);
+
+    if (balanceError) {
+      console.error("[swiss] ❌ Balance lookup query failed:", balanceError);
+      return json({ success: false, message: "Balance lookup failed." }, 500);
+    }
+
+    if (!balanceRow) {
+      console.log("[swiss] ❌ No balance record found for API key:", apiKey);
+      return json({
+        success: false,
+        message: "No balance record found for this API key.",
+      }, 401);
+    }
+
+    balance = parseFloat(String(balanceRow.balance_usd));
+    console.log("[swiss] 🔍 Parsed balance:", balance);
+    console.log("[swiss] 🔍 Is balance finite?", Number.isFinite(balance));
+    console.log("[swiss] 🔍 Balance > 0?", balance > 0);
+
+    if (!Number.isFinite(balance) || balance <= 0) {
+      console.log("[swiss] ❌ Insufficient balance - User:", apiKeyRow.user_id, "Balance:", balance);
+      return json({
+        success: false,
+        message: `Your account is active, but your balance is $${balance}. Please top up to continue.`,
+      }, 402);
+    }
+
+    console.log("[swiss] ✅ Balance check passed - User:", apiKeyRow.user_id, "Balance:", balance);
+  } else {
+    console.log("[swiss] ✅ Skipping balance check - Guest bypass enabled");
   }
-
-  console.log("[swiss] ✅ Balance check passed - User:", row.user_id, "Balance:", balance);
 
   urlObj.searchParams.delete("api_key");
   
@@ -210,9 +242,10 @@ serve(async (req) => {
   const mergedPayload = {
     ...(bodyJson ?? {}),
     ...Object.fromEntries(urlObj.searchParams.entries()),
-    user_id: row.user_id,
+    user_id: apiKeyRow.user_id,
     api_key: apiKey,
     auth_method: authMethod, 
+    guest_bypass: isGuestBypass,
   };
 
   // Special handling for email-based requests - FIXED LOGIC
@@ -247,7 +280,7 @@ serve(async (req) => {
     // Log the request and response data into the swissdebuglogs table
     await logSwissDebug({
       apiKey,
-      userId: row.user_id,
+      userId: apiKeyRow.user_id,
       balance,
       requestType: mergedPayload.request || "unknown",
       payload: mergedPayload
