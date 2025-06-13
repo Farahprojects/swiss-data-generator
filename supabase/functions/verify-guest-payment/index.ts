@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
+import { translate } from "../_shared/translator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -136,6 +137,116 @@ serve(async (req) => {
       amountPaid: guestReportData.amount_paid
     });
 
+    // Generate the astrological report
+    let reportContent = null;
+    let reportError = null;
+
+    try {
+      console.log("🔮 Starting report generation...");
+      
+      // Build translator payload from Stripe metadata
+      const translatorPayload = {
+        request: session.metadata?.request || "natal", // Default to natal chart
+        birth_date: session.metadata?.birth_date,
+        birth_time: session.metadata?.birth_time,
+        location: session.metadata?.location,
+        latitude: session.metadata?.latitude ? parseFloat(session.metadata.latitude) : undefined,
+        longitude: session.metadata?.longitude ? parseFloat(session.metadata.longitude) : undefined,
+        report: session.metadata?.report || "standard", // Report tier
+        skip_logging: true, // Skip translator logging for guest reports
+      };
+
+      console.log("🔮 Translator payload:", {
+        request: translatorPayload.request,
+        hasLocation: !!translatorPayload.location,
+        hasCoordinates: !!(translatorPayload.latitude && translatorPayload.longitude),
+        reportTier: translatorPayload.report
+      });
+
+      // Call translator directly
+      const translatorResult = await translate(translatorPayload);
+      
+      console.log("🔮 Translator response:", {
+        status: translatorResult.status,
+        hasText: !!translatorResult.text,
+        textLength: translatorResult.text?.length || 0
+      });
+
+      if (translatorResult.status === 200) {
+        reportContent = translatorResult.text;
+        console.log("✅ Report generated successfully");
+      } else {
+        reportError = `Translator returned status ${translatorResult.status}`;
+        console.error("❌ Report generation failed:", reportError);
+      }
+    } catch (error: any) {
+      reportError = `Report generation error: ${error.message}`;
+      console.error("❌ Report generation exception:", error);
+    }
+
+    // Send email with report if generation was successful
+    let emailSent = false;
+    let emailError = null;
+
+    if (reportContent && reportData.email) {
+      try {
+        console.log("📧 Sending report email to:", reportData.email);
+        
+        const emailPayload = {
+          to: reportData.email,
+          subject: `Your ${reportData.reportType || 'Astrological'} Report`,
+          html: `
+            <h2>Your Astrological Report</h2>
+            <p>Thank you for your purchase! Your report is ready:</p>
+            <div style="background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px;">
+              <pre style="white-space: pre-wrap; font-family: Georgia, serif;">${reportContent}</pre>
+            </div>
+            <p>Order Details:</p>
+            <ul>
+              <li>Report Type: ${reportData.reportType || 'Standard'}</li>
+              <li>Amount Paid: $${reportData.amount}</li>
+              <li>Order ID: ${session.id}</li>
+            </ul>
+            <p>Thank you for choosing our astrological services!</p>
+          `,
+          text: `Your Astrological Report\n\n${reportContent}\n\nOrder Details:\nReport Type: ${reportData.reportType}\nAmount: $${reportData.amount}\nOrder ID: ${session.id}`
+        };
+
+        const emailResponse = await supabase.functions.invoke("send-email", {
+          body: emailPayload
+        });
+
+        if (emailResponse.error) {
+          emailError = `Email sending failed: ${emailResponse.error.message}`;
+          console.error("❌ Email sending failed:", emailResponse.error);
+        } else {
+          emailSent = true;
+          console.log("✅ Report email sent successfully");
+        }
+      } catch (error: any) {
+        emailError = `Email error: ${error.message}`;
+        console.error("❌ Email sending exception:", error);
+      }
+    }
+
+    // Update guest_reports record with report content and email status
+    try {
+      await supabase
+        .from("guest_reports")
+        .update({
+          report_content: reportContent,
+          report_error: reportError,
+          email_sent: emailSent,
+          email_error: emailError,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", guestReportData.id);
+      
+      console.log("✅ Updated guest report record with report and email status");
+    } catch (error: any) {
+      console.error("❌ Failed to update guest report record:", error);
+    }
+
     // Return verified payment details along with guest report ID
     const response = {
       success: true,
@@ -145,9 +256,13 @@ serve(async (req) => {
       currency: session.currency,
       reportData,
       guestReportId: guestReportData.id,
+      reportGenerated: !!reportContent,
+      emailSent,
+      reportError,
+      emailError
     };
 
-    console.log("🎉 Payment verification completed successfully");
+    console.log("🎉 Payment verification and report processing completed successfully");
 
     return new Response(
       JSON.stringify(response),
