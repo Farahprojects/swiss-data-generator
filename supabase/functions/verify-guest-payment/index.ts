@@ -170,9 +170,7 @@ serve(async (req) => {
           translatorRequest = "essence"; // fallback
         }
       } else if (guestReportData.report_type === "sync") {
-        translatorRequest = "synastry";
-      } else if (guestReportData.report_type === "natal") {
-        translatorRequest = "natal";
+        translatorRequest = "sync";
       } else {
         // For other report types, use the report type directly
         translatorRequest = guestReportData.report_type;
