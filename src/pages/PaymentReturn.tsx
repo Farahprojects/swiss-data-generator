@@ -5,7 +5,6 @@ import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { verifyGuestPayment } from "@/utils/guest-checkout";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const PaymentReturn = () => {
@@ -13,7 +12,7 @@ const PaymentReturn = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [status, setStatus] = useState<'loading' | 'verifying' | 'generating' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'verifying' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing your payment...');
   const [reportDetails, setReportDetails] = useState<any>(null);
   
@@ -54,44 +53,13 @@ const PaymentReturn = () => {
         }
         
         // Payment verified and guest report record created
-        setStatus('generating');
-        setMessage('Payment confirmed! Generating your report...');
-        setReportDetails(verificationResult.reportData);
-        
-        // Generate the report using the stored metadata
-        const { data: reportData, error: reportError } = await supabase.functions.invoke('standard-report', {
-          body: verificationResult.reportData,
-        });
-        
-        if (reportError) {
-          throw new Error(`Report generation failed: ${reportError.message}`);
-        }
-        
-        // Update the guest_reports table with the generated report content
-        if (verificationResult.guestReportId && reportData?.report) {
-          const { error: updateError } = await supabase
-            .from('guest_reports')
-            .update({
-              report_content: reportData.report,
-              has_report: true,
-            })
-            .eq('id', verificationResult.guestReportId);
-          
-          if (updateError) {
-            console.error('Error updating guest report with content:', updateError);
-            // Don't throw here as the report was generated successfully
-          } else {
-            console.log('Guest report updated with generated content');
-          }
-        }
-        
-        // Success!
         setStatus('success');
-        setMessage('Report generated and will be sent to your email shortly!');
+        setMessage('Payment confirmed! Your order has been processed and saved.');
+        setReportDetails(verificationResult.reportData);
         
         toast({
           title: "Success!",
-          description: `Your ${verificationResult.reportData.reportType} report has been generated and will be sent to ${verificationResult.reportData.email}`,
+          description: `Your payment for ${verificationResult.reportData.reportType} has been processed successfully.`,
         });
         
       } catch (error) {
@@ -114,7 +82,6 @@ const PaymentReturn = () => {
     switch (status) {
       case 'loading':
       case 'verifying':
-      case 'generating':
         return <Loader2 className="h-12 w-12 animate-spin text-primary" />;
       case 'success':
         return <CheckCircle className="h-12 w-12 text-green-500" />;
@@ -146,7 +113,6 @@ const PaymentReturn = () => {
           <CardTitle className={`text-2xl ${getStatusColor()}`}>
             {status === 'loading' && 'Processing Payment'}
             {status === 'verifying' && 'Verifying Payment'}
-            {status === 'generating' && 'Generating Report'}
             {status === 'success' && 'Payment Successful!'}
             {status === 'error' && 'Payment Issue'}
           </CardTitle>
@@ -159,6 +125,9 @@ const PaymentReturn = () => {
               <p><strong>Report Type:</strong> {reportDetails.reportType}</p>
               <p><strong>Email:</strong> {reportDetails.email}</p>
               <p><strong>Amount:</strong> ${reportDetails.amount}</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Your order details have been saved and will be processed soon.
+              </p>
             </div>
           )}
           
