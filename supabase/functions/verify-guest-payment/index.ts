@@ -10,15 +10,12 @@ const corsHeaders = {
 // Map frontend report types to Swiss API request types
 const mapReportTypeToSwissRequest = (reportType: string): string => {
   const mapping: { [key: string]: string } = {
-    'essence': 'natal',
-    'flow': 'natal',
-    'mindset': 'natal',
-    'monthly': 'transit',
-    'focus': 'natal',
-    'sync': 'synastry',
-    'compatibility': 'synastry',
-  };
-  return mapping[reportType] || 'natal';
+    'essence': 'essence',
+    'flow': 'flow',
+    'mindset': 'mindset',
+    'monthly': 'monthly',
+    'focus': 'focus',
+    'sync': 'sync',
 };
 
 // Format date for Swiss API (assuming it expects YYYY-MM-DD format)
