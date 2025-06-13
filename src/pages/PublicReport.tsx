@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,8 +19,7 @@ import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp } from 'lucide
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import ReportGuideModal from '@/components/public-report/ReportGuideModal';
-import { getProductByName } from '@/utils/stripe-products';
-import { guestCheckoutWithPrice, guestCheckoutWithAmount } from '@/utils/guest-checkout';
+import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
 import { useToast } from '@/hooks/use-toast';
 
 const reportSchema = z.object({
