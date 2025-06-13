@@ -21,14 +21,24 @@ const reportGuides = [
     title: 'Essence Report',
     price: '$25',
     description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
-    details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.'
+    details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
+    subTypes: [
+      'Personal – Self-awareness, emotional behavior, inner wiring',
+      'Professional – How you operate in work, decision-making, productivity', 
+      'Relational – How you show up in relationships (patterns, openness, tension)'
+    ]
   },
   {
     type: 'Sync',
     title: 'Sync Report',
     price: '$25',
     description: 'How your energy aligns with someone - connection, tension, and flow.',
-    details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.'
+    details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
+    subTypes: [
+      'Personal Sync – Romantic, emotional, or close social connection',
+      'Professional Sync – Team dynamics, leadership compatibility, working styles',
+      'Each uses the same underlying chart, but the AI interprets it through that specific lens.'
+    ]
   },
   {
     type: 'Mindset',
@@ -90,9 +100,18 @@ const ReportGuideModal = ({ isOpen, onClose }: ReportGuideModalProps) => {
                 <p className="text-sm text-muted-foreground mb-3 italic">
                   "{report.description}"
                 </p>
-                <p className="text-sm">
+                <p className="text-sm mb-3">
                   {report.details}
                 </p>
+                {report.subTypes && (
+                  <div className="space-y-1">
+                    {report.subTypes.map((subType, index) => (
+                      <p key={index} className="text-xs text-muted-foreground">
+                        • {subType}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
