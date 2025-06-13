@@ -159,11 +159,23 @@ serve(async (req) => {
       // Map the report type to translator request type
       let translatorRequest = "natal"; // default
       if (guestReportData.report_type === "essence") {
-        translatorRequest = storedData.essenceType || "essence";
-      } else if (guestReportData.report_type === "relationship") {
+        // Handle the essence type mapping correctly
+        if (storedData.essenceType === "essence_personal") {
+          translatorRequest = "essence";
+        } else if (storedData.essenceType === "essence_professional") {
+          translatorRequest = "essence_professional";
+        } else if (storedData.essenceType === "essence_relational") {
+          translatorRequest = "essence_relational";
+        } else {
+          translatorRequest = "essence"; // fallback
+        }
+      } else if (guestReportData.report_type === "sync") {
         translatorRequest = "synastry";
       } else if (guestReportData.report_type === "natal") {
         translatorRequest = "natal";
+      } else {
+        // For other report types, use the report type directly
+        translatorRequest = guestReportData.report_type;
       }
 
       // Build translator payload from stored report data

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -279,19 +278,19 @@ const CreateReportPage = () => {
                     className="justify-start"
                   >
                     <ToggleGroupItem 
-                      value="personal-identity" 
+                      value="essence_personal" 
                       className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
                     >
                       Personal
                     </ToggleGroupItem>
                     <ToggleGroupItem 
-                      value="professional" 
+                      value="essence_professional" 
                       className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
                     >
                       Professional
                     </ToggleGroupItem>
                     <ToggleGroupItem 
-                      value="relational" 
+                      value="essence_relational" 
                       className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
                     >
                       Relational

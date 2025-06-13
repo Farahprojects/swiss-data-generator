@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -69,9 +68,9 @@ const relationshipTypes = [
 ];
 
 const essenceTypes = [
-  { value: 'personal-identity', label: 'Personal' },
-  { value: 'professional', label: 'Professional' },
-  { value: 'relational', label: 'Relational' },
+  { value: 'essence_personal', label: 'Personal' },
+  { value: 'essence_professional', label: 'Professional' },
+  { value: 'essence_relational', label: 'Relational' },
 ];
 
 const ClientReportModal = ({ 
