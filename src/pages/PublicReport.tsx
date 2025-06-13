@@ -104,7 +104,7 @@ const PublicReport = () => {
     setValue(fieldName, placeData.name);
   };
 
-  // Report pricing configuration - no database lookup needed
+  // Report pricing configuration - database lookup only
   const getReportPriceAndDescription = async (reportType: string, relationshipType?: string, essenceType?: string) => {
     const baseDescriptions = {
       'sync': 'Sync Compatibility Report',
@@ -137,33 +137,19 @@ const PublicReport = () => {
 
     const productName = reportTypeToProductName[reportType as keyof typeof reportTypeToProductName];
     
-    try {
-      if (productName) {
-        const product = await getProductByName(productName);
-        if (product) {
-          return { 
-            amount: product.amount_usd, 
-            description: product.description || description 
-          };
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching product price:', error);
+    if (!productName) {
+      throw new Error(`Unknown report type: ${reportType}`);
     }
 
-    // Fallback pricing if database query fails
-    const fallbackPricing = {
-      'sync': 39.99,
-      'essence': 29.99,
-      'flow': 34.99,
-      'mindset': 32.99,
-      'monthly': 24.99,
-      'focus': 27.99,
-    };
+    const product = await getProductByName(productName);
+    if (!product) {
+      throw new Error(`Product not found in database: ${productName}`);
+    }
 
-    const amount = fallbackPricing[reportType as keyof typeof fallbackPricing] || 29.99;
-    
-    return { amount, description };
+    return { 
+      amount: product.amount_usd, 
+      description: product.description || description 
+    };
   };
 
   const onSubmit = async (data: ReportFormData) => {
