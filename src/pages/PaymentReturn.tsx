@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +16,15 @@ const PaymentReturn = () => {
   const [reportDetails, setReportDetails] = useState<any>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   
+  // Guard to prevent multiple executions
+  const hasProcessed = useRef(false);
+  
   useEffect(() => {
+    // Prevent multiple executions for the same session
+    if (hasProcessed.current) {
+      return;
+    }
+    
     const handlePaymentReturn = async () => {
       try {
         const params = new URLSearchParams(location.search);
@@ -40,6 +47,9 @@ const PaymentReturn = () => {
         // If we have a session_id, it means successful payment from Stripe
         if (sessionId) {
           console.log("✅ Session ID found - payment was successful:", sessionId);
+          
+          // Mark as processed to prevent re-execution
+          hasProcessed.current = true;
           
           // Verify payment with Stripe and create guest report record
           setStatus('verifying');
@@ -72,6 +82,7 @@ const PaymentReturn = () => {
         // If payment was cancelled (status=cancelled but no session_id)
         if (urlStatus === 'cancelled') {
           console.log("❌ Payment was cancelled by user");
+          hasProcessed.current = true;
           setStatus('error');
           setMessage('Payment was cancelled. You can try again anytime.');
           return;
@@ -79,6 +90,7 @@ const PaymentReturn = () => {
         
         // If we get here, something unexpected happened
         console.error("❌ Unexpected payment return state - no session ID and no cancel status");
+        hasProcessed.current = true;
         setStatus('error');
         setMessage('Payment status unclear. Please check your email for confirmation or contact support.');
         
@@ -87,6 +99,7 @@ const PaymentReturn = () => {
           message: error.message,
           stack: error.stack
         });
+        hasProcessed.current = true;
         setStatus('error');
         setMessage(error instanceof Error ? error.message : 'An unexpected error occurred');
         
@@ -99,7 +112,7 @@ const PaymentReturn = () => {
     };
     
     handlePaymentReturn();
-  }, [location, navigate, toast]);
+  }, [location.search]); // Only depend on location.search
 
   const getIcon = () => {
     switch (status) {
