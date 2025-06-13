@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -148,7 +147,7 @@ const PublicReport = () => {
 
       {/* Main Form Section */}
       <div className="container mx-auto px-4 py-12">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
             {/* Step 1: Report Type Selection */}
             <div className="space-y-6">
@@ -166,7 +165,7 @@ const PublicReport = () => {
                   <h2 className="text-2xl font-semibold">Choose Your Report Type</h2>
                 </div>
                 
-                <div className="pl-2 md:pl-12 space-y-4">
+                <div className="pl-1 md:pl-12 space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="reportType">Report Type *</Label>
                     <Controller
@@ -204,13 +203,13 @@ const PublicReport = () => {
                             type="single"
                             value={field.value}
                             onValueChange={field.onChange}
-                            className="justify-start flex-wrap gap-2"
+                            className="justify-start flex-wrap gap-1 md:gap-2"
                           >
                             {essenceTypes.map((type) => (
                               <ToggleGroupItem 
                                 key={type.value} 
                                 value={type.value}
-                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0"
+                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-xs md:text-sm px-2 md:px-4 py-2"
                               >
                                 {type.label}
                               </ToggleGroupItem>
@@ -245,13 +244,13 @@ const PublicReport = () => {
                             type="single"
                             value={field.value}
                             onValueChange={field.onChange}
-                            className="justify-start flex-wrap gap-2"
+                            className="justify-start flex-wrap gap-1 md:gap-2"
                           >
                             {relationshipTypes.map((type) => (
                               <ToggleGroupItem 
                                 key={type.value} 
                                 value={type.value}
-                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0"
+                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-xs md:text-sm px-2 md:px-4 py-2"
                               >
                                 {type.label}
                               </ToggleGroupItem>
@@ -275,8 +274,8 @@ const PublicReport = () => {
                       <h2 className="text-2xl font-semibold">Contact Information</h2>
                     </div>
                     
-                    <div className="pl-2 md:pl-12">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
+                    <div className="pl-1 md:pl-12">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
                         <div className="space-y-2">
                           <Label htmlFor="name">Full Name *</Label>
                           <Input
@@ -315,7 +314,7 @@ const PublicReport = () => {
                       <h2 className="text-2xl font-semibold">Your Birth Details</h2>
                     </div>
                     
-                    <div className="pl-2 md:pl-12 space-y-6 birth-details-container" data-testid="birth-details">
+                    <div className="pl-1 md:pl-12 space-y-6 birth-details-container" data-testid="birth-details">
                       <div className="grid grid-cols-2 gap-2 md:gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="birthDate">Birth Date *</Label>
@@ -369,7 +368,7 @@ const PublicReport = () => {
                     <h2 className="text-2xl font-semibold">Second Person Details</h2>
                   </div>
                   
-                  <div className="pl-2 md:pl-12 space-y-6">
+                  <div className="pl-1 md:pl-12 space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="secondPersonName">Name *</Label>
                       <Input
