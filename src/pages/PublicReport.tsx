@@ -18,6 +18,9 @@ import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp } from 'lucide
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import ReportGuideModal from '@/components/public-report/ReportGuideModal';
+import { getProductByName } from '@/utils/stripe-products';
+import { guestCheckoutWithPrice, guestCheckoutWithAmount } from '@/utils/guest-checkout';
+import { useToast } from '@/hooks/use-toast';
 
 const reportSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
@@ -65,6 +68,7 @@ const PublicReport = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [showReportGuide, setShowReportGuide] = useState(false);
+  const { toast } = useToast();
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -102,11 +106,42 @@ const PublicReport = () => {
   const onSubmit = async (data: ReportFormData) => {
     setIsProcessing(true);
     try {
-      // TODO: Integrate with Stripe checkout and report generation
       console.log('Report data:', data);
-      alert('Payment integration coming soon! Your report data has been logged to console.');
+      
+      // Get the appropriate product based on report type
+      const product = await getProductByName(data.reportType);
+      
+      if (product) {
+        // Use the product's price ID for checkout
+        const result = await guestCheckoutWithPrice(data.email, product.price_id);
+        
+        if (!result.success) {
+          toast({
+            title: "Payment Error",
+            description: result.error || "Failed to initiate checkout",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Fallback to a default amount if no product found
+        const defaultAmount = 29.99; // Default report price
+        const result = await guestCheckoutWithAmount(data.email, defaultAmount);
+        
+        if (!result.success) {
+          toast({
+            title: "Payment Error", 
+            description: result.error || "Failed to initiate checkout",
+            variant: "destructive",
+          });
+        }
+      }
     } catch (error) {
       console.error('Error processing report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process your request. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
