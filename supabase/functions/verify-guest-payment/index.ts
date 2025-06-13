@@ -137,29 +137,88 @@ serve(async (req) => {
       amountPaid: guestReportData.amount_paid
     });
 
-    // Generate the astrological report
+    // Generate the astrological report using data from report_data column
     let reportContent = null;
     let reportError = null;
 
     try {
       console.log("🔮 Starting report generation...");
       
-      // Build translator payload from Stripe metadata
-      const translatorPayload = {
-        request: session.metadata?.request || "natal", // Default to natal chart
-        birth_date: session.metadata?.birth_date,
-        birth_time: session.metadata?.birth_time,
-        location: session.metadata?.location,
-        latitude: session.metadata?.latitude ? parseFloat(session.metadata.latitude) : undefined,
-        longitude: session.metadata?.longitude ? parseFloat(session.metadata.longitude) : undefined,
-        report: session.metadata?.report || "standard", // Report tier
+      // Extract birth data from the stored report_data
+      const storedData = guestReportData.report_data as any;
+      console.log("📋 Stored report data:", {
+        keys: Object.keys(storedData || {}),
+        reportType: guestReportData.report_type
+      });
+
+      // Validate required fields
+      if (!storedData) {
+        throw new Error("No report data found in guest_reports record");
+      }
+
+      // Map the report type to translator request type
+      let translatorRequest = "natal"; // default
+      if (guestReportData.report_type === "essence") {
+        translatorRequest = storedData.essenceType || "essence";
+      } else if (guestReportData.report_type === "relationship") {
+        translatorRequest = "synastry";
+      } else if (guestReportData.report_type === "natal") {
+        translatorRequest = "natal";
+      }
+
+      // Build translator payload from stored report data
+      const translatorPayload: any = {
+        request: translatorRequest,
+        birth_date: storedData.birthDate,
+        birth_time: storedData.birthTime,
+        location: storedData.birthLocation,
         skip_logging: true, // Skip translator logging for guest reports
       };
 
-      console.log("🔮 Translator payload:", {
+      // Add coordinates if available
+      if (storedData.latitude && storedData.longitude) {
+        translatorPayload.latitude = parseFloat(storedData.latitude);
+        translatorPayload.longitude = parseFloat(storedData.longitude);
+      }
+
+      // Add report tier if specified
+      if (storedData.reportTier) {
+        translatorPayload.report = storedData.reportTier;
+      }
+
+      // For relationship reports, add partner data
+      if (translatorRequest === "synastry" && storedData.partnerData) {
+        translatorPayload.person_a = {
+          birth_date: storedData.birthDate,
+          birth_time: storedData.birthTime,
+          location: storedData.birthLocation,
+          latitude: storedData.latitude ? parseFloat(storedData.latitude) : undefined,
+          longitude: storedData.longitude ? parseFloat(storedData.longitude) : undefined,
+        };
+        translatorPayload.person_b = {
+          birth_date: storedData.partnerData.birthDate,
+          birth_time: storedData.partnerData.birthTime,
+          location: storedData.partnerData.birthLocation,
+          latitude: storedData.partnerData.latitude ? parseFloat(storedData.partnerData.latitude) : undefined,
+          longitude: storedData.partnerData.longitude ? parseFloat(storedData.partnerData.longitude) : undefined,
+        };
+      }
+
+      // Validate required birth data
+      if (!translatorPayload.birth_date) {
+        throw new Error("Birth date is required but not found in report data");
+      }
+      if (!translatorPayload.location && !translatorPayload.latitude) {
+        throw new Error("Birth location or coordinates are required but not found in report data");
+      }
+
+      console.log("🔮 Translator payload built:", {
         request: translatorPayload.request,
+        hasBirthDate: !!translatorPayload.birth_date,
+        hasBirthTime: !!translatorPayload.birth_time,
         hasLocation: !!translatorPayload.location,
         hasCoordinates: !!(translatorPayload.latitude && translatorPayload.longitude),
+        hasPartnerData: !!translatorPayload.person_b,
         reportTier: translatorPayload.report
       });
 
@@ -176,7 +235,7 @@ serve(async (req) => {
         reportContent = translatorResult.text;
         console.log("✅ Report generated successfully");
       } else {
-        reportError = `Translator returned status ${translatorResult.status}`;
+        reportError = `Translator returned status ${translatorResult.status}: ${translatorResult.text}`;
         console.error("❌ Report generation failed:", reportError);
       }
     } catch (error: any) {
@@ -188,13 +247,13 @@ serve(async (req) => {
     let emailSent = false;
     let emailError = null;
 
-    if (reportContent && reportData.email) {
+    if (reportContent && guestReportData.email) {
       try {
-        console.log("📧 Sending report email to:", reportData.email);
+        console.log("📧 Sending report email to:", guestReportData.email);
         
         const emailPayload = {
-          to: reportData.email,
-          subject: `Your ${reportData.reportType || 'Astrological'} Report`,
+          to: guestReportData.email,
+          subject: `Your ${guestReportData.report_type || 'Astrological'} Report`,
           html: `
             <h2>Your Astrological Report</h2>
             <p>Thank you for your purchase! Your report is ready:</p>
@@ -203,13 +262,13 @@ serve(async (req) => {
             </div>
             <p>Order Details:</p>
             <ul>
-              <li>Report Type: ${reportData.reportType || 'Standard'}</li>
-              <li>Amount Paid: $${reportData.amount}</li>
+              <li>Report Type: ${guestReportData.report_type || 'Standard'}</li>
+              <li>Amount Paid: $${guestReportData.amount_paid}</li>
               <li>Order ID: ${session.id}</li>
             </ul>
             <p>Thank you for choosing our astrological services!</p>
           `,
-          text: `Your Astrological Report\n\n${reportContent}\n\nOrder Details:\nReport Type: ${reportData.reportType}\nAmount: $${reportData.amount}\nOrder ID: ${session.id}`
+          text: `Your Astrological Report\n\n${reportContent}\n\nOrder Details:\nReport Type: ${guestReportData.report_type}\nAmount: $${guestReportData.amount_paid}\nOrder ID: ${session.id}`
         };
 
         const emailResponse = await supabase.functions.invoke("send-email", {
@@ -231,15 +290,22 @@ serve(async (req) => {
 
     // Update guest_reports record with report content and email status
     try {
+      const updateData: any = {
+        report_content: reportContent,
+        email_sent: emailSent,
+        updated_at: new Date().toISOString()
+      };
+
+      if (reportError) {
+        updateData.report_error = reportError;
+      }
+      if (emailError) {
+        updateData.email_error = emailError;
+      }
+
       await supabase
         .from("guest_reports")
-        .update({
-          report_content: reportContent,
-          report_error: reportError,
-          email_sent: emailSent,
-          email_error: emailError,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq("id", guestReportData.id);
       
       console.log("✅ Updated guest report record with report and email status");
@@ -254,7 +320,7 @@ serve(async (req) => {
       paymentStatus: session.payment_status,
       amountPaid: session.amount_total,
       currency: session.currency,
-      reportData,
+      reportData: guestReportData.report_data,
       guestReportId: guestReportData.id,
       reportGenerated: !!reportContent,
       emailSent,
