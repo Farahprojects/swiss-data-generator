@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,9 +18,6 @@ import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp } from 'lucide
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import ReportGuideModal from '@/components/public-report/ReportGuideModal';
-import { getProductByName } from '@/utils/stripe-products';
-import { initiateStripeCheckout } from '@/utils/stripe-checkout';
-import { useToast } from '@/hooks/use-toast';
 
 const reportSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
@@ -68,8 +65,6 @@ const PublicReport = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [showReportGuide, setShowReportGuide] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const { toast } = useToast();
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -104,105 +99,20 @@ const PublicReport = () => {
     setValue(fieldName, placeData.name);
   };
 
-  // Fetch product details when report type changes
-  useEffect(() => {
-    const fetchProductDetails = async () => {
-      if (!selectedReportType) {
-        setSelectedProduct(null);
-        return;
-      }
-
-      try {
-        // Map form values to product names
-        const productNameMap: Record<string, string> = {
-          'essence': 'Essence Report',
-          'sync': 'Sync Report',
-          'mindset': 'Mindset Report',
-          'flow': 'Flow Report',
-          'focus': 'Focus Report',
-          'monthly': 'Monthly Report'
-        };
-
-        const productName = productNameMap[selectedReportType];
-        if (productName) {
-          const product = await getProductByName(productName);
-          setSelectedProduct(product);
-        }
-      } catch (error) {
-        console.error('Error fetching product details:', error);
-        setSelectedProduct(null);
-      }
-    };
-
-    fetchProductDetails();
-  }, [selectedReportType]);
-
   const onSubmit = async (data: ReportFormData) => {
-    if (!selectedProduct) {
-      toast({
-        title: "Error",
-        description: "Please select a report type first.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsProcessing(true);
     try {
-      console.log('Report form data:', data);
-      console.log('Selected product:', selectedProduct);
-
-      // Create metadata for the report
-      const reportMetadata = {
-        reportType: data.reportType,
-        relationshipType: data.relationshipType,
-        essenceType: data.essenceType,
-        name: data.name,
-        email: data.email,
-        birthDate: data.birthDate,
-        birthTime: data.birthTime,
-        birthLocation: data.birthLocation,
-        secondPersonName: data.secondPersonName,
-        secondPersonBirthDate: data.secondPersonBirthDate,
-        secondPersonBirthTime: data.secondPersonBirthTime,
-        secondPersonBirthLocation: data.secondPersonBirthLocation,
-        returnYear: data.returnYear,
-        notes: data.notes,
-        promoCode: data.promoCode,
-      };
-
-      // Use the existing stripe checkout utility with the product's price_id
-      const result = await initiateStripeCheckout({
-        mode: "payment",
-        priceId: selectedProduct.price_id,
-        successUrl: `${window.location.origin}/payment-return?status=success&report_type=${data.reportType}`,
-        cancelUrl: `${window.location.origin}/payment-return?status=cancelled`,
-      });
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to initiate checkout');
-      }
+      // TODO: Integrate with Stripe checkout and report generation
+      console.log('Report data:', data);
+      alert('Payment integration coming soon! Your report data has been logged to console.');
     } catch (error) {
       console.error('Error processing report:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to process report. Please try again.",
-        variant: "destructive"
-      });
     } finally {
       setIsProcessing(false);
     }
   };
 
   const getCurrentYear = () => new Date().getFullYear();
-
-  const getButtonText = () => {
-    if (isProcessing) return 'Processing...';
-    if (selectedProduct) {
-      return `Generate My Report - $${selectedProduct.amount_usd}`;
-    }
-    return 'Generate My Report';
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -521,17 +431,10 @@ const PublicReport = () => {
                   type="submit"
                   size="lg" 
                   className="px-12 py-6 text-lg"
-                  disabled={isProcessing || !selectedProduct}
+                  disabled={isProcessing}
                 >
-                  {getButtonText()}
+                  {isProcessing ? 'Processing...' : 'Generate My Report'}
                 </Button>
-                
-                {/* Show product details */}
-                {selectedProduct && (
-                  <div className="text-center text-sm text-muted-foreground">
-                    <p>{selectedProduct.description}</p>
-                  </div>
-                )}
                 
                 {/* Promo Code Section */}
                 <div className="w-full max-w-md">
