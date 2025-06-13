@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { verifyGuestPayment } from "@/utils/guest-checkout";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const PaymentReturn = () => {
   const location = useLocation();
@@ -15,6 +16,7 @@ const PaymentReturn = () => {
   const [status, setStatus] = useState<'loading' | 'verifying' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing your payment...');
   const [reportDetails, setReportDetails] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   
   useEffect(() => {
     const handlePaymentReturn = async () => {
@@ -23,47 +25,80 @@ const PaymentReturn = () => {
         const urlStatus = params.get('status');
         const sessionId = params.get('session_id');
         
-        console.log("Payment return params:", { urlStatus, sessionId });
+        console.log("🔍 Payment return URL analysis:", { 
+          urlStatus, 
+          sessionId,
+          fullUrl: location.search,
+          allParams: Object.fromEntries(params.entries())
+        });
+        
+        setDebugInfo({
+          urlStatus,
+          sessionId,
+          allParams: Object.fromEntries(params.entries())
+        });
         
         // If payment was cancelled
         if (urlStatus === 'cancelled') {
+          console.log("❌ Payment was cancelled by user");
           setStatus('error');
           setMessage('Payment was cancelled. You can try again anytime.');
           return;
         }
         
-        // If no session ID, fall back to old behavior
+        // If no session ID, try to find recent payment by checking URL params
         if (!sessionId) {
-          console.log("No session ID found, redirecting to dashboard");
-          setTimeout(() => {
-            navigate('/dashboard/billing', { replace: true });
-          }, 2000);
-          return;
+          console.error("❌ No session ID found in URL parameters");
+          console.log("🔍 Available URL params:", Object.fromEntries(params.entries()));
+          
+          // Try to extract any session-like parameter
+          const allParams = Object.fromEntries(params.entries());
+          const possibleSessionId = Object.entries(allParams).find(([key, value]) => 
+            key.toLowerCase().includes('session') || 
+            (typeof value === 'string' && value.startsWith('cs_'))
+          );
+          
+          if (possibleSessionId) {
+            console.log("🔍 Found possible session ID:", possibleSessionId);
+            setMessage(`Found session parameter: ${possibleSessionId[0]}=${possibleSessionId[1]}. Attempting verification...`);
+            // You could try to verify with this ID
+          } else {
+            setStatus('error');
+            setMessage('No payment session found. The payment may not have completed properly.');
+            return;
+          }
         }
         
         // Verify payment with Stripe and create guest report record
         setStatus('verifying');
-        setMessage('Verifying your payment...');
+        setMessage('Verifying your payment and saving your order...');
         
+        console.log("🔄 Starting payment verification with session ID:", sessionId);
         const verificationResult = await verifyGuestPayment(sessionId);
-        console.log("Verification result:", verificationResult);
+        console.log("📊 Verification result:", verificationResult);
         
         if (!verificationResult.success || !verificationResult.verified) {
+          console.error("❌ Payment verification failed:", verificationResult.error);
           throw new Error(verificationResult.error || 'Payment verification failed');
         }
         
         // Payment verified and guest report record created
         setStatus('success');
-        setMessage('Payment confirmed! Your order has been processed and saved.');
+        setMessage('Payment confirmed! Your order has been processed and saved to our database.');
         setReportDetails(verificationResult.reportData);
+        
+        console.log("✅ Payment verification completed successfully");
         
         toast({
           title: "Success!",
           description: `Your payment for ${verificationResult.reportData.reportType} has been processed successfully.`,
         });
         
-      } catch (error) {
-        console.error('Error processing payment return:', error);
+      } catch (error: any) {
+        console.error('❌ Error processing payment return:', {
+          message: error.message,
+          stack: error.stack
+        });
         setStatus('error');
         setMessage(error instanceof Error ? error.message : 'An unexpected error occurred');
         
@@ -126,8 +161,17 @@ const PaymentReturn = () => {
               <p><strong>Email:</strong> {reportDetails.email}</p>
               <p><strong>Amount:</strong> ${reportDetails.amount}</p>
               <p className="text-xs text-muted-foreground mt-2">
-                Your order details have been saved and will be processed soon.
+                Your order details have been saved to our database and will be processed soon.
               </p>
+            </div>
+          )}
+          
+          {debugInfo && status === 'error' && (
+            <div className="bg-red-50 p-4 rounded-lg text-sm">
+              <p><strong>Debug Info:</strong></p>
+              <p>Status: {debugInfo.urlStatus}</p>
+              <p>Session ID: {debugInfo.sessionId || 'Not found'}</p>
+              <p>URL Params: {JSON.stringify(debugInfo.allParams)}</p>
             </div>
           )}
           

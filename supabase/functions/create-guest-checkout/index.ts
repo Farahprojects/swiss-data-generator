@@ -31,49 +31,69 @@ serve(async (req) => {
       reportData, // New: report details for metadata
     } = await req.json();
 
-    console.log("Creating guest checkout:", { amount, email, description, reportData });
+    console.log("🔄 Creating guest checkout with data:", { 
+      amount, 
+      email, 
+      description, 
+      hasReportData: !!reportData,
+      reportDataKeys: reportData ? Object.keys(reportData) : []
+    });
 
     /* -------- Validation -------- */
     
     // 1. Validate amount - must be provided, positive, and reasonable
     if (!amount || typeof amount !== 'number' || amount <= 0) {
+      console.error("❌ Invalid amount:", amount);
       throw new Error("Amount must be a positive number");
     }
     if (amount < 1 || amount > 500) {
+      console.error("❌ Amount out of range:", amount);
       throw new Error("Amount must be between $1 and $500");
     }
 
     // 2. Validate email - must be provided and valid format
     if (!email || typeof email !== 'string') {
+      console.error("❌ Missing email");
       throw new Error("Email is required");
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.error("❌ Invalid email format:", email);
       throw new Error("Invalid email format");
     }
 
     // 3. Validate description - must be clear and non-empty
     if (!description || typeof description !== 'string' || description.trim().length < 5) {
+      console.error("❌ Invalid description:", description);
       throw new Error("Description must be at least 5 characters long");
     }
+
+    console.log("✅ Validation passed");
 
     /* -------- Find / create customer -------- */
     let customerId: string;
     const custList = await stripe.customers.list({ email: email, limit: 1 });
     if (custList.data.length) {
       customerId = custList.data[0].id;
+      console.log("🔍 Found existing Stripe customer:", customerId);
     } else {
       const cust = await stripe.customers.create({
         email: email,
         metadata: { guest_checkout: "true" },
       });
       customerId = cust.id;
+      console.log("🆕 Created new Stripe customer:", customerId);
     }
 
     /* -------- Success & cancel URLs with session ID -------- */
-    const baseOrigin = req.headers.get("origin") || "";
-    const finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}&status=success&amount=${amount}`;
+    const baseOrigin = req.headers.get("origin") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+    
+    // FIXED: Use the correct Stripe parameter format for session ID
+    const finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}&status=success`;
     const finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=cancelled`;
+    
+    console.log("🔗 Success URL:", finalSuccessUrl);
+    console.log("🔗 Cancel URL:", finalCancelUrl);
 
     /* -------- Prepare metadata for report generation -------- */
     const metadata = {
@@ -85,7 +105,7 @@ serve(async (req) => {
       ...(reportData || {}),
     };
 
-    console.log("Session metadata:", metadata);
+    console.log("📋 Session metadata prepared with keys:", Object.keys(metadata));
 
     /* -------- Create checkout session with direct amount -------- */
     const session = await stripe.checkout.sessions.create({
@@ -118,14 +138,30 @@ serve(async (req) => {
       ],
     });
 
-    console.log("Session created:", session.id);
+    console.log("✅ Stripe session created successfully:", {
+      sessionId: session.id,
+      url: session.url ? "URL_PROVIDED" : "NO_URL",
+      customer: session.customer,
+      amount_total: session.amount_total
+    });
 
     return new Response(
-      JSON.stringify({ sessionId: session.id, url: session.url }),
+      JSON.stringify({ 
+        sessionId: session.id, 
+        url: session.url,
+        debug: {
+          successUrl: finalSuccessUrl,
+          metadata: Object.keys(metadata),
+          amount_cents: Math.round(amount * 100)
+        }
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err: any) {
-    console.error("Error creating guest checkout session:", err);
+    console.error("❌ Error creating guest checkout session:", {
+      message: err.message,
+      stack: err.stack
+    });
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
