@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -69,6 +70,19 @@ const reportGuides = [
 ];
 
 const ReportGuideModal = ({ isOpen, onClose }: ReportGuideModalProps) => {
+  const formatSubType = (subType: string) => {
+    const parts = subType.split(' – ');
+    if (parts.length === 2) {
+      return (
+        <>
+          <span className="text-primary font-bold">{parts[0]}</span>
+          <span> – {parts[1]}</span>
+        </>
+      );
+    }
+    return subType;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -105,7 +119,7 @@ const ReportGuideModal = ({ isOpen, onClose }: ReportGuideModalProps) => {
                   <div className="space-y-1">
                     {report.subTypes.map((subType, index) => (
                       <p key={index} className="text-xs text-muted-foreground font-bold">
-                        • {subType}
+                        {formatSubType(subType)}
                       </p>
                     ))}
                   </div>
