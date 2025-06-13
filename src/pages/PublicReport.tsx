@@ -31,11 +31,17 @@ const reportSchema = z.object({
   birthDate: z.string().min(1, 'Birth date is required'),
   birthTime: z.string().min(1, 'Birth time is required'),
   birthLocation: z.string().min(1, 'Birth location is required'),
+  birthLatitude: z.number().optional(),
+  birthLongitude: z.number().optional(),
+  birthPlaceId: z.string().optional(),
   // For compatibility/sync reports
   secondPersonName: z.string().optional(),
   secondPersonBirthDate: z.string().optional(),
   secondPersonBirthTime: z.string().optional(),
   secondPersonBirthLocation: z.string().optional(),
+  secondPersonLatitude: z.number().optional(),
+  secondPersonLongitude: z.number().optional(),
+  secondPersonPlaceId: z.string().optional(),
   // For return reports
   returnYear: z.string().optional(),
   notes: z.string().optional(),
@@ -82,10 +88,16 @@ const PublicReport = () => {
       birthDate: '',
       birthTime: '',
       birthLocation: '',
+      birthLatitude: undefined,
+      birthLongitude: undefined,
+      birthPlaceId: '',
       secondPersonName: '',
       secondPersonBirthDate: '',
       secondPersonBirthTime: '',
       secondPersonBirthLocation: '',
+      secondPersonLatitude: undefined,
+      secondPersonLongitude: undefined,
+      secondPersonPlaceId: '',
       returnYear: '',
       notes: '',
       promoCode: '',
@@ -100,8 +112,23 @@ const PublicReport = () => {
   const requiresEssenceType = selectedReportType === 'essence';
   const requiresReturnYear = selectedReportType === 'return';
 
-  const handlePlaceSelect = (placeData: PlaceData, fieldName: keyof ReportFormData = 'birthLocation') => {
-    setValue(fieldName, placeData.name);
+  const handlePlaceSelect = (placeData: PlaceData, fieldPrefix = '') => {
+    const locationField = fieldPrefix ? `${fieldPrefix}Location` : 'birthLocation';
+    const latitudeField = fieldPrefix ? `${fieldPrefix}Latitude` : 'birthLatitude';
+    const longitudeField = fieldPrefix ? `${fieldPrefix}Longitude` : 'birthLongitude';
+    const placeIdField = fieldPrefix ? `${fieldPrefix}PlaceId` : 'birthPlaceId';
+    
+    setValue(locationField as keyof ReportFormData, placeData.name);
+    
+    if (placeData.latitude && placeData.longitude) {
+      setValue(latitudeField as keyof ReportFormData, placeData.latitude);
+      setValue(longitudeField as keyof ReportFormData, placeData.longitude);
+      console.log(`📍 Coordinates saved: ${placeData.latitude}, ${placeData.longitude}`);
+    }
+    
+    if (placeData.placeId) {
+      setValue(placeIdField as keyof ReportFormData, placeData.placeId);
+    }
   };
 
   // Report pricing configuration - database lookup only
@@ -177,10 +204,16 @@ const PublicReport = () => {
         birthDate: data.birthDate,
         birthTime: data.birthTime,
         birthLocation: data.birthLocation,
+        birthLatitude: data.birthLatitude,
+        birthLongitude: data.birthLongitude,
+        birthPlaceId: data.birthPlaceId,
         secondPersonName: data.secondPersonName,
         secondPersonBirthDate: data.secondPersonBirthDate,
         secondPersonBirthTime: data.secondPersonBirthTime,
         secondPersonBirthLocation: data.secondPersonBirthLocation,
+        secondPersonLatitude: data.secondPersonLatitude,
+        secondPersonLongitude: data.secondPersonLongitude,
+        secondPersonPlaceId: data.secondPersonPlaceId,
         returnYear: data.returnYear,
         notes: data.notes,
         promoCode: data.promoCode,
@@ -443,7 +476,7 @@ const PublicReport = () => {
                           label="Birth Location *"
                           value={watch('birthLocation') || ''}
                           onChange={(value) => setValue('birthLocation', value)}
-                          onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'birthLocation')}
+                          onPlaceSelect={(placeData) => handlePlaceSelect(placeData)}
                           placeholder="Enter birth city, state, country"
                           id="birthLocation"
                           error={errors.birthLocation?.message}
@@ -509,7 +542,7 @@ const PublicReport = () => {
                         label="Birth Location *"
                         value={watch('secondPersonBirthLocation') || ''}
                         onChange={(value) => setValue('secondPersonBirthLocation', value)}
-                        onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'secondPersonBirthLocation')}
+                        onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'secondPerson')}
                         placeholder="Enter birth city, state, country"
                         id="secondPersonBirthLocation"
                         error={errors.secondPersonBirthLocation?.message}

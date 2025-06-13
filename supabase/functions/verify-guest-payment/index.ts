@@ -148,7 +148,8 @@ serve(async (req) => {
       const storedData = guestReportData.report_data as any;
       console.log("📋 Stored report data:", {
         keys: Object.keys(storedData || {}),
-        reportType: guestReportData.report_type
+        reportType: guestReportData.report_type,
+        hasCoordinates: !!(storedData?.birthLatitude && storedData?.birthLongitude)
       });
 
       // Validate required fields
@@ -185,10 +186,14 @@ serve(async (req) => {
         skip_logging: true, // Skip translator logging for guest reports
       };
 
-      // Add coordinates if available
-      if (storedData.latitude && storedData.longitude) {
-        translatorPayload.latitude = parseFloat(storedData.latitude);
-        translatorPayload.longitude = parseFloat(storedData.longitude);
+      // Use coordinates from form data if available (more accurate)
+      if (storedData.birthLatitude && storedData.birthLongitude) {
+        translatorPayload.latitude = parseFloat(storedData.birthLatitude);
+        translatorPayload.longitude = parseFloat(storedData.birthLongitude);
+        console.log("📍 Using form coordinates:", {
+          lat: translatorPayload.latitude,
+          lng: translatorPayload.longitude
+        });
       }
 
       // Add report tier if specified
@@ -197,21 +202,26 @@ serve(async (req) => {
       }
 
       // For relationship reports, add partner data
-      if (translatorRequest === "synastry" && storedData.partnerData) {
+      if (translatorRequest === "sync" && storedData.secondPersonName) {
         translatorPayload.person_a = {
           birth_date: storedData.birthDate,
           birth_time: storedData.birthTime,
           location: storedData.birthLocation,
-          latitude: storedData.latitude ? parseFloat(storedData.latitude) : undefined,
-          longitude: storedData.longitude ? parseFloat(storedData.longitude) : undefined,
+          latitude: storedData.birthLatitude ? parseFloat(storedData.birthLatitude) : undefined,
+          longitude: storedData.birthLongitude ? parseFloat(storedData.birthLongitude) : undefined,
         };
         translatorPayload.person_b = {
-          birth_date: storedData.partnerData.birthDate,
-          birth_time: storedData.partnerData.birthTime,
-          location: storedData.partnerData.birthLocation,
-          latitude: storedData.partnerData.latitude ? parseFloat(storedData.partnerData.latitude) : undefined,
-          longitude: storedData.partnerData.longitude ? parseFloat(storedData.partnerData.longitude) : undefined,
+          birth_date: storedData.secondPersonBirthDate,
+          birth_time: storedData.secondPersonBirthTime,
+          location: storedData.secondPersonBirthLocation,
+          latitude: storedData.secondPersonLatitude ? parseFloat(storedData.secondPersonLatitude) : undefined,
+          longitude: storedData.secondPersonLongitude ? parseFloat(storedData.secondPersonLongitude) : undefined,
         };
+        
+        console.log("👥 Sync report with coordinates:", {
+          personA: !!(translatorPayload.person_a.latitude && translatorPayload.person_a.longitude),
+          personB: !!(translatorPayload.person_b.latitude && translatorPayload.person_b.longitude)
+        });
       }
 
       // Validate required birth data
