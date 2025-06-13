@@ -11,18 +11,22 @@ export const initiateGuestCheckout = async ({
   description,
   successUrl,
   cancelUrl,
+  reportData,
 }: {
   email: string;
   amount: number;
   description: string;
   successUrl?: string;
   cancelUrl?: string;
+  reportData?: Record<string, any>;
 }) => {
   try {
     // Validate required parameters
     if (!email || !amount || !description) {
       throw new Error("Email, amount, and description are required");
     }
+
+    console.log("Initiating guest checkout:", { email, amount, description, reportData });
 
     // Call the Supabase Edge Function to create a guest checkout session
     const { data, error } = await supabase.functions.invoke("create-guest-checkout", {
@@ -32,6 +36,7 @@ export const initiateGuestCheckout = async ({
         description,
         successUrl: successUrl || window.location.origin + '/payment-return?status=success',
         cancelUrl: cancelUrl || window.location.origin + '/payment-return?status=cancelled',
+        reportData, // Pass report data for metadata
       },
     });
 
@@ -61,7 +66,41 @@ export const initiateGuestCheckout = async ({
  * @param email Guest user's email
  * @param amount Amount in dollars
  * @param description Clear description for the charge
+ * @param reportData Additional report data to store in session metadata
  */
-export const guestCheckoutWithAmount = async (email: string, amount: number, description: string) => {
-  return initiateGuestCheckout({ email, amount, description });
+export const guestCheckoutWithAmount = async (
+  email: string, 
+  amount: number, 
+  description: string,
+  reportData?: Record<string, any>
+) => {
+  return initiateGuestCheckout({ email, amount, description, reportData });
+};
+
+/**
+ * Verifies a guest payment using the Stripe session ID
+ * @param sessionId Stripe checkout session ID
+ */
+export const verifyGuestPayment = async (sessionId: string) => {
+  try {
+    console.log("Verifying guest payment:", sessionId);
+
+    const { data, error } = await supabase.functions.invoke("verify-guest-payment", {
+      body: { sessionId },
+    });
+
+    if (error) {
+      console.error("Error verifying guest payment:", error);
+      throw new Error(error.message || "Failed to verify payment");
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Failed to verify guest payment:", err);
+    return {
+      success: false,
+      verified: false,
+      error: err instanceof Error ? err.message : "Unknown error occurred"
+    };
+  }
 };

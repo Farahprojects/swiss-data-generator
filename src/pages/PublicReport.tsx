@@ -166,8 +166,27 @@ const PublicReport = () => {
       );
       
       setIsPricingLoading(false);
+
+      // Prepare report data for storage in payment metadata
+      const reportData = {
+        reportType: data.reportType,
+        relationshipType: data.relationshipType,
+        essenceType: data.essenceType,
+        name: data.name,
+        email: data.email,
+        birthDate: data.birthDate,
+        birthTime: data.birthTime,
+        birthLocation: data.birthLocation,
+        secondPersonName: data.secondPersonName,
+        secondPersonBirthDate: data.secondPersonBirthDate,
+        secondPersonBirthTime: data.secondPersonBirthTime,
+        secondPersonBirthLocation: data.secondPersonBirthLocation,
+        returnYear: data.returnYear,
+        notes: data.notes,
+        promoCode: data.promoCode,
+      };
       
-      const result = await guestCheckoutWithAmount(data.email, amount, description);
+      const result = await guestCheckoutWithAmount(data.email, amount, description, reportData);
       
       if (!result.success) {
         toast({

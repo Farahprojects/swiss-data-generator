@@ -28,7 +28,10 @@ serve(async (req) => {
       description,
       successUrl,
       cancelUrl,
+      reportData, // New: report details for metadata
     } = await req.json();
+
+    console.log("Creating guest checkout:", { amount, email, description, reportData });
 
     /* -------- Validation -------- */
     
@@ -67,10 +70,22 @@ serve(async (req) => {
       customerId = cust.id;
     }
 
-    /* -------- Success & cancel URLs -------- */
+    /* -------- Success & cancel URLs with session ID -------- */
     const baseOrigin = req.headers.get("origin") || "";
-    const finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?status=success&amount=${amount}`;
+    const finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}&status=success&amount=${amount}`;
     const finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=cancelled`;
+
+    /* -------- Prepare metadata for report generation -------- */
+    const metadata = {
+      guest_checkout: "true",
+      guest_email: email,
+      amount: amount.toString(),
+      description: description,
+      // Include all report data in metadata for later retrieval
+      ...(reportData || {}),
+    };
+
+    console.log("Session metadata:", metadata);
 
     /* -------- Create checkout session with direct amount -------- */
     const session = await stripe.checkout.sessions.create({
@@ -79,19 +94,9 @@ serve(async (req) => {
       customer: customerId,
       success_url: finalSuccessUrl,
       cancel_url: finalCancelUrl,
-      metadata: {
-        guest_checkout: "true",
-        guest_email: email,
-        amount: amount.toString(),
-        description: description,
-      },
+      metadata: metadata,
       payment_intent_data: {
-        metadata: { 
-          guest_checkout: "true",
-          guest_email: email,
-          amount: amount.toString(),
-          description: description,
-        },
+        metadata: metadata,
         setup_future_usage: "off_session" as const,
       },
       billing_address_collection: "auto" as const,
@@ -112,6 +117,8 @@ serve(async (req) => {
         },
       ],
     });
+
+    console.log("Session created:", session.id);
 
     return new Response(
       JSON.stringify({ sessionId: session.id, url: session.url }),
