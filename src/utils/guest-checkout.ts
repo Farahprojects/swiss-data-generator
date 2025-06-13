@@ -29,15 +29,24 @@ export const initiateGuestCheckout = async ({
     console.log("Initiating guest checkout:", { email, amount, description, reportData });
 
     // Call the Supabase Edge Function to create a guest checkout session
+    // Only pass successUrl and cancelUrl if they are explicitly provided
+    const requestBody: any = {
+      email,
+      amount,
+      description,
+      reportData, // Pass report data for metadata
+    };
+
+    // Only include URLs if they are explicitly provided
+    if (successUrl) {
+      requestBody.successUrl = successUrl;
+    }
+    if (cancelUrl) {
+      requestBody.cancelUrl = cancelUrl;
+    }
+
     const { data, error } = await supabase.functions.invoke("create-guest-checkout", {
-      body: {
-        email,
-        amount,
-        description,
-        successUrl: successUrl || window.location.origin + '/payment-return?status=success',
-        cancelUrl: cancelUrl || window.location.origin + '/payment-return?status=cancelled',
-        reportData, // Pass report data for metadata
-      },
+      body: requestBody,
     });
 
     if (error) {
@@ -74,6 +83,7 @@ export const guestCheckoutWithAmount = async (
   description: string,
   reportData?: Record<string, any>
 ) => {
+  // Don't pass any default URLs - let the backend handle them
   return initiateGuestCheckout({ email, amount, description, reportData });
 };
 
