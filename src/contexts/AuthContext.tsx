@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -78,6 +77,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isPendingEmailCheck, setIsPendingEmailCheck] = useState(false);
   const { clearNavigationState } = useNavigationState();
   const initializedRef = useRef(false);
+  const sessionRecoveryRef = useRef(false);
+
+  // Session recovery function
+  const recoverSession = async () => {
+    if (sessionRecoveryRef.current) return;
+    sessionRecoveryRef.current = true;
+
+    try {
+      console.log('🔄 Attempting session recovery...');
+      const { data: { session: recoveredSession }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('❌ Session recovery error:', error);
+        logToSupabase('Session recovery failed', {
+          level: 'error',
+          page: 'AuthContext',
+          data: { error: error.message }
+        });
+        return;
+      }
+
+      if (recoveredSession) {
+        console.log('✅ Session recovered successfully');
+        setUser(recoveredSession.user);
+        setSession(recoveredSession);
+        
+        logToSupabase('Session recovered successfully', {
+          level: 'info',
+          page: 'AuthContext',
+          data: { userId: recoveredSession.user.id }
+        });
+      } else {
+        console.log('ℹ️ No session to recover');
+      }
+    } catch (error) {
+      console.error('❌ Session recovery exception:', error);
+      logToSupabase('Session recovery exception', {
+        level: 'error',
+        page: 'AuthContext',
+        data: { error: error instanceof Error ? error.message : String(error) }
+      });
+    } finally {
+      sessionRecoveryRef.current = false;
+    }
+  };
 
   /* ─────────────────────────────────────────────────────────────
    * Register Supabase auth listener and get initial session
@@ -163,30 +207,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     /* ────────────────────────────
-     * Bootstrap existing session ONLY ONCE
+     * Bootstrap existing session with retry logic
      * ────────────────────────────*/
-    supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
-      console.log('📋 Initial session check:', !!supaSession);
-      
-      logToSupabase('Initial session check', {
-        page: 'AuthContext',
-        level: 'info',
-        data: {
-          hasSession: !!supaSession,
-          userId: supaSession?.user?.id
+    const initializeSession = async () => {
+      try {
+        const { data: { session: supaSession }, error } = await supabase.auth.getSession();
+        
+        console.log('📋 Initial session check:', !!supaSession, error?.message || 'no error');
+        
+        logToSupabase('Initial session check', {
+          page: 'AuthContext',
+          level: 'info',
+          data: {
+            hasSession: !!supaSession,
+            userId: supaSession?.user?.id,
+            error: error?.message
+          }
+        });
+        
+        if (supaSession) {
+          setUser(supaSession.user);
+          setSession(supaSession);
         }
-      });
-      
-      setUser(supaSession?.user ?? null);
-      setSession(supaSession);
-      setLoading(false);
-    });
+      } catch (error) {
+        console.error('❌ Initial session check failed:', error);
+        logToSupabase('Initial session check failed', {
+          page: 'AuthContext',
+          level: 'error',
+          data: { error: error instanceof Error ? error.message : String(error) }
+        });
+        
+        // Attempt session recovery after a delay
+        setTimeout(recoverSession, 1000);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeSession();
 
     return () => {
       console.log('🧹 Cleaning up auth subscription');
       subscription.unsubscribe();
     };
   }, []);
+
+  // Additional session recovery on window focus (for development environment)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!user && !loading) {
+        console.log('🔍 Window focused, checking for session...');
+        recoverSession();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user, loading]);
 
   const clearPendingEmail = () => {
     setPendingEmailAddress(null);
