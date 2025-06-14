@@ -123,6 +123,13 @@ export const GmailMessageList = ({
   );
 };
 
+// Utility: get first word of name or email (e.g. "Peter" from "Peter Farah" or "peter@company.com")
+const getSenderShortName = (address: string) => {
+  if (!address) return '';
+  const namePart = address.split(/[ @]/)[0];
+  return namePart.length > 15 ? namePart.slice(0, 15) : namePart;
+};
+
 interface MessageRowProps {
   message: EmailMessage;
   isSelected: boolean;
@@ -140,28 +147,34 @@ const MessageRow = ({
   formatDate,
   truncateText
 }: MessageRowProps) => {
-  // Unread: sender + subject bold, blue dot
+  // For single-line Gmail-style: [checkbox][star][blue dot][bold name][subject - preview][date]
+  const senderShort = getSenderShortName(
+    message.direction === 'incoming' ? message.from_address : message.to_address
+  );
+  const subject = message.subject || 'No Subject';
+  const PREVIEW_MAX = 38; // tune this for optimal look
+
   return (
     <div
       className={cn(
-        "grid grid-cols-[44px_1fr_120px] items-center px-2 pr-4 py-3 gap-0 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition group relative",
+        "grid grid-cols-[48px_120px_1fr_76px] items-center px-2 pr-2 py-1 gap-0 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition group relative",
         !message.read ? "bg-accent" : "bg-white"
       )}
-      style={{ minHeight: 60 }}
+      style={{ minHeight: 46 }}
       onClick={onSelect}
     >
-      {/* Actions/Selection Column */}
-      <div className="flex items-center gap-2 pl-2">
+      {/* Selection + Star */}
+      <div className="flex items-center gap-2 pl-1">
         <Checkbox
           checked={isSelected}
           onCheckedChange={onCheckboxChange}
           onClick={(e) => e.stopPropagation()}
-          className="opacity-0 group-hover:opacity-100 transition-opacity rounded"
+          className="rounded"
         />
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-6 w-6 p-0"
           onClick={(e) => {
             e.stopPropagation();
           }}
@@ -174,37 +187,47 @@ const MessageRow = ({
         </Button>
       </div>
 
-      {/* WHO + WHAT Column */}
-      <div className="flex flex-col min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          {/* Unread blue dot */}
-          <span className={cn("inline-block rounded-full mr-2 transition", !message.read ? "w-2 h-2 bg-blue-600" : "w-2 h-2 bg-transparent")}
-            title={!message.read ? "Unread" : undefined}
-          />
-          {/* Who */}
-          <span className={cn(
-            "text-sm truncate max-w-[180px]",
+      {/* Sender name & unread dot */}
+      <div className="flex items-center min-w-0">
+        {/* Unread blue dot */}
+        <span className={cn(
+          "inline-block rounded-full mr-1 transition",
+          !message.read ? "w-2 h-2 bg-blue-600" : "w-2 h-2 bg-transparent"
+        )}
+        title={!message.read ? "Unread" : undefined}
+        />
+        <span
+          className={cn(
+            "truncate max-w-[75px] text-sm",
             !message.read ? "font-semibold text-gray-900" : "text-gray-700"
-          )}>
-            {message.direction === 'incoming' ? message.from_address : message.to_address}
-          </span>
-        </div>
-        <div className="flex flex-row">
-          {/* What: subject + preview */}
-          <span className={cn(
-            "truncate",
+          )}
+          title={senderShort}
+        >
+          {senderShort}
+        </span>
+      </div>
+
+      {/* Subject + Body */}
+      <div className="flex items-center min-w-0">
+        <span
+          className={cn(
+            "truncate text-sm",
             !message.read ? "font-medium text-gray-900" : "text-gray-700"
-          )}>
-            {message.subject || 'No Subject'}
-          </span>
-          <span className="text-xs text-gray-500 mx-2">-</span>
-          <span className="truncate text-xs text-gray-500 flex-1">
-            {truncateText(message.body, 60)}
-          </span>
-        </div>
+          )}
+        >
+          {subject}
+        </span>
+        {message.body && (
+          <>
+            <span className="text-xs text-gray-400 mx-1">–</span>
+            <span className="truncate text-xs text-gray-500 max-w-full">
+              {truncateText(message.body, PREVIEW_MAX)}
+            </span>
+          </>
+        )}
       </div>
       
-      {/* WHEN Column */}
+      {/* Date / When */}
       <div className="flex justify-end items-center text-xs text-gray-500">
         {formatDate(message.created_at)}
       </div>
