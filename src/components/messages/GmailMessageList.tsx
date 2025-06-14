@@ -32,6 +32,9 @@ interface GmailMessageListProps {
   onSelectMessage: (message: EmailMessage) => void;
   onSelectMessageCheckbox: (messageId: string, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
+  onArchiveSelected: () => void;
+  onDeleteSelected: () => void;
+  onToggleStar: (message: EmailMessage) => void;
 }
 
 export const GmailMessageList = ({
@@ -40,7 +43,10 @@ export const GmailMessageList = ({
   selectedMessage,
   onSelectMessage,
   onSelectMessageCheckbox,
-  onSelectAll
+  onSelectAll,
+  onArchiveSelected,
+  onDeleteSelected,
+  onToggleStar
 }: GmailMessageListProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -77,16 +83,16 @@ export const GmailMessageList = ({
       {/* Toolbar */}
       <div className="px-4 py-2 border-b bg-gray-50/50 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pl-1">
             <Checkbox
               checked={allSelected}
               onCheckedChange={onSelectAll}
               className="rounded"
             />
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onArchiveSelected}>
               <Archive className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onDeleteSelected}>
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
@@ -114,6 +120,7 @@ export const GmailMessageList = ({
                 onCheckboxChange={(checked) => onSelectMessageCheckbox(message.id, checked)}
                 formatDate={formatDate}
                 truncateText={truncateText}
+                onToggleStar={() => onToggleStar(message)}
               />
             ))}
           </div>
@@ -137,6 +144,7 @@ interface MessageRowProps {
   onCheckboxChange: (checked: boolean) => void;
   formatDate: (date: string) => string;
   truncateText: (text: string, length?: number) => string;
+  onToggleStar: () => void;
 }
 
 const MessageRow = ({
@@ -145,7 +153,8 @@ const MessageRow = ({
   onSelect,
   onCheckboxChange,
   formatDate,
-  truncateText
+  truncateText,
+  onToggleStar
 }: MessageRowProps) => {
   // For single-line Gmail-style: [checkbox][star][blue dot][bold name][subject - preview][date]
   const senderShort = getSenderShortName(
@@ -177,6 +186,7 @@ const MessageRow = ({
           className="h-6 w-6 p-0"
           onClick={(e) => {
             e.stopPropagation();
+            onToggleStar();
           }}
         >
           {message.starred ? (

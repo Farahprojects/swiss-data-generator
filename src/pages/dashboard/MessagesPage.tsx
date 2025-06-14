@@ -10,6 +10,12 @@ import { GmailMessageList } from '@/components/messages/GmailMessageList';
 import { GmailMessageDetail } from '@/components/messages/GmailMessageDetail';
 import { ComposeModal } from '@/components/messages/ComposeModal';
 
+import {
+  toggleStarMessage,
+  archiveMessages,
+  deleteMessages,
+} from "@/utils/messageActions";
+
 interface EmailMessage {
   id: string;
   subject: string;
@@ -174,19 +180,67 @@ const MessagesPage = () => {
     });
   };
 
-  const handleArchive = () => {
-    toast({
-      title: "Message archived",
-      description: "Message has been archived.",
-    });
+  const handleArchive = async () => {
+    // Archive currently selected message (single)
+    if (selectedMessage) {
+      await archiveMessages([selectedMessage.id], toast);
+      setMessages(prev =>
+        prev.filter(m => m.id !== selectedMessage.id)
+      );
+      setSelectedMessage(null);
+    }
   };
 
-  const handleDelete = () => {
-    toast({
-      title: "Message deleted",
-      description: "Message has been deleted.",
-    });
-    setSelectedMessage(null);
+  const handleDelete = async () => {
+    // Delete currently selected message (single)
+    if (selectedMessage) {
+      await deleteMessages([selectedMessage.id], toast);
+      setMessages(prev =>
+        prev.filter(m => m.id !== selectedMessage.id)
+      );
+      setSelectedMessage(null);
+    }
+  };
+
+  const handleArchiveSelected = async () => {
+    if (selectedMessages.size === 0) return;
+    const ids = Array.from(selectedMessages);
+    await archiveMessages(ids, toast);
+    setMessages(prev =>
+      prev.filter(m => !ids.includes(m.id))
+    );
+    setSelectedMessages(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedMessages.size === 0) return;
+    const ids = Array.from(selectedMessages);
+    await deleteMessages(ids, toast);
+    setMessages(prev =>
+      prev.filter(m => !ids.includes(m.id))
+    );
+    setSelectedMessages(new Set());
+  };
+
+  const handleToggleStar = async (message: EmailMessage) => {
+    // Optimistic UI
+    setMessages(prev =>
+      prev.map(m =>
+        m.id === message.id ? { ...m, starred: !m.starred } : m
+      )
+    );
+    try {
+      await toggleStarMessage(message, toast);
+      // Nothing to do, UI already updated
+    } catch {
+      // Error handled via toast
+      // Rollback if needed
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === message.id ? { ...m, starred: message.starred } : m
+        )
+      );
+    }
   };
 
   const unreadCount = messages.filter(m => !m.read && m.direction === 'incoming').length;
@@ -267,6 +321,9 @@ const MessagesPage = () => {
               onSelectMessage={handleSelectMessage}
               onSelectMessageCheckbox={handleSelectMessageCheckbox}
               onSelectAll={handleSelectAll}
+              onArchiveSelected={handleArchiveSelected}
+              onDeleteSelected={handleDeleteSelected}
+              onToggleStar={handleToggleStar}
             />
           )}
         </div>
