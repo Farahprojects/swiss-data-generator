@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -157,8 +156,8 @@ ${clientData.goals || 'No specific goals listed'}
 Journal Entries:
 ${clientData.journalText}
 
-Previous Reports:
-${clientData.previousReportsText}`;
+Previous Astrological Data:
+${clientData.previousAstroDataText}`;
 
   const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
 

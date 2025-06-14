@@ -74,28 +74,66 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
     }
   };
 
-  const formatReportForInsight = (report: ClientReport) => {
+  const extractAstroData = (report: ClientReport) => {
     const reportType = report.report_tier || report.request_type || 'Report';
     
-    // Extract key insights from response payload if available
-    let keyInsights = '';
+    // Extract raw astrological data from response payload
+    let astroData = '';
     try {
-      if (report.response_payload?.report) {
-        // Try to extract a summary or first few lines
-        const content = report.response_payload.report;
-        if (typeof content === 'string') {
-          keyInsights = content.substring(0, 200) + '...';
+      if (report.response_payload?.astroData || report.response_payload?.natal || report.response_payload?.transits) {
+        const payload = report.response_payload;
+        
+        // Extract natal chart data
+        if (payload.natal) {
+          astroData += `Natal Chart Data:\n`;
+          if (payload.natal.planets) {
+            astroData += `Planets: ${JSON.stringify(payload.natal.planets, null, 2)}\n`;
+          }
+          if (payload.natal.houses) {
+            astroData += `Houses: ${JSON.stringify(payload.natal.houses, null, 2)}\n`;
+          }
+          if (payload.natal.aspects) {
+            astroData += `Aspects: ${JSON.stringify(payload.natal.aspects, null, 2)}\n`;
+          }
+          if (payload.natal.angles) {
+            astroData += `Angles: ${JSON.stringify(payload.natal.angles, null, 2)}\n`;
+          }
         }
+        
+        // Extract transit data
+        if (payload.transits) {
+          astroData += `\nTransit Data:\n`;
+          if (payload.transits.planets) {
+            astroData += `Transit Planets: ${JSON.stringify(payload.transits.planets, null, 2)}\n`;
+          }
+          if (payload.transits.aspects) {
+            astroData += `Transit Aspects: ${JSON.stringify(payload.transits.aspects, null, 2)}\n`;
+          }
+        }
+        
+        // Extract essence calculations if available
+        if (payload.essence) {
+          astroData += `\nEssence Calculations:\n${JSON.stringify(payload.essence, null, 2)}\n`;
+        }
+        
+        // Extract any other astrological data
+        if (payload.astroData) {
+          astroData += `\nAdditional Astro Data:\n${JSON.stringify(payload.astroData, null, 2)}\n`;
+        }
+      } else {
+        // Fallback to raw payload if no specific astro structure
+        astroData = JSON.stringify(report.response_payload, null, 2);
       }
     } catch (error) {
-      console.error('Error extracting insights from report:', error);
+      console.error('Error extracting astro data from report:', error);
+      astroData = 'Unable to extract astrological data from this report.';
     }
 
     return {
       id: report.id,
       type: reportType,
       created_at: report.created_at,
-      key_insights: keyInsights
+      astro_data: astroData
     };
   };
 
@@ -123,24 +161,24 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         });
       });
 
-      // Log previous reports being processed
+      // Log previous reports being processed and extract astro data
       console.log('🔥 MODAL: Previous reports received:', previousReports);
       console.log('🔥 MODAL: Previous reports count:', previousReports.length);
-      const formattedReports = previousReports.map(formatReportForInsight);
-      console.log('🔥 MODAL: Formatted reports for insight:', formattedReports);
+      const extractedAstroData = previousReports.map(extractAstroData);
+      console.log('🔥 MODAL: Extracted astro data for insight:', extractedAstroData);
 
       const clientData = {
         fullName: client.full_name,
         goals: client.notes || undefined,
         journalEntries: journalEntries,
-        previousReports: formattedReports
+        previousAstroData: extractedAstroData
       };
 
       console.log('🔥 MODAL: === CLIENT DATA BEING CREATED ===');
       console.log('🔥 MODAL: Full clientData object:', clientData);
       console.log('🔥 MODAL: Goals field value:', clientData.goals);
       console.log('🔥 MODAL: Journal entries field:', clientData.journalEntries);
-      console.log('🔥 MODAL: Previous reports field:', clientData.previousReports);
+      console.log('🔥 MODAL: Previous astro data field:', clientData.previousAstroData);
 
       const title = customTitle.trim() || generateDateTitle();
       console.log('🔥 MODAL: Generated title:', title);
@@ -238,7 +276,7 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="text-sm text-foreground">
-            This will analyze {client.full_name}'s goals, progress through {previousReports.length} previous report{previousReports.length !== 1 ? 's' : ''}, and {journalEntries.length} journal {journalEntries.length === 1 ? 'entry' : 'entries'} to generate personalized coaching insights.
+            This will analyze {client.full_name}'s goals, progress through {previousReports.length} previous astro report{previousReports.length !== 1 ? 's' : ''}, and {journalEntries.length} journal {journalEntries.length === 1 ? 'entry' : 'entries'} to generate personalized coaching insights.
           </div>
           
           {loadingReports && (

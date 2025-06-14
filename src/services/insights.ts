@@ -10,7 +10,7 @@ export interface GenerateInsightRequest {
     fullName: string;
     goals?: string;
     journalText: string;
-    previousReportsText: string;
+    previousAstroDataText: string;
   };
 }
 
@@ -37,11 +37,11 @@ export const insightsService = {
         entry_text: string;
         created_at: string;
       }>;
-      previousReports?: Array<{
+      previousAstroData?: Array<{
         id: string;
         type: string;
         created_at: string;
-        key_insights?: string;
+        astro_data?: string;
       }>;
     };
   }): Promise<GenerateInsightResponse> {
@@ -117,22 +117,22 @@ export const insightsService = {
 
       console.log('🚀 SERVICE: Transformed journal text length:', journalText.length);
 
-      // Extract plain text from previous reports
-      console.log('🚀 SERVICE: Processing previous reports:', request.clientData.previousReports?.length || 0);
+      // Extract astrological data from previous reports
+      console.log('🚀 SERVICE: Processing previous astro data:', request.clientData.previousAstroData?.length || 0);
       
-      const previousReportsText = request.clientData.previousReports?.map((report, index) => {
-        console.log(`🚀 SERVICE: Processing report ${index + 1}:`, {
-          id: report.id,
-          type: report.type,
-          created_at: report.created_at,
-          key_insights_length: report.key_insights?.length || 0
+      const previousAstroDataText = request.clientData.previousAstroData?.map((astroReport, index) => {
+        console.log(`🚀 SERVICE: Processing astro report ${index + 1}:`, {
+          id: astroReport.id,
+          type: astroReport.type,
+          created_at: astroReport.created_at,
+          astro_data_length: astroReport.astro_data?.length || 0
         });
         
-        const date = new Date(report.created_at).toLocaleDateString();
-        return `Report Type: ${report.type}\nDate: ${date}\nKey Insights: ${report.key_insights || 'No insights available'}`;
-      }).join('\n\n---\n\n') || 'No previous reports available.';
+        const date = new Date(astroReport.created_at).toLocaleDateString();
+        return `Report Type: ${astroReport.type}\nDate: ${date}\nAstrological Data:\n${astroReport.astro_data || 'No astrological data available'}`;
+      }).join('\n\n---\n\n') || 'No previous astrological data available.';
 
-      console.log('🚀 SERVICE: Transformed reports text length:', previousReportsText.length);
+      console.log('🚀 SERVICE: Transformed astro data text length:', previousAstroDataText.length);
 
       // Create the payload object - this will be sent as a raw object
       const payload = {
@@ -144,7 +144,7 @@ export const insightsService = {
           fullName: request.clientData.fullName,
           goals: request.clientData.goals,
           journalText,
-          previousReportsText
+          previousAstroDataText
         }
       };
 
