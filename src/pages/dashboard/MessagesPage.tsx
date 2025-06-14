@@ -259,7 +259,7 @@ const MessagesPage = () => {
           isMessagesPageMobile={true}
           activeFilter={activeFilter}
           unreadCount={unreadCount}
-          onFilterChange={setActiveFilter}
+          onFilterChange={(filter: MessageFilterType) => setActiveFilter(filter)}
         />
         <div className="w-full relative min-h-screen pb-24 bg-background">
           {/* Mobile Compose button, smaller/nicer */}

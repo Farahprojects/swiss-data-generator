@@ -75,7 +75,6 @@ export function SimpleSidebarMenu(props: MessageMenuProps) {
                     >
                       <item.icon />
                       <span>{item.name}</span>
-                      {/* Show unread badge only for Inbox */}
                       {item.filter === "inbox" && props.unreadCount && props.unreadCount > 0 && (
                         <span className="ml-auto bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">{props.unreadCount}</span>
                       )}
