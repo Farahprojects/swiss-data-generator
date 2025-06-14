@@ -23,8 +23,8 @@ import UnifiedNavigation from '@/components/UnifiedNavigation';
 
 const HEADER_HEIGHT = 72;
 
-// Define type for message filters
-type MessageFilterType = "inbox" | "sent" | "starred" | "archive" | "trash";
+// Define type for message filters ("inbox", "sent", ...)
+export type MessageFilterType = "inbox" | "sent" | "starred" | "archive" | "trash";
 
 const MessagesPage = () => {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
@@ -262,10 +262,8 @@ const MessagesPage = () => {
           onFilterChange={(filter: MessageFilterType) => setActiveFilter(filter)}
         />
         <div className="w-full relative min-h-screen pb-24 bg-background">
-          {/* Mobile Compose button, smaller/nicer */}
+          {/* Mobile Compose button */}
           <MobileComposeButton onClick={() => setShowCompose(true)} />
-
-          {/* Main Message List, allow more body text */}
           <div className="w-full">
             {selectedMessage ? (
               <GmailMessageDetail
@@ -312,7 +310,7 @@ const MessagesPage = () => {
   // Desktop layout (sidebar, sticky header, etc)
   return (
     <div className="w-full">
-      {/* Sticky Header: Compose far left, then after sidebar: Messages, then search fills space */}
+      {/* Sticky Header */}
       <div
         className="sticky top-16 z-10 bg-white border-b px-0 py-3 w-full flex items-center"
         style={{ minHeight: HEADER_HEIGHT, height: HEADER_HEIGHT }}
@@ -327,12 +325,10 @@ const MessagesPage = () => {
             Compose
           </Button>
         </div>
-        {/* Header content starts after sidebar */}
         <div className="ml-64 flex items-center gap-4 w-full pr-10">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit mr-4">
             Messages
           </h1>
-          {/* Search bar fills remaining space */}
           <div className="relative flex-1 max-w-2xl">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
@@ -343,8 +339,6 @@ const MessagesPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Layout: Sidebar starts below HEADER_HEIGHT */}
       <div className="flex">
         <MessagesSidebar
           activeFilter={activeFilter}
@@ -353,8 +347,6 @@ const MessagesPage = () => {
           onOpenBranding={handleOpenBranding}
           headerHeight={HEADER_HEIGHT}
         />
-
-        {/* Content area */}
         <div className="ml-64 w-full">
           {selectedMessage ? (
             <GmailMessageDetail

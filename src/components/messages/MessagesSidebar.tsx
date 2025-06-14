@@ -14,10 +14,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Import MessageFilterType from messages page
+export type MessageFilterType = "inbox" | "sent" | "starred" | "archive" | "trash";
+
 interface MessagesSidebarProps {
-  activeFilter: string;
+  activeFilter: MessageFilterType;
   unreadCount: number;
-  onFilterChange: (filter: string) => void;
+  onFilterChange: (filter: MessageFilterType) => void;
   onOpenBranding: () => void;
   headerHeight?: number;
 }
@@ -61,7 +64,7 @@ export const MessagesSidebar = ({
                     ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
                     : "bg-transparent text-gray-700 hover:bg-gray-100"
                 )}
-                onClick={() => onFilterChange(item.id)}
+                onClick={() => onFilterChange(item.id as MessageFilterType)}
                 type="button"
               >
                 <item.icon className="w-4 h-4" />
