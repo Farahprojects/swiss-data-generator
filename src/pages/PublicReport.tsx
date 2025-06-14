@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -46,6 +47,44 @@ const reportSchema = z.object({
   returnYear: z.string().optional(),
   notes: z.string().optional(),
   promoCode: z.string().optional(),
+}).refine((data) => {
+  // If reportType is essence, essenceType is required
+  if (data.reportType === 'essence' && (!data.essenceType || data.essenceType === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please select an essence focus type",
+  path: ["essenceType"]
+}).refine((data) => {
+  // If reportType is sync, relationshipType is required
+  if (data.reportType === 'sync' && (!data.relationshipType || data.relationshipType === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please select a relationship type",
+  path: ["relationshipType"]
+}).refine((data) => {
+  // If sync report, second person details are required
+  if (data.reportType === 'sync') {
+    if (!data.secondPersonName || data.secondPersonName.trim() === '') {
+      return false;
+    }
+    if (!data.secondPersonBirthDate || data.secondPersonBirthDate === '') {
+      return false;
+    }
+    if (!data.secondPersonBirthTime || data.secondPersonBirthTime === '') {
+      return false;
+    }
+    if (!data.secondPersonBirthLocation || data.secondPersonBirthLocation.trim() === '') {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "All second person details are required for sync reports",
+  path: ["secondPersonName"]
 });
 
 type ReportFormData = z.infer<typeof reportSchema>;
@@ -133,13 +172,24 @@ const PublicReport = () => {
 
   // Function to build the complete report type
   const buildCompleteReportType = (data: ReportFormData) => {
+    console.log('Building report type with data:', {
+      reportType: data.reportType,
+      essenceType: data.essenceType,
+      relationshipType: data.relationshipType
+    });
+    
     if (data.reportType === 'essence' && data.essenceType) {
-      return `essence_${data.essenceType}`;
+      const completeType = `essence_${data.essenceType}`;
+      console.log('Built complete essence type:', completeType);
+      return completeType;
     }
     if (data.reportType === 'sync' && data.relationshipType) {
-      return `sync_${data.relationshipType}`;
+      const completeType = `sync_${data.relationshipType}`;
+      console.log('Built complete sync type:', completeType);
+      return completeType;
     }
     // For other report types that don't have subtypes
+    console.log('Using base report type:', data.reportType);
     return data.reportType;
   };
 
@@ -196,11 +246,11 @@ const PublicReport = () => {
     setIsPricingLoading(true);
     
     try {
-      console.log('Report data:', data);
+      console.log('Form submission data:', data);
       
       // Build the complete report type
       const completeReportType = buildCompleteReportType(data);
-      console.log('Complete report type:', completeReportType);
+      console.log('Complete report type for submission:', completeReportType);
       
       const { amount, description } = await getReportPriceAndDescription(
         data.reportType, 
@@ -234,6 +284,8 @@ const PublicReport = () => {
         notes: data.notes,
         promoCode: data.promoCode,
       };
+      
+      console.log('Report data being sent to checkout:', reportData);
       
       const result = await guestCheckoutWithAmount(data.email, amount, description, reportData);
       
@@ -362,6 +414,9 @@ const PublicReport = () => {
                           </ToggleGroup>
                         )}
                       />
+                      {errors.essenceType && (
+                        <p className="text-sm text-destructive">{errors.essenceType.message}</p>
+                      )}
                     </div>
                   )}
 
@@ -403,6 +458,9 @@ const PublicReport = () => {
                           </ToggleGroup>
                         )}
                       />
+                      {errors.relationshipType && (
+                        <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
+                      )}
                     </div>
                   )}
                 </div>
