@@ -254,10 +254,16 @@ const MessagesPage = () => {
 
         {/* Top Search bar, visible below global nav */}
         <div
-          className="sticky top-0 z-20 w-full bg-white border-b"
-          style={{ marginTop: 64, minHeight: 44, height: 44, paddingLeft: 0, paddingRight: 0, boxSizing: 'border-box' }}
+          className="sticky top-0 z-20 w-full bg-white border-b pt-2 px-4"
+          style={{
+            marginTop: 64,
+            minHeight: 40,
+            height: 40,
+            boxSizing: 'border-box',
+            maxWidth: '100vw'
+          }}
         >
-          <div className="relative w-full">
+          <div className="relative w-full max-w-full">
             <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
               <Search className="w-5 h-5" />
             </span>
@@ -265,13 +271,14 @@ const MessagesPage = () => {
               placeholder="Search mail"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-gray-100 border-gray-200 rounded-full h-10 text-base focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
+              className="pl-12 bg-gray-100 border-gray-200 rounded-full h-9 text-base focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
               style={{
-                minHeight: 36,
-                height: 36,
+                minHeight: 34,
+                height: 34,
                 fontSize: 15,
                 marginTop: 0,
                 marginBottom: 0,
+                maxWidth: '100%',
               }}
             />
           </div>
