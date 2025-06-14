@@ -22,7 +22,21 @@ import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
-const UnifiedNavigation = () => {
+// Add types for message nav
+type MessageFilterType = "inbox" | "sent" | "starred" | "archive" | "trash";
+interface NavMessageMenuProps {
+  isMessagesPageMobile?: boolean;
+  activeFilter?: MessageFilterType;
+  unreadCount?: number;
+  onFilterChange?: (filter: MessageFilterType) => void;
+}
+
+const UnifiedNavigation = ({
+  isMessagesPageMobile,
+  activeFilter,
+  unreadCount,
+  onFilterChange,
+}: NavMessageMenuProps = {}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -257,7 +271,12 @@ const UnifiedNavigation = () => {
               className="fixed inset-y-0 left-0 z-50 h-full w-[240px] border-r bg-white p-0 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left data-[state=closed]:duration-300 data-[state=open]:duration-500"
             >
               <div onClick={closeSidebar}>
-                <SimpleSidebarMenu />
+                <SimpleSidebarMenu
+                  isMessagesPageMobile={isMessagesPageMobile && location.pathname === '/dashboard/messages'}
+                  activeFilter={activeFilter}
+                  unreadCount={unreadCount}
+                  onFilterChange={onFilterChange}
+                />
               </div>
             </SheetPrimitive.Content>
           </SheetPortal>

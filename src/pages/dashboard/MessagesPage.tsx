@@ -19,6 +19,7 @@ import {
   markMessageRead,
 } from "@/utils/messageActions";
 import { EmailMessage } from "@/types/email";
+import UnifiedNavigation from '@/components/UnifiedNavigation';
 
 const HEADER_HEIGHT = 72;
 
@@ -29,7 +30,7 @@ const MessagesPage = () => {
   const [searchParams] = useSearchParams();
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [showCompose, setShowCompose] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('inbox');
+  const [activeFilter, setActiveFilter] = useState<MessageFilterType>('inbox');
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -234,6 +235,8 @@ const MessagesPage = () => {
   console.log('Filtered messages count:', filteredMessages.length);
   console.log('Total messages count:', messages.length);
 
+  const showMobileSidebarMenu = isMobile;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -247,53 +250,59 @@ const MessagesPage = () => {
   if (isMobile) {
     // Mobile layout: Remove in-page search bar section
     return (
-      <div className="w-full relative min-h-screen pb-24 bg-background">
-        {/* Mobile Compose button, smaller/nicer */}
-        <MobileComposeButton onClick={() => setShowCompose(true)} />
-
-        {/* (No more search bar here - handled in Header) */}
-
-        {/* Main Message List, allow more body text */}
-        <div className="w-full">
-          {selectedMessage ? (
-            <GmailMessageDetail
-              message={selectedMessage}
-              onClose={handleBackToList}
-              onReply={handleReply}
-              onForward={handleForward}
-              onArchive={handleArchive}
-              onDelete={handleDelete}
-            />
-          ) : (
-            <GmailMessageList
-              messages={filteredMessages}
-              selectedMessages={selectedMessages}
-              selectedMessage={null}
-              onSelectMessage={handleSelectMessage}
-              onSelectMessageCheckbox={handleSelectMessageCheckbox}
-              onSelectAll={handleSelectAll}
-              onArchiveSelected={handleArchiveSelected}
-              onDeleteSelected={handleDeleteSelected}
-              onToggleStar={handleToggleStar}
-              // Pass prop/class for less left padding on mobile, if supported
-              mobileDense
-            />
-          )}
-        </div>
-        {/* Compose Modal */}
-        <ComposeModal
-          isOpen={showCompose}
-          onClose={() => setShowCompose(false)}
-          onSend={(messageData) => {
-            toast({
-              title: "Message sent",
-              description: "Your message has been sent successfully.",
-            });
-            setShowCompose(false);
-            loadMessages();
-          }}
+      <>
+        <UnifiedNavigation
+          // Pass message nav props to header menu for mobile messages page only
+          isMessagesPageMobile={true}
+          activeFilter={activeFilter}
+          unreadCount={unreadCount}
+          onFilterChange={setActiveFilter}
         />
-      </div>
+        <div className="w-full relative min-h-screen pb-24 bg-background">
+          {/* Mobile Compose button, smaller/nicer */}
+          <MobileComposeButton onClick={() => setShowCompose(true)} />
+
+          {/* Main Message List, allow more body text */}
+          <div className="w-full">
+            {selectedMessage ? (
+              <GmailMessageDetail
+                message={selectedMessage}
+                onClose={handleBackToList}
+                onReply={handleReply}
+                onForward={handleForward}
+                onArchive={handleArchive}
+                onDelete={handleDelete}
+              />
+            ) : (
+              <GmailMessageList
+                messages={filteredMessages}
+                selectedMessages={selectedMessages}
+                selectedMessage={null}
+                onSelectMessage={handleSelectMessage}
+                onSelectMessageCheckbox={handleSelectMessageCheckbox}
+                onSelectAll={handleSelectAll}
+                onArchiveSelected={handleArchiveSelected}
+                onDeleteSelected={handleDeleteSelected}
+                onToggleStar={handleToggleStar}
+                mobileDense
+              />
+            )}
+          </div>
+          {/* Compose Modal */}
+          <ComposeModal
+            isOpen={showCompose}
+            onClose={() => setShowCompose(false)}
+            onSend={(messageData) => {
+              toast({
+                title: "Message sent",
+                description: "Your message has been sent successfully.",
+              });
+              setShowCompose(false);
+              loadMessages();
+            }}
+          />
+        </div>
+      </>
     );
   }
 
