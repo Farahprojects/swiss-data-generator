@@ -14,6 +14,7 @@ import {
   toggleStarMessage,
   archiveMessages,
   deleteMessages,
+  markMessageRead,
 } from "@/utils/messageActions";
 import { EmailMessage } from "@/types/email";
 
@@ -51,6 +52,7 @@ const MessagesPage = () => {
         .from('email_messages')
         .select('*')
         .eq('user_id', user.id)
+        .eq('is_archived', false) // Only load unarchived messages in main view
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -58,25 +60,18 @@ const MessagesPage = () => {
         throw error;
       }
       
-      console.log('Raw messages from database:', data);
-      
-      // Map database direction values to UI values
-      const messagesData = (data || []).map(message => {
+      // Direction mapping if needed
+      const messagesData: EmailMessage[] = (data || []).map((message: any) => {
         const mappedDirection = message.direction === 'inbound' ? 'incoming' : 
                                message.direction === 'outbound' ? 'outgoing' : 
-                               message.direction; // fallback to original value
-        
-        console.log(`Message ${message.id}: ${message.direction} -> ${mappedDirection}`);
-        
+                               message.direction; // fallback
+        // Only use DB values for is_read, is_starred, is_archived
         return {
           ...message,
-          direction: mappedDirection as 'incoming' | 'outgoing',
-          read: Math.random() > 0.3, // Temporary mock data for read status
-          starred: Math.random() > 0.8 // Temporary mock data for starred
-        };
+          direction: mappedDirection,
+        } as EmailMessage;
       });
       
-      console.log('Processed messages:', messagesData);
       setMessages(messagesData);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -100,7 +95,7 @@ const MessagesPage = () => {
       switch (activeFilter) {
         case 'inbox': return message.direction === 'incoming';
         case 'sent': return message.direction === 'outgoing';
-        case 'starred': return message.starred;
+        case 'starred': return message.is_starred;
         case 'archive': return false; // We'll implement this later
         case 'trash': return false; // We'll implement this later
         default: return true;
@@ -110,15 +105,17 @@ const MessagesPage = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleSelectMessage = (message: EmailMessage) => {
-    // Set selected message for detail view instead of navigating
+  const handleSelectMessage = async (message: EmailMessage) => {
     setSelectedMessage(message);
-    
-    // Mark as read
-    if (!message.read) {
-      setMessages(prev => prev.map(m => 
-        m.id === message.id ? { ...m, read: true } : m
-      ));
+
+    // Mark as read in database (if not already)
+    if (!message.is_read) {
+      setMessages(prev =>
+        prev.map(m => 
+          m.id === message.id ? { ...m, is_read: true } : m
+        )
+      );
+      await markMessageRead(message.id);
     }
   };
 
@@ -213,24 +210,22 @@ const MessagesPage = () => {
     // Optimistic UI
     setMessages(prev =>
       prev.map(m =>
-        m.id === message.id ? { ...m, starred: !m.starred } : m
+        m.id === message.id ? { ...m, is_starred: !m.is_starred } : m
       )
     );
     try {
       await toggleStarMessage(message, toast);
-      // Nothing to do, UI already updated
     } catch {
-      // Error handled via toast
-      // Rollback if needed
+      // rollback on error
       setMessages(prev =>
         prev.map(m =>
-          m.id === message.id ? { ...m, starred: message.starred } : m
+          m.id === message.id ? { ...m, is_starred: message.is_starred } : m
         )
       );
     }
   };
 
-  const unreadCount = messages.filter(m => !m.read && m.direction === 'incoming').length;
+  const unreadCount = messages.filter(m => !m.is_read && m.direction === 'incoming').length;
 
   console.log('Current filter:', activeFilter);
   console.log('Filtered messages count:', filteredMessages.length);

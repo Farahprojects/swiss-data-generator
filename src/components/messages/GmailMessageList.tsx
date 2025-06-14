@@ -154,7 +154,7 @@ const MessageRow = ({
     <div
       className={cn(
         "grid grid-cols-[48px_120px_1fr_76px] items-center px-2 pr-2 py-1 gap-0 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition group relative",
-        !message.read ? "bg-accent" : "bg-white"
+        !message.is_read ? "bg-accent" : "bg-white"
       )}
       style={{ minHeight: 46 }}
       onClick={onSelect}
@@ -176,7 +176,7 @@ const MessageRow = ({
             onToggleStar();
           }}
         >
-          {message.starred ? (
+          {message.is_starred ? (
             <Star className="h-4 w-4 text-yellow-400 fill-current" />
           ) : (
             <StarOff className="h-4 w-4 text-gray-400" />
@@ -189,14 +189,14 @@ const MessageRow = ({
         {/* Unread blue dot */}
         <span className={cn(
           "inline-block rounded-full mr-1 transition",
-          !message.read ? "w-2 h-2 bg-blue-600" : "w-2 h-2 bg-transparent"
+          !message.is_read ? "w-2 h-2 bg-blue-600" : "w-2 h-2 bg-transparent"
         )}
-        title={!message.read ? "Unread" : undefined}
+        title={!message.is_read ? "Unread" : undefined}
         />
         <span
           className={cn(
             "truncate max-w-[75px] text-sm",
-            !message.read ? "font-semibold text-gray-900" : "text-gray-700"
+            !message.is_read ? "font-semibold text-gray-900" : "text-gray-700"
           )}
           title={senderShort}
         >
@@ -209,7 +209,7 @@ const MessageRow = ({
         <span
           className={cn(
             "truncate text-sm",
-            !message.read ? "font-medium text-gray-900" : "text-gray-700"
+            !message.is_read ? "font-medium text-gray-900" : "text-gray-700"
           )}
         >
           {subject}

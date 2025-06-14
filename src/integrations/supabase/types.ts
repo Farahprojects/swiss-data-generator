@@ -285,6 +285,9 @@ export type Database = {
           direction: string
           from_address: string
           id: string
+          is_archived: boolean
+          is_read: boolean
+          is_starred: boolean
           raw_headers: string | null
           sent_via: string | null
           subject: string | null
@@ -298,6 +301,9 @@ export type Database = {
           direction: string
           from_address: string
           id?: string
+          is_archived?: boolean
+          is_read?: boolean
+          is_starred?: boolean
           raw_headers?: string | null
           sent_via?: string | null
           subject?: string | null
@@ -311,6 +317,9 @@ export type Database = {
           direction?: string
           from_address?: string
           id?: string
+          is_archived?: boolean
+          is_read?: boolean
+          is_starred?: boolean
           raw_headers?: string | null
           sent_via?: string | null
           subject?: string | null

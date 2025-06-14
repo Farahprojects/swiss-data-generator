@@ -9,6 +9,7 @@ export interface EmailMessage {
   created_at: string;
   client_id?: string;
   sent_via: string;
-  read?: boolean;
-  starred?: boolean;
+  is_read: boolean;
+  is_starred: boolean;
+  is_archived: boolean;
 }
