@@ -11,7 +11,7 @@ import { GmailMessageDetail } from '@/components/messages/GmailMessageDetail';
 import { ComposeModal } from '@/components/messages/ComposeModal';
 import { MobileComposeButton } from '@/components/messages/MobileComposeButton';
 import { useIsMobile } from '@/hooks/use-mobile';
-
+import { useSearchParams } from "react-router-dom";
 import {
   toggleStarMessage,
   archiveMessages,
@@ -26,7 +26,7 @@ const MessagesPage = () => {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams] = useSearchParams();
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [showCompose, setShowCompose] = useState(false);
   const [activeFilter, setActiveFilter] = useState('inbox');
@@ -89,10 +89,10 @@ const MessagesPage = () => {
   };
 
   const filteredMessages = messages.filter(message => {
-    const matchesSearch = message.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      message.from_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      message.to_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      message.body?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = message.subject?.toLowerCase().includes(searchParams.get('search') || '') ||
+      message.from_address?.toLowerCase().includes(searchParams.get('search') || '') ||
+      message.to_address?.toLowerCase().includes(searchParams.get('search') || '') ||
+      message.body?.toLowerCase().includes(searchParams.get('search') || '');
 
     const matchesFilter = (() => {
       switch (activeFilter) {
@@ -245,37 +245,13 @@ const MessagesPage = () => {
   }
 
   if (isMobile) {
-    // Mobile layout (no sidebar, no header, sticky compose, full-width search, more visible body text)
-    // Header is likely 56px or 64px; adjust margin as needed (e.g. mt-16 for 64px)
+    // Mobile layout: Remove in-page search bar section
     return (
       <div className="w-full relative min-h-screen pb-24 bg-background">
         {/* Mobile Compose button, smaller/nicer */}
         <MobileComposeButton onClick={() => setShowCompose(true)} />
 
-        {/* Top Search bar, visible below global nav */}
-        <div
-          className="sticky top-0 z-20 w-full bg-white border-b"
-          style={{ marginTop: 64, minHeight: 44, height: 44, paddingLeft: 0, paddingRight: 0, boxSizing: 'border-box' }}
-        >
-          <div className="relative w-full">
-            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-              <Search className="w-5 h-5" />
-            </span>
-            <Input
-              placeholder="Search mail"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-gray-100 border-gray-200 rounded-full h-10 text-base focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
-              style={{
-                minHeight: 36,
-                height: 36,
-                fontSize: 15,
-                marginTop: 0,
-                marginBottom: 0,
-              }}
-            />
-          </div>
-        </div>
+        {/* (No more search bar here - handled in Header) */}
 
         {/* Main Message List, allow more body text */}
         <div className="w-full">
@@ -349,8 +325,7 @@ const MessagesPage = () => {
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search mail"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchParams.get('search') || ''}
               className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
             />
           </div>

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,10 +18,14 @@ import { logToSupabase } from '@/utils/batchedLogManager';
 import { SimpleSidebarMenu } from '@/components/dashboard/DashboardSidebar';
 import { Sheet, SheetContent, SheetPortal } from '@/components/ui/sheet';
 import * as SheetPrimitive from "@radix-ui/react-dialog";
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 
 const UnifiedNavigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,6 +37,7 @@ const UnifiedNavigation = () => {
   const isMainDashboard = location.pathname === '/dashboard';
   const isDashboardPageWithBurgerMenu = location.pathname.startsWith('/dashboard') && !isMainDashboard;
   const isDashboardPage = location.pathname.startsWith('/dashboard');
+  const isMessagesPage = location.pathname === '/dashboard/messages';
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -61,6 +65,24 @@ const UnifiedNavigation = () => {
     openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
   };
 
+  const showHeaderSearch =
+    isLoggedIn &&
+    isMessagesPage &&
+    isMobile;
+
+  // For global header search: only on mobile, only for /dashboard/messages
+  const headerSearch = searchParams.get('search') || '';
+  const setHeaderSearch = (val: string) => {
+    // Keep all other params, just update 'search'
+    const next = new URLSearchParams(searchParams);
+    if (val) {
+      next.set('search', val);
+    } else {
+      next.delete('search');
+    }
+    setSearchParams(next, { replace: true });
+  };
+
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 w-full h-16 bg-white z-50 shadow-sm border-b">
@@ -83,12 +105,27 @@ const UnifiedNavigation = () => {
               ) : null}
             </div>
             
-            {/* Centered logo - only for logged in users */}
-            {isLoggedIn && (
-              <div className="absolute left-1/2 transform -translate-x-1/2">
-                <Logo />
-              </div>
-            )}
+            {/* Centered logo or search bar */}
+            <div className="absolute left-1/2 transform -translate-x-1/2 min-w-0 max-w-full flex items-center">
+              {showHeaderSearch ? (
+                <div className="relative flex-1 w-[95vw] max-w-xs md:max-w-md pr-6">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    value={headerSearch}
+                    onChange={e => setHeaderSearch(e.target.value)}
+                    className="pl-10 h-9 rounded-full bg-gray-100 focus:bg-white text-sm outline-none w-full border border-gray-200"
+                    placeholder="Search mail"
+                    style={{ minWidth: 0 }}
+                    aria-label="Search mail"
+                  />
+                </div>
+              ) : (
+                // ... keep the existing logo behaviour
+                isLoggedIn && (
+                  <Logo />
+                )
+              )}
+            </div>
             
             {/* Desktop Navigation - only for not logged in users */}
             <div className="hidden md:flex items-center space-x-8">
