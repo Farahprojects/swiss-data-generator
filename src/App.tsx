@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
@@ -12,6 +11,8 @@ import DashboardHome from './pages/dashboard/DashboardHome';
 import ClientsPage from './pages/dashboard/ClientsPage';
 import ClientDetailPage from './pages/dashboard/ClientDetailPage';
 import ReportsPage from './pages/dashboard/ReportsPage';
+import MessagesPage from './pages/dashboard/MessagesPage';
+import CreateReportPage from './pages/dashboard/CreateReportPage';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -66,6 +67,8 @@ function App() {
                         <Route path="clients" element={<ClientsPage />} />
                         <Route path="clients/:clientId" element={<ClientDetailPage />} />
                         <Route path="reports" element={<ReportsPage />} />
+                        <Route path="reports/create" element={<CreateReportPage />} />
+                        <Route path="messages" element={<MessagesPage />} />
                         <Route path="settings" element={<UserSettings />} />
                         <Route path="website-builder" element={<WebsiteBuilder />} />
                       </Route>
