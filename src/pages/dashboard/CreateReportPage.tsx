@@ -278,19 +278,19 @@ const CreateReportPage = () => {
                     className="justify-start"
                   >
                     <ToggleGroupItem 
-                      value="essence_personal" 
+                      value="personal-identity"
                       className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
                     >
                       Personal
                     </ToggleGroupItem>
                     <ToggleGroupItem 
-                      value="essence_professional" 
+                      value="professional" 
                       className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
                     >
                       Professional
                     </ToggleGroupItem>
                     <ToggleGroupItem 
-                      value="essence_relational" 
+                      value="relational" 
                       className="data-[state=on]:bg-accent data-[state=on]:text-accent-foreground hover:bg-accent/50 hover:text-accent-foreground/80"
                     >
                       Relational
