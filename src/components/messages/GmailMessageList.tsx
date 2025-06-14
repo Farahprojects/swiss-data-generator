@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -66,7 +65,7 @@ export const GmailMessageList = ({
     }
   };
 
-  const truncateText = (text: string, maxLength: number = 120) => {
+  const truncateText = (text: string, maxLength: number = 100) => {
     if (!text) return '';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
@@ -91,7 +90,6 @@ export const GmailMessageList = ({
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
-          
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
             <MoreHorizontal className="w-4 h-4" />
           </Button>
@@ -142,23 +140,24 @@ const MessageRow = ({
   formatDate,
   truncateText
 }: MessageRowProps) => {
+  // Unread: sender + subject bold, blue dot
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-3 cursor-pointer hover:shadow-sm transition-all group border-b border-gray-100",
-        !message.read && "bg-white shadow-sm"
+        "grid grid-cols-[44px_1fr_120px] items-center px-2 pr-4 py-3 gap-0 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition group relative",
+        !message.read ? "bg-accent" : "bg-white"
       )}
+      style={{ minHeight: 60 }}
       onClick={onSelect}
     >
-      {/* Selection and Star */}
-      <div className="flex items-center gap-2">
+      {/* Actions/Selection Column */}
+      <div className="flex items-center gap-2 pl-2">
         <Checkbox
           checked={isSelected}
           onCheckedChange={onCheckboxChange}
           onClick={(e) => e.stopPropagation()}
           className="opacity-0 group-hover:opacity-100 transition-opacity rounded"
         />
-        
         <Button
           variant="ghost"
           size="sm"
@@ -175,40 +174,39 @@ const MessageRow = ({
         </Button>
       </div>
 
-      {/* Bullet Point */}
-      <div className="flex-shrink-0">
-        <Circle className={cn(
-          "w-2 h-2 fill-current",
-          !message.read ? "text-blue-600" : "text-gray-300"
-        )} />
-      </div>
-
-      {/* Message Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between mb-1">
-          <div className={cn(
-            "text-sm truncate",
-            !message.read ? "font-medium text-gray-900" : "text-gray-700"
+      {/* WHO + WHAT Column */}
+      <div className="flex flex-col min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          {/* Unread blue dot */}
+          <span className={cn("inline-block rounded-full mr-2 transition", !message.read ? "w-2 h-2 bg-blue-600" : "w-2 h-2 bg-transparent")}
+            title={!message.read ? "Unread" : undefined}
+          />
+          {/* Who */}
+          <span className={cn(
+            "text-sm truncate max-w-[180px]",
+            !message.read ? "font-semibold text-gray-900" : "text-gray-700"
           )}>
             {message.direction === 'incoming' ? message.from_address : message.to_address}
-          </div>
-          <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
-            {formatDate(message.created_at)}
           </span>
         </div>
-        
-        <div className="flex items-center gap-2">
+        <div className="flex flex-row">
+          {/* What: subject + preview */}
           <span className={cn(
-            "text-sm truncate",
-            !message.read ? "font-medium text-gray-900" : "text-gray-600"
+            "truncate",
+            !message.read ? "font-medium text-gray-900" : "text-gray-700"
           )}>
             {message.subject || 'No Subject'}
           </span>
-          <span className="text-xs text-gray-500">-</span>
-          <span className="text-xs text-gray-500 truncate flex-1">
-            {truncateText(message.body)}
+          <span className="text-xs text-gray-500 mx-2">-</span>
+          <span className="truncate text-xs text-gray-500 flex-1">
+            {truncateText(message.body, 60)}
           </span>
         </div>
+      </div>
+      
+      {/* WHEN Column */}
+      <div className="flex justify-end items-center text-xs text-gray-500">
+        {formatDate(message.created_at)}
       </div>
     </div>
   );
