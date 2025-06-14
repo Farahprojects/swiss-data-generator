@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -12,7 +11,6 @@ import {
   Settings, 
   Upload,
   FileText,
-  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +18,6 @@ interface MessagesSidebarProps {
   activeFilter: string;
   unreadCount: number;
   onFilterChange: (filter: string) => void;
-  onCompose: () => void;
   onOpenBranding: () => void;
 }
 
@@ -28,7 +25,6 @@ export const MessagesSidebar = ({
   activeFilter,
   unreadCount,
   onFilterChange,
-  onCompose,
   onOpenBranding
 }: MessagesSidebarProps) => {
   const navigationItems = [
@@ -47,27 +43,21 @@ export const MessagesSidebar = ({
 
   return (
     <div className="w-64 bg-white border-r flex flex-col h-[calc(100vh-4rem)] fixed left-0 top-16 z-5">
-      {/* Compose Button - Fixed at top */}
-      <div className="p-4 border-b bg-white flex-shrink-0">
-        <Button onClick={onCompose} className="w-full flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Compose
-        </Button>
-      </div>
-
       {/* Navigation - Scrollable content */}
       <ScrollArea className="flex-1">
         <div className="p-2">
           <div className="space-y-1">
             {navigationItems.map((item) => (
-              <Button
+              <button
                 key={item.id}
-                variant={activeFilter === item.id ? 'secondary' : 'ghost'}
                 className={cn(
-                  "w-full justify-start gap-3 h-10",
-                  activeFilter === item.id && "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  "w-full flex items-center gap-3 h-10 rounded text-left px-3 py-2 transition-colors",
+                  activeFilter === item.id
+                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    : "bg-transparent text-gray-700 hover:bg-gray-100"
                 )}
                 onClick={() => onFilterChange(item.id)}
+                type="button"
               >
                 <item.icon className="w-4 h-4" />
                 <span className="flex-1 text-left">{item.label}</span>
@@ -76,7 +66,7 @@ export const MessagesSidebar = ({
                     {item.count}
                   </Badge>
                 )}
-              </Button>
+              </button>
             ))}
           </div>
         </div>
@@ -90,16 +80,15 @@ export const MessagesSidebar = ({
             </h3>
             <div className="space-y-1">
               {brandingItems.map((item) => (
-                <Button
+                <button
                   key={item.id}
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start gap-2 h-8 text-sm"
+                  className="w-full flex items-center gap-2 h-8 text-sm rounded hover:bg-gray-100 px-2 transition-colors"
+                  type="button"
                   onClick={() => onOpenBranding()}
                 >
                   <item.icon className="w-3 h-3" />
                   {item.label}
-                </Button>
+                </button>
               ))}
             </div>
           </div>

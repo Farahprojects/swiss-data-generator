@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -220,6 +221,16 @@ const MessagesPage = () => {
                 className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
               />
             </div>
+            {/* Compose Button moved to header */}
+            <div>
+              <Button
+                onClick={() => setShowCompose(true)}
+                className="h-10 px-5 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Compose
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -231,7 +242,6 @@ const MessagesPage = () => {
           activeFilter={activeFilter}
           unreadCount={unreadCount}
           onFilterChange={setActiveFilter}
-          onCompose={() => setShowCompose(true)}
           onOpenBranding={handleOpenBranding}
         />
 
