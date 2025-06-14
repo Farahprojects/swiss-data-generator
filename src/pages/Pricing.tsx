@@ -208,6 +208,7 @@ const FAQSectionComponent = ({ items }: { items: { question: string; answer: str
 
 import EssenceSuiteCard from "@/components/pricing/EssenceSuiteCard";
 import RelationshipDynamicsCard from "@/components/pricing/RelationshipDynamicsCard";
+import DeeperInsightsCard from "@/components/pricing/DeeperInsightsCard";
 import TimingToolkitSection from "@/components/pricing/TimingToolkitSection";
 
 // --- NEW Coach-focused FAQ ---
@@ -326,6 +327,7 @@ const Pricing = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <EssenceSuiteCard />
             <RelationshipDynamicsCard />
+            <DeeperInsightsCard />
           </div>
           <TimingToolkitSection />
         </section>

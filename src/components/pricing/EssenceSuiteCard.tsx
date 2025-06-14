@@ -4,7 +4,7 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const EssenceSuiteCard = () => (
-  <Card className="shadow-lg border-primary border-2 md:col-span-2">
+  <Card className="shadow-lg border-primary border-2 h-full">
     <CardHeader className="flex flex-row items-start gap-4">
       <Badge className="bg-primary text-white mb-2 px-3 py-1">Most Popular for Coaches</Badge>
       <Users className="w-8 h-8 text-primary ml-auto" />

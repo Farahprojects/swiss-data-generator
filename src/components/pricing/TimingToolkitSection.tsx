@@ -5,22 +5,22 @@ import { TrendingUp, Star, Focus, Brain } from "lucide-react";
 
 const timingInsights = [
   {
-    icon: <TrendingUp className="w-6 h-6 text-primary" />,
+    icon: <TrendingUp className="w-8 h-8 text-primary" />,
     title: "Flow",
     desc: "Daily/weekly energy forecast to optimize session timing.",
   },
   {
-    icon: <Focus className="w-6 h-6 text-primary" />,
+    icon: <Focus className="w-8 h-8 text-primary" />,
     title: "Focus",
     desc: "Pinpoint career and personal themes for coaching goals.",
   },
   {
-    icon: <Brain className="w-6 h-6 text-primary" />,
+    icon: <Brain className="w-8 h-8 text-primary" />,
     title: "Mindset",
     desc: "Cognitive patterns & client communication style.",
   },
   {
-    icon: <Star className="w-6 h-6 text-primary" />,
+    icon: <Star className="w-8 h-8 text-primary" />,
     title: "Monthly",
     desc: "Month-ahead game plan for growth and breakthroughs.",
   },
@@ -28,19 +28,21 @@ const timingInsights = [
 
 const TimingToolkitSection = () => (
   <div>
-    <h2 className="text-xl font-bold mb-2 mt-10">Timing & Guidance Toolkit</h2>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <h2 className="text-2xl font-bold mb-6 mt-16 text-center text-gray-800">Timing & Guidance Toolkit</h2>
+    <p className="max-w-xl mx-auto text-center text-gray-600 mb-10">Add individual timing insights to your coaching sessions for laser-focused guidance.</p>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
       {timingInsights.map(({ icon, title, desc }) => (
-        <Card key={title} className="flex flex-col border-primary/40 border-2 h-full">
-          <CardHeader className="flex flex-row items-center gap-2">
-            {icon}
-            <CardTitle className="text-lg">{title}</CardTitle>
+        <Card key={title} className="shadow-lg border-primary/80 border-2 flex flex-col h-full">
+          <CardHeader className="flex flex-row items-start gap-4">
+            <Badge className="bg-primary/90 text-white px-3 py-1">Timing Tool</Badge>
+            <div className="ml-auto">{icon}</div>
           </CardHeader>
-          <CardContent>
-            <CardDescription className="text-gray-700 mb-3">{desc}</CardDescription>
-            <div className="flex flex-col mt-3">
-              <span className="text-2xl font-bold text-primary">$15</span>
-              <span className="text-gray-500 text-xs">per insight</span>
+          <CardContent className="flex flex-col flex-grow pt-0">
+            <CardTitle className="text-2xl mb-2">{title}</CardTitle>
+            <CardDescription className="text-gray-700 mb-4">{desc}</CardDescription>
+            <div className="flex flex-col md:flex-row md:items-end md:gap-4 mt-auto">
+              <div className="text-3xl font-bold text-primary">$15</div>
+              <span className="text-gray-500 text-sm mt-1 md:mt-0">per insight</span>
             </div>
           </CardContent>
         </Card>
