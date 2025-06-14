@@ -19,13 +19,15 @@ interface MessagesSidebarProps {
   unreadCount: number;
   onFilterChange: (filter: string) => void;
   onOpenBranding: () => void;
+  headerHeight?: number;
 }
 
 export const MessagesSidebar = ({
   activeFilter,
   unreadCount,
   onFilterChange,
-  onOpenBranding
+  onOpenBranding,
+  headerHeight = 72
 }: MessagesSidebarProps) => {
   const navigationItems = [
     { id: 'inbox', label: 'Inbox', icon: Inbox, count: unreadCount },
@@ -42,7 +44,10 @@ export const MessagesSidebar = ({
   ];
 
   return (
-    <div className="w-64 bg-white border-r flex flex-col h-[calc(100vh-4rem)] fixed left-0 top-16 z-5">
+    <div
+      className="w-64 bg-white border-r flex flex-col h-[calc(100vh-4rem)] fixed left-0 z-5"
+      style={{ top: `calc(4rem + ${headerHeight}px)` }}
+    >
       {/* Navigation - Scrollable content */}
       <ScrollArea className="flex-1">
         <div className="p-2">
@@ -97,3 +102,4 @@ export const MessagesSidebar = ({
     </div>
   );
 };
+

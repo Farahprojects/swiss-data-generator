@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +23,8 @@ interface EmailMessage {
   read?: boolean;
   starred?: boolean;
 }
+
+const HEADER_HEIGHT = 72;
 
 const MessagesPage = () => {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
@@ -206,46 +207,43 @@ const MessagesPage = () => {
 
   return (
     <div className="w-full">
-      {/* Sticky Header now full width, content shifted with ml-64 */}
-      <div className="sticky top-16 z-10 bg-white border-b px-0 py-4 w-full">
-        <div className="ml-64 px-6">
-          <div className="flex items-center gap-6">
-            <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
-            {/* Search */}
-            <div className="relative flex-1 max-w-2xl">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search mail"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500"
-              />
-            </div>
-            {/* Compose Button moved to header */}
-            <div>
-              <Button
-                onClick={() => setShowCompose(true)}
-                className="h-10 px-5 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Compose
-              </Button>
-            </div>
+      {/* Sticky Header: goes all the way left, compose left, search fills, title after */}
+      <div
+        className="sticky top-16 z-10 bg-white border-b px-0 py-3 w-full"
+        style={{ minHeight: HEADER_HEIGHT, height: HEADER_HEIGHT }}
+      >
+        <div className="flex items-center gap-4 px-6">
+          <Button
+            onClick={() => setShowCompose(true)}
+            className="h-10 px-5 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Compose
+          </Button>
+          <div className="relative flex-1 max-w-2xl">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search mail"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
+            />
           </div>
+          <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
         </div>
       </div>
 
-      {/* Main Content - emails now moved to the right with ml-64 */}
+      {/* Layout: Sidebar starts below HEADER_HEIGHT */}
       <div className="flex">
-        {/* Left Sidebar - fixed */}
         <MessagesSidebar
           activeFilter={activeFilter}
           unreadCount={unreadCount}
           onFilterChange={setActiveFilter}
           onOpenBranding={handleOpenBranding}
+          headerHeight={HEADER_HEIGHT}
         />
 
-        {/* Content area - moved right with ml-64 */}
+        {/* Content area */}
         <div className="ml-64 w-full">
           {selectedMessage ? (
             <GmailMessageDetail
@@ -268,7 +266,6 @@ const MessagesPage = () => {
           )}
         </div>
       </div>
-
       {/* Compose Modal */}
       <ComposeModal
         isOpen={showCompose}
