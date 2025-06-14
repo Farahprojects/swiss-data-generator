@@ -1,15 +1,12 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { log } from '@/utils/logUtils';
-import { supabase } from '@/integrations/supabase/client';
 
 export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, pendingEmailAddress, isPendingEmailCheck } = useAuth();
   const location = useLocation();
-  const [sessionValidated, setSessionValidated] = useState(false);
-  const [validatingSession, setValidatingSession] = useState(false);
   const searchParams = new URLSearchParams(location.search);
   
   // Check for password reset route with more precision
@@ -18,55 +15,19 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   
   // Check specifically for recovery token
   const hasRecoveryToken = searchParams.get('type') === 'recovery';
-
-  // Additional session validation for preview environment
-  useEffect(() => {
-    const validateSession = async () => {
-      if (loading || validatingSession || sessionValidated) return;
-      
-      setValidatingSession(true);
-      
-      try {
-        console.log('🔍 AuthGuard: Validating session...');
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('❌ AuthGuard: Session validation error:', error);
-          log('warn', 'AuthGuard session validation error', { error: error.message });
-        } else if (session) {
-          console.log('✅ AuthGuard: Session validated successfully');
-          log('debug', 'AuthGuard session validated', { userId: session.user.id });
-          setSessionValidated(true);
-        } else {
-          console.log('ℹ️ AuthGuard: No session found');
-          log('debug', 'AuthGuard no session found');
-        }
-      } catch (error) {
-        console.error('❌ AuthGuard: Session validation exception:', error);
-        log('error', 'AuthGuard session validation exception', { 
-          error: error instanceof Error ? error.message : String(error) 
-        });
-      } finally {
-        setValidatingSession(false);
-      }
-    };
-
-    validateSession();
-  }, [loading, user, validatingSession, sessionValidated]);
   
   useEffect(() => {
     // Only log significant auth state changes, not every evaluation
-    if (!loading && !validatingSession) {
+    if (!loading) {
       log('debug', 'AuthGuard auth state settled', {
         path: location.pathname,
         hasUser: !!user,
-        sessionValidated,
         isPasswordReset: isPasswordResetRoute,
         hasRecoveryToken,
         pendingEmailAddress: !!pendingEmailAddress
       });
     }
-  }, [location.pathname, user, loading, validatingSession, sessionValidated, isPasswordResetRoute, hasRecoveryToken, pendingEmailAddress]);
+  }, [location.pathname, user, loading, isPasswordResetRoute, hasRecoveryToken, pendingEmailAddress]);
   
   // If user is on password reset route, don't apply auth guard
   if (isPasswordResetRoute) {
@@ -80,7 +41,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to={`/auth/password${location.search}`} replace />;
   }
   
-  if (loading || isPendingEmailCheck || validatingSession) {
+  if (loading || isPendingEmailCheck) {
     // Still loading auth state or checking for pending email, show loading
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -92,16 +53,8 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
-  // Check both user state and session validation for extra reliability
-  const isAuthenticated = user && (sessionValidated || !validatingSession);
-  
   // Not logged in, redirect to login
-  if (!isAuthenticated) {
-    log('info', 'User not authenticated, redirecting to login', { 
-      hasUser: !!user, 
-      sessionValidated,
-      validatingSession 
-    });
+  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
