@@ -108,7 +108,7 @@ const UnifiedNavigation = () => {
             {/* Centered logo or search bar */}
             <div className="absolute left-1/2 transform -translate-x-1/2 min-w-0 max-w-full flex items-center">
               {showHeaderSearch ? (
-                <div className="relative flex-1 w-[95vw] max-w-xs md:max-w-md pr-6">
+                <div className="relative flex-1 w-full max-w-[70vw] sm:max-w-xs mx-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     value={headerSearch}
