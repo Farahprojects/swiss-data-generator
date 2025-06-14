@@ -1,3 +1,4 @@
+
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,8 +20,10 @@ const DashboardLayout = () => {
   const { openSettings } = useSettingsModal();
   
   // Check layout type based on current route
-  const isDashboardPageWithBurgerMenu = location.pathname === '/dashboard/website-builder';
-  
+  const isDashboardPageWithBurgerMenu =
+    location.pathname === '/dashboard/website-builder' ||
+    location.pathname === '/dashboard/messages'; // Add messages to burger-menu-only
+
   // Handle settings route redirects
   useEffect(() => {
     const isSettingsRoute = location.pathname.includes('/settings');
@@ -46,7 +49,7 @@ const DashboardLayout = () => {
     });
   }, [user, location.pathname]);
 
-  // Dashboard pages with burger menu get full width without sidebar (like website builder)
+  // Dashboard pages with burger menu get full width without sidebar (like website builder or messages)
   if (isDashboardPageWithBurgerMenu) {
     return (
       <div className="min-h-screen flex flex-col w-full">
@@ -85,3 +88,4 @@ const DashboardLayout = () => {
 };
 
 export default DashboardLayout;
+

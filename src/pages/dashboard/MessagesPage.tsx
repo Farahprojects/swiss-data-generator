@@ -206,8 +206,8 @@ const MessagesPage = () => {
 
   return (
     <div className="w-full">
-      {/* Sticky Header - positioned below the global nav with left margin for sidebar */}
-      <div className="sticky top-16 z-10 bg-white border-b px-6 py-4 ml-64">
+      {/* Sticky Header - positioned below the global nav, NO extra left margin */}
+      <div className="sticky top-16 z-10 bg-white border-b px-6 py-4">
         <div className="flex items-center gap-6">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
           
@@ -224,9 +224,9 @@ const MessagesPage = () => {
         </div>
       </div>
 
-      {/* Main Content - Adjusted for fixed sidebar */}
+      {/* Main Content - No main sidebar offset, so flex is enough */}
       <div className="flex">
-        {/* Left Sidebar - Now fixed */}
+        {/* Left Sidebar - Now flush with left edge, not fixed behind another sidebar */}
         <MessagesSidebar
           activeFilter={activeFilter}
           unreadCount={unreadCount}
@@ -235,8 +235,8 @@ const MessagesPage = () => {
           onOpenBranding={handleOpenBranding}
         />
 
-        {/* Content area - Either show message list or message detail */}
-        <div className="ml-64 w-full">
+        {/* Content area - Remove ml-64 so it's not offset */}
+        <div className="w-full">
           {selectedMessage ? (
             <GmailMessageDetail
               message={selectedMessage}
@@ -277,3 +277,4 @@ const MessagesPage = () => {
 };
 
 export default MessagesPage;
+
