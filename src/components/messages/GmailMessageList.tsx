@@ -22,6 +22,7 @@ interface GmailMessageListProps {
   onArchiveSelected: () => void;
   onDeleteSelected: () => void;
   onToggleStar: (message: EmailMessage) => void;
+  mobileDense?: boolean; // NEW: allow dense/compact layout for mobile
 }
 
 export const GmailMessageList = ({
@@ -33,7 +34,8 @@ export const GmailMessageList = ({
   onSelectAll,
   onArchiveSelected,
   onDeleteSelected,
-  onToggleStar
+  onToggleStar,
+  mobileDense = false // Default is false
 }: GmailMessageListProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -108,6 +110,7 @@ export const GmailMessageList = ({
                 formatDate={formatDate}
                 truncateText={truncateText}
                 onToggleStar={() => onToggleStar(message)}
+                mobileDense={mobileDense} // <-- NEW: pass down to row
               />
             ))}
           </div>
@@ -132,6 +135,7 @@ interface MessageRowProps {
   formatDate: (date: string) => string;
   truncateText: (text: string, length?: number) => string;
   onToggleStar: () => void;
+  mobileDense?: boolean;
 }
 
 const MessageRow = ({
@@ -141,26 +145,31 @@ const MessageRow = ({
   onCheckboxChange,
   formatDate,
   truncateText,
-  onToggleStar
+  onToggleStar,
+  mobileDense = false
 }: MessageRowProps) => {
   // For single-line Gmail-style: [checkbox][star][blue dot][bold name][subject - preview][date]
   const senderShort = getSenderShortName(
     message.direction === 'incoming' ? message.from_address : message.to_address
   );
   const subject = message.subject || 'No Subject';
-  const PREVIEW_MAX = 38; // tune this for optimal look
+
+  // Show more preview text and make row denser if mobileDense is set
+  const PREVIEW_MAX = mobileDense ? 60 : 38;
+  const leftPad = mobileDense ? "pl-0.5" : "pl-1";
 
   return (
     <div
       className={cn(
-        "grid grid-cols-[48px_120px_1fr_76px] items-center px-2 pr-2 py-1 gap-0 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition group relative",
+        `grid grid-cols-[48px_120px_1fr_76px] items-center px-2 pr-2 py-1 gap-0 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition group relative`,
+        leftPad,
         !message.is_read ? "bg-accent" : "bg-white"
       )}
       style={{ minHeight: 46 }}
       onClick={onSelect}
     >
       {/* Selection + Star */}
-      <div className="flex items-center gap-2 pl-1">
+      <div className={cn("flex items-center gap-2", leftPad)}>
         <Checkbox
           checked={isSelected}
           onCheckedChange={onCheckboxChange}
