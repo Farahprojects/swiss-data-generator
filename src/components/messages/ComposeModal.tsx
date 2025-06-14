@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Send, X, Bold, Italic, Underline, Loader2 } from 'lucide-react';
+import { Send, Bold, Italic, Underline, Loader2 } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { LinkInsertPopup } from './LinkInsertPopup';
 import { ColorPicker } from './ColorPicker';
@@ -13,6 +13,7 @@ import { FontSelector } from './FontSelector';
 import { AttachmentDropzone } from './AttachmentDropzone';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Attachment {
   id: string;
@@ -53,6 +54,7 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
     underline: false
   });
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const validateEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -65,31 +67,17 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
 
   const formatBodyWithStyles = () => {
     let formattedBody = body;
-    
-    // Convert basic formatting to HTML
-    if (textStyles.bold) {
-      formattedBody = `<strong>${formattedBody}</strong>`;
-    }
-    if (textStyles.italic) {
-      formattedBody = `<em>${formattedBody}</em>`;
-    }
-    if (textStyles.underline) {
-      formattedBody = `<u>${formattedBody}</u>`;
-    }
-    
-    // Apply color if not default
+    if (textStyles.bold) formattedBody = `<strong>${formattedBody}</strong>`;
+    if (textStyles.italic) formattedBody = `<em>${formattedBody}</em>`;
+    if (textStyles.underline) formattedBody = `<u>${formattedBody}</u>`;
     if (currentColor !== '#000000') {
       formattedBody = `<span style="color: ${currentColor}">${formattedBody}</span>`;
     }
-    
-    // Convert line breaks to HTML
     formattedBody = formattedBody.replace(/\n/g, '<br>');
-    
     return formattedBody;
   };
 
   const handleSend = async () => {
-    // Validation
     if (!to.trim()) {
       toast({
         title: "Error",
@@ -98,7 +86,6 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
       });
       return;
     }
-
     if (!validateEmail(to.trim())) {
       toast({
         title: "Error",
@@ -107,7 +94,6 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
       });
       return;
     }
-
     if (cc && !validateEmailList(cc)) {
       toast({
         title: "Error",
@@ -116,7 +102,6 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
       });
       return;
     }
-
     if (bcc && !validateEmailList(bcc)) {
       toast({
         title: "Error",
@@ -125,7 +110,6 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
       });
       return;
     }
-
     if (!body.trim()) {
       toast({
         title: "Error",
@@ -134,22 +118,17 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
       });
       return;
     }
-
     setIsSending(true);
-
     try {
       const formattedBody = formatBodyWithStyles();
-      
-      // Call the outbound-messenger edge function
       const { data, error } = await supabase.functions.invoke('outbound-messenger', {
         body: {
           to: to.trim(),
           subject: subject.trim() || 'No Subject',
           html: formattedBody,
-          text: body // Also send plain text version
+          text: body
         }
       });
-
       if (error) {
         console.error('Error sending email:', error);
         toast({
@@ -159,8 +138,6 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
         });
         return;
       }
-
-      // Call the original onSend callback if provided
       if (onSend) {
         onSend({
           to: to.trim(),
@@ -171,25 +148,15 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
           attachments
         });
       }
-
       toast({
         title: "Success",
         description: "Email sent successfully!"
       });
-
-      // Reset form
-      setTo('');
-      setCc('');
-      setBcc('');
-      setSubject('');
-      setBody('');
-      setAttachments([]);
-      setShowCc(false);
-      setShowBcc(false);
+      setTo(''); setCc(''); setBcc(''); setSubject(''); setBody('');
+      setAttachments([]); setShowCc(false); setShowBcc(false);
       setTextStyles({ bold: false, italic: false, underline: false });
       setCurrentColor('#000000');
       onClose();
-
     } catch (error) {
       console.error('Unexpected error:', error);
       toast({
@@ -210,8 +177,6 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
       const currentBody = body;
       const newBody = currentBody.substring(0, start) + text + currentBody.substring(end);
       setBody(newBody);
-      
-      // Set cursor position after inserted text
       setTimeout(() => {
         textarea.selectionStart = textarea.selectionEnd = start + text.length;
         textarea.focus();
@@ -353,85 +318,166 @@ export const ComposeModal = ({ isOpen, onClose, onSend }: ComposeModalProps) => 
           </div>
         </div>
 
-        {/* Actions with formatting tools */}
-        <div className="flex items-center justify-between pt-4 border-t">
-          <div className="flex items-center gap-1">
-            {/* Text Formatting */}
-            <Button
-              variant={textStyles.bold ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              onClick={() => toggleStyle('bold')}
-            >
-              <Bold className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={textStyles.italic ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              onClick={() => toggleStyle('italic')}
-            >
-              <Italic className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={textStyles.underline ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              onClick={() => toggleStyle('underline')}
-            >
-              <Underline className="w-4 h-4" />
-            </Button>
-
-            <Separator orientation="vertical" className="h-6 mx-1" />
-
-            {/* Font and Color Tools */}
-            <FontSelector
-              onFontSelect={setCurrentFont}
-              onFontSizeSelect={setCurrentSize}
-              currentFont={currentFont}
-              currentSize={currentSize}
-            />
-            <ColorPicker
-              onColorSelect={setCurrentColor}
-              currentColor={currentColor}
-            />
-
-            <Separator orientation="vertical" className="h-6 mx-1" />
-
-            {/* Content Tools */}
-            <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-            <LinkInsertPopup onLinkInsert={handleLinkInsert} />
-            <AttachmentDropzone
-              attachments={attachments}
-              onAttachmentsChange={setAttachments}
-            />
-            
-            {attachments.length > 0 && (
-              <span className="text-sm text-muted-foreground ml-2">
-                {attachments.length} attachment(s)
-              </span>
-            )}
-          </div>
-          
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClose} disabled={isSending}>
-              Cancel
-            </Button>
-            <Button onClick={handleSend} disabled={!to.trim() || !body.trim() || isSending}>
-              {isSending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send
-                </>
+        {/* Formatting tools and Action Buttons */}
+        {isMobile ? (
+          <div className="flex flex-col gap-2 pt-4 border-t">
+            {/* Row 1: Formatting Tools */}
+            <div className="flex flex-wrap items-center gap-1 justify-start">
+              <Button
+                variant={textStyles.bold ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('bold')}
+                className="px-2 py-1"
+              >
+                <Bold className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={textStyles.italic ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('italic')}
+                className="px-2 py-1"
+              >
+                <Italic className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={textStyles.underline ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('underline')}
+                className="px-2 py-1"
+              >
+                <Underline className="w-4 h-4" />
+              </Button>
+              {/* Small separator or none on mobile */}
+              <FontSelector
+                onFontSelect={setCurrentFont}
+                onFontSizeSelect={setCurrentSize}
+                currentFont={currentFont}
+                currentSize={currentSize}
+                mobile
+              />
+              <ColorPicker
+                onColorSelect={setCurrentColor}
+                currentColor={currentColor}
+                mobile
+              />
+              <EmojiPicker onEmojiSelect={handleEmojiSelect} mobile />
+              <LinkInsertPopup onLinkInsert={handleLinkInsert} mobile />
+              <AttachmentDropzone
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+                compact={true}
+              />
+              {attachments.length > 0 && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  {attachments.length}
+                </span>
               )}
-            </Button>
+            </div>
+            {/* Row 2: Action Buttons (Cancel left, Send right) */}
+            <div className="flex w-full justify-between gap-2 mt-2">
+              <Button
+                variant="outline"
+                onClick={handleClose}
+                className="flex-1"
+                disabled={isSending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSend}
+                className="flex-1"
+                disabled={!to.trim() || !body.trim() || isSending}
+              >
+                {isSending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between pt-4 border-t">
+            {/* Text Formatting */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant={textStyles.bold ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('bold')}
+              >
+                <Bold className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={textStyles.italic ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('italic')}
+              >
+                <Italic className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={textStyles.underline ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('underline')}
+              >
+                <Underline className="w-4 h-4" />
+              </Button>
+              <Separator orientation="vertical" className="h-6 mx-1" />
+              <FontSelector
+                onFontSelect={setCurrentFont}
+                onFontSizeSelect={setCurrentSize}
+                currentFont={currentFont}
+                currentSize={currentSize}
+              />
+              <ColorPicker
+                onColorSelect={setCurrentColor}
+                currentColor={currentColor}
+              />
+              <Separator orientation="vertical" className="h-6 mx-1" />
+              <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+              <LinkInsertPopup onLinkInsert={handleLinkInsert} />
+              <AttachmentDropzone
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+              />
+              {attachments.length > 0 && (
+                <span className="text-sm text-muted-foreground ml-2">
+                  {attachments.length} attachment(s)
+                </span>
+              )}
+            </div>
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleClose} disabled={isSending}>
+                Cancel
+              </Button>
+              <Button onClick={handleSend} disabled={!to.trim() || !body.trim() || isSending}>
+                {isSending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

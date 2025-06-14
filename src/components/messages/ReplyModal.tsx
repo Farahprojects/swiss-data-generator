@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Send, X, Bold, Italic, Underline, Loader2 } from 'lucide-react';
+import { Send, Bold, Italic, Underline, Loader2 } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { LinkInsertPopup } from './LinkInsertPopup';
 import { ColorPicker } from './ColorPicker';
@@ -13,6 +13,7 @@ import { FontSelector } from './FontSelector';
 import { AttachmentDropzone } from './AttachmentDropzone';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface EmailMessage {
   id: string;
@@ -60,6 +61,7 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
   });
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const handleSend = async () => {
     if (!body.trim()) {
@@ -70,22 +72,17 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
       });
       return;
     }
-
     setIsSending(true);
-
     try {
       const formattedBody = formatBodyWithStyles();
-      
-      // Call the outbound-messenger edge function
       const { data, error } = await supabase.functions.invoke('outbound-messenger', {
         body: {
           to,
           subject,
           html: formattedBody,
-          text: body // Also send plain text version
+          text: body
         }
       });
-
       if (error) {
         console.error('Error sending email:', error);
         toast({
@@ -95,26 +92,20 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
         });
         return;
       }
-
-      // Call the original onSend callback
       onSend({
         to,
         subject,
         body: formattedBody,
         attachments
       });
-
       toast({
         title: "Success",
         description: "Reply sent successfully!"
       });
-
-      // Reset form
       setBody('');
       setAttachments([]);
       setTextStyles({ bold: false, italic: false, underline: false });
       onClose();
-
     } catch (error) {
       console.error('Unexpected error:', error);
       toast({
@@ -129,27 +120,13 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
 
   const formatBodyWithStyles = () => {
     let formattedBody = body;
-    
-    // Convert basic formatting to HTML
-    if (textStyles.bold) {
-      formattedBody = `<strong>${formattedBody}</strong>`;
-    }
-    if (textStyles.italic) {
-      formattedBody = `<em>${formattedBody}</em>`;
-    }
-    if (textStyles.underline) {
-      formattedBody = `<u>${formattedBody}</u>`;
-    }
-    
-    // Apply color if not default
+    if (textStyles.bold) formattedBody = `<strong>${formattedBody}</strong>`;
+    if (textStyles.italic) formattedBody = `<em>${formattedBody}</em>`;
+    if (textStyles.underline) formattedBody = `<u>${formattedBody}</u>`;
     if (currentColor !== '#000000') {
       formattedBody = `<span style="color: ${currentColor}">${formattedBody}</span>`;
     }
-    
-    // Convert line breaks to HTML
     formattedBody = formattedBody.replace(/\n/g, '<br>');
-    
-    // Add original message quote
     const originalDate = new Date(originalMessage.created_at).toLocaleString();
     const quote = `
       <br><br>
@@ -161,7 +138,6 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
         ${originalMessage.body.replace(/\n/g, '<br>')}
       </div>
     `;
-    
     return formattedBody + quote;
   };
 
@@ -173,8 +149,6 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
       const currentBody = body;
       const newBody = currentBody.substring(0, start) + text + currentBody.substring(end);
       setBody(newBody);
-      
-      // Set cursor position after inserted text
       setTimeout(() => {
         textarea.selectionStart = textarea.selectionEnd = start + text.length;
         textarea.focus();
@@ -263,85 +237,165 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
           </div>
         </div>
 
-        {/* Actions with formatting tools */}
-        <div className="flex items-center justify-between pt-4 border-t">
-          <div className="flex items-center gap-1">
-            {/* Text Formatting */}
-            <Button
-              variant={textStyles.bold ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              onClick={() => toggleStyle('bold')}
-            >
-              <Bold className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={textStyles.italic ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              onClick={() => toggleStyle('italic')}
-            >
-              <Italic className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={textStyles.underline ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              onClick={() => toggleStyle('underline')}
-            >
-              <Underline className="w-4 h-4" />
-            </Button>
-
-            <Separator orientation="vertical" className="h-6 mx-1" />
-
-            {/* Font and Color Tools */}
-            <FontSelector
-              onFontSelect={setCurrentFont}
-              onFontSizeSelect={setCurrentSize}
-              currentFont={currentFont}
-              currentSize={currentSize}
-            />
-            <ColorPicker
-              onColorSelect={setCurrentColor}
-              currentColor={currentColor}
-            />
-
-            <Separator orientation="vertical" className="h-6 mx-1" />
-
-            {/* Content Tools */}
-            <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-            <LinkInsertPopup onLinkInsert={handleLinkInsert} />
-            <AttachmentDropzone
-              attachments={attachments}
-              onAttachmentsChange={setAttachments}
-            />
-            
-            {attachments.length > 0 && (
-              <span className="text-sm text-muted-foreground ml-2">
-                {attachments.length} attachment(s)
-              </span>
-            )}
-          </div>
-          
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={isSending}>
-              Cancel
-            </Button>
-            <Button onClick={handleSend} disabled={!body.trim() || isSending}>
-              {isSending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Reply
-                </>
+        {/* Formatting tools and Action Buttons */}
+        {isMobile ? (
+          <div className="flex flex-col gap-2 pt-4 border-t">
+            {/* Row 1: Formatting Tools */}
+            <div className="flex flex-wrap items-center gap-1 justify-start">
+              <Button
+                variant={textStyles.bold ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('bold')}
+                className="px-2 py-1"
+              >
+                <Bold className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={textStyles.italic ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('italic')}
+                className="px-2 py-1"
+              >
+                <Italic className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={textStyles.underline ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('underline')}
+                className="px-2 py-1"
+              >
+                <Underline className="w-4 h-4" />
+              </Button>
+              <FontSelector
+                onFontSelect={setCurrentFont}
+                onFontSizeSelect={setCurrentSize}
+                currentFont={currentFont}
+                currentSize={currentSize}
+                mobile
+              />
+              <ColorPicker
+                onColorSelect={setCurrentColor}
+                currentColor={currentColor}
+                mobile
+              />
+              <EmojiPicker onEmojiSelect={handleEmojiSelect} mobile />
+              <LinkInsertPopup onLinkInsert={handleLinkInsert} mobile />
+              <AttachmentDropzone
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+                compact={true}
+              />
+              {attachments.length > 0 && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  {attachments.length}
+                </span>
               )}
-            </Button>
+            </div>
+            {/* Row 2: Action Buttons (Cancel left, Send right) */}
+            <div className="flex w-full justify-between gap-2 mt-2">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="flex-1"
+                disabled={isSending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSend}
+                className="flex-1"
+                disabled={!body.trim() || isSending}
+              >
+                {isSending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Reply
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between pt-4 border-t">
+            {/* Text Formatting */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant={textStyles.bold ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('bold')}
+              >
+                <Bold className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={textStyles.italic ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('italic')}
+              >
+                <Italic className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={textStyles.underline ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                onClick={() => toggleStyle('underline')}
+              >
+                <Underline className="w-4 h-4" />
+              </Button>
+              <Separator orientation="vertical" className="h-6 mx-1" />
+              <FontSelector
+                onFontSelect={setCurrentFont}
+                onFontSizeSelect={setCurrentSize}
+                currentFont={currentFont}
+                currentSize={currentSize}
+              />
+              <ColorPicker
+                onColorSelect={setCurrentColor}
+                currentColor={currentColor}
+              />
+              <Separator orientation="vertical" className="h-6 mx-1" />
+              <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+              <LinkInsertPopup onLinkInsert={handleLinkInsert} />
+              <AttachmentDropzone
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+              />
+              {attachments.length > 0 && (
+                <span className="text-sm text-muted-foreground ml-2">
+                  {attachments.length} attachment(s)
+                </span>
+              )}
+            </div>
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose} disabled={isSending}>
+                Cancel
+              </Button>
+              <Button onClick={handleSend} disabled={!body.trim() || isSending}>
+                {isSending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Reply
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
