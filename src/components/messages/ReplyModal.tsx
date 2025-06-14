@@ -274,19 +274,16 @@ export const ReplyModal = ({ isOpen, onClose, originalMessage, onSend }: ReplyMo
                 onFontSizeSelect={setCurrentSize}
                 currentFont={currentFont}
                 currentSize={currentSize}
-                mobile
               />
               <ColorPicker
                 onColorSelect={setCurrentColor}
                 currentColor={currentColor}
-                mobile
               />
-              <EmojiPicker onEmojiSelect={handleEmojiSelect} mobile />
-              <LinkInsertPopup onLinkInsert={handleLinkInsert} mobile />
+              <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+              <LinkInsertPopup onLinkInsert={handleLinkInsert} />
               <AttachmentDropzone
                 attachments={attachments}
                 onAttachmentsChange={setAttachments}
-                compact={true}
               />
               {attachments.length > 0 && (
                 <span className="text-xs text-muted-foreground ml-1">
