@@ -25,6 +25,7 @@ import About from './pages/About';
 import Legal from './pages/Legal';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
+import Features from './pages/Features';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +49,7 @@ function App() {
                   <div className="min-h-screen bg-background">
                     <Routes>
                       <Route path="/" element={<Index />} />
+                      <Route path="/features" element={<Features />} />
                       <Route path="/report" element={<PublicReport />} />
                       <Route path="/payment-return" element={<PaymentReturn />} />
                       <Route path="/pricing" element={<Pricing />} />
