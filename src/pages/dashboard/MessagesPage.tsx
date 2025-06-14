@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -206,11 +205,10 @@ const MessagesPage = () => {
 
   return (
     <div className="w-full">
-      {/* Sticky Header - positioned below the global nav, NO extra left margin */}
-      <div className="sticky top-16 z-10 bg-white border-b px-6 py-4">
+      {/* Sticky Header - now moved to the right with ml-64 */}
+      <div className="sticky top-16 z-10 bg-white border-b px-6 py-4 ml-64">
         <div className="flex items-center gap-6">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
-          
           {/* Search */}
           <div className="relative flex-1 max-w-2xl">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -224,9 +222,9 @@ const MessagesPage = () => {
         </div>
       </div>
 
-      {/* Main Content - No main sidebar offset, so flex is enough */}
+      {/* Main Content - emails now moved to the right with ml-64 */}
       <div className="flex">
-        {/* Left Sidebar - Now flush with left edge, not fixed behind another sidebar */}
+        {/* Left Sidebar - fixed */}
         <MessagesSidebar
           activeFilter={activeFilter}
           unreadCount={unreadCount}
@@ -235,8 +233,8 @@ const MessagesPage = () => {
           onOpenBranding={handleOpenBranding}
         />
 
-        {/* Content area - Remove ml-64 so it's not offset */}
-        <div className="w-full">
+        {/* Content area - moved right with ml-64 */}
+        <div className="ml-64 w-full">
           {selectedMessage ? (
             <GmailMessageDetail
               message={selectedMessage}
@@ -277,4 +275,3 @@ const MessagesPage = () => {
 };
 
 export default MessagesPage;
-
