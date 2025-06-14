@@ -148,28 +148,98 @@ const MessageRow = ({
   onToggleStar,
   mobileDense = false
 }: MessageRowProps) => {
-  // For single-line Gmail-style: [checkbox][star][blue dot][bold name][subject - preview][date]
   const senderShort = getSenderShortName(
     message.direction === 'incoming' ? message.from_address : message.to_address
   );
   const subject = message.subject || 'No Subject';
 
-  // Show more preview text and make row denser if mobileDense is set
-  const PREVIEW_MAX = mobileDense ? 60 : 38;
-  const leftPad = mobileDense ? "pl-0.5" : "pl-1";
+  if (mobileDense) {
+    // Two-line grid for mobile
+    return (
+      <div
+        className={cn(
+          "grid grid-cols-[48px_1fr_90px] grid-rows-2 items-stretch px-2 pr-2 py-2 gap-x-2 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition group relative",
+          !message.is_read ? "bg-accent" : "bg-white",
+        )}
+        style={{ minHeight: 62 }}
+        onClick={onSelect}
+      >
+        {/* First line */}
+        <div className="flex items-center gap-2 row-span-2">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={onCheckboxChange}
+            onClick={(e) => e.stopPropagation()}
+            className="rounded"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleStar();
+            }}
+            tabIndex={0}
+            aria-label={message.is_starred ? "Unstar message" : "Star message"}
+          >
+            {message.is_starred ? (
+              <Star className="h-4 w-4 text-yellow-400 fill-current" />
+            ) : (
+              <StarOff className="h-4 w-4 text-gray-400" />
+            )}
+          </Button>
+        </div>
 
+        {/* Sender and subject - first row */}
+        <div className="flex items-center min-w-0 row-start-1 col-start-2 col-span-1">
+          <span className={cn(
+            "inline-block rounded-full mr-1 transition",
+            !message.is_read ? "w-2 h-2 bg-blue-600" : "w-2 h-2 bg-transparent"
+          )} title={!message.is_read ? "Unread" : undefined} />
+          <span className={cn(
+            "truncate max-w-[100px] text-sm",
+            !message.is_read ? "font-semibold text-gray-900" : "text-gray-700"
+          )} title={senderShort}>
+            {senderShort}
+          </span>
+          <span className="mx-2 text-gray-300 select-none">|</span>
+          <span className={cn(
+            "truncate text-sm",
+            !message.is_read ? "font-medium text-gray-900" : "text-gray-700"
+          )} title={subject}>
+            {subject}
+          </span>
+        </div>
+        {/* Date - first row, rightmost */}
+        <div className="flex justify-end items-center text-xs text-gray-500 row-start-1 col-start-3 col-span-1">
+          {formatDate(message.created_at)}
+        </div>
+
+        {/* Body preview - second row */}
+        <div className="flex items-center min-w-0 text-xs text-gray-600 row-start-2 col-start-2 col-span-2 mt-1">
+          {message.body &&
+            <span className="truncate max-w-full">
+              {truncateText(message.body, 120)}
+            </span>
+          }
+        </div>
+      </div>
+    );
+  }
+
+  // Default (desktop) layout unchanged
   return (
     <div
       className={cn(
         `grid grid-cols-[48px_120px_1fr_76px] items-center px-2 pr-2 py-1 gap-0 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition group relative`,
-        leftPad,
         !message.is_read ? "bg-accent" : "bg-white"
       )}
       style={{ minHeight: 46 }}
       onClick={onSelect}
     >
       {/* Selection + Star */}
-      <div className={cn("flex items-center gap-2", leftPad)}>
+      <div className="flex items-center gap-2">
         <Checkbox
           checked={isSelected}
           onCheckedChange={onCheckboxChange}
@@ -227,7 +297,7 @@ const MessageRow = ({
           <>
             <span className="text-xs text-gray-400 mx-1">–</span>
             <span className="truncate text-xs text-gray-500 max-w-full">
-              {truncateText(message.body, PREVIEW_MAX)}
+              {truncateText(message.body, 38)}
             </span>
           </>
         )}
