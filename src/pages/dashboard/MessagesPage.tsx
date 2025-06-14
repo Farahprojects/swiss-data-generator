@@ -9,6 +9,8 @@ import { MessagesSidebar } from '@/components/messages/MessagesSidebar';
 import { GmailMessageList } from '@/components/messages/GmailMessageList';
 import { GmailMessageDetail } from '@/components/messages/GmailMessageDetail';
 import { ComposeModal } from '@/components/messages/ComposeModal';
+import { MobileComposeButton } from '@/components/messages/MobileComposeButton';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import {
   toggleStarMessage,
@@ -30,6 +32,7 @@ const MessagesPage = () => {
   const [activeFilter, setActiveFilter] = useState('inbox');
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (user?.id) {
@@ -241,6 +244,70 @@ const MessagesPage = () => {
     );
   }
 
+  if (isMobile) {
+    // Mobile layout (no sidebar, no header, floating compose button, full-width search)
+    return (
+      <div className="w-full relative min-h-screen pb-24">
+        {/* Mobile floating Compose button */}
+        <MobileComposeButton onClick={() => setShowCompose(true)} />
+
+        {/* Top Search bar */}
+        <div className="sticky top-0 z-20 bg-white border-b px-3 py-3">
+          <div className="relative w-full">
+            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <Search className="w-5 h-5" />
+            </span>
+            <Input
+              placeholder="Search mail"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 bg-gray-100 border-gray-200 rounded-full h-11 text-base focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
+            />
+          </div>
+        </div>
+
+        <div className="w-full">
+          {selectedMessage ? (
+            <GmailMessageDetail
+              message={selectedMessage}
+              onClose={handleBackToList}
+              onReply={handleReply}
+              onForward={handleForward}
+              onArchive={handleArchive}
+              onDelete={handleDelete}
+            />
+          ) : (
+            <GmailMessageList
+              messages={filteredMessages}
+              selectedMessages={selectedMessages}
+              selectedMessage={null}
+              onSelectMessage={handleSelectMessage}
+              onSelectMessageCheckbox={handleSelectMessageCheckbox}
+              onSelectAll={handleSelectAll}
+              onArchiveSelected={handleArchiveSelected}
+              onDeleteSelected={handleDeleteSelected}
+              onToggleStar={handleToggleStar}
+            />
+          )}
+        </div>
+        {/* Compose Modal */}
+        <ComposeModal
+          isOpen={showCompose}
+          onClose={() => setShowCompose(false)}
+          onSend={(messageData) => {
+            toast({
+              title: "Message sent",
+              description: "Your message has been sent successfully.",
+            });
+            setShowCompose(false);
+            loadMessages();
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Desktop layout (sidebar, sticky header, etc)
   return (
     <div className="w-full">
       {/* Sticky Header: Compose far left, then after sidebar: Messages, then search fills space */}
@@ -260,7 +327,9 @@ const MessagesPage = () => {
         </div>
         {/* Header content starts after sidebar */}
         <div className="ml-64 flex items-center gap-4 w-full pr-10">
-          <h1 className="text-2xl font-normal text-gray-900 min-w-fit mr-4">Messages</h1>
+          <h1 className="text-2xl font-normal text-gray-900 min-w-fit mr-4">
+            Messages
+          </h1>
           {/* Search bar fills remaining space */}
           <div className="relative flex-1 max-w-2xl">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
