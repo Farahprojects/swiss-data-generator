@@ -246,22 +246,18 @@ const MessagesPage = () => {
 
   if (isMobile) {
     // Mobile layout (no sidebar, no header, sticky compose, full-width search, more visible body text)
+    // Header is likely 56px or 64px; adjust margin as needed (e.g. mt-16 for 64px)
     return (
       <div className="w-full relative min-h-screen pb-24 bg-background">
+        {/* Mobile Compose button, smaller/nicer */}
         <MobileComposeButton onClick={() => setShowCompose(true)} />
 
         {/* Top Search bar, visible below global nav */}
         <div
-          className="sticky top-0 z-20 w-screen bg-white border-b overflow-x-hidden pt-4 px-0"
-          style={{
-            marginTop: 64,
-            minHeight: 36,
-            height: 36,
-            boxSizing: 'border-box',
-            maxWidth: '100vw'
-          }}
+          className="sticky top-0 z-20 w-full bg-white border-b"
+          style={{ marginTop: 64, minHeight: 44, height: 44, paddingLeft: 0, paddingRight: 0, boxSizing: 'border-box' }}
         >
-          <div className="relative w-full max-w-full px-4">
+          <div className="relative w-full">
             <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
               <Search className="w-5 h-5" />
             </span>
@@ -269,14 +265,13 @@ const MessagesPage = () => {
               placeholder="Search mail"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 bg-gray-100 border-gray-200 rounded-full h-8 text-base focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
+              className="pl-12 bg-gray-100 border-gray-200 rounded-full h-10 text-base focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
               style={{
-                minHeight: 32,
-                height: 32,
+                minHeight: 36,
+                height: 36,
                 fontSize: 15,
                 marginTop: 0,
                 marginBottom: 0,
-                maxWidth: '100%',
               }}
             />
           </div>
@@ -304,10 +299,12 @@ const MessagesPage = () => {
               onArchiveSelected={handleArchiveSelected}
               onDeleteSelected={handleDeleteSelected}
               onToggleStar={handleToggleStar}
+              // Pass prop/class for less left padding on mobile, if supported
               mobileDense
             />
           )}
         </div>
+        {/* Compose Modal */}
         <ComposeModal
           isOpen={showCompose}
           onClose={() => setShowCompose(false)}
