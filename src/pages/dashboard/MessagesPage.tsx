@@ -207,12 +207,13 @@ const MessagesPage = () => {
 
   return (
     <div className="w-full">
-      {/* Sticky Header: goes all the way left, compose left, search fills, title after */}
+      {/* Sticky Header: Compose far left, then after sidebar: Messages, then search fills space */}
       <div
-        className="sticky top-16 z-10 bg-white border-b px-0 py-3 w-full"
+        className="sticky top-16 z-10 bg-white border-b px-0 py-3 w-full flex items-center"
         style={{ minHeight: HEADER_HEIGHT, height: HEADER_HEIGHT }}
       >
-        <div className="flex items-center gap-4 px-6">
+        {/* Compose button floats absolutely over sidebar */}
+        <div className="absolute left-0 top-0 h-full flex items-center pl-6 z-20" style={{ width: 256 }}>
           <Button
             onClick={() => setShowCompose(true)}
             className="h-10 px-5 flex items-center gap-2"
@@ -220,6 +221,11 @@ const MessagesPage = () => {
             <Plus className="w-4 h-4" />
             Compose
           </Button>
+        </div>
+        {/* Header content starts after sidebar */}
+        <div className="ml-64 flex items-center gap-4 w-full pr-6">
+          <h1 className="text-2xl font-normal text-gray-900 min-w-fit mr-4">Messages</h1>
+          {/* Search bar fills remaining space */}
           <div className="relative flex-1 max-w-2xl">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
@@ -229,7 +235,6 @@ const MessagesPage = () => {
               className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
             />
           </div>
-          <h1 className="text-2xl font-normal text-gray-900 min-w-fit">Messages</h1>
         </div>
       </div>
 
