@@ -20,7 +20,7 @@ export const QuickActions = () => {
     },
     {
       title: "Create Report",
-      href: "/dashboard/reports/create",
+      href: "/dashboard/reports/create", // Ensure this is correct!
       icon: FileText,
       variant: "outline" as const
     },
