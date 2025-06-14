@@ -68,9 +68,9 @@ const relationshipTypes = [
 ];
 
 const essenceTypes = [
-  { value: 'essence_personal', label: 'Personal' },
-  { value: 'essence_professional', label: 'Professional' },
-  { value: 'essence_relational', label: 'Relational' },
+  { value: 'personal-identity', label: 'Personal' },
+  { value: 'professional', label: 'Professional' },
+  { value: 'relational', label: 'Relational' },
 ];
 
 const ClientReportModal = ({ 
