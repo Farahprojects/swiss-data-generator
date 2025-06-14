@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Check, Loader2, Star, Users, TrendingUp, HeartHandshake, Clock, Sparkles, BrainCog, Compass } from "lucide-react";
+import { Check, Loader2, Star, Users, TrendingUp } from "lucide-react";
 import { faqs } from "@/utils/pricing";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -206,10 +207,6 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
   );
 };
 
-import { EssenceCollectionCard } from "@/components/pricing/EssenceCollectionCard";
-import { SyncCollectionCard } from "@/components/pricing/SyncCollectionCard";
-import { TimingMasterySection } from "@/components/pricing/TimingMasterySection";
-
 const Pricing = () => {
   const { user } = useAuth();
   const [prices, setPrices] = useState<PriceItem[]>([]);
@@ -257,33 +254,158 @@ const Pricing = () => {
       <Navbar />
 
       <main className="flex-grow">
-        {/* HERO */}
         <section className="container mx-auto py-20 px-4">
-          <div className="text-center mb-14">
-            <motion.h2 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="mb-3 text-4xl font-extrabold text-primary"
-            >
-              Choose Your Journey
-            </motion.h2>
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
-              className="mx-auto mb-4 max-w-3xl text-lg text-gray-600"
-            >
-              Three unique paths, endless self-discovery. Whether you want to explore your deepest essence, improve your connections, or master cosmic timing, you're one step away from profound guidance.
-            </motion.p>
-          </div>
+          {/* Hero Section */}
+          <section className="py-16">
+            <div className="container mx-auto px-4">
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="mb-4 text-center text-4xl font-bold text-primary"
+              >
+                Unlock Your Cosmic Blueprint
+              </motion.h2>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
+                className="mx-auto mb-12 max-w-3xl text-center text-lg text-gray-600"
+              >
+                Get personalized astrological insights that reveal who you are, why you're here, 
+                and how to navigate life's opportunities. Pay only for the wisdom you need.
+              </motion.p>
 
-          <div className="grid gap-8 md:grid-cols-2 max-w-5xl mx-auto mb-16">
-            <EssenceCollectionCard />
-            <SyncCollectionCard />
-          </div>
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
+                className="mt-4 mb-8"
+              >
+                <h3 className="font-medium text-lg mb-2 text-center">Every report includes:</h3>
+                <ul className="grid gap-y-2 gap-x-6 sm:grid-cols-2 max-w-2xl mx-auto">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-primary" />
+                    <span>Personalized to your birth data</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-primary" />
+                    <span>Precise Swiss-Ephemeris calculations</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-primary" />
+                    <span>Instant delivery via API</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-primary" />
+                    <span>No subscriptions or commitments</span>
+                  </li>
+                </ul>
+              </motion.div>
 
-          <TimingMasterySection />
+              {/* Reports Grid */}
+              {pricesLoading ? (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                  className="flex justify-center items-center h-64"
+                >
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                  <span className="ml-2">Loading insights...</span>
+                </motion.div>
+              ) : pricesError ? (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" 
+                  role="alert"
+                >
+                  <strong className="font-bold">Error: </strong> 
+                  <span className="block sm:inline">{pricesError}</span>
+                </motion.div>
+              ) : prices.length === 0 ? (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                  className="p-6 text-center text-gray-500"
+                >
+                  No insights available at this time.
+                </motion.div>
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16"
+                >
+                  {prices.map((price, index) => {
+                    const details = reportDetails[price.name.toLowerCase()] || {
+                      title: price.name,
+                      description: price.description || 'Astrological insight',
+                      useCase: 'Personal guidance',
+                      sampleInsight: 'Deep astrological wisdom awaits...'
+                    };
+
+                    return (
+                      <motion.div
+                        key={price.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 + (index * 0.1), duration: 0.6, ease: "easeOut" }}
+                      >
+                        <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-all duration-200 h-full">
+                          {details.isPopular && (
+                            <div className="absolute top-4 right-4">
+                              <Badge className="bg-primary text-white">
+                                <Star className="w-3 h-3 mr-1" />
+                                Popular
+                              </Badge>
+                            </div>
+                          )}
+                          
+                          <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
+                          
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-xl text-gray-900">{details.title}</CardTitle>
+                            <CardDescription className="text-gray-600">
+                              {details.description}
+                            </CardDescription>
+                          </CardHeader>
+                          
+                          <CardContent className="flex-grow flex flex-col">
+                            <div className="mb-4">
+                              <p className="text-sm font-medium text-gray-700 mb-2">Best for:</p>
+                              <p className="text-sm text-gray-600">{details.useCase}</p>
+                            </div>
+                            
+                            <div className="mb-6 bg-gray-50 p-3 rounded-lg">
+                              <p className="text-xs font-medium text-gray-700 mb-1">Sample insight:</p>
+                              <p className="text-sm italic text-gray-600">{details.sampleInsight}</p>
+                            </div>
+                            
+                            <Separator className="my-4" />
+                            
+                            <div className="text-center mt-auto">
+                              <div className="text-3xl font-bold text-primary mb-2">
+                                {formatPrice(price.unit_price_usd)}
+                              </div>
+                              <p className="text-sm text-gray-500">per insight</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </div>
+          </section>
+
+          <HowItWorksSection />
+          <FAQSection items={enhancedFaqs} />
         </section>
       </main>
 
@@ -295,7 +417,7 @@ const Pricing = () => {
           transition={{ delay: 2.4, duration: 0.6, ease: "easeOut" }}
           className="mb-6 text-3xl font-bold"
         >
-          Ready to begin your journey?
+          Ready to enhance your application with astrological insights?
         </motion.h2>
         <motion.p 
           initial={{ opacity: 0, y: 20 }}
@@ -303,7 +425,8 @@ const Pricing = () => {
           transition={{ delay: 2.5, duration: 0.6, ease: "easeOut" }}
           className="mx-auto mb-8 max-w-2xl text-xl"
         >
-          Start integrating powerful astrological insights into your life or business. Choose your path and experience personalized wisdom today.
+          Start integrating powerful astrological data into your business application. 
+          No subscriptions, no commitments — just precise insights when you need them.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -312,7 +435,7 @@ const Pricing = () => {
         >
           <Link to={user ? "/dashboard" : "/login"}>
             <Button className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100">
-              {user ? "Get API Access" : "Start Your Journey"}
+              {user ? "Get API Access" : "Start Building"}
             </Button>
           </Link>
         </motion.div>
