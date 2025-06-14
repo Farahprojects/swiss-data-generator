@@ -1,4 +1,3 @@
-
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,8 +19,7 @@ const DashboardLayout = () => {
   const { openSettings } = useSettingsModal();
   
   // Check layout type based on current route
-  const isMainDashboard = location.pathname === '/dashboard';
-  const isDashboardPageWithBurgerMenu = location.pathname.startsWith('/dashboard') && !isMainDashboard;
+  const isDashboardPageWithBurgerMenu = location.pathname === '/dashboard/website-builder';
   
   // Handle settings route redirects
   useEffect(() => {

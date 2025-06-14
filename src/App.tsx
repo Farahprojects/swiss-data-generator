@@ -26,6 +26,7 @@ import Legal from './pages/Legal';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import Features from './pages/Features';
+import WebsiteBuilder from './pages/dashboard/WebsiteBuilder';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,6 +67,7 @@ function App() {
                         <Route path="clients/:clientId" element={<ClientDetailPage />} />
                         <Route path="reports" element={<ReportsPage />} />
                         <Route path="settings" element={<UserSettings />} />
+                        <Route path="website-builder" element={<WebsiteBuilder />} />
                       </Route>
                       
                       <Route path="*" element={<NotFound />} />
