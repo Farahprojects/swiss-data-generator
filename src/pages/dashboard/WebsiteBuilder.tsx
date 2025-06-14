@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, Save, Globe } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { loadImagesFromStorage } from "@/utils/storageImageLoader";
+import { TheraLoader } from "@/components/ui/TheraLoader";
 
 interface WebsiteTemplate {
   id: string;
@@ -233,13 +234,9 @@ export default function WebsiteBuilder() {
   };
 
   if (isLoading) {
+    // Replace spinner with TheraLoader for branding consistency
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Website Builder...</p>
-        </div>
-      </div>
+      <TheraLoader message="Loading Website Builder..." size="lg" />
     );
   }
 
