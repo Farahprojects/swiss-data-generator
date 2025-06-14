@@ -85,7 +85,7 @@ verify_jwt = false
 [[edge-runtime.functions]]
 name = "create-report"
 source = "./supabase/functions/create-report"
-verify_jwt = true
+verify_jwt = false
 
 [[edge-runtime.functions]]
 name = "email-check"
@@ -115,7 +115,7 @@ verify_jwt = true
 [[edge-runtime.functions]]
 name = "outbound-messenger"
 source = "./supabase/functions/outbound-messenger"
-verify_jwt = true
+verify_jwt = false
 
 [[edge-runtime.functions]]
 name = "password_token"
@@ -150,7 +150,7 @@ verify_jwt = false
 [[edge-runtime.functions]]
 name = "standard-report"
 source = "./supabase/functions/standard-report"
-verify_jwt = true
+verify_jwt = false
 
 [[edge-runtime.functions]]
 name = "stripe-webhook-handler"
@@ -160,7 +160,7 @@ verify_jwt = false
 [[edge-runtime.functions]]
 name = "swiss"
 source = "./supabase/functions/swiss"
-verify_jwt = true
+verify_jwt = false 
 
 [[edge-runtime.functions]]
 name = "verification-emailer"
