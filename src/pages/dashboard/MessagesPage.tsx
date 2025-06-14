@@ -23,6 +23,9 @@ import UnifiedNavigation from '@/components/UnifiedNavigation';
 
 const HEADER_HEIGHT = 72;
 
+// Define type for message filters
+type MessageFilterType = "inbox" | "sent" | "starred" | "archive" | "trash";
+
 const MessagesPage = () => {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null);
