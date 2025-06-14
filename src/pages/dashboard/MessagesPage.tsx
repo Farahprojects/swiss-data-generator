@@ -245,14 +245,15 @@ const MessagesPage = () => {
   }
 
   if (isMobile) {
-    // Mobile layout (no sidebar, no header, floating compose button, full-width search)
+    // Mobile layout (no sidebar, no header, sticky compose, full-width search, more visible body text)
+    // Header is likely 56px or 64px; adjust margin as needed (e.g. mt-16 for 64px)
     return (
-      <div className="w-full relative min-h-screen pb-24">
-        {/* Mobile floating Compose button */}
+      <div className="w-full relative min-h-screen pb-24 bg-background">
+        {/* Mobile Compose button, smaller/nicer */}
         <MobileComposeButton onClick={() => setShowCompose(true)} />
 
-        {/* Top Search bar */}
-        <div className="sticky top-0 z-20 bg-white border-b px-3 py-3">
+        {/* Top Search bar, visible below global nav */}
+        <div className="sticky top-0 z-20 bg-white border-b px-3 py-3" style={{ marginTop: 64 }}>
           <div className="relative w-full">
             <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
               <Search className="w-5 h-5" />
@@ -266,6 +267,7 @@ const MessagesPage = () => {
           </div>
         </div>
 
+        {/* Main Message List, allow more body text */}
         <div className="w-full">
           {selectedMessage ? (
             <GmailMessageDetail
@@ -287,6 +289,8 @@ const MessagesPage = () => {
               onArchiveSelected={handleArchiveSelected}
               onDeleteSelected={handleDeleteSelected}
               onToggleStar={handleToggleStar}
+              // Pass prop/class for less left padding on mobile, if supported
+              mobileDense
             />
           )}
         </div>
