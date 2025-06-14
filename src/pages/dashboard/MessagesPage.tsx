@@ -216,14 +216,14 @@ const MessagesPage = () => {
         <div className="absolute left-0 top-0 h-full flex items-center pl-6 z-20" style={{ width: 256 }}>
           <Button
             onClick={() => setShowCompose(true)}
-            className="h-10 px-5 flex items-center gap-2"
+            className="h-10 px-7 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Compose
           </Button>
         </div>
         {/* Header content starts after sidebar */}
-        <div className="ml-64 flex items-center gap-4 w-full pr-6">
+        <div className="ml-64 flex items-center gap-4 w-full pr-10">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit mr-4">Messages</h1>
           {/* Search bar fills remaining space */}
           <div className="relative flex-1 max-w-2xl">
