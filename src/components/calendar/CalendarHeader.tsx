@@ -1,5 +1,11 @@
-
 import React from "react";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Utility for month names
 const monthNames = [
@@ -24,20 +30,20 @@ export const CalendarHeader = ({
   setToday,
   isMobile = false,
 }: Props) => {
-  // ----- MONTH SELECTOR LOGIC -----
-  function handleMonthChange(offset: number) {
-    const d = new Date(today);
-    d.setMonth(d.getMonth() + offset);
-    setToday(d);
+  function handleMonthSelect(value: string) {
+    const monthIndex = parseInt(value, 10);
+    if (!isNaN(monthIndex)) {
+      // Preserve year and day, only update month
+      const newDate = new Date(today);
+      newDate.setMonth(monthIndex);
+      setToday(newDate);
+    }
   }
 
-  function handleMonthClick() {
-    const now = new Date();
-    // jump to first of current month
-    setToday(new Date(now.getFullYear(), now.getMonth(), today.getDate()));
+  function handleWeekClick() {
+    setToday(new Date());
   }
-
-  // ----- EXISTING NAVIGATION -----
+  
   function nextUnit() {
     const d = new Date(today);
     if (view === "day") d.setDate(d.getDate() + 1);
@@ -45,6 +51,7 @@ export const CalendarHeader = ({
     if (view === "month") d.setMonth(d.getMonth() + 1);
     setToday(d);
   }
+  
   function prevUnit() {
     const d = new Date(today);
     if (view === "day") d.setDate(d.getDate() - 1);
@@ -53,75 +60,40 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  function handleWeekClick() {
-    setToday(new Date());
-  }
-
-  // ----- MONTH DISPLAY -----
-  const monthDisplay = (
-    <div className="flex items-center justify-center gap-1 select-none mb-2 w-full">
-      <button
-        type="button"
-        onClick={() => handleMonthChange(-1)}
-        aria-label="Previous month"
-        className="px-1 text-[1.7rem] font-bold"
-        style={{
-          color: "#7C60F9",
-          background: "transparent",
-          border: "none",
-          outline: "none",
-          cursor: "pointer",
-          lineHeight: "1",
-          transition: "color 0.1s"
-        }}
+  // Compose month selector (dropdown)
+  const monthSelector = (
+    <Select onValueChange={handleMonthSelect} value={today.getMonth().toString()}>
+      <SelectTrigger
+        className="w-[56px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-lg data-[state=open]:bg-transparent hover:bg-accent/20"
+        aria-label="Select month"
       >
-        &lt;
-      </button>
-      <span
-        onClick={handleMonthClick}
-        className="mx-2 font-semibold text-lg cursor-pointer"
-        style={{
-          color: "#241783",
-          background: "none",
-        }}
-        aria-label="Jump to current month"
-        tabIndex={0}
-        role="button"
-        onKeyPress={e => {
-          if (e.key === "Enter" || e.key === " ") {
-            handleMonthClick();
-          }
-        }}
-      >
-        {monthNames[today.getMonth()]} {today.getFullYear()}
-      </span>
-      <button
-        type="button"
-        onClick={() => handleMonthChange(1)}
-        aria-label="Next month"
-        className="px-1 text-[1.7rem] font-bold"
-        style={{
-          color: "#7C60F9",
-          background: "transparent",
-          border: "none",
-          outline: "none",
-          cursor: "pointer",
-          lineHeight: "1",
-          transition: "color 0.1s"
-        }}
-      >
-        &gt;
-      </button>
-    </div>
+        <SelectValue>
+          {monthNames[today.getMonth()].slice(0,3)}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent className="z-50 bg-popover p-0 min-w-fit w-24 text-sm">
+        {monthNames.map((name, idx) => (
+          <SelectItem
+            value={idx.toString()}
+            key={name}
+            className="py-1 px-3 text-base"
+          >
+            {name.slice(0,3)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 
+  // Row with month selector and "Week" navigation, session button on right for desktop
   return (
     <div className="flex flex-col items-center gap-0 mb-4 w-full">
-      {/* MONTH SELECTOR always shown */}
-      {monthDisplay}
-      {/* Desktop: nav + session button on right */}
+      {/* Desktop: inline */}
       <div className="hidden sm:flex w-full items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {monthSelector}
+          <span className="font-semibold text-lg text-primary">{today.getFullYear()}</span>
+          {/* Week nav (unchanged) */}
           <button
             type="button"
             onClick={prevUnit}
@@ -177,9 +149,11 @@ export const CalendarHeader = ({
           + Session
         </button>
       </div>
-      {/* Mobile: nav+label, then wide "+ Session" below */}
+      {/* Mobile: row layout, full-width + Session below */}
       <div className="flex sm:hidden flex-col w-full items-center">
-        <div className="flex items-center gap-4 justify-center w-full">
+        <div className="flex items-center gap-3 justify-center w-full">
+          {monthSelector}
+          <span className="font-semibold text-lg text-primary">{today.getFullYear()}</span>
           <button
             type="button"
             onClick={prevUnit}
