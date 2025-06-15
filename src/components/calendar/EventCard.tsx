@@ -1,8 +1,7 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { Button } from "@/components/ui/button";
-import { Circle } from "lucide-react";
+import { Circle, ChevronRight } from "lucide-react";
 
 type Props = {
   session: CalendarSession;
@@ -53,14 +52,13 @@ export const EventCard = ({
   isDetailed,
   clientName,
   compact = false,
-  onEdit, // New optional prop
-}: Props & { onEdit?: () => void }) => {
+}: Props) => {
   if (compact) {
     return (
       <div
         onClick={onClick}
         className={`
-          rounded-xl shadow-md border px-3 py-1 cursor-pointer flex flex-row items-center gap-2 bg-white
+          rounded-xl shadow-md border px-3 py-2 cursor-pointer flex flex-row items-center gap-2 bg-white
           hover:bg-accent/60 transition duration-200 group relative w-full min-w-0
         `}
         style={{ color: "#242424", opacity: onClick ? 0.97 : 1 }}
@@ -88,22 +86,8 @@ export const EventCard = ({
         <span className="text-xs font-bold opacity-90 text-primary ml-auto whitespace-nowrap">
           {formatTimeAndDuration(session.start_time, session.end_time)}
         </span>
-        {/* Edit button (optional) */}
-        {onEdit && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={e => {
-              e.stopPropagation();
-              onEdit?.();
-            }}
-            className="ml-2"
-            aria-label="Edit session"
-          >
-            <Pencil size={16} />
-          </Button>
-        )}
+        {/* Visual chevron as edit indicator */}
+        <ChevronRight size={18} className="ml-2 shrink-0 text-muted-foreground opacity-70 group-hover:opacity-100" aria-label="Edit" />
         {/* Delete button (optional, only if onDelete exists) */}
         {onDelete && (
           <Button
@@ -164,8 +148,9 @@ export const EventCard = ({
         )}
       </div>
       {/* Time and duration display */}
-      <div className="text-xs font-bold opacity-90 mt-1 text-primary">
-        {formatTimeAndDuration(session.start_time, session.end_time)}
+      <div className="flex items-center gap-2 mt-1 text-xs font-bold opacity-90 text-primary">
+        <span>{formatTimeAndDuration(session.start_time, session.end_time)}</span>
+        <ChevronRight size={18} className="ml-auto text-muted-foreground opacity-70 group-hover:opacity-100" aria-label="Edit" />
       </div>
       {/* Description (for isDetailed) */}
       {isDetailed && <div className="text-xs mt-1 text-muted-foreground">{session.description}</div>}

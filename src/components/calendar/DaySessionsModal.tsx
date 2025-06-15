@@ -5,7 +5,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { EventCard } from "./EventCard";
-import { Pencil } from "lucide-react";
 
 // Props
 type Props = {
@@ -29,7 +28,6 @@ export const DaySessionsModal: React.FC<Props> = ({
   onEditSession,
   onAddSession,
 }) => {
-  // Show date in header, e.g. "June 15, 2025"
   const dateStr = date.toLocaleDateString(undefined, {
     weekday: "long",
     year: "numeric",
@@ -48,9 +46,9 @@ export const DaySessionsModal: React.FC<Props> = ({
     <div className="flex flex-col gap-4 p-4 pb-2 h-full max-h-[85dvh] w-full">
       <h2 className="text-lg font-semibold mb-1">{dateStr}</h2>
       {sessions.length ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {sessions.map((session) => (
-            <div key={session.id} className="relative group">
+            <div key={session.id}>
               <EventCard
                 session={session}
                 clientName={session.client_id ? clientMap[session.client_id] : undefined}
@@ -58,19 +56,6 @@ export const DaySessionsModal: React.FC<Props> = ({
                 isDetailed={false}
                 onClick={() => onEditSession(session)}
               />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label="Edit session"
-                className="absolute top-1 right-1 opacity-80 hover:opacity-100 transition"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditSession(session);
-                }}
-              >
-                <Pencil size={18} />
-              </Button>
             </div>
           ))}
         </div>
