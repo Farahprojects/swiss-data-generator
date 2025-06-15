@@ -23,6 +23,7 @@ type Props = {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  inline?: boolean; // NEW PROP
 };
 
 export const DateTimePicker: React.FC<Props> = ({
@@ -34,6 +35,7 @@ export const DateTimePicker: React.FC<Props> = ({
   placeholder = "Select date & time",
   className = "",
   disabled,
+  inline = false,
 }) => {
   const [open, setOpen] = React.useState(false);
   const isMobile = useIsMobile();
@@ -61,33 +63,62 @@ export const DateTimePicker: React.FC<Props> = ({
   const ampm = hour < 12 ? "AM" : "PM";
   const timeString = `${hour12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 
-  const content = (
-    <div className="flex flex-col gap-2 min-w-[220px]">
-      {label && <span className="text-xs font-semibold mb-1">{label}</span>}
-      <Calendar
-        selected={value}
-        onSelect={d => {
-          if (d) handleDaySelect(d);
+  // -- INLINE RENDERING --
+  if (inline) {
+    return (
+      <div
+        className={cn(
+          "rounded-md border border-muted bg-background p-3 w-full max-w-md",
+          className
+        )}
+        style={{
+          // Ensure fits modal
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "stretch"
         }}
-        mode="single"
-        initialFocus
-        disabled={dateDisabled}
-        className={cn("p-3 pointer-events-auto")}
-      />
-      <div className="flex gap-2 items-center mt-1">
-        <TimePicker value={value} onChange={handleTimeChange} />
-        <span className="text-muted-foreground text-xs">{timeString}</span>
-      </div>
-      <Button
-        size="sm"
-        onClick={() => setOpen(false)}
-        className="flex gap-2 items-center mt-3 justify-center"
       >
-        Done
-      </Button>
-    </div>
-  );
+        {label && (
+          <span className="text-xs font-semibold mb-1">{label}</span>
+        )}
+        <Calendar
+          selected={value}
+          onSelect={d => {
+            if (d) handleDaySelect(d);
+          }}
+          mode="single"
+          initialFocus
+          disabled={dateDisabled}
+          className={cn("pointer-events-auto my-2 max-w-full")}
+        />
+        <div className="flex gap-2 items-center mt-1">
+          <TimePicker value={value} onChange={handleTimeChange} />
+          <span className="text-muted-foreground text-xs">{timeString}</span>
+        </div>
+        <div className="flex justify-end mt-2">
+          {/* Optionally, let consumer show/hide this button */}
+          <Button
+            size="sm"
+            variant="secondary"
+            className="gap-2"
+            type="button"
+            disabled={disabled}
+          >
+            <CalendarIcon className="w-4 h-4" />
+            {value ? (
+              <>
+                {dateString}, {timeString}
+              </>
+            ) : (
+              <span>{placeholder}</span>
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
+  // -- POPOVER/SHEET RENDERING (default) --
   if (isMobile) {
     return (
       <>
@@ -121,7 +152,30 @@ export const DateTimePicker: React.FC<Props> = ({
               flexDirection: "column",
             }}
           >
-            {content}
+            <div className="flex flex-col gap-2 min-w-[220px]">
+              {label && <span className="text-xs font-semibold mb-1">{label}</span>}
+              <Calendar
+                selected={value}
+                onSelect={d => {
+                  if (d) handleDaySelect(d);
+                }}
+                mode="single"
+                initialFocus
+                disabled={dateDisabled}
+                className={cn("p-3 pointer-events-auto")}
+              />
+              <div className="flex gap-2 items-center mt-1">
+                <TimePicker value={value} onChange={handleTimeChange} />
+                <span className="text-muted-foreground text-xs">{timeString}</span>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setOpen(false)}
+                className="flex gap-2 items-center mt-3 justify-center"
+              >
+                Done
+              </Button>
+            </div>
           </SheetContent>
         </Sheet>
       </>
@@ -151,7 +205,30 @@ export const DateTimePicker: React.FC<Props> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        {content}
+        <div className="flex flex-col gap-2 min-w-[220px]">
+          {label && <span className="text-xs font-semibold mb-1">{label}</span>}
+          <Calendar
+            selected={value}
+            onSelect={d => {
+              if (d) handleDaySelect(d);
+            }}
+            mode="single"
+            initialFocus
+            disabled={dateDisabled}
+            className={cn("p-3 pointer-events-auto")}
+          />
+          <div className="flex gap-2 items-center mt-1">
+            <TimePicker value={value} onChange={handleTimeChange} />
+            <span className="text-muted-foreground text-xs">{timeString}</span>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setOpen(false)}
+            className="flex gap-2 items-center mt-3 justify-center"
+          >
+            Done
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );
