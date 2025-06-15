@@ -8,8 +8,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TimePicker } from "./TimePicker";
 import { cn } from "@/lib/utils";
 
-// All devices now use mobile-friendly Sheet layout
-
 type Props = {
   label?: string;
   value: Date;
@@ -55,9 +53,9 @@ export const DateTimePicker: React.FC<Props> = ({
   const ampm = hour < 12 ? "AM" : "PM";
   const timeString = `${hour12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 
-  // Mobile-style content, will be used everywhere
+  // Mobile-style content, now sized to modal on desktop
   const content = (
-    <div className="flex flex-col gap-2 min-w-[260px] max-w-[340px] mx-auto">
+    <div className="flex flex-col gap-2 min-w-[260px] w-full max-w-md mx-auto">
       {label && <span className="text-xs font-semibold mb-1">{label}</span>}
       <Calendar
         selected={value}
@@ -83,7 +81,7 @@ export const DateTimePicker: React.FC<Props> = ({
     </div>
   );
 
-  // Always use Sheet popover, styled to fit both desktop and mobile
+  // Always use Sheet popover, but make it modal-sized on desktop
   return (
     <>
       <Button
@@ -110,15 +108,15 @@ export const DateTimePicker: React.FC<Props> = ({
         <SheetContent
           side="bottom"
           className={cn(
-            "!max-w-full !w-screen",
-            "h-[75dvh] flex flex-col items-center p-0 rounded-t-lg",
-            "md:h-[420px] md:rounded-lg md:top-1/2 md:bottom-auto md:translate-y-[-50%] md:left-1/2 md:-translate-x-1/2 md:w-[380px] md:fixed md:mx-0"
+            "!max-w-md !w-full",
+            "h-auto min-h-[340px] max-h-[480px] flex flex-col items-center p-0 rounded-t-lg",
+            "md:rounded-lg md:top-1/2 md:bottom-auto md:translate-y-[-50%] md:left-1/2 md:-translate-x-1/2 md:fixed md:mx-0",
+            "bg-white shadow-xl"
           )}
           style={{
-            minHeight: "55dvh",
-            maxHeight: "95dvh",
-            display: "flex",
-            flexDirection: "column",
+            minHeight: "340px",
+            maxHeight: "480px",
+            width: "100%",
             justifyContent: "center"
           }}
         >
