@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { mapRowToCalendarSession } from "@/utils/calendarHelpers";
 
+// Add import for auth to get current user
+import { createClient } from "@supabase/supabase-js";
+const getCurrentUserId = () => supabase.auth.getUser().then(res => res.data.user?.id || null);
+
 // Service for CRUD calendar sessions
 export const calendarSessionsService = {
   async getSessions(): Promise<CalendarSession[]> {
@@ -20,26 +24,36 @@ export const calendarSessionsService = {
   },
 
   async createSession(session: Omit<CalendarSession, "id">) {
-    // Do not provide `coach_id` (RLS inserts automatically)
+    // Get coach_id before insert (auth required!)
+    const coach_id = await getCurrentUserId();
+    if (!coach_id) {
+      throw new Error("User not authenticated (coach_id missing)");
+    }
     // Convert Date to ISO strings for insert
     const payload: any = {
       ...session,
       start_time: session.start_time.toISOString(),
       end_time: session.end_time.toISOString(),
-      // Pass null for client_id/color_tag if ""/undefined
       client_id: session.client_id || null,
       color_tag: session.color_tag || null,
       event_type: session.event_type ?? "session",
+      coach_id, // Required for DB insert and RLS
     };
     delete payload.id;
-    // coach_id set by RLS
 
     const { data, error } = await supabase
       .from("calendar_sessions")
       .insert(payload)
       .select()
       .single();
-    if (error) throw new Error(error.message);
+
+    if (error) {
+      console.error("Supabase error: ", error);
+      throw new Error(error.message);
+    }
+    if (!data) {
+      throw new Error('Failed to create calendar session (no data returned)');
+    }
     return mapRowToCalendarSession(data);
   },
 
