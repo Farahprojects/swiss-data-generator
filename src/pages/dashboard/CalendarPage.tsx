@@ -59,7 +59,7 @@ const CalendarPage: React.FC = () => {
   );
   const desktopTitle = (
     <h1 className="hidden sm:block text-2xl md:text-3xl font-bold mb-2">
-      Coaching Calendar
+      Calendar
     </h1>
   );
 
