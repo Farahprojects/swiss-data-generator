@@ -35,7 +35,7 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
         {days.map((day) => (
           <div
             key={day.toISOString()}
-            className={`py-1 px-2 text-xs font-bold text-center bg-white border-b select-none
+            className={`py-1 px-2 text-xs font-bold text-center bg-white select-none
               ${isToday(day) ? "text-primary border-primary shadow" : ""}
               ${isWeekend(day) ? "bg-accent/20" : ""}
             `}
