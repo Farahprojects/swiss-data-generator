@@ -11,17 +11,20 @@ type Props = {
   isMobile?: boolean;
 };
 
+// NEW: Improved week and day formats for desktop:
 function formatPeriodLabel(today: Date, view: "month" | "week" | "day") {
   if (!today) return "";
   if (view === "day") {
+    // Short weekday and month, 4-digit year. Example: "Mon, Jun 17, 2025"
     return today.toLocaleDateString(undefined, {
-      weekday: "long",
-      month: "long",
+      weekday: "short",
+      month: "short",
       day: "numeric",
       year: "numeric"
     });
   }
   if (view === "month") {
+    // Example: "June 2025"
     return today.toLocaleDateString(undefined, {
       month: "long",
       year: "numeric"
@@ -33,17 +36,24 @@ function formatPeriodLabel(today: Date, view: "month" | "week" | "day") {
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
+
     const startDay = start.getDate();
-    const startMonth = start.toLocaleString(undefined, { month: "short" });
     const endDay = end.getDate();
-    const endMonth = end.toLocaleString(undefined, { month: "short" });
-    const showYear = (start.getFullYear() !== end.getFullYear());
-    if (startMonth === endMonth && !showYear) {
-      return `${startMonth} ${startDay} – ${endDay}, ${start.getFullYear()}`;
-    } else if (showYear) {
-      return `${startMonth} ${startDay}, ${start.getFullYear()} – ${endMonth} ${endDay}, ${end.getFullYear()}`;
+    const startMonthShort = start.toLocaleString(undefined, { month: "short" });
+    const endMonthShort = end.toLocaleString(undefined, { month: "short" });
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+
+    // Condense: show both months/years if they are not the same
+    if (startMonthShort === endMonthShort && startYear === endYear) {
+      // e.g. "Jun 17-23, 2025"
+      return `${startMonthShort} ${startDay}-${endDay}, ${startYear}`;
+    } else if (startYear === endYear) {
+      // e.g. "Jun 30-Jul 6, 2025"
+      return `${startMonthShort} ${startDay}-${endMonthShort} ${endDay}, ${startYear}`;
     } else {
-      return `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${end.getFullYear()}`;
+      // e.g. "Dec 30, 2024-Jan 5, 2025"
+      return `${startMonthShort} ${startDay}, ${startYear}-${endMonthShort} ${endDay}, ${endYear}`;
     }
   }
   return "";
@@ -73,7 +83,7 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Mobile version: stacked layout
+  // Mobile version: stacked layout (unchanged)
   if (isMobile) {
     return (
       <div className="mb-4 w-full">
@@ -142,7 +152,7 @@ export const CalendarHeader = ({
     );
   }
 
-  // Desktop/tablet version (unchanged)
+  // Desktop/tablet version (UPDATED)
   return (
     <div className="mb-4 w-full">
       {/* Calendar Title */}
@@ -161,8 +171,8 @@ export const CalendarHeader = ({
         "
         style={{ gridTemplateColumns: "1fr auto 1fr" }}
       >
-        {/* Left: Arrows + date label (fixed width on desktop) */}
-        <div className="flex items-center justify-start min-w-[230px]">
+        {/* Left: Arrows + date label (increased min width, removed truncation/maxWidth) */}
+        <div className="flex items-center justify-start min-w-[260px]">
           <button
             type="button"
             onClick={prevUnit}
@@ -171,7 +181,7 @@ export const CalendarHeader = ({
           >
             <ArrowLeft size={20} />
           </button>
-          <span className="text-base sm:text-lg md:text-xl font-semibold px-2 select-none min-w-[120px] text-center truncate" style={{ maxWidth: 180 }}>
+          <span className="text-base sm:text-lg md:text-xl font-semibold px-2 select-none min-w-[120px] text-center">
             {formatPeriodLabel(today, view)}
           </span>
           <button
