@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,14 +55,10 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
               )}
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg font-semibold text-primary leading-tight hover:text-primary/80 transition-colors">
+          <div className="flex-1 min-w-0 flex items-center">
+            <CardTitle className="text-lg font-semibold text-primary leading-tight hover:text-primary/80 transition-colors text-left w-full">
               {isMobile ? formatClientNameForMobile(client.full_name) : client.full_name}
             </CardTitle>
-            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-              <Calendar className="w-3 h-3" />
-              <span>Added {formatDate(client.created_at)}</span>
-            </div>
           </div>
         </div>
       </CardHeader>
@@ -80,9 +75,6 @@ export const ClientCard: React.FC<ClientCardProps> = React.memo(({
                 {client.birth_location}
               </div>
             )}
-            <div className="text-xs text-muted-foreground">
-              {client.birth_date && `Born ${formatDate(client.birth_date)}`}
-            </div>
           </div>
         </div>
       </CardContent>
