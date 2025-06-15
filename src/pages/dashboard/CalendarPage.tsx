@@ -56,6 +56,13 @@ const CalendarPage: React.FC = () => {
     })), [clients]
   );
 
+  // Create client map for easy lookup
+  const clientMap = React.useMemo(() => {
+    const map: Record<string, { id: string; name: string }> = {};
+    clientOptions.forEach(c => { map[c.id] = c; });
+    return map;
+  }, [clientOptions]);
+
   function handleSaveSession(data: any, id?: string) {
     if (id) updateSession(id, data);
     else createSession(data);
@@ -99,6 +106,7 @@ const CalendarPage: React.FC = () => {
           onMoveSession={moveSession}
           isMobile={isMobile}
           setSelectedDay={isMobile ? setSelectedDay : undefined}
+          clients={clientMap}
         />
       </div>
       <EventModal

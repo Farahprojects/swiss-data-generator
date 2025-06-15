@@ -7,6 +7,8 @@ import DayView from "./views/DayView";
 import SessionCardsMobile from "./SessionCardsMobile";
 import { MobileDaySelector } from "./MobileDaySelector";
 
+type ClientMap = Record<string, { id: string; name: string }>;
+
 type Props = {
   view: "month" | "week" | "day";
   date: Date;
@@ -16,6 +18,7 @@ type Props = {
   onMoveSession: (id: string, newStart: Date, newEnd: Date) => void;
   isMobile: boolean;
   setSelectedDay?: (date: Date) => void;
+  clients?: ClientMap;
 };
 
 export const CalendarView = ({
@@ -27,6 +30,7 @@ export const CalendarView = ({
   onMoveSession,
   isMobile,
   setSelectedDay,
+  clients,
 }: Props) => {
   if (isMobile && selectedDay && setSelectedDay) {
     return (
@@ -41,6 +45,7 @@ export const CalendarView = ({
           sessions={sessions}
           onSessionClick={onSessionClick}
           selectedDay={selectedDay}
+          clients={clients}
         />
       </div>
     );
