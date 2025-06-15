@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
@@ -17,7 +18,6 @@ function useIsMobile() {
 }
 
 const CalendarPage: React.FC = () => {
-  const [view, setView] = useState<"month" | "week" | "day">("week");
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null); // session being edited
@@ -69,8 +69,6 @@ const CalendarPage: React.FC = () => {
       {mobileTitle}
       {desktopTitle}
       <CalendarHeader
-        view={view}
-        setView={setView}
         onAddSession={() => {
           setEditing(null);
           setModalOpen(true);
@@ -87,7 +85,6 @@ const CalendarPage: React.FC = () => {
       />
       <div className="flex-1 w-full mt-2">
         <CalendarView
-          view={view}
           date={currentDate}
           sessions={filteredSessions}
           onSessionClick={session => {
