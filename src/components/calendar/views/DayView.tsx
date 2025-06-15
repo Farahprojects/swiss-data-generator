@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
@@ -30,31 +31,13 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   // Compact slot height for improved density
   const slotHeight = 40; // Keep density and match EmptySlot default
 
-  // Date header formatting
-  const dayNum = date.getDate();
-  const monthName = date.toLocaleString("default", { month: "short" });
-  const weekdayName = date.toLocaleDateString(undefined, { weekday: "long" });
+  // Removed date header (dayNum, monthName, weekdayName, "Today" badge)
 
   return (
     <div className={`border rounded overflow-hidden ${
       isToday(date) ? "ring-2 ring-primary" : ""
     } bg-gray-100`}>
-      {/* Date header */}
-      <div className="flex items-center justify-center py-3 bg-white border-b relative">
-        <div className="flex flex-col items-center">
-          <span className={`text-3xl font-bold ${isToday(date) ? "text-primary" : ""}`}>
-            {dayNum} <span className="text-base font-normal text-muted-foreground">{monthName}</span>
-          </span>
-          <span className={`text-sm font-semibold mt-1 ${isToday(date) ? "text-primary" : "text-muted-foreground"}`}>
-            {weekdayName}
-          </span>
-        </div>
-        {isToday(date) && (
-          <span className="absolute right-4 top-1 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium">
-            Today
-          </span>
-        )}
-      </div>
+      {/* Date header removed */}
       {/* Time slots */}
       <div className="flex flex-col min-h-[400px] relative">
         {TIMEBLOCKS.map((hr, idx) => {
@@ -129,3 +112,4 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   );
 };
 export default DayView;
+
