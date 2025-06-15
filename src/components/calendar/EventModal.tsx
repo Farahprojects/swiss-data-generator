@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -129,7 +130,6 @@ export const EventModal = ({
               }));
             }}
             minDate={undefined}
-            inline // <--- force inline for modal
           />
         </div>
         <div className="flex-1 flex flex-col">
