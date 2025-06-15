@@ -1,6 +1,5 @@
 
 import React from "react";
-import { Button } from "@/components/ui/button";
 
 type Props = {
   view: "month" | "week" | "day";
@@ -34,57 +33,70 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Allows user to click to jump to current week
+  // Allows user to click "Week" to jump to current week
   function handleWeekClick() {
     setToday(new Date());
   }
 
   return (
     <div className="flex flex-col items-center gap-0 mb-4">
-      {/* Navigation and minimal week pill */}
-      <div className="flex items-center gap-2 justify-center">
-        <Button
-          variant="ghost"
-          size="icon"
+      <div className="flex items-center gap-4 justify-center">
+        <button
+          type="button"
           onClick={prevUnit}
           aria-label="Previous"
+          className="px-1 text-[1.7rem] font-semibold"
+          style={{
+            color: "#7C60F9",
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            cursor: "pointer",
+            lineHeight: "1",
+            transition: "color 0.1s"
+          }}
         >
           &lt;
-        </Button>
-        {/* Minimal, elegant clickable week pill */}
+        </button>
         <button
           type="button"
           onClick={handleWeekClick}
-          className="mx-2 px-8 py-2 rounded-full font-semibold text-xl transition-colors select-none border"
+          className="select-none font-semibold text-lg px-2 py-1 bg-transparent outline-none border-none"
+          aria-label="Jump to current week"
           style={{
-            borderColor: "#7C60F9",
-            background: "#F6F4FF",
             color: "#241783",
-            fontWeight: 700,
-            borderWidth: 2,
-            boxShadow: "none",
-            letterSpacing: 0.2,
+            cursor: "pointer",
+            background: "none",
           }}
         >
           Week
         </button>
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          type="button"
           onClick={nextUnit}
           aria-label="Next"
+          className="px-1 text-[1.7rem] font-semibold"
+          style={{
+            color: "#7C60F9",
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            cursor: "pointer",
+            lineHeight: "1",
+            transition: "color 0.1s"
+          }}
         >
           &gt;
-        </Button>
+        </button>
       </div>
-
-      {/* + Add Session button */}
       <div className="w-full flex justify-center mt-3">
-        <Button onClick={onAddSession} className="w-full sm:w-auto">
+        <button
+          onClick={onAddSession}
+          className="w-full sm:w-auto bg-primary text-primary-foreground px-4 py-2 rounded font-semibold"
+        >
           + Add Session
-        </Button>
+        </button>
       </div>
-      {/* No client filter or view controls */}
     </div>
   );
 };
