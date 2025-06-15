@@ -1,12 +1,11 @@
-
 import React, { useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
 import { useClientsData } from "@/hooks/useClientsData";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MobileDaySelector } from "@/components/calendar/MobileDaySelector";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import CalendarView from "@/components/calendar/CalendarView";
 import { EventModal } from "@/components/calendar/EventModal";
+import { addHours } from 'date-fns';
 
 // Removed the demoClients and ClientFilter logic
 
@@ -68,6 +67,20 @@ const CalendarPage: React.FC = () => {
     else createSession(data);
   }
 
+  const handleTimeSlotClick = (startTime: Date) => {
+    const newSessionTemplate = {
+      title: "",
+      description: "",
+      start_time: startTime,
+      end_time: addHours(startTime, 1), // Default 1 hour duration
+      client_id: null,
+      event_type: "session",
+      color_tag: "#2563eb",
+    };
+    setEditing(newSessionTemplate);
+    setModalOpen(true);
+  };
+
   // Titles
   const mobileTitle = (
     <h1 className="text-xl font-bold mb-2 sm:hidden">Calendar</h1>
@@ -79,7 +92,7 @@ const CalendarPage: React.FC = () => {
   );
 
   return (
-    <div className="max-w-6xl mx-auto p-2 py-6 flex flex-col">
+    <div className="max-w-7xl mx-auto p-2 py-6 flex flex-col">
       {mobileTitle}
       {desktopTitle}
       <CalendarHeader
@@ -107,6 +120,7 @@ const CalendarPage: React.FC = () => {
           isMobile={isMobile}
           setSelectedDay={isMobile ? setSelectedDay : undefined}
           clients={clientMap}
+          onTimeSlotClick={handleTimeSlotClick}
         />
       </div>
       <EventModal
