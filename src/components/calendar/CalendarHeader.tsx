@@ -84,14 +84,17 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Layout: Title + period with nav arrows, then toggles + add session.
+  // Layout: Title, then one row of controls (arrows+label, toggles, +Session)
   return (
     <div className="flex flex-col items-center gap-0 mb-4 w-full">
       {/* Calendar Title */}
       <div className="w-full flex flex-col items-center gap-0">
         <h1 className="text-xl font-bold sm:text-2xl md:text-3xl mb-0.5">Calendar</h1>
-        {/* Date/month/week label with arrows */}
-        <div className="flex items-center justify-center gap-2 mb-1 w-full">
+      </div>
+      {/* Unified control row: nav arrows + date, toggles, +Session */}
+      <div className="flex flex-col sm:flex-row w-full items-center sm:justify-between gap-2 mt-2">
+        {/* Arrows + date label */}
+        <div className="flex items-center gap-2 mb-1 sm:mb-0">
           <button
             type="button"
             onClick={prevUnit}
@@ -112,9 +115,7 @@ export const CalendarHeader = ({
             <ArrowRight size={20} />
           </button>
         </div>
-      </div>
-      {/* View toggle and add session */}
-      <div className="flex w-full items-center justify-between sm:justify-between gap-2 mt-2">
+        {/* View toggle */}
         <div className="flex items-center">
           <ToggleGroup
             type="single"
@@ -149,6 +150,7 @@ export const CalendarHeader = ({
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
+        {/* Add session */}
         <button
           onClick={onAddSession}
           className="bg-primary text-primary-foreground px-4 py-2 rounded font-semibold"
