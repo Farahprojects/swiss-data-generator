@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -149,7 +150,6 @@ const Login = () => {
           setErrorMsg('Invalid email or password');
         }
         setLoading(false);
-        setLoginAttempted(false);
         return;
       }
 
@@ -159,7 +159,6 @@ const Login = () => {
       if (authedUser && !authedUser.email_confirmed_at) {
         openVerificationModal();
         setLoading(false);
-        setLoginAttempted(false);
         return;
       }
 
@@ -169,11 +168,8 @@ const Login = () => {
         page: 'Login'
       });
 
-      // Reset loading after short delay to allow AuthGuard redirect
-      setTimeout(() => {
-        setLoading(false);
-        setLoginAttempted(false);
-      }, 200);
+      // Instead of navigating here, let the context/guard handle redirect.
+
     } catch (err: any) {
       toast({
         title: 'Error',
@@ -181,6 +177,7 @@ const Login = () => {
         variant: 'destructive',
       });
       setLoading(false);
+    } finally {
       setLoginAttempted(false);
     }
   };
@@ -299,3 +296,4 @@ const Login = () => {
 };
 
 export default Login;
+
