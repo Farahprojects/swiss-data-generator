@@ -145,17 +145,32 @@ export const EventModal = ({
           }}
           minDate={undefined}
         />
-        {/* Duration + Color Row, horizontal on desktop, stacked on mobile */}
-        <div className={isMobile ? "flex flex-col gap-2 mt-2" : "flex flex-row gap-4 mt-2"}>
-          {/* Duration picker */}
-          <div className={`${isMobile ? "" : "flex-1"} mt-[1px]`}>
-            <DurationPicker
-              value={duration}
-              onChange={setDuration}
-            />
+        {/* Duration and Session time inline, then color as its own row */}
+        <div className="flex flex-col gap-2 mt-2">
+          <div className="flex flex-row items-center gap-3">
+            <div className="mt-[1px]">
+              <DurationPicker
+                value={duration}
+                onChange={setDuration}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground font-bold ml-2 whitespace-nowrap">
+              Session:{" "}
+              {(() => {
+                const st = form.start_time;
+                const et = form.end_time;
+                const format12 = (d: Date) => {
+                  const h = d.getHours() % 12 || 12;
+                  const m = d.getMinutes().toString().padStart(2, "0");
+                  const ampm = d.getHours() < 12 ? "AM" : "PM";
+                  return `${h}:${m} ${ampm}`;
+                };
+                return `${format12(st)} – ${format12(et)}`;
+              })()}
+            </div>
           </div>
-          {/* Color picker */}
-          <div className="flex flex-col gap-1 items-start">
+          {/* Color picker under Duration row */}
+          <div className="flex flex-col gap-1 items-start mt-1">
             <span className="text-xs text-gray-500 mb-1">Color</span>
             <div className="flex gap-1 flex-wrap">
               {COLOR_OPTIONS.map((color) => (
@@ -177,22 +192,6 @@ export const EventModal = ({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Preview of calculated end time */}
-      <div className="text-xs text-muted-foreground font-bold">
-        Session:{" "}
-        {(() => {
-          const st = form.start_time;
-          const et = form.end_time;
-          const format12 = (d: Date) => {
-            const h = d.getHours() % 12 || 12;
-            const m = d.getMinutes().toString().padStart(2, "0");
-            const ampm = d.getHours() < 12 ? "AM" : "PM";
-            return `${h}:${m} ${ampm}`;
-          };
-          return `${format12(st)} – ${format12(et)}`;
-        })()}
       </div>
 
       {/* Client Picker */}
