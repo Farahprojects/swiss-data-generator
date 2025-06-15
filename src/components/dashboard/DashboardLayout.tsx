@@ -22,7 +22,8 @@ const DashboardLayout = () => {
   const isDashboardPageWithBurgerMenu =
     location.pathname === '/dashboard/website-builder' ||
     location.pathname === '/dashboard/messages' ||
-    location.pathname === '/dashboard/clients'; // Enable burger menu for clients page always!
+    location.pathname === '/dashboard/clients' ||
+    location.pathname === '/dashboard/reports'; // Enable burger menu for reports page too!
 
   // Handle settings route redirects
   useEffect(() => {

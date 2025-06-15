@@ -50,10 +50,12 @@ const UnifiedNavigation = ({
   const isLoggedIn = !!user;
   const isMainDashboard = location.pathname === '/dashboard';
   const isDashboardClientsPage = location.pathname === '/dashboard/clients';
+  const isDashboardReportsPage = location.pathname === '/dashboard/reports';
   const isDashboardPageWithBurgerMenu = (
     location.pathname === '/dashboard/website-builder' ||
     location.pathname === '/dashboard/messages' ||
-    location.pathname === '/dashboard/clients'
+    location.pathname === '/dashboard/clients' ||
+    location.pathname === '/dashboard/reports'
   );
   const isDashboardPage = location.pathname.startsWith('/dashboard');
   const isMessagesPage = location.pathname === '/dashboard/messages';
