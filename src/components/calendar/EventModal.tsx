@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -102,16 +101,6 @@ export const EventModal = ({
     const clientIdValue =
       form.client_id && form.client_id !== "" ? form.client_id : null;
     onSave({ ...form, client_id: clientIdValue }, initial?.id);
-    onClose();
-  }
-
-  // Delete confirmation dialog state (local, only shown if initial exists)
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  function handleDelete() {
-    if (onDelete && initial?.id) {
-      onDelete(initial.id);
-    }
-    setDeleteOpen(false);
     onClose();
   }
 
@@ -227,29 +216,6 @@ export const EventModal = ({
         </label>
       </div>
 
-      {/* Type selector */}
-      <div className="flex flex-row gap-2">
-        <label className="flex items-center gap-1">
-          <span className="text-xs text-gray-500">Type</span>
-          <select
-            className="border rounded px-2 py-1 ml-1"
-            value={form.event_type}
-            onChange={(e) =>
-              setForm((f) => ({
-                ...f,
-                event_type: e.target.value as EventType,
-              }))
-            }
-          >
-            {EVENT_TYPES.map((et) => (
-              <option key={et.value} value={et.value}>
-                {et.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
       {/* Action buttons */}
       <div
         className={`flex gap-2 justify-end mt-3 ${
@@ -271,40 +237,6 @@ export const EventModal = ({
         >
           {initial ? "Save Changes" : "Add Session"}
         </Button>
-        {initial?.id && onDelete && (
-          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-            <AlertDialogTrigger asChild>
-              <Button
-                type="button"
-                variant="destructive"
-                className={isMobile ? "w-full" : ""}
-                onClick={() => setDeleteOpen(true)}
-              >
-                Delete
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to delete this session?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action is permanent and cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel asChild>
-                  <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
-                    Cancel
-                  </Button>
-                </AlertDialogCancel>
-                <AlertDialogAction asChild>
-                  <Button type="button" variant="destructive" onClick={handleDelete}>
-                    Delete Session
-                  </Button>
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
       </div>
     </div>
   );
