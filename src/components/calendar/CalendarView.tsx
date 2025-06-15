@@ -2,7 +2,7 @@
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import MonthView from "./views/MonthView";
-import { ProfessionalWeekView } from "./views/ProfessionalWeekView";
+import WeekView from "./views/WeekView";
 import DayView from "./views/DayView";
 import SessionCardsMobile from "./SessionCardsMobile";
 import { MobileDaySelector } from "./MobileDaySelector";
@@ -16,7 +16,6 @@ type Props = {
   sessions: CalendarSession[];
   onSessionClick: (session: CalendarSession) => void;
   onMoveSession: (id: string, newStart: Date, newEnd: Date) => void;
-  onCreateSession?: (date: Date, hour: number) => void;
   isMobile: boolean;
   setSelectedDay?: (date: Date) => void;
   clients?: ClientMap;
@@ -29,7 +28,6 @@ export const CalendarView = ({
   sessions,
   onSessionClick,
   onMoveSession,
-  onCreateSession,
   isMobile,
   setSelectedDay,
   clients,
@@ -52,22 +50,18 @@ export const CalendarView = ({
       </div>
     );
   }
-  
   if (view === "month")
     return <MonthView date={date} sessions={sessions} onSessionClick={onSessionClick} clients={clients} />;
-  
   if (view === "week")
     return (
-      <ProfessionalWeekView
+      <WeekView
         date={date}
         sessions={sessions}
         onSessionClick={onSessionClick}
         onMoveSession={onMoveSession}
-        onCreateSession={onCreateSession}
         clients={clients}
       />
     );
-  
   return (
     <DayView
       date={date}
@@ -78,5 +72,5 @@ export const CalendarView = ({
     />
   );
 };
-
 export default CalendarView;
+
