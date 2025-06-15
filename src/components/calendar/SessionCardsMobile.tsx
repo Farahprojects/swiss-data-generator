@@ -1,23 +1,13 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "./EventCard";
+import { isSameDay, sortByTime } from "@/utils/calendarHelpers";
 
 type Props = {
   sessions: CalendarSession[];
   onSessionClick: (session: CalendarSession) => void;
   selectedDay: Date;
 };
-const sortByTime = (a: CalendarSession, b: CalendarSession) =>
-  a.start_time.getTime() - b.start_time.getTime();
-
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getDate() === b.getDate() &&
-    a.getMonth() === b.getMonth() &&
-    a.getFullYear() === b.getFullYear()
-  );
-}
 
 const SessionCardsMobile = ({ sessions, onSessionClick, selectedDay }: Props) => {
   const filtered = sessions.filter(s => isSameDay(s.start_time, selectedDay));

@@ -1,20 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarSession, EventType } from "@/types/calendar";
-
-// Helper to safely map DB row to CalendarSession
-function mapRowToCalendarSession(s: any): CalendarSession {
-  return {
-    id: s.id,
-    title: s.title,
-    description: s.description ?? "",
-    start_time: new Date(s.start_time),
-    end_time: new Date(s.end_time),
-    client_id: s.client_id ?? undefined,
-    event_type: (s.event_type ?? "session") as EventType,
-    color_tag: s.color_tag ?? undefined,
-  };
-}
+import { mapRowToCalendarSession } from "@/utils/calendarHelpers";
 
 // Service for CRUD calendar sessions
 export const calendarSessionsService = {

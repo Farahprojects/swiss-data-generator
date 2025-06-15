@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Palette } from "lucide-react";
+import { COLOR_OPTIONS, EVENT_TYPES } from "@/constants/calendarConstants";
 
 type Props = {
   open: boolean;
@@ -15,23 +16,6 @@ type Props = {
   clients: { id: string; name: string }[];
   isMobile?: boolean;
 };
-
-const eventTypes: { label: string; value: EventType }[] = [
-  { label: "Session", value: "session" },
-  { label: "Check-in", value: "check-in" },
-  { label: "Task", value: "task" },
-  { label: "Other", value: "other" },
-];
-
-// 6 most popular solid colors
-const colorOptions = [
-  "#2563eb", // blue-600
-  "#ef4444", // red-500
-  "#22c55e", // green-500
-  "#eab308", // yellow-500
-  "#f97316", // orange-500
-  "#a21caf", // purple-800
-];
 
 export const EventModal = ({
   open,
@@ -167,7 +151,7 @@ export const EventModal = ({
               }))
             }
           >
-            {eventTypes.map((et) => (
+            {EVENT_TYPES.map((et) => (
               <option key={et.value} value={et.value}>
                 {et.label}
               </option>
@@ -178,7 +162,7 @@ export const EventModal = ({
         <div className="flex flex-col gap-1">
           <span className="text-xs text-gray-500">Color</span>
           <div className="flex gap-1 mt-1 flex-wrap">
-            {colorOptions.map((color) => (
+            {COLOR_OPTIONS.map((color) => (
               <button
                 key={color}
                 type="button"
