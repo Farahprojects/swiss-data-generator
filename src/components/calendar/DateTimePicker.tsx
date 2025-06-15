@@ -1,4 +1,3 @@
-
 import React from "react";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
@@ -68,11 +67,6 @@ export const DateTimePicker: React.FC<Props> = ({
   const CAL_WIDTH = 320; // px, matches Calendar
   const content = (
     <div className="flex flex-col items-center justify-center py-4 w-full" style={{ minWidth: CAL_WIDTH }}>
-      {label && (
-        <span className="w-full text-xs font-semibold mb-2 pl-2 text-left">
-          {label}
-        </span>
-      )}
       <div className="flex justify-center w-full mb-3">
         <Calendar
           selected={value}
