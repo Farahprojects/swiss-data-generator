@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -103,10 +102,14 @@ const UnifiedNavigation = ({
     setSearchParams(next, { replace: true });
   };
 
-  // NEW: Enable sidebar burger for clients page mobile too
-  const shouldShowBurgerMenu = isLoggedIn && isMobile && (
-    isDashboardPageWithBurgerMenu || (isMainDashboard && isMobile)
-  );
+  // Always show burger menu for /dashboard/clients when logged in, regardless of screen size
+  const shouldShowBurgerMenu =
+    isLoggedIn &&
+    (
+      isDashboardClientsPage ||
+      (isDashboardPageWithBurgerMenu && isMobile) ||
+      (isMainDashboard && isMobile)
+    );
 
   return (
     <>
@@ -298,4 +301,3 @@ const UnifiedNavigation = ({
 };
 
 export default UnifiedNavigation;
-
