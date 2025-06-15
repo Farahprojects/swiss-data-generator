@@ -12,6 +12,39 @@ type Props = {
   clientName?: string;
 };
 
+// Format time as: 4:23 - 5:23 pm 1h
+function formatTimeAndDuration(start: Date, end: Date) {
+  const startH = start.getHours();
+  const endH = end.getHours();
+  const startM = start.getMinutes();
+  const endM = end.getMinutes();
+
+  // Hour/min padding
+  const pad = (x: number) => x.toString().padStart(2, "0");
+
+  // Format: "h:mm"
+  const fmt = (h: number, m: number) => {
+    let h12 = h % 12;
+    if (h12 === 0) h12 = 12;
+    return `${h12}:${pad(m)}`;
+  };
+
+  // Calculate duration, rounding minutes
+  let ms = end.getTime() - start.getTime();
+  if (ms < 0) ms += 24 * 60 * 60 * 1000; // handle midnight wrap
+  const totalMinutes = Math.round(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  let durationStr = "";
+  if (hours > 0) durationStr += `${hours}h`;
+  if (minutes > 0) durationStr += (durationStr ? " " : "") + `${minutes}m`;
+
+  // Use AM/PM on only end time
+  const ampm = endH >= 12 ? "pm" : "am";
+
+  return `${fmt(startH, startM)} - ${fmt(endH, endM)}${ampm} ${durationStr}`;
+}
+
 export const EventCard = ({
   session,
   onClick,
@@ -53,12 +86,12 @@ export const EventCard = ({
         </Button>
       )}
     </div>
-    {/* Time */}
-    <div className="text-xs opacity-80 ml-6">
-      {session.start_time.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })} -{" "}
-      {session.end_time.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })}
+    {/* Time and duration display */}
+    <div className="text-xs opacity-80 ml-10">
+      {formatTimeAndDuration(session.start_time, session.end_time)}
     </div>
     {/* Description (for isDetailed) */}
     {isDetailed && <div className="text-xs mt-1">{session.description}</div>}
   </div>
 );
+
