@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -47,9 +48,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  */
 const checkForPendingEmailChange = async (sessionToken: string, userEmail: string) => {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
-
     const res = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
       method: 'POST',
       headers: {
@@ -58,15 +56,12 @@ const checkForPendingEmailChange = async (sessionToken: string, userEmail: strin
         Authorization: `Bearer ${sessionToken}`,
       },
       body: JSON.stringify({ email: userEmail }),
-      signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {
-    logToSupabase('email-check failed (timeout or error)', {
+    logToSupabase('email-check failed', {
       level: 'warn',
       page: 'AuthContext',
       data: { error: err instanceof Error ? err.message : String(err) },
@@ -119,19 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(supaSession);
 
       if (event === 'SIGNED_IN' && supaSession) {
+        // Check for pending email change after successful sign-in
         setIsPendingEmailCheck(true);
-
-        let timedOut = false;
-        const failsafe = setTimeout(() => {
-          timedOut = true;
-          setIsPendingEmailCheck(false);
-          logToSupabase('email-check timeout failsafe hit', {
-            level: 'warn',
-            page: 'AuthContext',
-            data: { forUser: supaSession.user?.email }
-          });
-        }, 3000); // Decreased to 3s
-
+        
+        // Defer the email check to avoid blocking the auth flow
         setTimeout(async () => {
           try {
             const emailCheckData = await checkForPendingEmailChange(
@@ -139,36 +125,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               supaSession.user.email || ''
             );
             
-            if (!timedOut) {
-              logToSupabase('email-check response in AuthContext', {
-                level: 'debug',
-                page: 'AuthContext',
-                data: emailCheckData,
-              });
+            logToSupabase('email-check response in AuthContext', {
+              level: 'debug',
+              page: 'AuthContext',
+              data: emailCheckData,
+            });
 
-              if (emailCheckData?.status === 'pending') {
-                setPendingEmailAddress(emailCheckData.pending_to);
-                logToSupabase('Pending email change detected, setting pendingEmailAddress', {
-                  level: 'info',
-                  page: 'AuthContext',
-                  data: { pendingTo: emailCheckData.pending_to }
-                });
-              } else {
-                setPendingEmailAddress(null);
-              }
-            }
-          } catch (error) {
-            if (!timedOut) {
-              logToSupabase('Error checking for pending email change', {
-                level: 'error',
+            if (emailCheckData?.status === 'pending') {
+              setPendingEmailAddress(emailCheckData.pending_to);
+              logToSupabase('Pending email change detected, setting pendingEmailAddress', {
+                level: 'info',
                 page: 'AuthContext',
-                data: { error: error instanceof Error ? error.message : String(error) }
+                data: { pendingTo: emailCheckData.pending_to }
               });
+            } else {
               setPendingEmailAddress(null);
             }
+          } catch (error) {
+            logToSupabase('Error checking for pending email change', {
+              level: 'error',
+              page: 'AuthContext',
+              data: { error: error instanceof Error ? error.message : String(error) }
+            });
+            setPendingEmailAddress(null);
           } finally {
-            if (!timedOut) setIsPendingEmailCheck(false);
-            clearTimeout(failsafe);
+            setIsPendingEmailCheck(false);
           }
         }, 0);
       }

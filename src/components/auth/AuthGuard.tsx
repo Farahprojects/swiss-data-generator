@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,21 +29,6 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     }
   }, [location.pathname, user, loading, isPasswordResetRoute, hasRecoveryToken, pendingEmailAddress]);
   
-  // Add: max loading fallback
-  const [loadingTimedOut, setLoadingTimedOut] = React.useState(false);
-  React.useEffect(() => {
-    let timeout: NodeJS.Timeout | undefined;
-    if ((loading || isPendingEmailCheck) && !loadingTimedOut) {
-      timeout = setTimeout(() => {
-        setLoadingTimedOut(true);
-        console.debug('[AuthGuard] Loading fallback timeout hit (10s)');
-      }, 10000);
-    }
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    }
-  }, [loading, isPendingEmailCheck, loadingTimedOut]);
-  
   // If user is on password reset route, don't apply auth guard
   if (isPasswordResetRoute) {
     log('debug', 'Password reset route detected, bypassing auth guard');
@@ -55,8 +41,8 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to={`/auth/password${location.search}`} replace />;
   }
   
-  // Loading only if both: genuinely loading and haven't hit fallback.
-  if ((loading || isPendingEmailCheck) && !loadingTimedOut) {
+  if (loading || isPendingEmailCheck) {
+    // Still loading auth state or checking for pending email, show loading
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -65,11 +51,6 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
         </div>
       </div>
     );
-  }
-  
-  // If user not set after fallback, redirect
-  if (loadingTimedOut && !user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
   // Not logged in, redirect to login
