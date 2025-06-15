@@ -28,7 +28,7 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const currentHour = now.getHours();
   const currentMinutes = now.getMinutes();
   // Compact slot height for improved density
-  const slotHeight = 40; // decreased from 56 for more density
+  const slotHeight = 40; // Keep density and match EmptySlot default
 
   // Date header formatting
   const dayNum = date.getDate();
@@ -112,6 +112,7 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                       <EmptySlot
                         timeLabel={`${hr}:00`}
                         interactive={true}
+                        height={slotHeight}
                         onCreate={() => {
                           // Optionally: trigger create event modal with this start time
                         }}

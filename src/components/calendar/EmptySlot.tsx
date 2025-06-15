@@ -5,18 +5,20 @@ type EmptySlotProps = {
   timeLabel?: string;
   onCreate?: () => void;
   interactive?: boolean;
+  height?: number; // NEW: controls height/thickness in px
 };
 
 const EmptySlot: React.FC<EmptySlotProps> = ({
   timeLabel,
   onCreate,
   interactive = true,
+  height = 40, // Default to 40px to match slotHeight in DayView
 }) => {
   return (
     <div
       className={`
         relative flex flex-col items-center justify-center
-        h-14 px-1
+        px-1
         rounded-lg transition
         ${interactive ? "cursor-pointer hover:bg-accent/70 hover:shadow-lg" : ""}
         group
@@ -24,7 +26,7 @@ const EmptySlot: React.FC<EmptySlotProps> = ({
         `}
       onClick={onCreate}
       style={{
-        minHeight: "48px",
+        minHeight: `${height}px`,
         border: "1px dashed #e5e7eb",
         zIndex: 0,
       }}
