@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Palette } from "lucide-react";
 import { COLOR_OPTIONS, EVENT_TYPES } from "@/constants/calendarConstants";
+import { DateTimePicker } from "./DateTimePicker";
 
 type Props = {
   open: boolean;
@@ -89,35 +90,39 @@ export const EventModal = ({
         }
         className={isMobile ? "mb-1" : ""}
       />
-      <div className={`flex ${isMobile ? "flex-col gap-1" : "gap-2"}`}>
-        <label className={isMobile ? "flex flex-col" : "flex-1"}>
-          <span className="text-xs text-gray-500">Start</span>
-          <Input
-            type="datetime-local"
-            value={form.start_time.toISOString().slice(0, 16)}
-            onChange={(e) =>
-              setForm((f) => ({
+      <div className={isMobile ? "flex flex-col gap-2" : "flex gap-2"}>
+        <div className="flex-1">
+          <DateTimePicker
+            label="Start"
+            value={form.start_time}
+            onChange={date => {
+              // When changing start date, if end is before start, push end to +1h
+              let end = form.end_time;
+              if (date >= end) {
+                end = new Date(date.getTime() + 60 * 60 * 1000);
+              }
+              setForm(f => ({
                 ...f,
-                start_time: new Date(e.target.value),
+                start_time: date,
+                end_time: end,
+              }));
+            }}
+            minDate={undefined}
+          />
+        </div>
+        <div className="flex-1">
+          <DateTimePicker
+            label="End"
+            value={form.end_time}
+            onChange={date =>
+              setForm(f => ({
+                ...f,
+                end_time: date,
               }))
             }
-            className={isMobile ? "text-sm" : ""}
+            minDate={form.start_time}
           />
-        </label>
-        <label className={isMobile ? "flex flex-col" : "flex-1"}>
-          <span className="text-xs text-gray-500">End</span>
-          <Input
-            type="datetime-local"
-            value={form.end_time.toISOString().slice(0, 16)}
-            onChange={(e) =>
-              setForm((f) => ({
-                ...f,
-                end_time: new Date(e.target.value),
-              }))
-            }
-            className={isMobile ? "text-sm" : ""}
-          />
-        </label>
+        </div>
       </div>
       <div>
         <label>
