@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Palette } from "lucide-react";
 import { COLOR_OPTIONS, EVENT_TYPES } from "@/constants/calendarConstants";
 import { DateTimePicker } from "./DateTimePicker";
+import { DurationPicker } from "./DurationPicker";
 
 type Props = {
   open: boolean;
@@ -18,6 +20,10 @@ type Props = {
   isMobile?: boolean;
 };
 
+function calculateEndTime(start: Date, duration: { hours: number; minutes: number }) {
+  return new Date(start.getTime() + duration.hours * 60 * 60 * 1000 + duration.minutes * 60 * 1000);
+}
+
 export const EventModal = ({
   open,
   onClose,
@@ -26,17 +32,29 @@ export const EventModal = ({
   clients,
   isMobile = false,
 }: Props) => {
+  // Initial duration logic
+  function getInitialDuration() {
+    if (initial) {
+      const diff = (initial.end_time.getTime() - initial.start_time.getTime()) / 1000 / 60;
+      const h = Math.floor(diff / 60);
+      const m = diff % 60;
+      return { hours: h, minutes: m };
+    }
+    return { hours: 1, minutes: 0 };
+  }
+
   const [form, setForm] = useState<Omit<CalendarSession, "id">>(
     initial || {
       title: "",
       description: "",
       start_time: new Date(),
-      end_time: new Date(),
+      end_time: new Date(Date.now() + 60 * 60 * 1000),
       client_id: "",
       event_type: "session",
       color_tag: "#2563eb",
     }
   );
+  const [duration, setDuration] = useState(getInitialDuration());
   const [showCustomColor, setShowCustomColor] = useState(false);
 
   useEffect(() => {
@@ -45,17 +63,26 @@ export const EventModal = ({
         title: "",
         description: "",
         start_time: new Date(),
-        end_time: new Date(),
+        end_time: new Date(Date.now() + 60 * 60 * 1000),
         client_id: "",
         event_type: "session",
         color_tag: "#2563eb",
       }
     );
+    setDuration(getInitialDuration());
     setShowCustomColor(false);
   }, [initial, open]);
 
+  // Update end time whenever start_time or duration changes
+  useEffect(() => {
+    setForm(f => ({
+      ...f,
+      end_time: calculateEndTime(f.start_time, duration),
+    }));
+  }, [form.start_time, duration]);
+
   function handleSave() {
-    if (!form.title || !form.start_time || !form.end_time) return;
+    if (!form.title || !form.start_time) return;
     // Use null for empty client_id
     const clientIdValue =
       form.client_id && form.client_id !== "" ? form.client_id : null;
@@ -90,40 +117,45 @@ export const EventModal = ({
         }
         className={isMobile ? "mb-1" : ""}
       />
+
       <div className={isMobile ? "flex flex-col gap-2" : "flex gap-2"}>
         <div className="flex-1">
           <DateTimePicker
-            label="Start"
+            label="Date & Start Time"
             value={form.start_time}
             onChange={date => {
-              // When changing start date, if end is before start, push end to +1h
-              let end = form.end_time;
-              if (date >= end) {
-                end = new Date(date.getTime() + 60 * 60 * 1000);
-              }
               setForm(f => ({
                 ...f,
                 start_time: date,
-                end_time: end,
               }));
             }}
             minDate={undefined}
           />
         </div>
-        <div className="flex-1">
-          <DateTimePicker
-            label="End"
-            value={form.end_time}
-            onChange={date =>
-              setForm(f => ({
-                ...f,
-                end_time: date,
-              }))
-            }
-            minDate={form.start_time}
+        <div className="flex-1 flex flex-col">
+          <span className="text-xs font-semibold mb-1">Duration</span>
+          <DurationPicker
+            value={duration}
+            onChange={setDuration}
           />
         </div>
       </div>
+      {/* Preview of calculated end time */}
+      <div className="text-xs text-muted-foreground">
+        Session:{" "}
+        {(() => {
+          const st = form.start_time;
+          const et = form.end_time;
+          const format12 = (d: Date) => {
+            const h = d.getHours() % 12 || 12;
+            const m = d.getMinutes().toString().padStart(2, "0");
+            const ampm = d.getHours() < 12 ? "AM" : "PM";
+            return `${h}:${m} ${ampm}`;
+          };
+          return `${format12(st)} – ${format12(et)}`;
+        })()}
+      </div>
+
       <div>
         <label>
           <span className="text-xs text-gray-500">Client</span>

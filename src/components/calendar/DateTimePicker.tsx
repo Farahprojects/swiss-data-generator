@@ -1,7 +1,7 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Check } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -35,36 +35,35 @@ export const DateTimePicker: React.FC<Props> = ({
   className = "",
   disabled,
 }) => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = React.useState(false);
   const isMobile = useIsMobile();
 
   function handleDaySelect(day: Date) {
-    // Merge time from previous value
-    const newDate = new Date(day);
-    newDate.setHours(value.getHours(), value.getMinutes(), 0, 0);
+    const newDate = new Date(value);
+    newDate.setFullYear(day.getFullYear(), day.getMonth(), day.getDate());
     onChange(newDate);
   }
-
   function handleTimeChange(newTime: Date) {
-    // Merge day from previous value
     const newDate = new Date(value);
     newDate.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0);
     onChange(newDate);
   }
-
-  const dateString = value ? format(value, "EEE, MMM d yyyy") : "";
-  const timeString = value ? format(value, "HH:mm") : "";
-
-  // Common min/max restrictions for date picker
   function dateDisabled(date: Date) {
     if (minDate && date < minDate) return true;
     if (maxDate && date > maxDate) return true;
     return false;
   }
+  const dateString = value ? format(value, "EEE, MMM d yyyy") : "";
+  // 12-hour format
+  const hour = value.getHours();
+  const hour12 = hour % 12 || 12;
+  const minute = value.getMinutes();
+  const ampm = hour < 12 ? "AM" : "PM";
+  const timeString = `${hour12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 
   const content = (
     <div className="flex flex-col gap-2 min-w-[220px]">
-      <span className="text-xs font-semibold mb-1">{label}</span>
+      {label && <span className="text-xs font-semibold mb-1">{label}</span>}
       <Calendar
         selected={value}
         onSelect={d => {
@@ -77,16 +76,14 @@ export const DateTimePicker: React.FC<Props> = ({
       />
       <div className="flex gap-2 items-center mt-1">
         <TimePicker value={value} onChange={handleTimeChange} />
-        <span className="text-muted-foreground text-xs">
-          {format(value, "HH:mm")}
-        </span>
+        <span className="text-muted-foreground text-xs">{timeString}</span>
       </div>
       <Button
         size="sm"
         onClick={() => setOpen(false)}
         className="flex gap-2 items-center mt-3 justify-center"
       >
-        <Check className="w-4 h-4" /> Done
+        Done
       </Button>
     </div>
   );
@@ -131,7 +128,6 @@ export const DateTimePicker: React.FC<Props> = ({
     );
   }
 
-  // Desktop: Popover
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
