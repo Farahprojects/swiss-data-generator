@@ -71,7 +71,10 @@ export const EventModal = ({
 
   function handleSave() {
     if (!form.title || !form.start_time || !form.end_time) return;
-    onSave(form, initial?.id);
+    // Use null for empty client_id
+    const clientIdValue =
+      form.client_id && form.client_id !== "" ? form.client_id : null;
+    onSave({ ...form, client_id: clientIdValue }, initial?.id);
     onClose();
   }
 

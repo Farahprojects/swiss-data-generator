@@ -137,6 +137,56 @@ export type Database = {
           },
         ]
       }
+      calendar_sessions: {
+        Row: {
+          client_id: string | null
+          coach_id: string
+          color_tag: string | null
+          created_at: string | null
+          description: string | null
+          end_time: string
+          event_type: string | null
+          id: string
+          start_time: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          coach_id: string
+          color_tag?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_time: string
+          event_type?: string | null
+          id?: string
+          start_time: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          coach_id?: string
+          color_tag?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_time?: string
+          event_type?: string | null
+          id?: string
+          start_time?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           avatar_url: string | null

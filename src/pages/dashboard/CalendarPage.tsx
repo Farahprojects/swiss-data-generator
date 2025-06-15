@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
+import { useClientsData } from "@/hooks/useClientsData";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileDaySelector } from "@/components/calendar/MobileDaySelector";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
@@ -23,7 +24,6 @@ const CalendarPage: React.FC = () => {
     return d;
   });
 
-  // When changing week, update selectedDay (mobile)
   React.useEffect(() => {
     if (isMobile) {
       const weekStart = new Date(currentDate);
@@ -45,8 +45,16 @@ const CalendarPage: React.FC = () => {
     moveSession,
   } = useCalendarSessions();
 
-  // Use all sessions; no filtering by client anymore
-  const filteredSessions = sessions;
+  // Fetch coach's actual clients
+  const { clients, loading: clientsLoading } = useClientsData();
+
+  // Transform client data to { id, name }
+  const clientOptions = React.useMemo(() =>
+    clients.map((c: any) => ({
+      id: c.id,
+      name: c.full_name || "Unnamed client",
+    })), [clients]
+  );
 
   function handleSaveSession(data: any, id?: string) {
     if (id) updateSession(id, data);
@@ -83,7 +91,7 @@ const CalendarPage: React.FC = () => {
           view={view}
           date={currentDate}
           selectedDay={isMobile ? selectedDay : undefined}
-          sessions={filteredSessions}
+          sessions={sessions}
           onSessionClick={session => {
             setEditing(session);
             setModalOpen(true);
@@ -98,7 +106,7 @@ const CalendarPage: React.FC = () => {
         onClose={() => setModalOpen(false)}
         onSave={handleSaveSession}
         initial={editing}
-        clients={[]} // No clients filter now
+        clients={clientOptions}
         isMobile={isMobile}
       />
     </div>
