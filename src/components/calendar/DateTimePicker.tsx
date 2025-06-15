@@ -66,10 +66,7 @@ export const DateTimePicker: React.FC<Props> = ({
   // Layout: center all content, match calendar width, button same width as calendar
   const CAL_WIDTH = 320; // px, matches Calendar
   const content = (
-    <div
-      className="flex flex-col items-center justify-center py-4 w-full"
-      style={{ minWidth: CAL_WIDTH }}
-    >
+    <div className="flex flex-col items-center justify-center py-4 w-full" style={{ minWidth: CAL_WIDTH }}>
       <div className="flex justify-center w-full mb-3">
         <Calendar
           selected={value}
@@ -137,11 +134,11 @@ export const DateTimePicker: React.FC<Props> = ({
             "p-0 m-0 bg-white border-none",
             "flex flex-col items-center justify-center",
             "!max-w-lg w-full",
-            "mt-[8px] mb-[8px] md:mt-[20px] md:mb-[20px] md:rounded-lg"
+            "md:top-1/2 md:bottom-auto md:left-1/2 md:translate-y-[-50%] md:-translate-x-1/2 md:fixed md:mx-0 md:rounded-lg"
           )}
           style={{
-            minHeight: 480,
-            maxHeight: "98vh",
+            minHeight: 440,
+            maxHeight: 540,
             padding: 0,
             display: "flex",
             justifyContent: "center",
