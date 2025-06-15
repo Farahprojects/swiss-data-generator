@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -109,7 +108,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   const getLivePreview = (template: any) => {
     return (
       <div 
-        className="w-full h-80 rounded-lg border bg-white shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
+        className="w-full rounded-lg border bg-white shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
         onClick={() => onSelectTemplate(template)}
       >
         {/* Browser Chrome */}
@@ -125,8 +124,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         </div>
 
         {/* Scrollable Template Preview */}
-        <div className="h-72 overflow-auto">
-          <div className="transform scale-[0.35] origin-top-left w-[285%] h-[285%]">
+        <div className="max-h-72 overflow-auto">
+          <div className="w-full">
             {getTemplateComponent(template)}
           </div>
         </div>
