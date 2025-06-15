@@ -77,7 +77,10 @@ export const TimePicker: React.FC<TimePickerProps> = ({
       </select>
       <select
         value={ampm}
-        onChange={e => setAmPm(e.target.value === "AM" ? "AM" : "PM")}
+        onChange={e => {
+          const val = e.target.value;
+          if (val === "AM" || val === "PM") setAmPm(val);
+        }}
         disabled={disabled}
         className="rounded px-2 py-1 border"
         aria-label="AM/PM"
