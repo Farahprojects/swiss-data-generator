@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -133,7 +132,6 @@ export const EventModal = ({
           />
         </div>
         <div className="flex-1 flex flex-col">
-          <span className="text-xs font-semibold mb-1">Duration</span>
           <DurationPicker
             value={duration}
             onChange={setDuration}
