@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -5,19 +6,20 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Palette } from "lucide-react";
 import { COLOR_OPTIONS, EVENT_TYPES } from "@/constants/calendarConstants";
 import { DateTimePicker } from "./DateTimePicker";
 import { DurationPicker } from "./DurationPicker";
+import { AlertDialog, AlertDialogContent, AlertDialogTrigger, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onSave: (event: Omit<CalendarSession, "id">, id?: string) => void;
+  onDelete?: (id: string) => void; // NEW: for deleting a session
   initial?: CalendarSession | null;
   clients: { id: string; name: string }[];
   isMobile?: boolean;
-  initialDate?: Date; // NEW: initial date for new event
+  initialDate?: Date;
 };
 
 function calculateEndTime(start: Date, duration: { hours: number; minutes: number }) {
@@ -28,12 +30,12 @@ export const EventModal = ({
   open,
   onClose,
   onSave,
+  onDelete,
   initial,
   clients,
   isMobile = false,
-  initialDate, // NEW
+  initialDate,
 }: Props) => {
-  // Initial duration logic
   function getInitialDuration() {
     if (initial) {
       const diff = (initial.end_time.getTime() - initial.start_time.getTime()) / 1000 / 60;
@@ -56,10 +58,8 @@ export const EventModal = ({
     }
   );
   const [duration, setDuration] = useState(getInitialDuration());
-  const [showCustomColor, setShowCustomColor] = useState(false);
-
+  // Remove custom color logic, showCustomColor
   useEffect(() => {
-    // OVERRIDE: if no initial (creating), use initialDate if provided
     setForm(
       initial
         ? initial
@@ -88,10 +88,8 @@ export const EventModal = ({
           }
     );
     setDuration(getInitialDuration());
-    setShowCustomColor(false);
   }, [initial, open, initialDate]);
 
-  // Update end time whenever start_time or duration changes
   useEffect(() => {
     setForm(f => ({
       ...f,
@@ -101,14 +99,23 @@ export const EventModal = ({
 
   function handleSave() {
     if (!form.title || !form.start_time) return;
-    // Use null for empty client_id
     const clientIdValue =
       form.client_id && form.client_id !== "" ? form.client_id : null;
     onSave({ ...form, client_id: clientIdValue }, initial?.id);
     onClose();
   }
 
-  // Modal content
+  // Delete confirmation dialog state (local, only shown if initial exists)
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  function handleDelete() {
+    if (onDelete && initial?.id) {
+      onDelete(initial.id);
+    }
+    setDeleteOpen(false);
+    onClose();
+  }
+
+  // -- UI LAYOUT STARTS HERE --
   const modalContent = (
     <div
       className={
@@ -136,27 +143,53 @@ export const EventModal = ({
         className={isMobile ? "mb-1" : ""}
       />
 
-      <div className={isMobile ? "flex flex-col gap-2" : "flex gap-2"}>
-        <div className="flex-1">
-          <DateTimePicker
-            label="Date & Start Time"
-            value={form.start_time}
-            onChange={date => {
-              setForm(f => ({
-                ...f,
-                start_time: date,
-              }));
-            }}
-            minDate={undefined}
-          />
-        </div>
-        <div className="flex-1">
-          <DurationPicker
-            value={duration}
-            onChange={setDuration}
-          />
+      {/* Date/time picker row */}
+      <div className="flex flex-col gap-2">
+        <DateTimePicker
+          label="Date & Start Time"
+          value={form.start_time}
+          onChange={date => {
+            setForm(f => ({
+              ...f,
+              start_time: date,
+            }));
+          }}
+          minDate={undefined}
+        />
+        {/* Duration + Color Row, horizontal on desktop, stacked on mobile */}
+        <div className={isMobile ? "flex flex-col gap-2 mt-2" : "flex flex-row gap-4 mt-2"}>
+          {/* Duration picker */}
+          <div className={isMobile ? "" : "flex-1"}>
+            <DurationPicker
+              value={duration}
+              onChange={setDuration}
+            />
+          </div>
+          {/* Color picker */}
+          <div className="flex flex-col gap-1 items-start">
+            <span className="text-xs text-gray-500 mb-1">Color</span>
+            <div className="flex gap-1 flex-wrap">
+              {COLOR_OPTIONS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`rounded-full border-2 ${
+                    form.color_tag === color
+                      ? "border-primary shadow-lg scale-110"
+                      : "border-transparent"
+                  } w-7 h-7 transition-all hover:scale-110`}
+                  style={{ backgroundColor: color }}
+                  aria-label={`Pick color ${color}`}
+                  onClick={() => {
+                    setForm((f) => ({ ...f, color_tag: color }));
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
       {/* Preview of calculated end time */}
       <div className="text-xs text-muted-foreground">
         Session:{" "}
@@ -173,6 +206,7 @@ export const EventModal = ({
         })()}
       </div>
 
+      {/* Client Picker */}
       <div>
         <label>
           <span className="text-xs text-gray-500">Client</span>
@@ -192,7 +226,9 @@ export const EventModal = ({
           </select>
         </label>
       </div>
-      <div className={`flex gap-2 ${isMobile ? "flex-col" : ""}`}>
+
+      {/* Type selector */}
+      <div className="flex flex-row gap-2">
         <label className="flex items-center gap-1">
           <span className="text-xs text-gray-500">Type</span>
           <select
@@ -212,29 +248,9 @@ export const EventModal = ({
             ))}
           </select>
         </label>
-        {/* Color Picker UI - only 5 colors, no custom */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-gray-500">Color</span>
-          <div className="flex gap-1 mt-1 flex-wrap">
-            {COLOR_OPTIONS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                className={`rounded-full border-2 ${
-                  form.color_tag === color
-                    ? "border-primary shadow-lg scale-110"
-                    : "border-transparent"
-                } w-7 h-7 transition-all hover:scale-110`}
-                style={{ backgroundColor: color }}
-                aria-label={`Pick color ${color}`}
-                onClick={() => {
-                  setForm((f) => ({ ...f, color_tag: color }));
-                }}
-              />
-            ))}
-          </div>
-        </div>
       </div>
+
+      {/* Action buttons */}
       <div
         className={`flex gap-2 justify-end mt-3 ${
           isMobile ? "flex-col-reverse items-stretch" : ""
@@ -255,11 +271,44 @@ export const EventModal = ({
         >
           {initial ? "Save Changes" : "Add Session"}
         </Button>
+        {initial?.id && onDelete && (
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                variant="destructive"
+                className={isMobile ? "w-full" : ""}
+                onClick={() => setDeleteOpen(true)}
+              >
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to delete this session?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action is permanent and cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel asChild>
+                  <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+                    Cancel
+                  </Button>
+                </AlertDialogCancel>
+                <AlertDialogAction asChild>
+                  <Button type="button" variant="destructive" onClick={handleDelete}>
+                    Delete Session
+                  </Button>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
     </div>
   );
 
-  // Use Radix Sheet for mobile and Dialog for desktop
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -280,7 +329,6 @@ export const EventModal = ({
     );
   }
 
-  // Desktop: Dialog remains the same for larger screens
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="">

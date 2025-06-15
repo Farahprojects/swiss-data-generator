@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
 import { useClientsData } from "@/hooks/useClientsData";
@@ -72,6 +71,12 @@ const CalendarPage: React.FC = () => {
     else createSession(data);
   }
 
+  function handleDeleteSession(id: string) {
+    deleteSession(id);
+    setModalOpen(false);
+    setEditing(null);
+  }
+
   // ------------------------
   // Month grid day click logic
   function handleDayClick(day: Date) {
@@ -141,6 +146,7 @@ const CalendarPage: React.FC = () => {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSaveSession}
+        onDelete={handleDeleteSession}
         initial={editing}
         clients={clientOptions}
         isMobile={isMobile}
