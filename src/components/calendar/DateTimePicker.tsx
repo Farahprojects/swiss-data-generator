@@ -53,35 +53,44 @@ export const DateTimePicker: React.FC<Props> = ({
   const ampm = hour < 12 ? "AM" : "PM";
   const timeString = `${hour12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 
-  // Mobile-style content, now sized to modal on desktop
+  // Polished modal-like card layout
   const content = (
-    <div className="flex flex-col gap-2 min-w-[260px] w-full max-w-md mx-auto">
-      {label && <span className="text-xs font-semibold mb-1">{label}</span>}
-      <Calendar
-        selected={value}
-        onSelect={d => {
-          if (d) handleDaySelect(d);
-        }}
-        mode="single"
-        initialFocus
-        disabled={dateDisabled}
-        className={cn("p-3 pointer-events-auto")}
-      />
-      <div className="flex gap-2 items-center mt-1">
+    <div className="flex flex-col w-full max-w-[370px] min-w-[270px] mx-auto py-2 items-center">
+      {label && (
+        <span className="w-full text-xs font-semibold mb-1 ml-1 text-left">
+          {label}
+        </span>
+      )}
+      <div className="flex justify-center w-full">
+        <Calendar
+          selected={value}
+          onSelect={d => {
+            if (d) handleDaySelect(d);
+          }}
+          mode="single"
+          initialFocus
+          disabled={dateDisabled}
+          className={cn("p-4 pointer-events-auto w-full max-w-[370px]")}
+        />
+      </div>
+      <div className="flex gap-2 items-center w-full mt-3 px-2">
         <TimePicker value={value} onChange={handleTimeChange} />
         <span className="text-muted-foreground text-xs">{timeString}</span>
       </div>
       <Button
         size="sm"
         onClick={() => setOpen(false)}
-        className="flex gap-2 items-center mt-3 justify-center"
+        className="w-full mt-5 rounded-lg bg-primary text-primary-foreground font-semibold py-3 text-base"
+        style={{
+          maxWidth: 370,
+        }}
       >
         Done
       </Button>
     </div>
   );
 
-  // Always use Sheet popover, but make it modal-sized on desktop
+  // Always use Sheet popover, make it modal-sized centered on desktop
   return (
     <>
       <Button
@@ -108,16 +117,17 @@ export const DateTimePicker: React.FC<Props> = ({
         <SheetContent
           side="bottom"
           className={cn(
-            "!max-w-md !w-full",
-            "h-auto min-h-[340px] max-h-[480px] flex flex-col items-center p-0 rounded-t-lg",
-            "md:rounded-lg md:top-1/2 md:bottom-auto md:translate-y-[-50%] md:left-1/2 md:-translate-x-1/2 md:fixed md:mx-0",
+            "!max-w-md !w-full flex justify-center items-center",
+            "h-auto min-h-[420px] max-h-[520px] p-0 md:rounded-lg md:top-1/2 md:bottom-auto md:translate-y-[-50%] md:left-1/2 md:-translate-x-1/2 md:fixed md:mx-0",
             "bg-white shadow-xl"
           )}
           style={{
-            minHeight: "340px",
-            maxHeight: "480px",
+            minHeight: 420,
+            maxHeight: 520,
             width: "100%",
-            justifyContent: "center"
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 0
           }}
         >
           {content}
