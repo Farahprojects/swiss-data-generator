@@ -131,9 +131,9 @@ export const DateTimePicker: React.FC<Props> = ({
           side="bottom"
           className={cn(
             "datetime-picker-no-overlay",
-            "p-0 m-0 bg-white shadow-xl border-none",
+            "p-0 m-0 bg-white border-none",
             "flex flex-col items-center justify-center",
-            "!max-w-md w-full",
+            "!max-w-lg w-full",
             "md:top-1/2 md:bottom-auto md:left-1/2 md:translate-y-[-50%] md:-translate-x-1/2 md:fixed md:mx-0 md:rounded-lg"
           )}
           style={{
