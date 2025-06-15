@@ -137,13 +137,14 @@ export const DateTimePicker: React.FC<Props> = ({
             "md:top-1/2 md:bottom-auto md:left-1/2 md:translate-y-[-50%] md:-translate-x-1/2 md:fixed md:mx-0 md:rounded-lg"
           )}
           style={{
-            minHeight: 480, // Increased from 440 to 480
-            maxHeight: 580, // Increased from 540 to 580
+            minHeight: 480,
+            maxHeight: 580,
             padding: 0,
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             zIndex: 50,
+            boxShadow: "none",
           }}
         >
           {content}
