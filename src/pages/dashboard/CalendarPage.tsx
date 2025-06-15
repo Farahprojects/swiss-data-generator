@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
 import { useClientsData } from "@/hooks/useClientsData";
@@ -68,6 +67,26 @@ const CalendarPage: React.FC = () => {
     else createSession(data);
   }
 
+  // New function to handle creating session from time slot click
+  function handleCreateSessionFromTimeSlot(date: Date, hour: number) {
+    const startTime = new Date(date);
+    startTime.setHours(hour, 0, 0, 0);
+    
+    const endTime = new Date(startTime);
+    endTime.setHours(hour + 1, 0, 0, 0);
+
+    setEditing({
+      title: "",
+      description: "",
+      start_time: startTime,
+      end_time: endTime,
+      client_id: "",
+      event_type: "session",
+      color_tag: "#2563eb",
+    });
+    setModalOpen(true);
+  }
+
   // Titles
   const mobileTitle = (
     <h1 className="text-xl font-bold mb-2 sm:hidden">Calendar</h1>
@@ -104,6 +123,7 @@ const CalendarPage: React.FC = () => {
             setModalOpen(true);
           }}
           onMoveSession={moveSession}
+          onCreateSession={handleCreateSessionFromTimeSlot}
           isMobile={isMobile}
           setSelectedDay={isMobile ? setSelectedDay : undefined}
           clients={clientMap}
