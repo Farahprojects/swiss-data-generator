@@ -111,10 +111,24 @@ const UnifiedNavigation = ({
       (isMainDashboard && isMobile)
     );
 
+  // Determine nav wrapper padding
+  // - Remove horizontal px-4 padding for mobile burger-menu dashboard pages
+  // - Keep px-4/etc for all other navs (public, desktop, etc)
+  let navWrapperClass =
+    "h-full max-w-none ";
+  if (
+    isDashboardPageWithBurgerMenu &&
+    isMobile
+  ) {
+    navWrapperClass += "px-0";
+  } else {
+    navWrapperClass += "px-4 sm:px-6 lg:px-8";
+  }
+
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 w-full h-16 bg-white z-50 shadow-sm border-b">
-        <div className="h-full max-w-none px-4 sm:px-6 lg:px-8">
+        <div className={navWrapperClass}>
           <div className="flex justify-between items-center h-full">
             {/* Left section */}
             <div className="flex items-center">
