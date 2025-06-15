@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
@@ -39,13 +38,27 @@ const isToday = (d: Date) => {
 };
 const isWeekend = (d: Date) => d?.getDay() === 0 || d?.getDay() === 6;
 
+const getCellClasses = (d: Date | null, dayIsToday: boolean, dayIsWeekend: boolean) => {
+  let base = "min-h-[60px] border p-1 flex flex-col gap-1 relative transition rounded-lg";
+  if (!d) {
+    base += " bg-muted/40 opacity-40 border-dashed border-muted";
+  } else if (dayIsToday) {
+    base += " bg-primary/10 border-2 border-primary shadow-lg animate-pulse";
+  } else if (dayIsWeekend) {
+    base += " bg-accent/30";
+  } else {
+    base += " bg-white";
+  }
+  return base;
+};
+
 const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const grid = getMonthGrid(date);
   return (
-    <div className="grid grid-cols-7 gap-[2px] border rounded overflow-hidden bg-gray-100">
+    <div className="grid grid-cols-7 gap-[2px] border rounded-lg overflow-hidden bg-gray-100 shadow">
       {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
         <div
-          className="py-1 px-2 text-xs font-bold border-b bg-white text-center"
+          className="py-1 px-2 text-xs font-extrabold border-b bg-white text-center shadow-sm"
           key={day}
         >
           {day}
@@ -54,22 +67,17 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
       {grid.flat().map((d, i) => {
         const dayIsToday = d && isToday(d);
         const dayIsWeekend = d && isWeekend(d);
-        const cellBg = dayIsToday
-          ? "bg-primary/5"
-          : dayIsWeekend
-          ? "bg-accent/20"
-          : "bg-white";
         return (
           <div
             key={i}
-            className={`min-h-[60px] ${cellBg} border p-1 flex flex-col gap-1 relative transition`}
+            className={getCellClasses(d, !!dayIsToday, !!dayIsWeekend)}
             style={{ borderColor: dayIsToday ? "#6951f3" : undefined }}
           >
             {d && (
               <span
-                className={`text-xs font-semibold absolute left-2 top-1 z-10 ${
-                  dayIsToday ? "text-primary" : ""
-                }`}
+                className={`text-xs font-extrabold absolute left-2 top-1 z-10 p-1 rounded transition
+                  ${dayIsToday ? "bg-primary text-white shadow" : ""}
+                `}
               >
                 {d.getDate()}
               </span>
@@ -86,9 +94,7 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                     return (
                       <EmptySlot
                         interactive={true}
-                        onCreate={() => {
-                          // Wire: pop create session modal for this date
-                        }}
+                        onCreate={() => {}}
                         timeLabel={undefined}
                       />
                     );
@@ -116,4 +122,3 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   );
 };
 export default MonthView;
-

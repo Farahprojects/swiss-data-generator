@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
@@ -23,6 +22,14 @@ const isToday = (date: Date) => {
   return now.toDateString() === date.toDateString();
 };
 
+const getBackgroundForHour = (hr: number) => {
+  if (hr < 9) return "bg-gradient-to-r from-sky-100 via-white to-sky-50"; // Early morning
+  if (hr >= 9 && hr < 12) return "bg-gradient-to-r from-accent/60 via-white to-accent/40"; // Morning/business
+  if (hr >= 12 && hr < 17) return "bg-gradient-to-r from-yellow-50 via-white to-yellow-100"; // Afternoon/business
+  if (hr >= 17 && hr < 20) return "bg-gradient-to-r from-orange-50 via-white to-orange-100"; // Evening
+  return "bg-muted";
+};
+
 const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const now = new Date();
   const showCurrentTime = isToday(date);
@@ -32,10 +39,23 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const slotHeight = 56; // px per slot (h-14), adjust if you change EmptySlot/EventCard heights
 
   return (
-    <div className={`border rounded overflow-hidden ${
-      isToday(date) ? "ring-2 ring-primary" : ""
-    } bg-gray-100`}>
+    <div className={`border rounded-lg shadow bg-gray-100 relative overflow-hidden ${isToday(date) ? "ring-2 ring-primary" : ""}`}>
       <div className="flex flex-col min-h-[400px] relative">
+        {/* Current time indicator (spanning the whole height) */}
+        {showCurrentTime && (
+          <div
+            className="absolute left-[72px] right-2 z-40 pointer-events-none"
+            style={{
+              top: ((currentHour - 8) * slotHeight + (currentMinutes / 60) * slotHeight) + "px",
+              height: "2px",
+            }}
+          >
+            <div className="flex items-center animate-pulse">
+              <div className="h-2 w-2 bg-primary rounded-full shadow border-2 border-white" />
+              <div className="flex-1 h-1 bg-primary opacity-90 rounded-full ml-2" />
+            </div>
+          </div>
+        )}
         {TIMEBLOCKS.map((hr, idx) => {
           // Events starting at this hour/timeblock
           const events = sessions.filter(
@@ -45,26 +65,18 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
           );
           // Business/after-hours background colors
           const isBusiness = hr >= BUSINESS_START && hr <= BUSINESS_END;
-          const bgColor = isBusiness
-            ? "bg-gradient-to-r from-white via-accent/60 to-white"
-            : "bg-gradient-to-r from-muted via-accent/40 to-muted";
+          const bgColor = getBackgroundForHour(hr);
 
           return (
-            <div key={hr} className={`flex items-start gap-1 border-b px-2 py-0 ${bgColor} relative`} style={{ minHeight: slotHeight }}>
-              {/* Render current time indicator within the slot for today */}
-              {showCurrentTime && idx === (currentHour - 8) && (
-                <div
-                  className="absolute left-0 right-0 top-0 z-10 flex items-center"
-                  style={{
-                    top: `${(currentMinutes / 60) * slotHeight}px`,
-                    height: "2px",
-                  }}
-                >
-                  <div className="h-2 w-2 bg-primary rounded-full shadow border border-white -ml-3" />
-                  <div className="flex-1 h-1 bg-primary/80 opacity-80 rounded" />
-                </div>
-              )}
-              <div className="w-16 text-xs text-muted-foreground font-bold">{`${hr}:00`}</div>
+            <div
+              key={hr}
+              className={`flex items-start gap-1 border-b px-2 py-0 ${bgColor} transition-all relative group ${isBusiness ? "shadow-xs" : ""}`}
+              style={{ minHeight: slotHeight, position: "relative" }}
+            >
+              {/* Hour label with bold highlight for now */}
+              <div className={`w-16 text-xs font-bold flex items-center justify-end select-none ${showCurrentTime && hr === currentHour ? "text-primary scale-110 animate-pulse" : "text-muted-foreground"}`}>
+                {`${hr}:00`}
+              </div>
               <div className="flex-1 flex gap-1">
                 {events.length > 0
                   ? events.map(sess => {
@@ -86,10 +98,7 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                     <EmptySlot
                       timeLabel={`${hr}:00`}
                       interactive={true}
-                      onCreate={() => {
-                        // Optionally: trigger create event modal with this start time
-                        // On integration, use a callback
-                      }}
+                      onCreate={() => {}}
                     />
                   )
                 }
@@ -102,4 +111,3 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   );
 };
 export default DayView;
-
