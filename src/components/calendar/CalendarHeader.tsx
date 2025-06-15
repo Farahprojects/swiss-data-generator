@@ -8,6 +8,7 @@ type Props = {
   today: Date;
   setToday: (date: Date) => void;
   clientFilterBar?: React.ReactNode;
+  isMobile?: boolean;
 };
 export const CalendarHeader = ({
   view,
@@ -16,6 +17,7 @@ export const CalendarHeader = ({
   today,
   setToday,
   clientFilterBar,
+  isMobile = false,
 }: Props) => {
   function nextUnit() {
     const d = new Date(today);
@@ -33,11 +35,13 @@ export const CalendarHeader = ({
   }
   return (
     <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-2 mb-4">
-      <div className="flex gap-2">
-        <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>Month</Button>
-        <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}>Week</Button>
-        <Button variant={view === "day" ? "default" : "outline"} size="sm" onClick={() => setView("day")}>Day</Button>
-      </div>
+      {!isMobile && (
+        <div className="flex gap-2">
+          <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>Month</Button>
+          <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}>Week</Button>
+          <Button variant={view === "day" ? "default" : "outline"} size="sm" onClick={() => setView("day")}>Day</Button>
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={prevUnit}>
           &lt;

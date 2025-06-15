@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
-import { CalendarHeader } from "@/components/calendar/CalendarHeader";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileDaySelector } from "@/components/calendar/MobileDaySelector";
+import CalendarHeader from "@/components/calendar/CalendarHeader";
 import CalendarView from "@/components/calendar/CalendarView";
 import { EventModal } from "@/components/calendar/EventModal";
 import { ClientFilter } from "@/components/calendar/ClientFilter";
@@ -22,16 +24,29 @@ const CalendarPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null); // session being edited
   const [clientFilter, setClientFilter] = useState("");
-  const [isMobile, setIsMobile] = useState(useIsMobile());
+  const isMobile = useIsMobile();
 
-  // Listen for window resize to toggle mobile mode
+  // Selected day for mobile view, defaults to currentDate at midnight
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  // When changing week, reset selected day to Sunday of week
   React.useEffect(() => {
-    function handleResize() {
-      setIsMobile(useIsMobile());
+    if (isMobile) {
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      // If selectedDay not in current week, set to weekStart
+      const diff = selectedDay.getTime() - weekStart.getTime();
+      if (diff < 0 || diff >= 7 * 24 * 60 * 60 * 1000) {
+        setSelectedDay(weekStart);
+      }
     }
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    // eslint-disable-next-line
+  }, [currentDate, isMobile]);
 
   const {
     sessions,
@@ -84,11 +99,13 @@ const CalendarPage: React.FC = () => {
             setValue={setClientFilter}
           />
         }
+        isMobile={isMobile}
       />
       <div className="flex-1 w-full mt-2">
         <CalendarView
           view={view}
           date={currentDate}
+          selectedDay={isMobile ? selectedDay : undefined}
           sessions={filteredSessions}
           onSessionClick={session => {
             setEditing(session);
@@ -96,6 +113,7 @@ const CalendarPage: React.FC = () => {
           }}
           onMoveSession={moveSession}
           isMobile={isMobile}
+          setSelectedDay={isMobile ? setSelectedDay : undefined}
         />
       </div>
       <EventModal
