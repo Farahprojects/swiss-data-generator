@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 
@@ -51,7 +50,7 @@ export const CalendarHeader = ({
         </Button>
       </div>
       <div className="flex-1">{clientFilterBar}</div>
-      <Button onClick={onAddSession} className="w-full sm:w-auto" variant="primary">
+      <Button onClick={onAddSession} className="w-full sm:w-auto">
         + Add Session
       </Button>
     </div>
