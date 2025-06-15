@@ -131,7 +131,7 @@ const ClientsPage = React.memo(() => {
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto">
+    <div className="space-y-4 w-full md:max-w-7xl md:mx-auto">
       <ClientsPageHeader {...headerProps} />
       {/* Always grid view on mobile, otherwise respect saved preference */}
       {effectiveViewMode === 'grid' ? (
