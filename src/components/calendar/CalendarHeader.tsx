@@ -68,11 +68,11 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Month selector (unchanged, still using pl-3, no tick)
+  // Month selector - font size reduced to text-base
   const monthSelector = (
     <Select onValueChange={handleMonthSelect} value={today.getMonth().toString()}>
       <SelectTrigger
-        className="w-[74px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-lg data-[state=open]:bg-transparent hover:bg-accent/20"
+        className="w-[74px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-base data-[state=open]:bg-transparent hover:bg-accent/20"
         aria-label="Select month"
         style={{ minWidth: 56, marginRight: 0, marginLeft: 0 }}
       >
@@ -86,7 +86,7 @@ export const CalendarHeader = ({
           <SelectItem
             value={idx.toString()}
             key={name}
-            className={`py-2 px-3 text-xl rounded-none pl-3 [&>span:first-child]:hidden ${
+            className={`py-2 px-3 text-base rounded-none pl-3 [&>span:first-child]:hidden ${
               today.getMonth() === idx
                 ? "bg-accent/40 text-primary font-bold"
                 : "bg-transparent text-popover-foreground font-normal"
@@ -100,26 +100,26 @@ export const CalendarHeader = ({
     </Select>
   );
 
-  // Year selector: increase width and minWidth to ensure digits are visible
+  // Year selector - text-base, widened further so '2025' etc. is never cut off
   const thisYear = today.getFullYear();
   const yearRange = Array.from({ length: 7 }, (_, i) => thisYear - 3 + i);
 
   const yearSelector = (
     <Select onValueChange={handleYearSelect} value={thisYear.toString()}>
       <SelectTrigger
-        className="w-[72px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-lg data-[state=open]:bg-transparent hover:bg-accent/20"
+        className="w-[80px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-base data-[state=open]:bg-transparent hover:bg-accent/20"
         aria-label="Select year"
-        style={{ minWidth: 64, marginRight: 0, marginLeft: 0 }}
+        style={{ minWidth: 76, marginRight: 0, marginLeft: 0 }}
       >
         <SelectValue>{thisYear}</SelectValue>
         <span style={{ display: "none" }} aria-hidden="true" />
       </SelectTrigger>
-      <SelectContent className="z-50 bg-popover p-0 min-w-fit w-24 text-xl max-h-64 overflow-y-auto">
+      <SelectContent className="z-50 bg-popover p-0 min-w-fit w-24 text-base max-h-64 overflow-y-auto">
         {yearRange.map((year) => (
           <SelectItem
             value={year.toString()}
             key={year}
-            className={`py-2 px-5 text-xl rounded-none pl-3 [&>span:first-child]:hidden ${
+            className={`py-2 px-5 text-base rounded-none pl-3 [&>span:first-child]:hidden ${
               thisYear === year
                 ? "bg-accent/40 text-primary font-bold"
                 : "bg-transparent text-popover-foreground font-normal"
@@ -133,7 +133,7 @@ export const CalendarHeader = ({
     </Select>
   );
 
-  // --- Main return with tighter week design ---
+  // --- Main return ---
   return (
     <div className="flex flex-col items-center gap-0 mb-4 w-full">
       {/* Desktop: inline */}
@@ -145,7 +145,7 @@ export const CalendarHeader = ({
             type="button"
             onClick={prevUnit}
             aria-label="Previous"
-            className="px-1 text-[1.7rem] font-semibold"
+            className="px-1 text-[1.5rem] font-semibold"
             style={{
               color: "#7C60F9",
               background: "transparent",
@@ -161,15 +161,16 @@ export const CalendarHeader = ({
           <button
             type="button"
             onClick={handleWeekClick}
-            className="font-semibold text-lg px-3 py-1 bg-accent/40 text-primary rounded transition-colors border-none outline-none shadow-none"
+            className="font-semibold text-base px-2 py-1 border-none outline-none shadow-none bg-transparent"
             aria-label="Jump to current week"
             style={{
-              minWidth: 54,
+              minWidth: 48,
               margin: "0 2px",
               cursor: "pointer",
               fontWeight: 700,
-              background: 'rgba(124,96,249,0.10)', // same as accent/40
+              background: "none",
               color: '#7C60F9',
+              borderRadius: 0,
             }}
           >
             Week
@@ -178,7 +179,7 @@ export const CalendarHeader = ({
             type="button"
             onClick={nextUnit}
             aria-label="Next"
-            className="px-1 text-[1.7rem] font-semibold"
+            className="px-1 text-[1.5rem] font-semibold"
             style={{
               color: "#7C60F9",
               background: "transparent",
@@ -208,7 +209,7 @@ export const CalendarHeader = ({
             type="button"
             onClick={prevUnit}
             aria-label="Previous"
-            className="px-1 text-[1.7rem] font-semibold"
+            className="px-1 text-[1.5rem] font-semibold"
             style={{
               color: "#7C60F9",
               background: "transparent",
@@ -224,15 +225,16 @@ export const CalendarHeader = ({
           <button
             type="button"
             onClick={handleWeekClick}
-            className="font-semibold text-lg px-3 py-1 bg-accent/40 text-primary rounded transition-colors border-none outline-none shadow-none"
+            className="font-semibold text-base px-2 py-1 border-none outline-none shadow-none bg-transparent"
             aria-label="Jump to current week"
             style={{
-              minWidth: 54,
+              minWidth: 48,
               margin: "0 2px",
               cursor: "pointer",
               fontWeight: 700,
-              background: 'rgba(124,96,249,0.10)',
+              background: "none",
               color: '#7C60F9',
+              borderRadius: 0,
             }}
           >
             Week
@@ -241,7 +243,7 @@ export const CalendarHeader = ({
             type="button"
             onClick={nextUnit}
             aria-label="Next"
-            className="px-1 text-[1.7rem] font-semibold"
+            className="px-1 text-[1.5rem] font-semibold"
             style={{
               color: "#7C60F9",
               background: "transparent",
