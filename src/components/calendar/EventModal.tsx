@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -24,15 +23,12 @@ const eventTypes: { label: string; value: EventType }[] = [
 ];
 
 const colorOptions = [
-  "#a5b4fc", // light indigo
-  "#fef08a", // yellow
-  "#bbf7d0", // green
-  "#fca5a5", // red
-  "#fdba74", // orange
-  "#fcd34d", // gold
-  "#67e8f9", // blue
-  "#c4b5fd", // purple
-  "#f9a8d4", // pink
+  "#2563eb", // blue-600
+  "#ef4444", // red-500
+  "#22c55e", // green-500
+  "#eab308", // yellow-500
+  "#f97316", // orange-500
+  "#a21caf", // purple-800
 ];
 
 export const EventModal = ({
@@ -210,7 +206,7 @@ export const EventModal = ({
                 <div className="mt-2 flex items-center gap-2">
                   <input
                     type="color"
-                    value={form.color_tag || "#a5b4fc"}
+                    value={form.color_tag || "#2563eb"}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, color_tag: e.target.value }))
                     }
