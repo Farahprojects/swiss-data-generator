@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -120,6 +119,7 @@ export const EventModal = ({
 
       <div className={isMobile ? "flex flex-col gap-2" : "flex gap-2"}>
         <div className="flex-1">
+          {/* Use inline DateTimePicker */}
           <DateTimePicker
             label="Date & Start Time"
             value={form.start_time}
@@ -130,6 +130,8 @@ export const EventModal = ({
               }));
             }}
             minDate={undefined}
+            inline
+            className="mb-2"
           />
         </div>
         <div className="flex-1 flex flex-col">
@@ -268,7 +270,7 @@ export const EventModal = ({
     </div>
   );
 
-  // Use Radix Sheet for mobile and Dialog for desktop
+  // Use Sheet for mobile, Dialog for desktop (unchanged)
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -289,7 +291,7 @@ export const EventModal = ({
     );
   }
 
-  // Desktop: Dialog remains the same for larger screens
+  // Desktop: Dialog (but now DateTimePicker is inline)
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="">
