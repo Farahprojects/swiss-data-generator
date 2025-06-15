@@ -19,45 +19,43 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
   return (
     <div
       className={cn(
-        "flex items-center w-full",
+        "flex items-center gap-2",
         className
       )}
     >
-      <div className="flex items-center gap-2 w-full border rounded-md px-3 py-2 bg-background">
-        <span className="font-medium text-sm min-w-[62px]">Duration</span>
-        <span className="mx-1 text-muted-foreground text-xs">H</span>
-        <select
-          value={value.hours}
-          onChange={e =>
-            onChange({ ...value, hours: Number(e.target.value) })
-          }
-          disabled={disabled}
-          className="rounded px-2 py-1 border text-sm focus:outline-none"
-          aria-label="Duration hours"
-        >
-          {Array.from({ length: 9 }, (_, i) => i).map(h => (
-            <option key={h} value={h}>
-              {h}
-            </option>
-          ))}
-        </select>
-        <span className="mx-1 text-muted-foreground text-xs">M</span>
-        <select
-          value={value.minutes}
-          onChange={e =>
-            onChange({ ...value, minutes: Number(e.target.value) })
-          }
-          disabled={disabled}
-          className="rounded px-2 py-1 border text-sm focus:outline-none"
-          aria-label="Duration minutes"
-        >
-          {[0, 15, 30, 45].map(m => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </div>
+      <span className="font-medium text-sm">Duration</span>
+      <span className="mx-1 text-muted-foreground text-xs">H</span>
+      <select
+        value={value.hours}
+        onChange={e =>
+          onChange({ ...value, hours: Number(e.target.value) })
+        }
+        disabled={disabled}
+        className="rounded px-2 py-1 border text-sm"
+        aria-label="Duration hours"
+      >
+        {Array.from({ length: 9 }, (_, i) => i).map(h => (
+          <option key={h} value={h}>
+            {h}
+          </option>
+        ))}
+      </select>
+      <span className="mx-1 text-muted-foreground text-xs">M</span>
+      <select
+        value={value.minutes}
+        onChange={e =>
+          onChange({ ...value, minutes: Number(e.target.value) })
+        }
+        disabled={disabled}
+        className="rounded px-2 py-1 border text-sm"
+        aria-label="Duration minutes"
+      >
+        {[0, 15, 30, 45].map(m => (
+          <option key={m} value={m}>
+            {m}
+          </option>
+        ))}
+      </select>
     </div>
   );
 };
