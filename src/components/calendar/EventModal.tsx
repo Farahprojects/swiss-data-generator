@@ -17,6 +17,7 @@ type Props = {
   initial?: CalendarSession | null;
   clients: { id: string; name: string }[];
   isMobile?: boolean;
+  initialDate?: Date; // NEW: initial date for new event
 };
 
 function calculateEndTime(start: Date, duration: { hours: number; minutes: number }) {
@@ -30,6 +31,7 @@ export const EventModal = ({
   initial,
   clients,
   isMobile = false,
+  initialDate, // NEW
 }: Props) => {
   // Initial duration logic
   function getInitialDuration() {
@@ -57,20 +59,37 @@ export const EventModal = ({
   const [showCustomColor, setShowCustomColor] = useState(false);
 
   useEffect(() => {
+    // OVERRIDE: if no initial (creating), use initialDate if provided
     setForm(
-      initial || {
-        title: "",
-        description: "",
-        start_time: new Date(),
-        end_time: new Date(Date.now() + 60 * 60 * 1000),
-        client_id: "",
-        event_type: "session",
-        color_tag: "#2563eb",
-      }
+      initial
+        ? initial
+        : {
+            title: "",
+            description: "",
+            start_time:
+              initialDate
+                ? (() => {
+                    const d = new Date(initialDate);
+                    d.setHours(9, 0, 0, 0);
+                    return d;
+                  })()
+                : new Date(),
+            end_time:
+              initialDate
+                ? (() => {
+                    const d = new Date(initialDate);
+                    d.setHours(10, 0, 0, 0);
+                    return d;
+                  })()
+                : new Date(Date.now() + 60 * 60 * 1000),
+            client_id: "",
+            event_type: "session",
+            color_tag: "#2563eb",
+          }
     );
     setDuration(getInitialDuration());
     setShowCustomColor(false);
-  }, [initial, open]);
+  }, [initial, open, initialDate]);
 
   // Update end time whenever start_time or duration changes
   useEffect(() => {

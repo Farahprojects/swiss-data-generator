@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 
@@ -8,6 +7,7 @@ type Props = {
   sessions: CalendarSession[];
   onSessionClick: (session: CalendarSession) => void;
   clients?: ClientMap;
+  onDayClick?: (date: Date) => void; // NEW
 };
 
 // Generate a 5x7 grid for the month, showing prev/next month days as needed
@@ -56,7 +56,7 @@ const isToday = (d: Date) => {
   return d?.toDateString() === now.toDateString();
 };
 
-const MobileMonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
+const MobileMonthView = ({ date, sessions, onSessionClick, clients = {}, onDayClick }: Props) => {
   const grid = getMonthGrid(date);
   const viewMonth = date.getMonth();
 
@@ -94,14 +94,13 @@ const MobileMonthView = ({ date, sessions, onSessionClick, clients = {} }: Props
                 touchAction: "manipulation",
                 borderWidth: isTodayCell ? 2 : 1,
                 borderRadius: isTodayCell ? 8 : 0,
+                cursor: inThisMonth ? "pointer" : "default",
+                opacity: inThisMonth ? 1 : 0.6,
               }}
               disabled={!inThisMonth}
               tabIndex={inThisMonth ? 0 : -1}
-              onClick={
-                inThisMonth && dayEvents.length > 0
-                  ? () => onSessionClick(dayEvents[0])
-                  : undefined
-              }
+              onClick={inThisMonth ? () => { onDayClick?.(d); } : undefined}
+              aria-label={inThisMonth ? `Add session on ${d.toDateString()}` : undefined}
             >
               <span
                 className={`text-base mt-2 ${textColor}`}
@@ -117,10 +116,9 @@ const MobileMonthView = ({ date, sessions, onSessionClick, clients = {} }: Props
                     minHeight: 22,
                   }}
                 >
-                  {dayEvents.length} {/* Show count of events */}
+                  {dayEvents.length}
                 </span>
               )}
-              {/* Optionally show extra events as "+N" in future */}
             </button>
           );
         })}

@@ -10,6 +10,7 @@ type Props = {
   sessions: CalendarSession[];
   onSessionClick: (session: CalendarSession) => void;
   clients?: ClientMap;
+  onDayClick?: (date: Date) => void; // NEW
 };
 
 // Helper: Generate a 5x7 grid, all real dates for prev/this/next month
@@ -59,7 +60,7 @@ const isToday = (d: Date) => {
   return d?.toDateString() === now.toDateString();
 };
 
-const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
+const MonthView = ({ date, sessions, onSessionClick, clients = {}, onDayClick }: Props) => {
   const grid = getMonthGrid(date);
   const viewMonth = date.getMonth();
   return (
@@ -89,10 +90,19 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
         );
 
         return (
-          <div
+          <button
             key={i}
-            className={`min-h-[60px] ${cellBg} border p-1 flex flex-col gap-1 relative transition`}
-            style={{ borderColor: isTodayCell ? "#6951f3" : undefined }}
+            className={`min-h-[60px] ${cellBg} border p-1 flex flex-col gap-1 relative transition group focus:z-10 focus:ring-2 outline-none`}
+            style={{
+              borderColor: isTodayCell ? "#6951f3" : undefined,
+              cursor: inThisMonth ? "pointer" : "default",
+              opacity: inThisMonth ? 1 : 0.6,
+            }}
+            type="button"
+            disabled={!inThisMonth}
+            tabIndex={inThisMonth ? 0 : -1}
+            onClick={inThisMonth ? () => { onDayClick?.(d); } : undefined}
+            aria-label={inThisMonth ? `Add session on ${d.toDateString()}` : undefined}
           >
             <span
               className={`text-xs font-semibold absolute left-2 top-1 z-10 ${textColor} flex items-baseline gap-0.5`}
@@ -108,7 +118,10 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
               {dayEvents.map(event => (
                 <button
                   key={event.id}
-                  onClick={() => onSessionClick(event)}
+                  onClick={e => {
+                    e.stopPropagation();
+                    onSessionClick(event);
+                  }}
                   className="rounded-full border-2 border-white shadow focus:outline-none focus:ring-2 focus:ring-primary/60"
                   style={{
                     width: 14,
@@ -122,7 +135,7 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                 />
               ))}
             </div>
-          </div>
+          </button>
         );
       })}
     </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
 import { useClientsData } from "@/hooks/useClientsData";
@@ -14,6 +13,7 @@ const CalendarPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
+  const [newSessionDate, setNewSessionDate] = useState<Date | null>(null);
   const isMobile = useIsMobile();
 
   // Selected day (for mobile day scrolling)
@@ -69,6 +69,12 @@ const CalendarPage: React.FC = () => {
 
   // Titles: all handled in CalendarHeader now
 
+  function handleDayClick(day: Date) {
+    setEditing(null);
+    setNewSessionDate(day);
+    setModalOpen(true);
+  } 
+
   return (
     <div className="max-w-6xl mx-auto p-2 py-6 flex flex-col">
       <CalendarHeader
@@ -76,6 +82,7 @@ const CalendarPage: React.FC = () => {
         setView={setView}
         onAddSession={() => {
           setEditing(null);
+          setNewSessionDate(null);
           setModalOpen(true);
         }}
         today={currentDate}
@@ -90,12 +97,14 @@ const CalendarPage: React.FC = () => {
           sessions={sessions}
           onSessionClick={session => {
             setEditing(session);
+            setNewSessionDate(null);
             setModalOpen(true);
           }}
           onMoveSession={moveSession}
           isMobile={isMobile}
           setSelectedDay={isMobile ? setSelectedDay : undefined}
           clients={clientMap}
+          onDayClick={handleDayClick}
         />
       </div>
       <EventModal
@@ -105,9 +114,9 @@ const CalendarPage: React.FC = () => {
         initial={editing}
         clients={clientOptions}
         isMobile={isMobile}
+        initialDate={editing ? undefined : newSessionDate || undefined}
       />
     </div>
   );
 };
 export default CalendarPage;
-

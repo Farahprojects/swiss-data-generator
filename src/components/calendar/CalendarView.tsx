@@ -19,6 +19,7 @@ type Props = {
   isMobile: boolean;
   setSelectedDay?: (date: Date) => void;
   clients?: ClientMap;
+  onDayClick?: (date: Date) => void;
 };
 
 export const CalendarView = ({
@@ -31,6 +32,7 @@ export const CalendarView = ({
   isMobile,
   setSelectedDay,
   clients,
+  onDayClick,
 }: Props) => {
   if (isMobile && view === "month") {
     // Mobile month view
@@ -40,6 +42,7 @@ export const CalendarView = ({
         sessions={sessions}
         onSessionClick={onSessionClick}
         clients={clients}
+        onDayClick={onDayClick}
       />
     );
   }
@@ -63,7 +66,7 @@ export const CalendarView = ({
     );
   }
   if (view === "month")
-    return <MonthView date={date} sessions={sessions} onSessionClick={onSessionClick} clients={clients} />;
+    return <MonthView date={date} sessions={sessions} onSessionClick={onSessionClick} clients={clients} onDayClick={onDayClick} />;
   if (view === "week")
     return (
       <WeekView
