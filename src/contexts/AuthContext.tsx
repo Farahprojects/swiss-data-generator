@@ -119,10 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(supaSession);
 
       if (event === 'SIGNED_IN' && supaSession) {
-        // Check for pending email change after successful sign-in
         setIsPendingEmailCheck(true);
 
-        // ---- Add TIMEOUT FAILSAFE to guarantee unblock even if stuck ----
         let timedOut = false;
         const failsafe = setTimeout(() => {
           timedOut = true;
@@ -132,9 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             page: 'AuthContext',
             data: { forUser: supaSession.user?.email }
           });
-        }, 6500); // Slightly longer than fetch timeout
+        }, 3000); // Decreased to 3s
 
-        // Defer the email check to avoid blocking the auth flow
         setTimeout(async () => {
           try {
             const emailCheckData = await checkForPendingEmailChange(
@@ -174,7 +171,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             clearTimeout(failsafe);
           }
         }, 0);
-        // ------------- END TIMEOUT PATCH -------------
       }
 
       if (event === 'SIGNED_OUT') {

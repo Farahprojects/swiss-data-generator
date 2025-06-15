@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +38,22 @@ const Login = () => {
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
+
+  // Add: loading failsafe timeout
+  useEffect(() => {
+    let timeout: NodeJS.Timeout | undefined;
+    if (loading) {
+      timeout = setTimeout(() => {
+        console.debug('[Login] Loading timeout hit');
+        setLoading(false);
+        setLoginAttempted(false);
+        setErrorMsg('Something went wrong; please try again.');
+      }, 10000); // 10 seconds
+    }
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    }
+  }, [loading]);
 
   // Check if we need to show verification modal based on AuthContext state
   useEffect(() => {
@@ -138,18 +153,32 @@ const Login = () => {
     setLoading(true);
     setErrorMsg('');
 
+    let done = false;
+    // Failsafe: always reset loading after 9 seconds even if something goes wrong in try
+    const minTimeout = setTimeout(() => {
+      if (!done) {
+        setLoading(false);
+        setLoginAttempted(false);
+        setErrorMsg('Login did not complete. Please reload and try again.');
+        console.error('[Login] Login failsafe triggered after 9s');
+      }
+    }, 9000);
+
     try {
       // STEP 1: password validation
       const { data, error } = await signIn(email, password);
 
       if (error) {
-        const msg = error.message.toLowerCase();
+        const msg = error.message?.toLowerCase() || '';
         if (msg.includes('confirm') || msg.includes('verification') || msg.includes('verify')) {
           openVerificationModal();
         } else {
           setErrorMsg('Invalid email or password');
         }
         setLoading(false);
+        setLoginAttempted(false);
+        done = true;
+        clearTimeout(minTimeout);
         return;
       }
 
@@ -159,6 +188,9 @@ const Login = () => {
       if (authedUser && !authedUser.email_confirmed_at) {
         openVerificationModal();
         setLoading(false);
+        setLoginAttempted(false);
+        done = true;
+        clearTimeout(minTimeout);
         return;
       }
 
@@ -167,8 +199,12 @@ const Login = () => {
         level: 'info',
         page: 'Login'
       });
+      setLoading(false);
+      setLoginAttempted(false);
+      done = true;
+      clearTimeout(minTimeout);
 
-      // Instead of navigating here, let the context/guard handle redirect.
+      // Let context/guard handle navigation
 
     } catch (err: any) {
       toast({
@@ -177,8 +213,9 @@ const Login = () => {
         variant: 'destructive',
       });
       setLoading(false);
-    } finally {
       setLoginAttempted(false);
+      done = true;
+      clearTimeout(minTimeout);
     }
   };
 
@@ -296,4 +333,3 @@ const Login = () => {
 };
 
 export default Login;
-
