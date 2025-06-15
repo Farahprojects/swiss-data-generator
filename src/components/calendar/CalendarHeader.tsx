@@ -69,11 +69,7 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Create 3 years: previous, current, next
-  const thisYear = today.getFullYear();
-  const yearRange = [thisYear - 1, thisYear, thisYear + 1];
-
-  // Month selector: wide, 3-letter name, no arrow
+  // Month selector: wide, 3-letter name, no arrow, highlight theme for selected
   const monthSelector = (
     <Select onValueChange={handleMonthSelect} value={today.getMonth().toString()}>
       <SelectTrigger
@@ -92,7 +88,13 @@ export const CalendarHeader = ({
           <SelectItem
             value={idx.toString()}
             key={name}
-            className="py-1 px-3 text-base"
+            className={`py-2 px-3 text-xl rounded-none ${
+              today.getMonth() === idx
+                ? "bg-accent/40 text-primary font-bold"
+                : "bg-transparent text-popover-foreground font-normal"
+            }`}
+            style={{ transition: "background 0.15s, color 0.15s" }}
+            // Remove indicator slot!
           >
             {name.slice(0, 3)}
           </SelectItem>
@@ -101,7 +103,11 @@ export const CalendarHeader = ({
     </Select>
   );
 
-  // Year selector: 3-year scrollable, centered on current year, no arrow
+  // Year selector: scrollable, highlight theme for selected
+  const thisYear = today.getFullYear();
+  // Generate a pretty scrollable window: 3 previous, 3 after (or customizable)
+  const yearRange = Array.from({ length: 7 }, (_, i) => thisYear - 3 + i);
+
   const yearSelector = (
     <Select onValueChange={handleYearSelect} value={thisYear.toString()}>
       <SelectTrigger
@@ -110,15 +116,19 @@ export const CalendarHeader = ({
         style={{ minWidth: 54, marginRight: 0, marginLeft: 0 }}
       >
         <SelectValue>{thisYear}</SelectValue>
-        {/* Hide dropdown arrow */}
         <span style={{ display: "none" }} aria-hidden="true" />
       </SelectTrigger>
-      <SelectContent className="z-50 bg-popover p-0 min-w-fit w-20 text-base max-h-40 overflow-y-auto">
+      <SelectContent className="z-50 bg-popover p-0 min-w-fit w-20 text-xl max-h-64 overflow-y-auto">
         {yearRange.map((year) => (
           <SelectItem
             value={year.toString()}
             key={year}
-            className="py-1 px-3 text-base"
+            className={`py-2 px-5 text-xl rounded-none ${
+              thisYear === year
+                ? "bg-accent/40 text-primary font-bold"
+                : "bg-transparent text-popover-foreground font-normal"
+            }`}
+            style={{ transition: "background 0.15s, color 0.15s" }}
           >
             {year}
           </SelectItem>
