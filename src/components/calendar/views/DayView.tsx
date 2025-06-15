@@ -31,10 +31,32 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   // Compute "current time" slot Y position
   const slotHeight = 56; // px per slot (h-14), adjust if you change EmptySlot/EventCard heights
 
+  // Date header formatting
+  const dayNum = date.getDate();
+  const monthName = date.toLocaleString("default", { month: "short" });
+  const weekdayName = date.toLocaleDateString(undefined, { weekday: "long" });
+
   return (
     <div className={`border rounded overflow-hidden ${
       isToday(date) ? "ring-2 ring-primary" : ""
     } bg-gray-100`}>
+      {/* Date header */}
+      <div className="flex items-center justify-center py-3 bg-white border-b relative">
+        <div className="flex flex-col items-center">
+          <span className={`text-3xl font-bold ${isToday(date) ? "text-primary" : ""}`}>
+            {dayNum} <span className="text-base font-normal text-muted-foreground">{monthName}</span>
+          </span>
+          <span className={`text-sm font-semibold mt-1 ${isToday(date) ? "text-primary" : "text-muted-foreground"}`}>
+            {weekdayName}
+          </span>
+        </div>
+        {isToday(date) && (
+          <span className="absolute right-4 top-1 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium">
+            Today
+          </span>
+        )}
+      </div>
+      {/* Time slots */}
       <div className="flex flex-col min-h-[400px] relative">
         {TIMEBLOCKS.map((hr, idx) => {
           // Events starting at this hour/timeblock
