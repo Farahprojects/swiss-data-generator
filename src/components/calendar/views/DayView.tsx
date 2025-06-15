@@ -1,9 +1,11 @@
+
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
 import EmptySlot from "../EmptySlot";
 import { formatClientNameForMobile } from "@/utils/clientsFormatters";
 
+// Highlight business hours 9-17 (inclusive), otherwise after-hours
 const BUSINESS_START = 9, BUSINESS_END = 17;
 const TIMEBLOCKS = Array.from({ length: 13 }, (_, i) => 8 + i); // 8:00-20:00
 
@@ -26,26 +28,28 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const showCurrentTime = isToday(date);
   const currentHour = now.getHours();
   const currentMinutes = now.getMinutes();
-  const slotHeight = 40;
+  // Compact slot height for improved density
+  const slotHeight = 40; // Keep density and match EmptySlot default
 
   return (
-    <div className="rounded overflow-hidden bg-white">
+    <div className={`rounded overflow-hidden bg-white ${
+      isToday(date) ? "ring-2 ring-primary" : ""
+    }`}>
       {/* Time slots */}
       <div className="flex flex-col min-h-[400px] relative">
         {TIMEBLOCKS.map((hr, idx) => {
+          // Events starting at this hour/timeblock
           const events = sessions.filter(
             sess =>
               sess.start_time.getHours() === hr &&
               sess.start_time.toDateString() === date.toDateString()
           );
+          // All slots have white bg
           const bgColor = "bg-white";
 
           return (
-            <div
-              key={hr}
-              className={`flex items-stretch gap-1 px-2 py-0 ${bgColor} relative`}
-              style={{ minHeight: slotHeight }}
-            >
+            <div key={hr} className={`flex items-stretch gap-1 px-2 py-0 ${bgColor} relative`} style={{ minHeight: slotHeight }}>
+              {/* Render current time indicator within the slot for today */}
               {showCurrentTime && idx === (currentHour - 8) && (
                 <div
                   className="absolute left-0 right-0 top-0 z-10 flex items-center"
@@ -58,31 +62,33 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                   <div className="flex-1 h-1 bg-primary/80 opacity-80 rounded" />
                 </div>
               )}
+              {/* Time label */}
               <div className="w-16 flex items-center text-xs text-muted-foreground font-bold h-full">{`${hr}:00`}</div>
+              {/* Events in one line (row) */}
               <div className="flex-1 flex flex-row gap-2 overflow-x-auto items-stretch min-h-0">
                 {events.length > 0
                   ? events.map(sess => {
-                      let clientName: string | undefined;
-                      if (sess.client_id && clients[sess.client_id]) {
-                        clientName = formatClientNameForMobile(clients[sess.client_id].name);
-                      }
-                      return (
-                        <div
-                          className="flex-1 min-w-[240px] max-w-full"
-                          key={sess.id}
-                          style={{ display: "flex", alignItems: "stretch" }}
-                        >
-                          <EventCard
-                            session={sess}
-                            onClick={() => onSessionClick(sess)}
-                            clientName={clientName}
-                            isDetailed={true}
-                            compact={true}
-                          />
-                        </div>
-                      );
-                    })
-                  : null}
+                    let clientName: string | undefined;
+                    if (sess.client_id && clients[sess.client_id]) {
+                      clientName = formatClientNameForMobile(clients[sess.client_id].name);
+                    }
+                    return (
+                      <div className="flex-1 min-w-[240px] max-w-full" key={sess.id} style={{ display: "flex", alignItems: "stretch" }}>
+                        <EventCard
+                          session={sess}
+                          onClick={() => onSessionClick(sess)}
+                          clientName={clientName}
+                          isDetailed={true}
+                          compact={true}
+                        />
+                      </div>
+                    );
+                  })
+                  : (
+                    // Render nothing for empty slots
+                    null
+                  )
+                }
               </div>
             </div>
           );
@@ -91,5 +97,4 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
     </div>
   );
 };
-
 export default DayView;
