@@ -24,7 +24,8 @@ const DashboardLayout = () => {
     location.pathname === '/dashboard/messages' ||
     location.pathname === '/dashboard/clients' ||
     location.pathname === '/dashboard/reports' ||
-    location.pathname === '/dashboard/reports/create'; // Burger menu for create report as well
+    location.pathname === '/dashboard/reports/create' ||
+    location.pathname === '/dashboard/calendar'; // Added calendar!
 
   // Handle settings route redirects
   useEffect(() => {

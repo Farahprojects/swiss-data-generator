@@ -57,7 +57,8 @@ const UnifiedNavigation = ({
     location.pathname === '/dashboard/messages' ||
     location.pathname === '/dashboard/clients' ||
     location.pathname === '/dashboard/reports' ||
-    location.pathname === '/dashboard/reports/create'
+    location.pathname === '/dashboard/reports/create' ||
+    location.pathname === '/dashboard/calendar'
   );
   const isDashboardPage = location.pathname.startsWith('/dashboard');
   const isMessagesPage = location.pathname === '/dashboard/messages';
