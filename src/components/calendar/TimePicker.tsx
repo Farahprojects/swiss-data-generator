@@ -1,4 +1,3 @@
-
 import React from "react";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +77,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
       </select>
       <select
         value={ampm}
-        onChange={e => setAmPm(e.target.value as "AM" | "PM")}
+        onChange={e => setAmPm(e.target.value === "AM" ? "AM" : "PM")}
         disabled={disabled}
         className="rounded px-2 py-1 border"
         aria-label="AM/PM"
