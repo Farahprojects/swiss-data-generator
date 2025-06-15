@@ -107,13 +107,14 @@ const UnifiedNavigation = ({
     setSearchParams(next, { replace: true });
   };
 
-  // Always show burger menu for /dashboard/clients when logged in, regardless of screen size
-  const shouldShowBurgerMenu =
+  // Determine if we are on a dashboard page where sidebar/burger is shown
+  const showDashboardBurgerMenu =
     isLoggedIn &&
     (
       isDashboardClientsPage ||
       (isDashboardPageWithBurgerMenu && isMobile) ||
-      (isMainDashboard && isMobile)
+      (isMainDashboard && isMobile) ||
+      (isDashboardPageWithBurgerMenu && !isMobile) // <-- add: show burger on desktop for these pages too
     );
 
   // Determine nav wrapper padding
@@ -137,7 +138,8 @@ const UnifiedNavigation = ({
           <div className="flex justify-between items-center h-full">
             {/* Left section */}
             <div className="flex items-center">
-              {shouldShowBurgerMenu ? (
+              {/* ---- DESKTOP & MOBILE BURGER BUTTON (controlled by showDashboardBurgerMenu) ---- */}
+              {showDashboardBurgerMenu ? (
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -167,7 +169,6 @@ const UnifiedNavigation = ({
                   />
                 </div>
               ) : (
-                // ... keep the existing logo behaviour
                 isLoggedIn && (
                   <Logo />
                 )
