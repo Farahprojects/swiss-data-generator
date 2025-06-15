@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { Button } from "@/components/ui/button";
@@ -87,11 +86,10 @@ export const EventCard = ({
       )}
     </div>
     {/* Time and duration display */}
-    <div className="text-xs opacity-80 ml-10">
+    <div className="text-xs opacity-80">
       {formatTimeAndDuration(session.start_time, session.end_time)}
     </div>
     {/* Description (for isDetailed) */}
     {isDetailed && <div className="text-xs mt-1">{session.description}</div>}
   </div>
 );
-
