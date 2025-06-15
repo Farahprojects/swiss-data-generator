@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 
@@ -13,7 +12,7 @@ type Props = {
   clients?: ClientMap;
 };
 
-// Helper: Generate a full 6x7 grid, but all are real dates
+// Helper: Generate a 5x7 grid, all real dates for prev/this/next month
 const getMonthGrid = (date: Date) => {
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -26,11 +25,11 @@ const getMonthGrid = (date: Date) => {
   const prevMonthYear = month === 0 ? year - 1 : year;
   const daysInPrevMonth = new Date(prevMonthYear, prevMonth + 1, 0).getDate();
 
-  // result: 6 rows × 7 days = 42 date objects, filled accordingly
+  // Only generate 5 rows × 7 days = 35 date objects (removes last row)
   const grid: Date[][] = [];
   let dayCounter = 1;
   let nextMonthDay = 1;
-  for (let row = 0; row < 6; row++) {
+  for (let row = 0; row < 5; row++) {
     const week: Date[] = [];
     for (let col = 0; col < 7; col++) {
       const idx = row * 7 + col;
