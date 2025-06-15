@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Select,
@@ -6,6 +7,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+// ADD:
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // Utility for month names
 const monthNames = [
@@ -48,7 +51,7 @@ export const CalendarHeader = ({
     }
   }
 
-  function handleWeekClick() {
+  function handleJumpToToday() {
     setToday(new Date());
   }
 
@@ -68,7 +71,7 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Month selector - font size reduced to text-base
+  // Month selector
   const monthSelector = (
     <Select onValueChange={handleMonthSelect} value={today.getMonth().toString()}>
       <SelectTrigger
@@ -100,7 +103,7 @@ export const CalendarHeader = ({
     </Select>
   );
 
-  // Year selector - text-base, widened further so '2025' etc. is never cut off
+  // Year selector
   const thisYear = today.getFullYear();
   const yearRange = Array.from({ length: 7 }, (_, i) => thisYear - 3 + i);
 
@@ -158,23 +161,39 @@ export const CalendarHeader = ({
           >
             &lt;
           </button>
-          <button
-            type="button"
-            onClick={handleWeekClick}
-            className="font-semibold text-base px-2 py-1 border-none outline-none shadow-none bg-transparent"
-            aria-label="Jump to current week"
-            style={{
-              minWidth: 48,
-              margin: "0 2px",
-              cursor: "pointer",
-              fontWeight: 700,
-              background: "none",
-              color: '#7C60F9',
-              borderRadius: 0,
-            }}
+          {/* Added ToggleGroup for view selection */}
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={v => v && setView(v as "month" | "week" | "day")}
+            className="ml-1 mr-1"
+            size="sm"
           >
-            Week
-          </button>
+            <ToggleGroupItem
+              value="month"
+              aria-label="Month view"
+              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
+              variant={view === "month" ? "default" : "outline"}
+            >
+              Month
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="week"
+              aria-label="Week view"
+              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
+              variant={view === "week" ? "default" : "outline"}
+            >
+              Week
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="day"
+              aria-label="Day view"
+              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
+              variant={view === "day" ? "default" : "outline"}
+            >
+              Day
+            </ToggleGroupItem>
+          </ToggleGroup>
           <button
             type="button"
             onClick={nextUnit}
@@ -222,23 +241,39 @@ export const CalendarHeader = ({
           >
             &lt;
           </button>
-          <button
-            type="button"
-            onClick={handleWeekClick}
-            className="font-semibold text-base px-2 py-1 border-none outline-none shadow-none bg-transparent"
-            aria-label="Jump to current week"
-            style={{
-              minWidth: 48,
-              margin: "0 2px",
-              cursor: "pointer",
-              fontWeight: 700,
-              background: "none",
-              color: '#7C60F9',
-              borderRadius: 0,
-            }}
+          {/* View toggle for mobile */}
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={v => v && setView(v as "month" | "week" | "day")}
+            className="ml-1 mr-1"
+            size="sm"
           >
-            Week
-          </button>
+            <ToggleGroupItem
+              value="month"
+              aria-label="Month view"
+              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
+              variant={view === "month" ? "default" : "outline"}
+            >
+              Month
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="week"
+              aria-label="Week view"
+              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
+              variant={view === "week" ? "default" : "outline"}
+            >
+              Week
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="day"
+              aria-label="Day view"
+              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
+              variant={view === "day" ? "default" : "outline"}
+            >
+              Day
+            </ToggleGroupItem>
+          </ToggleGroup>
           <button
             type="button"
             onClick={nextUnit}
