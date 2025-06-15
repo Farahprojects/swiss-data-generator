@@ -31,13 +31,10 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   // Compact slot height for improved density
   const slotHeight = 40; // Keep density and match EmptySlot default
 
-  // Removed date header (dayNum, monthName, weekdayName, "Today" badge)
-
   return (
     <div className={`border rounded overflow-hidden ${
       isToday(date) ? "ring-2 ring-primary" : ""
-    } bg-gray-100`}>
-      {/* Date header removed */}
+    } bg-white`}>
       {/* Time slots */}
       <div className="flex flex-col min-h-[400px] relative">
         {TIMEBLOCKS.map((hr, idx) => {
@@ -47,11 +44,8 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
               sess.start_time.getHours() === hr &&
               sess.start_time.toDateString() === date.toDateString()
           );
-          // Business/after-hours background colors
-          const isBusiness = hr >= BUSINESS_START && hr <= BUSINESS_END;
-          const bgColor = isBusiness
-            ? "bg-gradient-to-r from-white via-accent/60 to-white"
-            : "bg-gradient-to-r from-muted via-accent/40 to-muted";
+          // All slots have white bg
+          const bgColor = "bg-white";
 
           return (
             <div key={hr} className={`flex items-stretch gap-1 border-b px-2 py-0 ${bgColor} relative`} style={{ minHeight: slotHeight }}>
@@ -91,16 +85,8 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                     );
                   })
                   : (
-                    <div className="flex-1 flex items-stretch">
-                      <EmptySlot
-                        timeLabel={`${hr}:00`}
-                        interactive={true}
-                        height={slotHeight}
-                        onCreate={() => {
-                          // Optionally: trigger create event modal with this start time
-                        }}
-                      />
-                    </div>
+                    // Render nothing for empty slots
+                    null
                   )
                 }
               </div>
@@ -112,4 +98,3 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   );
 };
 export default DayView;
-
