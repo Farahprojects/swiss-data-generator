@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,11 @@ export const EventCard = ({
 }: Props) => (
   <div
     onClick={onClick}
-    className={`rounded-lg shadow border px-3 py-2 cursor-pointer flex flex-col gap-1 bg-white hover:bg-gray-50 transition`}
+    className={`
+      rounded-xl shadow-md border px-3 py-2 cursor-pointer flex flex-col gap-1 bg-white
+      hover:bg-accent/60 transition duration-200 transform hover:scale-[1.025]
+      group relative
+      `}
     style={{ color: "#242424", opacity: onClick ? 0.97 : 1 }}
   >
     {/* Top Row: Dot + Client Name */}
@@ -86,10 +91,11 @@ export const EventCard = ({
       )}
     </div>
     {/* Time and duration display */}
-    <div className="text-xs opacity-80">
+    <div className="text-xs font-bold opacity-90 mt-1 text-primary">
       {formatTimeAndDuration(session.start_time, session.end_time)}
     </div>
     {/* Description (for isDetailed) */}
-    {isDetailed && <div className="text-xs mt-1">{session.description}</div>}
+    {isDetailed && <div className="text-xs mt-1 text-muted-foreground">{session.description}</div>}
   </div>
 );
+
