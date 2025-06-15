@@ -48,7 +48,7 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
           const bgColor = "bg-white";
 
           return (
-            <div key={hr} className={`flex items-stretch gap-1 border-b px-2 py-0 ${bgColor} relative`} style={{ minHeight: slotHeight }}>
+            <div key={hr} className={`flex items-stretch gap-1 px-2 py-0 ${bgColor} relative`} style={{ minHeight: slotHeight }}>
               {/* Render current time indicator within the slot for today */}
               {showCurrentTime && idx === (currentHour - 8) && (
                 <div
