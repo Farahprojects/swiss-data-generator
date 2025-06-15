@@ -30,7 +30,7 @@ const generateTimeSlots = () => {
     slots.push({
       hour,
       time,
-      label: format(time, hour === 12 ? "12 PM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`),
+      label: format(time, hour === 12 ? "'12 PM'" : hour > 12 ? `'${hour - 12} PM'` : `'${hour} AM'`),
     });
   }
   return slots;
@@ -76,11 +76,13 @@ const CurrentTimeIndicator = () => {
 const EventCard = ({ 
   session, 
   onClick, 
-  clientName 
+  clientName,
+  style 
 }: { 
   session: CalendarSession; 
   onClick: () => void; 
   clientName?: string; 
+  style: React.CSSProperties;
 }) => {
   const formatTime = (date: Date) => format(date, "h:mm a");
   
@@ -89,6 +91,7 @@ const EventCard = ({
       onClick={onClick}
       className="absolute left-1 right-1 bg-white rounded-lg border-l-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden group hover:scale-[1.02] z-10"
       style={{ 
+        ...style,
         borderLeftColor: session.color_tag || "#3b82f6",
         backgroundColor: `${session.color_tag || "#3b82f6"}10`
       }}
