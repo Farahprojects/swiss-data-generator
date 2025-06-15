@@ -1,7 +1,6 @@
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
-import EmptySlot from "../EmptySlot";
 import { formatClientNameForMobile } from "@/utils/clientsFormatters";
 
 type ClientMap = Record<string, { id: string; name: string }>;
@@ -83,12 +82,8 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
               }}
             >
               {daySessions.length === 0 ? (
-                <EmptySlot
-                  interactive={true}
-                  onCreate={() => {
-                    // To wire: pop event modal for this date
-                  }}
-                />
+                // No "EmptySlot" or "Add Event" UI anymore; just leave cell empty
+                null
               ) : (
                 daySessions.map(sess => {
                   let clientName: string | undefined;
