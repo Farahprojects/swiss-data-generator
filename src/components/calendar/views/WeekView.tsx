@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
@@ -79,6 +80,7 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
               className={`border p-1 min-h-[120px] flex flex-col gap-1 transition ${dayBg} group relative`}
               style={{
                 borderColor: dayIsToday ? "#6951f3" : undefined,
+                borderWidth: dayIsToday ? "2px" : undefined,
               }}
             >
               {daySessions.length === 0 ? (

@@ -32,9 +32,9 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const slotHeight = 40; // Keep density and match EmptySlot default
 
   return (
-    <div className={`border rounded overflow-hidden ${
+    <div className={`border rounded overflow-hidden bg-white ${
       isToday(date) ? "ring-2 ring-primary" : ""
-    } bg-white`}>
+    }`}>
       {/* Time slots */}
       <div className="flex flex-col min-h-[400px] relative">
         {TIMEBLOCKS.map((hr, idx) => {
