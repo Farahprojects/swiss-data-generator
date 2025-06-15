@@ -1,8 +1,9 @@
+
 import React, { useMemo, useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileDaySelector } from "@/components/calendar/MobileDaySelector";
-import CalendarHeader from "@/components/calendar/CalendarHeader";
+import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import CalendarView from "@/components/calendar/CalendarView";
 import { EventModal } from "@/components/calendar/EventModal";
 import { ClientFilter } from "@/components/calendar/ClientFilter";
@@ -12,11 +13,6 @@ const demoClients = [
   { id: "client2", name: "Dan Zhang" },
   { id: "client3", name: "Victoria Lee" },
 ];
-
-// Quick utility to check mobile
-function useIsMobile() {
-  return window.innerWidth < 700;
-}
 
 const CalendarPage: React.FC = () => {
   const [view, setView] = useState<"month" | "week" | "day">("week");
@@ -128,3 +124,4 @@ const CalendarPage: React.FC = () => {
   );
 };
 export default CalendarPage;
+
