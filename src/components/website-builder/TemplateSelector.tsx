@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -90,26 +89,28 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       backgroundStyle: 'solid'
     };
 
+    // Add isPreview={true} for all template renders in selection mode
     switch (templateType) {
       case 'modern':
-        return <ModernTemplate customizationData={defaultCustomizationData} />;
+        return <ModernTemplate customizationData={defaultCustomizationData} isPreview={true} />;
       case 'classic':
-        return <ClassicTemplate customizationData={defaultCustomizationData} />;
+        return <ClassicTemplate customizationData={defaultCustomizationData} isPreview={true} />;
       case 'minimal':
-        return <MinimalTemplate customizationData={defaultCustomizationData} />;
+        return <MinimalTemplate customizationData={defaultCustomizationData} isPreview={true} />;
       case 'creative':
-        return <CreativeTemplate customizationData={defaultCustomizationData} />;
+        return <CreativeTemplate customizationData={defaultCustomizationData} isPreview={true} />;
       case 'professional':
-        return <ProfessionalTemplate customizationData={defaultCustomizationData} />;
+        return <ProfessionalTemplate customizationData={defaultCustomizationData} isPreview={true} />;
       default:
-        return <ModernTemplate customizationData={defaultCustomizationData} />;
+        return <ModernTemplate customizationData={defaultCustomizationData} isPreview={true} />;
     }
   };
 
+  // Update: Remove all fixed heights (h-80, h-72), let container grow with content, scale to 50%.
   const getLivePreview = (template: any) => {
     return (
       <div 
-        className="w-full h-80 rounded-lg border bg-white shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
+        className="w-full rounded-lg border bg-white shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
         onClick={() => onSelectTemplate(template)}
       >
         {/* Browser Chrome */}
@@ -124,9 +125,9 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           </div>
         </div>
 
-        {/* Scrollable Template Preview */}
-        <div className="h-72 overflow-auto">
-          <div className="transform scale-[0.35] origin-top-left w-[285%] h-[285%]">
+        {/* Responsive Template Preview - scale to 50% for good fit */}
+        <div className="flex justify-center items-start bg-white py-4">
+          <div className="transform scale-50 origin-top w-[200%]">
             {getTemplateComponent(template)}
           </div>
         </div>
