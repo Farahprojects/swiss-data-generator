@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
@@ -30,7 +29,7 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
   const todayIdx = days.findIndex(isToday);
 
   return (
-    <div className="border rounded bg-gray-100 overflow-x-auto">
+    <div className="rounded bg-gray-100 overflow-x-auto">
       <div className="grid grid-cols-7">
         {days.map((day) => (
           <div
@@ -77,7 +76,7 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
           return (
             <div
               key={day.toISOString()}
-              className={`border p-1 min-h-[120px] flex flex-col gap-1 transition ${dayBg} group relative`}
+              className={`p-1 min-h-[120px] flex flex-col gap-1 transition ${dayBg} group relative`}
               style={{
                 borderColor: dayIsToday ? "#6951f3" : undefined,
                 borderWidth: dayIsToday ? "2px" : undefined,
