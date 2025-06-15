@@ -8,9 +8,9 @@ type TimePickerProps = {
   disabled?: boolean;
 };
 
-function to12Hour(hour: number) {
+function to12Hour(hour: number): { h: number; ampm: "AM" | "PM" } {
   const h = hour % 12 || 12;
-  const ampm = hour < 12 ? "AM" : "PM";
+  const ampm: "AM" | "PM" = hour < 12 ? "AM" : "PM";
   return { h, ampm };
 }
 function from12Hour(h: number, ampm: "AM" | "PM") {
