@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,12 @@ const UnifiedNavigation = ({
   
   const isLoggedIn = !!user;
   const isMainDashboard = location.pathname === '/dashboard';
-  const isDashboardPageWithBurgerMenu = location.pathname.startsWith('/dashboard') && !isMainDashboard;
+  const isDashboardClientsPage = location.pathname === '/dashboard/clients';
+  const isDashboardPageWithBurgerMenu = (
+    location.pathname === '/dashboard/website-builder' ||
+    location.pathname === '/dashboard/messages' ||
+    location.pathname === '/dashboard/clients'
+  );
   const isDashboardPage = location.pathname.startsWith('/dashboard');
   const isMessagesPage = location.pathname === '/dashboard/messages';
 
@@ -97,6 +103,11 @@ const UnifiedNavigation = ({
     setSearchParams(next, { replace: true });
   };
 
+  // NEW: Enable sidebar burger for clients page mobile too
+  const shouldShowBurgerMenu = isLoggedIn && isMobile && (
+    isDashboardPageWithBurgerMenu || (isMainDashboard && isMobile)
+  );
+
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 w-full h-16 bg-white z-50 shadow-sm border-b">
@@ -104,7 +115,7 @@ const UnifiedNavigation = ({
           <div className="flex justify-between items-center h-full">
             {/* Left section */}
             <div className="flex items-center">
-              {isLoggedIn && (isDashboardPageWithBurgerMenu || (isMainDashboard && isMobile)) ? (
+              {shouldShowBurgerMenu ? (
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -287,3 +298,4 @@ const UnifiedNavigation = ({
 };
 
 export default UnifiedNavigation;
+
