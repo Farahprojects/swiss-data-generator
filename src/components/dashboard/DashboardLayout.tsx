@@ -8,6 +8,7 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardBreadcrumb } from "@/components/dashboard/DashboardBreadcrumb";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SettingsModal } from "@/components/settings/SettingsModal";
 
 /**
  * Professional DashboardLayout with proper nested routing
@@ -53,7 +54,14 @@ const DashboardLayout = () => {
   }, [user, location.pathname]);
 
   // Dashboard pages with burger menu get full width without sidebar (like website builder, messages, clients)
-  if (isDashboardPageWithBurgerMenu) {
+  if (
+    location.pathname === '/dashboard/website-builder' ||
+    location.pathname === '/dashboard/messages' ||
+    location.pathname === '/dashboard/clients' ||
+    location.pathname === '/dashboard/reports' ||
+    location.pathname === '/dashboard/reports/create' ||
+    location.pathname === '/dashboard/calendar'
+  ) {
     return (
       <div className="min-h-screen flex flex-col w-full">
         <UnifiedNavigation />
@@ -62,6 +70,7 @@ const DashboardLayout = () => {
             <Outlet />
           </DashboardErrorBoundary>
         </main>
+        <SettingsModal />
       </div>
     );
   }
@@ -70,11 +79,11 @@ const DashboardLayout = () => {
   return (
     <div className="min-h-screen flex flex-col w-full">
       <UnifiedNavigation />
-      
+
       <div className="flex flex-1 w-full pt-16">
         <SidebarProvider defaultOpen={true}>
           <DashboardSidebar />
-          
+
           <SidebarInset className="flex flex-col flex-1">
             <main className="flex-1 p-4 md:p-6">
               <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
@@ -86,6 +95,7 @@ const DashboardLayout = () => {
           </SidebarInset>
         </SidebarProvider>
       </div>
+      <SettingsModal />
     </div>
   );
 };
