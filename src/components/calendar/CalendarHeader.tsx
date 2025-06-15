@@ -80,12 +80,12 @@ export const CalendarHeader = ({
         <div className="w-full flex flex-col items-center">
           <h1 className="text-xl font-bold mb-2">Calendar</h1>
         </div>
-        {/* Row 1: View toggle */}
+        {/* Row 1: View toggle (only Month and Week on mobile) */}
         <div className="flex justify-center w-full mb-1">
           <ToggleGroup
             type="single"
             value={view}
-            onValueChange={v => v && setView(v as "month" | "week" | "day")}
+            onValueChange={v => v && setView(v as "month" | "week")}
             className="gap-2"
             size="sm"
           >
@@ -104,14 +104,6 @@ export const CalendarHeader = ({
               variant={view === "week" ? "default" : "outline"}
             >
               Week
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="day"
-              aria-label="Day view"
-              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
-              variant={view === "day" ? "default" : "outline"}
-            >
-              Day
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
