@@ -1,4 +1,3 @@
-
 import React from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -58,10 +57,6 @@ export const CalendarHeader = ({
   setToday,
   isMobile = false,
 }: Props) => {
-  function handleJumpToToday() {
-    setToday(new Date());
-  }
-
   function nextUnit() {
     const d = new Date(today);
     if (view === "day") d.setDate(d.getDate() + 1);
@@ -78,7 +73,84 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Use CSS Grid for fixed, consistent positioning
+  // Mobile version: stacked layout
+  if (isMobile) {
+    return (
+      <div className="mb-4 w-full">
+        <div className="w-full flex flex-col items-center">
+          <h1 className="text-xl font-bold mb-2">Calendar</h1>
+        </div>
+        {/* Row 1: View toggle */}
+        <div className="flex justify-center w-full mb-1">
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={v => v && setView(v as "month" | "week" | "day")}
+            className="gap-2"
+            size="sm"
+          >
+            <ToggleGroupItem
+              value="month"
+              aria-label="Month view"
+              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
+              variant={view === "month" ? "default" : "outline"}
+            >
+              Month
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="week"
+              aria-label="Week view"
+              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
+              variant={view === "week" ? "default" : "outline"}
+            >
+              Week
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="day"
+              aria-label="Day view"
+              className="font-semibold text-base px-3 py-1 data-[state=on]:bg-primary/90 data-[state=on]:text-white"
+              variant={view === "day" ? "default" : "outline"}
+            >
+              Day
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+        {/* Row 2: Arrows + date label */}
+        <div className="flex items-center justify-center w-full mb-2">
+          <button
+            type="button"
+            onClick={prevUnit}
+            aria-label="Previous"
+            className="text-primary-600 hover:bg-primary/10 p-2 rounded-full transition"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <span className="text-base font-semibold px-2 select-none min-w-[120px] text-center truncate" style={{ maxWidth: 200 }}>
+            {formatPeriodLabel(today, view)}
+          </span>
+          <button
+            type="button"
+            onClick={nextUnit}
+            aria-label="Next"
+            className="text-primary-600 hover:bg-primary/10 p-2 rounded-full transition"
+          >
+            <ArrowRight size={20} />
+          </button>
+        </div>
+        {/* Row 3: +Session button */}
+        <div className="flex justify-center w-full">
+          <button
+            onClick={onAddSession}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded font-semibold w-full max-w-xs"
+          >
+            + Session
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop/tablet version (unchanged)
   return (
     <div className="mb-4 w-full">
       {/* Calendar Title */}
