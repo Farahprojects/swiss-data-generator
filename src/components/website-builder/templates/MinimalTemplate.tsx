@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -10,7 +11,7 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
   const themeColor = customizationData.themeColor || '#10B981';
   const fontFamily = customizationData.fontFamily || 'Inter';
 
-  const sectionPadding = isPreview ? 'py-4' : 'py-16 sm:py-24 lg:py-32';
+  const sectionPadding = isPreview ? 'py-6' : 'py-16 sm:py-24 lg:py-32';
   const heroSection = isPreview ? 'py-8' : 'min-h-screen';
 
   return (
@@ -39,81 +40,69 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
           </motion.div>
         </div>
       </section>
-      {isPreview ? (
-        <section className="py-2 bg-gray-50">
-          <div className="max-w-xl mx-auto px-4 sm:px-6 text-center">
-            <h2 className="text-lg font-light mb-2 text-gray-900">About</h2>
-            <p className="text-xs text-gray-600 font-light">
+
+      {/* Clean About */}
+      <section className={`${sectionPadding} bg-gray-50`}>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center"
+          >
+            <h2 className="text-2xl sm:text-3xl font-light mb-8 sm:mb-12 text-gray-900">About</h2>
+            <p className="text-base sm:text-lg text-gray-600 leading-relaxed font-light">
               {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
             </p>
-          </div>
-        </section>
-      ) : (
-        <>
-          {/* Clean About */}
-          <section className={`${sectionPadding} bg-gray-50`}>
-            <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Minimal Services List */}
+      <section className={`${sectionPadding} bg-white`}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <h2 className="text-2xl sm:text-3xl font-light mb-12 sm:mb-16 text-gray-900 text-center">Services</h2>
+          <div className="space-y-8 sm:space-y-12 lg:space-y-16">
+            {(customizationData.services || []).map((service: any, index: number) => (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-                className="text-center"
+                key={index}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: index * 0.2 }}
+                className="border-b border-gray-100 pb-6 sm:pb-8 lg:pb-12 last:border-b-0"
               >
-                <h2 className="text-2xl sm:text-3xl font-light mb-8 sm:mb-12 text-gray-900">About</h2>
-                <p className="text-base sm:text-lg text-gray-600 leading-relaxed font-light">
-                  {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
-                </p>
+                <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3 items-start lg:items-center">
+                  <h3 className="text-lg sm:text-xl font-light text-gray-900 break-words">{service.title}</h3>
+                  <p className="text-sm sm:text-base text-gray-600 font-light lg:col-span-1 leading-relaxed break-words">{service.description}</p>
+                  <div className="flex items-center justify-between lg:justify-end gap-4 flex-wrap">
+                    <span className="text-base sm:text-lg font-light text-gray-900">{service.price}</span>
+                    <Button 
+                      variant="ghost" 
+                      className="text-gray-600 hover:text-gray-900 font-light p-0 h-auto text-sm sm:text-base"
+                    >
+                      Details →
+                    </Button>
+                  </div>
+                </div>
               </motion.div>
-            </div>
-          </section>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          {/* Minimal Services List */}
-          <section className={`${sectionPadding} bg-white`}>
-            <div className="max-w-4xl mx-auto px-4 sm:px-6">
-              <h2 className="text-2xl sm:text-3xl font-light mb-12 sm:mb-16 text-gray-900 text-center">Services</h2>
-              <div className="space-y-8 sm:space-y-12 lg:space-y-16">
-                {(customizationData.services || []).map((service: any, index: number) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.6, delay: index * 0.2 }}
-                    className="border-b border-gray-100 pb-6 sm:pb-8 lg:pb-12 last:border-b-0"
-                  >
-                    <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3 items-start lg:items-center">
-                      <h3 className="text-lg sm:text-xl font-light text-gray-900 break-words">{service.title}</h3>
-                      <p className="text-sm sm:text-base text-gray-600 font-light lg:col-span-1 leading-relaxed break-words">{service.description}</p>
-                      <div className="flex items-center justify-between lg:justify-end gap-4 flex-wrap">
-                        <span className="text-base sm:text-lg font-light text-gray-900">{service.price}</span>
-                        <Button 
-                          variant="ghost" 
-                          className="text-gray-600 hover:text-gray-900 font-light p-0 h-auto text-sm sm:text-base"
-                        >
-                          Details →
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Minimal CTA */}
-          <section className={`${sectionPadding} bg-gray-50`}>
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
-              <h2 className="text-2xl sm:text-3xl font-light mb-6 sm:mb-8 text-gray-900">Let's Begin</h2>
-              <p className="text-base sm:text-lg text-gray-600 font-light mb-8 sm:mb-12">Simple. Focused. Transformative.</p>
-              <Button 
-                className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px]"
-                style={{ backgroundColor: themeColor }}
-              >
-                {customizationData.buttonText || "Start Conversation"}
-              </Button>
-            </div>
-          </section>
-        </>
-      )}
+      {/* Minimal CTA */}
+      <section className={`${sectionPadding} bg-gray-50`}>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-2xl sm:text-3xl font-light mb-6 sm:mb-8 text-gray-900">Let's Begin</h2>
+          <p className="text-base sm:text-lg text-gray-600 font-light mb-8 sm:mb-12">Simple. Focused. Transformative.</p>
+          <Button 
+            className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px]"
+            style={{ backgroundColor: themeColor }}
+          >
+            {customizationData.buttonText || "Start Conversation"}
+          </Button>
+        </div>
+      </section>
     </div>
   );
 };

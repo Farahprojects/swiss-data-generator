@@ -90,20 +90,19 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       backgroundStyle: 'solid'
     };
 
-    // Pass isPreview=true for compact mode in selector preview!
     switch (templateType) {
       case 'modern':
-        return <ModernTemplate customizationData={defaultCustomizationData} isPreview={true} />;
+        return <ModernTemplate customizationData={defaultCustomizationData} />;
       case 'classic':
-        return <ClassicTemplate customizationData={defaultCustomizationData} isPreview={true} />;
+        return <ClassicTemplate customizationData={defaultCustomizationData} />;
       case 'minimal':
-        return <MinimalTemplate customizationData={defaultCustomizationData} isPreview={true} />;
+        return <MinimalTemplate customizationData={defaultCustomizationData} />;
       case 'creative':
-        return <CreativeTemplate customizationData={defaultCustomizationData} isPreview={true} />;
+        return <CreativeTemplate customizationData={defaultCustomizationData} />;
       case 'professional':
-        return <ProfessionalTemplate customizationData={defaultCustomizationData} isPreview={true} />;
+        return <ProfessionalTemplate customizationData={defaultCustomizationData} />;
       default:
-        return <ModernTemplate customizationData={defaultCustomizationData} isPreview={true} />;
+        return <ModernTemplate customizationData={defaultCustomizationData} />;
     }
   };
 
