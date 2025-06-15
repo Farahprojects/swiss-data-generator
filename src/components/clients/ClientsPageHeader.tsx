@@ -41,16 +41,24 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
       <p className="text-muted-foreground -mt-1">Manage your client relationships and their journeys</p>
       
       {/* Controls Row */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             placeholder="Search clients by name..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 w-64"
+            // Make search bar smaller
+            className="pl-10 w-48"
           />
         </div>
+        <Button 
+          onClick={onNewClient}
+          className="flex items-center gap-2 flex-shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          {isMobile ? 'Client' : 'New Client'}
+        </Button>
         {/* DO NOT INCLUDE FILTER DROPDOWN SELECT */}
         {/* DO NOT RENDER VIEW TOGGLE ON MOBILE */}
         {!isMobile && (
@@ -73,14 +81,6 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
             </Button>
           </div>
         )}
-        
-        <Button 
-          onClick={onNewClient}
-          className="flex items-center gap-2 flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          New Client
-        </Button>
       </div>
       
       {searchTerm && (
