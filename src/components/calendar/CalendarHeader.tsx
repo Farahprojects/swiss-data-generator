@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 
@@ -9,21 +10,6 @@ type Props = {
   setToday: (date: Date) => void;
   isMobile?: boolean;
 };
-
-// Helper to get the week start and end dates
-function getWeekRangeString(date: Date): string {
-  const start = new Date(date);
-  start.setDate(date.getDate() - date.getDay());
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-
-  // Short month if same, otherwise both months
-  const format = (dt: Date) => dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  if (start.getMonth() === end.getMonth()) {
-    return `${format(start)} - ${end.getDate()}, ${end.getFullYear()}`;
-  }
-  return `${format(start)} - ${format(end)}, ${end.getFullYear()}`;
-}
 
 export const CalendarHeader = ({
   view,
@@ -48,18 +34,14 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Allows user to click the week range for fast jump to current week
+  // Allows user to click to jump to current week
   function handleWeekClick() {
-    const now = new Date();
-    setToday(now);
+    setToday(new Date());
   }
-
-  // For optional: Format "Week of 15 Jun, 2025"
-  // const weekOfString = `Week of ${today.toLocaleDateString(undefined, {day:"numeric", month:"short", year:"numeric"})}`;
 
   return (
     <div className="flex flex-col items-center gap-0 mb-4">
-      {/* Navigation and week label */}
+      {/* Navigation and minimal week pill */}
       <div className="flex items-center gap-2 justify-center">
         <Button
           variant="ghost"
@@ -69,23 +51,22 @@ export const CalendarHeader = ({
         >
           &lt;
         </Button>
-        {/* Clickable "Week" pill, styled in theme color */}
+        {/* Minimal, elegant clickable week pill */}
         <button
           type="button"
           onClick={handleWeekClick}
-          className="mx-2 px-6 py-2 rounded-full font-bold text-lg transition-colors select-none"
+          className="mx-2 px-8 py-2 rounded-full font-semibold text-xl transition-colors select-none border"
           style={{
-            // Use your ref image's light purple and border
+            borderColor: "#7C60F9",
+            background: "#F6F4FF",
             color: "#241783",
-            border: "3px solid #7C60F9", // theme border
-            background: "#F6F4FF", // matching your light purple bg
-            boxShadow: "0 0 0 1.5px #7C60F9 inset",
+            fontWeight: 700,
+            borderWidth: 2,
+            boxShadow: "none",
+            letterSpacing: 0.2,
           }}
         >
           Week
-          {/* Optionally use this line for "Week of ..." display instead:
-              {weekOfString}
-          */}
         </button>
         <Button
           variant="ghost"
