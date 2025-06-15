@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import MonthView from "./views/MonthView";
@@ -6,6 +5,7 @@ import WeekView from "./views/WeekView";
 import DayView from "./views/DayView";
 import SessionCardsMobile from "./SessionCardsMobile";
 import { MobileDaySelector } from "./MobileDaySelector";
+import MobileMonthView from "./views/MobileMonthView";
 
 type ClientMap = Record<string, { id: string; name: string }>;
 
@@ -32,7 +32,19 @@ export const CalendarView = ({
   setSelectedDay,
   clients,
 }: Props) => {
+  if (isMobile && view === "month") {
+    // Mobile month view
+    return (
+      <MobileMonthView
+        date={date}
+        sessions={sessions}
+        onSessionClick={onSessionClick}
+        clients={clients}
+      />
+    );
+  }
   if (isMobile && selectedDay && setSelectedDay) {
+    // Mobile week view (existing)
     return (
       <div>
         <MobileDaySelector
@@ -73,4 +85,3 @@ export const CalendarView = ({
   );
 };
 export default CalendarView;
-
