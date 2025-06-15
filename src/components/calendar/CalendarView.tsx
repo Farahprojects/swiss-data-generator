@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import MonthView from "./views/MonthView";
@@ -5,7 +6,6 @@ import WeekView from "./views/WeekView";
 import DayView from "./views/DayView";
 import SessionCardsMobile from "./SessionCardsMobile";
 import { MobileDaySelector } from "./MobileDaySelector";
-import ProfessionalWeekView from "./views/ProfessionalWeekView";
 
 type ClientMap = Record<string, { id: string; name: string }>;
 
@@ -19,7 +19,6 @@ type Props = {
   isMobile: boolean;
   setSelectedDay?: (date: Date) => void;
   clients?: ClientMap;
-  onTimeSlotClick?: (date: Date) => void;
 };
 
 export const CalendarView = ({
@@ -32,7 +31,6 @@ export const CalendarView = ({
   isMobile,
   setSelectedDay,
   clients,
-  onTimeSlotClick,
 }: Props) => {
   if (isMobile && selectedDay && setSelectedDay) {
     return (
@@ -54,18 +52,7 @@ export const CalendarView = ({
   }
   if (view === "month")
     return <MonthView date={date} sessions={sessions} onSessionClick={onSessionClick} clients={clients} />;
-  if (view === "week") {
-    if (!isMobile && onTimeSlotClick) {
-      return (
-        <ProfessionalWeekView
-          date={date}
-          sessions={sessions}
-          onSessionClick={onSessionClick}
-          clients={clients}
-          onTimeSlotClick={onTimeSlotClick}
-        />
-      );
-    }
+  if (view === "week")
     return (
       <WeekView
         date={date}
@@ -75,7 +62,6 @@ export const CalendarView = ({
         clients={clients}
       />
     );
-  }
   return (
     <DayView
       date={date}
@@ -87,3 +73,4 @@ export const CalendarView = ({
   );
 };
 export default CalendarView;
+
