@@ -60,7 +60,13 @@ const isToday = (d: Date) => {
   return d?.toDateString() === now.toDateString();
 };
 
-const MonthView = ({ date, sessions, onSessionClick, clients = {}, onDayClick }: Props) => {
+const MonthView = ({
+  date,
+  sessions,
+  onSessionClick,
+  clients = {},
+  onDayClick,
+}: Props) => {
   const grid = getMonthGrid(date);
   const viewMonth = date.getMonth();
   return (
@@ -101,8 +107,15 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {}, onDayClick }:
             type="button"
             disabled={!inThisMonth}
             tabIndex={inThisMonth ? 0 : -1}
-            onClick={inThisMonth ? () => { onDayClick?.(d); } : undefined}
-            aria-label={inThisMonth ? `Add session on ${d.toDateString()}` : undefined}
+            onClick={
+              inThisMonth
+                ? () => {
+                    // If events on day, open modal with list, else default add
+                    onDayClick?.(d);
+                  }
+                : undefined
+            }
+            aria-label={inThisMonth ? `View/add sessions on ${d.toDateString()}` : undefined}
           >
             <span
               className={`text-xs font-semibold absolute left-2 top-1 z-10 ${textColor} flex items-baseline gap-0.5`}
@@ -126,7 +139,7 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {}, onDayClick }:
                   style={{
                     width: 14,
                     height: 14,
-                    background: getDotColor(event.color_tag),
+                    background: event.color_tag || "#a5b4fc",
                   }}
                   title={event.title}
                   aria-label={event.title}

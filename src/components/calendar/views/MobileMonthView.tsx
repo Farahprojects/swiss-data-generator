@@ -100,7 +100,7 @@ const MobileMonthView = ({ date, sessions, onSessionClick, clients = {}, onDayCl
               disabled={!inThisMonth}
               tabIndex={inThisMonth ? 0 : -1}
               onClick={inThisMonth ? () => { onDayClick?.(d); } : undefined}
-              aria-label={inThisMonth ? `Add session on ${d.toDateString()}` : undefined}
+              aria-label={inThisMonth ? `View/add sessions on ${d.toDateString()}` : undefined}
             >
               <span
                 className={`text-base mt-2 ${textColor}`}

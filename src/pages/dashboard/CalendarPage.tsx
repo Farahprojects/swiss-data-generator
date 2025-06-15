@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
 import { useClientsData } from "@/hooks/useClientsData";
@@ -5,8 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import CalendarView from "@/components/calendar/CalendarView";
 import { EventModal } from "@/components/calendar/EventModal";
-
-// Removed the demoClients and ClientFilter logic
+import { DaySessionsModal } from "@/components/calendar/DaySessionsModal"; // NEW
 
 const CalendarPage: React.FC = () => {
   const [view, setView] = useState<"month" | "week" | "day">("week");
@@ -22,6 +22,10 @@ const CalendarPage: React.FC = () => {
     d.setHours(0, 0, 0, 0);
     return d;
   });
+
+  // New: Day session modal state
+  const [dayModalOpen, setDayModalOpen] = useState(false);
+  const [dayModalDate, setDayModalDate] = useState<Date | null>(null);
 
   React.useEffect(() => {
     if (isMobile) {
@@ -44,21 +48,22 @@ const CalendarPage: React.FC = () => {
     moveSession,
   } = useCalendarSessions();
 
-  // Fetch coach's actual clients
-  const { clients, loading: clientsLoading } = useClientsData();
+  const { clients } = useClientsData();
 
-  // Transform client data to { id, name }
-  const clientOptions = React.useMemo(() =>
-    clients.map((c: any) => ({
-      id: c.id,
-      name: c.full_name || "Unnamed client",
-    })), [clients]
+  const clientOptions = React.useMemo(
+    () =>
+      clients.map((c: any) => ({
+        id: c.id,
+        name: c.full_name || "Unnamed client",
+      })),
+    [clients]
   );
 
-  // Create client map for easy lookup
   const clientMap = React.useMemo(() => {
     const map: Record<string, { id: string; name: string }> = {};
-    clientOptions.forEach(c => { map[c.id] = c; });
+    clientOptions.forEach((c) => {
+      map[c.id] = c;
+    });
     return map;
   }, [clientOptions]);
 
@@ -67,13 +72,38 @@ const CalendarPage: React.FC = () => {
     else createSession(data);
   }
 
-  // Titles: all handled in CalendarHeader now
-
+  // ------------------------
+  // Month grid day click logic
   function handleDayClick(day: Date) {
-    setEditing(null);
-    setNewSessionDate(day);
+    // Find all sessions for this day
+    const sessionsForDay = sessions.filter(
+      (s) => s.start_time.toDateString() === day.toDateString()
+    );
+    if (sessionsForDay.length > 0) {
+      setDayModalDate(day);
+      setDayModalOpen(true);
+    } else {
+      setEditing(null);
+      setNewSessionDate(day);
+      setModalOpen(true);
+    }
+  }
+
+  function handleOpenEditSessionFromDayModal(session: any) {
+    setDayModalOpen(false);
+    setEditing(session);
+    setNewSessionDate(null);
     setModalOpen(true);
-  } 
+  }
+
+  function handleOpenAddSessionFromDayModal() {
+    setDayModalOpen(false);
+    setEditing(null);
+    setNewSessionDate(dayModalDate);
+    setModalOpen(true);
+  }
+
+  // ------------------------
 
   return (
     <div className="max-w-6xl mx-auto p-2 py-6 flex flex-col">
@@ -116,6 +146,22 @@ const CalendarPage: React.FC = () => {
         isMobile={isMobile}
         initialDate={editing ? undefined : newSessionDate || undefined}
       />
+
+      {/* NEW: DaySessionsModal */}
+      {dayModalDate && (
+        <DaySessionsModal
+          open={dayModalOpen}
+          onClose={() => setDayModalOpen(false)}
+          date={dayModalDate}
+          sessions={sessions.filter(
+            (s) => s.start_time.toDateString() === dayModalDate.toDateString()
+          )}
+          clients={clientOptions}
+          isMobile={isMobile}
+          onEditSession={handleOpenEditSessionFromDayModal}
+          onAddSession={handleOpenAddSessionFromDayModal}
+        />
+      )}
     </div>
   );
 };

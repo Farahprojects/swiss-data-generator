@@ -53,7 +53,8 @@ export const EventCard = ({
   isDetailed,
   clientName,
   compact = false,
-}: Props) => {
+  onEdit, // New optional prop
+}: Props & { onEdit?: () => void }) => {
   if (compact) {
     return (
       <div
@@ -87,6 +88,22 @@ export const EventCard = ({
         <span className="text-xs font-bold opacity-90 text-primary ml-auto whitespace-nowrap">
           {formatTimeAndDuration(session.start_time, session.end_time)}
         </span>
+        {/* Edit button (optional) */}
+        {onEdit && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={e => {
+              e.stopPropagation();
+              onEdit?.();
+            }}
+            className="ml-2"
+            aria-label="Edit session"
+          >
+            <Pencil size={16} />
+          </Button>
+        )}
         {/* Delete button (optional, only if onDelete exists) */}
         {onDelete && (
           <Button
