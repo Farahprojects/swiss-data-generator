@@ -131,7 +131,7 @@ export const EventModal = ({
             minDate={undefined}
           />
         </div>
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1">
           <DurationPicker
             value={duration}
             onChange={setDuration}
