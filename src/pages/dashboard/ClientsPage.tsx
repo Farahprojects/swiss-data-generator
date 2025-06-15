@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import { useClientViewMode } from '@/hooks/useClientViewMode';
@@ -44,8 +43,6 @@ const ClientsPage = React.memo(() => {
     backgroundRefreshing: clientsData.backgroundRefreshing,
     searchTerm: clientsData.searchTerm,
     onSearchChange: clientsData.setSearchTerm,
-    filterType: clientsData.filterType,
-    onFilterChange: clientsData.setFilterType,
     viewMode,
     onViewModeChange: updateViewMode,
     onNewClient: () => clientsModals.setModalState('showNewClientModal', true),

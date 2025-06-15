@@ -2,17 +2,14 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Grid, List, Info } from 'lucide-react';
-import { ViewMode, FilterType } from '@/types/clients-page';
+import { Grid, List, Plus, Search } from 'lucide-react';
+import { ViewMode } from '@/types/clients-page';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ClientsPageHeaderProps {
   backgroundRefreshing: boolean;
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  filterType: FilterType;
-  onFilterChange: (filter: FilterType) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   onNewClient: () => void;
@@ -24,8 +21,6 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
   backgroundRefreshing,
   searchTerm,
   onSearchChange,
-  filterType,
-  onFilterChange,
   viewMode,
   onViewModeChange,
   onNewClient,
@@ -56,49 +51,18 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
             className="pl-10 w-64"
           />
         </div>
-
-        <Select value={filterType} onValueChange={onFilterChange}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Clients</SelectItem>
-            <SelectItem value="most_active">Most Active</SelectItem>
-            <SelectItem value="report_ready">Report-Ready</SelectItem>
-            <SelectItem value="has_journal_no_report">Has Journal, No Report</SelectItem>
-          </SelectContent>
-        </Select>
-        
-        <div className="flex items-center border rounded-md">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => onViewModeChange('grid')}
-            className="rounded-r-none"
-          >
-            <Grid className="w-4 h-4" />
-          </Button>
-          {isMobile ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
-                    size="sm"
-                    disabled
-                    className="rounded-l-none cursor-not-allowed"
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <span>
-                    List view is not available on mobile screens
-                  </span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
+        {/* DO NOT INCLUDE FILTER DROPDOWN SELECT */}
+        {/* DO NOT RENDER VIEW TOGGLE ON MOBILE */}
+        {!isMobile && (
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => onViewModeChange('grid')}
+              className="rounded-r-none"
+            >
+              <Grid className="w-4 h-4" />
+            </Button>
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
               size="sm"
@@ -107,8 +71,8 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
             >
               <List className="w-4 h-4" />
             </Button>
-          )}
-        </div>
+          </div>
+        )}
         
         <Button 
           onClick={onNewClient}
