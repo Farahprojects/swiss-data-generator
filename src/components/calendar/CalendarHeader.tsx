@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 
@@ -55,9 +54,12 @@ export const CalendarHeader = ({
     setToday(now);
   }
 
+  // For optional: Format "Week of 15 Jun, 2025"
+  // const weekOfString = `Week of ${today.toLocaleDateString(undefined, {day:"numeric", month:"short", year:"numeric"})}`;
+
   return (
     <div className="flex flex-col items-center gap-0 mb-4">
-      {/* Navigation and week range */}
+      {/* Navigation and week label */}
       <div className="flex items-center gap-2 justify-center">
         <Button
           variant="ghost"
@@ -67,19 +69,23 @@ export const CalendarHeader = ({
         >
           &lt;
         </Button>
-        {/* Clickable week range, styled in theme color */}
+        {/* Clickable "Week" pill, styled in theme color */}
         <button
           type="button"
           onClick={handleWeekClick}
-          className="mx-2 px-3 py-1 rounded-full font-semibold transition-colors focus:outline-none"
+          className="mx-2 px-6 py-2 rounded-full font-bold text-lg transition-colors select-none"
           style={{
-            color: "var(--primary, #6951f3)",
-            border: "2px solid #6951f3",
-            background: "rgba(105,81,243,0.08)",
-            boxShadow: "0 0 0 1px #6951f3 inset",
+            // Use your ref image's light purple and border
+            color: "#241783",
+            border: "3px solid #7C60F9", // theme border
+            background: "#F6F4FF", // matching your light purple bg
+            boxShadow: "0 0 0 1.5px #7C60F9 inset",
           }}
         >
-          {getWeekRangeString(today)}
+          Week
+          {/* Optionally use this line for "Week of ..." display instead:
+              {weekOfString}
+          */}
         </button>
         <Button
           variant="ghost"
@@ -97,7 +103,7 @@ export const CalendarHeader = ({
           + Add Session
         </Button>
       </div>
-      {/* Remove client filter bar and view controls per user request */}
+      {/* No client filter or view controls */}
     </div>
   );
 };
