@@ -3,8 +3,9 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Grid, List } from 'lucide-react';
+import { Plus, Search, Grid, List, Info } from 'lucide-react';
 import { ViewMode, FilterType } from '@/types/clients-page';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ClientsPageHeaderProps {
   backgroundRefreshing: boolean;
@@ -16,6 +17,7 @@ interface ClientsPageHeaderProps {
   onViewModeChange: (mode: ViewMode) => void;
   onNewClient: () => void;
   filteredCount: number;
+  isMobile?: boolean;
 }
 
 export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
@@ -27,7 +29,8 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
   viewMode,
   onViewModeChange,
   onNewClient,
-  filteredCount
+  filteredCount,
+  isMobile = false,
 }) => {
   return (
     <div className="mt-8 space-y-4">
@@ -75,14 +78,36 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
           >
             <Grid className="w-4 h-4" />
           </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => onViewModeChange('list')}
-            className="rounded-l-none"
-          >
-            <List className="w-4 h-4" />
-          </Button>
+          {isMobile ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    disabled
+                    className="rounded-l-none cursor-not-allowed"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <span>
+                    List view is not available on mobile screens
+                  </span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => onViewModeChange('list')}
+              className="rounded-l-none"
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          )}
         </div>
         
         <Button 

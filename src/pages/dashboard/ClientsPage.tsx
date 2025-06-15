@@ -18,8 +18,10 @@ const ClientsPage = React.memo(() => {
   const isMobile = useIsMobile();
   
   // Use the saved view mode or default to 'grid' if none is set
+  // But force 'grid' on mobile for display
+  const effectiveViewMode = isMobile ? 'grid' : (savedViewMode || 'grid');
   const viewMode = savedViewMode || 'grid';
-  
+
   const clientsData = useClientsData();
   const clientsModals = useClientsModals({ 
     refreshClientsData: clientsData.refreshClientsData 
@@ -47,7 +49,8 @@ const ClientsPage = React.memo(() => {
     viewMode,
     onViewModeChange: updateViewMode,
     onNewClient: () => clientsModals.setModalState('showNewClientModal', true),
-    filteredCount: clientsData.clients.length
+    filteredCount: clientsData.clients.length,
+    isMobile, // pass mobile status for header
   };
 
   const commonProps = {
@@ -133,8 +136,8 @@ const ClientsPage = React.memo(() => {
   return (
     <div className="space-y-4 max-w-7xl mx-auto">
       <ClientsPageHeader {...headerProps} />
-      
-      {viewMode === 'grid' ? (
+      {/* Always grid view on mobile, otherwise respect saved preference */}
+      {effectiveViewMode === 'grid' ? (
         <ClientsGrid {...gridProps} />
       ) : (
         <ClientsTable {...tableProps} />
