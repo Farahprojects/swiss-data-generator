@@ -65,13 +65,12 @@ const Login = () => {
     }
   }, [location.state]);
 
-  // Redirect user ONLY when arriving on /login while already authenticated and no pending verification
+  // If user is already authenticated and not in a pending state, early redirect to dashboard.
   if (
     user &&
-    !loginAttempted &&
-    !showVerificationModal &&
     !pendingEmailAddress &&
     !isPendingEmailCheck &&
+    !showVerificationModal &&
     !window.location.pathname.includes('/auth/password')
   ) {
     const from = (location.state as any)?.from?.pathname || '/dashboard';
@@ -150,24 +149,26 @@ const Login = () => {
         } else {
           setErrorMsg('Invalid email or password');
         }
-        return setLoading(false);
+        setLoading(false);
+        return;
       }
 
       const authedUser = data?.user;
 
       // STEP 2: email not confirmed
       if (authedUser && !authedUser.email_confirmed_at) {
-        return openVerificationModal();
+        openVerificationModal();
+        setLoading(false);
+        return;
       }
 
-      // STEP 3: Successful login - navigate to dashboard
-      logToSupabase('Login successful, navigating to dashboard', {
+      // STEP 3: Success - DO NOT navigate programmatically.
+      logToSupabase('Login successful, waiting for AuthGuard/Context redirect', {
         level: 'info',
         page: 'Login'
       });
-      
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+
+      // Instead of navigating here, let the context/guard handle redirect.
 
     } catch (err: any) {
       toast({
@@ -181,9 +182,6 @@ const Login = () => {
     }
   };
 
-  // ──────────────────────────────────────────
-  // OAuth helpers
-  // ──────────────────────────────────────────
   const handleGoogleSignIn = async () => {
     // Disabled for now
     return;
@@ -201,8 +199,7 @@ const Login = () => {
       title: 'Email verified!',
       description: 'You can now continue to your dashboard.',
     });
-    const from = (location.state as any)?.from?.pathname || '/dashboard';
-    navigate(from, { replace: true });
+    // Let AuthGuard/context redirect, not direct navigation.
   };
 
   const handleVerificationCancelled = () => {
@@ -210,9 +207,6 @@ const Login = () => {
     clearPendingEmail();
   };
 
-  // ──────────────────────────────────────────
-  // render
-  // ──────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-screen">
       <UnifiedNavigation />
@@ -302,3 +296,4 @@ const Login = () => {
 };
 
 export default Login;
+
