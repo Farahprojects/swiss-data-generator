@@ -71,22 +71,17 @@ export const GmailMessageList = ({
     <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
       {/* Toolbar */}
       <div className="px-4 py-2 border-b bg-gray-50/50 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 pl-1">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={onSelectAll}
-              className="rounded"
-            />
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onArchiveSelected}>
-              <Archive className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onDeleteSelected}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <MoreHorizontal className="w-4 h-4" />
+        <div className="flex items-center gap-2 pl-1">
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={onSelectAll}
+            className="rounded"
+          />
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onArchiveSelected}>
+            <Archive className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onDeleteSelected}>
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       </div>
@@ -110,7 +105,7 @@ export const GmailMessageList = ({
                 formatDate={formatDate}
                 truncateText={truncateText}
                 onToggleStar={() => onToggleStar(message)}
-                mobileDense={mobileDense} // <-- NEW: pass down to row
+                mobileDense={mobileDense}
               />
             ))}
           </div>
@@ -165,7 +160,7 @@ const MessageRow = ({
         onClick={onSelect}
       >
         {/* First line */}
-        <div className="flex items-center gap-2 row-span-2">
+        <div className="flex items-center gap-2 row-span-2 pl-1">
           <Checkbox
             checked={isSelected}
             onCheckedChange={onCheckboxChange}
