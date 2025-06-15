@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
@@ -97,12 +96,13 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                       clientName = formatClientNameForMobile(clients[sess.client_id].name);
                     }
                     return (
-                      <div className="flex-1 min-w-[140px] max-w-xs" key={sess.id} style={{ display: "flex", alignItems: "stretch" }}>
+                      <div className="flex-1 min-w-[240px] max-w-full" key={sess.id} style={{ display: "flex", alignItems: "stretch" }}>
                         <EventCard
                           session={sess}
                           onClick={() => onSessionClick(sess)}
-                          isDetailed={false}
                           clientName={clientName}
+                          isDetailed={true}
+                          compact={true}
                         />
                       </div>
                     );
