@@ -8,6 +8,17 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TimePicker } from "./TimePicker";
 import { cn } from "@/lib/utils";
 
+// Custom inline style to hide the overlay for this picker only
+const transparentOverlayStyles = `
+  .datetime-picker-no-overlay[data-state="open"]::before {
+    content: "";
+    display: none !important;
+  }
+  .datetime-picker-no-overlay .fixed.bg-black\\/80 {
+    background: transparent !important;
+  }
+`;
+
 type Props = {
   label?: string;
   value: Date;
@@ -53,15 +64,16 @@ export const DateTimePicker: React.FC<Props> = ({
   const ampm = hour < 12 ? "AM" : "PM";
   const timeString = `${hour12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 
-  // Polished modal-like card layout
+  // Layout: center all content, match calendar width, button same width as calendar
+  const CAL_WIDTH = 320; // px, matches Calendar
   const content = (
-    <div className="flex flex-col w-full max-w-[370px] min-w-[270px] mx-auto py-2 items-center">
+    <div className="flex flex-col items-center justify-center py-4 w-full" style={{ minWidth: CAL_WIDTH }}>
       {label && (
-        <span className="w-full text-xs font-semibold mb-1 ml-1 text-left">
+        <span className="w-full text-xs font-semibold mb-2 pl-2 text-left">
           {label}
         </span>
       )}
-      <div className="flex justify-center w-full">
+      <div className="flex justify-center w-full mb-3">
         <Calendar
           selected={value}
           onSelect={d => {
@@ -70,19 +82,23 @@ export const DateTimePicker: React.FC<Props> = ({
           mode="single"
           initialFocus
           disabled={dateDisabled}
-          className={cn("p-4 pointer-events-auto w-full max-w-[370px]")}
+          className={cn("p-4 pointer-events-auto w-full max-w-[320px] rounded-lg shadow-md border")}
         />
       </div>
-      <div className="flex gap-2 items-center w-full mt-3 px-2">
+      <div className="flex gap-2 items-center mb-5 w-full justify-center">
         <TimePicker value={value} onChange={handleTimeChange} />
         <span className="text-muted-foreground text-xs">{timeString}</span>
       </div>
       <Button
         size="sm"
         onClick={() => setOpen(false)}
-        className="w-full mt-5 rounded-lg bg-primary text-primary-foreground font-semibold py-3 text-base"
+        className="rounded-lg bg-primary text-primary-foreground font-semibold text-base"
         style={{
-          maxWidth: 370,
+          width: CAL_WIDTH,
+          maxWidth: "100%",
+          minWidth: 160,
+          paddingTop: 12,
+          paddingBottom: 12,
         }}
       >
         Done
@@ -90,9 +106,12 @@ export const DateTimePicker: React.FC<Props> = ({
     </div>
   );
 
-  // Always use Sheet popover, make it modal-sized centered on desktop
+  // We inject inline style to ensure no overlay (only for this component)
+  // SheetContent given unique class for targeting overlay removal
   return (
     <>
+      {/* Inline override styles for overlay removal */}
+      <style>{transparentOverlayStyles}</style>
       <Button
         variant="outline"
         type="button"
@@ -117,17 +136,20 @@ export const DateTimePicker: React.FC<Props> = ({
         <SheetContent
           side="bottom"
           className={cn(
-            "!max-w-md !w-full flex justify-center items-center",
-            "h-auto min-h-[420px] max-h-[520px] p-0 md:rounded-lg md:top-1/2 md:bottom-auto md:translate-y-[-50%] md:left-1/2 md:-translate-x-1/2 md:fixed md:mx-0",
-            "bg-white shadow-xl"
+            "datetime-picker-no-overlay",
+            "p-0 m-0 bg-white shadow-xl border-none",
+            "flex flex-col items-center justify-center",
+            "!max-w-md w-full",
+            "md:top-1/2 md:bottom-auto md:left-1/2 md:translate-y-[-50%] md:-translate-x-1/2 md:fixed md:mx-0 md:rounded-lg"
           )}
           style={{
-            minHeight: 420,
-            maxHeight: 520,
-            width: "100%",
+            minHeight: 440,
+            maxHeight: 540,
+            padding: 0,
+            display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            padding: 0
+            zIndex: 50,
           }}
         >
           {content}
