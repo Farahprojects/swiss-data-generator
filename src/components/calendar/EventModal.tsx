@@ -212,7 +212,7 @@ export const EventModal = ({
             ))}
           </select>
         </label>
-        {/* Color Picker UI */}
+        {/* Color Picker UI - only 5 colors, no custom */}
         <div className="flex flex-col gap-1">
           <span className="text-xs text-gray-500">Color</span>
           <div className="flex gap-1 mt-1 flex-wrap">
@@ -229,36 +229,10 @@ export const EventModal = ({
                 aria-label={`Pick color ${color}`}
                 onClick={() => {
                   setForm((f) => ({ ...f, color_tag: color }));
-                  setShowCustomColor(false);
                 }}
               />
             ))}
-            <button
-              type="button"
-              className={`rounded-full border ${
-                showCustomColor
-                  ? "border-primary"
-                  : "border-gray-300 hover:border-gray-400"
-              } w-7 h-7 flex items-center justify-center bg-white ml-1`}
-              aria-label="Pick a custom color"
-              onClick={() => setShowCustomColor((v) => !v)}
-            >
-              <Palette size={20} className="text-gray-500" />
-            </button>
           </div>
-          {showCustomColor && (
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="color"
-                value={form.color_tag || "#2563eb"}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, color_tag: e.target.value }))
-                }
-                className="w-8 h-8 rounded border"
-              />
-              <span className="text-xs font-mono">{form.color_tag}</span>
-            </div>
-          )}
         </div>
       </div>
       <div

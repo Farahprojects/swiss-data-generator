@@ -1,14 +1,13 @@
 
 import { EventType } from "@/types/calendar";
 
-// Popular calendar hex colors
+// Limited to 5 official color hex codes for dot selector
 export const COLOR_OPTIONS = [
-  "#2563eb", // blue-600
-  "#ef4444", // red-500
-  "#22c55e", // green-500
-  "#eab308", // yellow-500
-  "#f97316", // orange-500
-  "#a21caf", // purple-800
+  "#2563eb", // blue (blue-600)
+  "#eab308", // yellow (yellow-500)
+  "#22c55e", // green (green-500)
+  "#ef4444", // red (red-500)
+  "#6951f3", // purple (theme primary)
 ];
 
 // Allowed event types
@@ -18,3 +17,4 @@ export const EVENT_TYPES: { label: string, value: EventType }[] = [
   { label: "Task", value: "task" },
   { label: "Other", value: "other" },
 ];
+
