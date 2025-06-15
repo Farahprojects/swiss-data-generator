@@ -148,7 +148,7 @@ export const EventModal = ({
         {/* Duration + Color Row, horizontal on desktop, stacked on mobile */}
         <div className={isMobile ? "flex flex-col gap-2 mt-2" : "flex flex-row gap-4 mt-2"}>
           {/* Duration picker */}
-          <div className={isMobile ? "" : "flex-1"}>
+          <div className={`${isMobile ? "" : "flex-1"} mt-[1px]`}>
             <DurationPicker
               value={duration}
               onChange={setDuration}
@@ -180,7 +180,7 @@ export const EventModal = ({
       </div>
 
       {/* Preview of calculated end time */}
-      <div className="text-xs text-muted-foreground">
+      <div className="text-xs text-muted-foreground font-bold">
         Session:{" "}
         {(() => {
           const st = form.start_time;
