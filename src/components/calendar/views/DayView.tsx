@@ -28,8 +28,8 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const showCurrentTime = isToday(date);
   const currentHour = now.getHours();
   const currentMinutes = now.getMinutes();
-  // Compute "current time" slot Y position
-  const slotHeight = 56; // px per slot (h-14), adjust if you change EmptySlot/EventCard heights
+  // Compact slot height for improved density
+  const slotHeight = 40; // decreased from 56 for more density
 
   // Date header formatting
   const dayNum = date.getDate();
@@ -72,7 +72,7 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
             : "bg-gradient-to-r from-muted via-accent/40 to-muted";
 
           return (
-            <div key={hr} className={`flex items-start gap-1 border-b px-2 py-0 ${bgColor} relative`} style={{ minHeight: slotHeight }}>
+            <div key={hr} className={`flex items-stretch gap-1 border-b px-2 py-0 ${bgColor} relative`} style={{ minHeight: slotHeight }}>
               {/* Render current time indicator within the slot for today */}
               {showCurrentTime && idx === (currentHour - 8) && (
                 <div
@@ -86,8 +86,10 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                   <div className="flex-1 h-1 bg-primary/80 opacity-80 rounded" />
                 </div>
               )}
-              <div className="w-16 text-xs text-muted-foreground font-bold">{`${hr}:00`}</div>
-              <div className="flex-1 flex gap-1">
+              {/* Time label */}
+              <div className="w-16 flex items-center text-xs text-muted-foreground font-bold h-full">{`${hr}:00`}</div>
+              {/* Events in one line (row) */}
+              <div className="flex-1 flex flex-row gap-2 overflow-x-auto items-stretch min-h-0">
                 {events.length > 0
                   ? events.map(sess => {
                     let clientName: string | undefined;
@@ -95,24 +97,26 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                       clientName = formatClientNameForMobile(clients[sess.client_id].name);
                     }
                     return (
-                      <EventCard
-                        key={sess.id}
-                        session={sess}
-                        onClick={() => onSessionClick(sess)}
-                        isDetailed={false}
-                        clientName={clientName}
-                      />
+                      <div className="flex-1 min-w-[140px] max-w-xs" key={sess.id} style={{ display: "flex", alignItems: "stretch" }}>
+                        <EventCard
+                          session={sess}
+                          onClick={() => onSessionClick(sess)}
+                          isDetailed={false}
+                          clientName={clientName}
+                        />
+                      </div>
                     );
                   })
                   : (
-                    <EmptySlot
-                      timeLabel={`${hr}:00`}
-                      interactive={true}
-                      onCreate={() => {
-                        // Optionally: trigger create event modal with this start time
-                        // On integration, use a callback
-                      }}
-                    />
+                    <div className="flex-1 flex items-stretch">
+                      <EmptySlot
+                        timeLabel={`${hr}:00`}
+                        interactive={true}
+                        onCreate={() => {
+                          // Optionally: trigger create event modal with this start time
+                        }}
+                      />
+                    </div>
                   )
                 }
               </div>
@@ -124,4 +128,3 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   );
 };
 export default DayView;
-
