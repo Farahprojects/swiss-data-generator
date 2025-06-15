@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -212,15 +213,44 @@ const CreateReportPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl">
+    <div
+      className="
+        min-h-screen
+        flex
+        flex-col
+        items-stretch
+        justify-start
+        px-0
+        pt-4
+        md:items-center
+        md:justify-center
+        md:px-6
+      "
+    >
+      <div className="
+        w-full
+        md:max-w-2xl
+        "
+      >
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 text-center">Create Report</h1>
         </div>
-
-        <Card className="border-2 border-gray-100 overflow-hidden">
+        <Card className="
+          border-2 border-gray-100 overflow-hidden
+          rounded-none
+          shadow-none
+          p-0
+          bg-transparent
+          md:rounded-lg
+          md:shadow-sm
+          md:p-0
+        ">
           <div className="bg-gradient-to-r from-primary/10 to-transparent p-1"></div>
-          <CardContent className="p-6">
+          <CardContent className="
+            p-2
+            pt-4
+            md:p-6
+          ">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="reportType">Report Type</Label>

@@ -51,11 +51,13 @@ const UnifiedNavigation = ({
   const isMainDashboard = location.pathname === '/dashboard';
   const isDashboardClientsPage = location.pathname === '/dashboard/clients';
   const isDashboardReportsPage = location.pathname === '/dashboard/reports';
+  // UPDATE burger menu pages to include create report
   const isDashboardPageWithBurgerMenu = (
     location.pathname === '/dashboard/website-builder' ||
     location.pathname === '/dashboard/messages' ||
     location.pathname === '/dashboard/clients' ||
-    location.pathname === '/dashboard/reports'
+    location.pathname === '/dashboard/reports' ||
+    location.pathname === '/dashboard/reports/create'
   );
   const isDashboardPage = location.pathname.startsWith('/dashboard');
   const isMessagesPage = location.pathname === '/dashboard/messages';
