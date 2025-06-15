@@ -42,25 +42,17 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
       
       {/* Controls Row */}
       <div className="flex items-center gap-2 flex-wrap">
+        {/* Search input always on the left */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             placeholder="Search clients"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            // Make search bar smaller
             className="pl-10 w-48"
           />
         </div>
-        <Button 
-          onClick={onNewClient}
-          className="flex items-center gap-2 flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          {isMobile ? 'Client' : 'New Client'}
-        </Button>
-        {/* DO NOT INCLUDE FILTER DROPDOWN SELECT */}
-        {/* DO NOT RENDER VIEW TOGGLE ON MOBILE */}
+        {/* If not mobile, render view toggle next */}
         {!isMobile && (
           <div className="flex items-center border rounded-md">
             <Button
@@ -81,6 +73,16 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
             </Button>
           </div>
         )}
+        {/* This spacer pushes the button to the far right */}
+        <div className="flex-1 min-w-[12px]" />
+        {/* "+ Client" button always on right */}
+        <Button 
+          onClick={onNewClient}
+          className="flex items-center gap-2 flex-shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          + Client
+        </Button>
       </div>
       
       {searchTerm && (
