@@ -2,12 +2,15 @@
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
+import { formatClientNameForMobile } from "@/utils/clientsFormatters";
 
-// Minimal month grid for demo, not a calendar lib
+// Extended Props to accept clients map
+type ClientMap = Record<string, { id: string; name: string }>;
 type Props = {
   date: Date;
   sessions: CalendarSession[];
   onSessionClick: (session: CalendarSession) => void;
+  clients?: ClientMap;
 };
 const getMonthGrid = (date: Date) => {
   const year = date.getFullYear();
@@ -29,7 +32,7 @@ const getMonthGrid = (date: Date) => {
   }
   return calendar;
 };
-const MonthView = ({ date, sessions, onSessionClick }: Props) => {
+const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const grid = getMonthGrid(date);
   return (
     <div className="grid grid-cols-7 gap-[2px] border rounded overflow-hidden bg-gray-100">
@@ -52,13 +55,20 @@ const MonthView = ({ date, sessions, onSessionClick }: Props) => {
                   event =>
                     event.start_time.toDateString() === d.toDateString()
                 )
-                .map(event => (
-                  <EventCard
-                    key={event.id}
-                    session={event}
-                    onClick={() => onSessionClick(event)}
-                  />
-                ))}
+                .map(event => {
+                  let clientName: string | undefined;
+                  if (event.client_id && clients[event.client_id]) {
+                    clientName = formatClientNameForMobile(clients[event.client_id].name);
+                  }
+                  return (
+                    <EventCard
+                      key={event.id}
+                      session={event}
+                      onClick={() => onSessionClick(event)}
+                      clientName={clientName}
+                    />
+                  );
+                })}
           </div>
         </div>
       ))}
@@ -66,3 +76,4 @@ const MonthView = ({ date, sessions, onSessionClick }: Props) => {
   );
 };
 export default MonthView;
+

@@ -50,8 +50,27 @@ export const CalendarView = ({
       </div>
     );
   }
-  if (view === "month") return <MonthView date={date} sessions={sessions} onSessionClick={onSessionClick} />;
-  if (view === "week") return <WeekView date={date} sessions={sessions} onSessionClick={onSessionClick} onMoveSession={onMoveSession} />;
-  return <DayView date={date} sessions={sessions} onSessionClick={onSessionClick} onMoveSession={onMoveSession} />;
+  if (view === "month")
+    return <MonthView date={date} sessions={sessions} onSessionClick={onSessionClick} clients={clients} />;
+  if (view === "week")
+    return (
+      <WeekView
+        date={date}
+        sessions={sessions}
+        onSessionClick={onSessionClick}
+        onMoveSession={onMoveSession}
+        clients={clients}
+      />
+    );
+  return (
+    <DayView
+      date={date}
+      sessions={sessions}
+      onSessionClick={onSessionClick}
+      onMoveSession={onMoveSession}
+      clients={clients}
+    />
+  );
 };
 export default CalendarView;
+
