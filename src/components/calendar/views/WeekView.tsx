@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
@@ -37,7 +36,7 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
           <div
             key={day.toISOString()}
             className={`py-1 px-2 text-xs font-bold text-center bg-white border-b select-none
-              ${isToday(day) ? "bg-primary/10 text-primary border-primary border-b-2 shadow" : ""}
+              ${isToday(day) ? "text-primary border-primary border-b-2 shadow" : ""}
               ${isWeekend(day) ? "bg-accent/20" : ""}
             `}
           >
@@ -54,7 +53,7 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
               gridColumnStart: todayIdx + 1,
               gridColumnEnd: todayIdx + 2,
               zIndex: 10,
-              height: `calc(((${new Date().getHours() - 8} + ${new Date().getMinutes()}/60) * 56px) + 40px)`, // rough Y
+              height: `calc(((${new Date().getHours() - 8} + ${new Date().getMinutes()}/60) * 56px) + 40px)`,
             }}
           >
             <div
@@ -72,11 +71,8 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
         {days.map(day => {
           const dayIsToday = isToday(day);
           const dayIsWeekend = isWeekend(day);
-          const dayBg = dayIsToday
-            ? "bg-primary/5"
-            : dayIsWeekend
-            ? "bg-accent/20"
-            : "bg-white";
+          // Keep all cells white
+          const dayBg = "bg-white";
           const daySessions = sessions.filter(sess => sess.start_time.toDateString() === day.toDateString());
           return (
             <div
@@ -116,4 +112,3 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
     </div>
   );
 }
-
