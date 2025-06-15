@@ -1,11 +1,10 @@
 
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
-import { EventCard } from "../EventCard";
-import EmptySlot from "../EmptySlot";
-import { formatClientNameForMobile } from "@/utils/clientsFormatters";
 
-// Extended Props to accept clients map
+// Dots will use color_tag, fallback is a nice color
+const getDotColor = (tag?: string) => tag || "#a5b4fc";
+
 type ClientMap = Record<string, { id: string; name: string }>;
 type Props = {
   date: Date;
@@ -13,6 +12,7 @@ type Props = {
   onSessionClick: (session: CalendarSession) => void;
   clients?: ClientMap;
 };
+
 const getMonthGrid = (date: Date) => {
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -33,11 +33,11 @@ const getMonthGrid = (date: Date) => {
   }
   return calendar;
 };
+
 const isToday = (d: Date) => {
   const now = new Date();
   return d?.toDateString() === now.toDateString();
 };
-const isWeekend = (d: Date) => d?.getDay() === 0 || d?.getDay() === 6;
 
 const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const grid = getMonthGrid(date);
@@ -52,13 +52,15 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
         </div>
       ))}
       {grid.flat().map((d, i) => {
-        const dayIsToday = d && isToday(d);
-        const dayIsWeekend = d && isWeekend(d);
+        const dayIsToday = !!d && isToday(d);
+        // All days have same white bg, except today
         const cellBg = dayIsToday
           ? "bg-primary/5"
-          : dayIsWeekend
-          ? "bg-accent/20"
           : "bg-white";
+        // Find all events on this day
+        const dayEvents = d
+          ? sessions.filter(event => event.start_time.toDateString() === d.toDateString())
+          : [];
         return (
           <div
             key={i}
@@ -74,40 +76,24 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
                 {d.getDate()}
               </span>
             )}
-            <div className="flex flex-col gap-1 mt-4">
-              {d &&
-                (() => {
-                  const dayEvents =
-                    sessions.filter(
-                      event =>
-                        event.start_time.toDateString() === d.toDateString()
-                    ) ?? [];
-                  if (dayEvents.length === 0) {
-                    return (
-                      <EmptySlot
-                        interactive={true}
-                        onCreate={() => {
-                          // Wire: pop create session modal for this date
-                        }}
-                        timeLabel={undefined}
-                      />
-                    );
-                  }
-                  return dayEvents.map(event => {
-                    let clientName: string | undefined;
-                    if (event.client_id && clients[event.client_id]) {
-                      clientName = formatClientNameForMobile(clients[event.client_id].name);
-                    }
-                    return (
-                      <EventCard
-                        key={event.id}
-                        session={event}
-                        onClick={() => onSessionClick(event)}
-                        clientName={clientName}
-                      />
-                    );
-                  });
-                })()}
+            {/* Instead of EmptySlot or EventCard, just show dots for each event */}
+            <div className="flex flex-row flex-wrap gap-[4px] mt-5 ml-1">
+              {dayEvents.map(event => (
+                <button
+                  key={event.id}
+                  onClick={() => onSessionClick(event)}
+                  className="rounded-full border-2 border-white shadow focus:outline-none focus:ring-2 focus:ring-primary/60"
+                  style={{
+                    width: 14,
+                    height: 14,
+                    background: getDotColor(event.color_tag),
+                  }}
+                  title={event.title}
+                  aria-label={event.title}
+                  tabIndex={0}
+                  type="button"
+                />
+              ))}
             </div>
           </div>
         );
@@ -116,4 +102,3 @@ const MonthView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   );
 };
 export default MonthView;
-
