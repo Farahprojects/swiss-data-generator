@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { CalendarSession, EventType } from "@/types/calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -120,6 +119,7 @@ export const EventModal = ({
 
       <div className={isMobile ? "flex flex-col gap-2" : "flex gap-2"}>
         <div className="flex-1">
+          {/* Pass inline to DateTimePicker so it always renders inside the modal */}
           <DateTimePicker
             label="Date & Start Time"
             value={form.start_time}
@@ -130,6 +130,7 @@ export const EventModal = ({
               }));
             }}
             minDate={undefined}
+            inline
           />
         </div>
         <div className="flex-1 flex flex-col">

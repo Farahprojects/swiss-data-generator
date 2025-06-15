@@ -23,6 +23,7 @@ type Props = {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  inline?: boolean; // NEW: Forces the picker to render inline
 };
 
 export const DateTimePicker: React.FC<Props> = ({
@@ -34,6 +35,7 @@ export const DateTimePicker: React.FC<Props> = ({
   placeholder = "Select date & time",
   className = "",
   disabled,
+  inline = false,
 }) => {
   const [open, setOpen] = React.useState(false);
   const isMobile = useIsMobile();
@@ -61,8 +63,8 @@ export const DateTimePicker: React.FC<Props> = ({
   const ampm = hour < 12 ? "AM" : "PM";
   const timeString = `${hour12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 
-  const content = (
-    <div className="flex flex-col gap-2 min-w-[220px]">
+  const pickerContent = (
+    <div className={cn("flex flex-col gap-2 min-w-[220px] w-full", inline ? "p-0 bg-transparent shadow-none" : "")}>
       {label && <span className="text-xs font-semibold mb-1">{label}</span>}
       <Calendar
         selected={value}
@@ -72,22 +74,30 @@ export const DateTimePicker: React.FC<Props> = ({
         mode="single"
         initialFocus
         disabled={dateDisabled}
-        className={cn("p-3 pointer-events-auto")}
+        className={cn("p-3 pointer-events-auto w-full", inline ? "border rounded bg-white" : "")}
       />
       <div className="flex gap-2 items-center mt-1">
         <TimePicker value={value} onChange={handleTimeChange} />
         <span className="text-muted-foreground text-xs">{timeString}</span>
       </div>
-      <Button
-        size="sm"
-        onClick={() => setOpen(false)}
-        className="flex gap-2 items-center mt-3 justify-center"
-      >
-        Done
-      </Button>
+      {!inline && (
+        <Button
+          size="sm"
+          onClick={() => setOpen(false)}
+          className="flex gap-2 items-center mt-3 justify-center"
+        >
+          Done
+        </Button>
+      )}
     </div>
   );
 
+  // FORCE INLINE IF inline PROP IS TRUE:
+  if (inline) {
+    return <div className={cn("w-full", className)}>{pickerContent}</div>;
+  }
+
+  // Default: show in sheet or popover
   if (isMobile) {
     return (
       <>
@@ -121,7 +131,7 @@ export const DateTimePicker: React.FC<Props> = ({
               flexDirection: "column",
             }}
           >
-            {content}
+            {pickerContent}
           </SheetContent>
         </Sheet>
       </>
@@ -151,7 +161,7 @@ export const DateTimePicker: React.FC<Props> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        {content}
+        {pickerContent}
       </PopoverContent>
     </Popover>
   );
