@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Select,
@@ -33,9 +34,17 @@ export const CalendarHeader = ({
   function handleMonthSelect(value: string) {
     const monthIndex = parseInt(value, 10);
     if (!isNaN(monthIndex)) {
-      // Preserve year and day, only update month
       const newDate = new Date(today);
       newDate.setMonth(monthIndex);
+      setToday(newDate);
+    }
+  }
+
+  function handleYearSelect(value: string) {
+    const yearInt = parseInt(value, 10);
+    if (!isNaN(yearInt)) {
+      const newDate = new Date(today);
+      newDate.setFullYear(yearInt);
       setToday(newDate);
     }
   }
@@ -43,7 +52,7 @@ export const CalendarHeader = ({
   function handleWeekClick() {
     setToday(new Date());
   }
-  
+
   function nextUnit() {
     const d = new Date(today);
     if (view === "day") d.setDate(d.getDate() + 1);
@@ -51,7 +60,7 @@ export const CalendarHeader = ({
     if (view === "month") d.setMonth(d.getMonth() + 1);
     setToday(d);
   }
-  
+
   function prevUnit() {
     const d = new Date(today);
     if (view === "day") d.setDate(d.getDate() - 1);
@@ -60,16 +69,23 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Compose month selector (dropdown)
+  // Create 3 years: previous, current, next
+  const thisYear = today.getFullYear();
+  const yearRange = [thisYear - 1, thisYear, thisYear + 1];
+
+  // Month selector: wide, 3-letter name, no arrow
   const monthSelector = (
     <Select onValueChange={handleMonthSelect} value={today.getMonth().toString()}>
       <SelectTrigger
-        className="w-[56px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-lg data-[state=open]:bg-transparent hover:bg-accent/20"
+        className="w-[74px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-lg data-[state=open]:bg-transparent hover:bg-accent/20"
         aria-label="Select month"
+        style={{ minWidth: 56, marginRight: 0, marginLeft: 0 }}
       >
         <SelectValue>
-          {monthNames[today.getMonth()].slice(0,3)}
+          {monthNames[today.getMonth()].slice(0, 3)}
         </SelectValue>
+        {/* Hide dropdown arrow */}
+        <span style={{ display: "none" }} aria-hidden="true" />
       </SelectTrigger>
       <SelectContent className="z-50 bg-popover p-0 min-w-fit w-24 text-sm">
         {monthNames.map((name, idx) => (
@@ -78,22 +94,47 @@ export const CalendarHeader = ({
             key={name}
             className="py-1 px-3 text-base"
           >
-            {name.slice(0,3)}
+            {name.slice(0, 3)}
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
   );
 
-  // Row with month selector and "Week" navigation, session button on right for desktop
+  // Year selector: 3-year scrollable, centered on current year, no arrow
+  const yearSelector = (
+    <Select onValueChange={handleYearSelect} value={thisYear.toString()}>
+      <SelectTrigger
+        className="w-[64px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-lg data-[state=open]:bg-transparent hover:bg-accent/20"
+        aria-label="Select year"
+        style={{ minWidth: 54, marginRight: 0, marginLeft: 0 }}
+      >
+        <SelectValue>{thisYear}</SelectValue>
+        {/* Hide dropdown arrow */}
+        <span style={{ display: "none" }} aria-hidden="true" />
+      </SelectTrigger>
+      <SelectContent className="z-50 bg-popover p-0 min-w-fit w-20 text-base max-h-40 overflow-y-auto">
+        {yearRange.map((year) => (
+          <SelectItem
+            value={year.toString()}
+            key={year}
+            className="py-1 px-3 text-base"
+          >
+            {year}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  // --- Main return: month + year select, week nav, arrows, same line ---
   return (
     <div className="flex flex-col items-center gap-0 mb-4 w-full">
       {/* Desktop: inline */}
       <div className="hidden sm:flex w-full items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {monthSelector}
-          <span className="font-semibold text-lg text-primary">{today.getFullYear()}</span>
-          {/* Week nav (unchanged) */}
+          {yearSelector}
           <button
             type="button"
             onClick={prevUnit}
@@ -151,9 +192,9 @@ export const CalendarHeader = ({
       </div>
       {/* Mobile: row layout, full-width + Session below */}
       <div className="flex sm:hidden flex-col w-full items-center">
-        <div className="flex items-center gap-3 justify-center w-full">
+        <div className="flex items-center gap-2 justify-center w-full">
           {monthSelector}
-          <span className="font-semibold text-lg text-primary">{today.getFullYear()}</span>
+          {yearSelector}
           <button
             type="button"
             onClick={prevUnit}
@@ -214,3 +255,5 @@ export const CalendarHeader = ({
     </div>
   );
 };
+
+// ... rest of file the same ...
