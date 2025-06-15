@@ -4,10 +4,12 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TimePicker } from "./TimePicker";
 import { cn } from "@/lib/utils";
 
-// Added 'inline' prop
+// All devices now use mobile-friendly Sheet layout
+
 type Props = {
   label?: string;
   value: Date;
@@ -17,7 +19,6 @@ type Props = {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
-  inline?: boolean;
 };
 
 export const DateTimePicker: React.FC<Props> = ({
@@ -29,7 +30,6 @@ export const DateTimePicker: React.FC<Props> = ({
   placeholder = "Select date & time",
   className = "",
   disabled,
-  inline = false,
 }) => {
   const [open, setOpen] = React.useState(false);
 
@@ -55,7 +55,7 @@ export const DateTimePicker: React.FC<Props> = ({
   const ampm = hour < 12 ? "AM" : "PM";
   const timeString = `${hour12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 
-  // The picker UI itself
+  // Mobile-style content, will be used everywhere
   const content = (
     <div className="flex flex-col gap-2 min-w-[260px] max-w-[340px] mx-auto">
       {label && <span className="text-xs font-semibold mb-1">{label}</span>}
@@ -73,19 +73,17 @@ export const DateTimePicker: React.FC<Props> = ({
         <TimePicker value={value} onChange={handleTimeChange} />
         <span className="text-muted-foreground text-xs">{timeString}</span>
       </div>
+      <Button
+        size="sm"
+        onClick={() => setOpen(false)}
+        className="flex gap-2 items-center mt-3 justify-center"
+      >
+        Done
+      </Button>
     </div>
   );
 
-  // Inline mode: always render picker content directly
-  if (inline) {
-    return (
-      <div className={className}>
-        {content}
-      </div>
-    );
-  }
-
-  // DEFAULT/FALLBACK: legacy button-triggered Sheet (should not be used anymore)
+  // Always use Sheet popover, styled to fit both desktop and mobile
   return (
     <>
       <Button
@@ -108,7 +106,25 @@ export const DateTimePicker: React.FC<Props> = ({
           <span>{placeholder}</span>
         )}
       </Button>
-      {/* This fallback Sheet is NOT used in EventModal anymore */}
+      <Sheet open={open} onOpenChange={v => setOpen(v)}>
+        <SheetContent
+          side="bottom"
+          className={cn(
+            "!max-w-full !w-screen",
+            "h-[75dvh] flex flex-col items-center p-0 rounded-t-lg",
+            "md:h-[420px] md:rounded-lg md:top-1/2 md:bottom-auto md:translate-y-[-50%] md:left-1/2 md:-translate-x-1/2 md:w-[380px] md:fixed md:mx-0"
+          )}
+          style={{
+            minHeight: "55dvh",
+            maxHeight: "95dvh",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center"
+          }}
+        >
+          {content}
+        </SheetContent>
+      </Sheet>
     </>
   );
 };
