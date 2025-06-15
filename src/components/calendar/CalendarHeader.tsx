@@ -68,7 +68,7 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Month selector: wide, 3-letter name, no arrow, NO tick, highlight theme for selected
+  // Month selector (unchanged, still using pl-3, no tick)
   const monthSelector = (
     <Select onValueChange={handleMonthSelect} value={today.getMonth().toString()}>
       <SelectTrigger
@@ -100,21 +100,21 @@ export const CalendarHeader = ({
     </Select>
   );
 
-  // Year selector: scrollable, highlight theme for selected, NO tick
+  // Year selector: increase width and minWidth to ensure digits are visible
   const thisYear = today.getFullYear();
   const yearRange = Array.from({ length: 7 }, (_, i) => thisYear - 3 + i);
 
   const yearSelector = (
     <Select onValueChange={handleYearSelect} value={thisYear.toString()}>
       <SelectTrigger
-        className="w-[64px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-lg data-[state=open]:bg-transparent hover:bg-accent/20"
+        className="w-[72px] h-8 px-2 border-none bg-transparent text-primary font-semibold focus:ring-0 focus:border-none shadow-none text-lg data-[state=open]:bg-transparent hover:bg-accent/20"
         aria-label="Select year"
-        style={{ minWidth: 54, marginRight: 0, marginLeft: 0 }}
+        style={{ minWidth: 64, marginRight: 0, marginLeft: 0 }}
       >
         <SelectValue>{thisYear}</SelectValue>
         <span style={{ display: "none" }} aria-hidden="true" />
       </SelectTrigger>
-      <SelectContent className="z-50 bg-popover p-0 min-w-fit w-20 text-xl max-h-64 overflow-y-auto">
+      <SelectContent className="z-50 bg-popover p-0 min-w-fit w-24 text-xl max-h-64 overflow-y-auto">
         {yearRange.map((year) => (
           <SelectItem
             value={year.toString()}
@@ -133,12 +133,12 @@ export const CalendarHeader = ({
     </Select>
   );
 
-  // --- Main return: month + year select, week nav, arrows, same line ---
+  // --- Main return with tighter week design ---
   return (
     <div className="flex flex-col items-center gap-0 mb-4 w-full">
       {/* Desktop: inline */}
       <div className="hidden sm:flex w-full items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {monthSelector}
           {yearSelector}
           <button
@@ -161,12 +161,15 @@ export const CalendarHeader = ({
           <button
             type="button"
             onClick={handleWeekClick}
-            className="select-none font-semibold text-lg px-2 py-1 bg-transparent outline-none border-none"
+            className="font-semibold text-lg px-3 py-1 bg-accent/40 text-primary rounded transition-colors border-none outline-none shadow-none"
             aria-label="Jump to current week"
             style={{
-              color: "#241783",
+              minWidth: 54,
+              margin: "0 2px",
               cursor: "pointer",
-              background: "none",
+              fontWeight: 700,
+              background: 'rgba(124,96,249,0.10)', // same as accent/40
+              color: '#7C60F9',
             }}
           >
             Week
@@ -198,7 +201,7 @@ export const CalendarHeader = ({
       </div>
       {/* Mobile: row layout, full-width + Session below */}
       <div className="flex sm:hidden flex-col w-full items-center">
-        <div className="flex items-center gap-2 justify-center w-full">
+        <div className="flex items-center gap-1 justify-center w-full">
           {monthSelector}
           {yearSelector}
           <button
@@ -221,12 +224,15 @@ export const CalendarHeader = ({
           <button
             type="button"
             onClick={handleWeekClick}
-            className="select-none font-semibold text-lg px-2 py-1 bg-transparent outline-none border-none"
+            className="font-semibold text-lg px-3 py-1 bg-accent/40 text-primary rounded transition-colors border-none outline-none shadow-none"
             aria-label="Jump to current week"
             style={{
-              color: "#241783",
+              minWidth: 54,
+              margin: "0 2px",
               cursor: "pointer",
-              background: "none",
+              fontWeight: 700,
+              background: 'rgba(124,96,249,0.10)',
+              color: '#7C60F9',
             }}
           >
             Week
