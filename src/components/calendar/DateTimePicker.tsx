@@ -4,15 +4,11 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { TimePicker } from "./TimePicker";
 import { cn } from "@/lib/utils";
+
+// All devices now use mobile-friendly Sheet layout
 
 type Props = {
   label?: string;
@@ -36,7 +32,6 @@ export const DateTimePicker: React.FC<Props> = ({
   disabled,
 }) => {
   const [open, setOpen] = React.useState(false);
-  const isMobile = useIsMobile();
 
   function handleDaySelect(day: Date) {
     const newDate = new Date(value);
@@ -54,15 +49,15 @@ export const DateTimePicker: React.FC<Props> = ({
     return false;
   }
   const dateString = value ? format(value, "EEE, MMM d yyyy") : "";
-  // 12-hour format
   const hour = value.getHours();
   const hour12 = hour % 12 || 12;
   const minute = value.getMinutes();
   const ampm = hour < 12 ? "AM" : "PM";
   const timeString = `${hour12}:${minute.toString().padStart(2, "0")} ${ampm}`;
 
+  // Mobile-style content, will be used everywhere
   const content = (
-    <div className="flex flex-col gap-2 min-w-[220px]">
+    <div className="flex flex-col gap-2 min-w-[260px] max-w-[340px] mx-auto">
       {label && <span className="text-xs font-semibold mb-1">{label}</span>}
       <Calendar
         selected={value}
@@ -88,71 +83,48 @@ export const DateTimePicker: React.FC<Props> = ({
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <>
-        <Button
-          variant="outline"
-          type="button"
-          className={cn(
-            "w-full justify-start flex items-center gap-2",
-            !value && "text-muted-foreground"
-          )}
-          onClick={() => setOpen(true)}
-          disabled={disabled}
-        >
-          <CalendarIcon className="w-4 h-4" />
-          {value ? (
-            <>
-              {dateString}, {timeString}
-            </>
-          ) : (
-            <span>{placeholder}</span>
-          )}
-        </Button>
-        <Sheet open={open} onOpenChange={v => setOpen(v)}>
-          <SheetContent
-            side="bottom"
-            className="!max-w-full !w-screen h-[75dvh] flex flex-col"
-            style={{
-              minHeight: "55dvh",
-              maxHeight: "95dvh",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {content}
-          </SheetContent>
-        </Sheet>
-      </>
-    );
-  }
-
+  // Always use Sheet popover, styled to fit both desktop and mobile
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          type="button"
+    <>
+      <Button
+        variant="outline"
+        type="button"
+        className={cn(
+          "w-full justify-start flex items-center gap-2",
+          !value && "text-muted-foreground",
+          className
+        )}
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+      >
+        <CalendarIcon className="w-4 h-4" />
+        {value ? (
+          <>
+            {dateString}, {timeString}
+          </>
+        ) : (
+          <span>{placeholder}</span>
+        )}
+      </Button>
+      <Sheet open={open} onOpenChange={v => setOpen(v)}>
+        <SheetContent
+          side="bottom"
           className={cn(
-            "w-full justify-start flex items-center gap-2",
-            !value && "text-muted-foreground"
+            "!max-w-full !w-screen",
+            "h-[75dvh] flex flex-col items-center p-0 rounded-t-lg",
+            "md:h-[420px] md:rounded-lg md:top-1/2 md:bottom-auto md:translate-y-[-50%] md:left-1/2 md:-translate-x-1/2 md:w-[380px] md:fixed md:mx-0"
           )}
-          disabled={disabled}
+          style={{
+            minHeight: "55dvh",
+            maxHeight: "95dvh",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center"
+          }}
         >
-          <CalendarIcon className="w-4 h-4" />
-          {value ? (
-            <>
-              {dateString}, {timeString}
-            </>
-          ) : (
-            <span>{placeholder}</span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        {content}
-      </PopoverContent>
-    </Popover>
+          {content}
+        </SheetContent>
+      </Sheet>
+    </>
   );
 };
