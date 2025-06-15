@@ -28,6 +28,7 @@ import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import Features from './pages/Features';
 import WebsiteBuilder from './pages/dashboard/WebsiteBuilder';
+import CalendarPage from './pages/dashboard/CalendarPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +65,7 @@ function App() {
                       
                       <Route path="/dashboard" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
                         <Route index element={<DashboardHome />} />
+                        <Route path="calendar" element={<CalendarPage />} />
                         <Route path="clients" element={<ClientsPage />} />
                         <Route path="clients/:clientId" element={<ClientDetailPage />} />
                         <Route path="reports" element={<ReportsPage />} />

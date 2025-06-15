@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from "react-router-dom";
 import { 
   Home, 
@@ -11,7 +10,8 @@ import {
   Send,
   Star,
   Archive,
-  Trash
+  Trash,
+  Calendar
 } from "lucide-react";
 import {
   Sidebar,
@@ -35,6 +35,7 @@ interface MessageMenuProps {
 
 const sidebarItems = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar }, // added!
   { name: "Clients", href: "/dashboard/clients", icon: Users },
   { name: "Messages", href: "/dashboard/messages", icon: Mail },
   { name: "Reports", href: "/dashboard/reports", icon: FileText },
@@ -164,4 +165,3 @@ export function DashboardSidebar() {
     </Sidebar>
   );
 }
-
