@@ -8,13 +8,12 @@ import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import CalendarView from "@/components/calendar/CalendarView";
 import { EventModal } from "@/components/calendar/EventModal";
 
-// Removed the demoClients and ClientFilter logic
-
 const CalendarPage: React.FC = () => {
   const [view, setView] = useState<"month" | "week" | "day">("week");
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
+  const [newEventDateTime, setNewEventDateTime] = useState<Date | null>(null);
   const isMobile = useIsMobile();
 
   // Selected day (for mobile day scrolling)
@@ -68,6 +67,44 @@ const CalendarPage: React.FC = () => {
     else createSession(data);
   }
 
+  function handleTimeSlotClick(date: Date, hour: number) {
+    const eventDateTime = new Date(date);
+    eventDateTime.setHours(hour, 0, 0, 0);
+    setNewEventDateTime(eventDateTime);
+    setEditing(null);
+    setModalOpen(true);
+  }
+
+  function handleAddSession() {
+    setEditing(null);
+    setNewEventDateTime(null);
+    setModalOpen(true);
+  }
+
+  function handleCloseModal() {
+    setModalOpen(false);
+    setNewEventDateTime(null);
+    setEditing(null);
+  }
+
+  // Create initial event data based on clicked time slot or default
+  const getInitialEventData = () => {
+    if (newEventDateTime) {
+      const endTime = new Date(newEventDateTime);
+      endTime.setHours(newEventDateTime.getHours() + 1); // Default 1 hour duration
+      return {
+        title: "",
+        description: "",
+        start_time: newEventDateTime,
+        end_time: endTime,
+        client_id: "",
+        event_type: "session" as const,
+        color_tag: "#2563eb",
+      };
+    }
+    return editing;
+  };
+
   // Titles
   const mobileTitle = (
     <h1 className="text-xl font-bold mb-2 sm:hidden">Calendar</h1>
@@ -85,10 +122,7 @@ const CalendarPage: React.FC = () => {
       <CalendarHeader
         view={view}
         setView={setView}
-        onAddSession={() => {
-          setEditing(null);
-          setModalOpen(true);
-        }}
+        onAddSession={handleAddSession}
         today={currentDate}
         setToday={setCurrentDate}
         isMobile={isMobile}
@@ -107,17 +141,19 @@ const CalendarPage: React.FC = () => {
           isMobile={isMobile}
           setSelectedDay={isMobile ? setSelectedDay : undefined}
           clients={clientMap}
+          onTimeSlotClick={handleTimeSlotClick}
         />
       </div>
       <EventModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={handleCloseModal}
         onSave={handleSaveSession}
-        initial={editing}
+        initial={getInitialEventData()}
         clients={clientOptions}
         isMobile={isMobile}
       />
     </div>
   );
 };
+
 export default CalendarPage;
