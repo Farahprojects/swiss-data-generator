@@ -1,3 +1,4 @@
+
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,10 +52,11 @@ const DashboardLayout = () => {
 
   // Dashboard pages with burger menu get full width without sidebar (like website builder, messages, clients)
   if (isDashboardPageWithBurgerMenu) {
+    // Remove horizontal padding on mobile, restore on md+
     return (
       <div className="min-h-screen flex flex-col w-full">
         <UnifiedNavigation />
-        <main className="flex-1 pt-16">
+        <main className="flex-1 pt-16 px-0 md:px-6">
           <DashboardErrorBoundary>
             <Outlet />
           </DashboardErrorBoundary>
@@ -64,6 +66,7 @@ const DashboardLayout = () => {
   }
 
   // Main dashboard layout with traditional sidebar (wrapped in SidebarProvider)
+  // Remove padding on mobile (p-0), restore it on md+ (md:p-4 md:pt-6)
   return (
     <div className="min-h-screen flex flex-col w-full">
       <UnifiedNavigation />
@@ -73,8 +76,8 @@ const DashboardLayout = () => {
           <DashboardSidebar />
           
           <SidebarInset className="flex flex-col flex-1">
-            <main className="flex-1 p-4 md:p-6">
-              <div className="bg-white p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
+            <main className="flex-1 p-0 md:p-4 md:pt-6">
+              <div className="bg-white p-0 md:p-4 md:p-6 w-full min-h-[calc(100vh-220px)]">
                 <DashboardErrorBoundary>
                   <Outlet />
                 </DashboardErrorBoundary>
@@ -88,3 +91,4 @@ const DashboardLayout = () => {
 };
 
 export default DashboardLayout;
+
