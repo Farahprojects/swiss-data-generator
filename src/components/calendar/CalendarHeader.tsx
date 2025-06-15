@@ -15,7 +15,6 @@ type Props = {
 function formatPeriodLabel(today: Date, view: "month" | "week" | "day") {
   if (!today) return "";
   if (view === "day") {
-    // Saturday, June 15, 2025
     return today.toLocaleDateString(undefined, {
       weekday: "long",
       month: "long",
@@ -24,14 +23,12 @@ function formatPeriodLabel(today: Date, view: "month" | "week" | "day") {
     });
   }
   if (view === "month") {
-    // June 2025
     return today.toLocaleDateString(undefined, {
       month: "long",
       year: "numeric"
     });
   }
   if (view === "week") {
-    // Find week start (Sunday) and end (Saturday)
     const start = new Date(today);
     start.setDate(today.getDate() - today.getDay());
     start.setHours(0, 0, 0, 0);
@@ -43,13 +40,10 @@ function formatPeriodLabel(today: Date, view: "month" | "week" | "day") {
     const endMonth = end.toLocaleString(undefined, { month: "short" });
     const showYear = (start.getFullYear() !== end.getFullYear());
     if (startMonth === endMonth && !showYear) {
-      // e.g. Jun 9 – 15, 2025
       return `${startMonth} ${startDay} – ${endDay}, ${start.getFullYear()}`;
     } else if (showYear) {
-      // e.g. Dec 30, 2024 – Jan 5, 2025
       return `${startMonth} ${startDay}, ${start.getFullYear()} – ${endMonth} ${endDay}, ${end.getFullYear()}`;
     } else {
-      // e.g. May 28 – Jun 3, 2025
       return `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${end.getFullYear()}`;
     }
   }
@@ -84,17 +78,27 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Layout: Title, then one row of controls (arrows+label, toggles, +Session)
+  // Use CSS Grid for fixed, consistent positioning
   return (
-    <div className="flex flex-col items-center gap-0 mb-4 w-full">
+    <div className="mb-4 w-full">
       {/* Calendar Title */}
-      <div className="w-full flex flex-col items-center gap-0">
-        <h1 className="text-xl font-bold sm:text-2xl md:text-3xl mb-0.5">Calendar</h1>
+      <div className="w-full flex flex-col items-center">
+        <h1 className="text-xl font-bold sm:text-2xl md:text-3xl mb-1">Calendar</h1>
       </div>
-      {/* Unified control row: nav arrows + date, toggles, +Session */}
-      <div className="flex flex-col sm:flex-row w-full items-center sm:justify-between gap-2 mt-2">
-        {/* Arrows + date label */}
-        <div className="flex items-center gap-2 mb-1 sm:mb-0">
+      {/* Header controls on one row, fixed positions */}
+      <div
+        className="
+          grid
+          grid-cols-3
+          items-center
+          w-full
+          gap-2
+          mt-2
+        "
+        style={{ gridTemplateColumns: "1fr auto 1fr" }}
+      >
+        {/* Left: Arrows + date label (fixed width on desktop) */}
+        <div className="flex items-center justify-start min-w-[230px]">
           <button
             type="button"
             onClick={prevUnit}
@@ -103,7 +107,7 @@ export const CalendarHeader = ({
           >
             <ArrowLeft size={20} />
           </button>
-          <span className="text-base sm:text-lg md:text-xl font-semibold px-2 select-none min-w-[120px] text-center">
+          <span className="text-base sm:text-lg md:text-xl font-semibold px-2 select-none min-w-[120px] text-center truncate" style={{ maxWidth: 180 }}>
             {formatPeriodLabel(today, view)}
           </span>
           <button
@@ -115,13 +119,13 @@ export const CalendarHeader = ({
             <ArrowRight size={20} />
           </button>
         </div>
-        {/* View toggle */}
-        <div className="flex items-center">
+        {/* Center: View toggle */}
+        <div className="flex items-center justify-center">
           <ToggleGroup
             type="single"
             value={view}
             onValueChange={v => v && setView(v as "month" | "week" | "day")}
-            className=""
+            className="gap-2"
             size="sm"
           >
             <ToggleGroupItem
@@ -150,15 +154,16 @@ export const CalendarHeader = ({
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
-        {/* Add session */}
-        <button
-          onClick={onAddSession}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded font-semibold"
-        >
-          + Session
-        </button>
+        {/* Right: Add session button, always right-aligned */}
+        <div className="flex items-center justify-end min-w-[134px]">
+          <button
+            onClick={onAddSession}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded font-semibold"
+          >
+            + Session
+          </button>
+        </div>
       </div>
     </div>
   );
 };
-
