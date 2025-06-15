@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
 import { useClientsData } from "@/hooks/useClientsData";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MobileDaySelector } from "@/components/calendar/MobileDaySelector";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import CalendarView from "@/components/calendar/CalendarView";
 import { EventModal } from "@/components/calendar/EventModal";
@@ -68,20 +67,10 @@ const CalendarPage: React.FC = () => {
     else createSession(data);
   }
 
-  // Titles
-  const mobileTitle = (
-    <h1 className="text-xl font-bold mb-2 sm:hidden">Calendar</h1>
-  );
-  const desktopTitle = (
-    <h1 className="hidden sm:block text-2xl md:text-3xl font-bold mb-2">
-      Calendar
-    </h1>
-  );
+  // Titles: all handled in CalendarHeader now
 
   return (
     <div className="max-w-6xl mx-auto p-2 py-6 flex flex-col">
-      {mobileTitle}
-      {desktopTitle}
       <CalendarHeader
         view={view}
         setView={setView}
@@ -121,3 +110,4 @@ const CalendarPage: React.FC = () => {
   );
 };
 export default CalendarPage;
+
