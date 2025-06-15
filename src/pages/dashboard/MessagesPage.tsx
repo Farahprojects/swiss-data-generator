@@ -242,8 +242,8 @@ const MessagesPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] w-full">
-        <div className="text-center w-full">
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
           <div className="text-lg">Loading messages...</div>
         </div>
       </div>
@@ -251,10 +251,11 @@ const MessagesPage = () => {
   }
 
   if (isMobile) {
-    // Mobile layout: Remove in-page search bar section. Make content fill screen width.
+    // Mobile layout: Remove in-page search bar section
     return (
       <>
         <UnifiedNavigation
+          // Pass message nav props to header menu for mobile messages page only
           isMessagesPageMobile={true}
           activeFilter={activeFilter}
           unreadCount={unreadCount}
@@ -263,7 +264,7 @@ const MessagesPage = () => {
         <div className="w-full relative min-h-screen pb-24 bg-background">
           {/* Mobile Compose button */}
           <MobileComposeButton onClick={() => setShowCompose(true)} />
-          <div className="w-full px-0"> {/* Remove horizontal padding on mobile */}
+          <div className="w-full">
             {selectedMessage ? (
               <GmailMessageDetail
                 message={selectedMessage}
