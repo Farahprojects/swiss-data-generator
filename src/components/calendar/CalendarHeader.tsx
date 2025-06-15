@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Select,
@@ -69,7 +68,7 @@ export const CalendarHeader = ({
     setToday(d);
   }
 
-  // Month selector: wide, 3-letter name, no arrow, highlight theme for selected
+  // Month selector: wide, 3-letter name, no arrow, NO tick, highlight theme for selected
   const monthSelector = (
     <Select onValueChange={handleMonthSelect} value={today.getMonth().toString()}>
       <SelectTrigger
@@ -80,7 +79,6 @@ export const CalendarHeader = ({
         <SelectValue>
           {monthNames[today.getMonth()].slice(0, 3)}
         </SelectValue>
-        {/* Hide dropdown arrow */}
         <span style={{ display: "none" }} aria-hidden="true" />
       </SelectTrigger>
       <SelectContent className="z-50 bg-popover p-0 min-w-fit w-24 text-sm">
@@ -88,13 +86,12 @@ export const CalendarHeader = ({
           <SelectItem
             value={idx.toString()}
             key={name}
-            className={`py-2 px-3 text-xl rounded-none ${
+            className={`py-2 px-3 text-xl rounded-none pl-3 [&>span:first-child]:hidden ${
               today.getMonth() === idx
                 ? "bg-accent/40 text-primary font-bold"
                 : "bg-transparent text-popover-foreground font-normal"
             }`}
             style={{ transition: "background 0.15s, color 0.15s" }}
-            // Remove indicator slot!
           >
             {name.slice(0, 3)}
           </SelectItem>
@@ -103,9 +100,8 @@ export const CalendarHeader = ({
     </Select>
   );
 
-  // Year selector: scrollable, highlight theme for selected
+  // Year selector: scrollable, highlight theme for selected, NO tick
   const thisYear = today.getFullYear();
-  // Generate a pretty scrollable window: 3 previous, 3 after (or customizable)
   const yearRange = Array.from({ length: 7 }, (_, i) => thisYear - 3 + i);
 
   const yearSelector = (
@@ -123,7 +119,7 @@ export const CalendarHeader = ({
           <SelectItem
             value={year.toString()}
             key={year}
-            className={`py-2 px-5 text-xl rounded-none ${
+            className={`py-2 px-5 text-xl rounded-none pl-3 [&>span:first-child]:hidden ${
               thisYear === year
                 ? "bg-accent/40 text-primary font-bold"
                 : "bg-transparent text-popover-foreground font-normal"
@@ -265,5 +261,3 @@ export const CalendarHeader = ({
     </div>
   );
 };
-
-// ... rest of file the same ...
