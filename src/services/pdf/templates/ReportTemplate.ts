@@ -65,7 +65,8 @@ export class ReportTemplate extends BaseTemplate {
     this.doc.setTextColor(33);
 
     let lineY = y + 12;
-    const lineHeight = 7.2;
+    const lineHeight = 7.5;
+    const paragraphSpacing = 4;
     const headingSpacing = 10;
     const bottomPadding = 20;
 
@@ -82,22 +83,34 @@ export class ReportTemplate extends BaseTemplate {
         this.doc.setFont('helvetica', 'bold');
         this.doc.setTextColor(40, 40, 60);
         this.doc.text(item.text, this.margins.left, lineY);
-        lineY += lineHeight + 2;
+        lineY += lineHeight;
       } else if (item.type === 'action-item') {
-        this.doc.setFont('helvetica', 'normal');
-        this.doc.setTextColor(33);
-        this.doc.text(item.text, this.margins.left + 5, lineY);
-        lineY += lineHeight + 2;
+        const actionLines = this.doc.splitTextToSize(item.text, this.pageWidth - this.margins.left - this.margins.right - 5);
+        actionLines.forEach(line => {
+          if (lineY + lineHeight > this.pageHeight - bottomPadding) {
+            this.doc.addPage();
+            lineY = this.margins.top;
+          }
+          this.doc.text(line, this.margins.left + 5, lineY);
+          lineY += lineHeight;
+        });
+        lineY += paragraphSpacing;
       } else if (item.type === 'tag') {
         this.doc.setFont('helvetica', 'normal');
         this.doc.setTextColor(60);
         this.doc.text(item.text, this.margins.left + 5, lineY);
         lineY += lineHeight;
       } else {
-        this.doc.setFont('helvetica', 'normal');
-        this.doc.setTextColor(33);
-        this.doc.text(item.text, this.margins.left, lineY);
-        lineY += lineHeight;
+        const paragraphLines = this.doc.splitTextToSize(item.text, this.pageWidth - this.margins.left - this.margins.right);
+        paragraphLines.forEach(line => {
+          if (lineY + lineHeight > this.pageHeight - bottomPadding) {
+            this.doc.addPage();
+            lineY = this.margins.top;
+          }
+          this.doc.text(line, this.margins.left, lineY);
+          lineY += lineHeight;
+        });
+        lineY += paragraphSpacing;
       }
     }
 
