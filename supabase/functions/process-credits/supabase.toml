@@ -1,0 +1,3 @@
+
+name = "process-credits"
+verify_jwt = false
