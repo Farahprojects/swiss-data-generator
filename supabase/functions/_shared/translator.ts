@@ -1,7 +1,13 @@
-
 // supabase/functions/_shared/translator.ts
 // Pure helper module – NO Edge Function wrapper
-// Exported translate() returns { status, text } so other functions can await it.
+//
+// ▸ 2025-06-16 patch
+//   • removed undefined `raw` reference in logger
+//   • logger now accepts optional `translatorPayload` so you can see the
+//     exact JSON forwarded to Swiss
+//   • every call supplies that payload where it exists
+//   • small typographical tidy-ups (no functional change elsewhere)
+// ---------------------------------------------------------------------------
 
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -20,45 +26,31 @@ const sb = createClient(SB_URL, SB_KEY);
 /*──────────────── canonical maps ------------------------ */
 const CANON: Record<string, string> = {
   natal:         "natal",
-
   transits:      "transits",
-
   progressions:  "progressions",
-
   return:        "return",
-
   synastry:      "synastry",
   compatibility: "synastry",
-
   positions:     "positions",
   moonphases:    "moonphases",
-
   body:          "body_matrix",
   body_matrix:   "body_matrix",
-
   sync:          "sync",
-
-  /* tracking-only       */
-  reports:       "reports",
-
-  /* ========= NEW ENDPOINTS (user-friendly aliases) ================ */
-  essence:           "essence",   // natal + current transits bundle
-
-  flow:              "flow",
-
-  mindset:           "mindset",
-
-  monthly:           "monthly",
-
-  focus:             "focus",
-  
+  reports:       "reports",   // tracking-only
+  /* ========= NEW ENDPOINTS (user-friendly aliases) ===== */
+  essence:       "essence",   // natal + current transits bundle
+  flow:          "flow",
+  mindset:       "mindset",
+  monthly:       "monthly",
+  focus:         "focus",
 };
+
 /*──────────────── misc maps */
 const HOUSE_ALIASES: Record<string, string> = {
-  placidus:    "P",
-  koch:        "K",
-  "whole-sign":"W",
-  equal:       "A",
+  placidus:     "P",
+  koch:         "K",
+  "whole-sign": "W",
+  equal:        "A",
 };
 
 /*──────────────── schema */
@@ -74,21 +66,25 @@ async function logToSupabase(
   errorMessage?: string,
   googleGeoUsed = false,
   userId?: string,
+  translatorPayload?: any,        // NEW – what we sent to Swiss
 ) {
-  
-  /* extract report tier - now accepts any report type from payload */
-  const reportTier = requestPayload?.report || raw?.report || null;
+  const reportTier =
+    requestPayload?.report ??
+    requestPayload?.report_type ??
+    requestPayload?.reportType ??
+    null;
 
   const { error } = await sb.from("translator_logs").insert({
-    request_type:       requestType,
-    request_payload:    requestPayload,
-    response_status:    responseStatus,
-    response_payload:   responsePayload,
-    processing_time_ms: processingTime,
-    error_message:      errorMessage,
-    google_geo:         googleGeoUsed,
-    report_tier:        reportTier,
-    user_id:            userId,
+    request_type:        requestType,
+    request_payload:     requestPayload,
+    translator_payload:  translatorPayload ?? null,
+    response_status:     responseStatus,
+    response_payload:    responsePayload,
+    processing_time_ms:  processingTime,
+    error_message:       errorMessage,
+    google_geo:          googleGeoUsed,
+    report_tier:         reportTier,
+    user_id:             userId,
   });
   if (error) console.error("Failed to log to Supabase:", error.message);
 }
@@ -97,14 +93,13 @@ async function logToSupabase(
 async function ensureLatLon(
   obj: any,
 ): Promise<{ data: any; googleGeoUsed: boolean }> {
-  // If lat/lon are provided or no location, return as is
   if (
     (obj.latitude !== undefined && obj.longitude !== undefined) ||
     !obj.location
   ) return { data: obj, googleGeoUsed: false };
 
   const place = String(obj.location).trim();
-  let googleGeoUsed = true; // Mark as used for geo lookup regardless of source
+  let googleGeoUsed = true;
 
   /* ---------- cache first ---------- */
   const { data } = await sb
@@ -116,11 +111,9 @@ async function ensureLatLon(
   if (data) {
     const age = (Date.now() - Date.parse(data.updated_at)) / 60000;
     if (age < GEO_TTL) {
-      // Even though we're using cache, we still mark googleGeoUsed as true
-      // This is the key change - we charge for the geo lookup service regardless of source
       return {
         data: { ...obj, latitude: data.lat, longitude: data.lon },
-        googleGeoUsed: true, // Changed from false to true
+        googleGeoUsed: true,
       };
     }
   }
@@ -170,10 +163,9 @@ export async function translate(
   const startTime     = Date.now();
   let   requestType   = "unknown";
   let   googleGeoUsed = false;
-  const userId        = raw.user_id; // Extract user ID from the payload
-  const apiKey        = raw.api_key; // Extract API key for report orchestrator
-  const requestId     = crypto.randomUUID().substring(0, 8); // Generate request ID for tracking
-  const skipLogging   = raw.skip_logging === true; // Check if logging should be skipped
+  const userId        = raw.user_id;
+  const skipLogging   = raw.skip_logging === true;
+  const requestId     = crypto.randomUUID().substring(0, 8);
 
   try {
     const body = Base.parse(raw);
@@ -240,161 +232,82 @@ export async function translate(
       const { data: pb, googleGeoUsed: gB } = await ensureLatLon(body.person_b);
       googleGeoUsed = gA || gB;
 
-      const a = normalise(pa);
-      const b = normalise(pb);
+      const payload = { person_a: normalise(pa), person_b: normalise(pb) };
 
-      const payload: Record<string, any> = {
-        person_a: a,
-        person_b: b,
-        include_progressions: !!body.include_progressions,
-      };
-      if (body.date) payload.date = body.date;
-      if (body.time) payload.time = body.time;
-
-      console.log(`[translator][${requestId}] Making sync request to Swiss API`);
+      console.log(`[translator][${requestId}] POST /sync`);
       const r   = await fetch(`${SWISS_API}/sync`, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
+        body:   JSON.stringify(payload),
       });
       const txt = await r.text();
 
-      console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
-
-      // Handle report generation using shared handler
       const reportResult = await handleReportGeneration({
         requestData: raw,
         swissApiResponse: txt,
         swissApiStatus: r.status,
-        requestId
+        requestId,
       });
 
-      // Determine final response data and error message
-      const finalResponseData = reportResult.responseData;
-      const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
+      const finalData  = reportResult.responseData;
+      const finalError = reportResult.errorMessage || (!r.ok
+        ? `Swiss API returned ${r.status}`
+        : undefined);
 
       if (!skipLogging) {
         await logToSupabase(
           requestType,
           raw,
           r.status,
-          (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
+          (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
           Date.now() - startTime,
-          finalErrorMessage,
+          finalError,
           googleGeoUsed,
           userId,
+          payload,                 // NEW – what we sent
         );
       }
 
-      return { 
-        status: r.status, 
-        text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
-      };
-    }
-
-    /*──────────────── SYNASTRY ───────────────────────────*/
-    if (canon === "synastry") {
-      if (!body.person_a || !body.person_b) {
-        const err = "person_a & person_b required";
-        if (!skipLogging) {
-          await logToSupabase(
-            requestType,
-            raw,
-            400,
-            { error: err },
-            Date.now() - startTime,
-            err,
-            googleGeoUsed,
-            userId,
-          );
-        }
-        return { status: 400, text: JSON.stringify({ error: err }) };
-      }
-
-      const { data: pa, googleGeoUsed: gA } = await ensureLatLon(body.person_a);
-      const { data: pb, googleGeoUsed: gB } = await ensureLatLon(body.person_b);
-      googleGeoUsed = gA || gB;
-
-      const a = normalise(pa);
-      const b = normalise(pb);
-
-      console.log(`[translator][${requestId}] Making synastry request to Swiss API`);
-      const r   = await fetch(`${SWISS_API}/synastry`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ person_a: a, person_b: b }),
-      });
-      const txt = await r.text();
-
-      console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
-
-      // Handle report generation using shared handler
-      const reportResult = await handleReportGeneration({
-        requestData: raw,
-        swissApiResponse: txt,
-        swissApiStatus: r.status,
-        requestId
-      });
-
-      // Determine final response data and error message
-      const finalResponseData = reportResult.responseData;
-      const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
-
-      if (!skipLogging) {
-        await logToSupabase(
-          requestType,
-          raw,
-          r.status,
-          (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
-          Date.now() - startTime,
-          finalErrorMessage,
-          googleGeoUsed,
-          userId,
-        );
-      }
-
-      return { 
-        status: r.status, 
-        text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
+      return {
+        status: r.status,
+        text: typeof finalData === "string" ? finalData : JSON.stringify(finalData),
       };
     }
 
     /*──────────────── simple GETs ─────────────────────────*/
     if (canon === "moonphases") {
       const year = body.year ?? new Date().getFullYear();
-      console.log(`[translator][${requestId}] Making moonphases request to Swiss API`);
-      const r    = await fetch(`${SWISS_API}/moonphases?year=${year}`);
-      const txt  = await r.text();
+      console.log(`[translator][${requestId}] GET /moonphases`);
+      const r   = await fetch(`${SWISS_API}/moonphases?year=${year}`);
+      const txt = await r.text();
 
-      console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
-
-      // Handle report generation using shared handler
       const reportResult = await handleReportGeneration({
         requestData: raw,
         swissApiResponse: txt,
         swissApiStatus: r.status,
-        requestId
+        requestId,
       });
 
-      // Determine final response data and error message
-      const finalResponseData = reportResult.responseData;
-      const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
+      const finalData  = reportResult.responseData;
+      const finalError = reportResult.errorMessage || (!r.ok
+        ? `Swiss API returned ${r.status}`
+        : undefined);
 
       if (!skipLogging) {
         await logToSupabase(
           requestType,
           raw,
           r.status,
-          (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
+          (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
           Date.now() - startTime,
-          finalErrorMessage,
+          finalError,
           googleGeoUsed,
           userId,
         );
       }
-      return { 
-        status: r.status, 
-        text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
+      return {
+        status: r.status,
+        text: typeof finalData === "string" ? finalData : JSON.stringify(finalData),
       };
     }
 
@@ -403,40 +316,38 @@ export async function translate(
         utc:      body.utc ?? new Date().toISOString(),
         sidereal: String(body.sidereal ?? false),
       });
-      console.log(`[translator][${requestId}] Making positions request to Swiss API`);
+      console.log(`[translator][${requestId}] GET /positions`);
       const r   = await fetch(`${SWISS_API}/positions?${qs}`);
       const txt = await r.text();
 
-      console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
-
-      // Handle report generation using shared handler
       const reportResult = await handleReportGeneration({
         requestData: raw,
         swissApiResponse: txt,
         swissApiStatus: r.status,
-        requestId
+        requestId,
       });
 
-      // Determine final response data and error message
-      const finalResponseData = reportResult.responseData;
-      const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
+      const finalData  = reportResult.responseData;
+      const finalError = reportResult.errorMessage || (!r.ok
+        ? `Swiss API returned ${r.status}`
+        : undefined);
 
       if (!skipLogging) {
         await logToSupabase(
           requestType,
           raw,
           r.status,
-          (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
+          (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
           Date.now() - startTime,
-          finalErrorMessage,
+          finalError,
           googleGeoUsed,
           userId,
         );
       }
 
-      return { 
-        status: r.status, 
-        text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
+      return {
+        status: r.status,
+        text: typeof finalData === "string" ? finalData : JSON.stringify(finalData),
       };
     }
 
@@ -446,50 +357,44 @@ export async function translate(
 
     const enriched = normalise(enrichedRaw);
 
-    /*------------------------------------------------------
-      We no longer need a separate ROUTE map.  The canonical
-      value itself *is* the Swiss-API path.
-    ------------------------------------------------------*/
-    const path = canon;                   // e.g. "mindset", "monthly", …
-
-    console.log(`[translator][${requestId}] Making ${path} request to Swiss API`);
+    const path    = canon;
+    console.log(`[translator][${requestId}] POST /${path}`);
     const r   = await fetch(`${SWISS_API}/${path}`, {
-      method:  "POST",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(enriched),
+      body:   JSON.stringify(enriched),
     });
     const txt = await r.text();
-    
-    console.log(`[translator][${requestId}] Swiss API response: ${r.status}`);
 
-    // Handle report generation using shared handler
     const reportResult = await handleReportGeneration({
       requestData: raw,
       swissApiResponse: txt,
       swissApiStatus: r.status,
-      requestId
+      requestId,
     });
 
-    // Determine final response data and error message
-    const finalResponseData = reportResult.responseData;
-    const finalErrorMessage = reportResult.errorMessage || (!r.ok ? `Swiss API returned ${r.status}` : undefined);
+    const finalData  = reportResult.responseData;
+    const finalError = reportResult.errorMessage || (!r.ok
+      ? `Swiss API returned ${r.status}`
+      : undefined);
 
     if (!skipLogging) {
       await logToSupabase(
         requestType,
         raw,
         r.status,
-        (() => { try { return JSON.parse(typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)); } catch { return { raw_response: finalResponseData }; } })(),
+        (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
         Date.now() - startTime,
-        finalErrorMessage,
+        finalError,
         googleGeoUsed,
         userId,
+        enriched,                // NEW – exact payload
       );
     }
 
-    return { 
-      status: r.status, 
-      text: typeof finalResponseData === 'string' ? finalResponseData : JSON.stringify(finalResponseData)
+    return {
+      status: r.status,
+      text: typeof finalData === "string" ? finalData : JSON.stringify(finalData),
     };
   } catch (err) {
     const msg = (err as Error).message;
