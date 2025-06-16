@@ -10,6 +10,7 @@ import ClientReportsTab from '@/components/clients/ClientReportsTab';
 import { ClientInsightsTab } from '@/components/clients/ClientInsightsTab';
 import EditClientForm from '@/components/clients/EditClientForm';
 import ClientReportModal from '@/components/clients/ClientReportModal';
+import CreateJournalEntryForm from '@/components/clients/CreateJournalEntryForm';
 import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -21,6 +22,7 @@ const ClientDetailPage = () => {
   const [activeTab, setActiveTab] = useState('journal');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showJournalModal, setShowJournalModal] = useState(false);
   const [showReportDrawer, setShowReportDrawer] = useState(false);
   const [selectedReportData, setSelectedReportData] = useState<any>(null);
   const isMobile = useIsMobile();
@@ -82,6 +84,10 @@ const ClientDetailPage = () => {
     );
   }
 
+  const handleCreateJournal = () => {
+    setShowJournalModal(true);
+  };
+
   const handleViewReport = (report: any) => {
     // Transform the report data to match ActivityLogDrawer format
     const transformedData = {
@@ -134,7 +140,7 @@ const ClientDetailPage = () => {
         return (
           <ClientJournalTab 
             journalEntries={journalEntries}
-            onCreateJournal={() => {}}
+            onCreateJournal={handleCreateJournal}
             onEntryUpdated={loadClientData}
             clientId={client.id}
             isMobile={isMobile}
@@ -239,6 +245,19 @@ const ClientDetailPage = () => {
           open={showReportModal}
           onOpenChange={setShowReportModal}
           onReportGenerated={loadClientData}
+        />
+      )}
+
+      {/* Journal Creation Modal */}
+      {client && (
+        <CreateJournalEntryForm
+          clientId={client.id}
+          open={showJournalModal}
+          onOpenChange={setShowJournalModal}
+          onEntryCreated={() => {
+            setShowJournalModal(false);
+            loadClientData();
+          }}
         />
       )}
 
