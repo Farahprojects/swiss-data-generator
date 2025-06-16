@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Plus, FileText, Edit2, Check, X, Trash2, User, ChevronRight, Target, ArrowRight } from 'lucide-react';
+import { Plus, FileText, Edit2, Check, X, Trash2, User, Target, ArrowRight } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
@@ -325,68 +324,50 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
 
                     {/* Actions */}
                     <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewInsight(insight)}
-                              className="text-gray-600 hover:text-primary hover:bg-primary/5 p-2 h-auto"
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span>View insight</span>
-                          </TooltipContent>
-                        </Tooltip>
-                        
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button 
-                                  disabled={deletingInsightId === insight.id}
-                                  className="text-gray-600 hover:text-destructive transition-colors p-2 disabled:opacity-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <span>Delete insight</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Insight</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this insight? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDeleteInsight(insight.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleViewInsight(insight)}
-                        className="text-gray-600 hover:text-primary hover:bg-primary/5 group"
+                        className="text-gray-600 hover:text-primary hover:bg-primary/5 flex items-center gap-2"
                       >
+                        <FileText className="w-4 h-4" />
                         <span className="text-sm">View Full Insight</span>
-                        <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                       </Button>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button 
+                                disabled={deletingInsightId === insight.id}
+                                className="text-gray-600 hover:text-destructive transition-colors p-2 disabled:opacity-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span>Delete insight</span>
+                            </TooltipContent>
+                          </Tooltip>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Insight</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this insight? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteInsight(insight.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </Card>
