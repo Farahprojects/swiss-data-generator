@@ -1,12 +1,13 @@
 // supabase/functions/_shared/translator.ts
 // Pure helper module – NO Edge Function wrapper
 //
-// ▸ 2025-06-16 patch
+// ▸ 2025-06-16 patch v2.1 - LATEST VERSION DEBUG
 //   • removed undefined `raw` reference in logger
 //   • logger now accepts optional `translatorPayload` so you can see the
 //     exact JSON forwarded to Swiss
 //   • every call supplies that payload where it exists
 //   • small typographical tidy-ups (no functional change elsewhere)
+//   • added version debug logging
 // ---------------------------------------------------------------------------
 
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
@@ -22,6 +23,9 @@ const GEO_TAB   = Deno.env.get("GEOCODE_CACHE_TABLE") ?? "geo_cache";
 const GEO_TTL   = +(Deno.env.get("GEOCODE_TTL_MIN") ?? "1440");
 
 const sb = createClient(SB_URL, SB_KEY);
+
+// Version identifier for debugging
+const TRANSLATOR_VERSION = "2025-06-16-v2.1-LATEST";
 
 /*──────────────── canonical maps ------------------------ */
 const CANON: Record<string, string> = {
@@ -166,6 +170,9 @@ export async function translate(
   const userId        = raw.user_id;
   const skipLogging   = raw.skip_logging === true;
   const requestId     = crypto.randomUUID().substring(0, 8);
+
+  // VERSION DEBUG LOG - This will appear in edge function logs
+  console.log(`[translator][${requestId}] ✅ TRANSLATOR VERSION: ${TRANSLATOR_VERSION} - LATEST FILE LOADED`);
 
   try {
     const body = Base.parse(raw);
@@ -398,6 +405,7 @@ export async function translate(
     };
   } catch (err) {
     const msg = (err as Error).message;
+    console.log(`[translator][${requestId}] ❌ ERROR: ${msg}`);
     if (!skipLogging) {
       await logToSupabase(
         requestType,
