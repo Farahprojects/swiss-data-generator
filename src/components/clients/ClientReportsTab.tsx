@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Plus, FileText, ChevronRight, User, Calendar } from 'lucide-react';
+import { Plus, FileText, Trash, User, Calendar } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 
 interface ClientReport {
@@ -22,6 +21,7 @@ interface ClientReportsTabProps {
   clientReports: ClientReport[];
   onCreateReport: () => void;
   onViewReport: (report: ClientReport) => void;
+  onDeleteReport: (report: ClientReport) => void;
 }
 
 const getDisplayName = (report: ClientReport): string => {
@@ -89,7 +89,8 @@ const hasExpandableContent = (report: ClientReport) => {
 export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
   clientReports,
   onCreateReport,
-  onViewReport
+  onViewReport,
+  onDeleteReport
 }) => {
   return (
     <TooltipProvider>
@@ -183,35 +184,32 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
 
                     {/* Actions */}
                     <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onViewReport(report)}
-                              disabled={!isSuccess}
-                              className="text-gray-600 hover:text-primary hover:bg-primary/5 p-2 h-auto"
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span>View report details</span>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewReport(report)}
                         disabled={!isSuccess}
-                        className="text-gray-600 hover:text-primary hover:bg-primary/5 group"
+                        className="text-gray-600 hover:text-primary hover:bg-primary/5 flex items-center gap-2"
                       >
+                        <FileText className="h-4 w-4" />
                         <span className="text-sm">View Full Report</span>
-                        <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                       </Button>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDeleteReport(report)}
+                            className="text-gray-600 hover:text-destructive hover:bg-destructive/5 p-2 h-auto"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <span>Delete report</span>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 </Card>

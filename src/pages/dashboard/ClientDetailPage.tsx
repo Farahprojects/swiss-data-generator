@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
@@ -107,6 +106,19 @@ const ClientDetailPage = () => {
     setShowReportDrawer(true);
   };
 
+  const handleDeleteReport = async (report: any) => {
+    try {
+      // For now, we'll just show a console log - in a real implementation,
+      // this would make an API call to delete the report
+      console.log('Deleting report:', report.id);
+      
+      // Reload the client data to refresh the reports list
+      loadClientData();
+    } catch (error) {
+      console.error('Error deleting report:', error);
+    }
+  };
+
   const handleViewInsight = (insight: any) => {
     // Transform the insight data to match ActivityLogDrawer format
     const transformedData = {
@@ -152,6 +164,7 @@ const ClientDetailPage = () => {
             clientReports={clientReports}
             onCreateReport={() => setShowReportModal(true)}
             onViewReport={handleViewReport}
+            onDeleteReport={handleDeleteReport}
           />
         );
       case 'insights':
