@@ -9,8 +9,14 @@ export interface GenerateInsightRequest {
   clientData: {
     fullName: string;
     goals?: string;
-    journalText: string;
-    previousAstroDataText: string;
+    journalEntries?: Array<{
+      id: string;
+      title?: string;
+      entry_text: string;
+      created_at: string;
+    }>;
+    previousReportTexts?: string;    // New field for report content
+    previousAstroDataText?: string;  // Existing field for astro data
   };
 }
 
@@ -37,12 +43,8 @@ export const insightsService = {
         entry_text: string;
         created_at: string;
       }>;
-      previousAstroData?: Array<{
-        id: string;
-        type: string;
-        created_at: string;
-        astro_data?: string;
-      }>;
+      previousReportTexts?: string;    // New field for report content
+      previousAstroDataText?: string;  // Existing field for astro data
     };
   }): Promise<GenerateInsightResponse> {
     console.log('🚀 === INSIGHTS SERVICE: Starting generateInsight ===');
@@ -98,43 +100,30 @@ export const insightsService = {
 
       console.log('🚀 SERVICE: API key retrieved successfully (length):', apiKeyData.api_key.length);
 
-      // Extract plain text from journal entries
+      // Extract plain text from journal entries (if included)
       console.log('🚀 SERVICE: === DATA TRANSFORMATION ===');
-      console.log('🚀 SERVICE: Processing journal entries:', request.clientData.journalEntries?.length || 0);
+      let journalText = 'No journal entries available.';
       
-      const journalText = request.clientData.journalEntries?.map((entry, index) => {
-        console.log(`🚀 SERVICE: Processing journal entry ${index + 1}:`, {
-          id: entry.id,
-          title: entry.title,
-          entry_text_length: entry.entry_text?.length || 0,
-          created_at: entry.created_at
-        });
+      if (request.clientData.journalEntries) {
+        console.log('🚀 SERVICE: Processing journal entries:', request.clientData.journalEntries.length);
         
-        const title = entry.title ? `Title: ${entry.title}\n` : '';
-        const date = new Date(entry.created_at).toLocaleDateString();
-        return `${title}Date: ${date}\nContent: ${entry.entry_text}`;
-      }).join('\n\n---\n\n') || 'No journal entries available.';
+        journalText = request.clientData.journalEntries.map((entry, index) => {
+          console.log(`🚀 SERVICE: Processing journal entry ${index + 1}:`, {
+            id: entry.id,
+            title: entry.title,
+            entry_text_length: entry.entry_text?.length || 0,
+            created_at: entry.created_at
+          });
+          
+          const title = entry.title ? `Title: ${entry.title}\n` : '';
+          const date = new Date(entry.created_at).toLocaleDateString();
+          return `${title}Date: ${date}\nContent: ${entry.entry_text}`;
+        }).join('\n\n---\n\n');
+      }
 
       console.log('🚀 SERVICE: Transformed journal text length:', journalText.length);
 
-      // Extract astrological data from previous reports
-      console.log('🚀 SERVICE: Processing previous astro data:', request.clientData.previousAstroData?.length || 0);
-      
-      const previousAstroDataText = request.clientData.previousAstroData?.map((astroReport, index) => {
-        console.log(`🚀 SERVICE: Processing astro report ${index + 1}:`, {
-          id: astroReport.id,
-          type: astroReport.type,
-          created_at: astroReport.created_at,
-          astro_data_length: astroReport.astro_data?.length || 0
-        });
-        
-        const date = new Date(astroReport.created_at).toLocaleDateString();
-        return `Report Type: ${astroReport.type}\nDate: ${date}\nAstrological Data:\n${astroReport.astro_data || 'No astrological data available'}`;
-      }).join('\n\n---\n\n') || 'No previous astrological data available.';
-
-      console.log('🚀 SERVICE: Transformed astro data text length:', previousAstroDataText.length);
-
-      // Create the payload object - this will be sent as a raw object
+      // Create the payload object with flexible data fields
       const payload = {
         clientId: request.clientId,
         coachId: request.coachId,
@@ -144,12 +133,17 @@ export const insightsService = {
           fullName: request.clientData.fullName,
           goals: request.clientData.goals,
           journalText,
-          previousAstroDataText
+          // Include report texts if provided
+          ...(request.clientData.previousReportTexts && { previousReportTexts: request.clientData.previousReportTexts }),
+          // Include astro data if provided  
+          ...(request.clientData.previousAstroDataText && { previousAstroDataText: request.clientData.previousAstroDataText })
         }
       };
 
       console.log('🚀 SERVICE: === CALLING EDGE FUNCTION ===');
       console.log('🚀 SERVICE: Final payload being sent:', payload);
+      console.log('🚀 SERVICE: Payload includes report texts:', !!payload.clientData.previousReportTexts);
+      console.log('🚀 SERVICE: Payload includes astro data:', !!payload.clientData.previousAstroDataText);
       console.log('🚀 SERVICE: About to call supabase.functions.invoke...');
       
       // Use the safe pattern - send raw object, let Supabase handle stringification and headers

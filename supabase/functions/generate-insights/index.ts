@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -148,16 +149,36 @@ async function getInsightPrice(requestId: string): Promise<number> {
 }
 
 async function generateInsight(systemPrompt: string, clientData: any, requestId: string): Promise<string> {
-  const userMessage = `Client Name: ${clientData.fullName}
+  // Build user message sections dynamically based on available data
+  const sections: string[] = [];
+  
+  // Always include client name and goals
+  sections.push(`Client Name: ${clientData.fullName}`);
+  sections.push(`Goals:\n${clientData.goals || 'No specific goals listed'}`);
 
-Goals:
-${clientData.goals || 'No specific goals listed'}
+  // Add journal entries if available
+  if (clientData.journalText) {
+    sections.push(`Journal Entries:\n${clientData.journalText}`);
+  }
 
-Journal Entries:
-${clientData.journalText}
+  // Add report texts if available
+  if (clientData.previousReportTexts) {
+    sections.push(`Previous Reports:\n${clientData.previousReportTexts}`);
+  }
 
-Previous Astrological Data:
-${clientData.previousAstroDataText}`;
+  // Add astrological data if available
+  if (clientData.previousAstroDataText) {
+    sections.push(`Previous Astrological Data:\n${clientData.previousAstroDataText}`);
+  }
+
+  const userMessage = sections.join('\n\n');
+
+  console.log(`[${requestId}] User message sections included:`, {
+    hasJournalText: !!clientData.journalText,
+    hasReportTexts: !!clientData.previousReportTexts,
+    hasAstroData: !!clientData.previousAstroDataText,
+    sectionsCount: sections.length
+  });
 
   const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
 
@@ -347,6 +368,11 @@ serve(async (req) => {
     });
 
     console.log(`[${requestId}] Processing insight generation for client: ${clientId}`);
+    console.log(`[${requestId}] Data types available:`, {
+      hasJournalText: !!clientData.journalText,
+      hasReportTexts: !!clientData.previousReportTexts,
+      hasAstroData: !!clientData.previousAstroDataText
+    });
 
     // Fetch prompt and generate insight
     const systemPrompt = await getInsightPrompt(insightType, requestId);

@@ -9,6 +9,13 @@ import { clientReportsService } from '@/services/clientReports';
 import { TheraLoader } from '@/components/ui/TheraLoader';
 import { Pencil } from 'lucide-react';
 
+// Configuration for what data to include in insights
+const INSIGHT_DATA_CONFIG = {
+  INCLUDE_REPORT_TEXT: true,      // Send generated report content
+  INCLUDE_ASTRO_DATA: false,      // Send raw astrological data
+  INCLUDE_JOURNAL_ENTRIES: true   // Send journal entries
+};
+
 interface GenerateInsightModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -72,6 +79,51 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
     } finally {
       setLoadingReports(false);
     }
+  };
+
+  const extractReportText = (report: ClientReport) => {
+    const reportType = report.report_tier || report.request_type || 'Report';
+    
+    // Extract human-readable report content from response payload
+    let reportText = '';
+    try {
+      if (report.response_payload) {
+        const payload = report.response_payload;
+        
+        // Look for generated report content in various fields
+        if (payload.report?.content) {
+          reportText = payload.report.content;
+        } else if (payload.generated_text) {
+          reportText = payload.generated_text;
+        } else if (payload.narrative) {
+          reportText = payload.narrative;
+        } else if (payload.content) {
+          reportText = payload.content;
+        } else if (payload.text) {
+          reportText = payload.text;
+        } else if (typeof payload === 'string') {
+          reportText = payload;
+        } else {
+          // Fallback: try to find any text content in the payload
+          const textContent = Object.values(payload)
+            .filter(value => typeof value === 'string' && value.length > 100)
+            .join('\n\n');
+          reportText = textContent || 'No readable report content found.';
+        }
+      } else {
+        reportText = 'No report content available.';
+      }
+    } catch (error) {
+      console.error('Error extracting report text:', error);
+      reportText = 'Unable to extract report content.';
+    }
+
+    return {
+      id: report.id,
+      type: reportType,
+      created_at: report.created_at,
+      report_text: reportText
+    };
   };
 
   const extractAstroData = (report: ClientReport) => {
@@ -139,50 +191,59 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
 
   const handleGenerate = async () => {
     console.log('🔥 === MODAL: STARTING INSIGHT GENERATION ===');
+    console.log('🔥 MODAL: Configuration:', INSIGHT_DATA_CONFIG);
     console.log('🔥 MODAL: Client object received:', client);
-    console.log('🔥 MODAL: Client ID:', client.id);
-    console.log('🔥 MODAL: Client name:', client.full_name);
-    console.log('🔥 MODAL: Client coach_id:', client.coach_id);
-    console.log('🔥 MODAL: Client notes (goals):', client.notes);
     
     setIsGenerating(true);
 
     try {
-      // Log journal entries being processed
-      console.log('🔥 MODAL: Journal entries received:', journalEntries);
-      console.log('🔥 MODAL: Journal entries count:', journalEntries.length);
-      journalEntries.forEach((entry, index) => {
-        console.log(`🔥 MODAL: Journal entry ${index + 1}:`, {
-          id: entry.id,
-          title: entry.title,
-          entry_text_length: entry.entry_text?.length || 0,
-          created_at: entry.created_at,
-          entry_text_preview: entry.entry_text?.substring(0, 100) + '...'
-        });
-      });
+      // Process data based on configuration
+      let extractedReportTexts: any[] = [];
+      let extractedAstroData: any[] = [];
+      
+      if (INSIGHT_DATA_CONFIG.INCLUDE_REPORT_TEXT) {
+        extractedReportTexts = previousReports.map(extractReportText);
+        console.log('🔥 MODAL: Extracted report texts:', extractedReportTexts);
+      }
+      
+      if (INSIGHT_DATA_CONFIG.INCLUDE_ASTRO_DATA) {
+        extractedAstroData = previousReports.map(extractAstroData);
+        console.log('🔥 MODAL: Extracted astro data:', extractedAstroData);
+      }
 
-      // Log previous reports being processed and extract astro data
-      console.log('🔥 MODAL: Previous reports received:', previousReports);
-      console.log('🔥 MODAL: Previous reports count:', previousReports.length);
-      const extractedAstroData = previousReports.map(extractAstroData);
-      console.log('🔥 MODAL: Extracted astro data for insight:', extractedAstroData);
-
-      const clientData = {
+      // Build clientData object based on configuration
+      const clientData: any = {
         fullName: client.full_name,
         goals: client.notes || undefined,
-        journalEntries: journalEntries,
-        previousAstroData: extractedAstroData
       };
 
-      console.log('🔥 MODAL: === CLIENT DATA BEING CREATED ===');
-      console.log('🔥 MODAL: Full clientData object:', clientData);
-      console.log('🔥 MODAL: Goals field value:', clientData.goals);
-      console.log('🔥 MODAL: Journal entries field:', clientData.journalEntries);
-      console.log('🔥 MODAL: Previous astro data field:', clientData.previousAstroData);
+      // Add journal entries if configured
+      if (INSIGHT_DATA_CONFIG.INCLUDE_JOURNAL_ENTRIES) {
+        clientData.journalEntries = journalEntries;
+      }
+
+      // Add report texts if configured and available
+      if (INSIGHT_DATA_CONFIG.INCLUDE_REPORT_TEXT && extractedReportTexts.length > 0) {
+        const reportTexts = extractedReportTexts.map((report, index) => {
+          const date = new Date(report.created_at).toLocaleDateString();
+          return `Report Type: ${report.type}\nDate: ${date}\nReport Content:\n${report.report_text}`;
+        }).join('\n\n---\n\n');
+        clientData.previousReportTexts = reportTexts;
+      }
+
+      // Add astro data if configured and available
+      if (INSIGHT_DATA_CONFIG.INCLUDE_ASTRO_DATA && extractedAstroData.length > 0) {
+        const astroTexts = extractedAstroData.map((astroReport, index) => {
+          const date = new Date(astroReport.created_at).toLocaleDateString();
+          return `Report Type: ${astroReport.type}\nDate: ${date}\nAstrological Data:\n${astroReport.astro_data}`;
+        }).join('\n\n---\n\n');
+        clientData.previousAstroDataText = astroTexts;
+      }
+
+      console.log('🔥 MODAL: Final clientData object:', clientData);
 
       const title = customTitle.trim() || generateDateTitle();
-      console.log('🔥 MODAL: Generated title:', title);
-
+      
       const requestPayload = {
         clientId: client.id,
         coachId: client.coach_id,
@@ -191,29 +252,13 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         clientData
       };
 
-      console.log('🔥 MODAL: === FINAL REQUEST PAYLOAD TO INSIGHTS SERVICE ===');
-      console.log('🔥 MODAL: Complete request payload:', requestPayload);
-      console.log('🔥 MODAL: Payload as JSON string:', JSON.stringify(requestPayload, null, 2));
-      console.log('🔥 MODAL: Request payload keys:', Object.keys(requestPayload));
-      console.log('🔥 MODAL: Client ID in payload:', requestPayload.clientId);
-      console.log('🔥 MODAL: Coach ID in payload:', requestPayload.coachId);
-      console.log('🔥 MODAL: Insight Type in payload:', requestPayload.insightType);
-      console.log('🔥 MODAL: Title in payload:', requestPayload.title);
-      console.log('🔥 MODAL: ClientData keys:', Object.keys(requestPayload.clientData));
-
-      console.log('🔥 MODAL: About to call insightsService.generateInsight...');
+      console.log('🔥 MODAL: Request payload to insights service:', requestPayload);
       
       const response = await insightsService.generateInsight(requestPayload);
 
-      console.log('🔥 MODAL: === INSIGHTS SERVICE RESPONSE ===');
       console.log('🔥 MODAL: Response received:', response);
-      console.log('🔥 MODAL: Response success:', response.success);
       
       if (response.success) {
-        console.log('🔥 MODAL: Insight generated successfully!');
-        console.log('🔥 MODAL: Insight ID:', response.insightId);
-        console.log('🔥 MODAL: Content length:', response.content?.length || 0);
-        
         toast({
           title: "Success",
           description: "Insight generated successfully!",
@@ -223,17 +268,10 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         setCustomTitle('');
         setShowTitleInput(false);
       } else {
-        console.error('🔥 MODAL: === INSIGHT GENERATION FAILED ===');
-        console.error('🔥 MODAL: Error from service:', response.error);
-        console.error('🔥 MODAL: Request ID:', response.requestId);
         throw new Error(response.error || 'Failed to generate insight');
       }
     } catch (error) {
-      console.error('🔥 MODAL: === CRITICAL ERROR IN GENERATE INSIGHT MODAL ===');
-      console.error('🔥 MODAL: Error type:', typeof error);
-      console.error('🔥 MODAL: Error message:', error instanceof Error ? error.message : String(error));
-      console.error('🔥 MODAL: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      console.error('🔥 MODAL: Full error object:', error);
+      console.error('🔥 MODAL: Error in generate insight modal:', error);
       
       toast({
         title: "Error",
@@ -242,7 +280,6 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
       });
     } finally {
       setIsGenerating(false);
-      console.log('🔥 MODAL: === MODAL FINISHED (success or error) ===');
     }
   };
 
