@@ -10,7 +10,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Client } from '@/types/database';
+
+interface MinimalClient {
+  id: string;
+  full_name: string;
+}
 
 interface ActionConfirmDialogProps {
   open: boolean;
@@ -19,7 +23,7 @@ interface ActionConfirmDialogProps {
   description: string;
   actionLabel: string;
   onConfirm: () => void;
-  client: Client | null;
+  client: MinimalClient | null;
   variant?: 'default' | 'destructive';
 }
 
