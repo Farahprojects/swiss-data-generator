@@ -1,5 +1,4 @@
 // supabase/functions/_shared/translator.ts
-// Pure helper module – NO Edge Function wrapper
 //
 // ▸ 2025-06-16 patch v2.1 - LATEST VERSION DEBUG
 //   • removed undefined `raw` reference in logger
