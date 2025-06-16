@@ -36,12 +36,14 @@ const processSwissDataInBackground = async (
 
     const payload = {
       request: mappedRequestType,
-      birth_date: reportData.birthDate,
-      birth_time: reportData.birthTime,
-      latitude: parseFloat(reportData.birthLatitude),
-      longitude: parseFloat(reportData.birthLongitude),
+      birth_date: reportData.birthDate ?? null,
+      birth_time: reportData.birthTime ?? null,
+      latitude: reportData.birthLatitude ? parseFloat(reportData.birthLatitude) : null,
+      longitude: reportData.birthLongitude ? parseFloat(reportData.birthLongitude) : null,
       name: reportData.name || "Guest",
     };
+
+    console.log("Sending to translator:", payload);
 
     const translated = await translate(payload);
     swissData = JSON.parse(translated.text);
