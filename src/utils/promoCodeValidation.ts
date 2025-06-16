@@ -69,18 +69,85 @@ export const validatePromoCode = async (code: string): Promise<PromoCodeValidati
 
 export const createFreeReport = async (promoCode: string, reportData: any) => {
   try {
-    const { data, error } = await supabase.functions.invoke('create-free-report', {
-      body: {
-        promoCode: promoCode.trim().toUpperCase(),
-        reportData
-      }
-    });
+    // Validate promo code first
+    const { data: promoCodeData, error: promoError } = await supabase
+      .from('promo_codes')
+      .select('*')
+      .eq('code', promoCode.trim().toUpperCase())
+      .eq('is_active', true)
+      .single();
 
-    if (error) {
-      throw new Error(error.message || 'Failed to create free report');
+    if (promoError || !promoCodeData) {
+      throw new Error('Invalid promo code');
     }
 
-    return data;
+    // Check if promo code is 100% discount
+    if (promoCodeData.discount_percent !== 100) {
+      throw new Error('Promo code does not provide free access');
+    }
+
+    // Check usage limits
+    if (promoCodeData.max_uses && promoCodeData.times_used >= promoCodeData.max_uses) {
+      throw new Error('Promo code usage limit exceeded');
+    }
+
+    // Generate a unique session ID for tracking
+    const sessionId = `free_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create guest report entry
+    const { data: guestReport, error: reportError } = await supabase
+      .from('guest_reports')
+      .insert({
+        stripe_session_id: sessionId,
+        email: reportData.email,
+        report_type: reportData.reportType,
+        report_data: reportData,
+        amount_paid: 0,
+        payment_status: 'free',
+        promo_code_used: promoCode,
+        has_report: false,
+        email_sent: false
+      })
+      .select()
+      .single();
+
+    if (reportError) {
+      console.error('❌ Error creating guest report:', reportError);
+      throw new Error('Failed to create report entry');
+    }
+
+    console.log('✅ Guest report created:', guestReport.id);
+
+    // Update promo code usage count
+    const { error: updateError } = await supabase
+      .from('promo_codes')
+      .update({ times_used: promoCodeData.times_used + 1 })
+      .eq('id', promoCodeData.id);
+
+    if (updateError) {
+      console.error('⚠️ Warning: Failed to update promo code usage count:', updateError);
+    }
+
+    // Now call verify-guest-payment to get Swiss data
+    const { data: verifyResult, error: verifyError } = await supabase.functions.invoke('verify-guest-payment', {
+      body: { sessionId: sessionId }
+    });
+
+    if (verifyError) {
+      console.error('❌ Error verifying free session:', verifyError);
+      throw new Error('Failed to process free report');
+    }
+
+    console.log('✅ Free report processed successfully');
+
+    return {
+      success: true,
+      message: 'Free report created successfully',
+      reportId: guestReport.id,
+      sessionId: sessionId,
+      verifyResult: verifyResult
+    };
+
   } catch (error) {
     console.error('Error creating free report:', error);
     throw error;

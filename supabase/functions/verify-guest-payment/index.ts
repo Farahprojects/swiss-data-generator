@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
@@ -123,16 +122,69 @@ serve(async (req) => {
     const { sessionId } = await req.json();
     if (!sessionId) throw new Error("Session ID is required");
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2024-04-10",
-    });
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") || "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
       { auth: { persistSession: false } }
     );
 
+    // Check if this is a free promo session (starts with "free_")
+    const isFreeSession = sessionId.startsWith('free_');
+    
+    if (isFreeSession) {
+      console.log('🎫 Processing free promo session:', sessionId);
+      
+      // For free sessions, get the guest report data directly from database
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from("guest_reports")
+        .select("*")
+        .eq("stripe_session_id", sessionId)
+        .single();
+
+      if (fetchError || !existingRecord) {
+        console.error('❌ Free session not found:', sessionId);
+        return new Response(
+          JSON.stringify({ error: 'Free session not found' }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if Swiss data already exists
+      if (existingRecord.swiss_data) {
+        console.log('✅ Swiss data already exists for free session');
+        return new Response(JSON.stringify({
+          success: true,
+          verified: true,
+          paymentStatus: 'free',
+          reportData: existingRecord.report_data,
+          guestReportId: existingRecord.id,
+          swissData: existingRecord.swiss_data,
+          message: "Free session already processed"
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Process Swiss data for free session
+      console.log('🔄 Starting Swiss data processing for free session');
+      EdgeRuntime.waitUntil(processSwissDataInBackground(existingRecord.id, existingRecord.report_data, supabase));
+
+      return new Response(JSON.stringify({
+        success: true,
+        verified: true,
+        paymentStatus: 'free',
+        reportData: existingRecord.report_data,
+        guestReportId: existingRecord.id,
+        swissProcessing: true,
+        message: "Free session verified and Swiss data processing started"
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Handle paid Stripe sessions (existing logic)
     const { data: existingRecord } = await supabase
       .from("guest_reports")
       .select("*")
@@ -154,6 +206,10 @@ serve(async (req) => {
       });
     }
 
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+      apiVersion: "2024-04-10",
+    });
+
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     if (session.payment_status !== "paid") throw new Error(`Payment not completed. Status: ${session.payment_status}`);
 
@@ -161,7 +217,7 @@ serve(async (req) => {
       email: session.metadata?.guest_email || session.customer_details?.email,
       amount: session.metadata?.amount,
       description: session.metadata?.description,
-      reportType: session.metadata?.reportType, // This now contains the complete report type
+      reportType: session.metadata?.reportType,
       sessionId: session.id,
       birthDate: session.metadata?.birthDate,
       birthTime: session.metadata?.birthTime,
@@ -186,7 +242,7 @@ serve(async (req) => {
       .insert({
         stripe_session_id: session.id,
         email: reportData.email,
-        report_type: reportData.reportType, // Save the complete report type here
+        report_type: reportData.reportType,
         amount_paid: (session.amount_total || 0) / 100,
         report_data: reportData,
         payment_status: "paid",
