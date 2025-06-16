@@ -37,15 +37,17 @@ export const ActionConfirmDialog: React.FC<ActionConfirmDialogProps> = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="bg-white border border-gray-200 shadow-2xl shadow-gray-500/20 rounded-lg max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle className="text-gray-900">{title}</AlertDialogTitle>
+          <AlertDialogDescription className="text-gray-600">
             {description.replace('{clientName}', client.full_name)}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100">
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm}
             className={variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}

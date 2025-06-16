@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
@@ -165,6 +166,7 @@ const ClientDetailPage = () => {
             onCreateReport={() => setShowReportModal(true)}
             onViewReport={handleViewReport}
             onDeleteReport={handleDeleteReport}
+            client={client}
           />
         );
       case 'insights':

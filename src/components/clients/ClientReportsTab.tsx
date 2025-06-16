@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Plus, FileText, Trash, User, Calendar } from 'lucide-react';
+import { Plus, FileText, Trash2, User, Calendar } from 'lucide-react';
+import { ActionConfirmDialog } from './ActionConfirmDialog';
 import { formatDate } from '@/utils/dateFormatters';
 
 interface ClientReport {
@@ -22,6 +23,7 @@ interface ClientReportsTabProps {
   onCreateReport: () => void;
   onViewReport: (report: ClientReport) => void;
   onDeleteReport: (report: ClientReport) => void;
+  client?: { id: string; full_name: string } | null;
 }
 
 const getDisplayName = (report: ClientReport): string => {
@@ -90,8 +92,22 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
   clientReports,
   onCreateReport,
   onViewReport,
-  onDeleteReport
+  onDeleteReport,
+  client = null
 }) => {
+  const [reportToDelete, setReportToDelete] = useState<ClientReport | null>(null);
+
+  const handleDeleteClick = (report: ClientReport) => {
+    setReportToDelete(report);
+  };
+
+  const handleConfirmDelete = () => {
+    if (reportToDelete) {
+      onDeleteReport(reportToDelete);
+      setReportToDelete(null);
+    }
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -200,10 +216,10 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onDeleteReport(report)}
+                            onClick={() => handleDeleteClick(report)}
                             className="text-gray-600 hover:text-destructive hover:bg-destructive/5 p-2 h-auto"
                           >
-                            <Trash className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -217,6 +233,18 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
             })}
           </div>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <ActionConfirmDialog
+          open={!!reportToDelete}
+          onOpenChange={(open) => !open && setReportToDelete(null)}
+          title="Delete Report"
+          description="Are you sure you want to delete this report? This action cannot be undone."
+          actionLabel="Delete"
+          onConfirm={handleConfirmDelete}
+          client={client}
+          variant="destructive"
+        />
       </div>
     </TooltipProvider>
   );
