@@ -66,7 +66,7 @@ function buildTranslatorPayload(rd: ReportData) {
       latitude:   parseFloat(rd.birthLatitude),
       longitude:  parseFloat(rd.birthLongitude),
       name:       rd.name ?? "Guest",
-      report:     "standard",                         // Add report field for single-person reports
+      report:     rd.reportType,                      // Use actual reportType instead of hardcoded "standard"
     };
   }
 
@@ -95,7 +95,7 @@ function buildTranslatorPayload(rd: ReportData) {
         name:       rd.secondPersonName ?? "B",
       },
       relationship_type: rd.relationshipType ?? "general",
-      report:           "compatibility",                // Add report field for sync/compatibility reports
+      report:           rd.reportType,                // Use actual reportType instead of hardcoded "compatibility"
     };
   }
 
