@@ -1,15 +1,16 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Plus, FileText, Edit2, Check, X, Trash2, User, Target, ArrowRight } from 'lucide-react';
+import { Plus, FileText, Edit2, Check, X, Trash2, User, Target } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatters';
 import { InsightEntry, Client } from '@/types/database';
 import { GenerateInsightModal } from './GenerateInsightModal';
+import { ActionConfirmDialog } from './ActionConfirmDialog';
 import { insightsService } from '@/services/insights';
 import { useToast } from '@/hooks/use-toast';
 
@@ -158,6 +159,8 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
 }) => {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [deletingInsightId, setDeletingInsightId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [insightToDelete, setInsightToDelete] = useState<InsightEntry | null>(null);
   const { toast } = useToast();
 
   const handleGenerateInsight = () => {
@@ -177,10 +180,17 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
     }
   };
 
-  const handleDeleteInsight = async (insightId: string) => {
+  const handleDeleteClick = (insight: InsightEntry) => {
+    setInsightToDelete(insight);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteInsight = async () => {
+    if (!insightToDelete) return;
+    
     try {
-      setDeletingInsightId(insightId);
-      await insightsService.deleteInsight(insightId);
+      setDeletingInsightId(insightToDelete.id);
+      await insightsService.deleteInsight(insightToDelete.id);
       toast({
         title: "Success",
         description: "Insight deleted successfully.",
@@ -197,6 +207,8 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
       });
     } finally {
       setDeletingInsightId(null);
+      setShowDeleteDialog(false);
+      setInsightToDelete(null);
     }
   };
 
@@ -310,7 +322,7 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                                 {actions.map((action, index) => (
                                   <div key={index} className="flex items-start gap-3">
                                     <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                      <ArrowRight className="w-3 h-3 text-gray-600" />
+                                      <Target className="w-3 h-3 text-gray-600" />
                                     </div>
                                     <span className="text-sm text-gray-700 leading-relaxed">{action}</span>
                                   </div>
@@ -334,40 +346,20 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
                         <span className="text-sm">View Full Insight</span>
                       </Button>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button 
-                                disabled={deletingInsightId === insight.id}
-                                className="text-gray-600 hover:text-destructive transition-colors p-2 disabled:opacity-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <span>Delete insight</span>
-                            </TooltipContent>
-                          </Tooltip>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Insight</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this insight? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleDeleteInsight(insight.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button 
+                            onClick={() => handleDeleteClick(insight)}
+                            disabled={deletingInsightId === insight.id}
+                            className="text-gray-600 hover:text-destructive transition-colors p-2 disabled:opacity-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <span>Delete insight</span>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 </Card>
@@ -385,6 +377,17 @@ export const ClientInsightsTab: React.FC<ClientInsightsTabProps> = ({
             onInsightGenerated={handleInsightGenerated}
           />
         )}
+
+        <ActionConfirmDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          title="Delete Insight"
+          description="Are you sure you want to delete this insight for {clientName}? This action cannot be undone."
+          actionLabel="Delete"
+          onConfirm={handleDeleteInsight}
+          client={client ? { id: client.id, full_name: client.full_name } : null}
+          variant="destructive"
+        />
       </div>
     </TooltipProvider>
   );
