@@ -1,4 +1,3 @@
-
 project_id = "wrvqqvqvwqmfdqvqmaar"
 
 [api]
@@ -9,7 +8,6 @@ extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-enabled = true
 port = 54322
 shadow_port = 54320
 major_version = 15
@@ -23,7 +21,7 @@ max_client_conn = 100
 
 [realtime]
 enabled = true
-ip_version = "ipv4"
+ip_version = "IPv4"
 
 [studio]
 enabled = true
@@ -52,122 +50,3 @@ enable_anonymous_sign_ins = false
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
-
-[edge-runtime]
-enabled = true
-port = 54288
-
-[[edge-runtime.functions]]
-name = "api-usage-handler"
-source = "./supabase/functions/api-usage-handler"
-verify_jwt = true
-
-[[edge-runtime.functions]]
-name = "api"
-source = "./supabase/functions/api"
-verify_jwt = true
-
-[[edge-runtime.functions]]
-name = "contact-form-handler"
-source = "./supabase/functions/contact-form-handler"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "create-checkout"
-source = "./supabase/functions/create-checkout"
-verify_jwt = true
-
-[[edge-runtime.functions]]
-name = "create-guest-checkout"
-source = "./supabase/functions/create-guest-checkout"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "create-report"
-source = "./supabase/functions/create-report"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "email-check"
-source = "./supabase/functions/email-check"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "email-verification"
-source = "./supabase/functions/email-verification"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "generate-insights"
-source = "./supabase/functions/generate-insights"
-verify_jwt = true
-
-[[edge-runtime.functions]]
-name = "get-google-maps-key"
-source = "./supabase/functions/get-google-maps-key"
-verify_jwt = true
-
-[[edge-runtime.functions]]
-name = "google-speech-to-text"
-source = "./supabase/functions/google-speech-to-text"
-verify_jwt = true
-
-[[edge-runtime.functions]]
-name = "outbound-messenger"
-source = "./supabase/functions/outbound-messenger"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "password_token"
-source = "./supabase/functions/password_token"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "process-credits"
-source = "./supabase/functions/process-credits"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "process-topup-queue"
-source = "./supabase/functions/process-topup-queue"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "send-email"
-source = "./supabase/functions/send-email"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "send-notification-email"
-source = "./supabase/functions/send-notification-email"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "signup_token"
-source = "./supabase/functions/signup_token"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "standard-report"
-source = "./supabase/functions/standard-report"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "stripe-webhook-handler"
-source = "./supabase/functions/stripe-webhook-handler"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "swiss"
-source = "./supabase/functions/swiss"
-verify_jwt = false 
-
-[[edge-runtime.functions]]
-name = "verification-emailer"
-source = "./supabase/functions/verification-emailer"
-verify_jwt = false
-
-[[edge-runtime.functions]]
-name = "verify-guest-payment"
-source = "./supabase/functions/verify-guest-payment"
-verify_jwt = false
