@@ -1,116 +1,42 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
+import { translate } from "./_shared/translator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const mapReportTypeToSwissRequest = (reportType: string): string => {
-  // Map complete report types to swiss request types
-  const mapping: { [key: string]: string } = {
-    'essence_personal': 'essence',
-    'essence_professional': 'essence',
-    'essence_relational': 'essence',
-    'sync_personal': 'sync',
-    'sync_professional': 'sync',
-    'flow': 'flow',
-    'mindset': 'mindset',
-    'monthly': 'monthly',
-    'focus': 'focus',
-  };
-  return mapping[reportType] || 'unknown';
-};
-
-const formatDateForSwiss = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
-  } catch {
-    return dateString;
-  }
-};
-
-const callSwissEphemerisAPI = async (reportData: any): Promise<any> => {
-  const requestType = mapReportTypeToSwissRequest(reportData.reportType);
-  if (requestType === "unknown") {
-    throw new Error(`Invalid report type: ${reportData.reportType}`);
-  }
-
-  const swissUrl = `${Deno.env.get("SWISS_EPHEMERIS_URL")}/${requestType}`;
-  if (!Deno.env.get("SWISS_EPHEMERIS_URL")) {
-    throw new Error("SWISS_EPHEMERIS_URL environment variable not set");
-  }
-
-  const payload: any = {
-    birth_day: formatDateForSwiss(reportData.birthDate),
-    latitude: parseFloat(reportData.birthLatitude),
-    longitude: parseFloat(reportData.birthLongitude),
-  };
-
-  if (['sync_personal', 'sync_professional'].includes(reportData.reportType)) {
-    if (reportData.secondPersonBirthDate && reportData.secondPersonLatitude && reportData.secondPersonLongitude) {
-      payload.birth_day2 = formatDateForSwiss(reportData.secondPersonBirthDate);
-      payload.latitude2 = parseFloat(reportData.secondPersonLatitude);
-      payload.longitude2 = parseFloat(reportData.secondPersonLongitude);
-    }
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-  try {
-    const endpoint = `${swissUrl}/${requestType}`;
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-    const text = await response.text();
-    if (!response.ok) throw new Error(`Swiss API error: ${response.status} - ${text}`);
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      return { raw_response: text };
-    }
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') throw new Error('Swiss API request timed out');
-    throw error;
-  }
-};
-
-const processSwissDataInBackground = async (guestReportId: string, reportData: any, supabase: any) => {
+const processSwissDataInBackground = async (
+  guestReportId: string,
+  reportData: any,
+  supabase: any
+) => {
   let swissData = null;
   let swissError = null;
 
   try {
-    swissData = await callSwissEphemerisAPI(reportData);
+    const translated = await translate({ ...reportData, request: reportData.reportType });
+    swissData = JSON.parse(translated.text);
   } catch (error) {
     swissError = error.message;
     swissData = {
       error: true,
       error_message: error.message,
       timestamp: new Date().toISOString(),
-      attempted_payload: {
-        request: mapReportTypeToSwissRequest(reportData.reportType),
-        birth_day: reportData.birthDate,
-        latitude: reportData.birthLatitude,
-        longitude: reportData.birthLongitude,
-      }
+      attempted_payload: reportData,
     };
   }
 
-  await supabase.from("guest_reports").update({
-    swiss_data: swissData,
-    has_report: !swissError,
-    updated_at: new Date().toISOString(),
-  }).eq("id", guestReportId);
+  await supabase
+    .from("guest_reports")
+    .update({
+      swiss_data: swissData,
+      has_report: !swissError,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", guestReportId);
 };
 
 serve(async (req) => {
@@ -128,13 +54,11 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Check if this is a free promo session (starts with "free_")
-    const isFreeSession = sessionId.startsWith('free_');
-    
+    const isFreeSession = sessionId.startsWith("free_");
+
     if (isFreeSession) {
-      console.log('🎫 Processing free promo session:', sessionId);
-      
-      // For free sessions, get the guest report data directly from database
+      console.log("🎫 Processing free promo session:", sessionId);
+
       const { data: existingRecord, error: fetchError } = await supabase
         .from("guest_reports")
         .select("*")
@@ -142,68 +66,57 @@ serve(async (req) => {
         .single();
 
       if (fetchError || !existingRecord) {
-        console.error('❌ Free session not found:', sessionId);
         return new Response(
-          JSON.stringify({ error: 'Free session not found' }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Free session not found" }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
         );
       }
 
-      // Check if Swiss data already exists
       if (existingRecord.swiss_data) {
-        console.log('✅ Swiss data already exists for free session');
-        return new Response(JSON.stringify({
-          success: true,
-          verified: true,
-          paymentStatus: 'free',
-          reportData: existingRecord.report_data,
-          guestReportId: existingRecord.id,
-          swissData: existingRecord.swiss_data,
-          message: "Free session already processed"
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            success: true,
+            verified: true,
+            paymentStatus: "free",
+            reportData: existingRecord.report_data,
+            guestReportId: existingRecord.id,
+            swissData: existingRecord.swiss_data,
+            message: "Free session already processed",
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
 
-      // Process Swiss data for free session
-      console.log('🔄 Starting Swiss data processing for free session');
-      EdgeRuntime.waitUntil(processSwissDataInBackground(existingRecord.id, existingRecord.report_data, supabase));
+      console.log("🔄 Starting Swiss data processing via translator");
+      EdgeRuntime.waitUntil(
+        processSwissDataInBackground(
+          existingRecord.id,
+          existingRecord.report_data,
+          supabase
+        )
+      );
 
-      return new Response(JSON.stringify({
-        success: true,
-        verified: true,
-        paymentStatus: 'free',
-        reportData: existingRecord.report_data,
-        guestReportId: existingRecord.id,
-        swissProcessing: true,
-        message: "Free session verified and Swiss data processing started"
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Handle paid Stripe sessions (existing logic)
-    const { data: existingRecord } = await supabase
-      .from("guest_reports")
-      .select("*")
-      .eq("stripe_session_id", sessionId)
-      .single();
-
-    if (existingRecord) {
-      return new Response(JSON.stringify({
-        success: true,
-        verified: true,
-        paymentStatus: existingRecord.payment_status,
-        reportData: existingRecord.report_data,
-        guestReportId: existingRecord.id,
-        swissData: existingRecord.swiss_data,
-        message: "Payment already verified and recorded"
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          verified: true,
+          paymentStatus: "free",
+          reportData: existingRecord.report_data,
+          guestReportId: existingRecord.id,
+          swissProcessing: true,
+          message: "Free session verified and Swiss data processing started",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -211,7 +124,10 @@ serve(async (req) => {
     });
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status !== "paid") throw new Error(`Payment not completed. Status: ${session.payment_status}`);
+    if (session.payment_status !== "paid")
+      throw new Error(
+        `Payment not completed. Status: ${session.payment_status}`
+      );
 
     const reportData = {
       email: session.metadata?.guest_email || session.customer_details?.email,
@@ -251,33 +167,43 @@ serve(async (req) => {
       .single();
 
     if (insertError) {
-      throw new Error(`Failed to create guest report record: ${insertError.message}`);
+      throw new Error(
+        `Failed to create guest report record: ${insertError.message}`
+      );
     }
 
-    EdgeRuntime.waitUntil(processSwissDataInBackground(guestReportData.id, reportData, supabase));
+    EdgeRuntime.waitUntil(
+      processSwissDataInBackground(guestReportData.id, reportData, supabase)
+    );
 
-    return new Response(JSON.stringify({
-      success: true,
-      verified: true,
-      paymentStatus: session.payment_status,
-      amountPaid: session.amount_total,
-      currency: session.currency,
-      reportData: guestReportData.report_data,
-      guestReportId: guestReportData.id,
-      swissProcessing: true,
-      message: "Payment verified and Swiss data processing started"
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        verified: true,
+        paymentStatus: session.payment_status,
+        amountPaid: session.amount_total,
+        currency: session.currency,
+        reportData: guestReportData.report_data,
+        guestReportId: guestReportData.id,
+        swissProcessing: true,
+        message: "Payment verified and Swiss data processing started",
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error: any) {
-    return new Response(JSON.stringify({
-      success: false,
-      verified: false,
-      error: error.message,
-    }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        verified: false,
+        error: error.message,
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
