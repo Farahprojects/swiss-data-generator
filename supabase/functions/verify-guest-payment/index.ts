@@ -1,5 +1,6 @@
+
 // supabase/functions/guest_verify_payment.ts
-// Edge Function: verifies Stripe/“free” sessions, records the guest report,
+// Edge Function: verifies Stripe/"free" sessions, records the guest report,
 // ▸ Changes
 //   • strict validation so ONLY translator-ready payloads are built
 //   • unified payload builder for every report type
