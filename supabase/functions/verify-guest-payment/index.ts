@@ -1,4 +1,3 @@
-
 // supabase/functions/guest_verify_payment.ts
 // Edge Function: verifies Stripe/"free" sessions, records the guest report,
 // ▸ Changes
@@ -68,6 +67,7 @@ function buildTranslatorPayload(rd: ReportData) {
       latitude:   parseFloat(rd.birthLatitude),
       longitude:  parseFloat(rd.birthLongitude),
       name:       rd.name ?? "Guest",
+      report:     "standard",                         // Add report field for single-person reports
     };
   }
 
@@ -96,6 +96,7 @@ function buildTranslatorPayload(rd: ReportData) {
         name:       rd.secondPersonName ?? "B",
       },
       relationship_type: rd.relationshipType ?? "general",
+      report:           "compatibility",                // Add report field for sync/compatibility reports
     };
   }
 
@@ -157,7 +158,7 @@ serve(async (req) => {
 
     const isFree = sessionId.startsWith("free_");
 
-    // ─────────── “FREE” SESSIONS ───────────
+    // ─────────── "FREE" SESSIONS ───────────
     if (isFree) {
       const { data: record, error } = await supabase
         .from("guest_reports")
