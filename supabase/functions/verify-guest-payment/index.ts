@@ -4,7 +4,7 @@
 //   • strict validation so ONLY translator-ready payloads are built
 //   • unified payload builder for every report type
 //   • clearer failures if something is missing
-//   • always sends birth_day + birth_time (or rejects)
+//   • always sends birth_day + birth_time (or rejects the requst and updates)
 //
 // ---------------------------------------------------------------------------
 
