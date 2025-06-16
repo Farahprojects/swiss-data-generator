@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -15,12 +14,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import ReportGuideModal from '@/components/public-report/ReportGuideModal';
 import { getProductByName } from '@/utils/stripe-products';
 import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
+import { validatePromoCode, createFreeReport, PromoCodeValidation } from '@/utils/promoCodeValidation';
 import { useToast } from '@/hooks/use-toast';
 
 const reportSchema = z.object({
@@ -114,6 +114,9 @@ const PublicReport = () => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [showReportGuide, setShowReportGuide] = useState(false);
   const [isPricingLoading, setIsPricingLoading] = useState(false);
+  const [promoValidation, setPromoValidation] = useState<PromoCodeValidation | null>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+  const [reportCreated, setReportCreated] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<ReportFormData>({
@@ -241,6 +244,35 @@ const PublicReport = () => {
     };
   };
 
+  // Debounced promo code validation
+  useEffect(() => {
+    const promoCode = watch('promoCode');
+    if (!promoCode || promoCode.trim() === '') {
+      setPromoValidation(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsValidatingPromo(true);
+      try {
+        const validation = await validatePromoCode(promoCode);
+        setPromoValidation(validation);
+      } catch (error) {
+        console.error('Error validating promo code:', error);
+        setPromoValidation({
+          isValid: false,
+          discountPercent: 0,
+          message: 'Error validating promo code',
+          isFree: false
+        });
+      } finally {
+        setIsValidatingPromo(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timeoutId);
+  }, [watch('promoCode')]);
+
   const onSubmit = async (data: ReportFormData) => {
     setIsProcessing(true);
     setIsPricingLoading(true);
@@ -251,7 +283,48 @@ const PublicReport = () => {
       // Build the complete report type
       const completeReportType = buildCompleteReportType(data);
       console.log('Complete report type for submission:', completeReportType);
+
+      // Check if we have a valid free promo code
+      if (data.promoCode && promoValidation?.isFree && promoValidation.isValid) {
+        console.log('Processing free report with promo code:', data.promoCode);
+        
+        // Prepare report data for free report
+        const reportData = {
+          reportType: completeReportType,
+          relationshipType: data.relationshipType,
+          essenceType: data.essenceType,
+          name: data.name,
+          email: data.email,
+          birthDate: data.birthDate,
+          birthTime: data.birthTime,
+          birthLocation: data.birthLocation,
+          birthLatitude: data.birthLatitude,
+          birthLongitude: data.birthLongitude,
+          birthPlaceId: data.birthPlaceId,
+          secondPersonName: data.secondPersonName,
+          secondPersonBirthDate: data.secondPersonBirthDate,
+          secondPersonBirthTime: data.secondPersonBirthTime,
+          secondPersonBirthLocation: data.secondPersonBirthLocation,
+          secondPersonLatitude: data.secondPersonLatitude,
+          secondPersonLongitude: data.secondPersonLongitude,
+          secondPersonPlaceId: data.secondPersonPlaceId,
+          returnYear: data.returnYear,
+          notes: data.notes,
+        };
+
+        const result = await createFreeReport(data.promoCode, reportData);
+        
+        setReportCreated(true);
+        toast({
+          title: "Free Report Created!",
+          description: "Your report has been generated and will be sent to your email shortly.",
+        });
+        
+        setIsPricingLoading(false);
+        return;
+      }
       
+      // Regular paid flow
       const { amount, description } = await getReportPriceAndDescription(
         data.reportType, 
         data.relationshipType, 
@@ -260,9 +333,15 @@ const PublicReport = () => {
       
       setIsPricingLoading(false);
 
-      // Prepare report data for storage in payment metadata
+      // Apply promo code discount if valid (but not free)
+      let finalAmount = amount;
+      if (data.promoCode && promoValidation?.isValid && !promoValidation.isFree) {
+        finalAmount = amount * (1 - promoValidation.discountPercent / 100);
+      }
+
+      // Prepare report data for paid checkout
       const reportData = {
-        reportType: completeReportType, // Use the complete report type here
+        reportType: completeReportType,
         relationshipType: data.relationshipType,
         essenceType: data.essenceType,
         name: data.name,
@@ -287,7 +366,7 @@ const PublicReport = () => {
       
       console.log('Report data being sent to checkout:', reportData);
       
-      const result = await guestCheckoutWithAmount(data.email, amount, description, reportData);
+      const result = await guestCheckoutWithAmount(data.email, finalAmount, description, reportData);
       
       if (!result.success) {
         toast({
@@ -310,6 +389,43 @@ const PublicReport = () => {
   };
 
   const getCurrentYear = () => new Date().getFullYear();
+
+  // Show success message if free report was created
+  if (reportCreated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+        <div className="container mx-auto px-4 py-16 text-center">
+          <Card className="max-w-2xl mx-auto border-2 border-green-200">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <CheckCircle className="h-12 w-12 text-green-500" />
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Report Created!</h1>
+                  <p className="text-gray-600">Your free report has been generated</p>
+                </div>
+              </div>
+              
+              <div className="bg-green-50 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-semibold text-green-800 mb-2">Success!</h3>
+                <p className="text-green-700">
+                  Your free report has been generated and will be sent to your email shortly. 
+                  Please check your inbox (and spam folder) for the report.
+                </p>
+              </div>
+
+              <Button 
+                onClick={() => window.location.reload()} 
+                variant="outline"
+                className="mt-4"
+              >
+                Create Another Report
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -636,7 +752,16 @@ const PublicReport = () => {
                   className="px-12 py-6 text-lg"
                   disabled={isProcessing || isPricingLoading}
                 >
-                  {isProcessing || isPricingLoading ? 'Processing...' : 'Generate My Report'}
+                  {isProcessing || isPricingLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : promoValidation?.isFree ? (
+                    'Generate My Free Report'
+                  ) : (
+                    'Generate My Report'
+                  )}
                 </Button>
                 
                 {/* Promo Code Section */}
@@ -658,18 +783,39 @@ const PublicReport = () => {
                   </button>
                   
                   <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    showPromoCode ? 'max-h-20 opacity-100 mt-3' : 'max-h-0 opacity-0'
+                    showPromoCode ? 'max-h-32 opacity-100 mt-3' : 'max-h-0 opacity-0'
                   }`}>
                     <div className="space-y-2">
-                      <Input
-                        {...register('promoCode')}
-                        placeholder="Enter promo code"
-                        className="text-center px-12 py-6 text-lg"
-                      />
-                      {watch('promoCode') && (
-                        <p className="text-xs text-center text-muted-foreground">
-                          Promo code will be applied at checkout
-                        </p>
+                      <div className="relative">
+                        <Input
+                          {...register('promoCode')}
+                          placeholder="Enter promo code"
+                          className="text-center px-12 py-6 text-lg"
+                          onChange={(e) => {
+                            register('promoCode').onChange(e);
+                            // Reset validation when user types
+                            if (e.target.value === '') {
+                              setPromoValidation(null);
+                            }
+                          }}
+                        />
+                        {isValidatingPromo && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {promoValidation && (
+                        <div className={`text-xs text-center p-2 rounded ${
+                          promoValidation.isValid 
+                            ? promoValidation.isFree 
+                              ? 'bg-green-50 text-green-700 border border-green-200'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
+                          {promoValidation.message}
+                        </div>
                       )}
                     </div>
                   </div>

@@ -532,6 +532,7 @@ export type Database = {
           has_report: boolean
           id: string
           payment_status: string
+          promo_code_used: string | null
           report_content: string | null
           report_data: Json
           report_type: string
@@ -547,6 +548,7 @@ export type Database = {
           has_report?: boolean
           id?: string
           payment_status?: string
+          promo_code_used?: string | null
           report_content?: string | null
           report_data?: Json
           report_type: string
@@ -562,6 +564,7 @@ export type Database = {
           has_report?: boolean
           id?: string
           payment_status?: string
+          promo_code_used?: string | null
           report_content?: string | null
           report_data?: Json
           report_type?: string
@@ -851,6 +854,36 @@ export type Database = {
           name?: string
           report_tier?: string | null
           unit_price_usd?: number
+        }
+        Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          discount_percent: number
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          times_used: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          discount_percent: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          times_used?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          discount_percent?: number
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          times_used?: number | null
         }
         Relationships: []
       }
