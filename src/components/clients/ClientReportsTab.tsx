@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Plus, FileText, Trash2, User, Calendar } from 'lucide-react';
 import { ActionConfirmDialog } from './ActionConfirmDialog';
+import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { formatDate } from '@/utils/dateFormatters';
 
 interface ClientReport {
@@ -189,9 +191,10 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                               </div>
                             </AccordionTrigger>
                             <AccordionContent className="pt-2">
-                              <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                {report.response_payload.report}
-                              </div>
+                              <ReportRenderer 
+                                content={report.response_payload.report}
+                                className="text-gray-700"
+                              />
                             </AccordionContent>
                           </AccordionItem>
                         </Accordion>

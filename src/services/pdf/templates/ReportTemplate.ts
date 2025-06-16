@@ -1,5 +1,7 @@
+
 import { BaseTemplate } from './BaseTemplate';
 import { ReportPdfData, PdfGenerationOptions, PdfMetadata } from '../types';
+import { ReportParser } from '@/utils/reportParser';
 
 export class ReportTemplate extends BaseTemplate {
   async generate(data: ReportPdfData, options: PdfGenerationOptions = {}): Promise<void> {
@@ -46,8 +48,7 @@ export class ReportTemplate extends BaseTemplate {
     this.doc.text('Client Energetic Insight', this.margins.left, y);
 
     // ═════════════ PRE‑PROCESS CONTENT ═════════════
-    const cleaned = this.cleanContent(data.content);
-    const blocks = this.processBlocks(cleaned);
+    const blocks = ReportParser.parseReport(data.content);
 
     // ═════════════ RENDER LOOP ═════════════
     this.doc.setFontSize(11).setFont('helvetica', 'normal').setTextColor(33);
@@ -117,56 +118,5 @@ export class ReportTemplate extends BaseTemplate {
     // ═════════════ SAVE ═════════════
     const fname = `report-${data.id.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.pdf`;
     this.download(fname);
-  }
-
-  // ═════════════ HELPERS ═════════════
-  private cleanContent(c: string) {
-    return c
-      .replace(/<[^>]*>/g, '')
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/\*(.*?)\*/g, '$1')
-      .replace(/[_`]/g, '')
-      .replace(/#{1,6}\s*/g, '')
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-      .trim();
-  }
-
-  private processBlocks(content: string) {
-    const lines = content.split(/\r?\n/); // PRESERVE blank lines
-    const out: { type: string; text: string }[] = [];
-
-    lines.forEach(raw => {
-      const line = raw.trim();
-      if (line === '') {
-        out.push({ type: 'spacer', text: '' });
-        return;
-      }
-      const lower = line.toLowerCase();
-
-      if (this.isHeading(line)) {
-        out.push({ type: 'heading', text: line });
-        return;
-      }
-      if (lower.startsWith('positivetags:') || lower.startsWith('negativetags:')) {
-        const lbl = lower.startsWith('positivetags:') ? 'Positive Traits' : 'Negative Traits';
-        out.push({ type: 'heading', text: lbl });
-        line.split(':')[1].split(',').map(t => t.trim()).filter(Boolean).forEach(tag => {
-          out.push({ type: 'tag', text: `• ${tag}` });
-        });
-        return;
-      }
-      if (/^\d+\.\s/.test(line)) {
-        out.push({ type: 'action', text: line });
-        return;
-      }
-      out.push({ type: 'normal', text: line });
-    });
-    return out;
-  }
-
-  private isHeading(l: string) {
-    const t = l.toLowerCase().trim();
-    const h = ['summary','insights','actions','tags','conclusion','recommendations','overview','analysis','findings','key points','next steps','takeaways'];
-    return l.length < 60 && h.some(s => t === s || t === `${s}:` || t.startsWith(`${s}:`));
   }
 }
