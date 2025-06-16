@@ -11,6 +11,9 @@ export class ReportTemplate extends BaseTemplate {
     };
     this.setMetadata(metadata);
 
+    // ────────────────────────────────────────────────────
+    // HEADER
+    // ────────────────────────────────────────────────────
     const logoY = 20;
     this.doc.setFontSize(26);
     this.doc.setFont('times', 'bold');
@@ -20,8 +23,11 @@ export class ReportTemplate extends BaseTemplate {
     this.doc.setFontSize(20);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(40, 40, 60);
-    this.doc.text(' Intelligence Report ', this.pageWidth / 2, logoY + 28, { align: 'center' });
+    this.doc.text('Intelligence Report', this.pageWidth / 2, logoY + 28, { align: 'center' });
 
+    // ────────────────────────────────────────────────────
+    // META INFO
+    // ────────────────────────────────────────────────────
     let y = logoY + 40;
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'normal');
@@ -37,6 +43,9 @@ export class ReportTemplate extends BaseTemplate {
     this.doc.setFont('helvetica', 'bold');
     this.doc.text(data.metadata.generatedAt, this.margins.left + 40, y);
 
+    // ────────────────────────────────────────────────────
+    // ERROR BLOCK (early‑exit)
+    // ────────────────────────────────────────────────────
     if (data.error) {
       this.doc.setFontSize(12);
       this.doc.setFont('helvetica', 'bold');
@@ -46,161 +55,170 @@ export class ReportTemplate extends BaseTemplate {
       this.doc.setFontSize(10);
       this.doc.setFont('helvetica', 'normal');
       this.doc.setTextColor(0, 0, 0);
-      const errorLines = this.doc.splitTextToSize(data.error, this.pageWidth - this.margins.left - this.margins.right);
+      const errorLines = this.doc.splitTextToSize(
+        data.error,
+        this.pageWidth - this.margins.left - this.margins.right
+      );
       this.doc.text(errorLines, this.margins.left, y + 17);
       return;
     }
 
+    // ────────────────────────────────────────────────────
+    // MAIN TITLE
+    // ────────────────────────────────────────────────────
     y += 18;
     this.doc.setFontSize(13);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(75, 63, 114);
     this.doc.text('Client Energetic Insight', this.margins.left, y);
 
+    // ────────────────────────────────────────────────────
+    // PRE‑PROCESS CONTENT
+    // ────────────────────────────────────────────────────
     const cleanedContent = this.cleanContent(data.content);
     const processedContent = this.processSpecialSections(cleanedContent);
 
-    this.doc.setFont('helvetica', 'normal');
+    // ────────────────────────────────────────────────────
+    // CONTENT LOOP
+    // ────────────────────────────────────────────────────
     this.doc.setFontSize(11);
+    this.doc.setFont('helvetica', 'normal');
     this.doc.setTextColor(33);
 
     let lineY = y + 12;
-    const lineHeight = 7.5;
-    const paragraphSpacing = 4;
-    const headingSpacing = 10;
-    const bottomPadding = 20;
+    const lineHeight = 7.5;          // single‑line height
+    const headingSpacing = 10;       // gap before headings
+    const bottomPadding = 20;        // footer safety‑zone
 
-    for (let i = 0; i < processedContent.length; i++) {
-      const item = processedContent[i];
-
-      if (lineY + lineHeight > this.pageHeight - bottomPadding) {
+    const addPageIfNeeded = (additional = 0) => {
+      if (lineY + additional > this.pageHeight - bottomPadding) {
         this.doc.addPage();
         lineY = this.margins.top;
       }
+    };
 
-      if (item.type === 'heading') {
-        lineY += headingSpacing;
-        this.doc.setFont('helvetica', 'bold');
-        this.doc.setTextColor(40, 40, 60);
-        this.doc.text(item.text, this.margins.left, lineY);
-        lineY += lineHeight;
-      } else if (item.type === 'action-item') {
-        const actionLines = this.doc.splitTextToSize(item.text, this.pageWidth - this.margins.left - this.margins.right - 5);
-        actionLines.forEach(line => {
-          if (lineY + lineHeight > this.pageHeight - bottomPadding) {
-            this.doc.addPage();
-            lineY = this.margins.top;
-          }
-          this.doc.text(line, this.margins.left + 5, lineY);
+    processedContent.forEach(item => {
+      switch (item.type) {
+        case 'heading': {
+          lineY += headingSpacing;
+          addPageIfNeeded(lineHeight);
+          this.doc.setFont('helvetica', 'bold');
+          this.doc.setTextColor(40, 40, 60);
+          this.doc.text(item.text, this.margins.left, lineY);
+          this.doc.setFont('helvetica', 'normal'); // reset
+          this.doc.setTextColor(33);
           lineY += lineHeight;
-        });
-        lineY += paragraphSpacing;
-      } else if (item.type === 'tag') {
-        this.doc.setFont('helvetica', 'normal');
-        this.doc.setTextColor(60);
-        this.doc.text(item.text, this.margins.left + 5, lineY);
-        lineY += lineHeight;
-      } else {
-        const paragraphLines = this.doc.splitTextToSize(item.text, this.pageWidth - this.margins.left - this.margins.right);
-        paragraphLines.forEach(line => {
-          if (lineY + lineHeight > this.pageHeight - bottomPadding) {
-            this.doc.addPage();
-            lineY = this.margins.top;
-          }
-          this.doc.text(line, this.margins.left, lineY);
+          break;
+        }
+
+        case 'action-item': {
+          const wrapped = this.doc.splitTextToSize(
+            item.text,
+            this.pageWidth - this.margins.left - this.margins.right - 5
+          );
+          wrapped.forEach(wLine => {
+            addPageIfNeeded(lineHeight);
+            this.doc.text(wLine, this.margins.left + 5, lineY);
+            lineY += lineHeight;
+          });
+          break;
+        }
+
+        case 'tag': {
+          addPageIfNeeded(lineHeight);
+          this.doc.setFont('helvetica', 'normal');
+          this.doc.setTextColor(60);
+          this.doc.text(item.text, this.margins.left + 5, lineY);
+          this.doc.setTextColor(33);
           lineY += lineHeight;
-        });
-        lineY += paragraphSpacing;
+          break;
+        }
+
+        default: { // normal paragraph text
+          const wrapped = this.doc.splitTextToSize(
+            item.text,
+            this.pageWidth - this.margins.left - this.margins.right
+          );
+          wrapped.forEach(wLine => {
+            addPageIfNeeded(lineHeight);
+            this.doc.text(wLine, this.margins.left, lineY);
+            lineY += lineHeight;
+          });
+          break;
+        }
       }
-    }
+    });
 
+    // ────────────────────────────────────────────────────
+    // FOOTER
+    // ────────────────────────────────────────────────────
     if (options.includeFooter !== false && lineY + 15 < this.pageHeight) {
       this.doc.setFontSize(9);
       this.doc.setFont('helvetica', 'italic');
       this.doc.setTextColor(120);
-      this.doc.text(
-        `www.theraiastro.com`,
-        this.pageWidth / 2,
-        this.pageHeight - 15,
-        { align: 'center' }
-      );
+      this.doc.text('www.theraiastro.com', this.pageWidth / 2, this.pageHeight - 15, { align: 'center' });
     }
 
+    // ────────────────────────────────────────────────────
+    // SAVE / DOWNLOAD
+    // ────────────────────────────────────────────────────
     const filename = `report-${data.id.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.pdf`;
     this.download(filename);
   }
 
+  // ────────────────────────────────────────────────────
+  // HELPERS
+  // ────────────────────────────────────────────────────
   private cleanContent(content: string): string {
-    let cleaned = content.replace(/<[^>]*>/g, '');
-    cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, '$1');
-    cleaned = cleaned.replace(/\*(.*?)\*/g, '$1');
-    cleaned = cleaned.replace(/[_`]/g, '');
-    cleaned = cleaned.replace(/#{1,6}\s*/g, '');
-    cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-    return cleaned.trim();
+    return content
+      .replace(/<[^>]*>/g, '')            // HTML tags
+      .replace(/\*\*(.*?)\*\*/g, '$1') // bold markdown
+      .replace(/\*(.*?)\*/g, '$1')       // italics markdown
+      .replace(/[_`]/g, '')               // underscores / backticks
+      .replace(/#{1,6}\s*/g, '')         // markdown headers
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // markdown links
+      .trim();
   }
 
-  private processSpecialSections(content: string): Array<{ type: string; text: string }> {
-    const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    const processed: Array<{ type: string; text: string }> = [];
+  private processSpecialSections(content: string) {
+    const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+    const processed: { type: string; text: string }[] = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const lowerLine = line.toLowerCase();
+    lines.forEach(line => {
+      const lower = line.toLowerCase();
 
       if (this.isMainHeading(line)) {
         processed.push({ type: 'heading', text: line });
-        continue;
+        return;
       }
 
-      if (lowerLine.startsWith('positivetags:') || lowerLine.startsWith('negativetags:')) {
-        const category = lowerLine.startsWith('positivetags:') ? 'Positive Traits' : 'Negative Traits';
-        processed.push({ type: 'heading', text: category });
-
-        const tagList = line.split(':')[1].split(',').map(tag => tag.trim());
-        tagList.forEach(tag => {
+      if (lower.startsWith('positivetags:') || lower.startsWith('negativetags:')) {
+        const label = lower.startsWith('positivetags:') ? 'Positive Traits' : 'Negative Traits';
+        processed.push({ type: 'heading', text: label });
+        line.split(':')[1].split(',').map(t => t.trim()).filter(Boolean).forEach(tag => {
           processed.push({ type: 'tag', text: `• ${tag}` });
         });
-        continue;
+        return;
       }
 
       if (this.isActionItem(line)) {
         processed.push({ type: 'action-item', text: line });
-        continue;
+        return;
       }
 
-      const splitLines = this.doc.splitTextToSize(
-        line,
-        this.pageWidth - this.margins.left - this.margins.right
-      );
-
-      for (const splitLine of splitLines) {
-        if (splitLine.trim()) {
-          processed.push({ type: 'normal', text: splitLine.trim() });
-        }
-      }
-    }
+      processed.push({ type: 'normal', text: line });
+    });
 
     return processed;
   }
 
   private isMainHeading(line: string): boolean {
-    const lowerLine = line.toLowerCase().trim();
-    const headings = [
-      'summary', 'insights', 'actions', 'tags', 'conclusion', 
-      'recommendations', 'overview', 'analysis', 'findings',
-      'key points', 'next steps', 'takeaways'
+    const lower = line.toLowerCase().trim();
+    const heads = [
+      'summary','insights','actions','tags','conclusion','recommendations',
+      'overview','analysis','findings','key points','next steps','takeaways'
     ];
-
-    if (line.length < 60) {
-      return headings.some(heading => 
-        lowerLine === heading || 
-        lowerLine === heading + ':' ||
-        lowerLine.includes(heading + ':')
-      );
-    }
-
-    return false;
+    return line.length < 60 && heads.some(h => lower === h || lower === `${h}:` || lower.startsWith(`${h}:`));
   }
 
   private isActionItem(line: string): boolean {
