@@ -8,6 +8,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const mapReportTypeToSwissRequest = (reportType: string): string => {
+  const mapping: { [key: string]: string } = {
+    'essence_personal': 'essence',
+    'essence_professional': 'essence',
+    'essence_relational': 'essence',
+    'sync_personal': 'sync',
+    'sync_professional': 'sync',
+    'flow': 'flow',
+    'mindset': 'mindset',
+    'monthly': 'monthly',
+    'focus': 'focus',
+  };
+  return mapping[reportType] || 'unknown';
+};
+
 const processSwissDataInBackground = async (
   guestReportId: string,
   reportData: any,
@@ -17,7 +32,18 @@ const processSwissDataInBackground = async (
   let swissError = null;
 
   try {
-    const translated = await translate({ ...reportData, request: mappedRequestType });
+    const mappedRequestType = mapReportTypeToSwissRequest(reportData.reportType);
+
+    const payload = {
+      request: mappedRequestType,
+      birth_date: reportData.birthDate,
+      birth_time: reportData.birthTime,
+      latitude: parseFloat(reportData.birthLatitude),
+      longitude: parseFloat(reportData.birthLongitude),
+      name: reportData.name || "Guest",
+    };
+
+    const translated = await translate(payload);
     swissData = JSON.parse(translated.text);
   } catch (error) {
     swissError = error.message;
@@ -57,8 +83,6 @@ serve(async (req) => {
     const isFreeSession = sessionId.startsWith("free_");
 
     if (isFreeSession) {
-      console.log("🎫 Processing free promo session:", sessionId);
-
       const { data: existingRecord, error: fetchError } = await supabase
         .from("guest_reports")
         .select("*")
@@ -93,7 +117,6 @@ serve(async (req) => {
         );
       }
 
-      console.log("🔄 Starting Swiss data processing via translator");
       EdgeRuntime.waitUntil(
         processSwissDataInBackground(
           existingRecord.id,
@@ -151,6 +174,7 @@ serve(async (req) => {
       returnYear: session.metadata?.returnYear,
       notes: session.metadata?.notes,
       promoCode: session.metadata?.promoCode,
+      name: session.metadata?.guest_name || "Guest",
     };
 
     const { data: guestReportData, error: insertError } = await supabase
