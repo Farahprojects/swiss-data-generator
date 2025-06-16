@@ -15,6 +15,8 @@ import ActivityLogDrawer from '@/components/activity-logs/ActivityLogDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, BookOpen, FileText, Lightbulb } from 'lucide-react';
+import { clientReportsService } from '@/services/clientReports';
+import { useToast } from '@/hooks/use-toast';
 
 const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -26,6 +28,7 @@ const ClientDetailPage = () => {
   const [showReportDrawer, setShowReportDrawer] = useState(false);
   const [selectedReportData, setSelectedReportData] = useState<any>(null);
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   
   const {
     client,
@@ -33,7 +36,8 @@ const ClientDetailPage = () => {
     clientReports,
     insightEntries,
     loading,
-    loadClientData
+    loadClientData,
+    setClientReports
   } = useClientData(clientId);
 
   // Show loading while auth is being verified
@@ -109,14 +113,28 @@ const ClientDetailPage = () => {
 
   const handleDeleteReport = async (report: any) => {
     try {
-      // For now, we'll just show a console log - in a real implementation,
-      // this would make an API call to delete the report
-      console.log('Deleting report:', report.id);
-      
-      // Reload the client data to refresh the reports list
-      loadClientData();
+      // Optimistic UI update - immediately remove from local state
+      const updatedReports = clientReports.filter(r => r.id !== report.id);
+      setClientReports(updatedReports);
+
+      // Make API call to archive the report
+      await clientReportsService.archiveClientReport(report.id);
+
+      toast({
+        title: "Success",
+        description: "Report deleted successfully.",
+      });
     } catch (error) {
       console.error('Error deleting report:', error);
+      
+      // Revert optimistic update on error
+      loadClientData();
+      
+      toast({
+        title: "Error",
+        description: "Failed to delete report. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 

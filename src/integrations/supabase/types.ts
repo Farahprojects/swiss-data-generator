@@ -1181,6 +1181,7 @@ export type Database = {
           error_message: string | null
           google_geo: boolean | null
           id: string
+          is_archived: boolean
           processing_time_ms: number | null
           report_name: string | null
           report_tier: string | null
@@ -1196,6 +1197,7 @@ export type Database = {
           error_message?: string | null
           google_geo?: boolean | null
           id?: string
+          is_archived?: boolean
           processing_time_ms?: number | null
           report_name?: string | null
           report_tier?: string | null
@@ -1211,6 +1213,7 @@ export type Database = {
           error_message?: string | null
           google_geo?: boolean | null
           id?: string
+          is_archived?: boolean
           processing_time_ms?: number | null
           report_name?: string | null
           report_tier?: string | null

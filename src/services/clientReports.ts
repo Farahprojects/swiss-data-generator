@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ClientReportFormData {
@@ -105,5 +106,17 @@ export const clientReportsService = {
     }
 
     return data || [];
+  },
+
+  async archiveClientReport(reportId: string): Promise<void> {
+    const { error } = await supabase
+      .from('translator_logs')
+      .update({ is_archived: true })
+      .eq('id', reportId);
+
+    if (error) {
+      console.error('Error archiving client report:', error);
+      throw new Error('Failed to archive report');
+    }
   }
 };

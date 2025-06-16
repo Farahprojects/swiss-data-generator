@@ -14,6 +14,7 @@ interface ClientReport {
   response_status: number;
   report_name?: string;
   report_tier?: string;
+  is_archived?: boolean;
 }
 
 export const useClientData = (clientId: string | undefined) => {
@@ -30,11 +31,12 @@ export const useClientData = (clientId: string | undefined) => {
     try {
       setLoading(true);
       
-      // Load client reports with report_tier field
+      // Load client reports with report_tier field and filter out archived reports
       const { data: reportsData, error: reportsError } = await supabase
         .from('translator_logs')
-        .select('id, request_type, response_payload, created_at, response_status, report_name, report_tier')
+        .select('id, request_type, response_payload, created_at, response_status, report_name, report_tier, is_archived')
         .eq('client_id', clientId)
+        .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
       if (reportsError) {
@@ -87,6 +89,7 @@ export const useClientData = (clientId: string | undefined) => {
     clientReports,
     insightEntries,
     loading,
-    loadClientData
+    loadClientData,
+    setClientReports
   };
 };
