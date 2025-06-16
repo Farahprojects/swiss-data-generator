@@ -64,7 +64,7 @@ function buildTranslatorPayload(rd: ReportData) {
 
     return {
       request,
-      birth_day:  rd.birthDate,
+      birth_date:  rd.birthDate,
       birth_time: rd.birthTime,                       // must be HH:MM[:SS]
       latitude:   parseFloat(rd.birthLatitude),
       longitude:  parseFloat(rd.birthLongitude),
