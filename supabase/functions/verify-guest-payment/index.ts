@@ -17,7 +17,7 @@ const processSwissDataInBackground = async (
   let swissError = null;
 
   try {
-    const translated = await translate({ ...reportData, request: reportData.reportType });
+    const translated = await translate({ ...reportData, request: mappedRequestType });
     swissData = JSON.parse(translated.text);
   } catch (error) {
     swissError = error.message;
