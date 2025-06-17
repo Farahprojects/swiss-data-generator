@@ -1,8 +1,24 @@
-
 // Report orchestrator utility
 // Handles report processing workflow including balance checks and report generation
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// Round-robin engine selection for load balancing
+const EDGE_ENGINES = [
+  "standard-report",
+  "standard-report-one", 
+  "standard-report-two",
+  "standard-report-three"
+];
+
+let engineIndex = 0;
+
+function getNextEngine() {
+  const engine = EDGE_ENGINES[engineIndex];
+  engineIndex = (engineIndex + 1) % EDGE_ENGINES.length;
+  console.log(`[reportOrchestrator] Selected engine: ${engine} (index: ${engineIndex - 1}/${EDGE_ENGINES.length - 1})`);
+  return engine;
+}
 
 // Initialize Supabase client
 const initSupabase = () => {
@@ -191,11 +207,12 @@ async function generateReport(payload: ReportPayload) {
       throw new Error("Missing SUPABASE_URL environment variable");
     }
     
-    // Call the standard-report edge function with the actual report type
-    console.log(`[reportOrchestrator] Calling standard-report edge function for ${payload.report_type} report`);
+    // Select next engine using round-robin
+    const selectedEngine = getNextEngine();
+    console.log(`[reportOrchestrator] Using engine '${selectedEngine}' for ${payload.report_type} report`);
     
     try {
-      const response = await fetch(`${supabaseUrl}/functions/v1/standard-report`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/${selectedEngine}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -213,13 +230,13 @@ async function generateReport(payload: ReportPayload) {
         const status = response.status;
         
         if (status === 401 || errorText.includes("JWT")) {
-          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 from standard-report function: ${status} - ${errorText}`);
+          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 from ${selectedEngine} function: ${status} - ${errorText}`);
           return {
             success: false,
             errorMessage: `JWT authentication error (401): ${errorText}`
           };
         } else {
-          console.error(`[reportOrchestrator] Error from standard-report function: ${status} - ${errorText}`);
+          console.error(`[reportOrchestrator] Error from ${selectedEngine} function: ${status} - ${errorText}`);
           return {
             success: false,
             errorMessage: `Report generation failed with status ${status}: ${errorText}`
@@ -228,25 +245,26 @@ async function generateReport(payload: ReportPayload) {
       }
       
       const reportResult = await response.json();
-      console.log(`[reportOrchestrator] Successfully received ${payload.report_type} report from standard-report function`);
+      console.log(`[reportOrchestrator] Successfully received ${payload.report_type} report from ${selectedEngine} function`);
       
       return {
         success: true,
         data: {
           title: `${payload.report_type.charAt(0).toUpperCase() + payload.report_type.slice(1)} ${payload.endpoint} Report`,
           content: reportResult.report,
-          generated_at: new Date().toISOString()
+          generated_at: new Date().toISOString(),
+          engine_used: selectedEngine // Track which engine was used
         }
       };
     } catch (fetchErr) {
       if (String(fetchErr).includes("JWT") || String(fetchErr).includes("401")) {
-        console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 calling standard-report: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
+        console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 calling ${selectedEngine}: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
       } else {
-        console.error(`[reportOrchestrator] Fetch error calling standard-report:`, fetchErr);
+        console.error(`[reportOrchestrator] Fetch error calling ${selectedEngine}:`, fetchErr);
       }
       return {
         success: false,
-        errorMessage: `Network error calling report service: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`
+        errorMessage: `Network error calling ${selectedEngine} service: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`
       };
     }
   } catch (err) {
