@@ -58,6 +58,7 @@ try {
 
 const OPENAI_MODEL = "gpt-4o";
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+const ENGINE_NAME = "openai-gpt4o"; // Define the engine name for this function
 
 // CORS headers for cross-domain requests
 const CORS_HEADERS = {
@@ -293,13 +294,14 @@ async function logReportAttempt(
       report_text: reportText,
       status: status,
       duration_ms: durationMs,
-      error_message: errorMessage
+      error_message: errorMessage,
+      engine_used: ENGINE_NAME // Add the engine name to the log
     });
     
     if (error) {
       console.error(`${logPrefix} Error logging report attempt: ${error.message}`);
     } else {
-      console.log(`${logPrefix} Successfully logged ${status} report attempt for user ${userId}`);
+      console.log(`${logPrefix} Successfully logged ${status} report attempt for user ${userId} using engine ${ENGINE_NAME}`);
     }
   } catch (err) {
     console.error(`${logPrefix} Failed to log report attempt: ${err instanceof Error ? err.message : String(err)}`);
