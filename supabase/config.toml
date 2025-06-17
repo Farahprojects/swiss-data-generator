@@ -1,3 +1,4 @@
+
 project_id = "wrvqqvqvwqmfdqvqmaar"
 
 [api]
@@ -50,3 +51,15 @@ enable_anonymous_sign_ins = false
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
+
+[functions.standard-report]
+verify_jwt = false
+
+[functions.standard-report-one]
+verify_jwt = false
+
+[functions.standard-report-two]
+verify_jwt = false
+
+[functions.standard-report-three]
+verify_jwt = false
