@@ -1,3 +1,4 @@
+
 // ============================================================================
 //  process-guest-report-pdf.ts
 //  Generates a PDF for a guest report and forwards a full email payload
@@ -141,10 +142,24 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     generatedAt: new Date(gr.created_at).toLocaleDateString(),
   }, requestId);
   if (!pdfBase64) throw new Error("PDF generation failed");
+  
+  log(`PDF generated successfully, size: ${pdfBase64.length} chars`);
+
+  // 3. Save PDF to database
+  try {
+    await supabase
+      .from("guest_reports")
+      .update({ report_pdf_data: pdfBase64 })
+      .eq("id", guestReportId);
+    log("PDF data saved to database");
+  } catch (error) {
+    log(`Failed to save PDF to database: ${error}`);
+    throw new Error(`Failed to save PDF: ${error}`);
+  }
 
   const filename = `energetic-report-${gr.report_type}-${gr.id.substring(0,8)}.pdf`;
 
-  // 3. fetch email template
+  // 4. fetch email template
   const { data: tmpl, error: tmplErr } = await supabase
     .from("email_notification_templates")
     .select("subject, body_html, body_text")
@@ -152,7 +167,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     .single();
   if (tmplErr || !tmpl) throw new Error(`Template fetch failed: ${tmplErr?.message}`);
 
-  // 4. build payload for send-email edge-function
+  // 5. build payload for send-email edge-function
   const emailPayload = {
     template_type: "report_delivery",      // easier debugging / future use
     to: gr.email,
@@ -168,7 +183,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     }],
   };
 
-  // 5. POST to send-email edge-function
+  // 6. POST to send-email edge-function
   if (!SEND_EMAIL_FUNCTION_URL) throw new Error("SEND_EMAIL_FUNCTION_URL env-var missing");
   const res = await fetch(SEND_EMAIL_FUNCTION_URL, {
     method: "POST",
@@ -177,7 +192,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
   });
   if (!res.ok) throw new Error(`send-email failed: ${res.status} ${await res.text()}`);
 
-  // 6. mark as sent
+  // 7. mark as sent
   await supabase.from("guest_reports")
     .update({ email_sent: true })
     .eq("id", guestReportId);
