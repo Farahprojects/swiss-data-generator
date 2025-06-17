@@ -63,3 +63,6 @@ verify_jwt = false
 
 [functions.standard-report-three]
 verify_jwt = false
+
+[functions.process-guest-report-pdf]
+verify_jwt = false
