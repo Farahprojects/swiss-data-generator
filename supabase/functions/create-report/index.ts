@@ -254,41 +254,33 @@ serve(async (req) => {
   }
 
   try {
-    // Get user from auth header
+    // FIXED: Use direct API key authentication instead of session tokens
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'API key required in Authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Verify user and get their data
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const apiKey = authHeader.replace('Bearer ', '');
 
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid authentication' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Get user's API key
+    // Validate API key directly against api_keys table
     const { data: apiKeyData, error: apiKeyError } = await supabase
       .from('api_keys')
-      .select('api_key')
-      .eq('user_id', user.id)
+      .select('user_id, api_key')
+      .eq('api_key', apiKey)
       .eq('is_active', true)
       .single();
 
     if (apiKeyError || !apiKeyData) {
-      return new Response(JSON.stringify({ error: 'No active API key found' }), {
-        status: 400,
+      return new Response(JSON.stringify({ error: 'Invalid or inactive API key' }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    const userId = apiKeyData.user_id;
 
     // Parse request body
     const formData: CreateReportRequest = await req.json();
@@ -311,7 +303,7 @@ serve(async (req) => {
     console.log('[create-report] Clean payload for Swiss API:', JSON.stringify(cleanPayload, null, 2));
 
     // Call Swiss API with clean payload and API key in headers (like curl)
-    const swissResult = await callSwissAPI(cleanPayload, user.id, apiKeyData.api_key);
+    const swissResult = await callSwissAPI(cleanPayload, userId, apiKey);
     
     if (!swissResult.success) {
       return new Response(JSON.stringify({ 
@@ -328,7 +320,7 @@ serve(async (req) => {
     console.log('[create-report] Saving report with name:', reportName);
 
     const translatorLogData: any = {
-      user_id: user.id,
+      user_id: userId,
       request_type: formData.reportType,
       request_payload: cleanPayload,
       response_payload: swissResult.data,
