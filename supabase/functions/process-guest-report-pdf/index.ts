@@ -16,8 +16,6 @@ import { SharedReportParser } from "../_shared/reportParser.ts";
 // ─── ENV VARS ────────────────────────────────────────────────────────────────
 const SUPABASE_URL           = Deno.env.get("SUPABASE_URL")              ?? "";
 const SUPABASE_SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const SEND_EMAIL_FUNCTION_URL = Deno.env.get("SEND_EMAIL_FUNCTION_URL")  // <-- NEW
-                              ?? "";
 
 // ─── CORS HEADERS ────────────────────────────────────────────────────────────
 const corsHeaders = {
@@ -183,21 +181,33 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     }],
   };
 
-  // 6. POST to send-email edge-function
-  if (!SEND_EMAIL_FUNCTION_URL) throw new Error("SEND_EMAIL_FUNCTION_URL env-var missing");
-  const res = await fetch(SEND_EMAIL_FUNCTION_URL, {
+  // 6. Call send-email edge-function directly
+  const sendEmailUrl = `${SUPABASE_URL}/functions/v1/send-email`;
+  log(`Calling send-email function at: ${sendEmailUrl}`);
+  
+  const res = await fetch(sendEmailUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`
+    },
     body: JSON.stringify(emailPayload),
   });
-  if (!res.ok) throw new Error(`send-email failed: ${res.status} ${await res.text()}`);
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    log(`send-email failed: ${res.status} ${errorText}`);
+    throw new Error(`send-email failed: ${res.status} ${errorText}`);
+  }
+
+  log("Email sent successfully via send-email function");
 
   // 7. mark as sent
   await supabase.from("guest_reports")
     .update({ email_sent: true })
     .eq("id", guestReportId);
 
-  log("PDF created and email payload forwarded successfully");
+  log("PDF created and email sent successfully");
   return { success: true, filename, pdfSize: pdfBase64.length };
 }
 
