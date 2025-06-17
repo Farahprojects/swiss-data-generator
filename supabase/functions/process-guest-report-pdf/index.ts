@@ -73,119 +73,203 @@ class ServerReportParser {
 
 // Server-side PDF Generator (adapted from frontend)
 class ServerPdfGenerator {
-  static generateReportPdf(reportData: any): string {
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
+  static generateReportPdf(reportData: any, logPrefix: string): string {
+    console.log(`${logPrefix} Starting PDF generation with jsPDF...`);
+    
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margins = { top: 20, right: 20, bottom: 20, left: 20 };
+      console.log(`${logPrefix} jsPDF instance created successfully`);
 
-    // Set metadata
-    doc.setProperties({
-      title: 'Essence Professional',
-      subject: 'Client Energetic Insight',
-      author: 'Theria Astro',
-      creator: 'PDF Generator Service'
-    });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margins = { top: 20, right: 20, bottom: 20, left: 20 };
 
-    // Header
-    const logoY = 20;
-    doc.setFontSize(26).setFont('times', 'bold').setTextColor(40, 40, 60);
-    doc.text('Therai.', pageWidth / 2, logoY + 12, { align: 'center' });
+      // Set metadata
+      doc.setProperties({
+        title: 'Essence Professional',
+        subject: 'Client Energetic Insight',
+        author: 'Theria Astro',
+        creator: 'PDF Generator Service'
+      });
 
-    doc.setFontSize(20).setFont('helvetica', 'bold');
-    doc.text('Intelligence Report', pageWidth / 2, logoY + 28, { align: 'center' });
+      console.log(`${logPrefix} PDF metadata set`);
 
-    // Meta information
-    let y = logoY + 40;
-    doc.setFontSize(10).setFont('helvetica', 'normal').setTextColor(100);
-    doc.text('Report ID:', margins.left, y);
-    doc.setFont('helvetica', 'bold').text(reportData.id.substring(0, 8), margins.left + 40, y);
+      // Header
+      const logoY = 20;
+      doc.setFontSize(26).setFont('times', 'bold').setTextColor(40, 40, 60);
+      doc.text('Therai.', pageWidth / 2, logoY + 12, { align: 'center' });
 
-    doc.setFont('helvetica', 'normal');
-    y += 6;
-    doc.text('Generated At:', margins.left, y);
-    doc.setFont('helvetica', 'bold').text(reportData.generatedAt, margins.left + 40, y);
+      doc.setFontSize(20).setFont('helvetica', 'bold');
+      doc.text('Intelligence Report', pageWidth / 2, logoY + 28, { align: 'center' });
 
-    // Section title
-    y += 18;
-    doc.setFontSize(13).setFont('helvetica', 'bold').setTextColor(75, 63, 114);
-    doc.text('Client Energetic Insight', margins.left, y);
+      // Meta information
+      let y = logoY + 40;
+      doc.setFontSize(10).setFont('helvetica', 'normal').setTextColor(100);
+      doc.text('Report ID:', margins.left, y);
+      doc.setFont('helvetica', 'bold').text(reportData.id.substring(0, 8), margins.left + 40, y);
 
-    // Process content blocks
-    const blocks = ServerReportParser.parseReport(reportData.content);
+      doc.setFont('helvetica', 'normal');
+      y += 6;
+      doc.text('Generated At:', margins.left, y);
+      doc.setFont('helvetica', 'bold').text(reportData.generatedAt, margins.left + 40, y);
 
-    // Render content
-    doc.setFontSize(11).setFont('helvetica', 'normal').setTextColor(33);
-    let lineY = y + 12;
-    const lineH = 7.2;
-    const headingGap = 10;
-    const footerPad = 20;
+      // Section title
+      y += 18;
+      doc.setFontSize(13).setFont('helvetica', 'bold').setTextColor(75, 63, 114);
+      doc.text('Client Energetic Insight', margins.left, y);
 
-    const newPage = () => {
-      doc.addPage();
-      lineY = margins.top;
-    };
+      console.log(`${logPrefix} PDF header and meta information added`);
 
-    const ensure = (extra = 0) => {
-      if (lineY + extra > pageHeight - footerPad) newPage();
-    };
+      // Process content blocks
+      const blocks = ServerReportParser.parseReport(reportData.content);
+      console.log(`${logPrefix} Content parsed into ${blocks.length} blocks`);
 
-    blocks.forEach(block => {
-      switch (block.type) {
-        case 'heading':
-          lineY += headingGap;
-          ensure(lineH);
-          doc.setFont('helvetica', 'bold').setTextColor(40, 40, 60);
-          doc.text(block.text, margins.left, lineY);
-          doc.setFont('helvetica', 'normal').setTextColor(33);
-          lineY += lineH;
-          break;
+      // Render content
+      doc.setFontSize(11).setFont('helvetica', 'normal').setTextColor(33);
+      let lineY = y + 12;
+      const lineH = 7.2;
+      const headingGap = 10;
+      const footerPad = 20;
 
-        case 'action':
-          const aWrap = doc.splitTextToSize(block.text, pageWidth - margins.left - margins.right - 5);
-          aWrap.forEach(l => {
+      const newPage = () => {
+        doc.addPage();
+        lineY = margins.top;
+      };
+
+      const ensure = (extra = 0) => {
+        if (lineY + extra > pageHeight - footerPad) newPage();
+      };
+
+      blocks.forEach((block, index) => {
+        switch (block.type) {
+          case 'heading':
+            lineY += headingGap;
             ensure(lineH);
-            doc.text(l, margins.left + 5, lineY);
+            doc.setFont('helvetica', 'bold').setTextColor(40, 40, 60);
+            doc.text(block.text, margins.left, lineY);
+            doc.setFont('helvetica', 'normal').setTextColor(33);
             lineY += lineH;
-          });
-          lineY += 2;
-          break;
+            break;
 
-        case 'tag':
-          ensure(lineH);
-          doc.setTextColor(60).text(block.text, margins.left + 5, lineY);
-          doc.setTextColor(33);
-          lineY += lineH;
-          break;
+          case 'action':
+            const aWrap = doc.splitTextToSize(block.text, pageWidth - margins.left - margins.right - 5);
+            aWrap.forEach(l => {
+              ensure(lineH);
+              doc.text(l, margins.left + 5, lineY);
+              lineY += lineH;
+            });
+            lineY += 2;
+            break;
 
-        case 'spacer':
-          lineY += lineH;
-          break;
-
-        default: // normal paragraph
-          const pWrap = doc.splitTextToSize(block.text, pageWidth - margins.left - margins.right);
-          pWrap.forEach(l => {
+          case 'tag':
             ensure(lineH);
-            doc.text(l, margins.left, lineY);
+            doc.setTextColor(60).text(block.text, margins.left + 5, lineY);
+            doc.setTextColor(33);
             lineY += lineH;
-          });
-          lineY += 2;
+            break;
+
+          case 'spacer':
+            lineY += lineH;
+            break;
+
+          default: // normal paragraph
+            const pWrap = doc.splitTextToSize(block.text, pageWidth - margins.left - margins.right);
+            pWrap.forEach(l => {
+              ensure(lineH);
+              doc.text(l, margins.left, lineY);
+              lineY += lineH;
+            });
+            lineY += 2;
+        }
+      });
+
+      console.log(`${logPrefix} Content rendered to PDF, processed ${blocks.length} blocks`);
+
+      // Footer
+      if (lineY + 15 < pageHeight) {
+        doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(120);
+        doc.text('www.theraiastro.com', pageWidth / 2, pageHeight - 15, { align: 'center' });
       }
-    });
 
-    // Footer
-    if (lineY + 15 < pageHeight) {
-      doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(120);
-      doc.text('www.theraiastro.com', pageWidth / 2, pageHeight - 15, { align: 'center' });
+      console.log(`${logPrefix} PDF footer added`);
+
+      // Generate PDF output and analyze it
+      console.log(`${logPrefix} Generating PDF output...`);
+      
+      // Try different output methods to see what works
+      let pdfOutput;
+      try {
+        pdfOutput = doc.output('datauristring');
+        console.log(`${logPrefix} PDF output generated using 'datauristring' method`);
+        console.log(`${logPrefix} Full output length: ${pdfOutput.length}`);
+        console.log(`${logPrefix} Output starts with: ${pdfOutput.substring(0, 100)}`);
+        
+        // Check if it's a valid data URI
+        if (pdfOutput.startsWith('data:application/pdf;base64,')) {
+          const base64Part = pdfOutput.split(',')[1];
+          console.log(`${logPrefix} Base64 part length: ${base64Part.length}`);
+          console.log(`${logPrefix} Base64 starts with: ${base64Part.substring(0, 50)}`);
+          console.log(`${logPrefix} Base64 ends with: ${base64Part.substring(base64Part.length - 50)}`);
+          
+          // Validate base64
+          try {
+            // Try to decode to verify it's valid base64
+            const decoded = atob(base64Part);
+            console.log(`${logPrefix} Base64 decode successful, decoded length: ${decoded.length}`);
+            console.log(`${logPrefix} Decoded starts with: ${decoded.substring(0, 20).split('').map(c => c.charCodeAt(0)).join(',')}`);
+            
+            // Check for PDF signature
+            if (decoded.startsWith('%PDF-')) {
+              console.log(`${logPrefix} ✅ Valid PDF signature found in decoded content`);
+            } else {
+              console.log(`${logPrefix} ❌ No PDF signature found. First 10 chars: ${decoded.substring(0, 10)}`);
+            }
+            
+            return base64Part;
+          } catch (decodeError) {
+            console.error(`${logPrefix} ❌ Base64 decode failed:`, decodeError);
+          }
+        } else {
+          console.log(`${logPrefix} ❌ Output doesn't start with data URI prefix`);
+        }
+      } catch (outputError) {
+        console.error(`${logPrefix} ❌ Error generating PDF output:`, outputError);
+      }
+
+      // Try alternative output method
+      try {
+        console.log(`${logPrefix} Trying alternative output method: 'datauri'`);
+        const altOutput = doc.output('datauri');
+        console.log(`${logPrefix} Alternative output length: ${altOutput.length}`);
+        console.log(`${logPrefix} Alternative output starts with: ${altOutput.substring(0, 100)}`);
+      } catch (altError) {
+        console.error(`${logPrefix} Alternative method failed:`, altError);
+      }
+
+      // Try base64 string directly
+      try {
+        console.log(`${logPrefix} Trying direct base64 output`);
+        const base64Output = doc.output('dataurl');
+        console.log(`${logPrefix} Direct base64 output length: ${base64Output.length}`);
+        console.log(`${logPrefix} Direct base64 output starts with: ${base64Output.substring(0, 100)}`);
+      } catch (base64Error) {
+        console.error(`${logPrefix} Direct base64 method failed:`, base64Error);
+      }
+
+      // Fallback: return empty base64 with clear error
+      console.error(`${logPrefix} ❌ All PDF generation methods failed`);
+      return "";
+
+    } catch (error) {
+      console.error(`${logPrefix} ❌ Fatal error in PDF generation:`, error);
+      console.error(`${logPrefix} Error stack:`, error.stack);
+      return "";
     }
-
-    // Return PDF as base64 string
-    return doc.output('datauristring').split(',')[1];
   }
 }
 
@@ -218,6 +302,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     }
 
     console.log(`${logPrefix} Found report for ${guestReport.email}, type: ${guestReport.report_type}`);
+    console.log(`${logPrefix} Report content length: ${guestReport.report_content.length} characters`);
 
     // Step 2: Generate PDF
     const reportData = {
@@ -227,8 +312,30 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     };
 
     console.log(`${logPrefix} Generating PDF...`);
-    const pdfBase64 = ServerPdfGenerator.generateReportPdf(reportData);
-    console.log(`${logPrefix} PDF generated successfully, size: ${pdfBase64.length} characters`);
+    const pdfBase64 = ServerPdfGenerator.generateReportPdf(reportData, logPrefix);
+    
+    if (!pdfBase64) {
+      throw new Error('PDF generation failed - no content generated');
+    }
+    
+    console.log(`${logPrefix} PDF generated successfully, base64 length: ${pdfBase64.length} characters`);
+    console.log(`${logPrefix} PDF base64 starts with: ${pdfBase64.substring(0, 50)}`);
+    console.log(`${logPrefix} PDF base64 ends with: ${pdfBase64.substring(pdfBase64.length - 50)}`);
+
+    // Validate the base64 content
+    try {
+      const decoded = atob(pdfBase64);
+      console.log(`${logPrefix} Base64 validation: decoded ${decoded.length} bytes`);
+      if (decoded.startsWith('%PDF-')) {
+        console.log(`${logPrefix} ✅ PDF signature validation passed`);
+      } else {
+        console.log(`${logPrefix} ❌ PDF signature validation failed - not a valid PDF`);
+        throw new Error('Generated content is not a valid PDF');
+      }
+    } catch (validationError) {
+      console.error(`${logPrefix} Base64 validation failed:`, validationError);
+      throw new Error('Generated PDF content is not valid base64');
+    }
 
     // Step 3: Fetch email template
     const { data: template, error: templateError } = await supabase
@@ -259,6 +366,12 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
       }]
     };
 
+    console.log(`${logPrefix} Email payload prepared:`);
+    console.log(`${logPrefix} - To: ${emailPayload.to}`);
+    console.log(`${logPrefix} - Subject: ${emailPayload.subject}`);
+    console.log(`${logPrefix} - Attachment: ${filename} (${pdfBase64.length} chars)`);
+    console.log(`${logPrefix} - Attachment starts: ${pdfBase64.substring(0, 30)}...`);
+
     console.log(`${logPrefix} Sending email to ${guestReport.email}...`);
     
     const emailResponse = await fetch(SMTP_ENDPOINT, {
@@ -267,9 +380,12 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
       body: JSON.stringify(emailPayload)
     });
 
+    const emailResponseText = await emailResponse.text();
+    console.log(`${logPrefix} Email response status: ${emailResponse.status}`);
+    console.log(`${logPrefix} Email response body: ${emailResponseText}`);
+
     if (!emailResponse.ok) {
-      const errorText = await emailResponse.text();
-      throw new Error(`Email sending failed: ${emailResponse.status} - ${errorText}`);
+      throw new Error(`Email sending failed: ${emailResponse.status} - ${emailResponseText}`);
     }
 
     console.log(`${logPrefix} Email sent successfully`);
@@ -289,7 +405,8 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     return { 
       success: true, 
       message: 'PDF generated and emailed successfully',
-      filename: filename
+      filename: filename,
+      pdfSize: pdfBase64.length
     };
 
   } catch (error) {
