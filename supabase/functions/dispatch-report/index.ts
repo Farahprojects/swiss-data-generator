@@ -1,10 +1,10 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { processReportRequest } from "../_shared/reportOrchestrator.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ORCHESTRATOR_URL = `${SUPABASE_URL}/functions/v1/report-orchestrator`;
 
 const EDGE_ENGINES = ["standard-report", "standard-report-one", "standard-report-two", "standard-report-three"];
 let engineIndex = 0; // For round-robin
@@ -63,19 +63,29 @@ Deno.serve(async (_req) => {
 
     await markAsProcessing(job.id);
 
+    // Select the next engine using round-robin
     const engine = getNextEngine();
-    const orchestratorPayload = { ...job.payload, engine };
+    
+    // Add the selected engine to the payload
+    const payloadWithEngine = { 
+      ...job.payload, 
+      engine,
+      report_type: job.report_type,
+      endpoint: job.endpoint,
+      user_id: job.user_id
+    };
 
-    const res = await fetch(ORCHESTRATOR_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(orchestratorPayload)
-    });
+    console.log(`[dispatch-report] Processing job ${job.id} with engine: ${engine}`);
 
-    const result = await res.json();
+    // Call the shared reportOrchestrator utility directly
+    const result = await processReportRequest(payloadWithEngine);
+
+    // Update the job with the result
     await updateJobResult(job.id, result.success, result.success ? result.report : result.errorMessage, engine);
 
+    console.log(`[dispatch-report] Job ${job.id} completed successfully with engine: ${engine}`);
     return new Response("Job dispatched", { status: 200 });
+    
   } catch (err) {
     console.error("Dispatcher error:", err);
     return new Response("Internal error", { status: 500 });
