@@ -2,7 +2,7 @@
 // Shared report generation handler
 // Ensures consistent report generation across all endpoints
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { processReportRequest } from "./reportOrchestrator.ts";
 
 interface ReportHandlerParams {
   requestData: any;
@@ -20,7 +20,7 @@ interface ReportHandlerResult {
 /**
  * Unified report generation handler
  * Processes report requests after successful Swiss API calls
- * Queues reports for asynchronous processing
+ * Ensures payment and report generation are always coupled
  */
 export async function handleReportGeneration(params: ReportHandlerParams): Promise<ReportHandlerResult> {
   const { requestData, swissApiResponse, swissApiStatus, requestId } = params;
@@ -62,24 +62,9 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
     };
   }
 
-  console.log(`${logPrefix} Report requested: "${reportRequested}", proceeding with queue insertion...`);
+  console.log(`${logPrefix} Report requested: "${reportRequested}", proceeding with generation...`);
 
   try {
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error(`${logPrefix} Missing Supabase credentials`);
-      return {
-        success: false,
-        responseData: swissApiResponse,
-        errorMessage: "Missing Supabase credentials for queue insertion"
-      };
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     // Parse Swiss API response with enhanced logging
     let swissData;
     console.log(`${logPrefix} Swiss API response type: ${typeof swissApiResponse}`);
@@ -98,44 +83,83 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       };
     }
 
-    // Validate report type before queuing
-    if (!reportRequested || typeof reportRequested !== 'string') {
+    // Prepare report payload with enhanced logging
+    const reportPayload = {
+      endpoint: requestData.request || "unknown",
+      report_type: requestData.report,
+      user_id: requestData.user_id,
+      apiKey: requestData.api_key,
+      chartData: swissData,
+      // Include any other relevant data from the request
+      ...requestData
+    };
+
+    console.log(`${logPrefix} Report payload prepared:`, {
+      endpoint: reportPayload.endpoint,
+      report_type: reportPayload.report_type,
+      user_id: reportPayload.user_id ? 'present' : 'missing',
+      apiKey: reportPayload.apiKey ? 'present' : 'missing',
+      chartData: reportPayload.chartData ? 'present' : 'missing',
+      chartDataKeys: reportPayload.chartData ? Object.keys(reportPayload.chartData).join(', ') : 'none'
+    });
+
+    // Validate report type before calling orchestrator
+    if (!reportPayload.report_type || typeof reportPayload.report_type !== 'string') {
       console.error(`${logPrefix} Invalid report type:`, {
-        value: reportRequested,
-        type: typeof reportRequested
+        value: reportPayload.report_type,
+        type: typeof reportPayload.report_type
       });
       console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
       return {
         success: true,
         responseData: {
           ...swissData,
-          report_error: `Invalid report type: ${reportRequested}`
+          report_error: `Invalid report type: ${reportPayload.report_type}`
         },
-        errorMessage: `Invalid report type provided: ${reportRequested}`
+        errorMessage: `Invalid report type provided: ${reportPayload.report_type}`
       };
     }
 
-    console.log(`${logPrefix} Inserting job into report_queue for "${reportRequested}" report...`);
-
-    // Insert job into report_queue
-    const { data, error } = await supabase.from("report_queue").insert({
-      status: "pending",
-      priority: 5,
-      payload: swissData,
-      report_type: reportRequested,
-      endpoint: requestData.request || "unknown",
-      user_id: requestData.user_id ?? null,
-      attempts: 0,
-      max_attempts: 3
-    }).select('id').single();
-
-    if (error) {
-      console.error(`${logPrefix} Failed to insert into report_queue:`, error.message);
+    console.log(`${logPrefix} Calling report orchestrator for "${reportPayload.report_type}" report...`);
+    
+    // Generate the report
+    const reportResult = await processReportRequest(reportPayload);
+    
+    console.log(`${logPrefix} Report orchestrator response:`, {
+      success: reportResult.success,
+      hasReport: !!reportResult.report,
+      errorMessage: reportResult.errorMessage,
+      reportPreview: reportResult.report ? 'Report generated successfully' : 'No report in response'
+    });
+    
+    if (reportResult.success && reportResult.report) {
+      console.log(`${logPrefix} Report generated successfully for "${reportPayload.report_type}"`);
       
-      // Return Swiss data with error message about queue insertion
+      // Combine Swiss API data with the report
+      const combinedResponse = {
+        ...swissData,
+        report: reportResult.report
+      };
+      
+      console.log(`${logPrefix} Combined response prepared with report included`);
+      console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
+      
+      return {
+        success: true,
+        responseData: combinedResponse
+      };
+    } else {
+      const errorMsg = reportResult.errorMessage || "Report generation failed without specific error";
+      console.error(`${logPrefix} Report generation failed:`, {
+        orchestratorSuccess: reportResult.success,
+        errorMessage: errorMsg,
+        reportType: reportPayload.report_type
+      });
+      
+      // Return Swiss API data with detailed error message about report
       const responseWithError = {
         ...swissData,
-        report_error: `Failed to queue ${reportRequested} report: ${error.message}`
+        report_error: `Failed to generate ${reportPayload.report_type} report: ${errorMsg}`
       };
       
       console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
@@ -143,31 +167,12 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       return {
         success: true,
         responseData: responseWithError,
-        errorMessage: `Failed to queue ${reportRequested} report: ${error.message}`
+        errorMessage: `Report generation failed for ${reportPayload.report_type}: ${errorMsg}`
       };
     }
-
-    console.log(`${logPrefix} Successfully queued job with ID: ${data.id}`);
-    
-    // Return Swiss API data with queue confirmation
-    const responseWithQueue = {
-      ...swissData,
-      report_status: "queued",
-      report_queue_id: data.id,
-      message: `${reportRequested} report has been queued for processing`
-    };
-    
-    console.log(`${logPrefix} Combined response prepared with queue confirmation`);
-    console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
-    
-    return {
-      success: true,
-      responseData: responseWithQueue
-    };
-    
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(`${logPrefix} Unexpected error in report queue insertion:`, {
+    console.error(`${logPrefix} Unexpected error in report generation:`, {
       error: errorMsg,
       stack: error instanceof Error ? error.stack : 'No stack trace',
       reportType: requestData?.report
@@ -184,7 +189,7 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
     // Return Swiss API data with error message
     const responseWithError = {
       ...swissData,
-      report_error: `Unexpected error during ${requestData?.report || 'unknown'} report queue insertion: ${errorMsg}`
+      report_error: `Unexpected error during ${requestData?.report || 'unknown'} report generation: ${errorMsg}`
     };
     
     console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
@@ -192,7 +197,7 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
     return {
       success: true,
       responseData: responseWithError,
-      errorMessage: `Unexpected error queuing ${requestData?.report || 'unknown'} report: ${errorMsg}`
+      errorMessage: `Unexpected error generating ${requestData?.report || 'unknown'} report: ${errorMsg}`
     };
   }
 }
