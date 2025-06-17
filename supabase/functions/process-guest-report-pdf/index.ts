@@ -10,6 +10,7 @@ import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SharedReportParser } from "../_shared/reportParser.ts";
 
 // ─── ENV VARS ────────────────────────────────────────────────────────────────
 const SUPABASE_URL           = Deno.env.get("SUPABASE_URL")              ?? "";
@@ -25,60 +26,8 @@ const corsHeaders = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Report-parsing + PDF-generation helpers (unchanged)
+//  PDF-generation helpers using shared parser
 // ─────────────────────────────────────────────────────────────────────────────
-class ServerReportParser {
-  static cleanContent(content: string) {
-    return content
-      .replace(/<[^>]*>/g, "")
-      .replace(/\*\*(.*?)\*\*/g, "$1")
-      .replace(/\*(.*?)\*/g, "$1")
-      .replace(/[_`]/g, "")
-      .replace(/#{1,6}\s*/g, "")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .trim();
-  }
-  static isHeading(line: string) {
-    const t = line.toLowerCase().trim();
-    const h = [
-      "summary", "insights", "actions", "tags",
-      "conclusion", "recommendations", "overview",
-      "analysis", "findings", "key points", "next steps", "takeaways",
-    ];
-    return line.length < 60 &&
-           h.some((s) => t === s || t === `${s}:` || t.startsWith(`${s}:`));
-  }
-  static processBlocks(content: string) {
-    const lines = content.split(/\r?\n/);
-    const out: { type: string; text: string }[] = [];
-    lines.forEach((raw) => {
-      const line = raw.trim();
-      if (!line) { out.push({ type: "spacer", text: "" }); return; }
-      const lower = line.toLowerCase();
-
-      if (this.isHeading(line)) {
-        out.push({ type: "heading", text: line }); return;
-      }
-      if (lower.startsWith("positivetags:") || lower.startsWith("negativetags:")) {
-        const lbl = lower.startsWith("positivetags:")
-          ? "Positive Traits"
-          : "Negative Traits";
-        out.push({ type: "heading", text: lbl });
-        line.split(":")[1].split(",").map((t) => t.trim())
-            .filter(Boolean)
-            .forEach((tag) => out.push({ type: "tag", text: `• ${tag}` }));
-        return;
-      }
-      if (/^\d+\.\s/.test(line)) { out.push({ type: "action", text: line }); return; }
-      out.push({ type: "normal", text: line });
-    });
-    return out;
-  }
-  static parseReport(content: string) {
-    return this.processBlocks(this.cleanContent(content));
-  }
-}
-
 class ServerPdfGenerator {
   static generateReportPdf(reportData: any, logPrefix: string): string {
     console.log(`${logPrefix} Starting PDF generation`);
@@ -112,8 +61,8 @@ class ServerPdfGenerator {
     doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(75,63,114);
     doc.text("Client Energetic Insight", m.left, y);
 
-    // ── body
-    const blocks = ServerReportParser.parseReport(reportData.content);
+    // ── body using shared parser
+    const blocks = SharedReportParser.parseReport(reportData.content);
     doc.setFontSize(11).setFont("helvetica", "normal").setTextColor(33);
     let lineY = y + 12;
     const lineH = 7.2, headingGap = 10, footerPad = 20;
