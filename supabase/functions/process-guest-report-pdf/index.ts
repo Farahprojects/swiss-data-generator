@@ -163,6 +163,17 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 async function processGuestReportPdf(guestReportId: string, requestId: string) {
   const log = (msg: string) => console.log(`[process-guest-report-pdf][${requestId}] ${msg}`);
 
+  // FIRST THING: Mark that the edge function was called
+  try {
+    await supabase
+      .from("guest_reports")
+      .update({ edge_function_confirmed: true })
+      .eq("id", guestReportId);
+    log("Edge function confirmed in database");
+  } catch (error) {
+    log(`Failed to confirm edge function call: ${error}`);
+  }
+
   // 1. fetch report
   const { data: gr, error } = await supabase
     .from("guest_reports")

@@ -527,6 +527,7 @@ export type Database = {
         Row: {
           amount_paid: number
           created_at: string
+          edge_function_confirmed: boolean | null
           email: string
           email_sent: boolean
           has_report: boolean
@@ -545,6 +546,7 @@ export type Database = {
         Insert: {
           amount_paid: number
           created_at?: string
+          edge_function_confirmed?: boolean | null
           email: string
           email_sent?: boolean
           has_report?: boolean
@@ -563,6 +565,7 @@ export type Database = {
         Update: {
           amount_paid?: number
           created_at?: string
+          edge_function_confirmed?: boolean | null
           email?: string
           email_sent?: boolean
           has_report?: boolean
