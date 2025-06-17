@@ -66,13 +66,15 @@ Deno.serve(async (_req) => {
     // Select the next engine using round-robin
     const engine = getNextEngine();
     
-    // Add the selected engine to the payload
+    // Map the queue payload to what reportOrchestrator expects
     const payloadWithEngine = { 
-      ...job.payload, 
-      engine,
-      report_type: job.report_type,
+      chartData: job.payload, // This contains natal, transits, etc.
+      apiKey: null, // Not needed for guest reports
       endpoint: job.endpoint,
-      user_id: job.user_id
+      report_type: job.report_type,
+      user_id: job.user_id,
+      engine,
+      reportType: job.report_type
     };
 
     console.log(`[dispatch-report] Processing job ${job.id} with engine: ${engine}`);
