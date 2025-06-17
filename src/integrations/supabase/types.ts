@@ -961,6 +961,63 @@ export type Database = {
         }
         Relationships: []
       }
+      report_queue: {
+        Row: {
+          assigned_worker: string | null
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          endpoint: string
+          engine_used: string | null
+          error_message: string | null
+          id: string
+          max_attempts: number
+          payload: Json
+          priority: number
+          report_type: string
+          result: Json | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["queue_status"]
+          user_id: string | null
+        }
+        Insert: {
+          assigned_worker?: string | null
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          endpoint: string
+          engine_used?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          payload: Json
+          priority?: number
+          report_type: string
+          result?: Json | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["queue_status"]
+          user_id?: string | null
+        }
+        Update: {
+          assigned_worker?: string | null
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          endpoint?: string
+          engine_used?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          payload?: Json
+          priority?: number
+          report_type?: string
+          result?: Json | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["queue_status"]
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       stripe_products: {
         Row: {
           active: boolean | null
@@ -1517,6 +1574,7 @@ export type Database = {
       }
     }
     Enums: {
+      queue_status: "pending" | "processing" | "completed" | "failed"
       user_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -1633,6 +1691,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      queue_status: ["pending", "processing", "completed", "failed"],
       user_role: ["admin", "user"],
     },
   },
