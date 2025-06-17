@@ -535,6 +535,8 @@ export type Database = {
           promo_code_used: string | null
           report_content: string | null
           report_data: Json
+          report_pdf_error: string | null
+          report_pdf_status: string | null
           report_type: string
           stripe_session_id: string
           swiss_data: Json | null
@@ -551,6 +553,8 @@ export type Database = {
           promo_code_used?: string | null
           report_content?: string | null
           report_data?: Json
+          report_pdf_error?: string | null
+          report_pdf_status?: string | null
           report_type: string
           stripe_session_id: string
           swiss_data?: Json | null
@@ -567,6 +571,8 @@ export type Database = {
           promo_code_used?: string | null
           report_content?: string | null
           report_data?: Json
+          report_pdf_error?: string | null
+          report_pdf_status?: string | null
           report_type?: string
           stripe_session_id?: string
           swiss_data?: Json | null

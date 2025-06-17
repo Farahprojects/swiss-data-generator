@@ -1,7 +1,8 @@
+// @deno-types="https://esm.sh/@types/jspdf@2.5.1"
+import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import jsPDF from "https://esm.sh/jspdf@2.5.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -356,9 +357,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     const emailPayload = {
       to: guestReport.email,
       subject: template.subject,
-      html: template.body_html,
-      text: template.body_text || "",
-      from: "Theria Astro <no-reply@theraiastro.com>",
+      body: template.body_html,
       attachments: [{
         filename: filename,
         content: pdfBase64,
