@@ -789,7 +789,7 @@ const PublicReport = () => {
                         Processing...
                       </>
                     ) : (
-                      'Enter'
+                      'Reveal'
                     )}
                   </Button>
                   
