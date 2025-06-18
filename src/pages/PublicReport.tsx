@@ -1,123 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
-import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
-import ReportGuideModal from '@/components/public-report/ReportGuideModal';
-import { getProductByName } from '@/utils/stripe-products';
-import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
-import { validatePromoCode, createFreeReport, PromoCodeValidation } from '@/utils/promoCodeValidation';
-import { useToast } from '@/hooks/use-toast';
-
-const reportSchema = z.object({
-  reportType: z.string().min(1, 'Please select a report type'),
-  relationshipType: z.string().optional(),
-  essenceType: z.string().optional(),
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  birthDate: z.string().min(1, 'Birth date is required'),
-  birthTime: z.string().min(1, 'Birth time is required'),
-  birthLocation: z.string().min(1, 'Birth location is required'),
-  birthLatitude: z.number().optional(),
-  birthLongitude: z.number().optional(),
-  birthPlaceId: z.string().optional(),
-  // For compatibility/sync reports
-  secondPersonName: z.string().optional(),
-  secondPersonBirthDate: z.string().optional(),
-  secondPersonBirthTime: z.string().optional(),
-  secondPersonBirthLocation: z.string().min(1, 'Birth location is required'),
-  secondPersonLatitude: z.number().optional(),
-  secondPersonLongitude: z.number().optional(),
-  secondPersonPlaceId: z.string().optional(),
-  // For return reports
-  returnYear: z.string().optional(),
-  notes: z.string().optional(),
-  promoCode: z.string().optional(),
-}).refine((data) => {
-  // If reportType is essence, essenceType is required
-  if (data.reportType === 'essence' && (!data.essenceType || data.essenceType === '')) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Please select an essence focus type",
-  path: ["essenceType"]
-}).refine((data) => {
-  // If reportType is sync, relationshipType is required
-  if (data.reportType === 'sync' && (!data.relationshipType || data.relationshipType === '')) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Please select a relationship type",
-  path: ["relationshipType"]
-}).refine((data) => {
-  // If sync report, second person details are required
-  if (data.reportType === 'sync') {
-    if (!data.secondPersonName || data.secondPersonName.trim() === '') {
-      return false;
-    }
-    if (!data.secondPersonBirthDate || data.secondPersonBirthDate === '') {
-      return false;
-    }
-    if (!data.secondPersonBirthTime || data.secondPersonBirthTime === '') {
-      return false;
-    }
-    if (!data.secondPersonBirthLocation || data.secondPersonBirthLocation.trim() === '') {
-      return false;
-    }
-  }
-  return true;
-}, {
-  message: "All second person details are required for sync reports",
-  path: ["secondPersonName"]
-});
-
-type ReportFormData = z.infer<typeof reportSchema>;
-
-const reportTypes = [
-  { value: 'sync', label: 'Sync Report' },
-  { value: 'essence', label: 'Essence Report' },
-  { value: 'flow', label: 'Flow Report' },
-  { value: 'mindset', label: 'Mindset Report' },
-  { value: 'monthly', label: 'Monthly Report' },
-  { value: 'focus', label: 'Focus Report' },
-];
-
-const relationshipTypes = [
-  { value: 'personal', label: 'Personal' },
-  { value: 'professional', label: 'Professional' },
-];
-
-const essenceTypes = [
-  { value: 'personal', label: 'Personal' },
-  { value: 'professional', label: 'Professional' },
-  { value: 'relational', label: 'Relational' },
-];
+import { reportSchema } from '@/schemas/report-form-schema';
+import { ReportFormData } from '@/types/public-report';
+import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { useReportSubmission } from '@/hooks/useReportSubmission';
+import HeroSection from '@/components/public-report/HeroSection';
+import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
+import ContactForm from '@/components/public-report/ContactForm';
+import BirthDetailsForm from '@/components/public-report/BirthDetailsForm';
+import SecondPersonForm from '@/components/public-report/SecondPersonForm';
+import SubmissionSection from '@/components/public-report/SubmissionSection';
+import FeaturesSection from '@/components/public-report/FeaturesSection';
+import SuccessScreen from '@/components/public-report/SuccessScreen';
 
 const PublicReport = () => {
-  const [isProcessing, setIsProcessing] = useState(false);
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [showReportGuide, setShowReportGuide] = useState(false);
-  const [isPricingLoading, setIsPricingLoading] = useState(false);
-  const [promoValidation, setPromoValidation] = useState<PromoCodeValidation | null>(null);
-  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
-  const [reportCreated, setReportCreated] = useState(false);
-  const { toast } = useToast();
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -148,748 +48,92 @@ const PublicReport = () => {
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors } } = form;
   const selectedReportType = watch('reportType');
+  const promoCode = watch('promoCode');
+
+  const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode || '');
+  const { isProcessing, isPricingLoading, reportCreated, submitReport } = useReportSubmission();
 
   const requiresSecondPerson = selectedReportType === 'sync' || selectedReportType === 'compatibility';
-  const requiresRelationshipType = requiresSecondPerson;
-  const requiresEssenceType = selectedReportType === 'essence';
-  const requiresReturnYear = selectedReportType === 'return';
-
-  const handlePlaceSelect = (placeData: PlaceData, fieldPrefix = '') => {
-    const locationField = fieldPrefix ? `${fieldPrefix}Location` : 'birthLocation';
-    const latitudeField = fieldPrefix ? `${fieldPrefix}Latitude` : 'birthLatitude';
-    const longitudeField = fieldPrefix ? `${fieldPrefix}Longitude` : 'birthLongitude';
-    const placeIdField = fieldPrefix ? `${fieldPrefix}PlaceId` : 'birthPlaceId';
-    
-    setValue(locationField as keyof ReportFormData, placeData.name);
-    
-    if (placeData.latitude && placeData.longitude) {
-      setValue(latitudeField as keyof ReportFormData, placeData.latitude);
-      setValue(longitudeField as keyof ReportFormData, placeData.longitude);
-      console.log(`📍 Coordinates saved: ${placeData.latitude}, ${placeData.longitude}`);
-    }
-    
-    if (placeData.placeId) {
-      setValue(placeIdField as keyof ReportFormData, placeData.placeId);
-    }
-  };
-
-  // Function to build the complete report type
-  const buildCompleteReportType = (data: ReportFormData) => {
-    console.log('Building report type with data:', {
-      reportType: data.reportType,
-      essenceType: data.essenceType,
-      relationshipType: data.relationshipType
-    });
-    
-    if (data.reportType === 'essence' && data.essenceType) {
-      const completeType = `essence_${data.essenceType}`;
-      console.log('Built complete essence type:', completeType);
-      return completeType;
-    }
-    if (data.reportType === 'sync' && data.relationshipType) {
-      const completeType = `sync_${data.relationshipType}`;
-      console.log('Built complete sync type:', completeType);
-      return completeType;
-    }
-    // For other report types that don't have subtypes
-    console.log('Using base report type:', data.reportType);
-    return data.reportType;
-  };
-
-  // Report pricing configuration - database lookup only
-  const getReportPriceAndDescription = async (reportType: string, relationshipType?: string, essenceType?: string) => {
-    const baseDescriptions = {
-      'sync': 'Sync Compatibility Report',
-      'essence': 'Personal Essence Report',
-      'flow': 'Life Flow Analysis Report',
-      'mindset': 'Mindset Transformation Report',
-      'monthly': 'Monthly Astrology Forecast',
-      'focus': 'Life Focus Guidance Report',
-    };
-
-    let description = baseDescriptions[reportType as keyof typeof baseDescriptions] || 'Astrology Report';
-    
-    // Add specific details to description
-    if (relationshipType) {
-      description += ` (${relationshipType.charAt(0).toUpperCase() + relationshipType.slice(1)} Focus)`;
-    }
-    if (essenceType) {
-      description += ` - ${essenceType.charAt(0).toUpperCase() + essenceType.slice(1)} Analysis`;
-    }
-
-    // Map report types to product names in the database
-    const reportTypeToProductName = {
-      'sync': 'Sync',
-      'essence': 'Essence',
-      'flow': 'Flow',
-      'mindset': 'Mindset',
-      'monthly': 'Monthly',
-      'focus': 'Focus',
-    };
-
-    const productName = reportTypeToProductName[reportType as keyof typeof reportTypeToProductName];
-    
-    if (!productName) {
-      throw new Error(`Unknown report type: ${reportType}`);
-    }
-
-    const product = await getProductByName(productName);
-    if (!product) {
-      throw new Error(`Product not found in database: ${productName}`);
-    }
-
-    return { 
-      amount: product.amount_usd, 
-      description: product.description || description 
-    };
-  };
-
-  // Debounced promo code validation
-  useEffect(() => {
-    const promoCode = watch('promoCode');
-    if (!promoCode || promoCode.trim() === '') {
-      setPromoValidation(null);
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
-      setIsValidatingPromo(true);
-      try {
-        const validation = await validatePromoCode(promoCode);
-        setPromoValidation(validation);
-      } catch (error) {
-        console.error('Error validating promo code:', error);
-        setPromoValidation({
-          isValid: false,
-          discountPercent: 0,
-          message: 'Error validating promo code',
-          isFree: false
-        });
-      } finally {
-        setIsValidatingPromo(false);
-      }
-    }, 800);
-
-    return () => clearTimeout(timeoutId);
-  }, [watch('promoCode')]);
 
   const onSubmit = async (data: ReportFormData) => {
-    console.log('🚀 Form submission started');
-    console.log('📝 Form data:', data);
-    
-    setIsProcessing(true);
-    setIsPricingLoading(true);
-    
-    try {
-      console.log('Form submission data:', data);
-      
-      // Build the complete report type
-      const completeReportType = buildCompleteReportType(data);
-      console.log('Complete report type for submission:', completeReportType);
-
-      // Check if we have a valid free promo code
-      if (data.promoCode && promoValidation?.isFree && promoValidation.isValid) {
-        console.log('Processing free report with promo code:', data.promoCode);
-        
-        // Prepare report data for free report
-        const reportData = {
-          reportType: completeReportType,
-          relationshipType: data.relationshipType,
-          essenceType: data.essenceType,
-          name: data.name,
-          email: data.email,
-          birthDate: data.birthDate,
-          birthTime: data.birthTime,
-          birthLocation: data.birthLocation,
-          birthLatitude: data.birthLatitude,
-          birthLongitude: data.birthLongitude,
-          birthPlaceId: data.birthPlaceId,
-          secondPersonName: data.secondPersonName,
-          secondPersonBirthDate: data.secondPersonBirthDate,
-          secondPersonBirthTime: data.secondPersonBirthTime,
-          secondPersonBirthLocation: data.secondPersonBirthLocation,
-          secondPersonLatitude: data.secondPersonLatitude,
-          secondPersonLongitude: data.secondPersonLongitude,
-          secondPersonPlaceId: data.secondPersonPlaceId,
-          returnYear: data.returnYear,
-          notes: data.notes,
-        };
-
-        const result = await createFreeReport(data.promoCode, reportData);
-        
-        setReportCreated(true);
-        toast({
-          title: "Free Report Created!",
-          description: "Your report has been generated and will be sent to your email shortly.",
-        });
-        
-        setIsPricingLoading(false);
-        return;
-      }
-      
-      // Regular paid flow
-      const { amount, description } = await getReportPriceAndDescription(
-        data.reportType, 
-        data.relationshipType, 
-        data.essenceType
-      );
-      
-      setIsPricingLoading(false);
-
-      // Apply promo code discount if valid (but not free)
-      let finalAmount = amount;
-      if (data.promoCode && promoValidation?.isValid && !promoValidation.isFree) {
-        finalAmount = amount * (1 - promoValidation.discountPercent / 100);
-      }
-
-      // Prepare report data for paid checkout
-      const reportData = {
-        reportType: completeReportType,
-        relationshipType: data.relationshipType,
-        essenceType: data.essenceType,
-        name: data.name,
-        email: data.email,
-        birthDate: data.birthDate,
-        birthTime: data.birthTime,
-        birthLocation: data.birthLocation,
-        birthLatitude: data.birthLatitude,
-        birthLongitude: data.birthLongitude,
-        birthPlaceId: data.birthPlaceId,
-        secondPersonName: data.secondPersonName,
-        secondPersonBirthDate: data.secondPersonBirthDate,
-        secondPersonBirthTime: data.secondPersonBirthTime,
-        secondPersonBirthLocation: data.secondPersonBirthLocation,
-        secondPersonLatitude: data.secondPersonLatitude,
-        secondPersonLongitude: data.secondPersonLongitude,
-        secondPersonPlaceId: data.secondPersonPlaceId,
-        returnYear: data.returnYear,
-        notes: data.notes,
-        promoCode: data.promoCode,
-      };
-      
-      console.log('Report data being sent to checkout:', reportData);
-      
-      const result = await guestCheckoutWithAmount(data.email, finalAmount, description, reportData);
-      
-      if (!result.success) {
-        toast({
-          title: "Payment Error",
-          description: result.error || "Failed to initiate checkout",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error processing report:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process your request. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      console.log('🏁 Form submission completed');
-      setIsProcessing(false);
-      setIsPricingLoading(false);
-    }
+    await submitReport(data, promoValidation);
   };
 
-  // Debug button click
   const handleButtonClick = (e: React.MouseEvent) => {
     console.log('🖱️ Button clicked!', e);
     e.preventDefault();
     e.stopPropagation();
     
-    // Manually trigger form submission
     console.log('📝 Triggering form submission...');
     handleSubmit(onSubmit)(e);
   };
 
-  const getCurrentYear = () => new Date().getFullYear();
+  const handlePromoCodeChange = (value: string) => {
+    if (value === '') {
+      // Handle clearing promo validation when field is cleared
+    }
+  };
 
-  // Show success message if free report was created
   if (reportCreated) {
-    return (
-      <div className="h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center">
-        <div className="container mx-auto px-4 text-center">
-          <Card className="max-w-2xl mx-auto border-2 border-green-200">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <CheckCircle className="h-12 w-12 text-green-500" />
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Report Created!</h1>
-                  <p className="text-gray-600">Your free report has been generated</p>
-                </div>
-              </div>
-              
-              <div className="bg-green-50 rounded-lg p-6 mb-6">
-                <h3 className="text-lg font-semibold text-green-800 mb-2">Success!</h3>
-                <p className="text-green-700">
-                  Your free report has been generated and will be sent to your email shortly. 
-                  Please check your inbox (and spam folder) for the report.
-                </p>
-              </div>
-
-              <Button 
-                onClick={() => window.location.reload()} 
-                variant="outline"
-                className="mt-4"
-              >
-                Create Another Report
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+    return <SuccessScreen />;
   }
 
   return (
     <div className="h-screen overflow-y-auto scroll-smooth" style={{ scrollSnapType: 'y mandatory' }}>
-      {/* Hero Section */}
-      <section className="h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20" style={{ scrollSnapAlign: 'start' }}>
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            See the Mirror in your eyes
-            <span className="text-primary block mt-2"> Your Subconscious, Unlocked</span>
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Reveal the subconscious patterns shaping your life — your drive, your resistance, your rhythm. Mapped at birth. Reflected back now.
-          </p>
-          
-          {/* Trust Indicators */}
-          <div className="flex justify-center items-center gap-8 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span>Instant Delivery</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              <span>Secure Payment</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Star className="h-4 w-4" />
-              <span>Professional Quality</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HeroSection />
 
-      {/* Form Container - Remove scroll-snap interference */}
       <div style={{ scrollSnapType: 'none' }}>
         <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
-          {/* Step 1: Report Type Selection */}
-          <section className="h-screen flex items-center justify-center bg-background" style={{ scrollSnapAlign: 'start' }}>
-            <div className="container mx-auto px-4 max-w-4xl">
-              <div className="space-y-8">
-                <button
-                  type="button"
-                  onClick={() => setShowReportGuide(true)}
-                  className="text-foreground hover:text-primary font-bold underline mx-auto block"
-                >
-                  Not sure which report to choose? Click here.
-                </button>
-                
-                <div className="space-y-6">
-                  <div className="flex items-center justify-center gap-4">
-                    <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">1</div>
-                    <h2 className="text-2xl font-semibold">Choose Your Report Type</h2>
-                  </div>
-                  
-                  <div className="space-y-4 max-w-2xl mx-auto">
-                    <div className="space-y-2">
-                      <Label htmlFor="reportType">Report Type *</Label>
-                      <Controller
-                        control={control}
-                        name="reportType"
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger className="h-12">
-                              <SelectValue placeholder="Select a report type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {reportTypes.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                  {type.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                      {errors.reportType && (
-                        <p className="text-sm text-destructive">{errors.reportType.message}</p>
-                      )}
-                    </div>
+          <ReportTypeSelector
+            control={control}
+            errors={errors}
+            selectedReportType={selectedReportType}
+            showReportGuide={showReportGuide}
+            setShowReportGuide={setShowReportGuide}
+          />
 
-                    {/* Conditional Fields for Report Options */}
-                    {requiresEssenceType && (
-                      <div className="space-y-2">
-                        <Label htmlFor="essenceType">Essence Focus *</Label>
-                        <Controller
-                          control={control}
-                          name="essenceType"
-                          render={({ field }) => (
-                            <ToggleGroup
-                              type="single"
-                              value={field.value}
-                              onValueChange={field.onChange}
-                              className="justify-center flex-wrap gap-2"
-                            >
-                              {essenceTypes.map((type) => (
-                                <ToggleGroupItem 
-                                  key={type.value} 
-                                  value={type.value}
-                                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
-                                >
-                                  {type.label}
-                                </ToggleGroupItem>
-                              ))}
-                            </ToggleGroup>
-                          )}
-                        />
-                        {errors.essenceType && (
-                          <p className="text-sm text-destructive">{errors.essenceType.message}</p>
-                        )}
-                      </div>
-                    )}
-
-                    {requiresReturnYear && (
-                      <div className="space-y-2">
-                        <Label htmlFor="returnYear">Return Year *</Label>
-                        <Input
-                          {...register('returnYear')}
-                          type="number"
-                          placeholder={getCurrentYear().toString()}
-                          min="1900"
-                          max="2100"
-                          className="h-12"
-                        />
-                      </div>
-                    )}
-
-                    {requiresRelationshipType && (
-                      <div className="space-y-2">
-                        <Label htmlFor="relationshipType">Relationship Type *</Label>
-                        <Controller
-                          control={control}
-                          name="relationshipType"
-                          render={({ field }) => (
-                            <ToggleGroup
-                              type="single"
-                              value={field.value}
-                              onValueChange={field.onChange}
-                              className="justify-center flex-wrap gap-2"
-                            >
-                              {relationshipTypes.map((type) => (
-                                <ToggleGroupItem 
-                                  key={type.value} 
-                                  value={type.value}
-                                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
-                                >
-                                  {type.label}
-                                </ToggleGroupItem>
-                              ))}
-                            </ToggleGroup>
-                          )}
-                        />
-                        {errors.relationshipType && (
-                          <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Step 2: Contact Information */}
           {selectedReportType && (
-            <section className="h-screen flex items-center justify-center bg-muted/20" style={{ scrollSnapAlign: 'start' }}>
-              <div className="container mx-auto px-4 max-w-4xl">
-                <div className="space-y-8">
-                  <div className="flex items-center justify-center gap-4">
-                    <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">2</div>
-                    <h2 className="text-2xl font-semibold">Contact Information</h2>
-                  </div>
-                  
-                  <div className="max-w-2xl mx-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Full Name *</Label>
-                        <Input
-                          id="name"
-                          {...register('name')}
-                          placeholder="Enter your full name"
-                          className="h-12"
-                        />
-                        {errors.name && (
-                          <p className="text-sm text-destructive">{errors.name.message}</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email Address *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          {...register('email')}
-                          placeholder="your@email.com"
-                          className="h-12"
-                        />
-                        {errors.email && (
-                          <p className="text-sm text-destructive">{errors.email.message}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <ContactForm
+              register={register}
+              errors={errors}
+            />
           )}
 
-          {/* Step 3: Birth Details */}
           {selectedReportType && (
-            <section className="h-screen flex items-center justify-center bg-background" style={{ scrollSnapAlign: 'start' }}>
-              <div className="container mx-auto px-4 max-w-4xl">
-                <div className="space-y-8">
-                  <div className="flex items-center justify-center gap-4">
-                    <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">3</div>
-                    <h2 className="text-2xl font-semibold">Your Birth Details</h2>
-                  </div>
-                  
-                  <div className="max-w-2xl mx-auto space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="birthDate">Birth Date *</Label>
-                        <Input
-                          id="birthDate"
-                          type="date"
-                          {...register('birthDate')}
-                          className="h-12"
-                        />
-                        {errors.birthDate && (
-                          <p className="text-sm text-destructive">{errors.birthDate.message}</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="birthTime">Birth Time *</Label>
-                        <Input
-                          id="birthTime"
-                          type="time"
-                          {...register('birthTime')}
-                          step="60"
-                          className="h-12"
-                        />
-                        {errors.birthTime && (
-                          <p className="text-sm text-destructive">{errors.birthTime.message}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <PlaceAutocomplete
-                        label="Birth Location *"
-                        value={watch('birthLocation') || ''}
-                        onChange={(value) => setValue('birthLocation', value)}
-                        onPlaceSelect={(placeData) => handlePlaceSelect(placeData)}
-                        placeholder="Enter birth city, state, country"
-                        id="birthLocation"
-                        error={errors.birthLocation?.message}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <BirthDetailsForm
+              register={register}
+              setValue={setValue}
+              watch={watch}
+              errors={errors}
+            />
           )}
 
-          {/* Step 4: Second Person Details (for compatibility/sync reports) */}
           {requiresSecondPerson && (
-            <section className="h-screen flex items-center justify-center bg-muted/20" style={{ scrollSnapAlign: 'start' }}>
-              <div className="container mx-auto px-4 max-w-4xl">
-                <div className="space-y-8">
-                  <div className="flex items-center justify-center gap-4">
-                    <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">4</div>
-                    <h2 className="text-2xl font-semibold">Second Person Details</h2>
-                  </div>
-                  
-                  <div className="max-w-2xl mx-auto space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="secondPersonName">Name *</Label>
-                      <Input
-                        id="secondPersonName"
-                        {...register('secondPersonName')}
-                        placeholder="Enter second person's name"
-                        className="h-12"
-                      />
-                      {errors.secondPersonName && (
-                        <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="secondPersonBirthDate">Birth Date *</Label>
-                        <Input
-                          id="secondPersonBirthDate"
-                          type="date"
-                          {...register('secondPersonBirthDate')}
-                          className="h-12"
-                        />
-                        {errors.secondPersonBirthDate && (
-                          <p className="text-sm text-destructive">{errors.secondPersonBirthDate.message}</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="secondPersonBirthTime">Birth Time *</Label>
-                        <Input
-                          id="secondPersonBirthTime"
-                          type="time"
-                          {...register('secondPersonBirthTime')}
-                          step="60"
-                          className="h-12"
-                        />
-                        {errors.secondPersonBirthTime && (
-                          <p className="text-sm text-destructive">{errors.secondPersonBirthTime.message}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <PlaceAutocomplete
-                        label="Birth Location *"
-                        value={watch('secondPersonBirthLocation') || ''}
-                        onChange={(value) => setValue('secondPersonBirthLocation', value)}
-                        onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'secondPerson')}
-                        placeholder="Enter birth city, state, country"
-                        id="secondPersonBirthLocation"
-                        error={errors.secondPersonBirthLocation?.message}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <SecondPersonForm
+              register={register}
+              setValue={setValue}
+              watch={watch}
+              errors={errors}
+            />
           )}
 
-          {/* Generate Report Section - Simplified button text */}
           {selectedReportType && (
-            <section className="h-screen flex items-center justify-center bg-background" style={{ scrollSnapAlign: 'start' }}>
-              <div className="container mx-auto px-4 max-w-4xl">
-                <div className="space-y-8 text-center">
-                  <h2 className="text-3xl font-semibold">Ready to Generate Your Report?</h2>
-                  
-                  <Button 
-                    type="button"
-                    size="lg" 
-                    className="px-12 py-6 text-lg relative z-10"
-                    disabled={isProcessing || isPricingLoading}
-                    onClick={handleButtonClick}
-                    style={{ pointerEvents: 'auto' }}
-                  >
-                    {isProcessing || isPricingLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      'Reveal'
-                    )}
-                  </Button>
-                  
-                  {/* Promo Code Section */}
-                  <div className="w-full max-w-md mx-auto">
-                    <button
-                      type="button"
-                      onClick={() => setShowPromoCode(!showPromoCode)}
-                      className="flex flex-col md:flex-row items-center gap-1 md:gap-2 text-base font-bold text-muted-foreground hover:text-foreground transition-colors mx-auto"
-                    >
-                      <span>Have a promo code?</span>
-                      <div className="flex items-center gap-1">
-                        <span className="underline">Enter it here</span>
-                        {showPromoCode ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </div>
-                    </button>
-                    
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      showPromoCode ? 'max-h-32 opacity-100 mt-3' : 'max-h-0 opacity-0'
-                    }`}>
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <Input
-                            {...register('promoCode')}
-                            placeholder="Enter promo code"
-                            className="text-center px-12 py-6 text-lg"
-                            onChange={(e) => {
-                              register('promoCode').onChange(e);
-                              if (e.target.value === '') {
-                                setPromoValidation(null);
-                              }
-                            }}
-                          />
-                          {isValidatingPromo && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        {promoValidation && (
-                          <div className={`text-xs text-center p-2 rounded ${
-                            promoValidation.isValid 
-                              ? promoValidation.isFree 
-                                ? 'bg-green-50 text-green-700 border border-green-200'
-                                : 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'bg-red-50 text-red-700 border border-red-200'
-                          }`}>
-                            {promoValidation.message}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <SubmissionSection
+              register={register}
+              isProcessing={isProcessing}
+              isPricingLoading={isPricingLoading}
+              showPromoCode={showPromoCode}
+              setShowPromoCode={setShowPromoCode}
+              promoValidation={promoValidation}
+              isValidatingPromo={isValidatingPromo}
+              onPromoCodeChange={handlePromoCodeChange}
+              onButtonClick={handleButtonClick}
+            />
           )}
         </form>
       </div>
 
-      {/* Features Section */}
-      <section className="h-screen flex items-center justify-center bg-muted/30" style={{ scrollSnapAlign: 'start' }}>
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Why Choose Our Reports?</h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="text-center">
-              <div className="bg-primary/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-2">AI-Powered Accuracy</h3>
-              <p className="text-muted-foreground">Advanced algorithms ensure precise calculations and personalized insights.</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-primary/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Clock className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-2">Instant Delivery</h3>
-              <p className="text-muted-foreground">Get your comprehensive report delivered to your email within minutes.</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-primary/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Star className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-2">Professional Quality</h3>
-              <p className="text-muted-foreground">Detailed, professional-grade reports trusted by astrology enthusiasts.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Report Guide Modal */}
-      <ReportGuideModal 
-        isOpen={showReportGuide} 
-        onClose={() => setShowReportGuide(false)} 
-      />
+      <FeaturesSection />
     </div>
   );
 };

@@ -1,0 +1,23 @@
+
+import React from 'react';
+import { FormStepProps } from '@/types/public-report';
+
+const FormStep = ({ stepNumber, title, children, className = '' }: FormStepProps) => {
+  return (
+    <section className={`h-screen flex items-center justify-center ${className}`} style={{ scrollSnapAlign: 'start' }}>
+      <div className="container mx-auto px-4 max-w-4xl">
+        <div className="space-y-8">
+          <div className="flex items-center justify-center gap-4">
+            <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">
+              {stepNumber}
+            </div>
+            <h2 className="text-2xl font-semibold">{title}</h2>
+          </div>
+          {children}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default FormStep;
