@@ -33,12 +33,12 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
 
   return (
     <div className="border border-gray-100 rounded-lg overflow-hidden bg-white hover:shadow-md transition-all duration-200">
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 bg-gray-50/50">
         {days.map((day, index) => (
           <div
             key={day.toISOString()}
-            className={`py-2 px-2 text-xs font-bold text-center bg-white select-none
-              ${isToday(day) ? "text-primary border-primary shadow" : ""}
+            className={`py-2 px-2 text-xs font-bold text-center select-none
+              ${isToday(day) ? "text-primary" : ""}
               ${isWeekend(day) ? "bg-accent/20" : ""}
               ${index < days.length - 1 ? 'border-r border-gray-100' : ''}
             `}
@@ -59,10 +59,6 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
               className={`p-2 min-h-[120px] flex flex-col gap-1 transition ${dayBg} group relative
                 ${index < days.length - 1 ? 'border-r border-gray-100' : ''}
               `}
-              style={{
-                borderColor: dayIsToday ? "#6951f3" : undefined,
-                borderWidth: dayIsToday ? "2px" : undefined,
-              }}
             >
               {daySessions.length === 0
                 ? null
