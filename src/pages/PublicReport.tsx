@@ -21,6 +21,7 @@ const PublicReport = () => {
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
+    mode: 'onChange',
     defaultValues: {
       reportType: '',
       relationshipType: '',
@@ -46,9 +47,20 @@ const PublicReport = () => {
     },
   });
 
-  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = form;
+  const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   const selectedReportType = watch('reportType');
   const promoCode = watch('promoCode');
+
+  // Debug: log form state
+  React.useEffect(() => {
+    console.log('📊 Form State Debug:', {
+      selectedReportType,
+      isValid,
+      hasErrors: Object.keys(errors).length > 0,
+      errors: errors,
+      formValues: watch()
+    });
+  }, [selectedReportType, isValid, errors, watch]);
 
   const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode || '');
   const { isProcessing, isPricingLoading, reportCreated, submitReport } = useReportSubmission();
@@ -56,6 +68,7 @@ const PublicReport = () => {
   const requiresSecondPerson = selectedReportType === 'sync' || selectedReportType === 'compatibility';
 
   const onSubmit = async (data: ReportFormData) => {
+    console.log('✅ Form submission successful, data:', data);
     await submitReport(data, promoValidation);
   };
 
@@ -65,7 +78,18 @@ const PublicReport = () => {
     e.stopPropagation();
     
     console.log('📝 Triggering form submission...');
-    handleSubmit(onSubmit)(e);
+    console.log('🔍 Current form errors:', errors);
+    console.log('🔍 Form is valid:', isValid);
+    
+    handleSubmit(
+      (data) => {
+        console.log('✅ Form validation passed, submitting:', data);
+        onSubmit(data);
+      },
+      (errors) => {
+        console.log('❌ Form validation failed:', errors);
+      }
+    )(e);
   };
 
   const handlePromoCodeChange = (value: string) => {
@@ -120,6 +144,7 @@ const PublicReport = () => {
           {selectedReportType && (
             <SubmissionSection
               register={register}
+              errors={errors}
               isProcessing={isProcessing}
               isPricingLoading={isPricingLoading}
               showPromoCode={showPromoCode}

@@ -16,7 +16,7 @@ export const reportSchema = z.object({
   secondPersonName: z.string().optional(),
   secondPersonBirthDate: z.string().optional(),
   secondPersonBirthTime: z.string().optional(),
-  secondPersonBirthLocation: z.string().min(1, 'Birth location is required'),
+  secondPersonBirthLocation: z.string().optional(),
   secondPersonLatitude: z.number().optional(),
   secondPersonLongitude: z.number().optional(),
   secondPersonPlaceId: z.string().optional(),
