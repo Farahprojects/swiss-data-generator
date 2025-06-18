@@ -1,4 +1,3 @@
-
 // Outbound message sender via SMTP endpoint
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.177.0";
@@ -191,7 +190,7 @@ serve(async (req) => {
           body: html,
           from_address: from || user.email || 'noreply@therai.coach',
           to_address: to,
-          direction: 'outgoing',
+          direction: 'outbound',
           sent_via: 'smtp',
           is_read: true, // Sent emails are considered "read"
           is_starred: false,
