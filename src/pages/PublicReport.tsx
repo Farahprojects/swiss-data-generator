@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -40,7 +39,7 @@ const reportSchema = z.object({
   secondPersonName: z.string().optional(),
   secondPersonBirthDate: z.string().optional(),
   secondPersonBirthTime: z.string().optional(),
-  secondPersonBirthLocation: z.string().optional(),
+  secondPersonBirthLocation: z.string().min(1, 'Birth location is required'),
   secondPersonLatitude: z.number().optional(),
   secondPersonLongitude: z.number().optional(),
   secondPersonPlaceId: z.string().optional(),
@@ -394,8 +393,8 @@ const PublicReport = () => {
   // Show success message if free report was created
   if (reportCreated) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-        <div className="container mx-auto px-4 py-16 text-center">
+      <div className="h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center">
+        <div className="container mx-auto px-4 text-center">
           <Card className="max-w-2xl mx-auto border-2 border-green-200">
             <CardContent className="p-8">
               <div className="flex items-center justify-center gap-3 mb-6">
@@ -429,10 +428,10 @@ const PublicReport = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
       {/* Hero Section */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-16 text-center">
+      <section className="h-screen snap-start snap-always bg-gradient-to-b from-background to-muted/20 flex items-center justify-center">
+        <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             See the Mirror in your eyes
             <span className="text-primary block mt-2"> Your Subconscious, Unlocked</span>
@@ -457,238 +456,247 @@ const PublicReport = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Main Form Section */}
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-6xl mx-auto">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
-            {/* Step 1: Report Type Selection */}
-            <div className="space-y-6">
-              <button
-                type="button"
-                onClick={() => setShowReportGuide(true)}
-                className="text-foreground hover:text-primary font-bold underline"
-              >
-                Not sure which report to choose? Click here.
-              </button>
-              
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">1</div>
-                  <h2 className="text-2xl font-semibold">Choose Your Report Type</h2>
-                </div>
+      {/* Main Form Container */}
+      <div className="snap-start snap-always">
+        <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
+          {/* Step 1: Report Type Selection */}
+          <section className="h-screen snap-start snap-always bg-background flex items-center justify-center">
+            <div className="container mx-auto px-4 max-w-4xl">
+              <div className="space-y-8">
+                <button
+                  type="button"
+                  onClick={() => setShowReportGuide(true)}
+                  className="text-foreground hover:text-primary font-bold underline mx-auto block"
+                >
+                  Not sure which report to choose? Click here.
+                </button>
                 
-                <div className="pl-1 md:pl-8 space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reportType">Report Type *</Label>
-                    <Controller
-                      control={control}
-                      name="reportType"
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a report type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {reportTypes.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-center gap-4">
+                    <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">1</div>
+                    <h2 className="text-2xl font-semibold">Choose Your Report Type</h2>
+                  </div>
+                  
+                  <div className="space-y-4 max-w-2xl mx-auto">
+                    <div className="space-y-2">
+                      <Label htmlFor="reportType">Report Type *</Label>
+                      <Controller
+                        control={control}
+                        name="reportType"
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className="h-12">
+                              <SelectValue placeholder="Select a report type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {reportTypes.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  {type.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.reportType && (
+                        <p className="text-sm text-destructive">{errors.reportType.message}</p>
                       )}
-                    />
-                    {errors.reportType && (
-                      <p className="text-sm text-destructive">{errors.reportType.message}</p>
+                    </div>
+
+                    {/* Conditional Fields for Report Options */}
+                    {requiresEssenceType && (
+                      <div className="space-y-2">
+                        <Label htmlFor="essenceType">Essence Focus *</Label>
+                        <Controller
+                          control={control}
+                          name="essenceType"
+                          render={({ field }) => (
+                            <ToggleGroup
+                              type="single"
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              className="justify-center flex-wrap gap-2"
+                            >
+                              {essenceTypes.map((type) => (
+                                <ToggleGroupItem 
+                                  key={type.value} 
+                                  value={type.value}
+                                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
+                                >
+                                  {type.label}
+                                </ToggleGroupItem>
+                              ))}
+                            </ToggleGroup>
+                          )}
+                        />
+                        {errors.essenceType && (
+                          <p className="text-sm text-destructive">{errors.essenceType.message}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {requiresReturnYear && (
+                      <div className="space-y-2">
+                        <Label htmlFor="returnYear">Return Year *</Label>
+                        <Input
+                          {...register('returnYear')}
+                          type="number"
+                          placeholder={getCurrentYear().toString()}
+                          min="1900"
+                          max="2100"
+                          className="h-12"
+                        />
+                      </div>
+                    )}
+
+                    {requiresRelationshipType && (
+                      <div className="space-y-2">
+                        <Label htmlFor="relationshipType">Relationship Type *</Label>
+                        <Controller
+                          control={control}
+                          name="relationshipType"
+                          render={({ field }) => (
+                            <ToggleGroup
+                              type="single"
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              className="justify-center flex-wrap gap-2"
+                            >
+                              {relationshipTypes.map((type) => (
+                                <ToggleGroupItem 
+                                  key={type.value} 
+                                  value={type.value}
+                                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
+                                >
+                                  {type.label}
+                                </ToggleGroupItem>
+                              ))}
+                            </ToggleGroup>
+                          )}
+                        />
+                        {errors.relationshipType && (
+                          <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
+                        )}
+                      </div>
                     )}
                   </div>
-
-                  {/* Conditional Fields for Report Options */}
-                  {requiresEssenceType && (
-                    <div className="space-y-2">
-                      <Label htmlFor="essenceType">Essence Focus *</Label>
-                      <Controller
-                        control={control}
-                        name="essenceType"
-                        render={({ field }) => (
-                          <ToggleGroup
-                            type="single"
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            className="justify-start flex-wrap gap-1 md:gap-2"
-                          >
-                            {essenceTypes.map((type) => (
-                              <ToggleGroupItem 
-                                key={type.value} 
-                                value={type.value}
-                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-xs md:text-sm px-2 md:px-4 py-2"
-                              >
-                                {type.label}
-                              </ToggleGroupItem>
-                            ))}
-                          </ToggleGroup>
-                        )}
-                      />
-                      {errors.essenceType && (
-                        <p className="text-sm text-destructive">{errors.essenceType.message}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {requiresReturnYear && (
-                    <div className="space-y-2">
-                      <Label htmlFor="returnYear">Return Year *</Label>
-                      <Input
-                        {...register('returnYear')}
-                        type="number"
-                        placeholder={getCurrentYear().toString()}
-                        min="1900"
-                        max="2100"
-                      />
-                    </div>
-                  )}
-
-                  {requiresRelationshipType && (
-                    <div className="space-y-2">
-                      <Label htmlFor="relationshipType">Relationship Type *</Label>
-                      <Controller
-                        control={control}
-                        name="relationshipType"
-                        render={({ field }) => (
-                          <ToggleGroup
-                            type="single"
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            className="justify-start flex-wrap gap-1 md:gap-2"
-                          >
-                            {relationshipTypes.map((type) => (
-                              <ToggleGroupItem 
-                                key={type.value} 
-                                value={type.value}
-                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-xs md:text-sm px-2 md:px-4 py-2"
-                              >
-                                {type.label}
-                              </ToggleGroupItem>
-                            ))}
-                          </ToggleGroup>
-                        )}
-                      />
-                      {errors.relationshipType && (
-                        <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
+          </section>
 
-            {/* Step 2: Contact Information */}
-            {selectedReportType && (
-              <>
-                <div className="border-t pt-8">
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">2</div>
-                      <h2 className="text-2xl font-semibold">Contact Information</h2>
-                    </div>
-                    
-                    <div className="pl-1 md:pl-8">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Full Name *</Label>
-                          <Input
-                            id="name"
-                            {...register('name')}
-                            placeholder="Enter your full name"
-                            className="h-12"
-                          />
-                          {errors.name && (
-                            <p className="text-sm text-destructive">{errors.name.message}</p>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address *</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            {...register('email')}
-                            placeholder="your@email.com"
-                            className="h-12"
-                          />
-                          {errors.email && (
-                            <p className="text-sm text-destructive">{errors.email.message}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+          {/* Step 2: Contact Information */}
+          {selectedReportType && (
+            <section className="h-screen snap-start snap-always bg-muted/20 flex items-center justify-center">
+              <div className="container mx-auto px-4 max-w-4xl">
+                <div className="space-y-8">
+                  <div className="flex items-center justify-center gap-4">
+                    <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">2</div>
+                    <h2 className="text-2xl font-semibold">Contact Information</h2>
                   </div>
-                </div>
-
-                {/* Step 3: Birth Details */}
-                <div className="border-t pt-8">
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">3</div>
-                      <h2 className="text-2xl font-semibold">Your Birth Details</h2>
-                    </div>
-                    
-                    <div className="pl-1 md:pl-8 space-y-6 birth-details-container" data-testid="birth-details">
-                      <div className="grid grid-cols-2 gap-2 md:gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="birthDate">Birth Date *</Label>
-                          <Input
-                            id="birthDate"
-                            type="date"
-                            {...register('birthDate')}
-                            className="h-12"
-                          />
-                          {errors.birthDate && (
-                            <p className="text-sm text-destructive">{errors.birthDate.message}</p>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="birthTime">Birth Time *</Label>
-                          <Input
-                            id="birthTime"
-                            type="time"
-                            {...register('birthTime')}
-                            step="60"
-                            className="h-12"
-                          />
-                          {errors.birthTime && (
-                            <p className="text-sm text-destructive">{errors.birthTime.message}</p>
-                          )}
-                        </div>
+                  
+                  <div className="max-w-2xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name *</Label>
+                        <Input
+                          id="name"
+                          {...register('name')}
+                          placeholder="Enter your full name"
+                          className="h-12"
+                        />
+                        {errors.name && (
+                          <p className="text-sm text-destructive">{errors.name.message}</p>
+                        )}
                       </div>
                       <div className="space-y-2">
-                        <PlaceAutocomplete
-                          label="Birth Location *"
-                          value={watch('birthLocation') || ''}
-                          onChange={(value) => setValue('birthLocation', value)}
-                          onPlaceSelect={(placeData) => handlePlaceSelect(placeData)}
-                          placeholder="Enter birth city, state, country"
-                          id="birthLocation"
-                          error={errors.birthLocation?.message}
+                        <Label htmlFor="email">Email Address *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          {...register('email')}
+                          placeholder="your@email.com"
+                          className="h-12"
                         />
+                        {errors.email && (
+                          <p className="text-sm text-destructive">{errors.email.message}</p>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-              </>
-            )}
+              </div>
+            </section>
+          )}
 
-            {/* Step 4: Second Person Details (for compatibility/sync reports) */}
-            {requiresSecondPerson && (
-              <div className="border-t pt-8">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4">
+          {/* Step 3: Birth Details */}
+          {selectedReportType && (
+            <section className="h-screen snap-start snap-always bg-background flex items-center justify-center">
+              <div className="container mx-auto px-4 max-w-4xl">
+                <div className="space-y-8">
+                  <div className="flex items-center justify-center gap-4">
+                    <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">3</div>
+                    <h2 className="text-2xl font-semibold">Your Birth Details</h2>
+                  </div>
+                  
+                  <div className="max-w-2xl mx-auto space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="birthDate">Birth Date *</Label>
+                        <Input
+                          id="birthDate"
+                          type="date"
+                          {...register('birthDate')}
+                          className="h-12"
+                        />
+                        {errors.birthDate && (
+                          <p className="text-sm text-destructive">{errors.birthDate.message}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="birthTime">Birth Time *</Label>
+                        <Input
+                          id="birthTime"
+                          type="time"
+                          {...register('birthTime')}
+                          step="60"
+                          className="h-12"
+                        />
+                        {errors.birthTime && (
+                          <p className="text-sm text-destructive">{errors.birthTime.message}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <PlaceAutocomplete
+                        label="Birth Location *"
+                        value={watch('birthLocation') || ''}
+                        onChange={(value) => setValue('birthLocation', value)}
+                        onPlaceSelect={(placeData) => handlePlaceSelect(placeData)}
+                        placeholder="Enter birth city, state, country"
+                        id="birthLocation"
+                        error={errors.birthLocation?.message}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Step 4: Second Person Details (for compatibility/sync reports) */}
+          {requiresSecondPerson && (
+            <section className="h-screen snap-start snap-always bg-muted/20 flex items-center justify-center">
+              <div className="container mx-auto px-4 max-w-4xl">
+                <div className="space-y-8">
+                  <div className="flex items-center justify-center gap-4">
                     <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">4</div>
                     <h2 className="text-2xl font-semibold">Second Person Details</h2>
                   </div>
                   
-                  <div className="pl-1 md:pl-8 space-y-6">
+                  <div className="max-w-2xl mx-auto space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="secondPersonName">Name *</Label>
                       <Input
@@ -701,7 +709,7 @@ const PublicReport = () => {
                         <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2 md:gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="secondPersonBirthDate">Birth Date *</Label>
                         <Input
@@ -742,93 +750,98 @@ const PublicReport = () => {
                   </div>
                 </div>
               </div>
-            )}
+            </section>
+          )}
 
-            {/* Generate Report Button and Promo Code Section */}
-            {selectedReportType && (
-              <div className="border-t pt-8 flex flex-col items-center space-y-4">
-                <Button 
-                  type="submit"
-                  size="lg" 
-                  className="px-12 py-6 text-lg"
-                  disabled={isProcessing || isPricingLoading}
-                >
-                  {isProcessing || isPricingLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : promoValidation?.isFree ? (
-                    'Generate My Free Report'
-                  ) : (
-                    'Generate My Report'
-                  )}
-                </Button>
-                
-                {/* Promo Code Section */}
-                <div className="w-full max-w-md">
-                  <button
-                    type="button"
-                    onClick={() => setShowPromoCode(!showPromoCode)}
-                    className="flex flex-col md:flex-row items-center gap-1 md:gap-2 text-base font-bold text-muted-foreground hover:text-foreground transition-colors mx-auto"
-                  >
-                    <span>Have a promo code?</span>
-                    <div className="flex items-center gap-1">
-                      <span className="underline">Enter it here</span>
-                      {showPromoCode ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </div>
-                  </button>
+          {/* Generate Report Section */}
+          {selectedReportType && (
+            <section className="h-screen snap-start snap-always bg-background flex items-center justify-center">
+              <div className="container mx-auto px-4 max-w-4xl">
+                <div className="space-y-8 text-center">
+                  <h2 className="text-3xl font-semibold">Ready to Generate Your Report?</h2>
                   
-                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    showPromoCode ? 'max-h-32 opacity-100 mt-3' : 'max-h-0 opacity-0'
-                  }`}>
-                    <div className="space-y-2">
-                      <div className="relative">
-                        <Input
-                          {...register('promoCode')}
-                          placeholder="Enter promo code"
-                          className="text-center px-12 py-6 text-lg"
-                          onChange={(e) => {
-                            register('promoCode').onChange(e);
-                            // Reset validation when user types
-                            if (e.target.value === '') {
-                              setPromoValidation(null);
-                            }
-                          }}
-                        />
-                        {isValidatingPromo && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <Button 
+                    type="submit"
+                    size="lg" 
+                    className="px-12 py-6 text-lg"
+                    disabled={isProcessing || isPricingLoading}
+                  >
+                    {isProcessing || isPricingLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : promoValidation?.isFree ? (
+                      'Generate My Free Report'
+                    ) : (
+                      'Generate My Report'
+                    )}
+                  </Button>
+                  
+                  {/* Promo Code Section */}
+                  <div className="w-full max-w-md mx-auto">
+                    <button
+                      type="button"
+                      onClick={() => setShowPromoCode(!showPromoCode)}
+                      className="flex flex-col md:flex-row items-center gap-1 md:gap-2 text-base font-bold text-muted-foreground hover:text-foreground transition-colors mx-auto"
+                    >
+                      <span>Have a promo code?</span>
+                      <div className="flex items-center gap-1">
+                        <span className="underline">Enter it here</span>
+                        {showPromoCode ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </button>
+                    
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      showPromoCode ? 'max-h-32 opacity-100 mt-3' : 'max-h-0 opacity-0'
+                    }`}>
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Input
+                            {...register('promoCode')}
+                            placeholder="Enter promo code"
+                            className="text-center px-12 py-6 text-lg"
+                            onChange={(e) => {
+                              register('promoCode').onChange(e);
+                              if (e.target.value === '') {
+                                setPromoValidation(null);
+                              }
+                            }}
+                          />
+                          {isValidatingPromo && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {promoValidation && (
+                          <div className={`text-xs text-center p-2 rounded ${
+                            promoValidation.isValid 
+                              ? promoValidation.isFree 
+                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'bg-red-50 text-red-700 border border-red-200'
+                          }`}>
+                            {promoValidation.message}
                           </div>
                         )}
                       </div>
-                      
-                      {promoValidation && (
-                        <div className={`text-xs text-center p-2 rounded ${
-                          promoValidation.isValid 
-                            ? promoValidation.isFree 
-                              ? 'bg-green-50 text-green-700 border border-green-200'
-                              : 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'bg-red-50 text-red-700 border border-red-200'
-                        }`}>
-                          {promoValidation.message}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
               </div>
-            )}
-          </form>
-        </div>
+            </section>
+          )}
+        </form>
       </div>
 
       {/* Features Section */}
-      <div className="border-t bg-muted/30 py-16">
+      <section className="h-screen snap-start snap-always bg-muted/30 flex items-center justify-center">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Why Choose Our Reports?</h2>
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -855,7 +868,7 @@ const PublicReport = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Report Guide Modal */}
       <ReportGuideModal 
