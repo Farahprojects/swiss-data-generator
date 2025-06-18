@@ -14,6 +14,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { ReplyModal } from './ReplyModal';
+import { CleanEmailRenderer } from './CleanEmailRenderer';
 
 interface EmailMessage {
   id: string;
@@ -129,50 +130,45 @@ export const GmailMessageDetail = ({
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
           {/* Subject */}
-          <h1 className="text-2xl font-normal text-gray-900 mb-6">
+          <h1 className="text-2xl font-medium text-gray-900 mb-6 leading-tight">
             {message.subject || 'No Subject'}
           </h1>
 
           {/* Message Info */}
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center text-white text-lg font-medium">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center text-white text-lg font-medium flex-shrink-0">
                 {getInitials(message.direction === 'incoming' ? message.from_address : message.to_address)}
               </div>
-              <div>
-                <div className="font-medium text-lg">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-base text-gray-900 mb-1">
                   {message.direction === 'incoming' ? message.from_address : message.to_address}
                 </div>
-                <div className="text-sm text-gray-600 mt-1">
+                <div className="text-sm text-gray-600 mb-1">
                   to {message.direction === 'incoming' ? message.to_address : message.from_address}
                 </div>
-                <div className="text-sm text-gray-500 mt-1">
+                <div className="text-sm text-gray-500">
                   {formatDateTime(message.created_at)}
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Badge variant={message.direction === 'incoming' ? 'default' : 'secondary'}>
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <Badge variant={message.direction === 'incoming' ? 'default' : 'secondary'} className="text-xs">
                 {message.direction === 'incoming' ? 'Received' : 'Sent'}
               </Badge>
-              {message.sent_via && message.sent_via !== 'email' && (
-                <Badge variant="outline">
-                  via {message.sent_via}
-                </Badge>
-              )}
             </div>
           </div>
 
-          {/* Message Body */}
-          <div className="prose max-w-none">
-            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-base">
-              {message.body}
-            </div>
-          </div>
+          {/* Clean Message Body */}
+          <CleanEmailRenderer 
+            body={message.body}
+            sentVia={message.sent_via}
+            direction={message.direction}
+          />
 
           {/* Action Buttons */}
-          <div className="mt-8 flex items-center gap-3">
+          <div className="mt-8 flex items-center gap-3 pt-4 border-t">
             <Button onClick={handleReplyClick} className="flex items-center gap-2">
               <Reply className="w-4 h-4" />
               Reply
