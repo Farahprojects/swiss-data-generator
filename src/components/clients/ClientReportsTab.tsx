@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,7 +71,7 @@ const getReportBadgeVariant = (tier: string | null | undefined) => {
 };
 
 const getReportSummary = (report: ClientReport) => {
-  if (!report.response_payload?.report) return 'Report generated successfully';
+  if (!report.response_payload?.report) return '';
   
   const content = report.response_payload.report;
   if (typeof content === 'string') {
@@ -81,7 +80,7 @@ const getReportSummary = (report: ClientReport) => {
     return sentences[0] ? sentences[0].trim() + '.' : content.substring(0, 150) + '...';
   }
   
-  return 'Report generated successfully';
+  return '';
 };
 
 const hasExpandableContent = (report: ClientReport) => {
@@ -176,9 +175,11 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
 
                     {/* Main Content */}
                     <div className="space-y-3">
-                      <p className="text-gray-900 leading-relaxed text-base">
-                        {summary}
-                      </p>
+                      {summary && (
+                        <p className="text-gray-900 leading-relaxed text-base">
+                          {summary}
+                        </p>
+                      )}
                       
                       {/* Expandable Full Report */}
                       {hasContent && isSuccess && (
