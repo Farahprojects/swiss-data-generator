@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +18,7 @@ import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp, Loader2 } fro
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import ReportGuideModal from '@/components/public-report/ReportGuideModal';
+import SectionJumping from '@/components/public-report/SectionJumping';
 import { getProductByName } from '@/utils/stripe-products';
 import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
 import { validatePromoCode, createFreeReport, PromoCodeValidation } from '@/utils/promoCodeValidation';
@@ -431,7 +431,7 @@ const PublicReport = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       {/* Hero Section */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div id="hero" className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-16 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             See the Mirror in your eyes
@@ -464,7 +464,7 @@ const PublicReport = () => {
         <div className="max-w-6xl mx-auto">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
             {/* Step 1: Report Type Selection */}
-            <div className="space-y-6">
+            <div id="choose-report" className="space-y-6">
               <button
                 type="button"
                 onClick={() => setShowReportGuide(true)}
@@ -587,7 +587,7 @@ const PublicReport = () => {
             {/* Step 2: Contact Information */}
             {selectedReportType && (
               <>
-                <div className="border-t pt-8">
+                <div id="contact-info" className="border-t pt-8">
                   <div className="space-y-6">
                     <div className="flex items-center gap-4">
                       <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">2</div>
@@ -627,7 +627,7 @@ const PublicReport = () => {
                 </div>
 
                 {/* Step 3: Birth Details */}
-                <div className="border-t pt-8">
+                <div id="birth-details" className="border-t pt-8">
                   <div className="space-y-6">
                     <div className="flex items-center gap-4">
                       <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">3</div>
@@ -681,7 +681,7 @@ const PublicReport = () => {
 
             {/* Step 4: Second Person Details (for compatibility/sync reports) */}
             {requiresSecondPerson && (
-              <div className="border-t pt-8">
+              <div id="second-person" className="border-t pt-8">
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
                     <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">4</div>
@@ -828,7 +828,7 @@ const PublicReport = () => {
       </div>
 
       {/* Features Section */}
-      <div className="border-t bg-muted/30 py-16">
+      <div id="features" className="border-t bg-muted/30 py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Why Choose Our Reports?</h2>
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -856,6 +856,9 @@ const PublicReport = () => {
           </div>
         </div>
       </div>
+
+      {/* Section Jumping Navigation */}
+      <SectionJumping showSecondPerson={requiresSecondPerson} />
 
       {/* Report Guide Modal */}
       <ReportGuideModal 
