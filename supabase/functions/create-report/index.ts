@@ -35,7 +35,7 @@ interface CreateReportRequest {
   todayDate?: string;
   todayTime?: string;
   notes?: string;
-  client_id?: string;
+  client_id?: string; // Add client_id parameter
 }
 
 // Form validation helper
@@ -76,12 +76,11 @@ function validateFormData(data: CreateReportRequest): { isValid: boolean; errors
   return { isValid: errors.length === 0, errors };
 }
 
-// Data transformation helper - creates payload for Swiss edge function
+// Data transformation helper - creates clean payload that matches exact curl format
 function transformToSwissFormat(data: CreateReportRequest): any {
   const basePayload: any = {
-    request: data.reportType,
-    user_id: '', // Will be set later
-    api_key: '', // Will be set later
+    request: data.reportType,  // CRITICAL: Add the request field that Swiss API requires
+    skip_logging: true  // CRITICAL: Tell translator not to log since we handle it here
   };
 
   // Handle different report types
@@ -105,8 +104,8 @@ function transformToSwissFormat(data: CreateReportRequest): any {
   // Person-based reports - Map form fields to Swiss API field names
   basePayload.name = data.name;
   basePayload.birth_date = data.birthDate;
-  basePayload.time = data.birthTime;
-  basePayload.location = data.birthLocation;
+  basePayload.time = data.birthTime;  // Map birthTime → time
+  basePayload.location = data.birthLocation;  // Map birthLocation → location
 
   // Add today's date/time if provided
   if (data.todayDate) {
@@ -132,14 +131,14 @@ function transformToSwissFormat(data: CreateReportRequest): any {
     basePayload.person_a = {
       name: data.name,
       birth_date: data.birthDate,
-      time: data.birthTime,
-      location: data.birthLocation
+      time: data.birthTime,  // Map birthTime → time
+      location: data.birthLocation  // Map birthLocation → location
     };
     basePayload.person_b = {
       name: data.name2,
       birth_date: data.birthDate2,
-      time: data.birthTime2,
-      location: data.birthLocation2
+      time: data.birthTime2,  // Map birthTime2 → time
+      location: data.birthLocation2  // Map birthLocation2 → location
     };
     
     // Remove individual fields for two-person reports
@@ -153,7 +152,7 @@ function transformToSwissFormat(data: CreateReportRequest): any {
   if (data.reportType === 'sync' && data.relationshipType) {
     basePayload.report = `sync_${data.relationshipType}`;
   } else if (data.reportType === 'essence' && data.essenceType) {
-    // Map essence types correctly
+    // CRITICAL FIX: Map essence types correctly
     if (data.essenceType === 'personal-identity') {
       basePayload.report = 'essence_personal';
     } else if (data.essenceType === 'professional') {
@@ -171,26 +170,42 @@ function transformToSwissFormat(data: CreateReportRequest): any {
     }
   }
 
-  // Add client_id if provided
-  if (data.client_id) {
-    basePayload.client_id = data.client_id;
-  }
-
   return basePayload;
 }
 
-// Swiss edge function caller - calls our swiss function instead of external API
-async function callSwissFunction(payload: any, userId: string, apiKey: string): Promise<{ success: boolean; data?: any; error?: string }> {
+// Helper to determine the report name to store - simplified to just names
+function getReportName(data: CreateReportRequest, reportTier?: string): string {
+  const requiresTwoPeople = ['compatibility', 'sync'].includes(data.reportType);
+  const requiresPositionsFields = data.reportType === 'positions';
+  const requiresMoonDate = data.reportType === 'moonphases';
+  
+  if (requiresMoonDate) {
+    return 'Moon Phases Report';
+  }
+  
+  if (requiresPositionsFields) {
+    return `Planetary Positions - ${data.positionsLocation}`;
+  }
+  
+  // Just return the person's name(s)
+  if (requiresTwoPeople && data.name && data.name2) {
+    return `${data.name} & ${data.name2}`;
+  } else if (data.name) {
+    return data.name;
+  } else {
+    return 'Unknown';
+  }
+}
+
+// Swiss API caller helper - sends clean payload with auth in headers like curl
+async function callSwissAPI(payload: any, userId: string, apiKey: string): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
-    console.log('[create-report] Calling Swiss edge function with payload:', JSON.stringify(payload, null, 2));
+    console.log('[create-report] Calling Swiss API with clean payload:', JSON.stringify(payload, null, 2));
     console.log('[create-report] Using user_id:', userId);
     console.log('[create-report] Using api_key:', apiKey.substring(0, 10) + '...');
     
-    // Set the user credentials in the payload
-    payload.user_id = userId;
-    payload.api_key = apiKey;
-    
-    // Call our Swiss edge function
+    // Make direct HTTP request to Swiss function with API key in Authorization header (like curl)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const response = await fetch(`${supabaseUrl}/functions/v1/swiss`, {
       method: 'POST',
       headers: {
@@ -200,20 +215,23 @@ async function callSwissFunction(payload: any, userId: string, apiKey: string): 
       body: JSON.stringify(payload)
     });
 
-    console.log('[create-report] Swiss function response status:', response.status);
+    console.log('[create-report] Swiss API response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.log('[create-report] Swiss function error response:', errorText);
-      return { success: false, error: `Swiss function error: ${response.status} - ${errorText}` };
+      console.log('[create-report] Swiss API error response:', errorText);
+      return { success: false, error: `Swiss API error: ${response.status} - ${errorText}` };
     }
 
     const data = await response.json();
-    console.log('[create-report] Swiss function response received successfully');
+    console.log('[create-report] Swiss API response:', {
+      data: data ? 'present' : 'missing',
+      success: data ? true : false
+    });
 
     return { success: true, data: data };
   } catch (error) {
-    console.error('[create-report] Error calling Swiss function:', error);
+    console.error('[create-report] Error calling Swiss API:', error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
@@ -236,33 +254,41 @@ serve(async (req) => {
   }
 
   try {
-    // Use direct API key authentication
+    // Get user from auth header
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'API key required in Authorization header' }), {
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    const apiKey = authHeader.replace('Bearer ', '');
+    // Verify user and get their data
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
 
-    // Validate API key directly against api_keys table
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid authentication' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Get user's API key
     const { data: apiKeyData, error: apiKeyError } = await supabase
       .from('api_keys')
-      .select('user_id, api_key')
-      .eq('api_key', apiKey)
+      .select('api_key')
+      .eq('user_id', user.id)
       .eq('is_active', true)
       .single();
 
     if (apiKeyError || !apiKeyData) {
-      return new Response(JSON.stringify({ error: 'Invalid or inactive API key' }), {
-        status: 401,
+      return new Response(JSON.stringify({ error: 'No active API key found' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-
-    const userId = apiKeyData.user_id;
 
     // Parse request body
     const formData: CreateReportRequest = await req.json();
@@ -280,12 +306,12 @@ serve(async (req) => {
       });
     }
 
-    // Transform data for Swiss function
-    const swissPayload = transformToSwissFormat(formData);
-    console.log('[create-report] Payload for Swiss function:', JSON.stringify(swissPayload, null, 2));
+    // Transform data to clean Swiss API format (like curl) with skip_logging flag
+    const cleanPayload = transformToSwissFormat(formData);
+    console.log('[create-report] Clean payload for Swiss API:', JSON.stringify(cleanPayload, null, 2));
 
-    // Call Swiss edge function (which will handle translator and report orchestrator)
-    const swissResult = await callSwissFunction(swissPayload, userId, apiKey);
+    // Call Swiss API with clean payload and API key in headers (like curl)
+    const swissResult = await callSwissAPI(cleanPayload, user.id, apiKeyData.api_key);
     
     if (!swissResult.success) {
       return new Response(JSON.stringify({ 
@@ -295,6 +321,36 @@ serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
+    }
+
+    // Log to translator_logs with the report name and client_id using the report_tier
+    const reportName = getReportName(formData, cleanPayload.report);
+    console.log('[create-report] Saving report with name:', reportName);
+
+    const translatorLogData: any = {
+      user_id: user.id,
+      request_type: formData.reportType,
+      request_payload: cleanPayload,
+      response_payload: swissResult.data,
+      response_status: 200,
+      report_name: reportName,
+      report_tier: cleanPayload.report
+    };
+
+    // Add client_id if provided
+    if (formData.client_id) {
+      translatorLogData.client_id = formData.client_id;
+      console.log('[create-report] Saving with client_id:', formData.client_id);
+    }
+
+    const { data: translatorLog, error: translatorLogError } = await supabase
+      .from('translator_logs')
+      .insert(translatorLogData)
+      .select()
+      .single();
+
+    if (translatorLogError) {
+      console.error('[create-report] Error saving translator log:', translatorLogError);
     }
 
     // Format and return response
