@@ -50,6 +50,8 @@ const PublicReport = () => {
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   const selectedReportType = watch('reportType');
   const promoCode = watch('promoCode');
+  const userName = watch('name');
+  const userEmail = watch('email');
 
   // Debug: log form state
   React.useEffect(() => {
@@ -98,8 +100,8 @@ const PublicReport = () => {
     }
   };
 
-  if (reportCreated) {
-    return <SuccessScreen />;
+  if (reportCreated && userName && userEmail) {
+    return <SuccessScreen name={userName} email={userEmail} />;
   }
 
   return (
