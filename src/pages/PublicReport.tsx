@@ -768,7 +768,7 @@ const PublicReport = () => {
             </section>
           )}
 
-          {/* Generate Report Section - Fix button event handling */}
+          {/* Generate Report Section - Simplified button text */}
           {selectedReportType && (
             <section className="h-screen flex items-center justify-center bg-background" style={{ scrollSnapAlign: 'start' }}>
               <div className="container mx-auto px-4 max-w-4xl">
@@ -788,10 +788,8 @@ const PublicReport = () => {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Processing...
                       </>
-                    ) : promoValidation?.isFree ? (
-                      'Generate My Free Report'
                     ) : (
-                      'Generate My Report'
+                      'Enter'
                     )}
                   </Button>
                   
