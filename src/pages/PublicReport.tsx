@@ -274,6 +274,9 @@ const PublicReport = () => {
   }, [watch('promoCode')]);
 
   const onSubmit = async (data: ReportFormData) => {
+    console.log('🚀 Form submission started');
+    console.log('📝 Form data:', data);
+    
     setIsProcessing(true);
     setIsPricingLoading(true);
     
@@ -383,9 +386,21 @@ const PublicReport = () => {
         variant: "destructive",
       });
     } finally {
+      console.log('🏁 Form submission completed');
       setIsProcessing(false);
       setIsPricingLoading(false);
     }
+  };
+
+  // Debug button click
+  const handleButtonClick = (e: React.MouseEvent) => {
+    console.log('🖱️ Button clicked!', e);
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Manually trigger form submission
+    console.log('📝 Triggering form submission...');
+    handleSubmit(onSubmit)(e);
   };
 
   const getCurrentYear = () => new Date().getFullYear();
@@ -428,9 +443,9 @@ const PublicReport = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
+    <div className="h-screen overflow-y-auto scroll-smooth" style={{ scrollSnapType: 'y mandatory' }}>
       {/* Hero Section */}
-      <section className="h-screen snap-start snap-always bg-gradient-to-b from-background to-muted/20 flex items-center justify-center">
+      <section className="h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20" style={{ scrollSnapAlign: 'start' }}>
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             See the Mirror in your eyes
@@ -458,11 +473,11 @@ const PublicReport = () => {
         </div>
       </section>
 
-      {/* Main Form Container */}
-      <div className="snap-start snap-always">
+      {/* Form Container - Remove scroll-snap interference */}
+      <div style={{ scrollSnapType: 'none' }}>
         <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
           {/* Step 1: Report Type Selection */}
-          <section className="h-screen snap-start snap-always bg-background flex items-center justify-center">
+          <section className="h-screen flex items-center justify-center bg-background" style={{ scrollSnapAlign: 'start' }}>
             <div className="container mx-auto px-4 max-w-4xl">
               <div className="space-y-8">
                 <button
@@ -589,7 +604,7 @@ const PublicReport = () => {
 
           {/* Step 2: Contact Information */}
           {selectedReportType && (
-            <section className="h-screen snap-start snap-always bg-muted/20 flex items-center justify-center">
+            <section className="h-screen flex items-center justify-center bg-muted/20" style={{ scrollSnapAlign: 'start' }}>
               <div className="container mx-auto px-4 max-w-4xl">
                 <div className="space-y-8">
                   <div className="flex items-center justify-center gap-4">
@@ -633,7 +648,7 @@ const PublicReport = () => {
 
           {/* Step 3: Birth Details */}
           {selectedReportType && (
-            <section className="h-screen snap-start snap-always bg-background flex items-center justify-center">
+            <section className="h-screen flex items-center justify-center bg-background" style={{ scrollSnapAlign: 'start' }}>
               <div className="container mx-auto px-4 max-w-4xl">
                 <div className="space-y-8">
                   <div className="flex items-center justify-center gap-4">
@@ -688,7 +703,7 @@ const PublicReport = () => {
 
           {/* Step 4: Second Person Details (for compatibility/sync reports) */}
           {requiresSecondPerson && (
-            <section className="h-screen snap-start snap-always bg-muted/20 flex items-center justify-center">
+            <section className="h-screen flex items-center justify-center bg-muted/20" style={{ scrollSnapAlign: 'start' }}>
               <div className="container mx-auto px-4 max-w-4xl">
                 <div className="space-y-8">
                   <div className="flex items-center justify-center gap-4">
@@ -753,18 +768,20 @@ const PublicReport = () => {
             </section>
           )}
 
-          {/* Generate Report Section */}
+          {/* Generate Report Section - Fix button event handling */}
           {selectedReportType && (
-            <section className="h-screen snap-start snap-always bg-background flex items-center justify-center">
+            <section className="h-screen flex items-center justify-center bg-background" style={{ scrollSnapAlign: 'start' }}>
               <div className="container mx-auto px-4 max-w-4xl">
                 <div className="space-y-8 text-center">
                   <h2 className="text-3xl font-semibold">Ready to Generate Your Report?</h2>
                   
                   <Button 
-                    type="submit"
+                    type="button"
                     size="lg" 
-                    className="px-12 py-6 text-lg"
+                    className="px-12 py-6 text-lg relative z-10"
                     disabled={isProcessing || isPricingLoading}
+                    onClick={handleButtonClick}
+                    style={{ pointerEvents: 'auto' }}
                   >
                     {isProcessing || isPricingLoading ? (
                       <>
@@ -841,7 +858,7 @@ const PublicReport = () => {
       </div>
 
       {/* Features Section */}
-      <section className="h-screen snap-start snap-always bg-muted/30 flex items-center justify-center">
+      <section className="h-screen flex items-center justify-center bg-muted/30" style={{ scrollSnapAlign: 'start' }}>
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Why Choose Our Reports?</h2>
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
