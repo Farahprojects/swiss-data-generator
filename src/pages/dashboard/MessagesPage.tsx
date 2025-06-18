@@ -32,6 +32,7 @@ const MessagesPage = () => {
   const [hiddenMessages, setHiddenMessages] = useState<Set<string>>(new Set());
   const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [contentLoading, setContentLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [showCompose, setShowCompose] = useState(false);
@@ -49,7 +50,13 @@ const MessagesPage = () => {
     }
 
     try {
-      setLoading(true);
+      // Show content loading for filter changes, full loading for initial load
+      if (messages.length > 0) {
+        setContentLoading(true);
+      } else {
+        setLoading(true);
+      }
+      
       console.log('Loading messages for filter:', filter, 'user:', user.id);
       
       let query = supabase
@@ -110,6 +117,7 @@ const MessagesPage = () => {
       });
     } finally {
       setLoading(false);
+      setContentLoading(false);
     }
   };
 
@@ -124,10 +132,13 @@ const MessagesPage = () => {
   const visibleMessages = messages.filter(message => !hiddenMessages.has(message.id));
 
   const filteredMessages = visibleMessages.filter(message => {
-    const matchesSearch = message.subject?.toLowerCase().includes(searchParams.get('search') || '') ||
-      message.from_address?.toLowerCase().includes(searchParams.get('search') || '') ||
-      message.to_address?.toLowerCase().includes(searchParams.get('search') || '') ||
-      message.body?.toLowerCase().includes(searchParams.get('search') || '');
+    const searchTerm = searchParams.get('search') || '';
+    if (!searchTerm) return true;
+    
+    const matchesSearch = message.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      message.from_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      message.to_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      message.body?.toLowerCase().includes(searchTerm.toLowerCase());
 
     return matchesSearch;
   });
@@ -300,7 +311,13 @@ const MessagesPage = () => {
           {/* Mobile Compose button */}
           <MobileComposeButton onClick={() => setShowCompose(true)} />
           <div className="w-full">
-            {selectedMessage ? (
+            {contentLoading ? (
+              <div className="flex items-center justify-center min-h-[200px]">
+                <div className="text-center">
+                  <div className="text-sm text-gray-500">Loading...</div>
+                </div>
+              </div>
+            ) : selectedMessage ? (
               <GmailMessageDetail
                 message={selectedMessage}
                 onClose={handleBackToList}
@@ -383,7 +400,13 @@ const MessagesPage = () => {
           headerHeight={HEADER_HEIGHT}
         />
         <div className="ml-64 w-full">
-          {selectedMessage ? (
+          {contentLoading ? (
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="text-center">
+                <div className="text-sm text-gray-500">Loading...</div>
+              </div>
+            </div>
+          ) : selectedMessage ? (
             <GmailMessageDetail
               message={selectedMessage}
               onClose={handleBackToList}

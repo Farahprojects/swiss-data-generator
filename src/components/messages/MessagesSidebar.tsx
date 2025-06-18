@@ -46,6 +46,19 @@ export const MessagesSidebar = ({
     { id: 'templates', label: 'Email Templates', icon: FileText },
   ];
 
+  const handleFilterClick = (e: React.MouseEvent, filter: MessageFilterType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Sidebar filter clicked:', filter);
+    onFilterChange(filter);
+  };
+
+  const handleBrandingClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onOpenBranding();
+  };
+
   return (
     <div
       className="w-64 bg-white border-r flex flex-col h-[calc(100vh-4rem)] fixed left-0 z-5"
@@ -64,7 +77,7 @@ export const MessagesSidebar = ({
                     ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
                     : "bg-transparent text-gray-700 hover:bg-gray-100"
                 )}
-                onClick={() => onFilterChange(item.id as MessageFilterType)}
+                onClick={(e) => handleFilterClick(e, item.id as MessageFilterType)}
                 type="button"
               >
                 <item.icon className="w-4 h-4" />
@@ -92,7 +105,7 @@ export const MessagesSidebar = ({
                   key={item.id}
                   className="w-full flex items-center gap-2 h-8 text-sm rounded hover:bg-gray-100 px-2 transition-colors"
                   type="button"
-                  onClick={() => onOpenBranding()}
+                  onClick={handleBrandingClick}
                 >
                   <item.icon className="w-3 h-3" />
                   {item.label}
@@ -105,4 +118,3 @@ export const MessagesSidebar = ({
     </div>
   );
 };
-
