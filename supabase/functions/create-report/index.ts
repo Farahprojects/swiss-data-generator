@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -143,30 +144,27 @@ function getReportName(data: CreateReportRequest, reportTier?: string): string {
 
 async function callSwissAPI(payload: any, userId: string, apiKey: string): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
-    console.log('[create-report] Calling Swiss API with clean payload:', JSON.stringify(payload, null, 2));
+    console.log('[create-report] Calling Swiss edge function with payload:', JSON.stringify(payload, null, 2));
     console.log('[create-report] Using user_id:', userId);
     console.log('[create-report] Using api_key:', apiKey.substring(0, 10) + '...');
 
-    const response = await fetch(`https://auth.theraiastro.com/functions/v1/swiss`, {
-      method: 'POST',
+    const response = await supabase.functions.invoke('swiss', {
+      body: payload,
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(payload)
+      }
     });
 
-    console.log('[create-report] Swiss API response status:', response.status);
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log('[create-report] Swiss API error response:', errorText);
-      return { success: false, error: `Swiss API error: ${response.status} - ${errorText}` };
+    console.log('[create-report] Swiss function response:', response);
+
+    if (response.error) {
+      console.log('[create-report] Swiss function error:', response.error);
+      return { success: false, error: `Swiss function error: ${response.error.message}` };
     }
 
-    const data = await response.json();
-    return { success: true, data };
+    return { success: true, data: response.data };
   } catch (error) {
-    console.error('[create-report] Error calling Swiss API:', error);
+    console.error('[create-report] Error calling Swiss function:', error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
@@ -181,13 +179,19 @@ function formatResponse(swissData: any, reportType: string): any {
 }
 
 serve(async (req) => {
+  console.log('[create-report] Request received:', req.method, req.url);
+
   if (req.method === 'OPTIONS') {
+    console.log('[create-report] OPTIONS request - returning CORS headers');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const authHeader = req.headers.get('Authorization');
+    console.log('[create-report] Auth header:', authHeader);
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[create-report] Missing or malformed Authorization header');
       return new Response(JSON.stringify({ error: 'API key required in Authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -195,6 +199,7 @@ serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
+    console.log('[create-report] Extracted API key:', apiKey.substring(0, 8), '...');
 
     const { data: apiKeyData, error: apiKeyError } = await supabase
       .from('api_keys')
@@ -204,6 +209,7 @@ serve(async (req) => {
       .single();
 
     if (apiKeyError || !apiKeyData) {
+      console.log('[create-report] API key lookup failed:', apiKeyError?.message || 'Not found');
       return new Response(JSON.stringify({ error: 'Invalid or inactive API key' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -211,12 +217,14 @@ serve(async (req) => {
     }
 
     const userId = apiKeyData.user_id;
+    console.log('[create-report] Auth success. user_id =', userId);
 
     const formData: CreateReportRequest = await req.json();
     console.log('[create-report] Received form data:', JSON.stringify(formData, null, 2));
 
     const validation = validateFormData(formData);
     if (!validation.isValid) {
+      console.log('[create-report] Validation failed:', validation.errors);
       return new Response(JSON.stringify({
         error: 'Validation failed',
         details: validation.errors
@@ -227,9 +235,12 @@ serve(async (req) => {
     }
 
     const cleanPayload = transformToSwissFormat(formData);
+    console.log('[create-report] Transformed payload:', JSON.stringify(cleanPayload, null, 2));
+    
     const swissResult = await callSwissAPI(cleanPayload, userId, apiKey);
 
     if (!swissResult.success) {
+      console.log('[create-report] Swiss API call failed:', swissResult.error);
       return new Response(JSON.stringify({
         error: 'Failed to generate report',
         details: swissResult.error
@@ -263,9 +274,12 @@ serve(async (req) => {
 
     if (translatorLogError) {
       console.error('[create-report] Error saving translator log:', translatorLogError);
+    } else {
+      console.log('[create-report] Successfully saved translator log');
     }
 
     const formattedResponse = formatResponse(swissResult.data, formData.reportType);
+    console.log('[create-report] Returning successful response');
 
     return new Response(JSON.stringify(formattedResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
