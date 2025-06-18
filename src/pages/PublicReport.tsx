@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -437,7 +438,7 @@ const PublicReport = () => {
             <span className="text-primary block mt-2"> Your Subconscious, Unlocked</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Reveal your subconscious patterns. The ones running underneath your choices, your drive, your resistance — all mapped at birth, now reflected back.
+            Reveal the subconscious patterns shaping your life — your drive, your resistance, your rhythm. Mapped at birth. Reflected back now.
           </p>
           
           {/* Trust Indicators */}
