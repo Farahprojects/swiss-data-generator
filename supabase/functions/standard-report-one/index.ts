@@ -1,7 +1,7 @@
 
 /*─────────────────────Made──────────────────────────────────────────────────────────
   standard-report-one.ts
-  Edge Function: Generates standard reports using Google's Gemini 2.5 Flash Preview model
+  Edge Function: Generates standard reports using OpenAI's GPT-4o model (Second API Key)
   Uses system prompts from the reports_prompts table
   Enhanced for production readiness with retries, timeouts, and structured logging.
 ────────────────────────────────────────────────────────────────────────────────*/
@@ -14,7 +14,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 ────────────────────────────────────────────────────────────────────────────────*/
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY_TWO") ?? "";
 
 // Production Readiness Configuration
 const MAX_API_RETRIES = parseInt(Deno.env.get("MAX_API_RETRIES") || "3");
@@ -28,7 +28,7 @@ const LOG_PREFIX_INIT = "[standard-report-one][init]";
 console.log(`${LOG_PREFIX_INIT} Edge function initializing with config:
 - SUPABASE_URL: ${SUPABASE_URL ? "Exists (first 10 chars): " + SUPABASE_URL.substring(0, 10) + "..." : "MISSING"}
 - SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY ? "Exists (length: " + SUPABASE_SERVICE_KEY.length + ")" : "MISSING"}
-- GOOGLE_API_KEY: ${GOOGLE_API_KEY ? "Exists (length: " + GOOGLE_API_KEY.length + ", starts with: " + GOOGLE_API_KEY.substring(0, 4) + "...)" : "MISSING"}
+- OPENAI_API_KEY_TWO: ${OPENAI_API_KEY ? "Exists (length: " + OPENAI_API_KEY.length + ", starts with: " + OPENAI_API_KEY.substring(0, 4) + "...)" : "MISSING"}
 - MAX_API_RETRIES: ${MAX_API_RETRIES}
 - INITIAL_RETRY_DELAY_MS: ${INITIAL_RETRY_DELAY_MS}
 - RETRY_BACKOFF_FACTOR: ${RETRY_BACKOFF_FACTOR}
@@ -40,9 +40,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   throw new Error("Missing required Supabase environment variables");
 }
 
-if (!GOOGLE_API_KEY) {
-  console.error(`${LOG_PREFIX_INIT} Missing Google API key`);
-  throw new Error("Missing Google API key");
+if (!OPENAI_API_KEY) {
+  console.error(`${LOG_PREFIX_INIT} Missing OpenAI API key (OPENAI_API_KEY_TWO)`);
+  throw new Error("Missing OpenAI API key (OPENAI_API_KEY_TWO)");
 }
 
 // Initialize Supabase client
@@ -56,8 +56,8 @@ try {
   throw err;
 }
 
-const GOOGLE_MODEL = "gemini-2.5-flash-preview-04-17";
-const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent`;
+const OPENAI_MODEL = "gpt-4o";
+const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
 // CORS headers for cross-domain requests
 const CORS_HEADERS = {
@@ -159,10 +159,10 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
   }
 }
 
-// Generate report using Gemini API
+// Generate report using OpenAI API
 async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<string> {
   const logPrefix = `[standard-report-one][${requestId}]`;
-  console.log(`${logPrefix} Generating report with Gemini`);
+  console.log(`${logPrefix} Generating report with OpenAI GPT-4o (using OPENAI_API_KEY_TWO)`);
 
   // Enhanced logging of the incoming payload
   console.log(`${logPrefix} Report data endpoint: ${reportData.endpoint}`);
@@ -175,42 +175,45 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     ...reportData // Include any other relevant data
   });
 
-  console.log(`${logPrefix} Calling Gemini API with model: ${GOOGLE_MODEL}`);
-  console.log(`${logPrefix} API Key format check: ${GOOGLE_API_KEY.length > 20 ? "Valid length" : "Invalid length"}`);
+  console.log(`${logPrefix} Calling OpenAI API with model: ${OPENAI_MODEL}`);
+  console.log(`${logPrefix} API Key format check: ${OPENAI_API_KEY.length > 20 ? "Valid length" : "Invalid length"}`);
 
-  const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
-  console.log(`${logPrefix} Target API URL (without key): ${GOOGLE_ENDPOINT}`);
+  console.log(`${logPrefix} Target API URL: ${OPENAI_ENDPOINT}`);
 
   const requestBody = {
-    contents: [
+    model: OPENAI_MODEL,
+    messages: [
+      {
+        role: "system",
+        content: systemPrompt
+      },
       {
         role: "user",
-        parts: [
-          { text: systemPrompt },
-          { text: userMessage }
-        ]
+        content: userMessage
       }
     ],
-    generationConfig: {
-      temperature: 0.2,
-      topK: 40,
-      topP: 0.95,
-      maxOutputTokens: 8192,
-    }
+    temperature: 0.2,
+    max_tokens: 8192,
+    top_p: 0.95,
+    frequency_penalty: 0,
+    presence_penalty: 0
   };
 
-  const callGeminiApi = async () => {
+  const callOpenAIApi = async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
-        console.warn(`${logPrefix} Gemini API call timed out after ${API_TIMEOUT_MS}ms`);
+        console.warn(`${logPrefix} OpenAI API call timed out after ${API_TIMEOUT_MS}ms`);
     }, API_TIMEOUT_MS);
 
     let response;
     try {
-        response = await fetch(apiUrl, {
+        response = await fetch(OPENAI_ENDPOINT, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${OPENAI_API_KEY}`
+            },
             body: JSON.stringify(requestBody),
             signal: controller.signal,
         });
@@ -218,19 +221,19 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
         // This catch is primarily for network errors or if AbortController aborts
         clearTimeout(timeoutId);
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-            throw new Error(`Gemini API call aborted due to timeout (${API_TIMEOUT_MS}ms)`);
+            throw new Error(`OpenAI API call aborted due to timeout (${API_TIMEOUT_MS}ms)`);
         }
         throw fetchError; // Re-throw other fetch errors
     }
     
     clearTimeout(timeoutId); // Clear timeout if fetch completed
 
-    console.log(`${logPrefix} Gemini API response status: ${response.status}`);
+    console.log(`${logPrefix} OpenAI API response status: ${response.status}`);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`${logPrefix} Gemini API error response: ${response.status} - ${errorText}`);
-      const error = new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      console.error(`${logPrefix} OpenAI API error response: ${response.status} - ${errorText}`);
+      const error = new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       // Add status to error object for potential specific handling in retry logic if needed
       (error as any).status = response.status;
       // Do not retry on 400 (bad request) or 404 (model not found) as they are likely permanent for this request
@@ -242,23 +245,23 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 
     const data = await response.json();
 
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-      console.error(`${logPrefix} No content or parts returned from Gemini API in candidate:`, JSON.stringify(data));
-      throw new Error("Malformed response from Gemini API: No content/parts in candidate");
+    if (!data.choices || data.choices.length === 0 || !data.choices[0].message || !data.choices[0].message.content) {
+      console.error(`${logPrefix} No content returned from OpenAI API in response:`, JSON.stringify(data));
+      throw new Error("Malformed response from OpenAI API: No content in message");
     }
 
-    const generatedText = data.candidates[0].content.parts[0].text;
-    console.log(`${logPrefix} Successfully generated report from Gemini`);
+    const generatedText = data.choices[0].message.content;
+    console.log(`${logPrefix} Successfully generated report from OpenAI`);
     return generatedText;
   };
 
   try {
-    return await retryWithBackoff(callGeminiApi, logPrefix, MAX_API_RETRIES, INITIAL_RETRY_DELAY_MS, RETRY_BACKOFF_FACTOR, "Gemini API call");
+    return await retryWithBackoff(callOpenAIApi, logPrefix, MAX_API_RETRIES, INITIAL_RETRY_DELAY_MS, RETRY_BACKOFF_FACTOR, "OpenAI API call");
   } catch (err) {
-    console.error(`${logPrefix} Failed to generate report with Gemini after retries:`, err);
+    console.error(`${logPrefix} Failed to generate report with OpenAI after retries:`, err);
     // If error has skipRetry, it means it's a non-retryable client error
     if ((err as any).skipRetry) {
-        throw new Error(`Permanent Gemini API error: ${err.message}`);
+        throw new Error(`Permanent OpenAI API error: ${err.message}`);
     }
     throw err; // Propagate other errors
   }
@@ -275,11 +278,12 @@ async function logReportAttempt(
   status: string,
   durationMs: number,
   errorMessage: string | null,
+  engineUsed: string,
   requestId: string
 ) {
   const logPrefix = `[standard-report-one][${requestId}]`;
   try {
-    console.log(`${logPrefix} Logging report attempt to report_logs table`);
+    console.log(`${logPrefix} Logging report attempt to report_logs table with engine: ${engineUsed}`);
     
     const { error } = await supabase.from("report_logs").insert({
       api_key: apiKey,
@@ -290,13 +294,14 @@ async function logReportAttempt(
       report_text: reportText,
       status: status,
       duration_ms: durationMs,
-      error_message: errorMessage
+      error_message: errorMessage,
+      engine_used: engineUsed
     });
     
     if (error) {
       console.error(`${logPrefix} Error logging report attempt: ${error.message}`);
     } else {
-      console.log(`${logPrefix} Successfully logged ${status} report attempt for user ${userId}`);
+      console.log(`${logPrefix} Successfully logged ${status} report attempt for user ${userId} with engine ${engineUsed}`);
     }
   } catch (err) {
     console.error(`${logPrefix} Failed to log report attempt: ${err instanceof Error ? err.message : String(err)}`);
@@ -342,9 +347,10 @@ serve(async (req) => {
       );
     }
     
-    // Extract the report type from the payload (either reportType or report_type)
+    // Extract the report type and selected engine from the payload
     const reportType = reportData.reportType || reportData.report_type || "standard";
-    console.log(`${logPrefix} Processing ${reportType} report for endpoint: ${reportData?.endpoint}`);
+    const selectedEngine = reportData.selectedEngine || "standard-report-one"; // Fall back to default if not provided
+    console.log(`${logPrefix} Processing ${reportType} report for endpoint: ${reportData?.endpoint} using engine: ${selectedEngine}`);
     console.log(`${logPrefix} Payload structure check - keys: ${Object.keys(reportData || {}).join(', ')}`);
 
     // Validate required fields
@@ -363,6 +369,7 @@ serve(async (req) => {
           "failed",
           Date.now() - startTime,
           "Missing required fields: chartData and endpoint are required",
+          selectedEngine,
           requestId
         );
       }
@@ -392,6 +399,7 @@ serve(async (req) => {
         "success",
         Date.now() - startTime,
         null,
+        selectedEngine,
         requestId
       );
     }
@@ -411,7 +419,7 @@ serve(async (req) => {
     // Log the failed attempt if we have user info
     if (err instanceof Error && err.cause && typeof err.cause === 'object' && err.cause !== null) {
       const payload = err.cause as any;
-      if (payload.apiKey && payload.user_id) {
+      if (payload.apiKey && payload.user_id && payload.selectedEngine) {
         await logReportAttempt(
           payload.apiKey,
           payload.user_id,
@@ -422,6 +430,7 @@ serve(async (req) => {
           "failed",
           Date.now() - startTime,
           errorMessage,
+          payload.selectedEngine,
           requestId
         );
       }
