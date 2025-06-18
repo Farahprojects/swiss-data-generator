@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,6 +22,8 @@ import { getProductByName } from '@/utils/stripe-products';
 import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
 import { validatePromoCode, createFreeReport, PromoCodeValidation } from '@/utils/promoCodeValidation';
 import { useToast } from '@/hooks/use-toast';
+import SectionNavigation from '@/components/public-report/SectionNavigation';
+import { useSectionNavigation } from '@/hooks/useSectionNavigation';
 
 const reportSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
@@ -391,6 +392,10 @@ const PublicReport = () => {
 
   const getCurrentYear = () => new Date().getFullYear();
 
+  // Section navigation setup
+  const sectionIds = ['hero', 'report-type', 'contact-info', 'birth-details', 'second-person', 'submit-section'];
+  const { currentSection, scrollToSection } = useSectionNavigation({ sectionIds });
+
   // Show success message if free report was created
   if (reportCreated) {
     return (
@@ -431,7 +436,7 @@ const PublicReport = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       {/* Hero Section */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div id="hero" className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-16 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             See the Mirror in your eyes
@@ -464,7 +469,7 @@ const PublicReport = () => {
         <div className="max-w-6xl mx-auto">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
             {/* Step 1: Report Type Selection */}
-            <div className="space-y-6">
+            <div id="report-type" className="space-y-6">
               <button
                 type="button"
                 onClick={() => setShowReportGuide(true)}
@@ -587,7 +592,7 @@ const PublicReport = () => {
             {/* Step 2: Contact Information */}
             {selectedReportType && (
               <>
-                <div className="border-t pt-8">
+                <div id="contact-info" className="border-t pt-8">
                   <div className="space-y-6">
                     <div className="flex items-center gap-4">
                       <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">2</div>
@@ -627,7 +632,7 @@ const PublicReport = () => {
                 </div>
 
                 {/* Step 3: Birth Details */}
-                <div className="border-t pt-8">
+                <div id="birth-details" className="border-t pt-8">
                   <div className="space-y-6">
                     <div className="flex items-center gap-4">
                       <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">3</div>
@@ -681,7 +686,7 @@ const PublicReport = () => {
 
             {/* Step 4: Second Person Details (for compatibility/sync reports) */}
             {requiresSecondPerson && (
-              <div className="border-t pt-8">
+              <div id="second-person" className="border-t pt-8">
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
                     <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">4</div>
@@ -746,7 +751,7 @@ const PublicReport = () => {
 
             {/* Generate Report Button and Promo Code Section */}
             {selectedReportType && (
-              <div className="border-t pt-8 flex flex-col items-center space-y-4">
+              <div id="submit-section" className="border-t pt-8 flex flex-col items-center space-y-4">
                 <Button 
                   type="submit"
                   size="lg" 
@@ -856,6 +861,13 @@ const PublicReport = () => {
           </div>
         </div>
       </div>
+
+      {/* Section Navigation */}
+      <SectionNavigation
+        currentSection={currentSection}
+        totalSections={sectionIds.length}
+        onSectionChange={scrollToSection}
+      />
 
       {/* Report Guide Modal */}
       <ReportGuideModal 
