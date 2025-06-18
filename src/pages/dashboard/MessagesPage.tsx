@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ export type MessageFilterType = "inbox" | "sent" | "starred" | "archive" | "tras
 
 const MessagesPage = () => {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
+  const [hiddenMessages, setHiddenMessages] = useState<Set<string>>(new Set());
   const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
@@ -38,13 +40,8 @@ const MessagesPage = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    if (user?.id) {
-      loadMessages();
-    }
-  }, [user?.id]);
-
-  const loadMessages = async () => {
+  // Load messages based on the active filter
+  const loadMessages = async (filter: MessageFilterType = activeFilter) => {
     if (!user?.id) {
       console.log('No user ID available');
       setLoading(false);
@@ -53,32 +50,56 @@ const MessagesPage = () => {
 
     try {
       setLoading(true);
-      console.log('Loading messages for user:', user.id);
+      console.log('Loading messages for filter:', filter, 'user:', user.id);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('email_messages')
         .select('*')
-        .eq('user_id', user.id)
-        .eq('is_archived', false) // Only load unarchived messages in main view
-        .order('created_at', { ascending: false });
+        .eq('user_id', user.id);
+
+      // Apply filter-specific conditions
+      switch (filter) {
+        case 'inbox':
+          query = query.eq('direction', 'inbound').eq('is_archived', false);
+          break;
+        case 'sent':
+          query = query.eq('direction', 'outbound');
+          break;
+        case 'starred':
+          query = query.eq('is_starred', true).eq('is_archived', false);
+          break;
+        case 'archive':
+          query = query.eq('is_archived', true);
+          break;
+        case 'trash':
+          // For now, just show empty - we can implement soft delete later
+          query = query.eq('id', 'non-existent-id'); // This will return empty results
+          break;
+        default:
+          query = query.eq('direction', 'inbound').eq('is_archived', false);
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Supabase error:', error);
         throw error;
       }
       
-      // Direction mapping if needed
+      // Direction mapping for consistency
       const messagesData: EmailMessage[] = (data || []).map((message: any) => {
         const mappedDirection = message.direction === 'inbound' ? 'incoming' : 
                                message.direction === 'outbound' ? 'outgoing' : 
-                               message.direction; // fallback
-        // Only use DB values for is_read, is_starred, is_archived
+                               message.direction;
         return {
           ...message,
           direction: mappedDirection,
         } as EmailMessage;
       });
       
+      console.log(`Loaded ${messagesData.length} messages for filter: ${filter}`);
       setMessages(messagesData);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -92,24 +113,23 @@ const MessagesPage = () => {
     }
   };
 
-  const filteredMessages = messages.filter(message => {
+  // Load messages when user or filter changes
+  useEffect(() => {
+    if (user?.id) {
+      loadMessages(activeFilter);
+    }
+  }, [user?.id, activeFilter]);
+
+  // Filter out hidden messages for display
+  const visibleMessages = messages.filter(message => !hiddenMessages.has(message.id));
+
+  const filteredMessages = visibleMessages.filter(message => {
     const matchesSearch = message.subject?.toLowerCase().includes(searchParams.get('search') || '') ||
       message.from_address?.toLowerCase().includes(searchParams.get('search') || '') ||
       message.to_address?.toLowerCase().includes(searchParams.get('search') || '') ||
       message.body?.toLowerCase().includes(searchParams.get('search') || '');
 
-    const matchesFilter = (() => {
-      switch (activeFilter) {
-        case 'inbox': return message.direction === 'incoming';
-        case 'sent': return message.direction === 'outgoing';
-        case 'starred': return message.is_starred;
-        case 'archive': return false; // We'll implement this later
-        case 'trash': return false; // We'll implement this later
-        default: return true;
-      }
-    })();
-
-    return matchesSearch && matchesFilter;
+    return matchesSearch;
   });
 
   const handleSelectMessage = async (message: EmailMessage) => {
@@ -171,24 +191,33 @@ const MessagesPage = () => {
     });
   };
 
+  // Soft delete - just hide the message locally
+  const handleSoftDelete = (messageId: string) => {
+    setHiddenMessages(prev => new Set([...prev, messageId]));
+    toast({
+      title: "Message hidden",
+      description: "Message has been hidden from view.",
+    });
+  };
+
   const handleArchive = async () => {
     // Archive currently selected message (single)
     if (selectedMessage) {
       await archiveMessages([selectedMessage.id], toast);
-      setMessages(prev =>
-        prev.filter(m => m.id !== selectedMessage.id)
-      );
+      // Remove from current view if not on archive page
+      if (activeFilter !== 'archive') {
+        setMessages(prev =>
+          prev.filter(m => m.id !== selectedMessage.id)
+        );
+      }
       setSelectedMessage(null);
     }
   };
 
   const handleDelete = async () => {
-    // Delete currently selected message (single)
+    // Soft delete currently selected message (single)
     if (selectedMessage) {
-      await deleteMessages([selectedMessage.id], toast);
-      setMessages(prev =>
-        prev.filter(m => m.id !== selectedMessage.id)
-      );
+      handleSoftDelete(selectedMessage.id);
       setSelectedMessage(null);
     }
   };
@@ -197,20 +226,25 @@ const MessagesPage = () => {
     if (selectedMessages.size === 0) return;
     const ids = Array.from(selectedMessages);
     await archiveMessages(ids, toast);
-    setMessages(prev =>
-      prev.filter(m => !ids.includes(m.id))
-    );
+    // Remove from current view if not on archive page
+    if (activeFilter !== 'archive') {
+      setMessages(prev =>
+        prev.filter(m => !ids.includes(m.id))
+      );
+    }
     setSelectedMessages(new Set());
   };
 
   const handleDeleteSelected = async () => {
     if (selectedMessages.size === 0) return;
     const ids = Array.from(selectedMessages);
-    await deleteMessages(ids, toast);
-    setMessages(prev =>
-      prev.filter(m => !ids.includes(m.id))
-    );
+    // Soft delete selected messages
+    setHiddenMessages(prev => new Set([...prev, ...ids]));
     setSelectedMessages(new Set());
+    toast({
+      title: "Messages hidden",
+      description: `${ids.length} message(s) have been hidden from view.`,
+    });
   };
 
   const handleToggleStar = async (message: EmailMessage) => {
@@ -237,6 +271,7 @@ const MessagesPage = () => {
   console.log('Current filter:', activeFilter);
   console.log('Filtered messages count:', filteredMessages.length);
   console.log('Total messages count:', messages.length);
+  console.log('Hidden messages count:', hiddenMessages.size);
 
   const showMobileSidebarMenu = isMobile;
 
