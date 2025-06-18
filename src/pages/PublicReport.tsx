@@ -105,7 +105,7 @@ const PublicReport = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-auto scroll-smooth" style={{ scrollSnapType: 'y mandatory' }}>
+    <div className="h-screen overflow-y-auto scroll-smooth -mt-16" style={{ scrollSnapType: 'y mandatory' }}>
       <HeroSection />
 
       <div style={{ scrollSnapType: 'none' }}>
