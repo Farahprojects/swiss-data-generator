@@ -14,9 +14,9 @@ const SuccessScreen = ({ name, email }: SuccessScreenProps) => {
   const firstName = name.split(' ')[0];
 
   return (
-    <div className="h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center">
-      <div className="container mx-auto px-4 flex items-center justify-center min-h-screen">
-        <Card className="max-w-2xl w-full border-2 border-primary/20">
+    <div className="h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center pt-16">
+      <div className="container mx-auto px-4">
+        <Card className="max-w-2xl mx-auto border-2 border-primary/20">
           <CardContent className="p-8 text-center">
             <div className="flex items-center justify-center gap-3 mb-6">
               <CheckCircle className="h-12 w-12 text-primary" />
