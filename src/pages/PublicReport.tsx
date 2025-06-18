@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,10 +18,12 @@ import { Star, Clock, Shield, CheckCircle, ChevronDown, ChevronUp, Loader2 } fro
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import ReportGuideModal from '@/components/public-report/ReportGuideModal';
+import SectionNavigation from '@/components/public-report/SectionNavigation';
 import { getProductByName } from '@/utils/stripe-products';
 import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
 import { validatePromoCode, createFreeReport, PromoCodeValidation } from '@/utils/promoCodeValidation';
 import { useToast } from '@/hooks/use-toast';
+import { useSectionNavigation } from '@/hooks/useSectionNavigation';
 
 const reportSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
@@ -154,6 +155,18 @@ const PublicReport = () => {
   const requiresRelationshipType = requiresSecondPerson;
   const requiresEssenceType = selectedReportType === 'essence';
   const requiresReturnYear = selectedReportType === 'return';
+
+  // Define sections for navigation
+  const sections = [
+    { id: 'hero-section', label: 'Introduction', visible: true },
+    { id: 'report-type-section', label: 'Choose Report Type', visible: true },
+    { id: 'contact-section', label: 'Contact Info', visible: !!selectedReportType },
+    { id: 'birth-details-section', label: 'Birth Details', visible: !!selectedReportType },
+    { id: 'second-person-section', label: 'Second Person', visible: requiresSecondPerson },
+    { id: 'features-section', label: 'Features', visible: true },
+  ];
+
+  const { activeSection, showNavigation, scrollToSection } = useSectionNavigation(sections);
 
   const handlePlaceSelect = (placeData: PlaceData, fieldPrefix = '') => {
     const locationField = fieldPrefix ? `${fieldPrefix}Location` : 'birthLocation';
@@ -430,8 +443,16 @@ const PublicReport = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      {/* Section Navigation */}
+      <SectionNavigation 
+        sections={sections}
+        activeSection={activeSection}
+        showNavigation={showNavigation}
+        onSectionClick={scrollToSection}
+      />
+
       {/* Hero Section */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <section id="hero-section" className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-16 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             See the Mirror in your eyes
@@ -457,137 +478,139 @@ const PublicReport = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Main Form Section */}
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
             {/* Step 1: Report Type Selection */}
-            <div className="space-y-6">
-              <button
-                type="button"
-                onClick={() => setShowReportGuide(true)}
-                className="text-foreground hover:text-primary font-bold underline"
-              >
-                Not sure which report to choose? Click here.
-              </button>
-              
+            <section id="report-type-section">
               <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">1</div>
-                  <h2 className="text-2xl font-semibold">Choose Your Report Type</h2>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowReportGuide(true)}
+                  className="text-foreground hover:text-primary font-bold underline"
+                >
+                  Not sure which report to choose? Click here.
+                </button>
                 
-                <div className="pl-1 md:pl-8 space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reportType">Report Type *</Label>
-                    <Controller
-                      control={control}
-                      name="reportType"
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a report type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {reportTypes.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">1</div>
+                    <h2 className="text-2xl font-semibold">Choose Your Report Type</h2>
+                  </div>
+                  
+                  {/* Conditional Fields for Report Options */}
+                  <div className="pl-1 md:pl-8 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reportType">Report Type *</Label>
+                      <Controller
+                        control={control}
+                        name="reportType"
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a report type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {reportTypes.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  {type.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.reportType && (
+                        <p className="text-sm text-destructive">{errors.reportType.message}</p>
                       )}
-                    />
-                    {errors.reportType && (
-                      <p className="text-sm text-destructive">{errors.reportType.message}</p>
+                    </div>
+
+                    {requiresEssenceType && (
+                      <div className="space-y-2">
+                        <Label htmlFor="essenceType">Essence Focus *</Label>
+                        <Controller
+                          control={control}
+                          name="essenceType"
+                          render={({ field }) => (
+                            <ToggleGroup
+                              type="single"
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              className="justify-start flex-wrap gap-1 md:gap-2"
+                            >
+                              {essenceTypes.map((type) => (
+                                <ToggleGroupItem 
+                                  key={type.value} 
+                                  value={type.value}
+                                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-xs md:text-sm px-2 md:px-4 py-2"
+                                >
+                                  {type.label}
+                                </ToggleGroupItem>
+                              ))}
+                            </ToggleGroup>
+                          )}
+                        />
+                        {errors.essenceType && (
+                          <p className="text-sm text-destructive">{errors.essenceType.message}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {requiresReturnYear && (
+                      <div className="space-y-2">
+                        <Label htmlFor="returnYear">Return Year *</Label>
+                        <Input
+                          {...register('returnYear')}
+                          type="number"
+                          placeholder={getCurrentYear().toString()}
+                          min="1900"
+                          max="2100"
+                        />
+                      </div>
+                    )}
+
+                    {requiresRelationshipType && (
+                      <div className="space-y-2">
+                        <Label htmlFor="relationshipType">Relationship Type *</Label>
+                        <Controller
+                          control={control}
+                          name="relationshipType"
+                          render={({ field }) => (
+                            <ToggleGroup
+                              type="single"
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              className="justify-start flex-wrap gap-1 md:gap-2"
+                            >
+                              {relationshipTypes.map((type) => (
+                                <ToggleGroupItem 
+                                  key={type.value} 
+                                  value={type.value}
+                                  className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-xs md:text-sm px-2 md:px-4 py-2"
+                                >
+                                  {type.label}
+                                </ToggleGroupItem>
+                              ))}
+                            </ToggleGroup>
+                          )}
+                        />
+                        {errors.relationshipType && (
+                          <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
+                        )}
+                      </div>
                     )}
                   </div>
-
-                  {/* Conditional Fields for Report Options */}
-                  {requiresEssenceType && (
-                    <div className="space-y-2">
-                      <Label htmlFor="essenceType">Essence Focus *</Label>
-                      <Controller
-                        control={control}
-                        name="essenceType"
-                        render={({ field }) => (
-                          <ToggleGroup
-                            type="single"
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            className="justify-start flex-wrap gap-1 md:gap-2"
-                          >
-                            {essenceTypes.map((type) => (
-                              <ToggleGroupItem 
-                                key={type.value} 
-                                value={type.value}
-                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-xs md:text-sm px-2 md:px-4 py-2"
-                              >
-                                {type.label}
-                              </ToggleGroupItem>
-                            ))}
-                          </ToggleGroup>
-                        )}
-                      />
-                      {errors.essenceType && (
-                        <p className="text-sm text-destructive">{errors.essenceType.message}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {requiresReturnYear && (
-                    <div className="space-y-2">
-                      <Label htmlFor="returnYear">Return Year *</Label>
-                      <Input
-                        {...register('returnYear')}
-                        type="number"
-                        placeholder={getCurrentYear().toString()}
-                        min="1900"
-                        max="2100"
-                      />
-                    </div>
-                  )}
-
-                  {requiresRelationshipType && (
-                    <div className="space-y-2">
-                      <Label htmlFor="relationshipType">Relationship Type *</Label>
-                      <Controller
-                        control={control}
-                        name="relationshipType"
-                        render={({ field }) => (
-                          <ToggleGroup
-                            type="single"
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            className="justify-start flex-wrap gap-1 md:gap-2"
-                          >
-                            {relationshipTypes.map((type) => (
-                              <ToggleGroupItem 
-                                key={type.value} 
-                                value={type.value}
-                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-xs md:text-sm px-2 md:px-4 py-2"
-                              >
-                                {type.label}
-                              </ToggleGroupItem>
-                            ))}
-                          </ToggleGroup>
-                        )}
-                      />
-                      {errors.relationshipType && (
-                        <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* Step 2: Contact Information */}
             {selectedReportType && (
               <>
-                <div className="border-t pt-8">
+                <section id="contact-section" className="border-t pt-8">
                   <div className="space-y-6">
                     <div className="flex items-center gap-4">
                       <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">2</div>
@@ -624,10 +647,10 @@ const PublicReport = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </section>
 
                 {/* Step 3: Birth Details */}
-                <div className="border-t pt-8">
+                <section id="birth-details-section" className="border-t pt-8">
                   <div className="space-y-6">
                     <div className="flex items-center gap-4">
                       <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">3</div>
@@ -675,13 +698,13 @@ const PublicReport = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </section>
               </>
             )}
 
             {/* Step 4: Second Person Details (for compatibility/sync reports) */}
             {requiresSecondPerson && (
-              <div className="border-t pt-8">
+              <section id="second-person-section" className="border-t pt-8">
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
                     <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">4</div>
@@ -741,7 +764,7 @@ const PublicReport = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </section>
             )}
 
             {/* Generate Report Button and Promo Code Section */}
@@ -828,7 +851,7 @@ const PublicReport = () => {
       </div>
 
       {/* Features Section */}
-      <div className="border-t bg-muted/30 py-16">
+      <section id="features-section" className="border-t bg-muted/30 py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Why Choose Our Reports?</h2>
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -855,7 +878,7 @@ const PublicReport = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Report Guide Modal */}
       <ReportGuideModal 
