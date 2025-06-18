@@ -11,48 +11,13 @@ const EDGE_ENGINES = [
   "standard-report-three"
 ];
 
-// Database-based round-robin engine selection
-async function getNextEngine(supabase: any) {
-  console.log(`[reportOrchestrator] Selecting next engine using database-based round-robin`);
-  
-  try {
-    // Query the last used engine from report_logs
-    const { data: lastReport, error } = await supabase
-      .from("report_logs")
-      .select("engine_used")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+let engineIndex = 0;
 
-    if (error) {
-      console.warn(`[reportOrchestrator] Error querying last engine, defaulting to first: ${error.message}`);
-      return EDGE_ENGINES[0];
-    }
-
-    let nextIndex = 0; // Default to first engine
-
-    if (lastReport && lastReport.engine_used) {
-      // Use exact array lookup instead of .includes() - this is the key fix
-      const currentIndex = EDGE_ENGINES.indexOf(lastReport.engine_used);
-      
-      if (currentIndex !== -1) {
-        // Move to next engine with wraparound
-        nextIndex = (currentIndex + 1) % EDGE_ENGINES.length;
-        console.log(`[reportOrchestrator] Last engine: ${lastReport.engine_used}, found at index ${currentIndex}, selecting next index: ${nextIndex}`);
-      } else {
-        console.log(`[reportOrchestrator] Last engine '${lastReport.engine_used}' not found in engines array, defaulting to first`);
-      }
-    } else {
-      console.log(`[reportOrchestrator] No previous reports found, starting with first engine`);
-    }
-
-    const selectedEngine = EDGE_ENGINES[nextIndex];
-    console.log(`[reportOrchestrator] Selected engine: ${selectedEngine} (index: ${nextIndex}/${EDGE_ENGINES.length - 1})`);
-    return selectedEngine;
-  } catch (error) {
-    console.error(`[reportOrchestrator] Unexpected error in engine selection, defaulting to first:`, error);
-    return EDGE_ENGINES[0];
-  }
+function getNextEngine() {
+  const engine = EDGE_ENGINES[engineIndex];
+  engineIndex = (engineIndex + 1) % EDGE_ENGINES.length;
+  console.log(`[reportOrchestrator] Selected engine: ${engine} (index: ${engineIndex - 1}/${EDGE_ENGINES.length - 1})`);
+  return engine;
 }
 
 // Initialize Supabase client
@@ -198,7 +163,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     const userId = payload.user_id;
     
     // Step 4: Generate the report
-    const report = await generateReport(payload, supabase);
+    const report = await generateReport(payload);
     
     if (!report.success) {
       return {
@@ -234,7 +199,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
  * Generate the appropriate report based on type
  * This will call the standard or premium report generation function
  */
-async function generateReport(payload: ReportPayload, supabase: any) {
+async function generateReport(payload: ReportPayload) {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     if (!supabaseUrl) {
@@ -242,8 +207,8 @@ async function generateReport(payload: ReportPayload, supabase: any) {
       throw new Error("Missing SUPABASE_URL environment variable");
     }
     
-    // Select next engine using database-based round-robin
-    const selectedEngine = await getNextEngine(supabase);
+    // Select next engine using round-robin
+    const selectedEngine = getNextEngine();
     console.log(`[reportOrchestrator] Using engine '${selectedEngine}' for ${payload.report_type} report`);
     
     try {
@@ -288,7 +253,7 @@ async function generateReport(payload: ReportPayload, supabase: any) {
           title: `${payload.report_type.charAt(0).toUpperCase() + payload.report_type.slice(1)} ${payload.endpoint} Report`,
           content: reportResult.report,
           generated_at: new Date().toISOString(),
-          engine_used: selectedEngine // CRITICAL FIX: Store the actual edge function name, not AI model
+          engine_used: selectedEngine // Track which engine was used
         }
       };
     } catch (fetchErr) {
