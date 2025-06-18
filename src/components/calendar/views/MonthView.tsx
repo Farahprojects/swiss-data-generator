@@ -1,4 +1,3 @@
-
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 
@@ -112,7 +111,6 @@ const MonthView = ({
                 ${!isLastRow ? 'border-b border-gray-100' : ''}
               `}
               style={{
-                borderColor: isTodayCell ? "#6951f3" : undefined,
                 cursor: inThisMonth ? "pointer" : "default",
                 opacity: inThisMonth ? 1 : 0.6,
               }}
