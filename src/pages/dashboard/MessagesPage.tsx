@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Plus } from 'lucide-react';
@@ -37,19 +37,28 @@ const MessagesPage = () => {
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [showCompose, setShowCompose] = useState(false);
   const [activeFilter, setActiveFilter] = useState<MessageFilterType>('inbox');
+  const [isLoadingInProgress, setIsLoadingInProgress] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  // Load messages based on the active filter
-  const loadMessages = async (filter: MessageFilterType = activeFilter) => {
+  // Load messages based on the active filter with proper error handling
+  const loadMessages = useCallback(async (filter: MessageFilterType = activeFilter, forceRefresh = false) => {
     if (!user?.id) {
       console.log('No user ID available');
       setLoading(false);
       return;
     }
 
+    // Prevent concurrent loads unless forced
+    if (isLoadingInProgress && !forceRefresh) {
+      console.log('Load already in progress, skipping...');
+      return;
+    }
+
     try {
+      setIsLoadingInProgress(true);
+      
       // Show content loading for filter changes, full loading for initial load
       if (messages.length > 0) {
         setContentLoading(true);
@@ -64,7 +73,7 @@ const MessagesPage = () => {
         .select('*')
         .eq('user_id', user.id);
 
-      // Apply filter-specific conditions
+      // Apply filter-specific conditions with proper handling
       switch (filter) {
         case 'inbox':
           query = query.eq('direction', 'inbound').eq('is_archived', false);
@@ -79,9 +88,11 @@ const MessagesPage = () => {
           query = query.eq('is_archived', true);
           break;
         case 'trash':
-          // For now, just show empty - we can implement soft delete later
-          query = query.eq('id', 'non-existent-id'); // This will return empty results
-          break;
+          // For trash, show hidden messages or use a proper deleted flag
+          // For now, return empty array to avoid UUID errors
+          console.log('Trash filter - returning empty results for now');
+          setMessages([]);
+          return;
         default:
           query = query.eq('direction', 'inbound').eq('is_archived', false);
       }
@@ -115,18 +126,42 @@ const MessagesPage = () => {
         description: "Failed to load messages. Please try again.",
         variant: "destructive",
       });
+      // Reset to empty state on error
+      setMessages([]);
     } finally {
       setLoading(false);
       setContentLoading(false);
+      setIsLoadingInProgress(false);
     }
-  };
+  }, [user?.id, activeFilter, messages.length, isLoadingInProgress, toast]);
 
-  // Load messages when user or filter changes
+  // Handle filter changes with proper state management
+  const handleFilterChange = useCallback(async (newFilter: MessageFilterType) => {
+    console.log('Filter change requested:', newFilter);
+    
+    // Prevent rapid filter changes
+    if (isLoadingInProgress) {
+      console.log('Load in progress, ignoring filter change');
+      return;
+    }
+
+    // Update active filter immediately for UI responsiveness
+    setActiveFilter(newFilter);
+    
+    // Clear selected message when changing filters
+    setSelectedMessage(null);
+    setSelectedMessages(new Set());
+    
+    // Load messages for the new filter
+    await loadMessages(newFilter, true);
+  }, [isLoadingInProgress, loadMessages]);
+
+  // Load messages when user changes or on initial load
   useEffect(() => {
     if (user?.id) {
       loadMessages(activeFilter);
     }
-  }, [user?.id, activeFilter]);
+  }, [user?.id]); // Only depend on user ID for initial load
 
   // Filter out hidden messages for display
   const visibleMessages = messages.filter(message => !hiddenMessages.has(message.id));
@@ -283,6 +318,7 @@ const MessagesPage = () => {
   console.log('Filtered messages count:', filteredMessages.length);
   console.log('Total messages count:', messages.length);
   console.log('Hidden messages count:', hiddenMessages.size);
+  console.log('Loading in progress:', isLoadingInProgress);
 
   const showMobileSidebarMenu = isMobile;
 
@@ -305,7 +341,7 @@ const MessagesPage = () => {
           isMessagesPageMobile={true}
           activeFilter={activeFilter}
           unreadCount={unreadCount}
-          onFilterChange={(filter: MessageFilterType) => setActiveFilter(filter)}
+          onFilterChange={handleFilterChange}
         />
         <div className="w-full relative min-h-screen pb-24 bg-background">
           {/* Mobile Compose button */}
@@ -351,7 +387,7 @@ const MessagesPage = () => {
                 description: "Your message has been sent successfully.",
               });
               setShowCompose(false);
-              loadMessages();
+              loadMessages(activeFilter, true);
             }}
           />
         </div>
@@ -395,7 +431,7 @@ const MessagesPage = () => {
         <MessagesSidebar
           activeFilter={activeFilter}
           unreadCount={unreadCount}
-          onFilterChange={setActiveFilter}
+          onFilterChange={handleFilterChange}
           onOpenBranding={handleOpenBranding}
           headerHeight={HEADER_HEIGHT}
         />
@@ -440,7 +476,7 @@ const MessagesPage = () => {
             description: "Your message has been sent successfully.",
           });
           setShowCompose(false);
-          loadMessages();
+          loadMessages(activeFilter, true);
         }}
       />
     </div>
