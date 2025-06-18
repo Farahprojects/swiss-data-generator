@@ -29,33 +29,33 @@ export const CleanEmailRenderer = ({ body, sentVia, direction }: CleanEmailRende
         })}
       </div>
 
-      {/* Quoted message section */}
+      {/* Quoted message section - Gmail style */}
       {parsedContent.quotedMessage && (
-        <div className="border-l-3 border-gray-300 pl-4 mt-6">
-          <div className="font-semibold text-gray-900 mb-2">
+        <div className="border-l-3 border-gray-300 pl-4 mt-8">
+          <div className="font-semibold text-gray-900 mb-3 text-sm">
             --- Original Message ---
           </div>
           
-          <div className="space-y-1 mb-3 text-sm">
+          <div className="space-y-1 mb-4 text-sm">
             <div>
-              <span className="font-medium text-gray-700">From:</span> {parsedContent.quotedMessage.from}
+              <span className="font-medium text-gray-900">From:</span> <span className="text-gray-600">{parsedContent.quotedMessage.from}</span>
             </div>
             {parsedContent.quotedMessage.date && (
               <div>
-                <span className="font-medium text-gray-700">Date:</span> {parsedContent.quotedMessage.date}
+                <span className="font-medium text-gray-900">Date:</span> <span className="text-gray-600">{parsedContent.quotedMessage.date}</span>
               </div>
             )}
             {parsedContent.quotedMessage.subject && (
               <div>
-                <span className="font-medium text-gray-700">Subject:</span> {parsedContent.quotedMessage.subject}
+                <span className="font-medium text-gray-900">Subject:</span> <span className="text-gray-600">{parsedContent.quotedMessage.subject}</span>
               </div>
             )}
           </div>
 
-          <div className="text-gray-600 leading-relaxed text-sm">
+          <div className="text-gray-700 leading-relaxed text-sm">
             {parsedContent.quotedMessage.content.split('\n').map((line, index) => {
               const trimmed = line.trim();
-              if (!trimmed) return <div key={index} className="h-2" />;
+              if (!trimmed) return <div key={index} className="h-3" />;
               
               return (
                 <p key={index} className="mb-2 last:mb-0">
