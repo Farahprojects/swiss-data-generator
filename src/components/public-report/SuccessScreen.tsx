@@ -15,9 +15,9 @@ const SuccessScreen = ({ name, email }: SuccessScreenProps) => {
 
   return (
     <div className="h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center">
-      <div className="container mx-auto px-4 text-center">
-        <Card className="max-w-2xl mx-auto border-2 border-primary/20">
-          <CardContent className="p-8">
+      <div className="container mx-auto px-4 flex items-center justify-center min-h-screen">
+        <Card className="max-w-2xl w-full border-2 border-primary/20">
+          <CardContent className="p-8 text-center">
             <div className="flex items-center justify-center gap-3 mb-6">
               <CheckCircle className="h-12 w-12 text-primary" />
               <div>
@@ -26,7 +26,7 @@ const SuccessScreen = ({ name, email }: SuccessScreenProps) => {
               </div>
             </div>
             
-            <div className="bg-primary/10 rounded-lg p-6 mb-6">
+            <div className="mb-6">
               <h3 className="text-lg font-semibold text-primary mb-2">Success!</h3>
               <p className="text-foreground">
                 Hi {firstName}, we sent an email to {email} with your free report. 
