@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
@@ -31,14 +32,15 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
   const days = [...Array(7)].map((_, i) => new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + i));
 
   return (
-    <div className="rounded bg-gray-100 overflow-x-auto">
+    <div className="border border-gray-100 rounded-lg overflow-hidden bg-white hover:shadow-md transition-all duration-200">
       <div className="grid grid-cols-7">
-        {days.map((day) => (
+        {days.map((day, index) => (
           <div
             key={day.toISOString()}
-            className={`py-1 px-2 text-xs font-bold text-center bg-white select-none
+            className={`py-2 px-2 text-xs font-bold text-center bg-white select-none
               ${isToday(day) ? "text-primary border-primary shadow" : ""}
               ${isWeekend(day) ? "bg-accent/20" : ""}
+              ${index < days.length - 1 ? 'border-r border-gray-100' : ''}
             `}
           >
             {day.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
@@ -46,15 +48,17 @@ export default function WeekView({ date, sessions, onSessionClick, clients = {} 
         ))}
       </div>
 
-      <div className="grid grid-cols-7 min-h-[200px] relative">
-        {days.map(day => {
+      <div className="grid grid-cols-7 min-h-[200px] relative border-t border-gray-100">
+        {days.map((day, index) => {
           const dayIsToday = isToday(day);
           const dayBg = "bg-white";
           const daySessions = sessions.filter(sess => sess.start_time.toDateString() === day.toDateString());
           return (
             <div
               key={day.toISOString()}
-              className={`p-1 min-h-[120px] flex flex-col gap-1 transition ${dayBg} group relative`}
+              className={`p-2 min-h-[120px] flex flex-col gap-1 transition ${dayBg} group relative
+                ${index < days.length - 1 ? 'border-r border-gray-100' : ''}
+              `}
               style={{
                 borderColor: dayIsToday ? "#6951f3" : undefined,
                 borderWidth: dayIsToday ? "2px" : undefined,
