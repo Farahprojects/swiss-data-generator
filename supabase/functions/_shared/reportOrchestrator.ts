@@ -1,4 +1,3 @@
-
 // Report orchestrator utility
 // Handles report processing workflow including balance checks and report generation
 
@@ -33,13 +32,13 @@ async function getNextEngine(supabase: any) {
     let nextIndex = 0; // Default to first engine
 
     if (lastReport && lastReport.engine_used) {
-      // Find current engine's position in the array
-      const currentIndex = EDGE_ENGINES.findIndex(engine => lastReport.engine_used.includes(engine));
+      // Use exact array lookup instead of .includes() - this is the key fix
+      const currentIndex = EDGE_ENGINES.indexOf(lastReport.engine_used);
       
       if (currentIndex !== -1) {
         // Move to next engine with wraparound
         nextIndex = (currentIndex + 1) % EDGE_ENGINES.length;
-        console.log(`[reportOrchestrator] Last engine contained: ${lastReport.engine_used}, found at index ${currentIndex}, selecting next index: ${nextIndex}`);
+        console.log(`[reportOrchestrator] Last engine: ${lastReport.engine_used}, found at index ${currentIndex}, selecting next index: ${nextIndex}`);
       } else {
         console.log(`[reportOrchestrator] Last engine '${lastReport.engine_used}' not found in engines array, defaulting to first`);
       }
@@ -289,7 +288,7 @@ async function generateReport(payload: ReportPayload, supabase: any) {
           title: `${payload.report_type.charAt(0).toUpperCase() + payload.report_type.slice(1)} ${payload.endpoint} Report`,
           content: reportResult.report,
           generated_at: new Date().toISOString(),
-          engine_used: selectedEngine // Track which engine was used
+          engine_used: selectedEngine // CRITICAL FIX: Store the actual edge function name, not AI model
         }
       };
     } catch (fetchErr) {
