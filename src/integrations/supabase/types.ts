@@ -906,6 +906,7 @@ export type Database = {
           created_at: string | null
           duration_ms: number | null
           endpoint: string
+          engine_used: string | null
           error_message: string | null
           id: string
           report_text: string | null
@@ -920,6 +921,7 @@ export type Database = {
           created_at?: string | null
           duration_ms?: number | null
           endpoint: string
+          engine_used?: string | null
           error_message?: string | null
           id?: string
           report_text?: string | null
@@ -934,6 +936,7 @@ export type Database = {
           created_at?: string | null
           duration_ms?: number | null
           endpoint?: string
+          engine_used?: string | null
           error_message?: string | null
           id?: string
           report_text?: string | null

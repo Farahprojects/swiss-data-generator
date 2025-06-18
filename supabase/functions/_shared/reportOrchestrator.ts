@@ -1,9 +1,10 @@
+
 // Report orchestrator utility
 // Handles report processing workflow including balance checks and report generation
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Round-robin engine selection for load balancing
+// Available edge engines for round-robin load balancing
 const EDGE_ENGINES = [
   "standard-report",
   "standard-report-one", 
@@ -11,13 +12,53 @@ const EDGE_ENGINES = [
   "standard-report-three"
 ];
 
-let engineIndex = 0;
-
-function getNextEngine() {
-  const engine = EDGE_ENGINES[engineIndex];
-  engineIndex = (engineIndex + 1) % EDGE_ENGINES.length;
-  console.log(`[reportOrchestrator] Selected engine: ${engine} (index: ${engineIndex - 1}/${EDGE_ENGINES.length - 1})`);
-  return engine;
+// Database-based round-robin engine selection
+async function getNextEngine(supabase: any) {
+  try {
+    console.log(`[reportOrchestrator] Selecting next engine using database-based round-robin`);
+    
+    // Get the most recently used engine from report_logs
+    const { data: lastReport, error } = await supabase
+      .from("report_logs")
+      .select("engine_used")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (error) {
+      console.error(`[reportOrchestrator] Error querying last engine: ${error.message}`);
+      console.log(`[reportOrchestrator] Defaulting to first engine due to query error`);
+      return EDGE_ENGINES[0];
+    }
+    
+    let nextEngineIndex = 0; // Default to first engine
+    
+    if (lastReport && lastReport.engine_used) {
+      console.log(`[reportOrchestrator] Last engine used: ${lastReport.engine_used}`);
+      
+      // Find the index of the last used engine
+      const lastEngineIndex = EDGE_ENGINES.indexOf(lastReport.engine_used);
+      
+      if (lastEngineIndex !== -1) {
+        // Move to next engine in round-robin fashion
+        nextEngineIndex = (lastEngineIndex + 1) % EDGE_ENGINES.length;
+        console.log(`[reportOrchestrator] Last engine '${lastReport.engine_used}' found at index ${lastEngineIndex}, selecting next at index ${nextEngineIndex}`);
+      } else {
+        console.log(`[reportOrchestrator] Last engine '${lastReport.engine_used}' not found in engines array, defaulting to first`);
+      }
+    } else {
+      console.log(`[reportOrchestrator] No previous reports found, defaulting to first engine`);
+    }
+    
+    const selectedEngine = EDGE_ENGINES[nextEngineIndex];
+    console.log(`[reportOrchestrator] Selected engine: ${selectedEngine} (index: ${nextEngineIndex}/${EDGE_ENGINES.length - 1})`);
+    
+    return selectedEngine;
+  } catch (error) {
+    console.error(`[reportOrchestrator] Unexpected error in getNextEngine: ${error instanceof Error ? error.message : String(error)}`);
+    console.log(`[reportOrchestrator] Falling back to first engine due to error`);
+    return EDGE_ENGINES[0];
+  }
 }
 
 // Initialize Supabase client
@@ -163,7 +204,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     const userId = payload.user_id;
     
     // Step 4: Generate the report
-    const report = await generateReport(payload);
+    const report = await generateReport(payload, supabase);
     
     if (!report.success) {
       return {
@@ -199,7 +240,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
  * Generate the appropriate report based on type
  * This will call the standard or premium report generation function
  */
-async function generateReport(payload: ReportPayload) {
+async function generateReport(payload: ReportPayload, supabase: any) {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     if (!supabaseUrl) {
@@ -207,8 +248,8 @@ async function generateReport(payload: ReportPayload) {
       throw new Error("Missing SUPABASE_URL environment variable");
     }
     
-    // Select next engine using round-robin
-    const selectedEngine = getNextEngine();
+    // Select next engine using database-based round-robin
+    const selectedEngine = await getNextEngine(supabase);
     console.log(`[reportOrchestrator] Using engine '${selectedEngine}' for ${payload.report_type} report`);
     
     try {
@@ -220,7 +261,8 @@ async function generateReport(payload: ReportPayload) {
         },
         body: JSON.stringify({
           ...payload,
-          reportType: payload.report_type // Pass the actual report type
+          reportType: payload.report_type, // Pass the actual report type
+          selectedEngine: selectedEngine // Pass the selected engine so it can be logged
         })
       });
       

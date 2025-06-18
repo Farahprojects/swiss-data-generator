@@ -1,4 +1,5 @@
 
+
 /*─────────────────────Made──────────────────────────────────────────────────────────
   standard-report.ts
   Edge Function: Generates standard reports using OpenAI's GPT-4o model
@@ -278,11 +279,12 @@ async function logReportAttempt(
   status: string,
   durationMs: number,
   errorMessage: string | null,
+  engineUsed: string,
   requestId: string
 ) {
   const logPrefix = `[standard-report][${requestId}]`;
   try {
-    console.log(`${logPrefix} Logging report attempt to report_logs table`);
+    console.log(`${logPrefix} Logging report attempt to report_logs table with engine: ${engineUsed}`);
     
     const { error } = await supabase.from("report_logs").insert({
       api_key: apiKey,
@@ -293,13 +295,14 @@ async function logReportAttempt(
       report_text: reportText,
       status: status,
       duration_ms: durationMs,
-      error_message: errorMessage
+      error_message: errorMessage,
+      engine_used: engineUsed
     });
     
     if (error) {
       console.error(`${logPrefix} Error logging report attempt: ${error.message}`);
     } else {
-      console.log(`${logPrefix} Successfully logged ${status} report attempt for user ${userId}`);
+      console.log(`${logPrefix} Successfully logged ${status} report attempt for user ${userId} with engine ${engineUsed}`);
     }
   } catch (err) {
     console.error(`${logPrefix} Failed to log report attempt: ${err instanceof Error ? err.message : String(err)}`);
@@ -345,9 +348,10 @@ serve(async (req) => {
       );
     }
     
-    // Extract the report type from the payload (either reportType or report_type)
+    // Extract the report type and selected engine from the payload
     const reportType = reportData.reportType || reportData.report_type || "standard";
-    console.log(`${logPrefix} Processing ${reportType} report for endpoint: ${reportData?.endpoint}`);
+    const selectedEngine = reportData.selectedEngine || "standard-report"; // Fall back to default if not provided
+    console.log(`${logPrefix} Processing ${reportType} report for endpoint: ${reportData?.endpoint} using engine: ${selectedEngine}`);
     console.log(`${logPrefix} Payload structure check - keys: ${Object.keys(reportData || {}).join(', ')}`);
 
     // Validate required fields
@@ -366,6 +370,7 @@ serve(async (req) => {
           "failed",
           Date.now() - startTime,
           "Missing required fields: chartData and endpoint are required",
+          selectedEngine,
           requestId
         );
       }
@@ -395,6 +400,7 @@ serve(async (req) => {
         "success",
         Date.now() - startTime,
         null,
+        selectedEngine,
         requestId
       );
     }
@@ -414,7 +420,7 @@ serve(async (req) => {
     // Log the failed attempt if we have user info
     if (err instanceof Error && err.cause && typeof err.cause === 'object' && err.cause !== null) {
       const payload = err.cause as any;
-      if (payload.apiKey && payload.user_id) {
+      if (payload.apiKey && payload.user_id && payload.selectedEngine) {
         await logReportAttempt(
           payload.apiKey,
           payload.user_id,
@@ -425,6 +431,7 @@ serve(async (req) => {
           "failed",
           Date.now() - startTime,
           errorMessage,
+          payload.selectedEngine,
           requestId
         );
       }
