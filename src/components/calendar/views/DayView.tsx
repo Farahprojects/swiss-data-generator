@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CalendarSession } from "@/types/calendar";
 import { EventCard } from "../EventCard";
@@ -25,9 +26,9 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
   const slotHeight = 40;
 
   return (
-    <div className="rounded overflow-hidden bg-white">
+    <div className="border border-gray-100 rounded-lg overflow-hidden bg-white hover:shadow-md transition-all duration-200">
       <div className="flex flex-col min-h-[400px] relative">
-        {TIMEBLOCKS.map((hr) => {
+        {TIMEBLOCKS.map((hr, index) => {
           const events = sessions.filter(
             (sess) =>
               sess.start_time.getHours() === hr &&
@@ -37,7 +38,9 @@ const DayView = ({ date, sessions, onSessionClick, clients = {} }: Props) => {
           return (
             <div
               key={hr}
-              className="flex items-stretch gap-1 px-2 py-0 bg-white relative"
+              className={`flex items-stretch gap-1 px-4 py-2 bg-white relative ${
+                index < TIMEBLOCKS.length - 1 ? 'border-b border-gray-100' : ''
+              }`}
               style={{ minHeight: slotHeight }}
             >
               <div className="w-16 flex items-center text-xs text-muted-foreground font-bold h-full">
