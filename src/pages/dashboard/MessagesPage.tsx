@@ -9,38 +9,48 @@ import { MobileComposeButton } from '@/components/messages/MobileComposeButton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import UnifiedNavigation from '@/components/UnifiedNavigation';
 import type { MessageFilterType } from '@/components/messages/MessagesSidebar';
+import type { EmailMessage } from '@/types/email';
 
 // Mock data for demonstration
-const mockMessages = [
+const mockMessages: EmailMessage[] = [
   {
     id: '1',
     subject: 'Welcome to our platform',
-    sender: 'team@example.com',
-    preview: 'Thank you for joining us. Here\'s everything you need to get started...',
-    timestamp: new Date('2024-01-15T10:30:00'),
-    isRead: false,
-    isStarred: true,
-    labels: ['inbox']
+    body: 'Thank you for joining us. Here\'s everything you need to get started with our comprehensive platform...',
+    from_address: 'team@example.com',
+    to_address: 'user@example.com',
+    direction: 'incoming',
+    created_at: '2024-01-15T10:30:00Z',
+    sent_via: 'email',
+    is_read: false,
+    is_starred: true,
+    is_archived: false
   },
   {
     id: '2',
     subject: 'Your report is ready',
-    sender: 'reports@example.com',
-    preview: 'Your monthly analytics report has been generated and is ready for review...',
-    timestamp: new Date('2024-01-14T14:22:00'),
-    isRead: true,
-    isStarred: false,
-    labels: ['inbox']
+    body: 'Your monthly analytics report has been generated and is ready for review. Please find the detailed insights attached.',
+    from_address: 'reports@example.com',
+    to_address: 'user@example.com',
+    direction: 'incoming',
+    created_at: '2024-01-14T14:22:00Z',
+    sent_via: 'email',
+    is_read: true,
+    is_starred: false,
+    is_archived: false
   },
   {
     id: '3',
     subject: 'Meeting reminder',
-    sender: 'calendar@example.com',
-    preview: 'Don\'t forget about your upcoming meeting tomorrow at 2 PM...',
-    timestamp: new Date('2024-01-13T09:15:00'),
-    isRead: false,
-    isStarred: false,
-    labels: ['inbox']
+    body: 'Don\'t forget about your upcoming meeting tomorrow at 2 PM. We\'ll be discussing the quarterly results and future plans.',
+    from_address: 'calendar@example.com',
+    to_address: 'user@example.com',
+    direction: 'incoming',
+    created_at: '2024-01-13T09:15:00Z',
+    sent_via: 'email',
+    is_read: false,
+    is_starred: false,
+    is_archived: false
   }
 ];
 
@@ -58,21 +68,21 @@ const MessagesPage = () => {
   const filteredMessages = mockMessages.filter(message => {
     switch (activeFilter) {
       case 'inbox':
-        return message.labels.includes('inbox');
+        return message.direction === 'incoming' && !message.is_archived;
       case 'sent':
-        return message.labels.includes('sent');
+        return message.direction === 'outgoing';
       case 'starred':
-        return message.isStarred;
+        return message.is_starred;
       case 'archive':
-        return message.labels.includes('archive');
+        return message.is_archived;
       case 'trash':
-        return message.labels.includes('trash');
+        return false; // No trash messages in mock data
       default:
-        return message.labels.includes('inbox');
+        return message.direction === 'incoming' && !message.is_archived;
     }
   });
 
-  const unreadCount = mockMessages.filter(msg => !msg.isRead && msg.labels.includes('inbox')).length;
+  const unreadCount = mockMessages.filter(msg => !msg.is_read && msg.direction === 'incoming' && !msg.is_archived).length;
   const selectedMessage = mockMessages.find(msg => msg.id === selectedMessageId);
 
   const handleFilterChange = (filter: MessageFilterType) => {
