@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,8 +21,6 @@ import {
 } from "@/utils/messageActions";
 import { EmailMessage } from "@/types/email";
 import UnifiedNavigation from '@/components/UnifiedNavigation';
-import { useNavigate } from 'react-router-dom';
-import { EmailBrandingPanel } from '@/components/messages/EmailBrandingPanel';
 
 const HEADER_HEIGHT = 72;
 
@@ -39,11 +38,9 @@ const MessagesPage = () => {
   const [showCompose, setShowCompose] = useState(false);
   const [activeFilter, setActiveFilter] = useState<MessageFilterType>('inbox');
   const [isLoadingInProgress, setIsLoadingInProgress] = useState(false);
-  const [showEmailBranding, setShowEmailBranding] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
 
   // Load messages based on the active filter with proper error handling
   const loadMessages = useCallback(async (filter: MessageFilterType = activeFilter, forceRefresh = false) => {
@@ -155,9 +152,6 @@ const MessagesPage = () => {
     setSelectedMessage(null);
     setSelectedMessages(new Set());
     
-    // Hide email branding if showing
-    setShowEmailBranding(false);
-    
     // Load messages for the new filter
     await loadMessages(newFilter, true);
   }, [isLoadingInProgress, loadMessages]);
@@ -186,7 +180,6 @@ const MessagesPage = () => {
 
   const handleSelectMessage = async (message: EmailMessage) => {
     setSelectedMessage(message);
-    setShowEmailBranding(false); // Hide branding when selecting message
 
     // Mark as read in database (if not already)
     if (!message.is_read) {
@@ -224,12 +217,10 @@ const MessagesPage = () => {
   };
 
   const handleOpenBranding = () => {
-    setShowEmailBranding(true);
-    setSelectedMessage(null);
-  };
-
-  const handleCloseBranding = () => {
-    setShowEmailBranding(false);
+    toast({
+      title: "Branding Settings",
+      description: "Email branding features coming soon!",
+    });
   };
 
   const handleReply = () => {
@@ -362,8 +353,6 @@ const MessagesPage = () => {
                   <div className="text-sm text-gray-500">Loading...</div>
                 </div>
               </div>
-            ) : showEmailBranding ? (
-              <EmailBrandingPanel onBack={handleCloseBranding} />
             ) : selectedMessage ? (
               <GmailMessageDetail
                 message={selectedMessage}
@@ -426,18 +415,16 @@ const MessagesPage = () => {
         </div>
         <div className="ml-64 flex items-center gap-4 w-full pr-10">
           <h1 className="text-2xl font-normal text-gray-900 min-w-fit mr-4">
-            {showEmailBranding ? 'Email Branding' : 'Messages'}
+            Messages
           </h1>
-          {!showEmailBranding && (
-            <div className="relative flex-1 max-w-2xl">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search mail"
-                value={searchParams.get('search') || ''}
-                className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
-              />
-            </div>
-          )}
+          <div className="relative flex-1 max-w-2xl">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search mail"
+              value={searchParams.get('search') || ''}
+              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
+            />
+          </div>
         </div>
       </div>
       <div className="flex">
@@ -455,8 +442,6 @@ const MessagesPage = () => {
                 <div className="text-sm text-gray-500">Loading...</div>
               </div>
             </div>
-          ) : showEmailBranding ? (
-            <EmailBrandingPanel onBack={handleCloseBranding} />
           ) : selectedMessage ? (
             <GmailMessageDetail
               message={selectedMessage}

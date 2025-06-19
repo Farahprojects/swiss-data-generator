@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -9,7 +8,9 @@ import {
   Star, 
   Archive, 
   Trash2, 
-  Settings,
+  Settings, 
+  Upload,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,7 +23,6 @@ interface MessagesSidebarProps {
   onFilterChange: (filter: MessageFilterType) => void;
   onOpenBranding: () => void;
   headerHeight?: number;
-  showEmailBranding?: boolean;
 }
 
 export const MessagesSidebar = ({
@@ -30,17 +30,20 @@ export const MessagesSidebar = ({
   unreadCount,
   onFilterChange,
   onOpenBranding,
-  headerHeight = 72,
-  showEmailBranding = false
+  headerHeight = 72
 }: MessagesSidebarProps) => {
-  const navigate = useNavigate();
-
   const navigationItems = [
     { id: 'inbox', label: 'Inbox', icon: Inbox, count: unreadCount },
     { id: 'sent', label: 'Sent', icon: Send },
     { id: 'starred', label: 'Starred', icon: Star },
     { id: 'archive', label: 'Archive', icon: Archive },
     { id: 'trash', label: 'Trash', icon: Trash2 },
+  ];
+
+  const brandingItems = [
+    { id: 'signatures', label: 'Email Signatures', icon: FileText },
+    { id: 'logo', label: 'Logo & Branding', icon: Upload },
+    { id: 'templates', label: 'Email Templates', icon: FileText },
   ];
 
   const handleFilterClick = (e: React.MouseEvent, filter: MessageFilterType) => {
@@ -53,7 +56,7 @@ export const MessagesSidebar = ({
   const handleBrandingClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    navigate('/dashboard/email-branding');
+    onOpenBranding();
   };
 
   return (
@@ -70,7 +73,7 @@ export const MessagesSidebar = ({
                 key={item.id}
                 className={cn(
                   "w-full flex items-center gap-3 h-10 rounded text-left px-3 py-2 transition-colors",
-                  activeFilter === item.id && !showEmailBranding
+                  activeFilter === item.id
                     ? "bg-accent text-accent-foreground hover:bg-accent/80"
                     : "bg-transparent text-gray-700 hover:bg-accent/30"
                 )}
@@ -94,22 +97,20 @@ export const MessagesSidebar = ({
           <div className="p-3">
             <h3 className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
               <Settings className="w-4 h-4" />
-              Email Settings
+              Email Branding
             </h3>
             <div className="space-y-1">
-              <button
-                className={cn(
-                  "w-full flex items-center gap-2 h-8 text-sm rounded px-2 transition-colors",
-                  showEmailBranding
-                    ? "bg-accent text-accent-foreground"
-                    : "hover:bg-accent/30"
-                )}
-                type="button"
-                onClick={handleBrandingClick}
-              >
-                <Settings className="w-3 h-3" />
-                Email Branding
-              </button>
+              {brandingItems.map((item) => (
+                <button
+                  key={item.id}
+                  className="w-full flex items-center gap-2 h-8 text-sm rounded hover:bg-accent/30 px-2 transition-colors"
+                  type="button"
+                  onClick={handleBrandingClick}
+                >
+                  <item.icon className="w-3 h-3" />
+                  {item.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
