@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { MobileComposeButton } from '@/components/messages/MobileComposeButton';
 import { EmailBrandingPanel } from '@/components/messages/EmailBrandingPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSearchParams } from "react-router-dom";
+import { useDebounceSearch } from '@/hooks/useDebounceSearch';
 import {
   toggleStarMessage,
   archiveMessages,
@@ -33,7 +35,7 @@ const MessagesPage = () => {
   const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null);
   const [loading, setLoading] = useState(true);
   const [contentLoading, setContentLoading] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [showCompose, setShowCompose] = useState(false);
   const [showEmailBranding, setShowEmailBranding] = useState(false);
@@ -43,8 +45,23 @@ const MessagesPage = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
-  // Load messages based on the active filter with proper error handling
-  const loadMessages = useCallback(async (filter: MessageFilterType = activeFilter, forceRefresh = false) => {
+  // Initialize search with URL search params
+  const initialSearch = searchParams.get('search') || '';
+  const { searchValue, debouncedValue: debouncedSearchValue, setSearchValue } = useDebounceSearch(initialSearch);
+
+  // Update URL when search value changes
+  useEffect(() => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (searchValue) {
+      newSearchParams.set('search', searchValue);
+    } else {
+      newSearchParams.delete('search');
+    }
+    setSearchParams(newSearchParams, { replace: true });
+  }, [searchValue, searchParams, setSearchParams]);
+
+  // Load messages based on the active filter with search support
+  const loadMessages = useCallback(async (filter: MessageFilterType = activeFilter, searchQuery = '', forceRefresh = false) => {
     if (!user?.id) {
       console.log('No user ID available');
       setLoading(false);
@@ -67,7 +84,7 @@ const MessagesPage = () => {
         setLoading(true);
       }
       
-      console.log('Loading messages for filter:', filter, 'user:', user.id);
+      console.log('Loading messages for filter:', filter, 'search:', searchQuery, 'user:', user.id);
       
       let query = supabase
         .from('email_messages')
@@ -98,6 +115,12 @@ const MessagesPage = () => {
           query = query.eq('direction', 'inbound').eq('is_archived', false);
       }
 
+      // Add search conditions if search query exists
+      if (searchQuery.trim()) {
+        const searchTerm = `%${searchQuery.trim()}%`;
+        query = query.or(`subject.ilike.${searchTerm},body.ilike.${searchTerm},from_address.ilike.${searchTerm},to_address.ilike.${searchTerm}`);
+      }
+
       query = query.order('created_at', { ascending: false });
 
       const { data, error } = await query;
@@ -118,7 +141,7 @@ const MessagesPage = () => {
         } as EmailMessage;
       });
       
-      console.log(`Loaded ${messagesData.length} messages for filter: ${filter}`);
+      console.log(`Loaded ${messagesData.length} messages for filter: ${filter}, search: "${searchQuery}"`);
       setMessages(messagesData);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -154,31 +177,29 @@ const MessagesPage = () => {
     setSelectedMessages(new Set());
     setShowEmailBranding(false);
     
+    // Clear search when changing filters
+    setSearchValue('');
+    
     // Load messages for the new filter
-    await loadMessages(newFilter, true);
-  }, [isLoadingInProgress, loadMessages]);
+    await loadMessages(newFilter, '', true);
+  }, [isLoadingInProgress, loadMessages, setSearchValue]);
 
   // Load messages when user changes or on initial load
   useEffect(() => {
     if (user?.id) {
-      loadMessages(activeFilter);
+      loadMessages(activeFilter, debouncedSearchValue);
     }
-  }, [user?.id]); // Only depend on user ID for initial load
+  }, [user?.id, debouncedSearchValue]); // Depend on debounced search value
 
-  // Filter out hidden messages for display
+  // Reload messages when filter changes (but not search, as that's handled above)
+  useEffect(() => {
+    if (user?.id && !debouncedSearchValue) {
+      loadMessages(activeFilter, '', false);
+    }
+  }, [activeFilter]);
+
+  // Filter out hidden messages for display (no client-side search filtering needed anymore)
   const visibleMessages = messages.filter(message => !hiddenMessages.has(message.id));
-
-  const filteredMessages = visibleMessages.filter(message => {
-    const searchTerm = searchParams.get('search') || '';
-    if (!searchTerm) return true;
-    
-    const matchesSearch = message.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      message.from_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      message.to_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      message.body?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesSearch;
-  });
 
   const handleSelectMessage = async (message: EmailMessage) => {
     setSelectedMessage(message);
@@ -201,7 +222,7 @@ const MessagesPage = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedMessages(new Set(filteredMessages.map(m => m.id)));
+      setSelectedMessages(new Set(visibleMessages.map(m => m.id)));
     } else {
       setSelectedMessages(new Set());
     }
@@ -320,7 +341,8 @@ const MessagesPage = () => {
   const unreadCount = messages.filter(m => !m.is_read && m.direction === 'incoming').length;
 
   console.log('Current filter:', activeFilter);
-  console.log('Filtered messages count:', filteredMessages.length);
+  console.log('Search query:', debouncedSearchValue);
+  console.log('Visible messages count:', visibleMessages.length);
   console.log('Total messages count:', messages.length);
   console.log('Hidden messages count:', hiddenMessages.size);
   console.log('Loading in progress:', isLoadingInProgress);
@@ -368,7 +390,7 @@ const MessagesPage = () => {
               />
             ) : (
               <GmailMessageList
-                messages={filteredMessages}
+                messages={visibleMessages}
                 selectedMessages={selectedMessages}
                 selectedMessage={null}
                 onSelectMessage={handleSelectMessage}
@@ -391,7 +413,7 @@ const MessagesPage = () => {
                 description: "Your message has been sent successfully.",
               });
               setShowCompose(false);
-              loadMessages(activeFilter, true);
+              loadMessages(activeFilter, debouncedSearchValue, true);
             }}
           />
         </div>
@@ -426,7 +448,8 @@ const MessagesPage = () => {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Search mail"
-                value={searchParams.get('search') || ''}
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
                 className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
               />
             </div>
@@ -462,7 +485,7 @@ const MessagesPage = () => {
             />
           ) : (
             <GmailMessageList
-              messages={filteredMessages}
+              messages={visibleMessages}
               selectedMessages={selectedMessages}
               selectedMessage={null}
               onSelectMessage={handleSelectMessage}
@@ -485,7 +508,7 @@ const MessagesPage = () => {
             description: "Your message has been sent successfully.",
           });
           setShowCompose(false);
-          loadMessages(activeFilter, true);
+          loadMessages(activeFilter, debouncedSearchValue, true);
         }}
       />
     </div>
