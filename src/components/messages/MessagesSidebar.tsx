@@ -74,8 +74,8 @@ export const MessagesSidebar = ({
                 className={cn(
                   "w-full flex items-center gap-3 h-10 rounded text-left px-3 py-2 transition-colors",
                   activeFilter === item.id
-                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                    : "bg-transparent text-gray-700 hover:bg-gray-100"
+                    ? "bg-accent text-accent-foreground hover:bg-accent/80"
+                    : "bg-transparent text-gray-700 hover:bg-accent/30"
                 )}
                 onClick={(e) => handleFilterClick(e, item.id as MessageFilterType)}
                 type="button"
@@ -83,7 +83,7 @@ export const MessagesSidebar = ({
                 <item.icon className="w-4 h-4" />
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.count && item.count > 0 && (
-                  <Badge variant="secondary" className="ml-auto bg-blue-100 text-blue-700">
+                  <Badge variant="secondary" className="ml-auto bg-accent text-accent-foreground">
                     {item.count}
                   </Badge>
                 )}
@@ -103,7 +103,7 @@ export const MessagesSidebar = ({
               {brandingItems.map((item) => (
                 <button
                   key={item.id}
-                  className="w-full flex items-center gap-2 h-8 text-sm rounded hover:bg-gray-100 px-2 transition-colors"
+                  className="w-full flex items-center gap-2 h-8 text-sm rounded hover:bg-accent/30 px-2 transition-colors"
                   type="button"
                   onClick={handleBrandingClick}
                 >
