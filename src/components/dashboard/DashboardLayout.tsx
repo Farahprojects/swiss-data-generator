@@ -1,3 +1,4 @@
+
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,7 +27,8 @@ const DashboardLayout = () => {
     location.pathname === '/dashboard/clients' ||
     location.pathname === '/dashboard/reports' ||
     location.pathname === '/dashboard/reports/create' ||
-    location.pathname === '/dashboard/calendar'; // Added calendar!
+    location.pathname === '/dashboard/calendar' ||
+    location.pathname === '/dashboard/email-branding';
 
   // Handle settings route redirects
   useEffect(() => {
@@ -53,14 +55,15 @@ const DashboardLayout = () => {
     });
   }, [user, location.pathname]);
 
-  // Dashboard pages with burger menu get full width without sidebar (like website builder, messages, clients)
+  // Dashboard pages with burger menu get full width without sidebar
   if (
     location.pathname === '/dashboard/website-builder' ||
     location.pathname === '/dashboard/messages' ||
     location.pathname === '/dashboard/clients' ||
     location.pathname === '/dashboard/reports' ||
     location.pathname === '/dashboard/reports/create' ||
-    location.pathname === '/dashboard/calendar'
+    location.pathname === '/dashboard/calendar' ||
+    location.pathname === '/dashboard/email-branding'
   ) {
     return (
       <div className="min-h-screen flex flex-col w-full">
