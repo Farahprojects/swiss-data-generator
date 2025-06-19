@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,7 +40,7 @@ const SubmissionSection = ({
   }, [hasErrors, errors]);
 
   return (
-    <FormStep stepNumber={0} title="Ready to Generate Your Report?" className="bg-background">
+    <FormStep stepNumber={4} title="Ready to Generate Your Report?" className="bg-background">
       <div className="space-y-8 text-center">
         {/* Show validation errors if any */}
         {hasErrors && (

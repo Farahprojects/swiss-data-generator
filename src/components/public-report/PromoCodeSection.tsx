@@ -20,7 +20,7 @@ const PromoCodeSection = ({
   onPromoCodeChange 
 }: PromoCodeSectionProps) => {
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-xs mx-auto">
       <div className="text-center mb-3">
         <span className="text-base font-bold text-muted-foreground">Have a promo code?</span>
       </div>
@@ -30,7 +30,8 @@ const PromoCodeSection = ({
           <Input
             {...register('promoCode')}
             placeholder="Enter here"
-            className="text-center px-12 py-6 text-lg"
+            className="text-center px-4 py-3 text-base"
+            maxLength={10}
             onChange={(e) => {
               register('promoCode').onChange(e);
               onPromoCodeChange(e.target.value);
