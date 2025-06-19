@@ -69,36 +69,28 @@ export const GmailMessageList = ({
   const allSelected = messages.length > 0 && messages.every(m => selectedMessages.has(m.id));
 
   return (
-    <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
-      {/* Floating Action Toolbar - Thinner Capsule Style */}
-      <div className="sticky top-24 z-20 flex justify-start px-2 py-1">
-        <div className="bg-white/95 backdrop-blur-sm shadow-lg rounded-full border border-gray-200/50 px-2 py-1">
-          <div className="flex items-center gap-1.5">
-            {/* Select All Checkbox */}
-            <div className="flex items-center">
-              <Checkbox
-                checked={allSelected}
-                onCheckedChange={onSelectAll}
-                className="rounded-sm"
-              />
-            </div>
-            
-            {/* Divider */}
-            <div className="w-px h-4 bg-gray-300"></div>
-            
-            {/* Delete Button */}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-7 w-7 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
-              onClick={onDeleteSelected}
-              disabled={selectedMessages.size === 0}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-        </div>
-      </div>
+    <div className="sticky top-[10rem] z-20 flex justify-start px-4 py-1 ml-2">
+  <div className="bg-white/95 backdrop-blur-sm shadow-md rounded-full border border-gray-200/50 px-3 py-1.5">
+    <div className="flex items-center gap-2">
+      <Checkbox
+        checked={allSelected}
+        onCheckedChange={onSelectAll}
+        className="rounded-sm"
+      />
+      <div className="w-px h-4 bg-gray-300"></div>
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="h-7 w-7 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
+        onClick={onDeleteSelected}
+        disabled={selectedMessages.size === 0}
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </Button>
+    </div>
+  </div>
+</div>
+
 
       {/* Message List - Scrollable */}
       <div className="flex-1 overflow-y-auto">
