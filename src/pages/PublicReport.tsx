@@ -56,7 +56,7 @@ const PublicReport = () => {
     },
   });
 
-  const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
+  const { register, handleSubmit, watch, setValue, control, trigger, formState: { errors, isValid } } = form;
   const selectedReportType = watch('reportType');
   const userName = watch('name');
   const userEmail = watch('email');
@@ -117,6 +117,8 @@ const PublicReport = () => {
             selectedReportType={selectedReportType}
             showReportGuide={showReportGuide}
             setShowReportGuide={setShowReportGuide}
+            trigger={trigger}
+            watch={watch}
           />
 
           {selectedReportType && (
