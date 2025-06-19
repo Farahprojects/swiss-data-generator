@@ -1,6 +1,6 @@
 
-import React, { useRef, useEffect } from 'react';
-import { Control, Controller, FieldErrors, UseFormTrigger } from 'react-hook-form';
+import React from 'react';
+import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,8 +16,6 @@ interface ReportTypeSelectorProps {
   selectedReportType: string;
   showReportGuide: boolean;
   setShowReportGuide: (show: boolean) => void;
-  trigger: UseFormTrigger<ReportFormData>;
-  watch: (field?: string) => any;
 }
 
 const ReportTypeSelector = ({ 
@@ -25,89 +23,18 @@ const ReportTypeSelector = ({
   errors, 
   selectedReportType,
   showReportGuide,
-  setShowReportGuide,
-  trigger,
-  watch
+  setShowReportGuide 
 }: ReportTypeSelectorProps) => {
-  const sectionRef = useRef<HTMLDivElement>(null);
   const requiresEssenceType = selectedReportType === 'essence';
   const requiresReturnYear = selectedReportType === 'return';
   const requiresRelationshipType = selectedReportType === 'sync' || selectedReportType === 'compatibility';
 
-  const essenceType = watch('essenceType');
-  const relationshipType = watch('relationshipType');
-
   const getCurrentYear = () => new Date().getFullYear();
-
-  // Intersection Observer to detect when section is leaving viewport
-  useEffect(() => {
-    if (!sectionRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        // When section is leaving viewport (intersectionRatio is decreasing and below threshold)
-        if (entry.intersectionRatio < 0.5 && !entry.isIntersecting) {
-          // Validate required fields based on selected report type
-          if (requiresEssenceType && (!essenceType || essenceType === '')) {
-            trigger('essenceType');
-          }
-          if (requiresRelationshipType && (!relationshipType || relationshipType === '')) {
-            trigger('relationshipType');
-          }
-        }
-      },
-      {
-        threshold: [0.5],
-        rootMargin: '-50px 0px -50px 0px'
-      }
-    );
-
-    observer.observe(sectionRef.current);
-
-    return () => observer.disconnect();
-  }, [requiresEssenceType, requiresRelationshipType, essenceType, relationshipType, trigger]);
-
-  // Also trigger validation on scroll events for more immediate feedback
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!sectionRef.current) return;
-      
-      const rect = sectionRef.current.getBoundingClientRect();
-      const isLeavingViewport = rect.bottom < window.innerHeight * 0.6;
-      
-      if (isLeavingViewport) {
-        if (requiresEssenceType && (!essenceType || essenceType === '')) {
-          trigger('essenceType');
-        }
-        if (requiresRelationshipType && (!relationshipType || relationshipType === '')) {
-          trigger('relationshipType');
-        }
-      }
-    };
-
-    const throttledScroll = throttle(handleScroll, 100);
-    window.addEventListener('scroll', throttledScroll, { passive: true });
-    
-    return () => window.removeEventListener('scroll', throttledScroll);
-  }, [requiresEssenceType, requiresRelationshipType, essenceType, relationshipType, trigger]);
-
-  // Simple throttle function
-  function throttle(func: Function, limit: number) {
-    let inThrottle: boolean;
-    return function(this: any, ...args: any[]) {
-      if (!inThrottle) {
-        func.apply(this, args);
-        inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
-      }
-    }
-  }
 
   return (
     <>
       <FormStep stepNumber={1} title="Choose Your Report Type" className="bg-background">
-        <div ref={sectionRef} className="space-y-6">
+        <div className="space-y-6">
           <button
             type="button"
             onClick={() => setShowReportGuide(true)}
@@ -153,11 +80,7 @@ const ReportTypeSelector = ({
                       type="single"
                       value={field.value}
                       onValueChange={field.onChange}
-                      className={`justify-center flex-wrap gap-2 transition-all duration-200 ${
-                        errors.essenceType 
-                          ? 'ring-2 ring-destructive ring-offset-2 bg-destructive/5 rounded-lg p-2' 
-                          : ''
-                      }`}
+                      className="justify-center flex-wrap gap-2"
                     >
                       {essenceTypes.map((type) => (
                         <ToggleGroupItem 
@@ -172,11 +95,7 @@ const ReportTypeSelector = ({
                   )}
                 />
                 {errors.essenceType && (
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                    <p className="text-sm text-destructive font-medium">
-                      ⚠️ Please select an essence focus before continuing
-                    </p>
-                  </div>
+                  <p className="text-sm text-destructive">{errors.essenceType.message}</p>
                 )}
               </div>
             )}
@@ -212,11 +131,7 @@ const ReportTypeSelector = ({
                       type="single"
                       value={field.value}
                       onValueChange={field.onChange}
-                      className={`justify-center flex-wrap gap-2 transition-all duration-200 ${
-                        errors.relationshipType 
-                          ? 'ring-2 ring-destructive ring-offset-2 bg-destructive/5 rounded-lg p-2' 
-                          : ''
-                      }`}
+                      className="justify-center flex-wrap gap-2"
                     >
                       {relationshipTypes.map((type) => (
                         <ToggleGroupItem 
@@ -231,11 +146,7 @@ const ReportTypeSelector = ({
                   )}
                 />
                 {errors.relationshipType && (
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                    <p className="text-sm text-destructive font-medium">
-                      ⚠️ Please select a relationship type before continuing
-                    </p>
-                  </div>
+                  <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
                 )}
               </div>
             )}
