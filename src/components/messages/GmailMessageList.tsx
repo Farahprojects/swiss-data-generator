@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -69,10 +70,10 @@ export const GmailMessageList = ({
 
   return (
     <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
-      {/* Floating Action Toolbar - Capsule Style */}
-      <div className="sticky top-24 z-20 flex justify-center px-4 py-3">
-        <div className="bg-white/95 backdrop-blur-sm shadow-lg rounded-full border border-gray-200/50 px-4 py-2">
-          <div className="flex items-center gap-3">
+      {/* Floating Action Toolbar - Thinner Capsule Style */}
+      <div className="sticky top-24 z-20 flex justify-start px-6 py-2">
+        <div className="bg-white/95 backdrop-blur-sm shadow-lg rounded-full border border-gray-200/50 px-3 py-1.5">
+          <div className="flex items-center gap-2">
             {/* Select All Checkbox */}
             <div className="flex items-center">
               <Checkbox
@@ -83,17 +84,17 @@ export const GmailMessageList = ({
             </div>
             
             {/* Divider */}
-            <div className="w-px h-6 bg-gray-300"></div>
+            <div className="w-px h-5 bg-gray-300"></div>
             
             {/* Delete Button */}
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 w-8 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
+              className="h-7 w-7 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
               onClick={onDeleteSelected}
               disabled={selectedMessages.size === 0}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
