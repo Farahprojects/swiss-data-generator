@@ -372,8 +372,8 @@ const MessagesPage = () => {
               />
             ) : (
               <>
-                {/* Sticky Mobile Toolbar */}
-                <div className="sticky top-16 z-20 bg-white border-b flex-shrink-0">
+                {/* Sticky Mobile Toolbar - moved lower */}
+                <div className="sticky top-20 z-20 bg-white border-b flex-shrink-0">
                   <div className="grid grid-cols-[48px_1fr_90px] items-center px-2 py-2">
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -485,8 +485,8 @@ const MessagesPage = () => {
             />
           ) : (
             <>
-              {/* Sticky Desktop Toolbar */}
-              <div className="sticky top-[88px] z-20 bg-gray-50/50 border-b flex-shrink-0">
+              {/* Sticky Desktop Toolbar - moved lower */}
+              <div className="sticky top-[104px] z-20 bg-gray-50/50 border-b flex-shrink-0">
                 <div className="grid grid-cols-[48px_1fr_90px] items-center px-2 py-2">
                   <div className="flex items-center gap-2">
                     <Checkbox
@@ -505,7 +505,7 @@ const MessagesPage = () => {
                   <div />
                 </div>
               </div>
-              <div className="h-[calc(100vh-160px)]">
+              <div className="h-[calc(100vh-176px)]">
                 <GmailMessageList
                   messages={filteredMessages}
                   selectedMessages={selectedMessages}
