@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
@@ -44,7 +43,7 @@ const ReportTypeSelector = ({
           <button
             type="button"
             onClick={() => setShowReportGuide(true)}
-            className="text-foreground hover:text-primary font-bold underline mx-auto block"
+            className="text-primary hover:text-primary-hover text-lg font-bold mx-auto block transition-colors"
           >
             Not sure which report to choose? Click here.
           </button>
