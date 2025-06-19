@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Plus } from 'lucide-react';
+import { Archive, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -336,6 +338,8 @@ const MessagesPage = () => {
     );
   }
 
+  const allSelected = filteredMessages.length > 0 && filteredMessages.every(m => selectedMessages.has(m.id));
+
   if (isMobile) {
     // Mobile layout: Remove in-page search bar section
     return (
@@ -367,18 +371,37 @@ const MessagesPage = () => {
                 onDelete={handleDelete}
               />
             ) : (
-              <GmailMessageList
-                messages={filteredMessages}
-                selectedMessages={selectedMessages}
-                selectedMessage={null}
-                onSelectMessage={handleSelectMessage}
-                onSelectMessageCheckbox={handleSelectMessageCheckbox}
-                onSelectAll={handleSelectAll}
-                onArchiveSelected={handleArchiveSelected}
-                onDeleteSelected={handleDeleteSelected}
-                onToggleStar={handleToggleStar}
-                mobileDense
-              />
+              <>
+                {/* Sticky Mobile Toolbar */}
+                <div className="sticky top-16 z-20 bg-white border-b flex-shrink-0">
+                  <div className="grid grid-cols-[48px_1fr_90px] items-center px-2 py-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={handleSelectAll}
+                        className="rounded"
+                      />
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleArchiveSelected}>
+                        <Archive className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleDeleteSelected}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div />
+                    <div />
+                  </div>
+                </div>
+                <GmailMessageList
+                  messages={filteredMessages}
+                  selectedMessages={selectedMessages}
+                  selectedMessage={null}
+                  onSelectMessage={handleSelectMessage}
+                  onSelectMessageCheckbox={handleSelectMessageCheckbox}
+                  onToggleStar={handleToggleStar}
+                  mobileDense
+                />
+              </>
             )}
           </div>
           {/* Compose Modal */}
@@ -461,17 +484,38 @@ const MessagesPage = () => {
               onDelete={handleDelete}
             />
           ) : (
-            <GmailMessageList
-              messages={filteredMessages}
-              selectedMessages={selectedMessages}
-              selectedMessage={null}
-              onSelectMessage={handleSelectMessage}
-              onSelectMessageCheckbox={handleSelectMessageCheckbox}
-              onSelectAll={handleSelectAll}
-              onArchiveSelected={handleArchiveSelected}
-              onDeleteSelected={handleDeleteSelected}
-              onToggleStar={handleToggleStar}
-            />
+            <>
+              {/* Sticky Desktop Toolbar */}
+              <div className="sticky top-[88px] z-20 bg-gray-50/50 border-b flex-shrink-0">
+                <div className="grid grid-cols-[48px_1fr_90px] items-center px-2 py-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={handleSelectAll}
+                      className="rounded"
+                    />
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleArchiveSelected}>
+                      <Archive className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleDeleteSelected}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div />
+                  <div />
+                </div>
+              </div>
+              <div className="h-[calc(100vh-160px)]">
+                <GmailMessageList
+                  messages={filteredMessages}
+                  selectedMessages={selectedMessages}
+                  selectedMessage={null}
+                  onSelectMessage={handleSelectMessage}
+                  onSelectMessageCheckbox={handleSelectMessageCheckbox}
+                  onToggleStar={handleToggleStar}
+                />
+              </div>
+            </>
           )}
         </div>
       </div>
