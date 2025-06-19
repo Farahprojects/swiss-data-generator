@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Star, Clock, Shield } from 'lucide-react';
 
@@ -7,8 +6,8 @@ const HeroSection = () => {
     <section className="h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20" style={{ scrollSnapAlign: 'start' }}>
       <div className="container mx-auto px-4 text-center">
         <h1 className="text-4xl md:text-6xl font-bold mb-6">
-          See the Mirror in your eyes
-          <span className="text-primary block mt-2"> Your Subconscious, Unlocked</span>
+          Your Subconscious, Unlocked
+          <span className="text-primary block mt-2">The Mirror in your eyes</span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
           Reveal the subconscious patterns shaping your life — your drive, your resistance, your rhythm. Mapped at birth. Reflected back now.
