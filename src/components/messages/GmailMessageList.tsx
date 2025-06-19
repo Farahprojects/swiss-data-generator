@@ -100,24 +100,27 @@ export const GmailMessageList = ({
             <p className="text-sm">Your messages will appear here</p>
           </div>
         ) : (
-          <div>
-            {messages.map((message) => (
-              <MessageRow
-                key={message.id}
-                message={message}
-                isSelected={selectedMessages.has(message.id)}
-                onSelect={() => onSelectMessage(message)}
-                onCheckboxChange={(checked) => onSelectMessageCheckbox(message.id, checked)}
-                formatDate={formatDate}
-                truncateText={truncateText}
-                onToggleStar={() => onToggleStar(message)}
-                mobileDense={mobileDense}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+          <div className="absolute top-[7rem] left-6 z-30">
+  <div className="bg-white/95 backdrop-blur-sm shadow-md rounded-full border border-gray-200/50 px-3 py-1.5">
+    <div className="flex items-center gap-2">
+      <Checkbox
+        checked={allSelected}
+        onCheckedChange={onSelectAll}
+        className="rounded-sm"
+      />
+      <div className="w-px h-4 bg-gray-300" />
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="h-7 w-7 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
+        onClick={onDeleteSelected}
+        disabled={selectedMessages.size === 0}
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </Button>
     </div>
+  </div>
+</div>
   );
 };
 
