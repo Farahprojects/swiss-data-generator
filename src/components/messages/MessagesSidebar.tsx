@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -32,6 +32,8 @@ export const MessagesSidebar = ({
   onOpenBranding,
   headerHeight = 72
 }: MessagesSidebarProps) => {
+  const navigate = useNavigate();
+
   const navigationItems = [
     { id: 'inbox', label: 'Inbox', icon: Inbox, count: unreadCount },
     { id: 'sent', label: 'Sent', icon: Send },
@@ -56,7 +58,7 @@ export const MessagesSidebar = ({
   const handleBrandingClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onOpenBranding();
+    navigate('/dashboard/email-branding');
   };
 
   return (

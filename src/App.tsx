@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
@@ -12,6 +13,7 @@ import ClientsPage from './pages/dashboard/ClientsPage';
 import ClientDetailPage from './pages/dashboard/ClientDetailPage';
 import ReportsPage from './pages/dashboard/ReportsPage';
 import MessagesPage from './pages/dashboard/MessagesPage';
+import EmailBrandingPage from './pages/dashboard/EmailBrandingPage';
 import CreateReportPage from './pages/dashboard/CreateReportPage';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
