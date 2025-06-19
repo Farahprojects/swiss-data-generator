@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,9 +32,6 @@ const SubmissionSection = ({
   // Check if there are any validation errors
   const hasErrors = Object.keys(errors).length > 0;
   
-  // Determine if we should disable the button
-  const shouldDisableButton = isProcessing || isPricingLoading || hasErrors || isValidatingPromo;
-  
   // Debug: log current errors
   React.useEffect(() => {
     if (hasErrors) {
@@ -67,17 +63,19 @@ const SubmissionSection = ({
           type="button"
           size="lg" 
           className="px-12 py-6 text-lg relative z-10"
-          disabled={shouldDisableButton}
+          disabled={isProcessing || isPricingLoading || hasErrors}
           onClick={onButtonClick}
           style={{ pointerEvents: 'auto' }}
         >
-          {(isProcessing || isPricingLoading || isValidatingPromo) ? (
+          {isProcessing || isPricingLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Processing...
             </>
+          ) : hasErrors ? (
+            'Fix Errors Above'
           ) : (
-            "Generate my Report"
+            'Enter'
           )}
         </Button>
         

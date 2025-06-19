@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { UseFormRegister } from 'react-hook-form';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ReportFormData } from '@/types/public-report';
 import { PromoCodeValidation } from '@/utils/promoCodeValidation';
@@ -30,31 +30,22 @@ const PromoCodeSection = ({
           <Input
             {...register('promoCode')}
             placeholder="Enter here"
-            className={`text-center px-4 py-3 text-base transition-colors ${
-              promoValidation?.isValid 
-                ? 'border-green-500 bg-green-50' 
-                : promoValidation && !promoValidation.isValid 
-                ? 'border-red-500 bg-red-50' 
-                : ''
-            }`}
+            className="text-center px-4 py-3 text-base"
             maxLength={10}
             onChange={(e) => {
               register('promoCode').onChange(e);
               onPromoCodeChange(e.target.value);
             }}
           />
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            {isValidatingPromo && (
+          {isValidatingPromo && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            )}
-            {!isValidatingPromo && promoValidation?.isValid && (
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            )}
-          </div>
+            </div>
+          )}
         </div>
         
         {promoValidation && (
-          <div className={`text-xs text-center p-2 rounded transition-all duration-300 ${
+          <div className={`text-xs text-center p-2 rounded ${
             promoValidation.isValid 
               ? promoValidation.isFree 
                 ? 'bg-green-50 text-green-700 border border-green-200'
@@ -62,12 +53,6 @@ const PromoCodeSection = ({
               : 'bg-red-50 text-red-700 border border-red-200'
           }`}>
             {promoValidation.message}
-          </div>
-        )}
-        
-        {isValidatingPromo && (
-          <div className="text-xs text-center p-2 rounded bg-gray-50 text-gray-600 border border-gray-200">
-            Validating promo code...
           </div>
         )}
       </div>
