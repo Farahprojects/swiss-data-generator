@@ -71,9 +71,9 @@ export const GmailMessageList = ({
   return (
     <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
       {/* Floating Action Toolbar - Thinner Capsule Style */}
-      <div className="sticky top-24 z-20 flex justify-start px-6 py-2">
-        <div className="bg-white/95 backdrop-blur-sm shadow-lg rounded-full border border-gray-200/50 px-3 py-1.5">
-          <div className="flex items-center gap-2">
+      <div className="sticky top-24 z-20 flex justify-start px-2 py-1">
+        <div className="bg-white/95 backdrop-blur-sm shadow-lg rounded-full border border-gray-200/50 px-2 py-1">
+          <div className="flex items-center gap-1.5">
             {/* Select All Checkbox */}
             <div className="flex items-center">
               <Checkbox
@@ -84,7 +84,7 @@ export const GmailMessageList = ({
             </div>
             
             {/* Divider */}
-            <div className="w-px h-5 bg-gray-300"></div>
+            <div className="w-px h-4 bg-gray-300"></div>
             
             {/* Delete Button */}
             <Button 
