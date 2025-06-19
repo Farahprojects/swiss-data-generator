@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
-import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import HeroSection from '@/components/public-report/HeroSection';
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
@@ -15,8 +14,19 @@ import SubmissionSection from '@/components/public-report/SubmissionSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 
+interface PromoValidationState {
+  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
+  message: string;
+  discountPercent: number;
+}
+
 const PublicReport = () => {
   const [showReportGuide, setShowReportGuide] = useState(false);
+  const [promoValidation, setPromoValidation] = useState<PromoValidationState>({
+    status: 'none',
+    message: '',
+    discountPercent: 0
+  });
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -48,7 +58,6 @@ const PublicReport = () => {
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   const selectedReportType = watch('reportType');
-  const promoCode = watch('promoCode');
   const userName = watch('name');
   const userEmail = watch('email');
 
@@ -63,14 +72,13 @@ const PublicReport = () => {
     });
   }, [selectedReportType, isValid, errors, watch]);
 
-  const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode || '');
   const { isProcessing, isPricingLoading, reportCreated, submitReport } = useReportSubmission();
 
   const requiresSecondPerson = selectedReportType === 'sync' || selectedReportType === 'compatibility';
 
   const onSubmit = async (data: ReportFormData) => {
     console.log('✅ Form submission successful, data:', data);
-    await submitReport(data, promoValidation);
+    await submitReport(data, promoValidation, setPromoValidation);
   };
 
   const handleButtonClick = (e: React.MouseEvent) => {
@@ -91,12 +99,6 @@ const PublicReport = () => {
         console.log('❌ Form validation failed:', errors);
       }
     )(e);
-  };
-
-  const handlePromoCodeChange = (value: string) => {
-    if (value === '') {
-      // Handle clearing promo validation when field is cleared
-    }
   };
 
   if (reportCreated && userName && userEmail) {
@@ -149,8 +151,6 @@ const PublicReport = () => {
               isProcessing={isProcessing}
               isPricingLoading={isPricingLoading}
               promoValidation={promoValidation}
-              isValidatingPromo={isValidatingPromo}
-              onPromoCodeChange={handlePromoCodeChange}
               onButtonClick={handleButtonClick}
             />
           )}

@@ -2,9 +2,15 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
-import { createFreeReport, PromoCodeValidation } from '@/utils/promoCodeValidation';
+import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation';
 import { getReportPriceAndDescription, buildCompleteReportType } from '@/services/report-pricing';
 import { ReportFormData } from '@/types/public-report';
+
+interface PromoValidationState {
+  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
+  message: string;
+  discountPercent: number;
+}
 
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -12,7 +18,11 @@ export const useReportSubmission = () => {
   const [reportCreated, setReportCreated] = useState(false);
   const { toast } = useToast();
 
-  const submitReport = async (data: ReportFormData, promoValidation: PromoCodeValidation | null) => {
+  const submitReport = async (
+    data: ReportFormData, 
+    promoValidation: PromoValidationState,
+    setPromoValidation: (state: PromoValidationState) => void
+  ) => {
     console.log('🚀 Form submission started');
     console.log('📝 Form data:', data);
     
@@ -20,13 +30,41 @@ export const useReportSubmission = () => {
     setIsPricingLoading(true);
     
     try {
+      // Validate promo code if present
+      let validatedPromo = null;
+      if (data.promoCode && data.promoCode.trim() !== '') {
+        console.log('🎫 Validating promo code:', data.promoCode);
+        setPromoValidation({
+          status: 'validating',
+          message: 'Validating promo code...',
+          discountPercent: 0
+        });
+
+        validatedPromo = await validatePromoCode(data.promoCode);
+        
+        if (validatedPromo.isValid) {
+          setPromoValidation({
+            status: validatedPromo.isFree ? 'valid-free' : 'valid-discount',
+            message: validatedPromo.message,
+            discountPercent: validatedPromo.discountPercent
+          });
+        } else {
+          setPromoValidation({
+            status: 'invalid',
+            message: validatedPromo.message,
+            discountPercent: 0
+          });
+        }
+      }
+
       const completeReportType = buildCompleteReportType(
         data.reportType, 
         data.essenceType, 
         data.relationshipType
       );
 
-      if (data.promoCode && promoValidation?.isFree && promoValidation.isValid) {
+      // Handle free report with promo code
+      if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
         console.log('Processing free report with promo code:', data.promoCode);
         
         const reportData = {
@@ -75,8 +113,8 @@ export const useReportSubmission = () => {
 
       // Apply promo code discount if valid (but not free)
       let finalAmount = amount;
-      if (data.promoCode && promoValidation?.isValid && !promoValidation.isFree) {
-        finalAmount = amount * (1 - promoValidation.discountPercent / 100);
+      if (data.promoCode && validatedPromo?.isValid && !validatedPromo.isFree) {
+        finalAmount = amount * (1 - validatedPromo.discountPercent / 100);
       }
 
       const reportData = {
