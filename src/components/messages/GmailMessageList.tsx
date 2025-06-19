@@ -18,6 +18,9 @@ interface GmailMessageListProps {
   selectedMessage: EmailMessage | null;
   onSelectMessage: (message: EmailMessage) => void;
   onSelectMessageCheckbox: (messageId: string, checked: boolean) => void;
+  onSelectAll: (checked: boolean) => void;
+  onArchiveSelected: () => void;
+  onDeleteSelected: () => void;
   onToggleStar: (message: EmailMessage) => void;
   mobileDense?: boolean; // NEW: allow dense/compact layout for mobile
 }
@@ -28,6 +31,9 @@ export const GmailMessageList = ({
   selectedMessage,
   onSelectMessage,
   onSelectMessageCheckbox,
+  onSelectAll,
+  onArchiveSelected,
+  onDeleteSelected,
   onToggleStar,
   mobileDense = false // Default is false
 }: GmailMessageListProps) => {
@@ -59,8 +65,37 @@ export const GmailMessageList = ({
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
+  const allSelected = messages.length > 0 && messages.every(m => selectedMessages.has(m.id));
+
   return (
-    <div className="w-full bg-white flex flex-col h-full">
+    <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
+      {/* Toolbar */}
+      <div
+        className="border-b bg-gray-50/50 flex-shrink-0"
+      >
+        {/* Change to grid layout for perfect alignment */}
+        <div className="grid grid-cols-[48px_1fr_90px] items-center px-2 py-2">
+          {/* First col: checkbox + actions (aligned with row checkboxes) */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={onSelectAll}
+              className="rounded"
+            />
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onArchiveSelected}>
+              <Archive className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onDeleteSelected}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+          {/* Middle col: (empty, for now; aligns with row grid) */}
+          <div />
+          {/* Right col: (empty, placeholder for potential future actions) */}
+          <div />
+        </div>
+      </div>
+
       {/* Message List - Scrollable */}
       <div className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
