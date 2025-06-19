@@ -2,14 +2,50 @@
 import { ReportTypeOption } from '@/types/public-report';
 
 export const reportTypes: ReportTypeOption[] = [
-  { value: 'sync', label: 'Sync Report' },
-  { value: 'essence', label: 'Essence Report' },
+  // Essence Report group
+  { value: 'essence-personal', label: 'Personal' },
+  { value: 'essence-professional', label: 'Professional' },
+  { value: 'essence-relational', label: 'Relational' },
+  
+  // Sync Report group
+  { value: 'sync-personal', label: 'Personal' },
+  { value: 'sync-professional', label: 'Professional' },
+  
+  // Standalone reports
   { value: 'flow', label: 'Flow Report' },
   { value: 'mindset', label: 'Mindset Report' },
   { value: 'monthly', label: 'Monthly Report' },
   { value: 'focus', label: 'Focus Report' },
 ];
 
+// Helper functions to parse combined values
+export const parseReportType = (combinedValue: string) => {
+  if (combinedValue.startsWith('essence-')) {
+    return {
+      mainType: 'essence',
+      subType: combinedValue.replace('essence-', '')
+    };
+  }
+  
+  if (combinedValue.startsWith('sync-')) {
+    return {
+      mainType: 'sync',
+      subType: combinedValue.replace('sync-', '')
+    };
+  }
+  
+  return {
+    mainType: combinedValue,
+    subType: null
+  };
+};
+
+export const getReportTypeLabel = (value: string) => {
+  const option = reportTypes.find(type => type.value === value);
+  return option?.label || value;
+};
+
+// Legacy exports for backward compatibility (no longer used)
 export const relationshipTypes: ReportTypeOption[] = [
   { value: 'personal', label: 'Personal' },
   { value: 'professional', label: 'Professional' },

@@ -6,6 +6,7 @@ import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
+import { parseReportType } from '@/constants/report-types';
 import HeroSection from '@/components/public-report/HeroSection';
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import ContactForm from '@/components/public-report/ContactForm';
@@ -52,21 +53,36 @@ const PublicReport = () => {
   const userName = watch('name');
   const userEmail = watch('email');
 
+  // Parse the combined report type
+  const { mainType, subType } = parseReportType(selectedReportType);
+  
+  // Set the individual fields for backward compatibility
+  React.useEffect(() => {
+    if (mainType === 'essence' && subType) {
+      setValue('essenceType', subType);
+    }
+    if (mainType === 'sync' && subType) {
+      setValue('relationshipType', subType);
+    }
+  }, [selectedReportType, setValue, mainType, subType]);
+
   // Debug: log form state
   React.useEffect(() => {
     console.log('📊 Form State Debug:', {
       selectedReportType,
+      mainType,
+      subType,
       isValid,
       hasErrors: Object.keys(errors).length > 0,
       errors: errors,
       formValues: watch()
     });
-  }, [selectedReportType, isValid, errors, watch]);
+  }, [selectedReportType, mainType, subType, isValid, errors, watch]);
 
   const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode || '');
   const { isProcessing, isPricingLoading, reportCreated, submitReport } = useReportSubmission();
 
-  const requiresSecondPerson = selectedReportType === 'sync' || selectedReportType === 'compatibility';
+  const requiresSecondPerson = mainType === 'sync';
 
   const onSubmit = async (data: ReportFormData) => {
     console.log('✅ Form submission successful, data:', data);

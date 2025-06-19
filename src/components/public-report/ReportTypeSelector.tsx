@@ -3,9 +3,8 @@ import React from 'react';
 import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { reportTypes, relationshipTypes, essenceTypes } from '@/constants/report-types';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { reportTypes, parseReportType } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
 import ReportGuideModal from './ReportGuideModal';
@@ -25,9 +24,8 @@ const ReportTypeSelector = ({
   showReportGuide,
   setShowReportGuide 
 }: ReportTypeSelectorProps) => {
-  const requiresEssenceType = selectedReportType === 'essence';
-  const requiresReturnYear = selectedReportType === 'return';
-  const requiresRelationshipType = selectedReportType === 'sync' || selectedReportType === 'compatibility';
+  const { mainType } = parseReportType(selectedReportType);
+  const requiresReturnYear = mainType === 'return';
 
   const getCurrentYear = () => new Date().getFullYear();
 
@@ -55,11 +53,26 @@ const ReportTypeSelector = ({
                       <SelectValue placeholder="Select a report type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {reportTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Essence Report</SelectLabel>
+                        <SelectItem value="essence-personal">Personal</SelectItem>
+                        <SelectItem value="essence-professional">Professional</SelectItem>
+                        <SelectItem value="essence-relational">Relational</SelectItem>
+                      </SelectGroup>
+                      
+                      <SelectGroup>
+                        <SelectLabel>Sync Report</SelectLabel>
+                        <SelectItem value="sync-personal">Personal</SelectItem>
+                        <SelectItem value="sync-professional">Professional</SelectItem>
+                      </SelectGroup>
+                      
+                      <SelectGroup>
+                        <SelectLabel>Other Reports</SelectLabel>
+                        <SelectItem value="flow">Flow Report</SelectItem>
+                        <SelectItem value="mindset">Mindset Report</SelectItem>
+                        <SelectItem value="monthly">Monthly Report</SelectItem>
+                        <SelectItem value="focus">Focus Report</SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 )}
@@ -68,37 +81,6 @@ const ReportTypeSelector = ({
                 <p className="text-sm text-destructive">{errors.reportType.message}</p>
               )}
             </div>
-
-            {requiresEssenceType && (
-              <div className="space-y-2">
-                <Label htmlFor="essenceType">Essence Focus *</Label>
-                <Controller
-                  control={control}
-                  name="essenceType"
-                  render={({ field }) => (
-                    <ToggleGroup
-                      type="single"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      className="justify-center flex-wrap gap-2"
-                    >
-                      {essenceTypes.map((type) => (
-                        <ToggleGroupItem 
-                          key={type.value} 
-                          value={type.value}
-                          className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
-                        >
-                          {type.label}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                  )}
-                />
-                {errors.essenceType && (
-                  <p className="text-sm text-destructive">{errors.essenceType.message}</p>
-                )}
-              </div>
-            )}
 
             {requiresReturnYear && (
               <div className="space-y-2">
@@ -117,37 +99,6 @@ const ReportTypeSelector = ({
                     />
                   )}
                 />
-              </div>
-            )}
-
-            {requiresRelationshipType && (
-              <div className="space-y-2">
-                <Label htmlFor="relationshipType">Relationship Type *</Label>
-                <Controller
-                  control={control}
-                  name="relationshipType"
-                  render={({ field }) => (
-                    <ToggleGroup
-                      type="single"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      className="justify-center flex-wrap gap-2"
-                    >
-                      {relationshipTypes.map((type) => (
-                        <ToggleGroupItem 
-                          key={type.value} 
-                          value={type.value}
-                          className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
-                        >
-                          {type.label}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                  )}
-                />
-                {errors.relationshipType && (
-                  <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
-                )}
               </div>
             )}
           </div>
