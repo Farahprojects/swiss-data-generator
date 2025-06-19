@@ -14,8 +14,6 @@ interface SubmissionSectionProps {
   errors: FieldErrors<ReportFormData>;
   isProcessing: boolean;
   isPricingLoading: boolean;
-  showPromoCode: boolean;
-  setShowPromoCode: (show: boolean) => void;
   promoValidation: PromoCodeValidation | null;
   isValidatingPromo: boolean;
   onPromoCodeChange: (value: string) => void;
@@ -27,8 +25,6 @@ const SubmissionSection = ({
   errors,
   isProcessing, 
   isPricingLoading,
-  showPromoCode,
-  setShowPromoCode,
   promoValidation,
   isValidatingPromo,
   onPromoCodeChange,
@@ -86,8 +82,6 @@ const SubmissionSection = ({
         
         <PromoCodeSection
           register={register}
-          showPromoCode={showPromoCode}
-          setShowPromoCode={setShowPromoCode}
           promoValidation={promoValidation}
           isValidatingPromo={isValidatingPromo}
           onPromoCodeChange={onPromoCodeChange}

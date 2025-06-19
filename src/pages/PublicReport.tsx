@@ -16,7 +16,6 @@ import FeaturesSection from '@/components/public-report/FeaturesSection';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 
 const PublicReport = () => {
-  const [showPromoCode, setShowPromoCode] = useState(false);
   const [showReportGuide, setShowReportGuide] = useState(false);
   
   const form = useForm<ReportFormData>({
@@ -149,8 +148,6 @@ const PublicReport = () => {
               errors={errors}
               isProcessing={isProcessing}
               isPricingLoading={isPricingLoading}
-              showPromoCode={showPromoCode}
-              setShowPromoCode={setShowPromoCode}
               promoValidation={promoValidation}
               isValidatingPromo={isValidatingPromo}
               onPromoCodeChange={handlePromoCodeChange}
