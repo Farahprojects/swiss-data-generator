@@ -35,10 +35,6 @@ const ReportTypeSelector = ({
     'essence-professional': 'How you operate, lead, and adapt in work environments.',
     'sync-professional': 'How you and another person align in a professional or team setting.',
     'sync-personal': 'How your energy interacts with anyone romantic, social, or casual.',
-    'flow': 'Creative/emotional openness over 7 days',
-    'mindset': 'Mood + mental clarity snapshot',
-    'monthly': 'Your personalized forecast for the current month',
-    'focus': 'Best hours today for deep work or rest'
   };
 
   return (

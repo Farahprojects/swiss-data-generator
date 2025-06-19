@@ -10,12 +10,6 @@ export const reportTypes: ReportTypeOption[] = [
   // Sync Report group
   { value: 'sync-professional', label: 'Sync - Professional' },
   { value: 'sync-personal', label: 'Sync - Personal' },
-  
-  // Standalone reports
-  { value: 'flow', label: 'Flow Report' },
-  { value: 'mindset', label: 'Mindset Report' },
-  { value: 'monthly', label: 'Monthly Report' },
-  { value: 'focus', label: 'Focus Report' },
 ];
 
 // Helper functions to parse combined values
