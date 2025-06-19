@@ -62,6 +62,7 @@ const MessagesPage = () => {
   // Get filter from URL params, default to 'inbox'
   const activeFilter = (searchParams.get('filter') as MessageFilterType) || 'inbox';
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [isComposeOpen, setIsComposeOpen] = useState(false);
 
   // Filter messages based on active filter
@@ -83,7 +84,7 @@ const MessagesPage = () => {
   });
 
   const unreadCount = mockMessages.filter(msg => !msg.is_read && msg.direction === 'incoming' && !msg.is_archived).length;
-  const selectedMessage = mockMessages.find(msg => msg.id === selectedMessageId);
+  const selectedMessage = mockMessages.find(msg => msg.id === selectedMessageId) || null;
 
   const handleFilterChange = (filter: MessageFilterType) => {
     const params = new URLSearchParams(searchParams);
@@ -95,12 +96,54 @@ const MessagesPage = () => {
     navigate('/dashboard/email-branding');
   };
 
-  const handleMessageSelect = (messageId: string) => {
-    setSelectedMessageId(messageId);
+  const handleMessageSelect = (message: EmailMessage) => {
+    setSelectedMessageId(message.id);
+  };
+
+  const handleSelectMessageCheckbox = (messageId: string, checked: boolean) => {
+    const newSelectedMessages = new Set(selectedMessages);
+    if (checked) {
+      newSelectedMessages.add(messageId);
+    } else {
+      newSelectedMessages.delete(messageId);
+    }
+    setSelectedMessages(newSelectedMessages);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedMessages(new Set(filteredMessages.map(msg => msg.id)));
+    } else {
+      setSelectedMessages(new Set());
+    }
   };
 
   const handleBackToList = () => {
     setSelectedMessageId(null);
+  };
+
+  const handleClose = () => {
+    setSelectedMessageId(null);
+  };
+
+  const handleReply = () => {
+    // TODO: Implement reply functionality
+    console.log('Reply clicked');
+  };
+
+  const handleForward = () => {
+    // TODO: Implement forward functionality
+    console.log('Forward clicked');
+  };
+
+  const handleArchive = () => {
+    // TODO: Implement archive functionality
+    console.log('Archive clicked');
+  };
+
+  const handleDelete = () => {
+    // TODO: Implement delete functionality
+    console.log('Delete clicked');
   };
 
   const headerHeight = 0; // No additional header in this layout
@@ -128,14 +171,23 @@ const MessagesPage = () => {
             <div className="w-80 border-r bg-white">
               <ImprovedMessageList
                 messages={filteredMessages}
-                selectedMessageId={selectedMessageId}
-                onMessageSelect={handleMessageSelect}
-                activeFilter={activeFilter}
+                selectedMessages={selectedMessages}
+                selectedMessage={selectedMessage}
+                onSelectMessage={handleMessageSelect}
+                onSelectMessageCheckbox={handleSelectMessageCheckbox}
+                onSelectAll={handleSelectAll}
               />
             </div>
             <div className="flex-1 bg-white">
               {selectedMessage ? (
-                <MessageDetail message={selectedMessage} />
+                <MessageDetail 
+                  message={selectedMessage}
+                  onClose={handleClose}
+                  onReply={handleReply}
+                  onForward={handleForward}
+                  onArchive={handleArchive}
+                  onDelete={handleDelete}
+                />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-500">
                   <div className="text-center">
@@ -153,14 +205,23 @@ const MessagesPage = () => {
       {isMobile && (
         <div className="flex-1 flex flex-col">
           {selectedMessage ? (
-            <MessageDetail message={selectedMessage} onBack={handleBackToList} />
+            <MessageDetail 
+              message={selectedMessage}
+              onClose={handleBackToList}
+              onReply={handleReply}
+              onForward={handleForward}
+              onArchive={handleArchive}
+              onDelete={handleDelete}
+            />
           ) : (
             <div className="flex-1 bg-white">
               <ImprovedMessageList
                 messages={filteredMessages}
-                selectedMessageId={selectedMessageId}
-                onMessageSelect={handleMessageSelect}
-                activeFilter={activeFilter}
+                selectedMessages={selectedMessages}
+                selectedMessage={selectedMessage}
+                onSelectMessage={handleMessageSelect}
+                onSelectMessageCheckbox={handleSelectMessageCheckbox}
+                onSelectAll={handleSelectAll}
               />
             </div>
           )}
