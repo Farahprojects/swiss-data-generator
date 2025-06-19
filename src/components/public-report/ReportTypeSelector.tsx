@@ -3,7 +3,7 @@ import React from 'react';
 import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { reportTypes, parseReportType } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
@@ -29,6 +29,18 @@ const ReportTypeSelector = ({
 
   const getCurrentYear = () => new Date().getFullYear();
 
+  const reportDescriptions = {
+    'essence-relational': 'How you connect, respond, and engage in relationships.',
+    'essence-personal': 'A direct read on your inner state, traits, and tendencies.',
+    'essence-professional': 'How you operate, lead, and adapt in work environments.',
+    'sync-professional': 'How you and another person align in a professional or team setting.',
+    'sync-personal': 'How your energy interacts with anyone romantic, social, or casual.',
+    'flow': 'Creative/emotional openness over 7 days',
+    'mindset': 'Mood + mental clarity snapshot',
+    'monthly': 'Your personalized forecast for the current month',
+    'focus': 'Best hours today for deep work or rest'
+  };
+
   return (
     <>
       <FormStep stepNumber={1} title="Choose Your Report Type" className="bg-background">
@@ -53,26 +65,16 @@ const ReportTypeSelector = ({
                       <SelectValue placeholder="Select a report type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Essence Report</SelectLabel>
-                        <SelectItem value="essence-personal">Personal</SelectItem>
-                        <SelectItem value="essence-professional">Professional</SelectItem>
-                        <SelectItem value="essence-relational">Relational</SelectItem>
-                      </SelectGroup>
-                      
-                      <SelectGroup>
-                        <SelectLabel>Sync Report</SelectLabel>
-                        <SelectItem value="sync-personal">Personal</SelectItem>
-                        <SelectItem value="sync-professional">Professional</SelectItem>
-                      </SelectGroup>
-                      
-                      <SelectGroup>
-                        <SelectLabel>Other Reports</SelectLabel>
-                        <SelectItem value="flow">Flow Report</SelectItem>
-                        <SelectItem value="mindset">Mindset Report</SelectItem>
-                        <SelectItem value="monthly">Monthly Report</SelectItem>
-                        <SelectItem value="focus">Focus Report</SelectItem>
-                      </SelectGroup>
+                      {reportTypes.map((reportType) => (
+                        <SelectItem key={reportType.value} value={reportType.value}>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{reportType.label}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {reportDescriptions[reportType.value as keyof typeof reportDescriptions]}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}

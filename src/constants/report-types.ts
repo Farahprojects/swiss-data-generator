@@ -3,13 +3,13 @@ import { ReportTypeOption } from '@/types/public-report';
 
 export const reportTypes: ReportTypeOption[] = [
   // Essence Report group
-  { value: 'essence-personal', label: 'Personal' },
-  { value: 'essence-professional', label: 'Professional' },
-  { value: 'essence-relational', label: 'Relational' },
+  { value: 'essence-relational', label: 'Essence - Relational' },
+  { value: 'essence-personal', label: 'Essence - Personal' },
+  { value: 'essence-professional', label: 'Essence - Professional' },
   
   // Sync Report group
-  { value: 'sync-personal', label: 'Personal' },
-  { value: 'sync-professional', label: 'Professional' },
+  { value: 'sync-professional', label: 'Sync - Professional' },
+  { value: 'sync-personal', label: 'Sync - Personal' },
   
   // Standalone reports
   { value: 'flow', label: 'Flow Report' },
