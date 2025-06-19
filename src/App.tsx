@@ -73,6 +73,7 @@ function App() {
                         <Route path="reports" element={<ReportsPage />} />
                         <Route path="reports/create" element={<CreateReportPage />} />
                         <Route path="messages" element={<MessagesPage />} />
+                        <Route path="email-branding" element={<EmailBrandingPage />} />
                         <Route path="settings" element={<UserSettings />} />
                         <Route path="website-builder" element={<WebsiteBuilder />} />
                       </Route>

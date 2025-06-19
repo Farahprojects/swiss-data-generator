@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +20,7 @@ import {
 } from "@/utils/messageActions";
 import { EmailMessage } from "@/types/email";
 import UnifiedNavigation from '@/components/UnifiedNavigation';
+import { useNavigate } from 'react-router-dom';
 
 const HEADER_HEIGHT = 72;
 
@@ -41,6 +41,7 @@ const MessagesPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   // Load messages based on the active filter with proper error handling
   const loadMessages = useCallback(async (filter: MessageFilterType = activeFilter, forceRefresh = false) => {
@@ -217,10 +218,7 @@ const MessagesPage = () => {
   };
 
   const handleOpenBranding = () => {
-    toast({
-      title: "Branding Settings",
-      description: "Email branding features coming soon!",
-    });
+    navigate('/dashboard/email-branding');
   };
 
   const handleReply = () => {
