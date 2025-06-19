@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
-import { createFreeReport, PromoCodeValidation } from '@/utils/promoCodeValidation';
+import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation';
 import { getReportPriceAndDescription, buildCompleteReportType } from '@/services/report-pricing';
 import { ReportFormData } from '@/types/public-report';
+import { PromoValidationState } from '@/pages/PublicReport';
 
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -12,7 +13,11 @@ export const useReportSubmission = () => {
   const [reportCreated, setReportCreated] = useState(false);
   const { toast } = useToast();
 
-  const submitReport = async (data: ReportFormData, promoValidation: PromoCodeValidation | null) => {
+  const submitReport = async (
+    data: ReportFormData, 
+    promoValidation: PromoValidationState,
+    setPromoValidation: (validation: PromoValidationState) => void
+  ) => {
     console.log('🚀 Form submission started');
     console.log('📝 Form data:', data);
     
@@ -26,45 +31,69 @@ export const useReportSubmission = () => {
         data.relationshipType
       );
 
-      if (data.promoCode && promoValidation?.isFree && promoValidation.isValid) {
-        console.log('Processing free report with promo code:', data.promoCode);
+      // Validate promo code if provided
+      if (data.promoCode && data.promoCode.trim() !== '') {
+        console.log('🎫 Validating promo code:', data.promoCode);
         
-        const reportData = {
-          reportType: completeReportType,
-          relationshipType: data.relationshipType,
-          essenceType: data.essenceType,
-          name: data.name,
-          email: data.email,
-          birthDate: data.birthDate,
-          birthTime: data.birthTime,
-          birthLocation: data.birthLocation,
-          birthLatitude: data.birthLatitude,
-          birthLongitude: data.birthLongitude,
-          birthPlaceId: data.birthPlaceId,
-          secondPersonName: data.secondPersonName,
-          secondPersonBirthDate: data.secondPersonBirthDate,
-          secondPersonBirthTime: data.secondPersonBirthTime,
-          secondPersonBirthLocation: data.secondPersonBirthLocation,
-          secondPersonLatitude: data.secondPersonLatitude,
-          secondPersonLongitude: data.secondPersonLongitude,
-          secondPersonPlaceId: data.secondPersonPlaceId,
-          returnYear: data.returnYear,
-          notes: data.notes,
-        };
+        const validation = await validatePromoCode(data.promoCode);
+        
+        if (validation.isValid) {
+          const newPromoValidation: PromoValidationState = {
+            status: validation.isFree ? 'valid-free' : 'valid-discount',
+            message: validation.message,
+            discountPercent: validation.discountPercent
+          };
+          setPromoValidation(newPromoValidation);
 
-        await createFreeReport(data.promoCode, reportData);
-        
-        setReportCreated(true);
-        toast({
-          title: "Free Report Created!",
-          description: "Your report has been generated and will be sent to your email shortly.",
-        });
-        
-        setIsPricingLoading(false);
-        return;
+          // If it's a free promo code, process as free report
+          if (validation.isFree) {
+            console.log('Processing free report with promo code:', data.promoCode);
+            
+            const reportData = {
+              reportType: completeReportType,
+              relationshipType: data.relationshipType,
+              essenceType: data.essenceType,
+              name: data.name,
+              email: data.email,
+              birthDate: data.birthDate,
+              birthTime: data.birthTime,
+              birthLocation: data.birthLocation,
+              birthLatitude: data.birthLatitude,
+              birthLongitude: data.birthLongitude,
+              birthPlaceId: data.birthPlaceId,
+              secondPersonName: data.secondPersonName,
+              secondPersonBirthDate: data.secondPersonBirthDate,
+              secondPersonBirthTime: data.secondPersonBirthTime,
+              secondPersonBirthLocation: data.secondPersonBirthLocation,
+              secondPersonLatitude: data.secondPersonLatitude,
+              secondPersonLongitude: data.secondPersonLongitude,
+              secondPersonPlaceId: data.secondPersonPlaceId,
+              returnYear: data.returnYear,
+              notes: data.notes,
+            };
+
+            await createFreeReport(data.promoCode, reportData);
+            
+            setReportCreated(true);
+            toast({
+              title: "Free Report Created!",
+              description: "Your report has been generated and will be sent to your email shortly.",
+            });
+            
+            setIsPricingLoading(false);
+            return;
+          }
+        } else {
+          // Invalid promo code
+          setPromoValidation({
+            status: 'invalid',
+            message: validation.message,
+            discountPercent: 0
+          });
+        }
       }
       
-      // Regular paid flow
+      // Regular paid flow (with or without discount)
       const { amount, description } = await getReportPriceAndDescription(
         data.reportType, 
         data.relationshipType, 
@@ -75,7 +104,7 @@ export const useReportSubmission = () => {
 
       // Apply promo code discount if valid (but not free)
       let finalAmount = amount;
-      if (data.promoCode && promoValidation?.isValid && !promoValidation.isFree) {
+      if (data.promoCode && promoValidation.status === 'valid-discount') {
         finalAmount = amount * (1 - promoValidation.discountPercent / 100);
       }
 

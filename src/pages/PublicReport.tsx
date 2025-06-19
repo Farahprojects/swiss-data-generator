@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
-import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { parseReportType } from '@/constants/report-types';
 import HeroSection from '@/components/public-report/HeroSection';
@@ -16,8 +15,19 @@ import SubmissionSection from '@/components/public-report/SubmissionSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 
+export interface PromoValidationState {
+  status: null | 'valid-free' | 'valid-discount' | 'invalid';
+  message: string;
+  discountPercent: number;
+}
+
 const PublicReport = () => {
   const [showReportGuide, setShowReportGuide] = useState(false);
+  const [promoValidation, setPromoValidation] = useState<PromoValidationState>({
+    status: null,
+    message: '',
+    discountPercent: 0
+  });
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -79,14 +89,13 @@ const PublicReport = () => {
     });
   }, [selectedReportType, mainType, subType, isValid, errors, watch]);
 
-  const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode || '');
   const { isProcessing, isPricingLoading, reportCreated, submitReport } = useReportSubmission();
 
   const requiresSecondPerson = mainType === 'sync';
 
   const onSubmit = async (data: ReportFormData) => {
     console.log('✅ Form submission successful, data:', data);
-    await submitReport(data, promoValidation);
+    await submitReport(data, promoValidation, setPromoValidation);
   };
 
   const handleButtonClick = (e: React.MouseEvent) => {
@@ -107,12 +116,6 @@ const PublicReport = () => {
         console.log('❌ Form validation failed:', errors);
       }
     )(e);
-  };
-
-  const handlePromoCodeChange = (value: string) => {
-    if (value === '') {
-      // Handle clearing promo validation when field is cleared
-    }
   };
 
   if (reportCreated && userName && userEmail) {
@@ -165,8 +168,6 @@ const PublicReport = () => {
               isProcessing={isProcessing}
               isPricingLoading={isPricingLoading}
               promoValidation={promoValidation}
-              isValidatingPromo={isValidatingPromo}
-              onPromoCodeChange={handlePromoCodeChange}
               onButtonClick={handleButtonClick}
             />
           )}

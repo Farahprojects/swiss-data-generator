@@ -1,23 +1,18 @@
 
 import React from 'react';
 import { UseFormRegister } from 'react-hook-form';
-import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ReportFormData } from '@/types/public-report';
-import { PromoCodeValidation } from '@/utils/promoCodeValidation';
+import { PromoValidationState } from '@/pages/PublicReport';
 
 interface PromoCodeSectionProps {
   register: UseFormRegister<ReportFormData>;
-  promoValidation: PromoCodeValidation | null;
-  isValidatingPromo: boolean;
-  onPromoCodeChange: (value: string) => void;
+  promoValidation: PromoValidationState;
 }
 
 const PromoCodeSection = ({ 
   register, 
-  promoValidation, 
-  isValidatingPromo,
-  onPromoCodeChange 
+  promoValidation
 }: PromoCodeSectionProps) => {
   return (
     <div className="w-full max-w-xs mx-auto">
@@ -32,25 +27,16 @@ const PromoCodeSection = ({
             placeholder="Enter here"
             className="text-center px-4 py-3 text-base"
             maxLength={10}
-            onChange={(e) => {
-              register('promoCode').onChange(e);
-              onPromoCodeChange(e.target.value);
-            }}
           />
-          {isValidatingPromo && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
         </div>
         
-        {promoValidation && (
+        {promoValidation.status && (
           <div className={`text-xs text-center p-2 rounded ${
-            promoValidation.isValid 
-              ? promoValidation.isFree 
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-blue-50 text-blue-700 border border-blue-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
+            promoValidation.status === 'valid-free' 
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : promoValidation.status === 'valid-discount'
+                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
           }`}>
             {promoValidation.message}
           </div>
