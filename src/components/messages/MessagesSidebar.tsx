@@ -22,6 +22,7 @@ interface MessagesSidebarProps {
   onFilterChange: (filter: MessageFilterType) => void;
   onOpenBranding: () => void;
   headerHeight?: number;
+  showEmailBranding?: boolean;
 }
 
 export const MessagesSidebar = ({
@@ -29,7 +30,8 @@ export const MessagesSidebar = ({
   unreadCount,
   onFilterChange,
   onOpenBranding,
-  headerHeight = 72
+  headerHeight = 72,
+  showEmailBranding = false
 }: MessagesSidebarProps) => {
   const navigate = useNavigate();
 
@@ -68,7 +70,7 @@ export const MessagesSidebar = ({
                 key={item.id}
                 className={cn(
                   "w-full flex items-center gap-3 h-10 rounded text-left px-3 py-2 transition-colors",
-                  activeFilter === item.id
+                  activeFilter === item.id && !showEmailBranding
                     ? "bg-accent text-accent-foreground hover:bg-accent/80"
                     : "bg-transparent text-gray-700 hover:bg-accent/30"
                 )}
@@ -96,7 +98,12 @@ export const MessagesSidebar = ({
             </h3>
             <div className="space-y-1">
               <button
-                className="w-full flex items-center gap-2 h-8 text-sm rounded hover:bg-accent/30 px-2 transition-colors"
+                className={cn(
+                  "w-full flex items-center gap-2 h-8 text-sm rounded px-2 transition-colors",
+                  showEmailBranding
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-accent/30"
+                )}
                 type="button"
                 onClick={handleBrandingClick}
               >
