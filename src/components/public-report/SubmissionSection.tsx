@@ -36,31 +36,6 @@ const SubmissionSection = ({
   // Determine if we should disable the button
   const shouldDisableButton = isProcessing || isPricingLoading || hasErrors || isValidatingPromo;
   
-  // Determine button text based on state
-  const getButtonText = () => {
-    if (isProcessing || isPricingLoading) {
-      return 'Processing...';
-    }
-    
-    if (hasErrors) {
-      return 'Fix Errors Above';
-    }
-    
-    if (isValidatingPromo) {
-      return 'Validating promo code...';
-    }
-    
-    if (promoValidation?.isValid) {
-      if (promoValidation.isFree) {
-        return 'Generate Free Report';
-      } else {
-        return `Apply ${promoValidation.discountPercent}% Discount & Continue`;
-      }
-    }
-    
-    return 'Enter';
-  };
-  
   // Debug: log current errors
   React.useEffect(() => {
     if (hasErrors) {
@@ -96,18 +71,13 @@ const SubmissionSection = ({
           onClick={onButtonClick}
           style={{ pointerEvents: 'auto' }}
         >
-          {(isProcessing || isPricingLoading) ? (
+          {(isProcessing || isPricingLoading || isValidatingPromo) ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Processing...
             </>
-          ) : isValidatingPromo ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Validating promo code...
-            </>
           ) : (
-            getButtonText()
+            "Generate my Report"
           )}
         </Button>
         
