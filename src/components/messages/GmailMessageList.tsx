@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -69,28 +68,29 @@ export const GmailMessageList = ({
   const allSelected = messages.length > 0 && messages.every(m => selectedMessages.has(m.id));
 
   return (
-    <div className="sticky top-[10rem] z-20 flex justify-start px-4 py-1 ml-2">
-  <div className="bg-white/95 backdrop-blur-sm shadow-md rounded-full border border-gray-200/50 px-3 py-1.5">
-    <div className="flex items-center gap-2">
-      <Checkbox
-        checked={allSelected}
-        onCheckedChange={onSelectAll}
-        className="rounded-sm"
-      />
-      <div className="w-px h-4 bg-gray-300"></div>
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="h-7 w-7 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
-        onClick={onDeleteSelected}
-        disabled={selectedMessages.size === 0}
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </Button>
-    </div>
-  </div>
-</div>
-
+    <div className="relative flex flex-col h-full">
+      {/* Floating Toolbar */}
+      <div className="absolute top-20 left-6 z-30">
+        <div className="bg-white/95 backdrop-blur-sm shadow-md rounded-full border border-gray-200/50 px-3 py-1.5">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={onSelectAll}
+              className="rounded-sm"
+            />
+            <div className="w-px h-4 bg-gray-300" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 w-7 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
+              onClick={onDeleteSelected}
+              disabled={selectedMessages.size === 0}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Message List - Scrollable */}
       <div className="flex-1 overflow-y-auto">
@@ -100,27 +100,24 @@ export const GmailMessageList = ({
             <p className="text-sm">Your messages will appear here</p>
           </div>
         ) : (
-          <div className="absolute top-[7rem] left-6 z-30">
-  <div className="bg-white/95 backdrop-blur-sm shadow-md rounded-full border border-gray-200/50 px-3 py-1.5">
-    <div className="flex items-center gap-2">
-      <Checkbox
-        checked={allSelected}
-        onCheckedChange={onSelectAll}
-        className="rounded-sm"
-      />
-      <div className="w-px h-4 bg-gray-300" />
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="h-7 w-7 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
-        onClick={onDeleteSelected}
-        disabled={selectedMessages.size === 0}
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </Button>
+          <div className="space-y-0">
+            {messages.map((message) => (
+              <MessageRow
+                key={message.id}
+                message={message}
+                isSelected={selectedMessages.has(message.id)}
+                onSelect={() => onSelectMessage(message)}
+                onCheckboxChange={(checked) => onSelectMessageCheckbox(message.id, checked)}
+                formatDate={formatDate}
+                truncateText={truncateText}
+                onToggleStar={() => onToggleStar(message)}
+                mobileDense={mobileDense}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-</div>
   );
 };
 
