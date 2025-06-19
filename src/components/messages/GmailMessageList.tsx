@@ -69,30 +69,33 @@ export const GmailMessageList = ({
 
   return (
     <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
-      {/* Toolbar */}
-      <div
-        className="border-b bg-gray-50/50 flex-shrink-0"
-      >
-        {/* Change to grid layout for perfect alignment */}
-        <div className="grid grid-cols-[48px_1fr_90px] items-center px-2 py-2">
-          {/* First col: checkbox + actions (aligned with row checkboxes) */}
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={onSelectAll}
-              className="rounded"
-            />
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onArchiveSelected}>
-              <Archive className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onDeleteSelected}>
+      {/* Floating Action Toolbar - Capsule Style */}
+      <div className="sticky top-24 z-20 flex justify-center px-4 py-3">
+        <div className="bg-white/95 backdrop-blur-sm shadow-lg rounded-full border border-gray-200/50 px-4 py-2">
+          <div className="flex items-center gap-3">
+            {/* Select All Checkbox */}
+            <div className="flex items-center">
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={onSelectAll}
+                className="rounded-sm"
+              />
+            </div>
+            
+            {/* Divider */}
+            <div className="w-px h-6 bg-gray-300"></div>
+            
+            {/* Delete Button */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
+              onClick={onDeleteSelected}
+              disabled={selectedMessages.size === 0}
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
-          {/* Middle col: (empty, for now; aligns with row grid) */}
-          <div />
-          {/* Right col: (empty, placeholder for potential future actions) */}
-          <div />
         </div>
       </div>
 
