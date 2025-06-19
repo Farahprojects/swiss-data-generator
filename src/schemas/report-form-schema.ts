@@ -1,6 +1,5 @@
 
 import * as z from 'zod';
-import { parseReportType } from '@/constants/report-types';
 
 export const reportSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
@@ -25,10 +24,23 @@ export const reportSchema = z.object({
   notes: z.string().optional(),
   promoCode: z.string().optional(),
 }).refine((data) => {
-  const { mainType } = parseReportType(data.reportType);
-  
-  // For sync reports, require second person details
-  if (mainType === 'sync') {
+  if (data.reportType === 'essence' && (!data.essenceType || data.essenceType === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please select an essence focus type",
+  path: ["essenceType"]
+}).refine((data) => {
+  if (data.reportType === 'sync' && (!data.relationshipType || data.relationshipType === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please select a relationship type",
+  path: ["relationshipType"]
+}).refine((data) => {
+  if (data.reportType === 'sync') {
     if (!data.secondPersonName || data.secondPersonName.trim() === '') {
       return false;
     }

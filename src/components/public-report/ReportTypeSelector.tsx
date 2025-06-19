@@ -4,7 +4,8 @@ import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { reportTypes, parseReportType } from '@/constants/report-types';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { reportTypes, relationshipTypes, essenceTypes } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
 import ReportGuideModal from './ReportGuideModal';
@@ -24,18 +25,11 @@ const ReportTypeSelector = ({
   showReportGuide,
   setShowReportGuide 
 }: ReportTypeSelectorProps) => {
-  const { mainType } = parseReportType(selectedReportType);
-  const requiresReturnYear = mainType === 'return';
+  const requiresEssenceType = selectedReportType === 'essence';
+  const requiresReturnYear = selectedReportType === 'return';
+  const requiresRelationshipType = selectedReportType === 'sync' || selectedReportType === 'compatibility';
 
   const getCurrentYear = () => new Date().getFullYear();
-
-  const reportDescriptions = {
-    'essence-relational': 'How you connect, respond, and engage in relationships.',
-    'essence-personal': 'A direct read on your inner state, traits, and tendencies.',
-    'essence-professional': 'How you operate, lead, and adapt in work environments.',
-    'sync-professional': 'How you and another person align in a professional or team setting.',
-    'sync-personal': 'How your energy interacts with anyone romantic, social, or casual.',
-  };
 
   return (
     <>
@@ -61,14 +55,9 @@ const ReportTypeSelector = ({
                       <SelectValue placeholder="Select a report type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {reportTypes.map((reportType) => (
-                        <SelectItem key={reportType.value} value={reportType.value}>
-                          <div className="flex flex-col items-start">
-                            <span className="font-medium">{reportType.label}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {reportDescriptions[reportType.value as keyof typeof reportDescriptions]}
-                            </span>
-                          </div>
+                      {reportTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -79,6 +68,37 @@ const ReportTypeSelector = ({
                 <p className="text-sm text-destructive">{errors.reportType.message}</p>
               )}
             </div>
+
+            {requiresEssenceType && (
+              <div className="space-y-2">
+                <Label htmlFor="essenceType">Essence Focus *</Label>
+                <Controller
+                  control={control}
+                  name="essenceType"
+                  render={({ field }) => (
+                    <ToggleGroup
+                      type="single"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      className="justify-center flex-wrap gap-2"
+                    >
+                      {essenceTypes.map((type) => (
+                        <ToggleGroupItem 
+                          key={type.value} 
+                          value={type.value}
+                          className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
+                        >
+                          {type.label}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
+                {errors.essenceType && (
+                  <p className="text-sm text-destructive">{errors.essenceType.message}</p>
+                )}
+              </div>
+            )}
 
             {requiresReturnYear && (
               <div className="space-y-2">
@@ -97,6 +117,37 @@ const ReportTypeSelector = ({
                     />
                   )}
                 />
+              </div>
+            )}
+
+            {requiresRelationshipType && (
+              <div className="space-y-2">
+                <Label htmlFor="relationshipType">Relationship Type *</Label>
+                <Controller
+                  control={control}
+                  name="relationshipType"
+                  render={({ field }) => (
+                    <ToggleGroup
+                      type="single"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      className="justify-center flex-wrap gap-2"
+                    >
+                      {relationshipTypes.map((type) => (
+                        <ToggleGroupItem 
+                          key={type.value} 
+                          value={type.value}
+                          className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
+                        >
+                          {type.label}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  )}
+                />
+                {errors.relationshipType && (
+                  <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
+                )}
               </div>
             )}
           </div>

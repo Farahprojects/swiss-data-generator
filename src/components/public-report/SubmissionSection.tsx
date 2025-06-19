@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,14 +6,16 @@ import FormStep from './FormStep';
 import PromoCodeSection from './PromoCodeSection';
 import { UseFormRegister, FieldErrors } from 'react-hook-form';
 import { ReportFormData } from '@/types/public-report';
-import { PromoValidationState } from '@/pages/PublicReport';
+import { PromoCodeValidation } from '@/utils/promoCodeValidation';
 
 interface SubmissionSectionProps {
   register: UseFormRegister<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
   isProcessing: boolean;
   isPricingLoading: boolean;
-  promoValidation: PromoValidationState;
+  promoValidation: PromoCodeValidation | null;
+  isValidatingPromo: boolean;
+  onPromoCodeChange: (value: string) => void;
   onButtonClick: (e: React.MouseEvent) => void;
 }
 
@@ -24,6 +25,8 @@ const SubmissionSection = ({
   isProcessing, 
   isPricingLoading,
   promoValidation,
+  isValidatingPromo,
+  onPromoCodeChange,
   onButtonClick 
 }: SubmissionSectionProps) => {
   // Check if there are any validation errors
@@ -69,14 +72,18 @@ const SubmissionSection = ({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Processing...
             </>
+          ) : hasErrors ? (
+            'Fix Errors Above'
           ) : (
-            'Generate my Report'
+            'Enter'
           )}
         </Button>
         
         <PromoCodeSection
           register={register}
           promoValidation={promoValidation}
+          isValidatingPromo={isValidatingPromo}
+          onPromoCodeChange={onPromoCodeChange}
         />
       </div>
     </FormStep>
