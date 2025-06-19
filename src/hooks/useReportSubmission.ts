@@ -16,6 +16,17 @@ export const useReportSubmission = () => {
     console.log('🚀 Form submission started');
     console.log('📝 Form data:', data);
     
+    // Safeguard: If there's a promo code but validation is null, prevent submission
+    if (data.promoCode && data.promoCode.trim() !== '' && !promoValidation) {
+      console.warn('⚠️ Promo code exists but validation is incomplete. Preventing submission.');
+      toast({
+        title: "Please wait",
+        description: "Promo code is still being validated. Please try again in a moment.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsProcessing(true);
     setIsPricingLoading(true);
     
@@ -26,6 +37,7 @@ export const useReportSubmission = () => {
         data.relationshipType
       );
 
+      // Handle free promo code reports
       if (data.promoCode && promoValidation?.isFree && promoValidation.isValid) {
         console.log('Processing free report with promo code:', data.promoCode);
         
@@ -77,6 +89,7 @@ export const useReportSubmission = () => {
       let finalAmount = amount;
       if (data.promoCode && promoValidation?.isValid && !promoValidation.isFree) {
         finalAmount = amount * (1 - promoValidation.discountPercent / 100);
+        console.log(`Applying ${promoValidation.discountPercent}% discount. Original: ${amount}, Final: ${finalAmount}`);
       }
 
       const reportData = {

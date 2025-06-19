@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,34 @@ const SubmissionSection = ({
   // Check if there are any validation errors
   const hasErrors = Object.keys(errors).length > 0;
   
+  // Determine if we should disable the button
+  const shouldDisableButton = isProcessing || isPricingLoading || hasErrors || isValidatingPromo;
+  
+  // Determine button text based on state
+  const getButtonText = () => {
+    if (isProcessing || isPricingLoading) {
+      return 'Processing...';
+    }
+    
+    if (hasErrors) {
+      return 'Fix Errors Above';
+    }
+    
+    if (isValidatingPromo) {
+      return 'Validating promo code...';
+    }
+    
+    if (promoValidation?.isValid) {
+      if (promoValidation.isFree) {
+        return 'Generate Free Report';
+      } else {
+        return `Apply ${promoValidation.discountPercent}% Discount & Continue`;
+      }
+    }
+    
+    return 'Enter';
+  };
+  
   // Debug: log current errors
   React.useEffect(() => {
     if (hasErrors) {
@@ -63,19 +92,22 @@ const SubmissionSection = ({
           type="button"
           size="lg" 
           className="px-12 py-6 text-lg relative z-10"
-          disabled={isProcessing || isPricingLoading || hasErrors}
+          disabled={shouldDisableButton}
           onClick={onButtonClick}
           style={{ pointerEvents: 'auto' }}
         >
-          {isProcessing || isPricingLoading ? (
+          {(isProcessing || isPricingLoading) ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Processing...
             </>
-          ) : hasErrors ? (
-            'Fix Errors Above'
+          ) : isValidatingPromo ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Validating promo code...
+            </>
           ) : (
-            'Enter'
+            getButtonText()
           )}
         </Button>
         
