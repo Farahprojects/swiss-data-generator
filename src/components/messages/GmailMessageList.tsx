@@ -69,8 +69,8 @@ export const GmailMessageList = ({
 
   return (
     <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
-      {/* Floating Action Toolbar - Sticky */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b shadow-sm">
+      {/* Floating Action Toolbar - Positioned below header */}
+      <div className="sticky top-16 z-10 bg-white/95 backdrop-blur-sm border-b shadow-sm">
         <div className="grid grid-cols-[48px_1fr_90px] items-center px-2 py-2">
           {/* First col: checkbox + delete action */}
           <div className="flex items-center gap-2">
