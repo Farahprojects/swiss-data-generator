@@ -68,27 +68,31 @@ export const GmailMessageList = ({
   const allSelected = messages.length > 0 && messages.every(m => selectedMessages.has(m.id));
 
   return (
-    <div className="relative flex flex-col h-full">
-      {/* Floating Toolbar */}
-      <div className="absolute top-20 left-6 z-30">
-        <div className="bg-white/95 backdrop-blur-sm shadow-md rounded-full border border-gray-200/50 px-3 py-1.5">
+    <div className="w-full bg-white flex flex-col h-[calc(100vh-8rem)]">
+      {/* Toolbar */}
+      <div
+        className="border-b bg-gray-50/50 flex-shrink-0"
+      >
+        {/* Change to grid layout for perfect alignment */}
+        <div className="grid grid-cols-[48px_1fr_90px] items-center px-2 py-2">
+          {/* First col: checkbox + actions (aligned with row checkboxes) */}
           <div className="flex items-center gap-2">
             <Checkbox
               checked={allSelected}
               onCheckedChange={onSelectAll}
-              className="rounded-sm"
+              className="rounded"
             />
-            <div className="w-px h-4 bg-gray-300" />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-7 w-7 p-0 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200" 
-              onClick={onDeleteSelected}
-              disabled={selectedMessages.size === 0}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onArchiveSelected}>
+              <Archive className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onDeleteSelected}>
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
+          {/* Middle col: (empty, for now; aligns with row grid) */}
+          <div />
+          {/* Right col: (empty, placeholder for potential future actions) */}
+          <div />
         </div>
       </div>
 
@@ -100,7 +104,7 @@ export const GmailMessageList = ({
             <p className="text-sm">Your messages will appear here</p>
           </div>
         ) : (
-          <div className="space-y-0">
+          <div>
             {messages.map((message) => (
               <MessageRow
                 key={message.id}
