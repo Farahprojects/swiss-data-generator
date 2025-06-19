@@ -71,7 +71,7 @@ const ReportTypeSelector = ({
 
             {requiresEssenceType && (
               <div className="space-y-2">
-                <Label htmlFor="essenceType">Essence Focus *</Label>
+                <div className="text-xl font-bold text-primary text-center">Choose your report style *</div>
                 <Controller
                   control={control}
                   name="essenceType"
@@ -122,7 +122,7 @@ const ReportTypeSelector = ({
 
             {requiresRelationshipType && (
               <div className="space-y-2">
-                <Label htmlFor="relationshipType">Relationship Type *</Label>
+                <div className="text-xl font-bold text-primary text-center">Choose your report style *</div>
                 <Controller
                   control={control}
                   name="relationshipType"
