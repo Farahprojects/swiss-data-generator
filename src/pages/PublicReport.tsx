@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -106,12 +107,12 @@ const PublicReport = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-auto scroll-smooth -mt-16" style={{ scrollSnapType: 'y mandatory' }}>
+    <div className="overflow-y-auto -mt-16">
       <HeroSection />
       
       <TestsSection />
 
-      <div style={{ scrollSnapType: 'none' }}>
+      <div>
         <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
           <ReportTypeSelector
             control={control}

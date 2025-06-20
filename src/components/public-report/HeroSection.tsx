@@ -4,7 +4,7 @@ import { Star, Clock, Shield } from 'lucide-react';
 
 const HeroSection = () => {
   return (
-    <section className="h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20" style={{ scrollSnapAlign: 'start' }}>
+    <section className="h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
       <div className="container mx-auto px-4 text-center">
         <h1 className="text-4xl md:text-6xl font-bold mb-6">
           The Mirror in your eyes
