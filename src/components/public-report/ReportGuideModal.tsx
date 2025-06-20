@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -33,7 +34,7 @@ const reportGuides = [
     details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
     subTypes: [
       'Personal – Self-awareness, emotional behavior, inner wiring',
-      'Professional – How you operate in work, decision-making, productivity', 
+      'Professional – How you operate at work: decision-making, productivity, and team dynamics. Useful for hiring, coaching, or leadership insight.', 
       'Relational – How you show up in relationships (patterns, openness, tension)'
     ]
   },
