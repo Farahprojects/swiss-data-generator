@@ -24,7 +24,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, icon: Ic
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-center justify-between">
-        <div className="flex-1">
+        <div className="flex-1 text-left">
           <h3 className={`text-4xl font-black transition-all duration-300 ${
             isActive || isHovered 
               ? 'text-primary' 
@@ -41,7 +41,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, icon: Ic
           <button
             className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 ${
               isActive || isHovered
-                ? 'bg-gradient-to-r from-primary to-secondary text-white opacity-100 translate-x-0'
+                ? 'bg-primary text-white opacity-100 translate-x-0'
                 : 'bg-gray-200 text-gray-600 opacity-0 -translate-x-2'
             }`}
           >
