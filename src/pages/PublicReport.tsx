@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,6 +12,7 @@ import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import SubmissionSection from '@/components/public-report/SubmissionSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
+import TestsSection from '@/components/public-report/TestsSection';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -108,6 +108,8 @@ const PublicReport = () => {
   return (
     <div className="h-screen overflow-y-auto scroll-smooth -mt-16" style={{ scrollSnapType: 'y mandatory' }}>
       <HeroSection />
+      
+      <TestsSection />
 
       <div style={{ scrollSnapType: 'none' }}>
         <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
