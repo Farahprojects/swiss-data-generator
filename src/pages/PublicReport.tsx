@@ -6,6 +6,7 @@ import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import HeroSection from '@/components/public-report/HeroSection';
+import TestsSection from '@/components/public-report/TestsSection';
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import ContactForm from '@/components/public-report/ContactForm';
 import BirthDetailsForm from '@/components/public-report/BirthDetailsForm';
@@ -108,6 +109,8 @@ const PublicReport = () => {
   return (
     <div className="h-screen overflow-y-auto scroll-smooth -mt-16" style={{ scrollSnapType: 'y mandatory' }}>
       <HeroSection />
+      
+      <TestsSection />
 
       <div style={{ scrollSnapType: 'none' }}>
         <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
