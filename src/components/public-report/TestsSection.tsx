@@ -1,7 +1,16 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
+import ReportCard from "./ReportCard";
 import * as LucideIcons from "lucide-react";
+import {
+  UserCircle,
+  Users,
+  Brain,
+  Repeat,
+  Target,
+  CalendarDays,
+} from 'lucide-react';
 
 interface Test {
   id: string;
@@ -70,24 +79,78 @@ const testData: Test[] = [
   },
 ];
 
+const reportGuides = [
+  {
+    type: 'Essence',
+    icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
+    title: 'Essence Report',
+    price: '$25',
+    bestFor: 'Self-understanding',
+    description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
+    details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
+    subTypes: [
+      'Personal – Self-awareness, emotional behavior, inner wiring',
+      'Professional – How you operate at work: decision-making, productivity, and team dynamics. Useful for hiring, coaching, or leadership insight.', 
+      'Relational – How you show up in relationships (patterns, openness, tension)'
+    ]
+  },
+  {
+    type: 'Sync',
+    icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
+    title: 'Sync Report',
+    price: '$25',
+    bestFor: 'Compatibility',
+    description: 'How your energy aligns with someone - connection, tension, and flow.',
+    details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
+    subTypes: [
+      'Personal Sync – Romantic, emotional, or close social connection',
+      'Professional Sync – Team dynamics, leadership compatibility, working styles'
+    ]
+  },
+  {
+    type: 'Flow',
+    icon: <Repeat className="h-5 w-5 text-primary inline-block mr-1" />,
+    title: 'Flow Report',
+    price: '$3',
+    bestFor: 'Emotional rhythm',
+    description: 'Creative/emotional openness over 7 days',
+    details: 'Track your creative and emotional rhythms throughout the week to optimize your creative output and emotional well-being.'
+  },
+  {
+    type: 'Monthly',
+    icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
+    title: 'Monthly Report',
+    price: '$3',
+    bestFor: 'Monthly planning',
+    description: 'Your personalized forecast for the current month',
+    details: 'Get monthly themes, key opportunities, and timing guidance for important decisions and activities.'
+  },
+  {
+    type: 'Mindset',
+    icon: <Brain className="h-5 w-5 text-primary inline-block mr-1" />,
+    title: 'Mindset Report',
+    price: '$3',
+    bestFor: 'Mental clarity',
+    description: 'Mood + mental clarity snapshot',
+    details: 'Get insights into your current mental state, thought patterns, and cognitive strengths for better decision-making.'
+  },
+  {
+    type: 'Focus',
+    icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
+    title: 'Focus Report',
+    price: '$3',
+    bestFor: 'Productivity',
+    description: 'Best hours today for deep work or rest',
+    details: 'Identify your optimal times for concentration, productivity, and rest based on your personal energy cycles.'
+  }
+];
+
 export default function TestsSection() {
   const [selectedTest, setSelectedTest] = useState(testData[0]);
-  const [imagesLoaded, setImagesLoaded] = useState(false);
   
-  useEffect(() => {
-    const imagePromises = testData.map((test) => {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.src = test.imageSrc;
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-    });
-    
-    Promise.all(imagePromises)
-      .then(() => setImagesLoaded(true))
-      .catch((err) => console.error("Error preloading images:", err));
-  }, []);
+  const getReportGuide = (testId: string) => {
+    return reportGuides.find(guide => guide.type === testId) || reportGuides[0];
+  };
   
   return (
     <div id="tests" className="py-16 bg-white">
@@ -119,16 +182,26 @@ export default function TestsSection() {
             
             <div className="md:col-span-6">
               <div className="w-full overflow-hidden rounded-2xl relative shadow-lg" style={{ height: "400px" }}>
-                {testData.map((test) => (
-                  <img 
-                    key={test.id}
-                    src={test.imageSrc} 
-                    alt={test.name}
-                    className={`w-full h-full object-cover absolute transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
-                    style={{ objectPosition: "center" }}
-                    loading="eager"
-                  />
-                ))}
+                {testData.map((test) => {
+                  const reportGuide = getReportGuide(test.id);
+                  return (
+                    <div 
+                      key={test.id}
+                      className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
+                    >
+                      <ReportCard
+                        type={reportGuide.type}
+                        icon={reportGuide.icon}
+                        title={reportGuide.title}
+                        price={reportGuide.price}
+                        bestFor={reportGuide.bestFor}
+                        description={reportGuide.description}
+                        details={reportGuide.details}
+                        subTypes={reportGuide.subTypes}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
