@@ -39,7 +39,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, icon: Ic
         
         <div className="ml-6">
           <button
-            className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 ${
+            className={`px-4 py-2 rounded-full font-semibold transition-all duration-300 ${
               isActive || isHovered
                 ? 'bg-primary text-white opacity-100 translate-x-0'
                 : 'bg-gray-200 text-gray-600 opacity-0 -translate-x-2'
