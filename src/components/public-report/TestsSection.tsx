@@ -25,7 +25,7 @@ const testData: Test[] = [
   },
   {
     id: "Sync",
-    name: "Sync",
+    name: "Relationships",
     description: "Understand your interpersonal dynamics",
     slug: "relationships",
     time: "10 min",
@@ -34,7 +34,7 @@ const testData: Test[] = [
   },
   {
     id: "Flow",
-    name: "Flow",
+    name: "Entrepreneur",
     description: "Align your career with your cosmic blueprint",
     slug: "Flow",
     time: "15 min",
@@ -43,7 +43,7 @@ const testData: Test[] = [
   },
   {
     id: "Monthly",
-    name: "Monthly ",
+    name: "Professional",
     description: "Discover your natural professional approach",
     slug: "Monthly ",
     time: "12 min",
@@ -90,7 +90,7 @@ export default function TestsSection() {
   }, []);
   
   return (
-    <div id="tests" className="py-16">
+    <div id="tests" className="py-16 bg-white">
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
           <div className="mb-10 text-center">
@@ -101,7 +101,7 @@ export default function TestsSection() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-            <div className="md:col-span-6 flex flex-col justify-between">
+            <div className="md:col-span-6">
               <div className="space-y-0">
                 {testData.map((test) => (
                   <TestCard
@@ -117,8 +117,8 @@ export default function TestsSection() {
               </div>
             </div>
             
-            <div className="md:col-span-6 flex">
-              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg" style={{ height: "360px" }}>
+            <div className="md:col-span-6">
+              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg" style={{ height: "400px" }}>
                 {testData.map((test) => (
                   <img 
                     key={test.id}

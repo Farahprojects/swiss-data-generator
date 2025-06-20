@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface TestCardProps {
@@ -12,20 +12,45 @@ interface TestCardProps {
 }
 
 export const TestCard = ({ title, description, path, isActive, onHover, icon: Icon }: TestCardProps) => {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <div 
-      className={`p-4 border-l-4 cursor-pointer transition-all duration-300 ${
-        isActive 
+      className={`p-6 cursor-pointer transition-all duration-300 border-l-4 ${
+        isActive || isHovered
           ? 'border-primary bg-primary/5 shadow-sm' 
-          : 'border-gray-200 hover:border-primary/50 hover:bg-gray-50'
+          : 'border-transparent hover:border-primary/50'
       }`}
-      onMouseEnter={onHover}
+      onMouseEnter={() => {
+        onHover();
+        setIsHovered(true);
+      }}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-center gap-3">
-        <Icon className="h-5 w-5 text-primary" />
-        <div>
-          <h3 className="font-semibold text-gray-900">{title}</h3>
-          {description && <p className="text-sm text-gray-600">{description}</p>}
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <h3 className={`text-5xl font-bold transition-all duration-300 ${
+            isActive || isHovered 
+              ? 'bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent' 
+              : 'text-gray-900'
+          }`}>
+            {title}
+          </h3>
+          {description && (
+            <p className="text-sm text-gray-600 mt-2">{description}</p>
+          )}
+        </div>
+        
+        <div className="ml-6">
+          <button
+            className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 ${
+              isActive || isHovered
+                ? 'bg-gradient-to-r from-primary to-secondary text-white opacity-100 translate-x-0'
+                : 'bg-gray-200 text-gray-600 opacity-0 -translate-x-2'
+            }`}
+          >
+            Explore
+          </button>
         </div>
       </div>
     </div>
