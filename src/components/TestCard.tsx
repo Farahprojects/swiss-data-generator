@@ -16,7 +16,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, icon: Ic
 
   return (
     <div 
-      className={`p-6 cursor-pointer transition-all duration-300 border-l-4 ${
+      className={`p-4 cursor-pointer transition-all duration-300 border-l-4 ${
         isActive || isHovered
           ? 'border-primary' 
           : 'border-transparent hover:border-primary/50'
