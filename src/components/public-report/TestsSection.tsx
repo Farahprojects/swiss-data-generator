@@ -16,7 +16,7 @@ interface Test {
 const testData: Test[] = [
   {
     id: "Essence",
-    name: "Mindset",
+    name: "Essence",
     description: "Understand your core thought patterns",
     slug: "Essence",
     time: "5 min",
@@ -25,7 +25,7 @@ const testData: Test[] = [
   },
   {
     id: "Sync",
-    name: "Relationships",
+    name: "Sync",
     description: "Understand your interpersonal dynamics",
     slug: "relationships",
     time: "10 min",
@@ -34,7 +34,7 @@ const testData: Test[] = [
   },
   {
     id: "Flow",
-    name: "Entrepreneur",
+    name: "Flow",
     description: "Align your career with your cosmic blueprint",
     slug: "Flow",
     time: "15 min",
@@ -43,7 +43,7 @@ const testData: Test[] = [
   },
   {
     id: "Monthly",
-    name: "Professional",
+    name: "Monthly",
     description: "Discover your natural professional approach",
     slug: "Monthly ",
     time: "12 min",
@@ -51,8 +51,8 @@ const testData: Test[] = [
     imageSrc: "/lovable-uploads/ac6e8a17-1dbf-41da-ba3f-534f993947d4.png"
   },
   {
-    id: "well-being",
-    name: "Well Being",
+    id: "Mindset",
+    name: "Mindset",
     description: "Optimize your health and wellness approach",
     slug: "well-being",
     time: "8 min",
@@ -60,8 +60,8 @@ const testData: Test[] = [
     imageSrc: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=1000&auto=format&fit=crop"
   },
   {
-    id: "life-shifts",
-    name: "Life Shifts",
+    id: "Focus",
+    name: "Focus",
     description: "Discover what the next 12 months may hold for you",
     slug: "life-shift",
     time: "10 min",
