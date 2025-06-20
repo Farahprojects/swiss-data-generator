@@ -18,7 +18,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, icon: Ic
     <div 
       className={`p-6 cursor-pointer transition-all duration-300 border-l-4 ${
         isActive || isHovered
-          ? 'border-primary bg-primary/5 shadow-sm' 
+          ? 'border-primary' 
           : 'border-transparent hover:border-primary/50'
       }`}
       onMouseEnter={() => {
@@ -29,7 +29,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, icon: Ic
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <h3 className={`text-5xl font-bold transition-all duration-300 ${
+          <h3 className={`text-3xl font-bold transition-all duration-300 ${
             isActive || isHovered 
               ? 'bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent' 
               : 'text-gray-900'
