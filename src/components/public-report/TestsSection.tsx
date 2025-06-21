@@ -66,7 +66,7 @@ const testData: Test[] = [
     slug: "well-being",
     time: "8 min",
     color: "bg-teal-500",
-    imageSrc: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=1000&auto=format&fit=crop"
+    imageSrc: "/lovable-uploads/a017ee13-6392-4278-aaf0-ef361c8dfde0.png"
   },
   {
     id: "Focus",
@@ -217,6 +217,14 @@ export default function TestsSection() {
                           <img 
                             src={test.imageSrc} 
                             alt="Monthly Report" 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                          />
+                        </div>
+                      ) : test.id === 'Mindset' ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-teal-50 to-teal-100">
+                          <img 
+                            src={test.imageSrc} 
+                            alt="Mindset Report" 
                             className="max-w-full max-h-full object-contain rounded-xl shadow-md"
                           />
                         </div>
