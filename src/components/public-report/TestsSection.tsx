@@ -1,4 +1,5 @@
 
+
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -48,7 +49,7 @@ const testData: Test[] = [
     slug: "Flow",
     time: "15 min",
     color: "bg-green-500",
-    imageSrc: "https://images.unsplash.com/photo-1493612276216-ee3925520721?q=80&w=1000&auto=format&fit=crop"
+    imageSrc: "/lovable-uploads/c245dba6-7af4-444f-a486-44594e57c9fd.png"
   },
   {
     id: "Monthly",
@@ -204,6 +205,14 @@ export default function TestsSection() {
                             className="max-w-full max-h-full object-contain rounded-xl shadow-md"
                           />
                         </div>
+                      ) : test.id === 'Flow' ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+                          <img 
+                            src={test.imageSrc} 
+                            alt="Flow Report" 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                          />
+                        </div>
                       ) : (
                         <ReportCard
                           type={getReportGuide(test.id).type}
@@ -227,3 +236,4 @@ export default function TestsSection() {
     </div>
   );
 }
+
