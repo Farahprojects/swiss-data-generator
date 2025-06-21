@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -38,7 +39,7 @@ const testData: Test[] = [
     slug: "relationships",
     time: "10 min",
     color: "bg-pink-500",
-    imageSrc: "/lovable-uploads/d84112e3-9253-4951-b3f0-fb8b2d5920a4.png"
+    imageSrc: "/lovable-uploads/71cede7b-0de9-4397-897f-29009a07c012.png"
   },
   {
     id: "Flow",
@@ -192,6 +193,14 @@ export default function TestsSection() {
                           <img 
                             src={test.imageSrc} 
                             alt="Essence Report" 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                          />
+                        </div>
+                      ) : test.id === 'Sync' ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-50 to-pink-100">
+                          <img 
+                            src={test.imageSrc} 
+                            alt="Sync Report" 
                             className="max-w-full max-h-full object-contain rounded-xl shadow-md"
                           />
                         </div>
