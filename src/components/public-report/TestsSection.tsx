@@ -182,22 +182,31 @@ export default function TestsSection() {
             <div className="md:col-span-6">
               <div className="w-full overflow-hidden rounded-2xl relative shadow-lg" style={{ height: "400px" }}>
                 {testData.map((test) => {
-                  const reportGuide = getReportGuide(test.id);
                   return (
                     <div 
                       key={test.id}
                       className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
                     >
-                      <ReportCard
-                        type={reportGuide.type}
-                        icon={reportGuide.icon}
-                        title={reportGuide.title}
-                        price={reportGuide.price}
-                        bestFor={reportGuide.bestFor}
-                        description={reportGuide.description}
-                        details={reportGuide.details}
-                        subTypes={reportGuide.subTypes}
-                      />
+                      {test.id === 'Essence' ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+                          <img 
+                            src={test.imageSrc} 
+                            alt="Essence Report" 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                          />
+                        </div>
+                      ) : (
+                        <ReportCard
+                          type={getReportGuide(test.id).type}
+                          icon={getReportGuide(test.id).icon}
+                          title={getReportGuide(test.id).title}
+                          price={getReportGuide(test.id).price}
+                          bestFor={getReportGuide(test.id).bestFor}
+                          description={getReportGuide(test.id).description}
+                          details={getReportGuide(test.id).details}
+                          subTypes={getReportGuide(test.id).subTypes}
+                        />
+                      )}
                     </div>
                   );
                 })}
