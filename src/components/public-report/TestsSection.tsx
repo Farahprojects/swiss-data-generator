@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -30,7 +29,7 @@ const testData: Test[] = [
     slug: "Essence",
     time: "5 min",
     color: "bg-blue-500",
-    imageSrc: "/lovable-uploads/ecb5f430-fb5b-4d15-b6ea-fb2735892778.png"
+    imageSrc: "/lovable-uploads/aa1bc8da-b181-46c3-92ce-7058a107633f.png"
   },
   {
     id: "Sync",
