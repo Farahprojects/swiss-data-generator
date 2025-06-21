@@ -76,7 +76,7 @@ const testData: Test[] = [
     slug: "life-shift",
     time: "10 min",
     color: "bg-purple-500",
-    imageSrc: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop"
+    imageSrc: "/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png"
   },
 ];
 
@@ -210,6 +210,14 @@ export default function TestsSection() {
                           <img 
                             src={test.imageSrc} 
                             alt="Flow Report" 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                          />
+                        </div>
+                      ) : test.id === 'Focus' ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-purple-100">
+                          <img 
+                            src={test.imageSrc} 
+                            alt="Focus Report" 
                             className="max-w-full max-h-full object-contain rounded-xl shadow-md"
                           />
                         </div>
