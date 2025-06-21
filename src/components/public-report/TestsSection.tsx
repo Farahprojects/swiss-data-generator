@@ -189,7 +189,7 @@ export default function TestsSection() {
                       className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
                     >
                       {test.id === 'Essence' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+                        <div className="w-full h-full flex items-center justify-center bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Essence Report" 
@@ -197,7 +197,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Sync' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-50 to-pink-100">
+                        <div className="w-full h-full flex items-center justify-center bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Sync Report" 
@@ -205,7 +205,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Flow' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+                        <div className="w-full h-full flex items-center justify-center bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Flow Report" 
@@ -213,7 +213,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Monthly' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+                        <div className="w-full h-full flex items-center justify-center bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Monthly Report" 
@@ -221,7 +221,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Mindset' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-teal-50 to-teal-100">
+                        <div className="w-full h-full flex items-center justify-center bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Mindset Report" 
@@ -229,7 +229,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Focus' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-purple-100">
+                        <div className="w-full h-full flex items-center justify-center bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Focus Report" 
