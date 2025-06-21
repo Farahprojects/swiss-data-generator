@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -189,51 +188,51 @@ export default function TestsSection() {
                       className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
                     >
                       {test.id === 'Essence' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-white">
+                        <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Essence Report" 
-                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                            className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
                       ) : test.id === 'Sync' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-white">
+                        <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Sync Report" 
-                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                            className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
                       ) : test.id === 'Flow' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-white">
+                        <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Flow Report" 
-                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                            className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
                       ) : test.id === 'Monthly' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-white">
+                        <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Monthly Report" 
-                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                            className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
                       ) : test.id === 'Mindset' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-white">
+                        <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Mindset Report" 
-                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                            className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
                       ) : test.id === 'Focus' ? (
-                        <div className="w-full h-full flex items-center justify-center bg-white">
+                        <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
                             alt="Focus Report" 
-                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                            className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
                       ) : (
