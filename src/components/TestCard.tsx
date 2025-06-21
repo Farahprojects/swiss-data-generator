@@ -8,11 +8,20 @@ interface TestCardProps {
   path: string;
   isActive: boolean;
   onHover: () => void;
+  onExplore?: () => void;
   icon: LucideIcon;
 }
 
-export const TestCard = ({ title, description, path, isActive, onHover, icon: Icon }: TestCardProps) => {
+export const TestCard = ({ title, description, path, isActive, onHover, onExplore, icon: Icon }: TestCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  const handleExploreClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onExplore) {
+      onExplore();
+    }
+  };
 
   return (
     <div 
@@ -39,6 +48,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, icon: Ic
         
         <div className="ml-6">
           <button
+            onClick={handleExploreClick}
             className={`px-4 py-2 rounded-full font-semibold transition-all duration-300 ${
               isActive || isHovered
                 ? 'bg-primary text-white opacity-100 translate-x-0'

@@ -1,6 +1,8 @@
+
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
+import ReportGuideModal from "./ReportGuideModal";
 import * as LucideIcons from "lucide-react";
 import {
   UserCircle,
@@ -146,6 +148,7 @@ const reportGuides = [
 
 export default function TestsSection() {
   const [selectedTest, setSelectedTest] = useState(testData[0]);
+  const [showReportGuide, setShowReportGuide] = useState(false);
   
   const getReportGuide = (testId: string) => {
     return reportGuides.find(guide => guide.type === testId) || reportGuides[0];
@@ -173,6 +176,7 @@ export default function TestsSection() {
                     path={test.slug}
                     isActive={selectedTest.id === test.id}
                     onHover={() => setSelectedTest(test)}
+                    onExplore={() => setShowReportGuide(true)}
                     icon={LucideIcons.Sparkles}
                   />
                 ))}
@@ -255,6 +259,11 @@ export default function TestsSection() {
           </div>
         </div>
       </div>
+      
+      <ReportGuideModal 
+        isOpen={showReportGuide} 
+        onClose={() => setShowReportGuide(false)} 
+      />
     </div>
   );
 }
