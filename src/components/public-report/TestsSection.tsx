@@ -1,5 +1,4 @@
 
-
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -58,7 +57,7 @@ const testData: Test[] = [
     slug: "Monthly ",
     time: "12 min",
     color: "bg-orange-500",
-    imageSrc: "/lovable-uploads/ac6e8a17-1dbf-41da-ba3f-534f993947d4.png"
+    imageSrc: "/lovable-uploads/62526a29-1fcb-4df9-a3fe-398ec868e224.png"
   },
   {
     id: "Mindset",
@@ -213,6 +212,14 @@ export default function TestsSection() {
                             className="max-w-full max-h-full object-contain rounded-xl shadow-md"
                           />
                         </div>
+                      ) : test.id === 'Monthly' ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+                          <img 
+                            src={test.imageSrc} 
+                            alt="Monthly Report" 
+                            className="max-w-full max-h-full object-contain rounded-xl shadow-md"
+                          />
+                        </div>
                       ) : test.id === 'Focus' ? (
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-purple-100">
                           <img 
@@ -244,4 +251,3 @@ export default function TestsSection() {
     </div>
   );
 }
-
