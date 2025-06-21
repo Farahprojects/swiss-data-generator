@@ -1,9 +1,11 @@
+
 // Edge Function: verifies Stripe/"free" sessions, records the guest report,
 // ▸ Changes
 //   • strict validation so ONLY translator-ready payloads are built
 //   • unified payload builder for every report type
 //   • clearer failures if something is missing
 //   • always sends birth_day + birth_time (or rejects the requst and updates)
+//   • UPDATED: pass guest_report_id as user_id to translator for tracing
 //
 // ---------------------------------------------------------------------------
 
@@ -114,7 +116,14 @@ async function processSwissDataInBackground(
     const payload = buildTranslatorPayload(reportData);
     console.log("[guest_verify_payment] Translator payload →", payload);
 
-    const translated = await translate(payload);
+    // UPDATED: Pass guest report ID as user_id for tracing in translator_logs
+    const translatorRequest = {
+      ...payload,
+      user_id: guestReportId,  // This will appear in translator_logs.user_id
+      skip_logging: false      // Ensure logging is enabled
+    };
+
+    const translated = await translate(translatorRequest);
     swissData = JSON.parse(translated.text);
   } catch (err: any) {
     swissError = err.message;
