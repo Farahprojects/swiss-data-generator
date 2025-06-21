@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ReportFormData } from '@/types/public-report';
+import { useDebounced } from '@/hooks/useDebounced';
 import FormStep from './FormStep';
 
 interface SecondPersonFormProps {
@@ -16,8 +17,24 @@ interface SecondPersonFormProps {
 }
 
 const SecondPersonForm = ({ register, setValue, watch, errors }: SecondPersonFormProps) => {
+  const [hasInteracted, setHasInteracted] = useState({
+    name: false,
+    birthDate: false,
+    birthTime: false,
+    birthLocation: false,
+  });
+
+  const secondPersonName = watch('secondPersonName') || '';
+  const secondPersonBirthDate = watch('secondPersonBirthDate') || '';
+  const secondPersonBirthTime = watch('secondPersonBirthTime') || '';
+  const secondPersonBirthLocation = watch('secondPersonBirthLocation') || '';
+
+  // Debounce the name value to prevent validation while typing
+  const debouncedName = useDebounced(secondPersonName, 500);
+
   const handlePlaceSelect = (placeData: PlaceData) => {
     setValue('secondPersonBirthLocation', placeData.name);
+    setHasInteracted(prev => ({ ...prev, birthLocation: true }));
     
     if (placeData.latitude && placeData.longitude) {
       setValue('secondPersonLatitude', placeData.latitude);
@@ -30,6 +47,21 @@ const SecondPersonForm = ({ register, setValue, watch, errors }: SecondPersonFor
     }
   };
 
+  const handleFieldInteraction = (fieldName: string) => {
+    setHasInteracted(prev => ({ ...prev, [fieldName]: true }));
+  };
+
+  const shouldShowError = (fieldName: keyof typeof hasInteracted, error: any) => {
+    return hasInteracted[fieldName] && error;
+  };
+
+  const getHelperText = (fieldName: string, value: string, error: any) => {
+    if (!hasInteracted[fieldName as keyof typeof hasInteracted] && !value) {
+      return "This field is required for sync reports";
+    }
+    return null;
+  };
+
   return (
     <FormStep stepNumber={4} title="Second Person Details" className="bg-muted/20">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -40,11 +72,20 @@ const SecondPersonForm = ({ register, setValue, watch, errors }: SecondPersonFor
             {...register('secondPersonName')}
             placeholder="Enter second person's name"
             className="h-12"
+            onFocus={() => handleFieldInteraction('name')}
+            onBlur={() => handleFieldInteraction('name')}
           />
-          {errors.secondPersonName && (
+          {shouldShowError('name', errors.secondPersonName) ? (
             <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>
+          ) : (
+            getHelperText('name', secondPersonName, errors.secondPersonName) && (
+              <p className="text-sm text-muted-foreground">
+                {getHelperText('name', secondPersonName, errors.secondPersonName)}
+              </p>
+            )
           )}
         </div>
+        
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="secondPersonBirthDate">Birth Date *</Label>
@@ -53,11 +94,20 @@ const SecondPersonForm = ({ register, setValue, watch, errors }: SecondPersonFor
               type="date"
               {...register('secondPersonBirthDate')}
               className="h-12"
+              onFocus={() => handleFieldInteraction('birthDate')}
+              onBlur={() => handleFieldInteraction('birthDate')}
             />
-            {errors.secondPersonBirthDate && (
+            {shouldShowError('birthDate', errors.secondPersonBirthDate) ? (
               <p className="text-sm text-destructive">{errors.secondPersonBirthDate.message}</p>
+            ) : (
+              getHelperText('birthDate', secondPersonBirthDate, errors.secondPersonBirthDate) && (
+                <p className="text-sm text-muted-foreground">
+                  {getHelperText('birthDate', secondPersonBirthDate, errors.secondPersonBirthDate)}
+                </p>
+              )
             )}
           </div>
+          
           <div className="space-y-2">
             <Label htmlFor="secondPersonBirthTime">Birth Time *</Label>
             <Input
@@ -66,22 +116,42 @@ const SecondPersonForm = ({ register, setValue, watch, errors }: SecondPersonFor
               {...register('secondPersonBirthTime')}
               step="60"
               className="h-12"
+              onFocus={() => handleFieldInteraction('birthTime')}
+              onBlur={() => handleFieldInteraction('birthTime')}
             />
-            {errors.secondPersonBirthTime && (
+            {shouldShowError('birthTime', errors.secondPersonBirthTime) ? (
               <p className="text-sm text-destructive">{errors.secondPersonBirthTime.message}</p>
+            ) : (
+              getHelperText('birthTime', secondPersonBirthTime, errors.secondPersonBirthTime) && (
+                <p className="text-sm text-muted-foreground">
+                  {getHelperText('birthTime', secondPersonBirthTime, errors.secondPersonBirthTime)}
+                </p>
+              )
             )}
           </div>
         </div>
+        
         <div className="space-y-2">
           <PlaceAutocomplete
             label="Birth Location *"
-            value={watch('secondPersonBirthLocation') || ''}
-            onChange={(value) => setValue('secondPersonBirthLocation', value)}
+            value={secondPersonBirthLocation}
+            onChange={(value) => {
+              setValue('secondPersonBirthLocation', value);
+              if (!hasInteracted.birthLocation && value) {
+                handleFieldInteraction('birthLocation');
+              }
+            }}
             onPlaceSelect={handlePlaceSelect}
             placeholder="Enter birth city, state, country"
             id="secondPersonBirthLocation"
-            error={errors.secondPersonBirthLocation?.message}
+            error={shouldShowError('birthLocation', errors.secondPersonBirthLocation) ? errors.secondPersonBirthLocation?.message : undefined}
           />
+          {!shouldShowError('birthLocation', errors.secondPersonBirthLocation) && 
+           getHelperText('birthLocation', secondPersonBirthLocation, errors.secondPersonBirthLocation) && (
+            <p className="text-sm text-muted-foreground">
+              {getHelperText('birthLocation', secondPersonBirthLocation, errors.secondPersonBirthLocation)}
+            </p>
+          )}
         </div>
       </div>
     </FormStep>

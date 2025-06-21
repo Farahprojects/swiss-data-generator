@@ -40,24 +40,37 @@ export const reportSchema = z.object({
   message: "Please select a relationship type",
   path: ["relationshipType"]
 }).refine((data) => {
-  if (data.reportType === 'sync') {
-    if (!data.secondPersonName || data.secondPersonName.trim() === '') {
-      return false;
-    }
-    if (!data.secondPersonBirthDate || data.secondPersonBirthDate === '') {
-      return false;
-    }
-    if (!data.secondPersonBirthTime || data.secondPersonBirthTime === '') {
-      return false;
-    }
-    if (!data.secondPersonBirthLocation || data.secondPersonBirthLocation.trim() === '') {
-      return false;
-    }
+  if (data.reportType === 'sync' && (!data.secondPersonName || data.secondPersonName.trim() === '')) {
+    return false;
   }
   return true;
 }, {
-  message: "All second person details are required for sync reports",
+  message: "Second person's name is required for sync reports",
   path: ["secondPersonName"]
+}).refine((data) => {
+  if (data.reportType === 'sync' && (!data.secondPersonBirthDate || data.secondPersonBirthDate === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Second person's birth date is required for sync reports",
+  path: ["secondPersonBirthDate"]
+}).refine((data) => {
+  if (data.reportType === 'sync' && (!data.secondPersonBirthTime || data.secondPersonBirthTime === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Second person's birth time is required for sync reports",
+  path: ["secondPersonBirthTime"]
+}).refine((data) => {
+  if (data.reportType === 'sync' && (!data.secondPersonBirthLocation || data.secondPersonBirthLocation.trim() === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Second person's birth location is required for sync reports",
+  path: ["secondPersonBirthLocation"]
 });
 
 export type ReportFormData = z.infer<typeof reportSchema>;

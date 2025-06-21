@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -16,8 +16,17 @@ interface BirthDetailsFormProps {
 }
 
 const BirthDetailsForm = ({ register, setValue, watch, errors }: BirthDetailsFormProps) => {
+  const [hasInteracted, setHasInteracted] = useState({
+    birthDate: false,
+    birthTime: false,
+    birthLocation: false,
+  });
+
+  const birthLocation = watch('birthLocation') || '';
+
   const handlePlaceSelect = (placeData: PlaceData) => {
     setValue('birthLocation', placeData.name);
+    setHasInteracted(prev => ({ ...prev, birthLocation: true }));
     
     if (placeData.latitude && placeData.longitude) {
       setValue('birthLatitude', placeData.latitude);
@@ -28,6 +37,14 @@ const BirthDetailsForm = ({ register, setValue, watch, errors }: BirthDetailsFor
     if (placeData.placeId) {
       setValue('birthPlaceId', placeData.placeId);
     }
+  };
+
+  const handleFieldInteraction = (fieldName: string) => {
+    setHasInteracted(prev => ({ ...prev, [fieldName]: true }));
+  };
+
+  const shouldShowError = (fieldName: keyof typeof hasInteracted, error: any) => {
+    return hasInteracted[fieldName] && error;
   };
 
   return (
@@ -41,8 +58,10 @@ const BirthDetailsForm = ({ register, setValue, watch, errors }: BirthDetailsFor
               type="date"
               {...register('birthDate')}
               className="h-12"
+              onFocus={() => handleFieldInteraction('birthDate')}
+              onBlur={() => handleFieldInteraction('birthDate')}
             />
-            {errors.birthDate && (
+            {shouldShowError('birthDate', errors.birthDate) && (
               <p className="text-sm text-destructive">{errors.birthDate.message}</p>
             )}
           </div>
@@ -54,8 +73,10 @@ const BirthDetailsForm = ({ register, setValue, watch, errors }: BirthDetailsFor
               {...register('birthTime')}
               step="60"
               className="h-12"
+              onFocus={() => handleFieldInteraction('birthTime')}
+              onBlur={() => handleFieldInteraction('birthTime')}
             />
-            {errors.birthTime && (
+            {shouldShowError('birthTime', errors.birthTime) && (
               <p className="text-sm text-destructive">{errors.birthTime.message}</p>
             )}
           </div>
@@ -63,12 +84,17 @@ const BirthDetailsForm = ({ register, setValue, watch, errors }: BirthDetailsFor
         <div className="space-y-2">
           <PlaceAutocomplete
             label="Birth Location *"
-            value={watch('birthLocation') || ''}
-            onChange={(value) => setValue('birthLocation', value)}
+            value={birthLocation}
+            onChange={(value) => {
+              setValue('birthLocation', value);
+              if (!hasInteracted.birthLocation && value) {
+                handleFieldInteraction('birthLocation');
+              }
+            }}
             onPlaceSelect={handlePlaceSelect}
             placeholder="Enter birth city, state, country"
             id="birthLocation"
-            error={errors.birthLocation?.message}
+            error={shouldShowError('birthLocation', errors.birthLocation) ? errors.birthLocation?.message : undefined}
           />
         </div>
       </div>

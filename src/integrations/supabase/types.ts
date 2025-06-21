@@ -1237,6 +1237,7 @@ export type Database = {
           request_type: string | null
           response_payload: Json | null
           response_status: number | null
+          translator_payload: Json | null
           user_id: string | null
         }
         Insert: {
@@ -1253,6 +1254,7 @@ export type Database = {
           request_type?: string | null
           response_payload?: Json | null
           response_status?: number | null
+          translator_payload?: Json | null
           user_id?: string | null
         }
         Update: {
@@ -1269,6 +1271,7 @@ export type Database = {
           request_type?: string | null
           response_payload?: Json | null
           response_status?: number | null
+          translator_payload?: Json | null
           user_id?: string | null
         }
         Relationships: [

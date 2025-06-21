@@ -31,7 +31,7 @@ const PublicReport = () => {
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
-    mode: 'onChange',
+    mode: 'onBlur', // Changed from 'onChange' to 'onBlur' for better UX
     defaultValues: {
       reportType: '',
       relationshipType: '',
