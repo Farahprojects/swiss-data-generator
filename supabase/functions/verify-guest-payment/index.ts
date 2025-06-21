@@ -81,14 +81,14 @@ function buildTranslatorPayload(rd: ReportData) {
     return {
       request,
       person_a: {
-        birth_date:  rd.birthDate,  // Changed from birth_day to birth_date
+        birth_day:  rd.birthDate,
         birth_time: rd.birthTime,
         latitude:   parseFloat(rd.birthLatitude),
         longitude:  parseFloat(rd.birthLongitude),
         name:       rd.name ?? "A",
       },
       person_b: {
-        birth_date:  rd.secondPersonBirthDate,  // Changed from birth_day to birth_date
+        birth_day:  rd.secondPersonBirthDate,
         birth_time: rd.secondPersonBirthTime,
         latitude:   parseFloat(rd.secondPersonLatitude),
         longitude:  parseFloat(rd.secondPersonLongitude),
