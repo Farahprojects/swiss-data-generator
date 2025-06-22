@@ -1,5 +1,4 @@
 
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -80,8 +79,8 @@ function validateFormData(data: CreateReportRequest): { isValid: boolean; errors
 // Data transformation helper - creates clean payload that matches exact curl format
 function transformToSwissFormat(data: CreateReportRequest): any {
   const basePayload: any = {
-    request: data.reportType  // CRITICAL: Add the request field that Swiss API requires
-    // REMOVED: skip_logging: true - Let translator handle all logging consistently
+    request: data.reportType,  // CRITICAL: Add the request field that Swiss API requires
+    skip_logging: true  // CRITICAL: Tell translator not to log since we handle it here
   };
 
   // Handle different report types
@@ -307,12 +306,11 @@ serve(async (req) => {
       });
     }
 
-    // Transform data to clean Swiss API format (like curl) - NO skip_logging flag
+    // Transform data to clean Swiss API format (like curl) with skip_logging flag
     const cleanPayload = transformToSwissFormat(formData);
     console.log('[create-report] Clean payload for Swiss API:', JSON.stringify(cleanPayload, null, 2));
 
     // Call Swiss API with clean payload and API key in headers (like curl)
-    // The translator will now handle ALL logging consistently
     const swissResult = await callSwissAPI(cleanPayload, user.id, apiKeyData.api_key);
     
     if (!swissResult.success) {
@@ -325,8 +323,35 @@ serve(async (req) => {
       });
     }
 
-    // REMOVED: Manual translator logging (lines 291-311)
-    // The translator will now handle all logging consistently with translator_payload
+    // Log to translator_logs with the report name and client_id using the report_tier
+    const reportName = getReportName(formData, cleanPayload.report);
+    console.log('[create-report] Saving report with name:', reportName);
+
+    const translatorLogData: any = {
+      user_id: user.id,
+      request_type: formData.reportType,
+      request_payload: cleanPayload,
+      response_payload: swissResult.data,
+      response_status: 200,
+      report_name: reportName,
+      report_tier: cleanPayload.report
+    };
+
+    // Add client_id if provided
+    if (formData.client_id) {
+      translatorLogData.client_id = formData.client_id;
+      console.log('[create-report] Saving with client_id:', formData.client_id);
+    }
+
+    const { data: translatorLog, error: translatorLogError } = await supabase
+      .from('translator_logs')
+      .insert(translatorLogData)
+      .select()
+      .single();
+
+    if (translatorLogError) {
+      console.error('[create-report] Error saving translator log:', translatorLogError);
+    }
 
     // Format and return response
     const formattedResponse = formatResponse(swissResult.data, formData.reportType);
@@ -346,4 +371,3 @@ serve(async (req) => {
     });
   }
 });
-

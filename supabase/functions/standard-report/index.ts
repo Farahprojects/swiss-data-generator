@@ -1,3 +1,5 @@
+
+
 /*─────────────────────Made──────────────────────────────────────────────────────────
   standard-report.ts
   Edge Function: Generates standard reports using OpenAI's GPT-4o model
@@ -167,12 +169,10 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
   console.log(`${logPrefix} Report data endpoint: ${reportData.endpoint}`);
   console.log(`${logPrefix} Report data contains chartData: ${reportData.chartData ? "Yes" : "No"}`);
   
-  // Structure data for the prompt - include personalized names for sync reports
+  // Structure data for the prompt
   const userMessage = JSON.stringify({
     chartData: reportData.chartData,
     endpoint: reportData.endpoint,
-    person_a_name: reportData.person_a_name,
-    person_b_name: reportData.person_b_name,
     ...reportData // Include any other relevant data
   });
 
