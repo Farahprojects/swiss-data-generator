@@ -1,4 +1,3 @@
-
 // Shared report generation handler
 // Ensures consistent report generation across all endpoints
 
@@ -90,6 +89,8 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       user_id: requestData.user_id,
       apiKey: requestData.api_key,
       chartData: swissData,
+      person_a_name: requestData.person_a_name,
+      person_b_name: requestData.person_b_name,
       // Include any other relevant data from the request
       ...requestData
     };
