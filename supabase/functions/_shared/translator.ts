@@ -1,3 +1,4 @@
+
 // supabase/functions/_shared/translator.ts
 //
 // ▸ 2025-06-16 patch v2.1 - LATEST VERSION DEBUG
@@ -234,6 +235,17 @@ export async function translate(
         return { status: 400, text: JSON.stringify({ error: err }) };
       }
 
+      // Extract names for personalized reports
+      const personAName = body.person_a?.name || "Person A";
+      const personBName = body.person_b?.name || "Person B";
+
+      // Add names to the request data for report generation
+      const enhancedRequestData = {
+        ...raw,
+        person_a_name: personAName,
+        person_b_name: personBName
+      };
+
       const { data: pa, googleGeoUsed: gA } = await ensureLatLon(body.person_a);
       const { data: pb, googleGeoUsed: gB } = await ensureLatLon(body.person_b);
       googleGeoUsed = gA || gB;
@@ -249,7 +261,7 @@ export async function translate(
       const txt = await r.text();
 
       const reportResult = await handleReportGeneration({
-        requestData: raw,
+        requestData: enhancedRequestData,
         swissApiResponse: txt,
         swissApiStatus: r.status,
         requestId,
