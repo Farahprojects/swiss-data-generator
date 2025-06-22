@@ -9,7 +9,6 @@ const EDGE_ENGINES = [
   "standard-report",
   "standard-report-one", 
   "standard-report-two",
-  "standard-report-three"
 ];
 
 // Database-based round-robin engine selection
