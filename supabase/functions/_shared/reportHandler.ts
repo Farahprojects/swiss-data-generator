@@ -135,18 +135,20 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
     if (reportResult.success && reportResult.report) {
       console.log(`${logPrefix} Report generated successfully for "${reportPayload.report_type}"`);
       
-      // Combine Swiss API data with the report
+      // Combine Swiss API data with the report and include engine_used
       const combinedResponse = {
         ...swissData,
-        report: reportResult.report
+        report: reportResult.report,
+        engine_used: reportResult.report.engine_used // <- Engine info from report generation
       };
       
-      console.log(`${logPrefix} Combined response prepared with report included`);
+      console.log(`${logPrefix} Combined response prepared with report and engine info included`);
       console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
       
       return {
         success: true,
-        responseData: combinedResponse
+        responseData: combinedResponse,
+        errorMessage: undefined
       };
     } else {
       const errorMsg = reportResult.errorMessage || "Report generation failed without specific error";

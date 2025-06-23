@@ -274,7 +274,7 @@ export async function translate(
           googleGeoUsed,
           userId,
           payload,                 // what we sent to Swiss
-          reportResult.engineUsed, // which report engine was used
+          reportResult.responseData?.engine_used, // extract engine from responseData
         );
       }
 
@@ -314,7 +314,7 @@ export async function translate(
           googleGeoUsed,
           userId,
           undefined, // no translator payload for simple GET
-          reportResult.engineUsed,
+          reportResult.responseData?.engine_used, // extract engine from responseData
         );
       }
       return {
@@ -355,7 +355,7 @@ export async function translate(
           googleGeoUsed,
           userId,
           undefined, // no translator payload for simple GET
-          reportResult.engineUsed,
+          reportResult.responseData?.engine_used, // extract engine from responseData
         );
       }
 
@@ -403,7 +403,7 @@ export async function translate(
         googleGeoUsed,
         userId,
         enriched,                // exact payload sent to Swiss
-        reportResult.engineUsed, // which report engine was used
+        reportResult.responseData?.engine_used, // extract engine from responseData
       );
     }
 
