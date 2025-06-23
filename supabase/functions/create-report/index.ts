@@ -80,7 +80,6 @@ function validateFormData(data: CreateReportRequest): { isValid: boolean; errors
 function transformToSwissFormat(data: CreateReportRequest): any {
   const basePayload: any = {
     request: data.reportType,  // CRITICAL: Add the request field that Swiss API requires
-    skip_logging: true  // CRITICAL: Tell translator not to log since we handle it here
   };
 
   // Handle different report types
