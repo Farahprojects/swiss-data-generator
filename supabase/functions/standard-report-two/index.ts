@@ -1,7 +1,8 @@
 
+
 /*─────────────────────Made──────────────────────────────────────────────────────────
-  standard-report-two.ts
-  Edge Function: Generates standard reports using OpenAI's GPT-4o model (Third API Key)
+  standard-report.ts
+  Edge Function: Generates standard reports using OpenAI's GPT-4o model
   Uses system prompts from the reports_prompts table
   Enhanced for production readiness with retries, timeouts, and structured logging.
 ────────────────────────────────────────────────────────────────────────────────*/
@@ -24,11 +25,11 @@ const API_TIMEOUT_MS = parseInt(Deno.env.get("API_TIMEOUT_MS") || "90000");
 const MAX_DB_RETRIES = parseInt(Deno.env.get("MAX_DB_RETRIES") || "2");
 
 // Enhanced debugging for initialization
-const LOG_PREFIX_INIT = "[standard-report-two][init]";
+const LOG_PREFIX_INIT = "[standard-report][init]";
 console.log(`${LOG_PREFIX_INIT} Edge function initializing with config:
 - SUPABASE_URL: ${SUPABASE_URL ? "Exists (first 10 chars): " + SUPABASE_URL.substring(0, 10) + "..." : "MISSING"}
 - SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY ? "Exists (length: " + SUPABASE_SERVICE_KEY.length + ")" : "MISSING"}
-- OPENAI_API_KEY_THREE: ${OPENAI_API_KEY ? "Exists (length: " + OPENAI_API_KEY.length + ", starts with: " + OPENAI_API_KEY.substring(0, 4) + "...)" : "MISSING"}
+- OPENAI_API_KEY: ${OPENAI_API_KEY ? "Exists (length: " + OPENAI_API_KEY.length + ", starts with: " + OPENAI_API_KEY.substring(0, 4) + "...)" : "MISSING"}
 - MAX_API_RETRIES: ${MAX_API_RETRIES}
 - INITIAL_RETRY_DELAY_MS: ${INITIAL_RETRY_DELAY_MS}
 - RETRY_BACKOFF_FACTOR: ${RETRY_BACKOFF_FACTOR}
@@ -41,8 +42,8 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 }
 
 if (!OPENAI_API_KEY) {
-  console.error(`${LOG_PREFIX_INIT} Missing OpenAI API key (OPENAI_API_KEY_THREE)`);
-  throw new Error("Missing OpenAI API key (OPENAI_API_KEY_THREE)");
+  console.error(`${LOG_PREFIX_INIT} Missing OpenAI API key`);
+  throw new Error("Missing OpenAI API key");
 }
 
 // Initialize Supabase client
@@ -71,7 +72,7 @@ const CORS_HEADERS = {
   UTILS
 ────────────────────────────────────────────────────────────────────────────────*/
 function jsonResponse(body: unknown, init: ResponseInit = {}, requestId?: string): Response {
-  const logPrefix = requestId ? `[standard-report-two][${requestId}]` : "[standard-report-two]";
+  const logPrefix = requestId ? `[standard-report][${requestId}]` : "[standard-report]";
   if (init.status && init.status >= 400) {
     console.error(`${logPrefix} Sending error response: ${init.status}`, body);
   }
@@ -121,7 +122,7 @@ async function retryWithBackoff<T>(
 
 // Fetch the system prompt from the reports_prompts table - now accepts reportType parameter
 async function getSystemPrompt(reportType: string, requestId: string): Promise<string> {
-  const logPrefix = `[standard-report-two][${requestId}]`;
+  const logPrefix = `[standard-report][${requestId}]`;
   console.log(`${logPrefix} Fetching system prompt for report type: ${reportType}`);
 
   const fetchPrompt = async () => {
@@ -161,8 +162,8 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
 
 // Generate report using OpenAI API
 async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<string> {
-  const logPrefix = `[standard-report-two][${requestId}]`;
-  console.log(`${logPrefix} Generating report with OpenAI GPT-4o (using OPENAI_API_KEY_THREE)`);
+  const logPrefix = `[standard-report][${requestId}]`;
+  console.log(`${logPrefix} Generating report with OpenAI GPT-4o`);
 
   // Enhanced logging of the incoming payload
   console.log(`${logPrefix} Report data endpoint: ${reportData.endpoint}`);
@@ -281,7 +282,7 @@ async function logReportAttempt(
   engineUsed: string,
   requestId: string
 ) {
-  const logPrefix = `[standard-report-two][${requestId}]`;
+  const logPrefix = `[standard-report][${requestId}]`;
   try {
     console.log(`${logPrefix} Logging report attempt to report_logs table with engine: ${engineUsed}`);
     
@@ -311,7 +312,7 @@ async function logReportAttempt(
 // Main handler function
 serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8); // Short unique ID for this request
-  const logPrefix = `[standard-report-two][${requestId}]`;
+  const logPrefix = `[standard-report][${requestId}]`;
   const startTime = Date.now();
 
   console.log(`${logPrefix} Received ${req.method} request for ${req.url}`);
@@ -349,7 +350,7 @@ serve(async (req) => {
     
     // Extract the report type and selected engine from the payload
     const reportType = reportData.reportType || reportData.report_type || "standard";
-    const selectedEngine = reportData.selectedEngine || "standard-report-two"; // Fall back to default if not provided
+    const selectedEngine = reportData.selectedEngine || "standard-report"; // Fall back to default if not provided
     console.log(`${logPrefix} Processing ${reportType} report for endpoint: ${reportData?.endpoint} using engine: ${selectedEngine}`);
     console.log(`${logPrefix} Payload structure check - keys: ${Object.keys(reportData || {}).join(', ')}`);
 
@@ -403,6 +404,7 @@ serve(async (req) => {
     requestId
   );
 }
+
 
 
     // Return the generated report
