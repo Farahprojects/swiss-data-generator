@@ -83,24 +83,30 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       };
     }
 
-    // Prepare report payload with enhanced logging
+    // Prepare report payload with enhanced logging and embedded person names
     const reportPayload = {
       endpoint: requestData.request || "unknown",
       report_type: requestData.report,
       user_id: requestData.user_id,
       apiKey: requestData.api_key,
-      chartData: swissData,
+      chartData: {
+        ...swissData,
+        person_a_name: requestData.person_a?.name,
+        person_b_name: requestData.person_b?.name
+      },
       // Include any other relevant data from the request
       ...requestData
     };
 
-    console.log(`${logPrefix} Report payload prepared:`, {
+    console.log(`${logPrefix} Report payload prepared with embedded names:`, {
       endpoint: reportPayload.endpoint,
       report_type: reportPayload.report_type,
       user_id: reportPayload.user_id ? 'present' : 'missing',
       apiKey: reportPayload.apiKey ? 'present' : 'missing',
       chartData: reportPayload.chartData ? 'present' : 'missing',
-      chartDataKeys: reportPayload.chartData ? Object.keys(reportPayload.chartData).join(', ') : 'none'
+      chartDataKeys: reportPayload.chartData ? Object.keys(reportPayload.chartData).join(', ') : 'none',
+      person_a_name: reportPayload.chartData.person_a_name || 'not provided',
+      person_b_name: reportPayload.chartData.person_b_name || 'not provided'
     });
 
     // Validate report type before calling orchestrator
