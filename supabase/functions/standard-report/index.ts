@@ -389,21 +389,23 @@ serve(async (req) => {
     const report = await generateReport(systemPrompt, reportData, requestId);
     
     // Log successful report generation - this is now the ONLY place reports are logged
-    if (reportData.apiKey && reportData.user_id) {
-      await logReportAttempt(
-        reportData.apiKey,
-        reportData.user_id,
-        reportType,
-        reportData.endpoint,
-        reportData.chartData,
-        report, // Make sure this contains the actual report text
-        "success",
-        Date.now() - startTime,
-        null,
-        selectedEngine,
-        requestId
-      );
-    }
+{
+  await logReportAttempt(
+    reportData.apiKey,
+    reportData.user_id,
+    reportType,
+    reportData.endpoint,
+    reportData.chartData,
+    report, // Make sure this contains the actual report text
+    "success",
+    Date.now() - startTime,
+    null,
+    selectedEngine,
+    requestId
+  );
+}
+
+
 
     // Return the generated report
     console.log(`${logPrefix} Successfully processed ${reportType} request in ${Date.now() - startTime}ms`);
