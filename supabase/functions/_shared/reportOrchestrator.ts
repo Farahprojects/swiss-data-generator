@@ -16,9 +16,9 @@ async function getNextEngine(supabase: any) {
   try {
     console.log(`[reportOrchestrator] Selecting next engine using database-based round-robin`);
     
-    // Get the most recently used engine from report_logs
+    // Get the most recently used engine from translator_logs
     const { data: lastReport, error } = await supabase
-      .from("report_logs")
+      .from("translator_logs")
       .select("engine_used")
       .order("created_at", { ascending: false })
       .limit(1)
