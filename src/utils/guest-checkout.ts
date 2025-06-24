@@ -63,3 +63,37 @@ export const initiateGuestCheckout = async ({
     };
   }
 };
+
+export const verifyGuestPayment = async (sessionId: string) => {
+  try {
+    console.log("🔍 Verifying guest payment for session:", sessionId);
+
+    const { data, error } = await supabase.functions.invoke("verify-guest-payment", {
+      body: { sessionId },
+    });
+
+    if (error) {
+      console.error("❌ Error verifying guest payment:", error);
+      return {
+        success: false,
+        verified: false,
+        error: error.message || "Failed to verify payment"
+      };
+    }
+
+    console.log("✅ Guest payment verification result:", data);
+    return {
+      success: true,
+      verified: data.verified,
+      reportData: data.reportData,
+      error: data.error
+    };
+  } catch (err) {
+    console.error("❌ Failed to verify guest payment:", err);
+    return {
+      success: false,
+      verified: false,
+      error: err instanceof Error ? err.message : "Unknown error occurred"
+    };
+  }
+};

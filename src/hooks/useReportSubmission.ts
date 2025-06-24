@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { guestCheckoutWithAmount } from '@/utils/guest-checkout';
+import { initiateGuestCheckout } from '@/utils/guest-checkout';
 import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation';
 import { getReportPriceAndDescription, buildCompleteReportType } from '@/services/report-pricing';
 import { ReportFormData } from '@/types/public-report';
@@ -143,7 +143,12 @@ export const useReportSubmission = () => {
       
       console.log('Report data being sent to checkout:', reportData);
       
-      const result = await guestCheckoutWithAmount(data.email, finalAmount, description, reportData);
+      const result = await initiateGuestCheckout({
+        amount: finalAmount,
+        email: data.email,
+        description,
+        reportData,
+      });
       
       if (!result.success) {
         toast({
