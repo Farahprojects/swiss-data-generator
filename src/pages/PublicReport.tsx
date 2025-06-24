@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +13,7 @@ import SubmissionSection from '@/components/public-report/SubmissionSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 import TestsSection from '@/components/public-report/TestsSection';
+import Footer from '@/components/Footer';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -161,6 +161,7 @@ const PublicReport = () => {
       </div>
 
       <FeaturesSection />
+      <Footer />
     </div>
   );
 };
