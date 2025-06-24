@@ -24,6 +24,13 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
           <div className="absolute top-1/2 left-1/2 w-20 h-20 sm:w-32 sm:h-32 lg:w-64 lg:h-64 bg-gradient-to-br from-blue-400 to-teal-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 opacity-50"></div>
         </div>
         
+        {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-20"
+            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+          ></div>
+        )}
+        
         <div className={`relative z-10 ${heroSection} flex items-center`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
             <motion.div
@@ -117,10 +124,18 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                 whileHover={{ scale: 1.05, rotate: Math.random() * 6 - 3 }}
                 className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl transform transition-all hover:shadow-2xl"
               >
-                <div 
-                  className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-2xl mb-4 sm:mb-6 bg-gradient-to-br from-current to-purple-500"
-                  style={{ color: themeColor }}
-                ></div>
+                {(service.imageData?.url || service.imageUrl) ? (
+                  <img
+                    src={service.imageData?.url || service.imageUrl}
+                    alt={service.title}
+                    className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-2xl mb-4 sm:mb-6 object-cover"
+                  />
+                ) : (
+                  <div 
+                    className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-2xl mb-4 sm:mb-6 bg-gradient-to-br from-current to-purple-500"
+                    style={{ color: themeColor }}
+                  ></div>
+                )}
                 <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900 break-words">{service.title}</h3>
                 <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed break-words">{service.description}</p>
                 <div className="flex items-center justify-between flex-wrap gap-3">

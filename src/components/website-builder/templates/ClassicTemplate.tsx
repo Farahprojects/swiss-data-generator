@@ -18,10 +18,10 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
     <div className="bg-cream-50" style={{ fontFamily: `${fontFamily}, serif` }}>
       {/* Classic Centered Hero */}
       <section className={`relative ${heroPadding} bg-gradient-to-b from-amber-50 to-white`}>
-        {customizationData.headerImageUrl && (
+        {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
           <div 
             className="absolute inset-0 bg-cover bg-center opacity-20"
-            style={{ backgroundImage: `url(${customizationData.headerImageUrl})` }}
+            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
           ></div>
         )}
         
@@ -54,9 +54,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-3 lg:gap-12 items-center">
             <div className="lg:col-span-1 order-2 lg:order-1">
-              {customizationData.aboutImageUrl ? (
+              {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) ? (
                 <img
-                  src={customizationData.aboutImageUrl}
+                  src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
                   alt="Philosophy"
                   className="w-full h-32 sm:h-48 lg:h-64 object-cover rounded-lg"
                 />
@@ -96,9 +96,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
                 className={`grid gap-6 lg:gap-8 lg:grid-cols-2 items-center ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}
               >
                 <div className={index % 2 === 1 ? 'lg:order-2' : 'order-2 lg:order-1'}>
-                  {service.imageUrl ? (
+                  {(service.imageData?.url || service.imageUrl) ? (
                     <img
-                      src={service.imageUrl}
+                      src={service.imageData?.url || service.imageUrl}
                       alt={service.title}
                       className="w-full h-24 sm:h-32 lg:h-48 object-cover rounded-lg"
                     />

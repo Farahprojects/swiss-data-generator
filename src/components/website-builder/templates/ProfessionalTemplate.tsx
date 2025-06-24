@@ -123,12 +123,20 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
               </div>
             </div>
             <div className="order-first lg:order-last">
-              <div className="bg-gray-100 rounded-lg h-32 sm:h-48 lg:h-64 flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <div className="w-8 h-8 sm:w-12 sm:h-12 lg:w-20 lg:h-20 mx-auto mb-2 sm:mb-4 rounded-full" style={{ backgroundColor: themeColor }}></div>
-                  <div className="text-xs sm:text-sm">Professional Portrait</div>
+              {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) ? (
+                <img
+                  src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
+                  alt="Professional"
+                  className="w-full h-32 sm:h-48 lg:h-64 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="bg-gray-100 rounded-lg h-32 sm:h-48 lg:h-64 flex items-center justify-center">
+                  <div className="text-center text-gray-500">
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 lg:w-20 lg:h-20 mx-auto mb-2 sm:mb-4 rounded-full" style={{ backgroundColor: themeColor }}></div>
+                    <div className="text-xs sm:text-sm">Professional Portrait</div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

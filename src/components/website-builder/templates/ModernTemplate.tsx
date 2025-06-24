@@ -23,10 +23,10 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-blue-600 opacity-20"></div>
         
         {/* Header background image overlay */}
-        {customizationData.headerImageUrl && (
+        {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
           <div 
             className="absolute inset-0 bg-cover bg-center opacity-30"
-            style={{ backgroundImage: `url(${customizationData.headerImageUrl})` }}
+            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
           ></div>
         )}
         
@@ -66,10 +66,10 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
               </p>
             </div>
             
-            {customizationData.aboutImageUrl && (
+            {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) && (
               <div className="order-first lg:order-last">
                 <img
-                  src={customizationData.aboutImageUrl}
+                  src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
                   alt="About"
                   className="w-full h-48 sm:h-64 lg:h-80 object-cover rounded-xl shadow-lg"
                 />
@@ -93,9 +93,9 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
                 className="bg-white rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-shadow"
               >
                 <div className="flex items-start space-x-4">
-                  {service.imageUrl ? (
+                  {(service.imageData?.url || service.imageUrl) ? (
                     <img
-                      src={service.imageUrl}
+                      src={service.imageData?.url || service.imageUrl}
                       alt={service.title}
                       className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-xl flex-shrink-0"
                     />

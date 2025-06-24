@@ -17,8 +17,15 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Ultra Minimal Hero */}
-      <section className={`${heroSection} flex items-center justify-center bg-white`}>
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
+      <section className={`${heroSection} flex items-center justify-center bg-white relative`}>
+        {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-10"
+            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+          ></div>
+        )}
+        
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -51,6 +58,17 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             className="text-center"
           >
             <h2 className="text-2xl sm:text-3xl font-light mb-8 sm:mb-12 text-gray-900">About</h2>
+            
+            {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) && (
+              <div className="mb-8 sm:mb-12">
+                <img
+                  src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
+                  alt="About"
+                  className="w-32 h-32 sm:w-48 sm:h-48 lg:w-64 lg:h-64 object-cover rounded-full mx-auto shadow-lg"
+                />
+              </div>
+            )}
+            
             <p className="text-base sm:text-lg text-gray-600 leading-relaxed font-light">
               {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
             </p>
