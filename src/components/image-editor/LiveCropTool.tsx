@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Rect, FabricObject } from 'fabric';
+import { Rect, FabricImage } from 'fabric';
 
 interface LiveCropToolProps {
   canvas: any;
@@ -16,8 +16,7 @@ export const LiveCropTool: React.FC<LiveCropToolProps> = ({
 }) => {
   const [aspectRatio, setAspectRatio] = useState<string>('free');
   const [cropRect, setCropRect] = useState<Rect | null>(null);
-  const [overlay, setOverlay] = useState<Rect[]>([]);
-  const [isCropMode, setIsCropMode] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
   const [cropDimensions, setCropDimensions] = useState({ width: 0, height: 0 });
 
   const aspectRatios = [
@@ -28,120 +27,45 @@ export const LiveCropTool: React.FC<LiveCropToolProps> = ({
     { value: '3:2', label: 'Photo (3:2)', ratio: 3/2 },
   ];
 
-  const getImageObject = () => {
+  const getImageObject = (): FabricImage | null => {
     if (!canvas) return null;
     const objects = canvas.getObjects();
-    return objects.find((obj: FabricObject) => obj.type === 'image');
+    return objects.find((obj: any) => obj.type === 'image') || null;
   };
 
-  const createOverlay = (cropRect: Rect) => {
-    if (!canvas) return;
-
-    // Remove existing overlay
-    overlay.forEach(rect => canvas.remove(rect));
-
-    const imageObj = getImageObject();
-    if (!imageObj) return;
-
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
-    
-    const cropLeft = cropRect.left || 0;
-    const cropTop = cropRect.top || 0;
-    const cropWidth = (cropRect.width || 0) * (cropRect.scaleX || 1);
-    const cropHeight = (cropRect.height || 0) * (cropRect.scaleY || 1);
-
-    // Create overlay rectangles to dim areas outside crop
-    const overlayRects = [
-      // Top overlay
-      new Rect({
-        left: 0,
-        top: 0,
-        width: canvasWidth,
-        height: cropTop,
-        fill: 'rgba(0, 0, 0, 0.5)',
-        selectable: false,
-        evented: false,
-        excludeFromExport: true
-      }),
-      // Bottom overlay
-      new Rect({
-        left: 0,
-        top: cropTop + cropHeight,
-        width: canvasWidth,
-        height: canvasHeight - (cropTop + cropHeight),
-        fill: 'rgba(0, 0, 0, 0.5)',
-        selectable: false,
-        evented: false,
-        excludeFromExport: true
-      }),
-      // Left overlay
-      new Rect({
-        left: 0,
-        top: cropTop,
-        width: cropLeft,
-        height: cropHeight,
-        fill: 'rgba(0, 0, 0, 0.5)',
-        selectable: false,
-        evented: false,
-        excludeFromExport: true
-      }),
-      // Right overlay
-      new Rect({
-        left: cropLeft + cropWidth,
-        top: cropTop,
-        width: canvasWidth - (cropLeft + cropWidth),
-        height: cropHeight,
-        fill: 'rgba(0, 0, 0, 0.5)',
-        selectable: false,
-        evented: false,
-        excludeFromExport: true
-      })
-    ];
-
-    overlayRects.forEach(rect => canvas.add(rect));
-    setOverlay(overlayRects);
-    canvas.renderAll();
-  };
-
-  const enforceLiveAspectRatio = (rect: Rect) => {
-    const selectedRatio = aspectRatios.find(ar => ar.value === aspectRatio);
-    if (!selectedRatio?.ratio) return;
-
-    const currentWidth = (rect.width || 0) * (rect.scaleX || 1);
-    const currentHeight = (rect.height || 0) * (rect.scaleY || 1);
-    
-    // Determine which dimension changed more recently and adjust the other
-    const newHeight = currentWidth / selectedRatio.ratio;
-    
-    rect.set({
-      height: newHeight / (rect.scaleY || 1)
-    });
-  };
-
-  const enableCropMode = () => {
+  const startCrop = () => {
     if (!canvas) return;
 
     const imageObj = getImageObject();
-    if (!imageObj) return;
+    if (!imageObj) {
+      console.error('No image found on canvas');
+      return;
+    }
 
-    // Create crop rectangle
+    // Clear any existing crop rectangle
+    if (cropRect) {
+      canvas.remove(cropRect);
+    }
+
+    // Get image bounds
     const imgBounds = imageObj.getBoundingRect();
-    const initialWidth = Math.min(200, imgBounds.width * 0.8);
-    const initialHeight = Math.min(200, imgBounds.height * 0.8);
+    
+    // Create crop rectangle - start with a reasonable size
+    const initialWidth = Math.min(200, imgBounds.width * 0.6);
+    const initialHeight = Math.min(200, imgBounds.height * 0.6);
 
     const rect = new Rect({
       left: imgBounds.left + (imgBounds.width - initialWidth) / 2,
       top: imgBounds.top + (imgBounds.height - initialHeight) / 2,
       width: initialWidth,
       height: initialHeight,
-      fill: 'transparent',
+      fill: 'rgba(0, 0, 255, 0.1)',
       stroke: '#007bff',
       strokeWidth: 2,
       strokeDashArray: [5, 5],
       cornerStyle: 'circle',
       cornerColor: '#007bff',
-      cornerSize: 8,
+      cornerSize: 10,
       transparentCorners: false,
       lockRotation: true,
       hasRotatingPoint: false
@@ -157,32 +81,35 @@ export const LiveCropTool: React.FC<LiveCropToolProps> = ({
     canvas.add(rect);
     canvas.setActiveObject(rect);
     setCropRect(rect);
-    setIsCropMode(true);
+    setIsCropping(true);
 
-    // Update dimensions display
-    setCropDimensions({
-      width: Math.round(rect.width || 0),
-      height: Math.round(rect.height || 0)
-    });
+    // Update dimensions
+    updateDimensions(rect);
 
-    // Create initial overlay
-    createOverlay(rect);
-
-    // Add event listeners for live updates
-    rect.on('moving', () => {
-      createOverlay(rect);
+    // Add event listeners for real-time updates
+    rect.on('scaling', () => {
+      enforceAspectRatio(rect);
       updateDimensions(rect);
     });
 
-    rect.on('scaling', () => {
-      if (selectedRatio?.ratio) {
-        enforceLiveAspectRatio(rect);
-      }
-      createOverlay(rect);
+    rect.on('moving', () => {
       updateDimensions(rect);
     });
 
     canvas.renderAll();
+  };
+
+  const enforceAspectRatio = (rect: Rect) => {
+    const selectedRatio = aspectRatios.find(ar => ar.value === aspectRatio);
+    if (!selectedRatio?.ratio) return;
+
+    const currentWidth = (rect.width || 0) * (rect.scaleX || 1);
+    const newHeight = currentWidth / selectedRatio.ratio;
+    
+    rect.set({
+      height: newHeight / (rect.scaleY || 1),
+      scaleY: 1
+    });
   };
 
   const updateDimensions = (rect: Rect) => {
@@ -194,78 +121,115 @@ export const LiveCropTool: React.FC<LiveCropToolProps> = ({
     });
   };
 
-  const applyCrop = () => {
+  const applyCrop = async () => {
     if (!canvas || !cropRect) return;
 
-    const imageObj = getImageObject();
-    if (!imageObj) return;
+    try {
+      const imageObj = getImageObject();
+      if (!imageObj) {
+        console.error('No image object found');
+        return;
+      }
 
-    // Get crop dimensions
-    const cropLeft = cropRect.left || 0;
-    const cropTop = cropRect.top || 0;
-    const cropWidth = (cropRect.width || 0) * (cropRect.scaleX || 1);
-    const cropHeight = (cropRect.height || 0) * (cropRect.scaleY || 1);
+      // Get crop rectangle bounds
+      const cropBounds = cropRect.getBoundingRect();
+      const imageBounds = imageObj.getBoundingRect();
 
-    // Create clipping path for the image
-    const clipPath = new Rect({
-      left: cropLeft - (imageObj.left || 0),
-      top: cropTop - (imageObj.top || 0),
-      width: cropWidth,
-      height: cropHeight,
-      absolutePositioned: true
-    });
+      // Calculate relative crop coordinates
+      const relativeLeft = (cropBounds.left - imageBounds.left) / imageBounds.width;
+      const relativeTop = (cropBounds.top - imageBounds.top) / imageBounds.height;
+      const relativeWidth = cropBounds.width / imageBounds.width;
+      const relativeHeight = cropBounds.height / imageBounds.height;
 
-    imageObj.set({
-      clipPath: clipPath
-    });
+      // Create a new cropped image
+      const originalElement = imageObj.getElement() as HTMLImageElement;
+      const tempCanvas = document.createElement('canvas');
+      const ctx = tempCanvas.getContext('2d');
+      
+      if (!ctx || !originalElement) {
+        console.error('Failed to create crop canvas');
+        return;
+      }
 
-    // Clean up crop UI
-    canvas.remove(cropRect);
-    overlay.forEach(rect => canvas.remove(rect));
-    setOverlay([]);
-    setCropRect(null);
-    setIsCropMode(false);
+      // Set canvas size to crop dimensions
+      tempCanvas.width = cropBounds.width;
+      tempCanvas.height = cropBounds.height;
 
-    canvas.renderAll();
-    onCropComplete();
+      // Calculate source coordinates on the original image
+      const sourceX = relativeLeft * originalElement.naturalWidth;
+      const sourceY = relativeTop * originalElement.naturalHeight;
+      const sourceWidth = relativeWidth * originalElement.naturalWidth;
+      const sourceHeight = relativeHeight * originalElement.naturalHeight;
+
+      // Draw the cropped portion
+      ctx.drawImage(
+        originalElement,
+        sourceX, sourceY, sourceWidth, sourceHeight,
+        0, 0, cropBounds.width, cropBounds.height
+      );
+
+      // Create new image from cropped canvas
+      const croppedDataURL = tempCanvas.toDataURL('image/png');
+      
+      // Load the cropped image
+      const newImg = await FabricImage.fromURL(croppedDataURL);
+      
+      // Position the new image where the original was
+      newImg.set({
+        left: imageBounds.left,
+        top: imageBounds.top,
+        scaleX: imageBounds.width / cropBounds.width,
+        scaleY: imageBounds.height / cropBounds.height
+      });
+
+      // Replace the original image
+      canvas.remove(imageObj);
+      canvas.add(newImg);
+      
+      // Clean up
+      cancelCrop();
+      canvas.renderAll();
+      
+      onCropComplete();
+      
+    } catch (error) {
+      console.error('Crop failed:', error);
+    }
   };
 
   const cancelCrop = () => {
-    if (!canvas) return;
-
-    if (cropRect) {
+    if (cropRect && canvas) {
       canvas.remove(cropRect);
       setCropRect(null);
     }
-
-    overlay.forEach(rect => canvas.remove(rect));
-    setOverlay([]);
-    setIsCropMode(false);
-    canvas.renderAll();
+    setIsCropping(false);
+    canvas?.renderAll();
   };
 
-  // Update aspect ratio for existing crop rectangle
+  // Auto-start crop when tool is selected
   useEffect(() => {
-    if (cropRect && isCropMode) {
-      const selectedRatio = aspectRatios.find(ar => ar.value === aspectRatio);
-      if (selectedRatio?.ratio) {
-        const currentWidth = (cropRect.width || 0) * (cropRect.scaleX || 1);
-        const newHeight = currentWidth / selectedRatio.ratio;
-        
-        cropRect.set({
-          height: newHeight / (cropRect.scaleY || 1)
-        });
-        
-        createOverlay(cropRect);
-        updateDimensions(cropRect);
-        canvas?.renderAll();
-      }
+    if (canvas && !isCropping) {
+      startCrop();
     }
-  }, [aspectRatio, cropRect, isCropMode, canvas]);
+    
+    return () => {
+      if (cropRect && canvas) {
+        canvas.remove(cropRect);
+      }
+    };
+  }, [canvas]);
+
+  // Update aspect ratio for existing crop
+  useEffect(() => {
+    if (cropRect && isCropping) {
+      enforceAspectRatio(cropRect);
+      canvas?.renderAll();
+    }
+  }, [aspectRatio]);
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Live Crop Tool</h3>
+      <h3 className="text-lg font-semibold">Crop Image</h3>
       
       <div>
         <Label className="text-sm font-medium">Aspect Ratio</Label>
@@ -290,34 +254,20 @@ export const LiveCropTool: React.FC<LiveCropToolProps> = ({
       )}
 
       <div className="space-y-2">
-        {!isCropMode ? (
-          <Button onClick={enableCropMode} className="w-full">
-            Start Cropping
-          </Button>
-        ) : (
-          <div className="space-y-2">
-            <Button onClick={applyCrop} className="w-full bg-green-600 hover:bg-green-700">
-              Apply Crop
-            </Button>
-            <Button onClick={cancelCrop} variant="outline" className="w-full">
-              Cancel
-            </Button>
-          </div>
-        )}
+        <Button onClick={applyCrop} className="w-full bg-green-600 hover:bg-green-700">
+          Apply Crop
+        </Button>
+        <Button onClick={cancelCrop} variant="outline" className="w-full">
+          Cancel Crop
+        </Button>
       </div>
 
       <div className="text-sm text-gray-600">
-        {!isCropMode ? (
-          <p>Click "Start Cropping" to begin live crop mode with real-time preview.</p>
-        ) : (
-          <div>
-            <p><strong>Live Crop Mode Active:</strong></p>
-            <p>• Drag to move the crop area</p>
-            <p>• Drag corners to resize</p>
-            <p>• Dark overlay shows what will be removed</p>
-            <p>• Aspect ratio is {aspectRatio === 'free' ? 'unlocked' : 'locked'}</p>
-          </div>
-        )}
+        <p><strong>How to crop:</strong></p>
+        <p>• Drag the corners to resize the crop area</p>
+        <p>• Drag the center to move the crop area</p>
+        <p>• Select an aspect ratio to constrain proportions</p>
+        <p>• Click "Apply Crop" when satisfied</p>
       </div>
     </div>
   );
