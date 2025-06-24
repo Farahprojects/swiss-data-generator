@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -272,11 +271,11 @@ const Login = () => {
                   onAppleSignIn={handleAppleSignIn}
                 />
 
-                <p className="text-sm text-gray-600 opacity-50">
+                <p className="text-sm text-gray-600">
                   Don't have an account?{' '}
-                  <span className="text-gray-400 cursor-not-allowed">
+                  <Link to="/signup" className="font-medium text-primary hover:underline">
                     Sign up
-                  </span>
+                  </Link>
                 </p>
               </div>
             </>
