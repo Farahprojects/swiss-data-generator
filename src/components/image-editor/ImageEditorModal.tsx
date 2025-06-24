@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -11,8 +10,6 @@ import { Button } from '@/components/ui/button';
 import { ImageCanvas } from './ImageCanvas';
 import { EditorToolbar } from './EditorToolbar';
 import { AdjustmentPanel } from './AdjustmentPanel';
-import { LiveCropTool } from './LiveCropTool';
-import { FilterPanel } from './FilterPanel';
 import { SimpleCropTool } from './SimpleCropTool';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ImageData } from '@/types/website-builder';
 
-export type EditorTool = 'select' | 'crop' | 'adjust' | 'filter';
+export type EditorTool = 'select' | 'crop' | 'adjust';
 
 export interface ImageAdjustments {
   brightness: number;
@@ -317,20 +314,6 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     canvas={fabricCanvas}
                     onCropComplete={handleCropComplete}
                   />
-                )}
-                
-                {activeTool === 'filter' && !hasCroppedImage && (
-                  <FilterPanel
-                    canvas={fabricCanvas}
-                  />
-                )}
-                
-                {activeTool === 'filter' && hasCroppedImage && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-                    <p className="text-sm text-yellow-800">
-                      Filters are not available after cropping. Please apply filters before cropping.
-                    </p>
-                  </div>
                 )}
               </div>
             </div>
