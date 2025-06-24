@@ -26,6 +26,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
   const canApplyFiltersRef = useRef<boolean>(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isCanvasInitialized = useRef<boolean>(false);
   const isMobile = useIsMobile();
 
   const calculateCanvasSize = useCallback(() => {
@@ -42,46 +43,50 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
   }, [isMobile]);
 
   const resizeCanvas = useCallback(() => {
-    if (!fabricCanvasRef.current || !containerRef.current) return;
+    if (!fabricCanvasRef.current || !containerRef.current || !isCanvasInitialized.current) return;
 
     const canvas = fabricCanvasRef.current;
     const { width: newWidth, height: newHeight } = calculateCanvasSize();
     
-    // Store current zoom and viewport transform
-    const currentZoom = canvas.getZoom();
-    const currentVpt = canvas.viewportTransform?.slice() || [1, 0, 0, 1, 0, 0];
-    
-    // Resize canvas
-    canvas.setDimensions({ width: newWidth, height: newHeight });
-    
-    // If we have an image, rescale and recenter it
-    if (imageObjectRef.current) {
-      const img = imageObjectRef.current;
-      const imgWidth = img.width || 1;
-      const imgHeight = img.height || 1;
+    try {
+      // Store current zoom and viewport transform
+      const currentZoom = canvas.getZoom();
+      const currentVpt = canvas.viewportTransform?.slice() || [1, 0, 0, 1, 0, 0];
       
-      // Calculate new scale to fit the resized canvas
-      const scale = Math.min(newWidth / imgWidth, newHeight / imgHeight) * 0.9;
+      // Resize canvas
+      canvas.setDimensions({ width: newWidth, height: newHeight });
       
-      img.scale(scale);
-      canvas.centerObject(img);
-      
-      // If we have an overlay, update its position and size to match the image
-      if (overlayObjectRef.current) {
-        const overlay = overlayObjectRef.current;
-        overlay.set({
-          left: img.left,
-          top: img.top,
-          width: img.getScaledWidth(),
-          height: img.getScaledHeight(),
-          originX: img.originX,
-          originY: img.originY,
-          angle: img.angle
-        });
+      // If we have an image, rescale and recenter it
+      if (imageObjectRef.current) {
+        const img = imageObjectRef.current;
+        const imgWidth = img.width || 1;
+        const imgHeight = img.height || 1;
+        
+        // Calculate new scale to fit the resized canvas
+        const scale = Math.min(newWidth / imgWidth, newHeight / imgHeight) * 0.9;
+        
+        img.scale(scale);
+        canvas.centerObject(img);
+        
+        // If we have an overlay, update its position and size to match the image
+        if (overlayObjectRef.current) {
+          const overlay = overlayObjectRef.current;
+          overlay.set({
+            left: img.left,
+            top: img.top,
+            width: img.getScaledWidth(),
+            height: img.getScaledHeight(),
+            originX: img.originX,
+            originY: img.originY,
+            angle: img.angle
+          });
+        }
       }
+      
+      canvas.renderAll();
+    } catch (error) {
+      console.error('Error resizing canvas:', error);
     }
-    
-    canvas.renderAll();
   }, [calculateCanvasSize]);
 
   // Handle window resize with debouncing
@@ -108,7 +113,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
 
   // Handle mobile mode changes
   useEffect(() => {
-    if (fabricCanvasRef.current) {
+    if (fabricCanvasRef.current && isCanvasInitialized.current) {
       resizeCanvas();
     }
   }, [isMobile, resizeCanvas]);
@@ -126,21 +131,27 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     });
 
     fabricCanvasRef.current = canvas;
-    onCanvasReady(canvas);
-
-    // Only load image initially if we have an imageUrl and haven't cropped yet
-    if (imageUrl && !cropApplied) {
-      loadImageToCanvas(canvas, imageUrl);
-    }
+    
+    // Wait for the canvas to be fully initialized before marking it as ready
+    setTimeout(() => {
+      isCanvasInitialized.current = true;
+      onCanvasReady(canvas);
+      
+      // Only load image initially if we have an imageUrl and haven't cropped yet
+      if (imageUrl && !cropApplied) {
+        loadImageToCanvas(canvas, imageUrl);
+      }
+    }, 0);
 
     return () => {
+      isCanvasInitialized.current = false;
       canvas.dispose();
     };
   }, [imageUrl, onCanvasReady]);
 
   // Only reload image when cropApplied changes from true to false (reset)
   useEffect(() => {
-    if (!fabricCanvasRef.current || !imageUrl) return;
+    if (!fabricCanvasRef.current || !imageUrl || !isCanvasInitialized.current) return;
     
     // If cropApplied just changed to false, reload the original image
     if (!cropApplied && fabricCanvasRef.current.getObjects().length === 0) {
@@ -227,7 +238,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
 
   // Apply adjustments when they change (only if not cropped)
   useEffect(() => {
-    if (!imageObjectRef.current || !fabricCanvasRef.current || cropApplied) {
+    if (!imageObjectRef.current || !fabricCanvasRef.current || cropApplied || !isCanvasInitialized.current) {
       if (cropApplied) {
         console.log('Skipping filter application - image has been cropped');
         return;
