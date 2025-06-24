@@ -148,7 +148,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Edit Image</DialogTitle>
         </DialogHeader>
@@ -195,7 +195,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
           </div>
         </div>
         
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4">
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>
             Cancel
           </Button>

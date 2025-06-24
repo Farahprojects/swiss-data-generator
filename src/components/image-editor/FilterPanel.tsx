@@ -1,13 +1,14 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { filters } from 'fabric';
 
 interface FilterPanelProps {
   canvas: any;
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({ canvas }) => {
-  const filters = [
+  const filterOptions = [
     { name: 'None', action: () => applyFilter('none') },
     { name: 'Grayscale', action: () => applyFilter('grayscale') },
     { name: 'Sepia', action: () => applyFilter('sepia') },
@@ -23,30 +24,30 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ canvas }) => {
     
     if (!imageObject) return;
 
-    let filters: any[] = [];
+    let imageFilters: any[] = [];
 
     switch (filterType) {
       case 'grayscale':
-        filters = [new (fabric as any).Image.filters.Grayscale()];
+        imageFilters = [new filters.Grayscale()];
         break;
       case 'sepia':
-        filters = [new (fabric as any).Image.filters.Sepia()];
+        imageFilters = [new filters.Sepia()];
         break;
       case 'vintage':
-        filters = [
-          new (fabric as any).Image.filters.Brightness({ brightness: -0.1 }),
-          new (fabric as any).Image.filters.Contrast({ contrast: 0.15 }),
-          new (fabric as any).Image.filters.Sepia()
+        imageFilters = [
+          new filters.Brightness({ brightness: -0.1 }),
+          new filters.Contrast({ contrast: 0.15 }),
+          new filters.Sepia()
         ];
         break;
       case 'blur':
-        filters = [new (fabric as any).Image.filters.Blur({ blur: 0.1 })];
+        imageFilters = [new filters.Blur({ blur: 0.1 })];
         break;
       default:
-        filters = [];
+        imageFilters = [];
     }
 
-    imageObject.filters = filters;
+    imageObject.filters = imageFilters;
     imageObject.applyFilters();
     canvas.renderAll();
   };
@@ -56,7 +57,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ canvas }) => {
       <h3 className="text-lg font-semibold">Filters</h3>
       
       <div className="grid grid-cols-2 gap-2">
-        {filters.map((filter) => (
+        {filterOptions.map((filter) => (
           <Button
             key={filter.name}
             variant="outline"

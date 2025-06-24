@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Rect } from 'fabric';
 
 interface CropToolProps {
   canvas: any;
@@ -61,8 +62,8 @@ export const CropTool: React.FC<CropToolProps> = ({
   const enableCropMode = () => {
     if (!canvas) return;
 
-    // Add a selection rectangle for cropping
-    const rect = new (fabric as any).Rect({
+    // Add a selection rectangle for cropping using v6 syntax
+    const rect = new Rect({
       left: 100,
       top: 100,
       width: 200,

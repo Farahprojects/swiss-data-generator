@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
-import { Canvas as FabricCanvas, FabricImage } from 'fabric';
+import { Canvas as FabricCanvas, FabricImage, filters } from 'fabric';
 import { ImageAdjustments } from './ImageEditorModal';
 
 interface ImageCanvasProps {
@@ -45,7 +45,8 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
           const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
           
           img.scale(scale);
-          img.center();
+          // Use centerObject instead of center() for v6
+          canvas.centerObject(img);
           
           canvas.add(img);
           canvas.renderAll();
@@ -69,28 +70,28 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     const img = imageObjectRef.current;
     const { brightness, contrast, saturation, rotation } = adjustments;
 
-    // Apply filters
-    const filters = [];
+    // Apply filters using v6 syntax
+    const imageFilters = [];
     
     if (brightness !== 0) {
-      filters.push(new (fabric as any).Image.filters.Brightness({
+      imageFilters.push(new filters.Brightness({
         brightness: brightness / 100
       }));
     }
     
     if (contrast !== 0) {
-      filters.push(new (fabric as any).Image.filters.Contrast({
+      imageFilters.push(new filters.Contrast({
         contrast: contrast / 100
       }));
     }
     
     if (saturation !== 0) {
-      filters.push(new (fabric as any).Image.filters.Saturation({
+      imageFilters.push(new filters.Saturation({
         saturation: saturation / 100
       }));
     }
 
-    img.filters = filters;
+    img.filters = imageFilters;
     img.applyFilters();
     
     // Apply rotation
