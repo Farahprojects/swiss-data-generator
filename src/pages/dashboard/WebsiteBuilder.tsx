@@ -74,7 +74,7 @@ export default function WebsiteBuilder() {
           setSelectedTemplate(template);
         }
       } else {
-        // No existing website, but let's check for images in storage
+        // No existing website, but let's check for images in storage only if no saved customization exists
         await loadImagesFromStorageAndPopulate();
       }
 
@@ -105,19 +105,27 @@ export default function WebsiteBuilder() {
     try {
       const storageImages = await loadImagesFromStorage(user.id);
       
-      // Update customization data with images from storage
+      // Only populate if we don't already have customization data
+      // This prevents overriding user's intentional deletions
       setCustomizationData(prev => {
         const updated = { ...prev };
         
-        if (storageImages.headerImageUrl) {
-          updated.headerImageUrl = storageImages.headerImageUrl;
+        // Only restore if not explicitly set to null/empty and not already configured
+        if (storageImages.headerImageUrl && !updated.headerImageData && !updated.headerImageUrl) {
+          updated.headerImageData = {
+            url: storageImages.headerImageUrl,
+            filePath: `${user.id}/header/${storageImages.headerImageUrl.split('/').pop()}`
+          };
         }
         
-        if (storageImages.aboutImageUrl) {
-          updated.aboutImageUrl = storageImages.aboutImageUrl;
+        if (storageImages.aboutImageUrl && !updated.aboutImageData && !updated.aboutImageUrl) {
+          updated.aboutImageData = {
+            url: storageImages.aboutImageUrl,
+            filePath: `${user.id}/about/${storageImages.aboutImageUrl.split('/').pop()}`
+          };
         }
         
-        // Handle service images
+        // Handle service images more carefully
         if (Object.keys(storageImages.serviceImages).length > 0) {
           if (!updated.services) {
             updated.services = [];
@@ -133,7 +141,13 @@ export default function WebsiteBuilder() {
                 imageUrl: ''
               };
             }
-            updated.services[serviceIndex].imageUrl = imageUrl;
+            // Only restore if not already configured
+            if (!updated.services[serviceIndex].imageData && !updated.services[serviceIndex].imageUrl) {
+              updated.services[serviceIndex].imageData = {
+                url: imageUrl,
+                filePath: `${user.id}/service/${serviceIndex}/${imageUrl.split('/').pop()}`
+              };
+            }
           });
         }
         
@@ -171,10 +185,19 @@ export default function WebsiteBuilder() {
   };
 
   const handleCustomizationChange = (field: string, value: any) => {
-    setCustomizationData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setCustomizationData(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Auto-save when images are changed/deleted
+      if (field.includes('Image') || field.includes('imageData')) {
+        // Debounce the save to avoid too many calls
+        setTimeout(() => {
+          handleSave();
+        }, 1000);
+      }
+      
+      return updated;
+    });
   };
 
   const handleSave = async () => {

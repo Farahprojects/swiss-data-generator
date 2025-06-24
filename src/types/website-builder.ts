@@ -4,11 +4,18 @@ export interface Service {
   description: string;
   price: string;
   imageUrl?: string;
+  imageData?: ImageData;
+}
+
+export interface ImageData {
+  url: string;
+  filePath: string;
 }
 
 export interface CustomizationData {
   coachName?: string;
   profileImage?: string;
+  profileImageData?: ImageData;
   tagline?: string;
   bio?: string;
   services?: Service[];
@@ -17,5 +24,7 @@ export interface CustomizationData {
   fontFamily?: string;
   backgroundStyle?: string;
   headerImageUrl?: string;
+  headerImageData?: ImageData;
   aboutImageUrl?: string;
+  aboutImageData?: ImageData;
 }
