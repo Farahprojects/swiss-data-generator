@@ -29,7 +29,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 }) => {
   const renderTemplate = () => {
     const templateProps = {
-      data: customizationData,
+      customizationData: customizationData || {},
       isPreview: !isPublicView
     };
 
