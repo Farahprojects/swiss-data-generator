@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -104,15 +105,15 @@ const About = () => {
                 <div className="backdrop-blur-sm bg-white/50 rounded-xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all">
                   <h3 className="font-semibold text-xl mb-4 text-primary">Accessibility</h3>
                   <p className="text-gray-700">
-                    We believe in making astrological data accessible to developers of all
-                    skill levels through a clear, well-documented API.
+                    We believe in making astrological insights accessible to everyone,
+                    creating user-friendly tools that serve people from all walks of life.
                   </p>
                 </div>
                 <div className="backdrop-blur-sm bg-white/50 rounded-xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all">
                   <h3 className="font-semibold text-xl mb-4 text-primary">Reliability</h3>
                   <p className="text-gray-700">
-                    Our infrastructure is designed for high availability and performance,
-                    ensuring your applications can always access the data they need.
+                    Our platform is built for consistency and dependability, ensuring you can
+                    trust our insights to guide your most important decisions.
                   </p>
                 </div>
               </div>
