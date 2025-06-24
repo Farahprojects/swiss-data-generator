@@ -50,7 +50,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
               className="text-center lg:text-left"
-              style={{ textShadow: hasHeaderImage ? '2px 2px 4px rgba(0,0,0,0.7)' : 'none' }}
+              style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
             >
               <h1 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}>
                 {customizationData.coachName || "Michael Thompson"}
