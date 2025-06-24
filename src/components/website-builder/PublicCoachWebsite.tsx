@@ -6,6 +6,7 @@ import { TemplatePreview } from "./TemplatePreview";
 import { TheraLoader } from "@/components/ui/TheraLoader";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { WebsiteErrorBoundary } from "./WebsiteErrorBoundary";
 
 interface CoachWebsite {
   id: string;
@@ -20,6 +21,22 @@ interface WebsiteTemplate {
   description: string;
   template_data: any;
 }
+
+// Helper function to validate and clean customization data
+const validateCustomizationData = (data: any) => {
+  if (!data || typeof data !== 'object') {
+    return {};
+  }
+
+  // Clean services array to remove null values
+  if (data.services && Array.isArray(data.services)) {
+    data.services = data.services.filter((service: any) => 
+      service && typeof service === 'object' && service !== null
+    );
+  }
+
+  return data;
+};
 
 export const PublicCoachWebsite: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -41,6 +58,8 @@ export const PublicCoachWebsite: React.FC = () => {
     }
 
     try {
+      console.log('Loading website for slug:', slug);
+      
       // Query coach_websites for a published website with this slug
       const { data: websiteData, error: websiteError } = await supabase
         .from('coach_websites')
@@ -50,12 +69,21 @@ export const PublicCoachWebsite: React.FC = () => {
         .single();
 
       if (websiteError || !websiteData) {
+        console.error('Website not found:', websiteError);
         setNotFound(true);
         setIsLoading(false);
         return;
       }
 
-      setWebsite(websiteData);
+      console.log('Website data loaded:', websiteData);
+
+      // Validate and clean the customization data
+      const cleanedData = {
+        ...websiteData,
+        customization_data: validateCustomizationData(websiteData.customization_data)
+      };
+
+      setWebsite(cleanedData);
 
       // Load the template data
       const { data: templateData, error: templateError } = await supabase
@@ -71,6 +99,7 @@ export const PublicCoachWebsite: React.FC = () => {
         return;
       }
 
+      console.log('Template data loaded:', templateData);
       setTemplate(templateData);
       setIsLoading(false);
 
@@ -111,12 +140,14 @@ export const PublicCoachWebsite: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen">
-      <TemplatePreview
-        template={template}
-        customizationData={website.customization_data}
-        isPublicView={true}
-      />
-    </div>
+    <WebsiteErrorBoundary>
+      <div className="min-h-screen">
+        <TemplatePreview
+          template={template}
+          customizationData={website.customization_data}
+          isPublicView={true}
+        />
+      </div>
+    </WebsiteErrorBoundary>
   );
 };

@@ -7,6 +7,17 @@ interface TemplateProps {
   isPreview?: boolean;
 }
 
+// Helper function to validate and filter services
+const validateServices = (services: any[]) => {
+  if (!Array.isArray(services)) {
+    return [];
+  }
+  
+  return services
+    .filter((service: any) => service && typeof service === 'object' && service !== null)
+    .filter((service: any) => service.title || service.description || service.price);
+};
+
 export const MinimalTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
   const themeColor = customizationData.themeColor || '#10B981';
   const fontFamily = customizationData.fontFamily || 'Inter';
@@ -18,9 +29,7 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
   // Filter out null services and ensure we have valid service objects
-  const validServices = (customizationData.services || [])
-    .filter((service: any) => service && typeof service === 'object')
-    .filter((service: any) => service.title || service.description || service.price);
+  const validServices = validateServices(customizationData.services || []);
 
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>

@@ -42,6 +42,26 @@ const fontOptions = [
   { name: 'Merriweather', value: 'Merriweather', category: 'Serif', preview: 'Classical and readable' }
 ];
 
+// Helper function to validate and clean services array
+const validateServices = (services: any[]): Service[] => {
+  if (!Array.isArray(services)) {
+    return [];
+  }
+  
+  return services.filter((service: any) => {
+    // Filter out null, undefined, or invalid service objects
+    return service && 
+           typeof service === 'object' && 
+           service !== null;
+  }).map((service: any) => ({
+    title: service.title || '',
+    description: service.description || '',
+    price: service.price || '',
+    imageUrl: service.imageUrl || '',
+    imageData: service.imageData || undefined
+  }));
+};
+
 export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   customizationData,
   onChange
@@ -62,7 +82,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   };
 
   const handleServiceChange = (index: number, field: string, value: string | ImageData | null) => {
-    const services = [...(customizationData.services || [])];
+    const services = validateServices(customizationData.services || []);
     if (field === 'imageData') {
       services[index] = { ...services[index], imageData: value as ImageData | undefined };
     } else {
@@ -72,23 +92,19 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   };
 
   const addService = () => {
-    const services = [...(customizationData.services || [])];
+    const services = validateServices(customizationData.services || []);
     services.push({ title: '', description: '', price: '', imageUrl: '' });
     onChange('services', services);
   };
 
   const removeService = (index: number) => {
-    const services = customizationData.services?.filter((_, i) => i !== index) || [];
-    onChange('services', services);
+    const services = validateServices(customizationData.services || []);
+    const filteredServices = services.filter((_, i) => i !== index);
+    onChange('services', filteredServices);
   };
 
-  // Filter out null services and ensure we have valid service objects
-  const validServices = (customizationData.services || [])
-    .filter((service: any) => service && typeof service === 'object')
-    .map((service: any, originalIndex: number) => ({
-      ...service,
-      originalIndex // Keep track of original index for updates
-    }));
+  // Ensure we always work with validated services
+  const validServices = validateServices(customizationData.services || []);
 
   const SectionHeader = ({ icon: Icon, title, isOpen, section }: any) => (
     <CollapsibleTrigger asChild>
@@ -242,65 +258,58 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     </div>
                     
                     <AnimatePresence>
-                      {(customizationData.services || []).map((service, index) => {
-                        // Skip null services
-                        if (!service || typeof service !== 'object') {
-                          return null;
-                        }
-                        
-                        return (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            transition={{ duration: 0.2 }}
-                            className="border rounded-lg p-4 space-y-3 bg-gray-50"
-                          >
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-gray-900">Service {index + 1}</h4>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeService(index)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
+                      {validServices.map((service, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.2 }}
+                          className="border rounded-lg p-4 space-y-3 bg-gray-50"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-gray-900">Service {index + 1}</h4>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeService(index)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 gap-3">
+                            <Input
+                              value={service.title || ''}
+                              onChange={(e) => handleServiceChange(index, 'title', e.target.value)}
+                              placeholder="e.g., Life Coaching Session"
+                            />
+                            <Textarea
+                              value={service.description || ''}
+                              onChange={(e) => handleServiceChange(index, 'description', e.target.value)}
+                              placeholder="Describe what this service includes..."
+                              rows={2}
+                            />
+                            <Input
+                              value={service.price || ''}
+                              onChange={(e) => handleServiceChange(index, 'price', e.target.value)}
+                              placeholder="e.g., $150/session or $500/package"
+                            />
                             
-                            <div className="grid grid-cols-1 gap-3">
-                              <Input
-                                value={service.title || ''}
-                                onChange={(e) => handleServiceChange(index, 'title', e.target.value)}
-                                placeholder="e.g., Life Coaching Session"
-                              />
-                              <Textarea
-                                value={service.description || ''}
-                                onChange={(e) => handleServiceChange(index, 'description', e.target.value)}
-                                placeholder="Describe what this service includes..."
-                                rows={2}
-                              />
-                              <Input
-                                value={service.price || ''}
-                                onChange={(e) => handleServiceChange(index, 'price', e.target.value)}
-                                placeholder="e.g., $150/session or $500/package"
-                              />
-                              
-                              <ImageUploader
-                                value={service.imageData}
-                                onChange={(data) => handleServiceChange(index, 'imageData', data)}
-                                label="Service Icon/Image"
-                                section="service"
-                                serviceIndex={index}
-                              />
-                            </div>
-                          </motion.div>
-                        );
-                      })}
+                            <ImageUploader
+                              value={service.imageData}
+                              onChange={(data) => handleServiceChange(index, 'imageData', data)}
+                              label="Service Icon/Image"
+                              section="service"
+                              serviceIndex={index}
+                            />
+                          </div>
+                        </motion.div>
+                      ))}
                     </AnimatePresence>
                     
-                    {(!customizationData.services || customizationData.services.length === 0 || validServices.length === 0) && (
+                    {validServices.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <Briefcase className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                         <p>No services added yet</p>
