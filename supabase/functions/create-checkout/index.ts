@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 /*  pin Stripe & Supabase imports to the same std version  */
@@ -185,9 +184,6 @@ serve(async (req) => {
         allow_promotion_codes: true,
         customer_update: { address: "auto" as const },
         custom_text: { submit: { message: "Your payment is securely processed by Stripe." } },
-        ...(isGuest ? {} : {
-          setup_intent_data: { metadata: metadata }  // Only for signed-in users
-        })
       };
 
       session = priceId
