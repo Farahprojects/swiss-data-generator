@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +22,7 @@ const debug = (...args: any[]) => {
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signInWithGoogle, signInWithApple, user } = useAuth();
+  const { signUp, signInWithGoogle, signInWithApple, user } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,32 +45,195 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Disabled signup functionality
-    toast({
-      title: 'Registration Disabled',
-      description: 'New account registration is temporarily disabled.',
-      variant: 'destructive'
-    });
-    return;
+    
+    if (!emailValid) {
+      setErrorMsg('Please enter a valid email address');
+      return;
+    }
+    
+    if (!passwordValid) {
+      setErrorMsg('Password must be at least 8 characters long');
+      return;
+    }
+    
+    if (!passwordsMatch) {
+      setErrorMsg('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+    
+    try {
+      debug('Attempting signup for:', email);
+      
+      const { error, user: newUser } = await signUp(email, password);
+      
+      if (error) {
+        debug('Signup error:', error);
+        
+        if (error.message.includes('User already registered')) {
+          setErrorMsg('An account with this email already exists. Try signing in instead.');
+        } else if (error.message.includes('Password should be at least')) {
+          setErrorMsg('Password must be at least 6 characters long');
+        } else if (error.message.includes('Invalid email')) {
+          setErrorMsg('Please enter a valid email address');
+        } else {
+          setErrorMsg(error.message || 'An error occurred during signup');
+        }
+        
+        logToSupabase('Signup failed', {
+          level: 'warn',
+          page: 'Signup',
+          data: { email, error: error.message }
+        });
+        
+        return;
+      }
+
+      if (newUser) {
+        debug('Signup successful, user created:', newUser.id);
+        
+        // Send verification email
+        try {
+          const { data, error: tokenError } = await supabase.functions.invoke('signup_token', {
+            body: { user_id: newUser.id }
+          });
+          
+          if (tokenError) {
+            console.error('Error sending verification email:', tokenError);
+            toast({
+              title: 'Account Created',
+              description: 'Your account was created but there was an issue sending the verification email. Please contact support.',
+              variant: 'destructive'
+            });
+          } else {
+            debug('Verification email sent successfully');
+          }
+        } catch (emailError) {
+          console.error('Exception sending verification email:', emailError);
+        }
+
+        setVerificationEmail(email);
+        setCurrentUserId(newUser.id);
+        setSignupSuccess(true);
+        
+        logToSupabase('Signup successful', {
+          level: 'info',
+          page: 'Signup',
+          data: { email, userId: newUser.id }
+        });
+      }
+    } catch (err: any) {
+      debug('Signup exception:', err);
+      setErrorMsg('An unexpected error occurred. Please try again.');
+      
+      logToSupabase('Signup exception', {
+        level: 'error',
+        page: 'Signup',
+        data: { email, error: err.message }
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
-    // Disabled for now
-    return;
+    try {
+      debug('Attempting Google sign in');
+      const { error } = await signInWithGoogle();
+      
+      if (error) {
+        debug('Google sign in error:', error);
+        setErrorMsg(error.message || 'Google sign in failed');
+        
+        logToSupabase('Google sign in failed', {
+          level: 'warn',
+          page: 'Signup',
+          data: { error: error.message }
+        });
+      }
+    } catch (err: any) {
+      debug('Google sign in exception:', err);
+      setErrorMsg('An error occurred with Google sign in');
+      
+      logToSupabase('Google sign in exception', {
+        level: 'error',
+        page: 'Signup',
+        data: { error: err.message }
+      });
+    }
   };
   
   const handleAppleSignIn = async () => {
-    // Disabled for now
-    return;
+    try {
+      debug('Attempting Apple sign in');
+      const { error } = await signInWithApple();
+      
+      if (error) {
+        debug('Apple sign in error:', error);
+        setErrorMsg(error.message || 'Apple sign in failed');
+        
+        logToSupabase('Apple sign in failed', {
+          level: 'warn',
+          page: 'Signup',
+          data: { error: error.message }
+        });
+      }
+    } catch (err: any) {
+      debug('Apple sign in exception:', err);
+      setErrorMsg('An error occurred with Apple sign in');
+      
+      logToSupabase('Apple sign in exception', {
+        level: 'error',
+        page: 'Signup',
+        data: { error: err.message }
+      });
+    }
   };
 
   const handleResendVerification = async () => {
-    // Disabled for now
-    return;
+    if (!currentUserId) {
+      toast({
+        title: 'Error',
+        description: 'Unable to resend verification email. Please try signing up again.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('signup_token', {
+        body: { user_id: currentUserId }
+      });
+      
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to resend verification email. Please try again.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Email Sent',
+          description: 'Verification email has been resent. Please check your inbox.',
+        });
+      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'An error occurred while resending the email.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderSignupForm = () => (
-    <div className="space-y-6 opacity-50">
+    <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <EmailInput 
@@ -78,7 +242,6 @@ const Signup = () => {
             onChange={setEmail}
             onFocus={() => setErrorMsg('')}
             placeholder="Enter your email"
-            disabled={true}
           />
           
           <PasswordInput
@@ -87,7 +250,6 @@ const Signup = () => {
             showRequirements={false}
             onChange={setPassword}
             onFocus={() => setErrorMsg('')}
-            disabled={true}
           />
           
           {passwordValid && (
@@ -104,21 +266,22 @@ const Signup = () => {
               label="Confirm Password"
               placeholder="Re-enter your password"
               showMatchError={password.length > 0 && confirmPassword.length > 0 && !passwordsMatch}
-              disabled={true}
             />
           )}
         </div>
 
-        <div className="text-center text-sm font-medium text-amber-600 bg-amber-50 p-3 rounded-md">
-          Registration is temporarily disabled
-        </div>
+        {errorMsg && (
+          <div className="text-center text-sm text-red-600 bg-red-50 p-3 rounded-md">
+            {errorMsg}
+          </div>
+        )}
 
         <Button 
           type="submit" 
           className="w-full"
-          disabled={true}
+          disabled={loading || !emailValid || !passwordValid || !passwordsMatch}
         >
-          Sign up
+          {loading ? 'Creating account...' : 'Sign up'}
         </Button>
 
         <SocialLogin 
@@ -126,7 +289,7 @@ const Signup = () => {
           onAppleSignIn={handleAppleSignIn}
         />
 
-        <p className="text-center text-sm text-gray-400">
+        <p className="text-center text-sm text-gray-600">
           Already have an account?{' '}
           <Link to="/login" className="font-medium text-primary hover:underline">
             Sign in
@@ -194,7 +357,7 @@ const Signup = () => {
             <p className="mt-2 text-gray-600">
               {signupSuccess 
                 ? 'One more step to complete your registration' 
-                : 'Registration Temporarily Disabled'}
+                : 'Create your account to get started'}
             </p>
           </header>
 

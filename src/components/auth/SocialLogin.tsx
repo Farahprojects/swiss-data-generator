@@ -13,14 +13,20 @@ interface SocialLoginProps {
 const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn }) => {
   const handleGoogleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Disabled for now
-    return;
+    logToSupabase('Google sign in attempted', {
+      level: 'info',
+      page: 'SocialLogin'
+    });
+    onGoogleSignIn();
   };
   
   const handleAppleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Disabled for now
-    return;
+    logToSupabase('Apple sign in attempted', {
+      level: 'info',
+      page: 'SocialLogin'
+    });
+    onAppleSignIn();
   };
 
   return (
@@ -39,8 +45,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn
           type="button" 
           variant="outline" 
           onClick={handleGoogleSignIn}
-          disabled={true}
-          className="flex items-center justify-center opacity-50 cursor-not-allowed"
+          className="flex items-center justify-center"
         >
           <FcGoogle className="mr-2 h-5 w-5" />
           Google
@@ -50,8 +55,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn
           type="button" 
           variant="outline" 
           onClick={handleAppleSignIn}
-          disabled={true}
-          className="flex items-center justify-center opacity-50 cursor-not-allowed"
+          className="flex items-center justify-center"
         >
           <FaApple className="mr-2 h-5 w-5" />
           Apple
