@@ -413,23 +413,6 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                         </SelectContent>
                       </Select>
                     </div>
-                    
-                    <div>
-                      <Label htmlFor="backgroundStyle" className="text-sm font-medium text-gray-700">Background Style</Label>
-                      <Select
-                        value={customizationData.backgroundStyle || 'solid'}
-                        onValueChange={(value) => onChange('backgroundStyle', value)}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="solid">Solid Color</SelectItem>
-                          <SelectItem value="gradient">Gradient</SelectItem>
-                          <SelectItem value="pattern">Subtle Pattern</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </CardContent>
                 </motion.div>
               </CollapsibleContent>
