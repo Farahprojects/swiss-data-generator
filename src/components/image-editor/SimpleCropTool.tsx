@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FabricImage } from 'fabric';
+import { FabricImage, Rect } from 'fabric';
 
 interface SimpleCropToolProps {
   canvas: any;
@@ -14,18 +15,18 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
   onCropComplete
 }) => {
   const [aspectRatio, setAspectRatio] = useState<string>('free');
-  const [originalImage, setOriginalImage] = useState<FabricImage | null>(null);
-  const [originalImageData, setOriginalImageData] = useState<{
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [cropOverlay, setCropOverlay] = useState<Rect | null>(null);
+  const [currentImage, setCurrentImage] = useState<FabricImage | null>(null);
+  const originalImageRef = useRef<{
+    element: HTMLImageElement;
+    width: number;
+    height: number;
     left: number;
     top: number;
     scaleX: number;
     scaleY: number;
-    angle: number;
-    width: number;
-    height: number;
   } | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [cropApplied, setCropApplied] = useState(false);
 
   const aspectRatios = [
     { value: 'free', label: 'Freeform', ratio: null },
@@ -35,68 +36,52 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     { value: '3:2', label: 'Photo (3:2)', ratio: 3/2 },
   ];
 
-  const getImageObject = (): FabricImage | null => {
-    if (!canvas) return null;
-    const objects = canvas.getObjects();
-    return objects.find((obj: any) => obj.type === 'image') || null;
-  };
-
+  // Find and setup the image when component mounts or canvas changes
   useEffect(() => {
-    if (canvas) {
-      const imageObj = getImageObject();
-      if (imageObj && !originalImage) {
-        setOriginalImage(imageObj);
-        setOriginalImageData({
-          left: imageObj.left || 0,
-          top: imageObj.top || 0,
-          scaleX: imageObj.scaleX || 1,
-          scaleY: imageObj.scaleY || 1,
-          angle: imageObj.angle || 0,
-          width: imageObj.width || 1,
-          height: imageObj.height || 1
-        });
-      }
+    if (!canvas) return;
+
+    const imageObj = canvas.getObjects().find((obj: any) => obj.type === 'image');
+    if (imageObj && !originalImageRef.current) {
+      console.log('Setting up crop tool with image:', imageObj);
+      
+      // Store original image data for reference
+      originalImageRef.current = {
+        element: imageObj.getElement(),
+        width: imageObj.width || 1,
+        height: imageObj.height || 1,
+        left: imageObj.left || 0,
+        top: imageObj.top || 0,
+        scaleX: imageObj.scaleX || 1,
+        scaleY: imageObj.scaleY || 1
+      };
+      
+      setCurrentImage(imageObj);
+      setupFreeformCrop(imageObj);
     }
   }, [canvas]);
 
+  // Handle aspect ratio changes
   useEffect(() => {
+    if (!canvas || !currentImage) return;
+
     if (aspectRatio === 'free') {
-      enableFreeformCrop();
+      setupFreeformCrop(currentImage);
     } else {
-      applyAspectRatioCrop();
+      setupAspectRatioCrop();
     }
-  }, [aspectRatio]);
+  }, [aspectRatio, currentImage]);
 
-  const resetImageToOriginal = () => {
-    if (!canvas || !originalImage || !originalImageData) return;
-
-    originalImage.set({
-      left: originalImageData.left,
-      top: originalImageData.top,
-      scaleX: originalImageData.scaleX,
-      scaleY: originalImageData.scaleY,
-      angle: originalImageData.angle,
-      selectable: false,
-      evented: false,
-      hasControls: false,
-      hasBorders: false
-    });
-
-    canvas.discardActiveObject();
-    canvas.selection = false;
-    canvas.isDrawingMode = false;
+  const setupFreeformCrop = (imageObj: FabricImage) => {
+    console.log('Setting up freeform crop');
     
-    canvas.renderAll();
-    setCropApplied(false);
-  };
+    // Clear any existing crop overlay
+    if (cropOverlay) {
+      canvas.remove(cropOverlay);
+      setCropOverlay(null);
+    }
 
-  const enableFreeformCrop = () => {
-    if (!canvas || !originalImage) return;
-
-    canvas.isDrawingMode = false;
-    canvas.selection = true;
-    
-    originalImage.set({
+    // Make image selectable for freeform cropping
+    imageObj.set({
       selectable: true,
       evented: true,
       hasControls: true,
@@ -107,181 +92,230 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       transparentCorners: false
     });
 
-    canvas.setActiveObject(originalImage);
+    canvas.setActiveObject(imageObj);
     canvas.renderAll();
   };
 
-  const scaleImageToFitCanvas = (image: FabricImage) => {
-    if (!canvas || !image) return;
-
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
-    const imgWidth = image.width || 1;
-    const imgHeight = image.height || 1;
-    
-    const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight) * 0.9;
-    
-    image.scale(scale);
-    canvas.centerObject(image);
-  };
-
-  const applyAspectRatioCrop = async () => {
-    if (!canvas || !originalImage || aspectRatio === 'free' || !originalImageData) return;
+  const setupAspectRatioCrop = () => {
+    if (!currentImage || !originalImageRef.current) return;
 
     const selectedRatio = aspectRatios.find(ar => ar.value === aspectRatio);
     if (!selectedRatio?.ratio) return;
 
+    console.log('Setting up aspect ratio crop:', aspectRatio);
+
+    // Remove any existing crop overlay
+    if (cropOverlay) {
+      canvas.remove(cropOverlay);
+    }
+
+    // Make image non-selectable
+    currentImage.set({
+      selectable: false,
+      evented: false,
+      hasControls: false,
+      hasBorders: false
+    });
+
+    // Calculate crop overlay dimensions based on aspect ratio
+    const imgBounds = currentImage.getBoundingRect();
+    const targetRatio = selectedRatio.ratio;
+    const currentRatio = imgBounds.width / imgBounds.height;
+
+    let cropWidth, cropHeight;
+    if (currentRatio > targetRatio) {
+      // Image is wider than target ratio
+      cropHeight = imgBounds.height * 0.8;
+      cropWidth = cropHeight * targetRatio;
+    } else {
+      // Image is taller than target ratio
+      cropWidth = imgBounds.width * 0.8;
+      cropHeight = cropWidth / targetRatio;
+    }
+
+    // Create crop overlay rectangle
+    const overlay = new Rect({
+      left: imgBounds.left + (imgBounds.width - cropWidth) / 2,
+      top: imgBounds.top + (imgBounds.height - cropHeight) / 2,
+      width: cropWidth,
+      height: cropHeight,
+      fill: 'transparent',
+      stroke: '#007bff',
+      strokeWidth: 2,
+      strokeDashArray: [5, 5],
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      excludeFromExport: true // Don't include in final export
+    });
+
+    canvas.add(overlay);
+    canvas.setActiveObject(overlay);
+    setCropOverlay(overlay);
+    canvas.renderAll();
+  };
+
+  const applyCrop = async (): Promise<boolean> => {
+    if (!canvas || !currentImage || !originalImageRef.current) {
+      console.error('Missing required objects for crop');
+      return false;
+    }
+
     setIsProcessing(true);
-
+    
     try {
-      const originalElement = originalImage.getElement() as HTMLImageElement;
-      if (!originalElement) {
-        throw new Error('Cannot access image element');
-      }
+      let cropBounds;
 
-      const naturalWidth = originalElement.naturalWidth;
-      const naturalHeight = originalElement.naturalHeight;
-      const currentRatio = naturalWidth / naturalHeight;
-      const targetRatio = selectedRatio.ratio;
-
-      let cropWidth, cropHeight;
-      let cropX = 0, cropY = 0;
-
-      if (currentRatio > targetRatio) {
-        cropHeight = naturalHeight;
-        cropWidth = cropHeight * targetRatio;
-        cropX = (naturalWidth - cropWidth) / 2;
+      if (aspectRatio === 'free') {
+        // Get crop bounds from selected image
+        cropBounds = currentImage.getBoundingRect();
+        console.log('Freeform crop bounds:', cropBounds);
       } else {
-        cropWidth = naturalWidth;
-        cropHeight = cropWidth / targetRatio;
-        cropY = (naturalHeight - cropHeight) / 2;
+        // Get crop bounds from overlay rectangle
+        if (!cropOverlay) {
+          console.error('No crop overlay found');
+          return false;
+        }
+        cropBounds = cropOverlay.getBoundingRect();
+        console.log('Aspect ratio crop bounds:', cropBounds);
       }
 
-      const croppedImage = await createCroppedImage(originalElement, {
+      // Get the original image element
+      const originalElement = originalImageRef.current.element;
+      if (!originalElement) {
+        console.error('No original image element');
+        return false;
+      }
+
+      // Calculate crop coordinates relative to the original image
+      const imgBounds = currentImage.getBoundingRect();
+      const scaleX = originalElement.naturalWidth / imgBounds.width;
+      const scaleY = originalElement.naturalHeight / imgBounds.height;
+
+      const cropX = Math.max(0, (cropBounds.left - imgBounds.left) * scaleX);
+      const cropY = Math.max(0, (cropBounds.top - imgBounds.top) * scaleY);
+      const cropWidth = Math.min(cropBounds.width * scaleX, originalElement.naturalWidth - cropX);
+      const cropHeight = Math.min(cropBounds.height * scaleY, originalElement.naturalHeight - cropY);
+
+      console.log('Crop parameters:', { cropX, cropY, cropWidth, cropHeight });
+
+      // Create cropped image
+      const croppedDataURL = await createCroppedImage(originalElement, {
         x: cropX,
         y: cropY,
         width: cropWidth,
         height: cropHeight
       });
 
-      canvas.remove(originalImage);
-      canvas.add(croppedImage);
+      // Remove old image and overlay
+      canvas.remove(currentImage);
+      if (cropOverlay) {
+        canvas.remove(cropOverlay);
+        setCropOverlay(null);
+      }
+
+      // Add new cropped image
+      const newImage = await FabricImage.fromURL(croppedDataURL);
       
-      scaleImageToFitCanvas(croppedImage);
+      // Scale and center the new image
+      const canvasWidth = canvas.getWidth();
+      const canvasHeight = canvas.getHeight();
+      const scale = Math.min(canvasWidth / newImage.width!, canvasHeight / newImage.height!) * 0.9;
       
-      croppedImage.set({
+      newImage.scale(scale);
+      canvas.centerObject(newImage);
+      
+      // Make it non-selectable
+      newImage.set({
         selectable: false,
         evented: false,
         hasControls: false,
         hasBorders: false
       });
+
+      canvas.add(newImage);
+      setCurrentImage(newImage);
       
-      canvas.renderAll();
-      setOriginalImage(croppedImage);
-      setCropApplied(true);
-
-    } catch (error) {
-      console.error('Auto-crop failed:', error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const createCroppedImage = async (originalElement: HTMLImageElement, cropArea: any): Promise<FabricImage> => {
-    const tempCanvas = document.createElement('canvas');
-    const ctx = tempCanvas.getContext('2d');
-    
-    if (!ctx) {
-      throw new Error('Failed to create crop canvas');
-    }
-
-    tempCanvas.width = cropArea.width;
-    tempCanvas.height = cropArea.height;
-
-    ctx.drawImage(
-      originalElement,
-      cropArea.x, cropArea.y, cropArea.width, cropArea.height,
-      0, 0, cropArea.width, cropArea.height
-    );
-
-    const croppedDataURL = tempCanvas.toDataURL('image/png');
-    const newImg = await FabricImage.fromURL(croppedDataURL);
-    
-    return newImg;
-  };
-
-  const applyFreeformCrop = async () => {
-    if (!canvas || !originalImage) return;
-
-    setIsProcessing(true);
-
-    try {
-      const activeObj = canvas.getActiveObject();
-      if (!activeObj || activeObj.type !== 'image') {
-        throw new Error('No image selected for cropping');
-      }
-
-      const originalElement = originalImage.getElement() as HTMLImageElement;
-      if (!originalElement) {
-        throw new Error('Cannot access image element');
-      }
-
-      const bounds = activeObj.getBoundingRect();
-      const scaleX = activeObj.scaleX || 1;
-      const scaleY = activeObj.scaleY || 1;
-      
-      const naturalWidth = originalElement.naturalWidth;
-      const naturalHeight = originalElement.naturalHeight;
-      const displayedWidth = (originalImage.width || 1) * scaleX;
-      const displayedHeight = (originalImage.height || 1) * scaleY;
-      
-      const scaleFactorX = naturalWidth / displayedWidth;
-      const scaleFactorY = naturalHeight / displayedHeight;
-      
-      const cropArea = {
-        x: Math.max(0, (bounds.left - (activeObj.left || 0) + bounds.width/2 - displayedWidth/2) * scaleFactorX),
-        y: Math.max(0, (bounds.top - (activeObj.top || 0) + bounds.height/2 - displayedHeight/2) * scaleFactorY),
-        width: Math.min(bounds.width * scaleFactorX, naturalWidth),
-        height: Math.min(bounds.height * scaleFactorY, naturalHeight)
+      // Update original reference for potential future crops
+      originalImageRef.current = {
+        element: newImage.getElement() as HTMLImageElement,
+        width: newImage.width || 1,
+        height: newImage.height || 1,
+        left: newImage.left || 0,
+        top: newImage.top || 0,
+        scaleX: newImage.scaleX || 1,
+        scaleY: newImage.scaleY || 1
       };
 
-      const croppedImage = await createCroppedImage(originalElement, cropArea);
-
-      canvas.remove(originalImage);
-      canvas.add(croppedImage);
-      
-      scaleImageToFitCanvas(croppedImage);
-      
-      croppedImage.set({
-        selectable: false,
-        evented: false,
-        hasControls: false,
-        hasBorders: false
-      });
-      
       canvas.renderAll();
-      setOriginalImage(croppedImage);
-      setCropApplied(true);
+      console.log('Crop applied successfully');
+      return true;
 
     } catch (error) {
-      console.error('Freeform crop failed:', error);
+      console.error('Crop failed:', error);
+      return false;
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const createCroppedImage = (originalElement: HTMLImageElement, cropArea: any): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        const tempCanvas = document.createElement('canvas');
+        const ctx = tempCanvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Failed to create crop canvas'));
+          return;
+        }
+
+        tempCanvas.width = cropArea.width;
+        tempCanvas.height = cropArea.height;
+
+        ctx.drawImage(
+          originalElement,
+          cropArea.x, cropArea.y, cropArea.width, cropArea.height,
+          0, 0, cropArea.width, cropArea.height
+        );
+
+        const croppedDataURL = tempCanvas.toDataURL('image/png', 0.9);
+        resolve(croppedDataURL);
+      } catch (error) {
+        reject(error);
+      }
+    });
   };
 
   const handleApply = async () => {
-    if (aspectRatio === 'free') {
-      await applyFreeformCrop();
-      onCropComplete(); // Notify parent after crop is applied
-    } else if (cropApplied) {
+    console.log('Applying crop...');
+    const success = await applyCrop();
+    if (success) {
       onCropComplete();
     }
   };
 
   const handleCancel = () => {
-    resetImageToOriginal();
-    setAspectRatio('free');
+    console.log('Cancelling crop');
+    
+    // Clean up crop overlay
+    if (cropOverlay) {
+      canvas.remove(cropOverlay);
+      setCropOverlay(null);
+    }
+
+    // Reset image to non-selectable state
+    if (currentImage) {
+      currentImage.set({
+        selectable: false,
+        evented: false,
+        hasControls: false,
+        hasBorders: false
+      });
+      canvas.discardActiveObject();
+    }
+
+    canvas.renderAll();
     onCropComplete();
   };
 
@@ -314,8 +348,8 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
 
       {aspectRatio !== 'free' && (
         <div className="text-sm text-gray-600 bg-green-50 p-3 rounded">
-          <p><strong>Auto Crop:</strong></p>
-          <p>Image automatically cropped to {aspectRatios.find(r => r.value === aspectRatio)?.label} ratio. Click Apply Crop to save.</p>
+          <p><strong>Aspect Ratio Crop:</strong></p>
+          <p>Adjust the blue dashed rectangle to select the area to keep, then click Apply Crop.</p>
         </div>
       )}
 

@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Canvas as FabricCanvas, FabricImage, filters } from 'fabric';
 import { ImageAdjustments } from './ImageEditorModal';
@@ -28,7 +29,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
 
     // Calculate responsive canvas size
     const container = containerRef.current;
-    const containerWidth = container.clientWidth - 32; // Account for padding
+    const containerWidth = container.clientWidth - 32;
     const containerHeight = container.clientHeight - 32;
     
     const maxWidth = isMobile ? Math.min(containerWidth, 350) : Math.min(containerWidth, 600);
@@ -43,76 +44,92 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     fabricCanvasRef.current = canvas;
     onCanvasReady(canvas);
 
-    // Load the image with CORS handling
+    // Load the image
     if (imageUrl) {
-      FabricImage.fromURL(imageUrl, {
-        crossOrigin: 'anonymous'
-      })
-        .then((img) => {
-          // Scale image to fit canvas while maintaining aspect ratio
-          const canvasWidth = canvas.getWidth();
-          const canvasHeight = canvas.getHeight();
-          const imgWidth = img.width || 1;
-          const imgHeight = img.height || 1;
-          
-          const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
-          
-          img.scale(scale);
-          canvas.centerObject(img);
-          
-          canvas.add(img);
-          canvas.renderAll();
-          
-          imageObjectRef.current = img;
-          
-          // Test if we can apply filters by trying a simple one
-          try {
-            const testFilter = new filters.Brightness({ brightness: 0 });
-            img.filters = [testFilter];
-            img.applyFilters();
-            canApplyFiltersRef.current = true;
-            console.log('Filters can be applied to this image');
-          } catch (error) {
-            console.warn('CORS restriction: Filters cannot be applied to this image', error);
-            canApplyFiltersRef.current = false;
-            // Clear any failed filters
-            img.filters = [];
-          }
-          
-          canvas.renderAll();
-        })
-        .catch((error) => {
-          console.error('Error loading image:', error);
-          // Try loading without CORS if the first attempt fails
-          FabricImage.fromURL(imageUrl)
-            .then((img) => {
-              const canvasWidth = canvas.getWidth();
-              const canvasHeight = canvas.getHeight();
-              const imgWidth = img.width || 1;
-              const imgHeight = img.height || 1;
-              
-              const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
-              
-              img.scale(scale);
-              canvas.centerObject(img);
-              
-              canvas.add(img);
-              canvas.renderAll();
-              
-              imageObjectRef.current = img;
-              canApplyFiltersRef.current = false; // Disable filters for non-CORS images
-              console.warn('Image loaded without CORS - filters will be disabled');
-            })
-            .catch((fallbackError) => {
-              console.error('Failed to load image even without CORS:', fallbackError);
-            });
-        });
+      loadImageToCanvas(canvas, imageUrl);
     }
 
     return () => {
       canvas.dispose();
     };
   }, [imageUrl, onCanvasReady, isMobile]);
+
+  const loadImageToCanvas = async (canvas: FabricCanvas, url: string) => {
+    try {
+      console.log('Loading image to canvas:', url);
+      
+      // Try loading with CORS first
+      const img = await FabricImage.fromURL(url, {
+        crossOrigin: 'anonymous'
+      });
+      
+      addImageToCanvas(canvas, img);
+      canApplyFiltersRef.current = true;
+      console.log('Image loaded successfully with CORS');
+      
+    } catch (error) {
+      console.warn('CORS loading failed, trying without CORS:', error);
+      
+      try {
+        // Fallback without CORS
+        const img = await FabricImage.fromURL(url);
+        addImageToCanvas(canvas, img);
+        canApplyFiltersRef.current = false;
+        console.log('Image loaded without CORS - filters disabled');
+        
+      } catch (fallbackError) {
+        console.error('Failed to load image:', fallbackError);
+      }
+    }
+  };
+
+  const addImageToCanvas = (canvas: FabricCanvas, img: FabricImage) => {
+    // Clear canvas first
+    canvas.clear();
+    canvas.backgroundColor = '#ffffff';
+    
+    // Scale image to fit canvas while maintaining aspect ratio
+    const canvasWidth = canvas.getWidth();
+    const canvasHeight = canvas.getHeight();
+    const imgWidth = img.width || 1;
+    const imgHeight = img.height || 1;
+    
+    const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight) * 0.9;
+    
+    img.scale(scale);
+    canvas.centerObject(img);
+    
+    // Set initial state - non-selectable unless in crop mode
+    img.set({
+      selectable: false,
+      evented: false,
+      hasControls: false,
+      hasBorders: false
+    });
+    
+    canvas.add(img);
+    canvas.renderAll();
+    
+    imageObjectRef.current = img;
+    
+    // Test filter capabilities
+    testFilterCapability(img, canvas);
+  };
+
+  const testFilterCapability = (img: FabricImage, canvas: FabricCanvas) => {
+    try {
+      const testFilter = new filters.Brightness({ brightness: 0 });
+      img.filters = [testFilter];
+      img.applyFilters();
+      canApplyFiltersRef.current = true;
+      console.log('Filters can be applied to this image');
+    } catch (error) {
+      console.warn('Filters cannot be applied due to CORS restrictions:', error);
+      canApplyFiltersRef.current = false;
+      img.filters = [];
+    }
+    canvas.renderAll();
+  };
 
   // Apply adjustments when they change
   useEffect(() => {
@@ -127,7 +144,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     const { brightness, contrast, saturation, rotation } = adjustments;
 
     try {
-      // Apply filters using v6 syntax
+      // Apply filters
       const imageFilters = [];
       
       if (brightness !== 0) {
@@ -155,6 +172,8 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
       img.rotate(rotation);
       
       fabricCanvasRef.current?.renderAll();
+      console.log('Applied adjustments:', adjustments);
+      
     } catch (error) {
       console.error('Error applying filters:', error);
       // If filters fail, at least apply rotation
