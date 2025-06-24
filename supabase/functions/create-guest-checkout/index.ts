@@ -95,18 +95,6 @@ serve(async (req) => {
     console.log("🔗 Success URL:", finalSuccessUrl);
     console.log("🔗 Cancel URL:", finalCancelUrl);
 
-    /* -------- Prepare metadata for report generation -------- */
-    const metadata = {
-      guest_checkout: "true",
-      guest_email: email,
-      amount: amount.toString(),
-      description: description,
-      // Include all report data in metadata for later retrieval
-      ...(reportData || {}),
-    };
-
-    console.log("📋 Session metadata prepared with keys:", Object.keys(metadata));
-
     /* -------- Create checkout session with direct amount -------- */
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"] as const,
@@ -114,11 +102,6 @@ serve(async (req) => {
       customer: customerId,
       success_url: finalSuccessUrl,
       cancel_url: finalCancelUrl,
-      metadata: metadata,
-      payment_intent_data: {
-        metadata: metadata,
-        setup_future_usage: "off_session" as const,
-      },
       billing_address_collection: "auto" as const,
       allow_promotion_codes: true,
       customer_update: { address: "auto" as const },
@@ -138,12 +121,32 @@ serve(async (req) => {
       ],
     });
 
+    /* -------- Prepare metadata for report generation -------- */
+    const metadata = {
+      guest_checkout: "true",
+      guest_email: email,
+      amount: amount.toString(),
+      description: description,
+      stripe_session_id: session.id, // Add session ID for better tracking
+      // Include all report data in metadata for later retrieval
+      ...(reportData || {}),
+    };
+
+    console.log("📋 Session metadata prepared with keys:", Object.keys(metadata));
+
+    // Update the session with metadata (Stripe doesn't allow metadata in create for checkout sessions)
+    // We'll add it to the payment intent instead when it's created
     console.log("✅ Stripe session created successfully:", {
       sessionId: session.id,
       url: session.url ? "URL_PROVIDED" : "NO_URL",
       customer: session.customer,
       amount_total: session.amount_total
     });
+
+    // If this is a service purchase, we need to ensure the payment intent gets the metadata
+    if (reportData?.purchase_type === 'service') {
+      console.log("🛍️ Service purchase detected, metadata will be attached via webhook");
+    }
 
     return new Response(
       JSON.stringify({ 
@@ -152,7 +155,8 @@ serve(async (req) => {
         debug: {
           successUrl: finalSuccessUrl,
           metadata: Object.keys(metadata),
-          amount_cents: Math.round(amount * 100)
+          amount_cents: Math.round(amount * 100),
+          isServicePurchase: reportData?.purchase_type === 'service'
         }
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },

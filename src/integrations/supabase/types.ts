@@ -976,6 +976,75 @@ export type Database = {
         }
         Relationships: []
       }
+      service_purchases: {
+        Row: {
+          amount_cents: number
+          coach_id: string | null
+          coach_payout_cents: number
+          coach_slug: string
+          completed_at: string | null
+          created_at: string
+          customer_email: string
+          customer_name: string | null
+          id: string
+          payment_status: string
+          platform_fee_cents: number
+          purchase_metadata: Json | null
+          receipt_url: string | null
+          service_description: string | null
+          service_price_original: string
+          service_title: string
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          coach_id?: string | null
+          coach_payout_cents?: number
+          coach_slug: string
+          completed_at?: string | null
+          created_at?: string
+          customer_email: string
+          customer_name?: string | null
+          id?: string
+          payment_status?: string
+          platform_fee_cents?: number
+          purchase_metadata?: Json | null
+          receipt_url?: string | null
+          service_description?: string | null
+          service_price_original: string
+          service_title: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          coach_id?: string | null
+          coach_payout_cents?: number
+          coach_slug?: string
+          completed_at?: string | null
+          created_at?: string
+          customer_email?: string
+          customer_name?: string | null
+          id?: string
+          payment_status?: string
+          platform_fee_cents?: number
+          purchase_metadata?: Json | null
+          receipt_url?: string | null
+          service_description?: string | null
+          service_price_original?: string
+          service_title?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stripe_products: {
         Row: {
           active: boolean | null

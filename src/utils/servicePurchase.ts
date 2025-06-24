@@ -59,7 +59,31 @@ export const handleServicePurchase = async (service: ServicePurchaseData, onErro
       return;
     }
 
-    if (data?.url) {
+    if (data?.url && data?.sessionId) {
+      console.log("Service purchase checkout session created:", data.sessionId);
+      
+      // Update the payment intent with complete metadata once the session is created
+      try {
+        await supabase.functions.invoke('update-service-purchase-metadata', {
+          body: {
+            sessionId: data.sessionId,
+            metadata: {
+              service_title: service.title,
+              service_description: service.description,
+              coach_slug: service.coachSlug,
+              coach_name: service.coachName,
+              service_price: service.price,
+              purchase_type: 'service',
+              stripe_session_id: data.sessionId,
+              guest_email: 'guest@example.com'
+            }
+          }
+        });
+      } catch (metadataError) {
+        console.warn("Failed to update payment intent metadata:", metadataError);
+        // Don't block the checkout flow for metadata issues
+      }
+
       // Open Stripe checkout in new tab
       window.open(data.url, '_blank');
     } else {

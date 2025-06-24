@@ -1,13 +1,15 @@
 
 /* ========================================================================== *
-   Supabase Edge Function – Stripe Webhook Handler (cards + top-ups)
+   Supabase Edge Function – Stripe Webhook Handler (cards + top-ups + services)
    Purpose : 1) Verify Stripe HMAC
              2) Deduplicate events              (stripe_webhook_events)
              3) Keep ONE saved‑card row/user    (payment_method)
              4) Log top‑ups & failures          (topup_logs / topup_logs_failed)
-             5) Centralise card‑status handling (active/status_reason/changed)
+             5) Track service purchases         (service_purchases)
+             6) Centralise card‑status handling (active/status_reason/changed)
    Notes   : • "credited" stays false here; DB trigger flips it
              • topup_logs is upserted on stripe_payment_intent_id (no duplicates)
+             • service_purchases tracks coach service sales
              • receipt_url fetched via expand/charge‑fetch fallback
    Runtime : Supabase Edge / Deno Deploy
  * ========================================================================== */
@@ -118,6 +120,164 @@ async function markEvent(evtId: string, err?: string) {
       processing_error: err ?? null,
     })
     .eq("stripe_event_id", evtId);
+}
+
+/* ───────── Coach resolution helper ───────── */
+
+async function resolveCoachFromSlug(coachSlug: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from("coach_websites")
+      .select("coach_id")
+      .eq("site_slug", coachSlug)
+      .single();
+    
+    if (error) {
+      console.error(`Failed to resolve coach from slug ${coachSlug}:`, error);
+      return null;
+    }
+    
+    return data?.coach_id || null;
+  } catch (error) {
+    console.error(`Error resolving coach slug ${coachSlug}:`, error);
+    return null;
+  }
+}
+
+/* ───────── Service purchase helpers ───────── */
+
+function calculatePlatformFee(amountCents: number): { platformFeeCents: number; coachPayoutCents: number } {
+  // 5% platform fee (adjust as needed)
+  const platformFeeCents = Math.floor(amountCents * 0.05);
+  const coachPayoutCents = amountCents - platformFeeCents;
+  return { platformFeeCents, coachPayoutCents };
+}
+
+async function logServicePurchase(pi: Stripe.PaymentIntent) {
+  const reportData = pi.metadata;
+  
+  // Check if this is a service purchase (has purchase_type: 'service')
+  if (reportData?.purchase_type !== 'service') {
+    return; // Not a service purchase, skip
+  }
+
+  const coachSlug = reportData.coach_slug;
+  if (!coachSlug) {
+    console.error("Service purchase missing coach_slug in metadata");
+    return;
+  }
+
+  console.log(`Processing service purchase for coach slug: ${coachSlug}`);
+
+  // Resolve coach ID from slug
+  const coachId = await resolveCoachFromSlug(coachSlug);
+  if (!coachId) {
+    console.error(`Failed to resolve coach ID for slug: ${coachSlug}`);
+  }
+
+  // Calculate platform fee and coach payout
+  const { platformFeeCents, coachPayoutCents } = calculatePlatformFee(pi.amount);
+
+  // Extract receipt URL
+  let receiptUrl: string | null = pi.charges?.data?.[0]?.receipt_url ?? null;
+  if (!receiptUrl && pi.latest_charge) {
+    const charge = await stripe.charges.retrieve(pi.latest_charge as string);
+    receiptUrl = (charge as Stripe.Charge).receipt_url ?? null;
+  }
+
+  // Get customer email
+  let customerEmail = reportData.guest_email || 'guest@example.com';
+  if (pi.customer && typeof pi.customer === 'string') {
+    const customer = await stripe.customers.retrieve(pi.customer);
+    if (!customer.deleted && customer.email) {
+      customerEmail = customer.email;
+    }
+  }
+
+  const purchaseData = {
+    stripe_session_id: reportData.stripe_session_id || pi.id, // Use session ID from metadata or fallback to PI
+    stripe_payment_intent_id: pi.id,
+    coach_id: coachId,
+    coach_slug: coachSlug,
+    service_title: reportData.service_title || 'Service Purchase',
+    service_description: reportData.service_description || null,
+    service_price_original: reportData.service_price || 'Unknown',
+    amount_cents: pi.amount,
+    platform_fee_cents: platformFeeCents,
+    coach_payout_cents: coachPayoutCents,
+    customer_email: customerEmail,
+    customer_name: reportData.customer_name || null,
+    stripe_customer_id: typeof pi.customer === 'string' ? pi.customer : null,
+    payment_status: 'completed',
+    receipt_url: receiptUrl,
+    purchase_metadata: reportData,
+  };
+
+  console.log("Inserting service purchase:", purchaseData);
+
+  const { error } = await supabase
+    .from("service_purchases")
+    .upsert(purchaseData, { 
+      onConflict: "stripe_payment_intent_id", 
+      returning: "minimal" 
+    });
+
+  if (error) {
+    console.error("Failed to log service purchase:", error);
+    throw error;
+  }
+
+  console.log(`Service purchase logged successfully for coach ${coachSlug}`);
+}
+
+async function logServicePurchaseFailure(pi: Stripe.PaymentIntent) {
+  const reportData = pi.metadata;
+  
+  // Check if this is a service purchase
+  if (reportData?.purchase_type !== 'service') {
+    return; // Not a service purchase, skip
+  }
+
+  const coachSlug = reportData.coach_slug;
+  if (!coachSlug) {
+    console.error("Failed service purchase missing coach_slug in metadata");
+    return;
+  }
+
+  console.log(`Processing failed service purchase for coach slug: ${coachSlug}`);
+
+  // Resolve coach ID from slug
+  const coachId = await resolveCoachFromSlug(coachSlug);
+
+  const failureData = {
+    stripe_session_id: reportData.stripe_session_id || pi.id,
+    stripe_payment_intent_id: pi.id,
+    coach_id: coachId,
+    coach_slug: coachSlug,
+    service_title: reportData.service_title || 'Service Purchase',
+    service_description: reportData.service_description || null,
+    service_price_original: reportData.service_price || 'Unknown',
+    amount_cents: pi.amount,
+    platform_fee_cents: 0,
+    coach_payout_cents: 0,
+    customer_email: reportData.guest_email || 'guest@example.com',
+    customer_name: reportData.customer_name || null,
+    stripe_customer_id: typeof pi.customer === 'string' ? pi.customer : null,
+    payment_status: 'failed',
+    receipt_url: null,
+    purchase_metadata: { ...reportData, failure_reason: pi.last_payment_error?.message || 'Unknown failure' },
+  };
+
+  const { error } = await supabase
+    .from("service_purchases")
+    .upsert(failureData, { 
+      onConflict: "stripe_payment_intent_id", 
+      returning: "minimal" 
+    });
+
+  if (error) {
+    console.error("Failed to log service purchase failure:", error);
+  }
 }
 
 /* ───────── Payment‑method helpers ───────── */
@@ -305,7 +465,7 @@ serve(async (req) => {
         break;
       }
 
-      /* ───────────────────── CREDIT TOP‑UPS (source of truth) ───────────── */
+      /* ───────────────────── PAYMENT SUCCESS (topups + services) ───────────── */
 
       case "payment_intent.succeeded": {
         const piRaw = evt.data.object as Stripe.PaymentIntent;
@@ -313,27 +473,42 @@ serve(async (req) => {
           piRaw.id,
           { expand: ["charges"] },
         );
-        const userId = pi.metadata?.user_id;
-        if (userId) await logTopupSuccess(userId, pi as Stripe.PaymentIntent);
+
+        // Check if this is a service purchase first
+        if (pi.metadata?.purchase_type === 'service') {
+          await logServicePurchase(pi as Stripe.PaymentIntent);
+        } else {
+          // Handle as topup if user_id is present
+          const userId = pi.metadata?.user_id;
+          if (userId) await logTopupSuccess(userId, pi as Stripe.PaymentIntent);
+        }
         break;
       }
 
       /* charge.succeeded fires too: upsert prevents duplicates */
       case "charge.succeeded": {
         const ch = evt.data.object as Stripe.Charge;
-        let userId = ch.metadata?.user_id as string | undefined;
-        if (!userId && ch.customer) {
-          const cust = await stripe.customers.retrieve(ch.customer as string);
-          userId = (cust as Stripe.Customer).metadata?.user_id;
-        }
-        if (!userId) break;
-
+        
         if (ch.payment_intent) {
           const pi = await stripe.paymentIntents.retrieve(
             ch.payment_intent as string,
             { expand: ["charges"] },
           );
-          await logTopupSuccess(userId, pi as Stripe.PaymentIntent);
+
+          // Check if this is a service purchase first
+          if (pi.metadata?.purchase_type === 'service') {
+            await logServicePurchase(pi as Stripe.PaymentIntent);
+          } else {
+            // Handle as topup
+            let userId = ch.metadata?.user_id as string | undefined;
+            if (!userId && ch.customer) {
+              const cust = await stripe.customers.retrieve(ch.customer as string);
+              userId = (cust as Stripe.Customer).metadata?.user_id;
+            }
+            if (userId) {
+              await logTopupSuccess(userId, pi as Stripe.PaymentIntent);
+            }
+          }
         }
         break;
       }
@@ -342,22 +517,40 @@ serve(async (req) => {
 
       case "payment_intent.payment_failed": {
         const pi = evt.data.object as Stripe.PaymentIntent;
-        const userId = pi.metadata?.user_id;
-        if (userId) {
-          await logTopupFailure(userId, pi);
-          await deactivateCard({ userId }, "stripe_failed");
+
+        // Check if this is a service purchase first
+        if (pi.metadata?.purchase_type === 'service') {
+          await logServicePurchaseFailure(pi);
+        } else {
+          // Handle as topup failure
+          const userId = pi.metadata?.user_id;
+          if (userId) {
+            await logTopupFailure(userId, pi);
+            await deactivateCard({ userId }, "stripe_failed");
+          }
         }
         break;
       }
 
       case "charge.failed": {
         const ch = evt.data.object as Stripe.Charge;
-        let userId = ch.metadata?.user_id as string | undefined;
-        if (!userId && ch.customer) {
-          const cust = await stripe.customers.retrieve(ch.customer as string);
-          userId = (cust as Stripe.Customer).metadata?.user_id;
+        
+        // For charge failures, we need to check the payment intent
+        if (ch.payment_intent) {
+          const pi = await stripe.paymentIntents.retrieve(ch.payment_intent as string);
+          
+          if (pi.metadata?.purchase_type === 'service') {
+            await logServicePurchaseFailure(pi);
+          } else {
+            // Handle as topup failure
+            let userId = ch.metadata?.user_id as string | undefined;
+            if (!userId && ch.customer) {
+              const cust = await stripe.customers.retrieve(ch.customer as string);
+              userId = (cust as Stripe.Customer).metadata?.user_id;
+            }
+            if (userId) await deactivateCard({ userId }, "stripe_failed");
+          }
         }
-        if (userId) await deactivateCard({ userId }, "stripe_failed");
         break;
       }
 
