@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, CheckCircle, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
@@ -346,10 +345,7 @@ const Contact = () => {
                   </form>
                 </div>
 
-                <div className="mt-12 text-center text-sm text-gray-500">
-                  <Mail className="mx-auto mb-2 h-5 w-5 text-primary" />
-                  <p>support@theraiapi.com</p>
-                </div>
+                
               </div>
             </section>
           </>
