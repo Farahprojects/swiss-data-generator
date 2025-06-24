@@ -26,30 +26,41 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ canvas }) => {
 
     let imageFilters: any[] = [];
 
-    switch (filterType) {
-      case 'grayscale':
-        imageFilters = [new filters.Grayscale()];
-        break;
-      case 'sepia':
-        imageFilters = [new filters.Sepia()];
-        break;
-      case 'vintage':
-        imageFilters = [
-          new filters.Brightness({ brightness: -0.1 }),
-          new filters.Contrast({ contrast: 0.15 }),
-          new filters.Sepia()
-        ];
-        break;
-      case 'blur':
-        imageFilters = [new filters.Blur({ blur: 0.1 })];
-        break;
-      default:
-        imageFilters = [];
-    }
+    try {
+      switch (filterType) {
+        case 'grayscale':
+          imageFilters = [new filters.Grayscale()];
+          break;
+        case 'sepia':
+          imageFilters = [new filters.Sepia()];
+          break;
+        case 'vintage':
+          imageFilters = [
+            new filters.Brightness({ brightness: -0.1 }),
+            new filters.Contrast({ contrast: 0.15 }),
+            new filters.Sepia()
+          ];
+          break;
+        case 'blur':
+          imageFilters = [new filters.Blur({ blur: 0.1 })];
+          break;
+        default:
+          imageFilters = [];
+      }
 
-    imageObject.filters = imageFilters;
-    imageObject.applyFilters();
-    canvas.renderAll();
+      imageObject.filters = imageFilters;
+      imageObject.applyFilters();
+      canvas.renderAll();
+    } catch (error) {
+      console.error('Error applying filter:', error);
+      console.warn('Filter cannot be applied due to CORS restrictions');
+      
+      // Show user-friendly message
+      const event = new CustomEvent('filterError', {
+        detail: { message: 'Filter cannot be applied to this image due to security restrictions.' }
+      });
+      window.dispatchEvent(event);
+    }
   };
 
   return (
@@ -72,6 +83,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ canvas }) => {
 
       <div className="text-sm text-gray-600">
         <p>Click on a filter to preview it on your image. You can switch between filters to find the perfect look.</p>
+        <p className="text-xs text-yellow-600 mt-2">
+          Note: Some filters may not work with externally hosted images due to security restrictions.
+        </p>
       </div>
     </div>
   );
