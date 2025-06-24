@@ -37,7 +37,6 @@ export default function WebsiteBuilder() {
   const [userSlug, setUserSlug] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
 
   useEffect(() => {
@@ -313,6 +312,47 @@ export default function WebsiteBuilder() {
     }
   };
 
+  const handlePreview = () => {
+    if (!selectedTemplate) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please select a template to preview."
+      });
+      return;
+    }
+
+    try {
+      // Generate a unique preview ID
+      const previewId = Date.now().toString();
+      
+      // Store preview data in localStorage
+      const previewData = {
+        template: selectedTemplate,
+        customizationData: customizationData
+      };
+      
+      localStorage.setItem(`preview-${previewId}`, JSON.stringify(previewData));
+      
+      // Open preview in new tab
+      const previewUrl = `/preview/${previewId}`;
+      window.open(previewUrl, '_blank');
+      
+      // Clean up localStorage after a delay (5 minutes)
+      setTimeout(() => {
+        localStorage.removeItem(`preview-${previewId}`);
+      }, 5 * 60 * 1000);
+      
+    } catch (error) {
+      console.error('Error opening preview:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to open preview. Please try again."
+      });
+    }
+  };
+
   const getPublishButtonText = () => {
     if (isPublishing) return 'Publishing...';
     if (!website) return 'Publish';
@@ -358,7 +398,7 @@ export default function WebsiteBuilder() {
             <div className="flex items-center space-x-3">
               <Button
                 variant="outline"
-                onClick={() => setShowPreview(true)}
+                onClick={handlePreview}
                 className="flex items-center space-x-2"
               >
                 <Eye className="h-4 w-4" />
@@ -403,15 +443,6 @@ export default function WebsiteBuilder() {
           </div>
         </div>
       </div>
-
-      {showPreview && (
-        <TemplatePreview
-          template={selectedTemplate}
-          customizationData={customizationData}
-          isFullScreen={true}
-          onClose={() => setShowPreview(false)}
-        />
-      )}
 
       {showPublishModal && website && (
         <PublishingModal

@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
@@ -31,6 +30,7 @@ import Features from './pages/Features';
 import WebsiteBuilder from './pages/dashboard/WebsiteBuilder';
 import CalendarPage from './pages/dashboard/CalendarPage';
 import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
+import PreviewWebsite from './pages/PreviewWebsite';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +64,9 @@ function App() {
                       
                       <Route path="/login" element={<Login />} />
                       <Route path="/signup" element={<Signup />} />
+                      
+                      {/* Preview route for website builder */}
+                      <Route path="/preview/:previewId" element={<PreviewWebsite />} />
                       
                       <Route path="/dashboard" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
                         <Route index element={<DashboardHome />} />
