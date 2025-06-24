@@ -77,7 +77,7 @@ function App() {
                         <Route path="website-builder" element={<WebsiteBuilder />} />
                       </Route>
                       
-                      {/* Dynamic slug route for published coach websites - must be at the bottom */}
+                      {/* Dynamic slug route for published coach websites - moved before catch-all */}
                       <Route path="/:slug" element={<PublicCoachWebsite />} />
                       
                       <Route path="*" element={<NotFound />} />
