@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ImageEditorModal } from '@/components/image-editor/ImageEditorModal';
 
 interface ImageData {
   url: string;
@@ -43,6 +44,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showImageEditor, setShowImageEditor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle both old string format and new ImageData format
@@ -176,6 +178,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     }
   };
 
+  const handleEdit = () => {
+    if (imageUrl && filePath) {
+      setShowImageEditor(true);
+    }
+  };
+
+  const handleSaveEdit = (newImageData: ImageData) => {
+    onChange(newImageData);
+    setShowImageEditor(false);
+  };
+
   return (
     <>
       <div className="space-y-3">
@@ -188,15 +201,27 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               alt={label}
               className="w-full h-32 object-cover rounded-lg border"
             />
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isDeleting}
-              className="absolute top-2 right-2 h-6 w-6 p-0"
-            >
-              <X className="h-3 w-3" />
-            </Button>
+            <div className="absolute top-2 right-2 flex space-x-1">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleEdit}
+                className="h-6 w-6 p-0"
+                title="Edit image"
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeleting}
+                className="h-6 w-6 p-0"
+                title="Delete image"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         ) : (
           <div
@@ -246,6 +271,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showImageEditor && imageUrl && filePath && (
+        <ImageEditorModal
+          isOpen={showImageEditor}
+          onClose={() => setShowImageEditor(false)}
+          imageData={{ url: imageUrl, filePath }}
+          onSave={handleSaveEdit}
+          section={section}
+          serviceIndex={serviceIndex}
+        />
+      )}
     </>
   );
 };
