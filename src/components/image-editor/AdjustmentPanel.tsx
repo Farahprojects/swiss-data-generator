@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
@@ -15,12 +14,8 @@ interface AdjustmentPanelProps {
 const overlayColors = [
   { name: 'Black', value: '#000000' },
   { name: 'White', value: '#ffffff' },
-  { name: 'Dark Gray', value: '#374151' },
-  { name: 'Light Gray', value: '#9ca3af' },
   { name: 'Navy Blue', value: '#1e3a8a' },
-  { name: 'Royal Blue', value: '#3b82f6' },
   { name: 'Deep Red', value: '#dc2626' },
-  { name: 'Forest Green', value: '#166534' },
 ];
 
 export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
