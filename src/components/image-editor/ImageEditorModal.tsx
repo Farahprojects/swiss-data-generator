@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -20,7 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ImageData } from '@/types/website-builder';
 
-export type EditorTool = 'select' | 'crop' | 'adjust' | 'filter' | 'rotate';
+export type EditorTool = 'select' | 'crop' | 'adjust' | 'filter';
 
 export interface ImageAdjustments {
   brightness: number;
@@ -194,13 +193,6 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               </div>
               
               <div className={`${isMobile ? 'border-t' : 'w-80 border-l'} bg-gray-50 p-4 overflow-y-auto`}>
-                {activeTool === 'crop' && (
-                  <SimpleCropTool
-                    canvas={fabricCanvas}
-                    onCropComplete={handleCropComplete}
-                  />
-                )}
-                
                 {activeTool === 'adjust' && !hasCroppedImage && (
                   <AdjustmentPanel
                     adjustments={adjustments}
@@ -215,6 +207,13 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       Adjustments are not available after cropping. Please apply adjustments before cropping.
                     </p>
                   </div>
+                )}
+                
+                {activeTool === 'crop' && (
+                  <SimpleCropTool
+                    canvas={fabricCanvas}
+                    onCropComplete={handleCropComplete}
+                  />
                 )}
                 
                 {activeTool === 'filter' && !hasCroppedImage && (

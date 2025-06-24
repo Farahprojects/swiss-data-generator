@@ -6,8 +6,6 @@ import {
   Crop, 
   Sliders, 
   Filter, 
-  RotateCw, 
-  RotateCcw,
   Undo2 
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -28,10 +26,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   
   const tools = [
     { id: 'select' as EditorTool, icon: MousePointer, label: 'Select' },
-    { id: 'crop' as EditorTool, icon: Crop, label: 'Crop' },
     { id: 'adjust' as EditorTool, icon: Sliders, label: 'Adjust' },
+    { id: 'crop' as EditorTool, icon: Crop, label: 'Crop' },
     { id: 'filter' as EditorTool, icon: Filter, label: 'Filter' },
-    { id: 'rotate' as EditorTool, icon: RotateCw, label: 'Rotate' },
   ];
 
   return (
