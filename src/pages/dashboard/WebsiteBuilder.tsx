@@ -37,6 +37,7 @@ export default function WebsiteBuilder() {
   const [userSlug, setUserSlug] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
 
@@ -265,9 +266,37 @@ export default function WebsiteBuilder() {
         title: "Error",
         description: "Failed to save website changes."
       });
+      throw error; // Re-throw so handlePublish can handle it
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handlePublish = async () => {
+    if (!user || !selectedTemplate) return;
+
+    setIsPublishing(true);
+    try {
+      // If no website exists, save first
+      if (!website) {
+        await handleSave();
+        // handleSave will update the website state, but we need to wait for it
+        // The website will be created and the publish modal will be shown
+      }
+      
+      setShowPublishModal(true);
+    } catch (error) {
+      // Error handling is already done in handleSave
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const getPublishButtonText = () => {
+    if (isPublishing) return 'Publishing...';
+    if (!website) return 'Publish';
+    if (website.is_published) return 'Update Site';
+    return 'Publish Changes';
   };
 
   if (isLoading) {
@@ -324,15 +353,14 @@ export default function WebsiteBuilder() {
                 <span>{isSaving ? 'Saving...' : 'Save'}</span>
               </Button>
               
-              {website && (
-                <Button
-                  onClick={() => setShowPublishModal(true)}
-                  className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
-                >
-                  <Globe className="h-4 w-4" />
-                  <span>{website.is_published ? 'Update Site' : 'Publish'}</span>
-                </Button>
-              )}
+              <Button
+                onClick={handlePublish}
+                disabled={isPublishing || isSaving}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+              >
+                <Globe className="h-4 w-4" />
+                <span>{getPublishButtonText()}</span>
+              </Button>
             </div>
           </div>
         </div>
