@@ -1,6 +1,9 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { useParams } from "react-router-dom";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
 
 interface TemplateProps {
   customizationData: any;
@@ -19,6 +22,10 @@ const validateServices = (services: any[]) => {
 };
 
 export const MinimalTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
+  const { slug } = useParams<{ slug: string }>();
+  const { toast } = useToast();
+  const [purchasingService, setPurchasingService] = useState<number | null>(null);
+  
   const themeColor = customizationData.themeColor || '#10B981';
   const fontFamily = customizationData.fontFamily || 'Inter';
 
@@ -30,6 +37,35 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
 
   // Filter out null services and ensure we have valid service objects
   const validServices = validateServices(customizationData.services || []);
+
+  const handlePurchaseClick = async (service: any, index: number) => {
+    if (isPreview) {
+      toast({
+        title: "Preview Mode",
+        description: "Purchase functionality is disabled in preview mode.",
+        variant: "default"
+      });
+      return;
+    }
+
+    setPurchasingService(index);
+
+    await handleServicePurchase({
+      title: service.title,
+      description: service.description,
+      price: service.price,
+      coachSlug: slug || 'unknown',
+      coachName: customizationData.coachName || 'Coach'
+    }, (error) => {
+      toast({
+        title: "Purchase Failed",
+        description: error,
+        variant: "destructive"
+      });
+    });
+
+    setPurchasingService(null);
+  };
 
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
@@ -124,12 +160,23 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
                       <span className="text-base sm:text-lg font-light text-gray-900">
                         {service.price || 'Contact for pricing'}
                       </span>
-                      <Button 
-                        variant="ghost" 
-                        className="text-gray-600 hover:text-gray-900 font-light p-0 h-auto text-sm sm:text-base"
-                      >
-                        Details →
-                      </Button>
+                      {hasValidPrice(service.price) ? (
+                        <Button 
+                          onClick={() => handlePurchaseClick(service, index)}
+                          disabled={purchasingService === index}
+                          className="font-light min-h-[36px]"
+                          style={{ backgroundColor: themeColor }}
+                        >
+                          {purchasingService === index ? "Processing..." : "Purchase"}
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="ghost" 
+                          className="text-gray-600 hover:text-gray-900 font-light p-0 h-auto text-sm sm:text-base"
+                        >
+                          Details →
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </motion.div>

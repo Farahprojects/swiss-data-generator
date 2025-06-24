@@ -1,5 +1,9 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { useParams } from "react-router-dom";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
 
 interface TemplateProps {
   customizationData: any;
@@ -7,6 +11,10 @@ interface TemplateProps {
 }
 
 export const ProfessionalTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
+  const { slug } = useParams<{ slug: string }>();
+  const { toast } = useToast();
+  const [purchasingService, setPurchasingService] = useState<number | null>(null);
+  
   const themeColor = customizationData.themeColor || '#1E40AF';
   const fontFamily = customizationData.fontFamily || 'Inter';
 
@@ -14,6 +22,35 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
 
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+
+  const handlePurchaseClick = async (service: any, index: number) => {
+    if (isPreview) {
+      toast({
+        title: "Preview Mode",
+        description: "Purchase functionality is disabled in preview mode.",
+        variant: "default"
+      });
+      return;
+    }
+
+    setPurchasingService(index);
+
+    await handleServicePurchase({
+      title: service.title,
+      description: service.description,
+      price: service.price,
+      coachSlug: slug || 'unknown',
+      coachName: customizationData.coachName || 'Coach'
+    }, (error) => {
+      toast({
+        title: "Purchase Failed",
+        description: error,
+        variant: "destructive"
+      });
+    });
+
+    setPurchasingService(null);
+  };
 
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
@@ -183,9 +220,20 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
                 <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed break-words">{service.description}</p>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: themeColor }}>{service.price}</div>
-                  <Button variant="outline" size="sm" className="min-h-[36px]">
-                    Learn More
-                  </Button>
+                  {hasValidPrice(service.price) ? (
+                    <Button 
+                      onClick={() => handlePurchaseClick(service, index)}
+                      disabled={purchasingService === index}
+                      className="min-h-[36px]"
+                      style={{ backgroundColor: themeColor }}
+                    >
+                      {purchasingService === index ? "Processing..." : "Purchase"}
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" className="min-h-[36px]">
+                      Learn More
+                    </Button>
+                  )}
                 </div>
               </motion.div>
             ))}
