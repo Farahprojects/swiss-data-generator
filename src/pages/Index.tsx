@@ -260,7 +260,7 @@ const Index = () => {
                   </Button>
                 </Link>
               </motion.div>
-            </div>
+            </motion.div>
           </div>
         </section>
       </main>
