@@ -117,6 +117,21 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     canvas.renderAll();
   };
 
+  const scaleImageToFitCanvas = (image: FabricImage) => {
+    if (!canvas || !image) return;
+
+    const canvasWidth = canvas.getWidth();
+    const canvasHeight = canvas.getHeight();
+    const imgWidth = image.width || 1;
+    const imgHeight = image.height || 1;
+    
+    // Calculate scale to fit canvas while maintaining aspect ratio
+    const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight) * 0.9; // 0.9 for some padding
+    
+    image.scale(scale);
+    canvas.centerObject(image);
+  };
+
   const applyAspectRatioCrop = async () => {
     if (!canvas || !originalImage || aspectRatio === 'free') return;
 
@@ -126,31 +141,36 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     setIsProcessing(true);
 
     try {
-      const imgBounds = originalImage.getBoundingRect();
-      const currentRatio = imgBounds.width / imgBounds.height;
+      // Get the original image element and its natural dimensions
+      const originalElement = originalImage.getElement() as HTMLImageElement;
+      if (!originalElement) {
+        throw new Error('Cannot access image element');
+      }
+
+      const naturalWidth = originalElement.naturalWidth;
+      const naturalHeight = originalElement.naturalHeight;
+      const currentRatio = naturalWidth / naturalHeight;
       const targetRatio = selectedRatio.ratio;
 
       let cropWidth, cropHeight;
-      let cropLeft, cropTop;
+      let cropX = 0, cropY = 0;
 
       if (currentRatio > targetRatio) {
         // Image is wider than target ratio - crop width
-        cropHeight = imgBounds.height;
+        cropHeight = naturalHeight;
         cropWidth = cropHeight * targetRatio;
-        cropLeft = imgBounds.left + (imgBounds.width - cropWidth) / 2;
-        cropTop = imgBounds.top;
+        cropX = (naturalWidth - cropWidth) / 2;
       } else {
         // Image is taller than target ratio - crop height
-        cropWidth = imgBounds.width;
+        cropWidth = naturalWidth;
         cropHeight = cropWidth / targetRatio;
-        cropLeft = imgBounds.left;
-        cropTop = imgBounds.top + (imgBounds.height - cropHeight) / 2;
+        cropY = (naturalHeight - cropHeight) / 2;
       }
 
-      // Create cropped image
-      const croppedImage = await cropImageData(originalImage, {
-        left: cropLeft - imgBounds.left,
-        top: cropTop - imgBounds.top,
+      // Create cropped image using canvas
+      const croppedImage = await createCroppedImage(originalElement, {
+        x: cropX,
+        y: cropY,
         width: cropWidth,
         height: cropHeight
       });
@@ -158,7 +178,9 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       // Replace original image with cropped version
       canvas.remove(originalImage);
       canvas.add(croppedImage);
-      canvas.centerObject(croppedImage);
+      
+      // Scale to fit canvas and center
+      scaleImageToFitCanvas(croppedImage);
       
       // Disable selection for auto-cropped images
       croppedImage.set({
@@ -178,12 +200,11 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     }
   };
 
-  const cropImageData = async (imageObj: FabricImage, cropArea: any): Promise<FabricImage> => {
-    const originalElement = imageObj.getElement() as HTMLImageElement;
+  const createCroppedImage = async (originalElement: HTMLImageElement, cropArea: any): Promise<FabricImage> => {
     const tempCanvas = document.createElement('canvas');
     const ctx = tempCanvas.getContext('2d');
     
-    if (!ctx || !originalElement) {
+    if (!ctx) {
       throw new Error('Failed to create crop canvas');
     }
 
@@ -191,19 +212,10 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     tempCanvas.width = cropArea.width;
     tempCanvas.height = cropArea.height;
 
-    // Calculate source coordinates on the original image
-    const scaleX = originalElement.naturalWidth / (imageObj.width || 1);
-    const scaleY = originalElement.naturalHeight / (imageObj.height || 1);
-    
-    const sourceX = cropArea.left * scaleX;
-    const sourceY = cropArea.top * scaleY;
-    const sourceWidth = cropArea.width * scaleX;
-    const sourceHeight = cropArea.height * scaleY;
-
-    // Draw the cropped portion
+    // Draw the cropped portion at original resolution
     ctx.drawImage(
       originalElement,
-      sourceX, sourceY, sourceWidth, sourceHeight,
+      cropArea.x, cropArea.y, cropArea.width, cropArea.height,
       0, 0, cropArea.width, cropArea.height
     );
 
@@ -225,25 +237,35 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
         throw new Error('No image selected for cropping');
       }
 
-      // Get the current transform of the image
-      const imgBounds = activeObj.getBoundingRect();
-      const originalBounds = originalImage.getBoundingRect();
+      // Get the original image element
+      const originalElement = originalImage.getElement() as HTMLImageElement;
+      if (!originalElement) {
+        throw new Error('Cannot access image element');
+      }
 
-      // Calculate crop area relative to original image
+      // Get current image bounds on canvas
+      const imgBounds = activeObj.getBoundingRect();
+      const originalScale = originalImageData?.scaleX || 1;
+      
+      // Calculate crop area in original image coordinates
+      const scaleRatio = originalElement.naturalWidth / (originalImage.width || 1);
+      
       const cropArea = {
-        left: Math.max(0, imgBounds.left - originalBounds.left),
-        top: Math.max(0, imgBounds.top - originalBounds.top),
-        width: Math.min(imgBounds.width, originalBounds.width),
-        height: Math.min(imgBounds.height, originalBounds.height)
+        x: Math.max(0, (imgBounds.left - (activeObj.left || 0)) * scaleRatio / originalScale),
+        y: Math.max(0, (imgBounds.top - (activeObj.top || 0)) * scaleRatio / originalScale),
+        width: Math.min(imgBounds.width * scaleRatio / originalScale, originalElement.naturalWidth),
+        height: Math.min(imgBounds.height * scaleRatio / originalScale, originalElement.naturalHeight)
       };
 
       // Create cropped image
-      const croppedImage = await cropImageData(originalImage, cropArea);
+      const croppedImage = await createCroppedImage(originalElement, cropArea);
 
       // Replace with cropped version
       canvas.remove(originalImage);
       canvas.add(croppedImage);
-      canvas.centerObject(croppedImage);
+      
+      // Scale to fit canvas and center
+      scaleImageToFitCanvas(croppedImage);
       
       // Disable selection after cropping
       croppedImage.set({
