@@ -181,11 +181,13 @@ serve(async (req) => {
           metadata: metadata,
           setup_future_usage: "off_session" as const,
         },
-        setup_intent_data: { metadata: metadata },
         billing_address_collection: "auto" as const,
         allow_promotion_codes: true,
         customer_update: { address: "auto" as const },
         custom_text: { submit: { message: "Your payment is securely processed by Stripe." } },
+        ...(isGuest ? {} : {
+          setup_intent_data: { metadata: metadata }  // Only for signed-in users
+        })
       };
 
       session = priceId
