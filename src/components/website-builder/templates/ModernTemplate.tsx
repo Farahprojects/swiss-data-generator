@@ -15,19 +15,32 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
   const sectionPadding = isPreview ? 'py-6' : 'py-8 sm:py-12 lg:py-16';
   const heroSection = isPreview ? 'py-8' : 'min-h-screen';
 
+  // Check if header image exists
+  const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+
   return (
     <div className="bg-gray-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Modern Hero with Split Layout */}
       <section className={`relative ${heroSection} flex items-center`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-blue-600 opacity-20"></div>
+        {/* Only show dark background when no header image */}
+        {!hasHeaderImage && (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-blue-600 opacity-20"></div>
+          </>
+        )}
         
         {/* Header background image overlay */}
-        {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
+        {hasHeaderImage && (
           <div 
-            className="absolute inset-0 bg-cover bg-center opacity-30"
+            className="absolute inset-0 bg-cover bg-center opacity-90"
             style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
           ></div>
+        )}
+        
+        {/* Light overlay for text readability when image is present */}
+        {hasHeaderImage && (
+          <div className="absolute inset-0 bg-black opacity-20"></div>
         )}
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 grid gap-6 lg:grid-cols-2 lg:gap-8 items-center">
@@ -36,6 +49,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
             className="text-white text-center lg:text-left"
+            style={{ textShadow: hasHeaderImage ? '2px 2px 4px rgba(0,0,0,0.7)' : 'none' }}
           >
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight">
               {customizationData.coachName || "Alex Johnson"}

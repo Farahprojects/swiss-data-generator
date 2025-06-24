@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -14,15 +13,21 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
   const sectionPadding = isPreview ? 'py-6' : 'py-16 sm:py-24 lg:py-32';
   const heroSection = isPreview ? 'py-8' : 'min-h-screen';
 
+  // Check if header image exists
+  const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Ultra Minimal Hero */}
-      <section className={`${heroSection} flex items-center justify-center bg-white relative`}>
-        {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-10"
-            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
-          ></div>
+      <section className={`${heroSection} flex items-center justify-center relative ${!hasHeaderImage ? 'bg-white' : ''}`}>
+        {hasHeaderImage && (
+          <>
+            <div 
+              className="absolute inset-0 bg-cover bg-center opacity-85"
+              style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+            ></div>
+            <div className="absolute inset-0 bg-white opacity-20"></div>
+          </>
         )}
         
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center relative z-10">
@@ -30,17 +35,22 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
+            style={{ textShadow: hasHeaderImage ? '2px 2px 4px rgba(0,0,0,0.7)' : 'none' }}
           >
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-light mb-6 sm:mb-8 text-gray-900 tracking-wide leading-tight">
+            <h1 className={`text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-light mb-6 sm:mb-8 tracking-wide leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}>
               {customizationData.coachName || "Maria Chen"}
             </h1>
-            <div className="w-12 sm:w-16 h-px bg-gray-900 mx-auto mb-6 sm:mb-8"></div>
-            <p className="text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 text-gray-600 font-light leading-relaxed">
+            <div className={`w-12 sm:w-16 h-px mx-auto mb-6 sm:mb-8 ${hasHeaderImage ? 'bg-white' : 'bg-gray-900'}`}></div>
+            <p className={`text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 font-light leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-600'}`}>
               {customizationData.tagline || "Simplicity in growth. Clarity in purpose."}
             </p>
             <Button 
               variant="outline"
-              className="border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white py-3 px-6 sm:py-3 sm:px-8 font-light tracking-wide min-h-[44px]"
+              className={`font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] ${
+                hasHeaderImage 
+                  ? 'border-white text-white hover:bg-white hover:text-gray-900' 
+                  : 'border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white'
+              }`}
             >
               {customizationData.buttonText || "Connect"}
             </Button>

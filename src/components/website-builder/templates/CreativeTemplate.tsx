@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -14,21 +13,30 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
   const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
   const heroSection = isPreview ? 'py-8' : 'min-h-screen';
 
+  // Check if header image exists
+  const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+
   return (
     <div className="bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Creative Asymmetric Hero */}
       <section className={`relative ${heroSection} overflow-hidden`}>
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-24 h-24 sm:w-36 sm:h-36 lg:w-72 lg:h-72 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full transform -translate-x-12 -translate-y-12 sm:-translate-x-18 sm:-translate-y-18 lg:-translate-x-32 lg:-translate-y-32 opacity-70"></div>
-          <div className="absolute bottom-0 right-0 w-32 h-32 sm:w-48 sm:h-48 lg:w-96 lg:h-96 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full transform translate-x-16 translate-y-16 sm:translate-x-24 sm:translate-y-24 lg:translate-x-48 lg:translate-y-48 opacity-60"></div>
-          <div className="absolute top-1/2 left-1/2 w-20 h-20 sm:w-32 sm:h-32 lg:w-64 lg:h-64 bg-gradient-to-br from-blue-400 to-teal-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 opacity-50"></div>
-        </div>
+        {/* Only show decorative elements when no header image */}
+        {!hasHeaderImage && (
+          <div className="absolute inset-0">
+            <div className="absolute top-0 left-0 w-24 h-24 sm:w-36 sm:h-36 lg:w-72 lg:h-72 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full transform -translate-x-12 -translate-y-12 sm:-translate-x-18 sm:-translate-y-18 lg:-translate-x-32 lg:-translate-y-32 opacity-70"></div>
+            <div className="absolute bottom-0 right-0 w-32 h-32 sm:w-48 sm:h-48 lg:w-96 lg:h-96 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full transform translate-x-16 translate-y-16 sm:translate-x-24 sm:translate-y-24 lg:translate-x-48 lg:translate-y-48 opacity-60"></div>
+            <div className="absolute top-1/2 left-1/2 w-20 h-20 sm:w-32 sm:h-32 lg:w-64 lg:h-64 bg-gradient-to-br from-blue-400 to-teal-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 opacity-50"></div>
+          </div>
+        )}
         
-        {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-20"
-            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
-          ></div>
+        {hasHeaderImage && (
+          <>
+            <div 
+              className="absolute inset-0 bg-cover bg-center opacity-85"
+              style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+            ></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/30 to-purple-500/30"></div>
+          </>
         )}
         
         <div className={`relative z-10 ${heroSection} flex items-center`}>

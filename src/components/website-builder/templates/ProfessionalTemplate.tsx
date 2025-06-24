@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +11,9 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
   const fontFamily = customizationData.fontFamily || 'Inter';
 
   const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
+
+  // Check if header image exists
+  const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
@@ -32,19 +34,30 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
       </header>
 
       {/* Corporate Hero */}
-      <section className={`${sectionPadding} bg-gradient-to-r from-gray-50 to-blue-50`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section className={`${sectionPadding} ${!hasHeaderImage ? 'bg-gradient-to-r from-gray-50 to-blue-50' : 'relative'}`}>
+        {hasHeaderImage && (
+          <>
+            <div 
+              className="absolute inset-0 bg-cover bg-center opacity-80"
+              style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+            ></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-900/70 to-blue-800/50"></div>
+          </>
+        )}
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
           <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
               className="text-center lg:text-left"
+              style={{ textShadow: hasHeaderImage ? '2px 2px 4px rgba(0,0,0,0.7)' : 'none' }}
             >
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 text-gray-900 leading-tight">
+              <h1 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}>
                 {customizationData.coachName || "Michael Thompson"}
               </h1>
-              <p className="text-lg sm:text-xl lg:text-2xl mb-6 sm:mb-8 text-gray-600 leading-relaxed">
+              <p className={`text-lg sm:text-xl lg:text-2xl mb-6 sm:mb-8 leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-600'}`}>
                 {customizationData.tagline || "Executive Leadership & Business Coaching"}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-6 sm:mb-8 justify-center lg:justify-start">
@@ -54,11 +67,18 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
                 >
                   {customizationData.buttonText || "Schedule Consultation"}
                 </Button>
-                <Button variant="outline" className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg border-gray-300 min-h-[44px]">
+                <Button 
+                  variant="outline" 
+                  className={`py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] ${
+                    hasHeaderImage 
+                      ? 'border-white text-white hover:bg-white hover:text-gray-900'
+                      : 'border-gray-300'
+                  }`}
+                >
                   Download Brochure
                 </Button>
               </div>
-              <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 lg:space-x-8 text-xs sm:text-sm text-gray-500 justify-center lg:justify-start">
+              <div className={`flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 lg:space-x-8 text-xs sm:text-sm justify-center lg:justify-start ${hasHeaderImage ? 'text-gray-300' : 'text-gray-500'}`}>
                 <div>✓ 15+ Years Experience</div>
                 <div>✓ Fortune 500 Clients</div>
                 <div>✓ Proven Results</div>

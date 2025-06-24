@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -14,15 +13,21 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
   const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
   const heroPadding = isPreview ? 'py-8' : 'py-16 sm:py-24 lg:py-32';
 
+  // Check if header image exists
+  const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+
   return (
     <div className="bg-cream-50" style={{ fontFamily: `${fontFamily}, serif` }}>
       {/* Classic Centered Hero */}
-      <section className={`relative ${heroPadding} bg-gradient-to-b from-amber-50 to-white`}>
-        {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-20"
-            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
-          ></div>
+      <section className={`relative ${heroPadding} ${!hasHeaderImage ? 'bg-gradient-to-b from-amber-50 to-white' : ''}`}>
+        {hasHeaderImage && (
+          <>
+            <div 
+              className="absolute inset-0 bg-cover bg-center opacity-80"
+              style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+            ></div>
+            <div className="absolute inset-0 bg-black opacity-30"></div>
+          </>
         )}
         
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
@@ -30,13 +35,14 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
+            style={{ textShadow: hasHeaderImage ? '2px 2px 4px rgba(0,0,0,0.7)' : 'none' }}
           >
             <div className="w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 mx-auto mb-6 sm:mb-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500"></div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold mb-4 sm:mb-6 text-gray-900 leading-tight">
+            <h1 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold mb-4 sm:mb-6 leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}>
               {customizationData.coachName || "Dr. Sarah Wilson"}
             </h1>
             <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto mb-4 sm:mb-6"></div>
-            <p className="text-lg sm:text-xl lg:text-2xl mb-8 sm:mb-10 text-gray-700 italic leading-relaxed">
+            <p className={`text-lg sm:text-xl lg:text-2xl mb-8 sm:mb-10 italic leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-700'}`}>
               {customizationData.tagline || "Classical Wisdom for Modern Challenges"}
             </p>
             <Button 
