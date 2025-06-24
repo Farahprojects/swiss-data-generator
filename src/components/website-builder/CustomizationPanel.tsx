@@ -187,27 +187,6 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       section="header"
                     />
                     
-                    {/* Header Image Opacity Control */}
-                    {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                          Header Image Opacity ({customizationData.headerImageOpacity || 100}%)
-                        </Label>
-                        <Slider
-                          value={[customizationData.headerImageOpacity || 100]}
-                          onValueChange={(value) => onChange('headerImageOpacity', value[0])}
-                          max={100}
-                          min={0}
-                          step={5}
-                          className="w-full"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500 mt-1">
-                          <span>Transparent</span>
-                          <span>Opaque</span>
-                        </div>
-                      </div>
-                    )}
-                    
                     <ImageUploader
                       value={customizationData.aboutImageData}
                       onChange={(data) => onChange('aboutImageData', data)}
@@ -435,6 +414,27 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Header Image Opacity Control - only show if header image exists */}
+                    {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                          Header Image Opacity ({customizationData.headerImageOpacity || 100}%)
+                        </Label>
+                        <Slider
+                          value={[customizationData.headerImageOpacity || 100]}
+                          onValueChange={(value) => onChange('headerImageOpacity', value[0])}
+                          max={100}
+                          min={0}
+                          step={5}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Transparent</span>
+                          <span>Opaque</span>
+                        </div>
+                      </div>
+                    )}
                     
                     <div>
                       <Label htmlFor="backgroundStyle" className="text-sm font-medium text-gray-700">Background Style</Label>
