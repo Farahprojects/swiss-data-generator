@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
-import { Canvas as FabricCanvas, FabricImage, filters } from 'fabric';
+import { Canvas as FabricCanvas, FabricImage, filters, Rect } from 'fabric';
 import { ImageAdjustments } from './ImageEditorModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -22,6 +22,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<FabricCanvas | null>(null);
   const imageObjectRef = useRef<FabricImage | null>(null);
+  const overlayObjectRef = useRef<Rect | null>(null);
   const canApplyFiltersRef = useRef<boolean>(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -145,57 +146,81 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
 
   // Apply adjustments when they change (only if not cropped)
   useEffect(() => {
-    if (!imageObjectRef.current || !canApplyFiltersRef.current || cropApplied) {
+    if (!imageObjectRef.current || !fabricCanvasRef.current || cropApplied) {
       if (cropApplied) {
         console.log('Skipping filter application - image has been cropped');
         return;
-      }
-      if (!canApplyFiltersRef.current) {
-        console.warn('Skipping filter application due to CORS restrictions');
       }
       return;
     }
 
     const img = imageObjectRef.current;
-    const { brightness, contrast, saturation, rotation } = adjustments;
+    const canvas = fabricCanvasRef.current;
+    const { brightness, contrast, opacity, opacityColor, rotation } = adjustments;
 
     try {
-      // Apply filters
-      const imageFilters = [];
-      
-      if (brightness !== 0) {
-        imageFilters.push(new filters.Brightness({
-          brightness: brightness / 100
-        }));
-      }
-      
-      if (contrast !== 0) {
-        imageFilters.push(new filters.Contrast({
-          contrast: contrast / 100
-        }));
-      }
-      
-      if (saturation !== 0) {
-        imageFilters.push(new filters.Saturation({
-          saturation: saturation / 100
-        }));
-      }
+      // Apply filters (brightness and contrast only)
+      if (canApplyFiltersRef.current) {
+        const imageFilters = [];
+        
+        if (brightness !== 0) {
+          imageFilters.push(new filters.Brightness({
+            brightness: brightness / 100
+          }));
+        }
+        
+        if (contrast !== 0) {
+          imageFilters.push(new filters.Contrast({
+            contrast: contrast / 100
+          }));
+        }
 
-      img.filters = imageFilters;
-      img.applyFilters();
+        img.filters = imageFilters;
+        img.applyFilters();
+      }
       
       // Apply rotation
       img.rotate(rotation);
+
+      // Handle opacity overlay
+      if (overlayObjectRef.current) {
+        canvas.remove(overlayObjectRef.current);
+        overlayObjectRef.current = null;
+      }
+
+      if (opacity > 0) {
+        const overlay = new Rect({
+          left: img.left,
+          top: img.top,
+          width: img.getScaledWidth(),
+          height: img.getScaledHeight(),
+          fill: opacityColor,
+          opacity: opacity / 100,
+          selectable: false,
+          evented: false,
+          excludeFromExport: false
+        });
+
+        // Position overlay to match image rotation and position
+        overlay.set({
+          originX: img.originX,
+          originY: img.originY,
+          angle: img.angle
+        });
+
+        canvas.add(overlay);
+        overlayObjectRef.current = overlay;
+      }
       
-      fabricCanvasRef.current?.renderAll();
+      canvas.renderAll();
       console.log('Applied adjustments:', adjustments);
       
     } catch (error) {
-      console.error('Error applying filters:', error);
+      console.error('Error applying adjustments:', error);
       // If filters fail, at least apply rotation
       try {
         img.rotate(rotation);
-        fabricCanvasRef.current?.renderAll();
+        canvas.renderAll();
       } catch (rotationError) {
         console.error('Error applying rotation:', rotationError);
       }

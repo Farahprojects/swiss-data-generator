@@ -25,7 +25,6 @@ export interface CustomizationData {
   backgroundStyle?: string;
   headerImageUrl?: string;
   headerImageData?: ImageData;
-  headerImageOpacity?: number;
   aboutImageUrl?: string;
   aboutImageData?: ImageData;
 }

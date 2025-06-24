@@ -12,6 +12,17 @@ interface AdjustmentPanelProps {
   canvas: any;
 }
 
+const overlayColors = [
+  { name: 'Black', value: '#000000' },
+  { name: 'White', value: '#ffffff' },
+  { name: 'Dark Gray', value: '#374151' },
+  { name: 'Light Gray', value: '#9ca3af' },
+  { name: 'Navy Blue', value: '#1e3a8a' },
+  { name: 'Royal Blue', value: '#3b82f6' },
+  { name: 'Deep Red', value: '#dc2626' },
+  { name: 'Forest Green', value: '#166534' },
+];
+
 export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
   adjustments,
   onChange,
@@ -21,6 +32,13 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
     onChange({
       ...adjustments,
       [key]: value[0]
+    });
+  };
+
+  const handleColorChange = (color: string) => {
+    onChange({
+      ...adjustments,
+      opacityColor: color
     });
   };
 
@@ -35,7 +53,8 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
     onChange({
       brightness: 0,
       contrast: 0,
-      saturation: 0,
+      opacity: 0,
+      opacityColor: '#000000',
       rotation: 0
     });
   };
@@ -89,20 +108,48 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
         </div>
 
         <div>
-          <Label className="text-sm font-medium">Saturation</Label>
+          <Label className="text-sm font-medium">Opacity Overlay</Label>
+          
+          {/* Color Selection */}
+          <div className="mt-2 mb-3">
+            <Label className="text-xs text-gray-600 mb-2 block">Overlay Color</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {overlayColors.map((color) => (
+                <button
+                  key={color.value}
+                  onClick={() => handleColorChange(color.value)}
+                  className={`w-8 h-8 rounded border-2 transition-all ${
+                    adjustments.opacityColor === color.value 
+                      ? 'border-blue-500 scale-110' 
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                  style={{ backgroundColor: color.value }}
+                  title={color.name}
+                >
+                  {adjustments.opacityColor === color.value && (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className={`w-2 h-2 rounded-full ${color.value === '#ffffff' ? 'bg-gray-800' : 'bg-white'}`}></div>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Opacity Slider */}
           <div className="mt-2">
             <Slider
-              value={[adjustments.saturation]}
-              onValueChange={(value) => handleSliderChange('saturation', value)}
-              min={-100}
+              value={[adjustments.opacity]}
+              onValueChange={(value) => handleSliderChange('opacity', value)}
+              min={0}
               max={100}
-              step={1}
+              step={5}
               className="w-full"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>-100</span>
-              <span>{adjustments.saturation}</span>
-              <span>100</span>
+              <span>0% (No overlay)</span>
+              <span>{adjustments.opacity}%</span>
+              <span>100% (Full overlay)</span>
             </div>
           </div>
         </div>

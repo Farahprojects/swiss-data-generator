@@ -22,7 +22,8 @@ export type EditorTool = 'select' | 'crop' | 'adjust';
 export interface ImageAdjustments {
   brightness: number;
   contrast: number;
-  saturation: number;
+  opacity: number;
+  opacityColor: string;
   rotation: number;
 }
 
@@ -53,7 +54,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [adjustments, setAdjustments] = useState<ImageAdjustments>({
     brightness: 0,
     contrast: 0,
-    saturation: 0,
+    opacity: 0,
+    opacityColor: '#000000',
     rotation: 0
   });
 
@@ -63,7 +65,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       setAdjustments({
         brightness: 0,
         contrast: 0,
-        saturation: 0,
+        opacity: 0,
+        opacityColor: '#000000',
         rotation: 0
       });
     }
@@ -256,7 +259,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       setAdjustments({
         brightness: 0,
         contrast: 0,
-        saturation: 0,
+        opacity: 0,
+        opacityColor: '#000000',
         rotation: 0
       });
       // Force canvas to reload original image by clearing it
@@ -287,7 +291,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   imageUrl={imageData.url}
                   onCanvasReady={setFabricCanvas}
                   activeTool={activeTool}
-                  adjustments={hasCroppedImage ? { brightness: 0, contrast: 0, saturation: 0, rotation: 0 } : adjustments}
+                  adjustments={hasCroppedImage ? { brightness: 0, contrast: 0, opacity: 0, opacityColor: '#000000', rotation: 0 } : adjustments}
                   cropApplied={hasCroppedImage}
                 />
               </div>
