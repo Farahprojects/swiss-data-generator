@@ -17,27 +17,30 @@ interface CoachWebsite {
 
 interface PublishingModalProps {
   website: CoachWebsite;
+  userSlug: string;
   onClose: () => void;
   onPublished: () => void;
 }
 
 export const PublishingModal: React.FC<PublishingModalProps> = ({
   website,
+  userSlug,
   onClose,
   onPublished
 }) => {
   const { toast } = useToast();
   const [isPublishing, setIsPublishing] = useState(false);
-  const [customSlug, setCustomSlug] = useState(website.site_slug);
+  const [customSlug, setCustomSlug] = useState(userSlug || website.site_slug);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  const websiteUrl = `https://theraiastro.co/coach/${customSlug}`;
+  const websiteUrl = `https://theraiastro.com/${customSlug}`;
 
   const handlePublish = async () => {
     setIsPublishing(true);
     
     try {
-      const { error } = await supabase
+      // Update coach_websites table
+      const { error: websiteError } = await supabase
         .from('coach_websites')
         .update({
           site_slug: customSlug,
@@ -46,9 +49,21 @@ export const PublishingModal: React.FC<PublishingModalProps> = ({
         })
         .eq('id', website.id);
 
-      if (error) throw error;
+      if (websiteError) throw websiteError;
 
-      // Send confirmation email (placeholder - would need email function)
+      // Update api_keys table to sync the slug
+      const { error: apiKeyError } = await supabase
+        .from('api_keys')
+        .update({
+          slug_coach: customSlug
+        })
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (apiKeyError) {
+        console.warn('Failed to update api_keys slug:', apiKeyError);
+        // Don't throw here as the website is already published
+      }
+
       logToSupabase("Website published successfully", {
         level: 'info',
         page: 'PublishingModal',
@@ -123,7 +138,7 @@ export const PublishingModal: React.FC<PublishingModalProps> = ({
           <div>
             <Label htmlFor="slug">Website URL</Label>
             <div className="flex items-center space-x-2 mt-1">
-              <span className="text-sm text-gray-500">theraiastro.co/coach/</span>
+              <span className="text-sm text-gray-500">theraiastro.com/</span>
               <Input
                 id="slug"
                 value={customSlug}

@@ -34,6 +34,7 @@ export default function WebsiteBuilder() {
   const [selectedTemplate, setSelectedTemplate] = useState<WebsiteTemplate | null>(null);
   const [website, setWebsite] = useState<CoachWebsite | null>(null);
   const [customizationData, setCustomizationData] = useState<any>({});
+  const [userSlug, setUserSlug] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -56,6 +57,21 @@ export default function WebsiteBuilder() {
 
       if (templatesError) throw templatesError;
       setTemplates(templatesData || []);
+
+      // Load user's slug from api_keys
+      const { data: apiKeyData, error: apiKeyError } = await supabase
+        .from('api_keys')
+        .select('slug_coach')
+        .eq('user_id', user.id)
+        .single();
+
+      if (apiKeyData?.slug_coach) {
+        setUserSlug(apiKeyData.slug_coach);
+      } else {
+        // Generate slug from email if not found in api_keys
+        const fallbackSlug = user.email?.split('@')[0]?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'coach';
+        setUserSlug(fallbackSlug);
+      }
 
       // Load existing website
       const { data: websiteData, error: websiteError } = await supabase
@@ -205,8 +221,6 @@ export default function WebsiteBuilder() {
 
     setIsSaving(true);
     try {
-      const slug = user.email?.split('@')[0]?.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'coach';
-      
       if (website) {
         // Update existing website
         const { error } = await supabase
@@ -225,7 +239,7 @@ export default function WebsiteBuilder() {
           .insert({
             coach_id: user.id,
             template_id: selectedTemplate.id,
-            site_slug: slug,
+            site_slug: userSlug,
             customization_data: customizationData
           })
           .select()
@@ -362,6 +376,7 @@ export default function WebsiteBuilder() {
       {showPublishModal && website && (
         <PublishingModal
           website={website}
+          userSlug={userSlug}
           onClose={() => setShowPublishModal(false)}
           onPublished={() => {
             setShowPublishModal(false);
