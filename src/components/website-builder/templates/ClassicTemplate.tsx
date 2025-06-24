@@ -20,14 +20,12 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
     <div className="bg-cream-50" style={{ fontFamily: `${fontFamily}, serif` }}>
       {/* Classic Centered Hero */}
       <section className={`relative ${heroPadding} ${!hasHeaderImage ? 'bg-gradient-to-b from-amber-50 to-white' : ''}`}>
+        {/* Header background image with no opacity reduction */}
         {hasHeaderImage && (
-          <>
-            <div 
-              className="absolute inset-0 bg-cover bg-center opacity-80"
-              style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
-            ></div>
-            <div className="absolute inset-0 bg-black opacity-30"></div>
-          </>
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+          ></div>
         )}
         
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">

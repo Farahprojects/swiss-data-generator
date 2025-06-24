@@ -29,14 +29,12 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
           </div>
         )}
         
+        {/* Header background image with no opacity reduction */}
         {hasHeaderImage && (
-          <>
-            <div 
-              className="absolute inset-0 bg-cover bg-center opacity-85"
-              style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
-            ></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/30 to-purple-500/30"></div>
-          </>
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+          ></div>
         )}
         
         <div className={`relative z-10 ${heroSection} flex items-center`}>

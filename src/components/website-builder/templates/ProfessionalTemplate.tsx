@@ -35,14 +35,12 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
 
       {/* Corporate Hero */}
       <section className={`${sectionPadding} ${!hasHeaderImage ? 'bg-gradient-to-r from-gray-50 to-blue-50' : 'relative'}`}>
+        {/* Header background image with no opacity reduction */}
         {hasHeaderImage && (
-          <>
-            <div 
-              className="absolute inset-0 bg-cover bg-center opacity-80"
-              style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
-            ></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-900/70 to-blue-800/50"></div>
-          </>
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+          ></div>
         )}
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">

@@ -20,14 +20,12 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Ultra Minimal Hero */}
       <section className={`${heroSection} flex items-center justify-center relative ${!hasHeaderImage ? 'bg-white' : ''}`}>
+        {/* Header background image with no opacity reduction */}
         {hasHeaderImage && (
-          <>
-            <div 
-              className="absolute inset-0 bg-cover bg-center opacity-85"
-              style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
-            ></div>
-            <div className="absolute inset-0 bg-white opacity-20"></div>
-          </>
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+          ></div>
         )}
         
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center relative z-10">

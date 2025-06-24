@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Slider } from "@/components/ui/slider";
 import { Plus, X, ChevronDown, ChevronUp, Palette, Type, Settings, User, Briefcase, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageUploader } from "./ImageUploader";
@@ -185,6 +186,27 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       label="Header Background Image"
                       section="header"
                     />
+                    
+                    {/* Header Image Opacity Control */}
+                    {(customizationData.headerImageData?.url || customizationData.headerImageUrl) && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                          Header Image Opacity ({customizationData.headerImageOpacity || 100}%)
+                        </Label>
+                        <Slider
+                          value={[customizationData.headerImageOpacity || 100]}
+                          onValueChange={(value) => onChange('headerImageOpacity', value[0])}
+                          max={100}
+                          min={0}
+                          step={5}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Transparent</span>
+                          <span>Opaque</span>
+                        </div>
+                      </div>
+                    )}
                     
                     <ImageUploader
                       value={customizationData.aboutImageData}

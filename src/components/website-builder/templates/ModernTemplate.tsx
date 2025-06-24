@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +16,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
 
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+  const headerOpacity = customizationData.headerImageOpacity || 100;
 
   return (
     <div className="bg-gray-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
@@ -30,17 +30,15 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
           </>
         )}
         
-        {/* Header background image overlay */}
+        {/* Header background image with optional opacity control */}
         {hasHeaderImage && (
           <div 
-            className="absolute inset-0 bg-cover bg-center opacity-90"
-            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ 
+              backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})`,
+              opacity: headerOpacity / 100
+            }}
           ></div>
-        )}
-        
-        {/* Light overlay for text readability when image is present */}
-        {hasHeaderImage && (
-          <div className="absolute inset-0 bg-black opacity-20"></div>
         )}
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 grid gap-6 lg:grid-cols-2 lg:gap-8 items-center">
