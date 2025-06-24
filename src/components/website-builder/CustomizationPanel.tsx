@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Plus, X, ChevronDown, ChevronUp, Palette, Type, Settings, User, Briefcase, Image as ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageUploader } from "./ImageUploader";
-import type { Service, CustomizationData } from "@/types/website-builder";
+import type { Service, CustomizationData, ImageData } from "@/types/website-builder";
 
 interface CustomizationPanelProps {
   customizationData: CustomizationData;
@@ -60,9 +60,13 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     }));
   };
 
-  const handleServiceChange = (index: number, field: string, value: string) => {
+  const handleServiceChange = (index: number, field: string, value: string | ImageData | null) => {
     const services = [...(customizationData.services || [])];
-    services[index] = { ...services[index], [field]: value };
+    if (field === 'imageData') {
+      services[index] = { ...services[index], imageData: value as ImageData | undefined };
+    } else {
+      services[index] = { ...services[index], [field]: value };
+    }
     onChange('services', services);
   };
 
@@ -176,15 +180,15 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                 >
                   <CardContent className="space-y-6 pt-0">
                     <ImageUploader
-                      value={customizationData.headerImageUrl}
-                      onChange={(url) => onChange('headerImageUrl', url)}
+                      value={customizationData.headerImageData}
+                      onChange={(data) => onChange('headerImageData', data)}
                       label="Header Background Image"
                       section="header"
                     />
                     
                     <ImageUploader
-                      value={customizationData.aboutImageUrl}
-                      onChange={(url) => onChange('aboutImageUrl', url)}
+                      value={customizationData.aboutImageData}
+                      onChange={(data) => onChange('aboutImageData', data)}
                       label="About Section Image"
                       section="about"
                     />
@@ -269,8 +273,8 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                             />
                             
                             <ImageUploader
-                              value={service.imageUrl}
-                              onChange={(url) => handleServiceChange(index, 'imageUrl', url || '')}
+                              value={service.imageData}
+                              onChange={(data) => handleServiceChange(index, 'imageData', data)}
                               label="Service Icon/Image"
                               section="service"
                               serviceIndex={index}
