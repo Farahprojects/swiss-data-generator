@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -11,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ImageCanvas } from './ImageCanvas';
 import { EditorToolbar } from './EditorToolbar';
 import { AdjustmentPanel } from './AdjustmentPanel';
-import { CropTool } from './CropTool';
+import { LiveCropTool } from './LiveCropTool';
 import { FilterPanel } from './FilterPanel';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -76,11 +75,12 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
     setIsProcessing(true);
     try {
-      // Export canvas as blob
+      // Export canvas as blob - exclude overlay elements
       const dataURL = fabricCanvas.toDataURL({
         format: 'jpeg',
         quality: 0.8,
-        multiplier: 1
+        multiplier: 1,
+        filter: (obj: any) => !obj.excludeFromExport
       });
 
       // Convert dataURL to blob
@@ -150,7 +150,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
+      <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-0 overflow-hidden">
         <div className="flex flex-col h-full">
           <DialogHeader className="px-6 py-4 border-b">
             <DialogTitle>Edit Image</DialogTitle>
@@ -175,7 +175,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               
               <div className={`${isMobile ? 'border-t' : 'w-80 border-l'} bg-gray-50 p-4 overflow-y-auto`}>
                 {activeTool === 'crop' && (
-                  <CropTool
+                  <LiveCropTool
                     canvas={fabricCanvas}
                     onCropComplete={() => setActiveTool('select')}
                   />
