@@ -159,9 +159,18 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
         console.log('Aspect ratio crop bounds:', cropBounds);
       }
 
-      // Use Fabric's built-in toDataURL with crop bounds - this handles coordinate conversion correctly
+      // Validate crop bounds
+      if (cropBounds.width <= 0 || cropBounds.height <= 0) {
+        console.error('Invalid crop bounds:', cropBounds);
+        return false;
+      }
+
+      console.log('Applying crop with bounds:', cropBounds);
+
+      // Use Fabric's built-in toDataURL with proper crop bounds
       const croppedDataURL = canvas.toDataURL({
         format: 'png',
+        quality: 1,
         multiplier: 1,
         left: cropBounds.left,
         top: cropBounds.top,
@@ -170,7 +179,12 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
         filter: (obj: any) => !obj.excludeFromExport
       });
 
-      console.log('Created cropped image dataURL using Fabric toDataURL');
+      if (!croppedDataURL || croppedDataURL.length < 100) {
+        console.error('Failed to generate cropped image data');
+        return false;
+      }
+
+      console.log('Cropped image generated successfully');
 
       // Load the cropped image back to the canvas
       const newImage = await FabricImage.fromURL(croppedDataURL);
@@ -206,7 +220,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       }
 
       canvas.renderAll();
-      console.log('Crop applied successfully using Fabric coordinate system');
+      console.log('Crop applied successfully');
       return true;
 
     } catch (error) {

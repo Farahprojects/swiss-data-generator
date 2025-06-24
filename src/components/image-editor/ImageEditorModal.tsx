@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -77,46 +78,141 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setActiveTool('select');
   };
 
+  const validateDataURL = (dataURL: string): boolean => {
+    try {
+      // Check if it's a valid data URL format
+      if (!dataURL.startsWith('data:')) {
+        console.error('Invalid data URL format');
+        return false;
+      }
+
+      // Check if it has reasonable length (not empty)
+      if (dataURL.length < 100) {
+        console.error('Data URL too short, likely invalid');
+        return false;
+      }
+
+      // Try to decode base64 part to verify it's valid
+      const base64Data = dataURL.split(',')[1];
+      if (!base64Data) {
+        console.error('No base64 data found in data URL');
+        return false;
+      }
+
+      // Verify base64 is decodable
+      atob(base64Data.substring(0, 100)); // Test decode first 100 chars
+      return true;
+    } catch (error) {
+      console.error('Data URL validation failed:', error);
+      return false;
+    }
+  };
+
+  const convertDataURLToBlob = async (dataURL: string): Promise<Blob> => {
+    try {
+      const response = await fetch(dataURL);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data URL: ${response.status}`);
+      }
+      return await response.blob();
+    } catch (error) {
+      console.error('Failed to convert data URL to blob:', error);
+      
+      // Fallback: manual conversion
+      try {
+        const [header, data] = dataURL.split(',');
+        const mimeMatch = header.match(/data:([^;]+)/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        
+        const binaryString = atob(data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        return new Blob([bytes], { type: mime });
+      } catch (fallbackError) {
+        console.error('Fallback blob conversion failed:', fallbackError);
+        throw new Error('Failed to convert image data to blob');
+      }
+    }
+  };
+
   const handleSave = async () => {
-    if (!fabricCanvas || !user) return;
+    if (!fabricCanvas || !user) {
+      console.error('Missing required objects for save');
+      toast({
+        variant: "destructive",
+        title: "Save failed",
+        description: "Canvas or user not available"
+      });
+      return;
+    }
 
     setIsProcessing(true);
+    
     try {
-      console.log('Saving image, hasCroppedImage:', hasCroppedImage);
-      
-      // Export canvas as blob - exclude overlay elements
+      console.log('Starting save process...');
+      console.log('Canvas dimensions:', {
+        width: fabricCanvas.getWidth(),
+        height: fabricCanvas.getHeight(),
+        objects: fabricCanvas.getObjects().length
+      });
+
+      // Use Fabric's built-in toDataURL with optimized settings
       const dataURL = fabricCanvas.toDataURL({
         format: 'jpeg',
-        quality: 0.8,
+        quality: 0.9,
         multiplier: 1,
         filter: (obj: any) => !obj.excludeFromExport
       });
 
-      console.log('Canvas exported to dataURL, length:', dataURL.length);
+      console.log('Canvas exported to dataURL, validating...');
 
-      // Convert dataURL to blob
-      const response = await fetch(dataURL);
-      const blob = await response.blob();
+      // Validate the data URL
+      if (!validateDataURL(dataURL)) {
+        throw new Error('Generated image data is invalid');
+      }
 
-      // Create file with original filename but add _edited suffix
+      console.log('Data URL validation passed, converting to blob...');
+
+      // Convert to blob with error handling
+      const blob = await convertDataURLToBlob(dataURL);
+      
+      if (!blob || blob.size === 0) {
+        throw new Error('Failed to create valid image blob');
+      }
+
+      console.log('Blob created successfully:', {
+        size: blob.size,
+        type: blob.type
+      });
+
+      // Generate unique filename
       const originalPath = imageData.filePath;
       const pathParts = originalPath.split('.');
-      const extension = pathParts.pop();
+      const extension = pathParts.pop() || 'jpg';
       const nameWithoutExt = pathParts.join('.');
       const timestamp = Date.now();
       const newFileName = `${nameWithoutExt}_edited_${timestamp}.${extension}`;
 
-      console.log('Uploading file:', newFileName);
+      console.log('Uploading to Supabase:', newFileName);
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('website-images')
         .upload(newFileName, blob, {
           cacheControl: '3600',
-          upsert: true
+          upsert: true,
+          contentType: blob.type
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase upload error:', error);
+        throw new Error(`Upload failed: ${error.message}`);
+      }
+
+      console.log('Upload successful:', data);
 
       // Get public URL
       const { data: urlData } = supabase.storage
@@ -130,6 +226,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
       console.log('Image saved successfully:', newImageData);
 
+      // Call the onSave callback
       onSave(newImageData);
       onClose();
 
@@ -139,11 +236,17 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       });
 
     } catch (error: any) {
-      console.error('Save error:', error);
+      console.error('Save error details:', {
+        message: error.message,
+        stack: error.stack,
+        fabricCanvas: !!fabricCanvas,
+        user: !!user
+      });
+      
       toast({
         variant: "destructive",
         title: "Save failed",
-        description: error.message || "Failed to save edited image."
+        description: error.message || "Failed to save edited image. Please try again."
       });
     } finally {
       setIsProcessing(false);
