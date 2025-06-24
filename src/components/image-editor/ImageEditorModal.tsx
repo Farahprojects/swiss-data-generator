@@ -12,6 +12,7 @@ import { EditorToolbar } from './EditorToolbar';
 import { AdjustmentPanel } from './AdjustmentPanel';
 import { LiveCropTool } from './LiveCropTool';
 import { FilterPanel } from './FilterPanel';
+import { SimpleCropTool } from './SimpleCropTool';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -175,7 +176,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               
               <div className={`${isMobile ? 'border-t' : 'w-80 border-l'} bg-gray-50 p-4 overflow-y-auto`}>
                 {activeTool === 'crop' && (
-                  <LiveCropTool
+                  <SimpleCropTool
                     canvas={fabricCanvas}
                     onCropComplete={() => setActiveTool('select')}
                   />
