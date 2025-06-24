@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -78,11 +79,19 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   };
 
   const handleSave = async () => {
-    if (!fabricCanvas || !user) return;
+    if (!fabricCanvas || !user) {
+      console.error('Missing fabricCanvas or user:', { fabricCanvas: !!fabricCanvas, user: !!user });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Canvas not ready or user not authenticated."
+      });
+      return;
+    }
 
     setIsProcessing(true);
     try {
-      console.log('Saving image, hasCroppedImage:', hasCroppedImage);
+      console.log('Starting save process...');
       
       // Export canvas as blob - exclude overlay elements
       const dataURL = fabricCanvas.toDataURL({
@@ -94,34 +103,53 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
       console.log('Canvas exported to dataURL, length:', dataURL.length);
 
+      if (!dataURL || dataURL.length < 100) {
+        throw new Error('Failed to export canvas - invalid data');
+      }
+
       // Convert dataURL to blob
       const response = await fetch(dataURL);
+      if (!response.ok) {
+        throw new Error('Failed to convert dataURL to blob');
+      }
+      
       const blob = await response.blob();
+      console.log('Blob created, size:', blob.size, 'type:', blob.type);
 
       // Create file with original filename but add _edited suffix
       const originalPath = imageData.filePath;
       const pathParts = originalPath.split('.');
-      const extension = pathParts.pop();
+      const extension = pathParts.pop() || 'jpg';
       const nameWithoutExt = pathParts.join('.');
       const timestamp = Date.now();
       const newFileName = `${nameWithoutExt}_edited_${timestamp}.${extension}`;
 
-      console.log('Uploading file:', newFileName);
+      console.log('Uploading file:', newFileName, 'to website-images bucket');
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('website-images')
         .upload(newFileName, blob, {
           cacheControl: '3600',
-          upsert: true
+          upsert: true,
+          contentType: 'image/jpeg'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Upload error:', error);
+        throw new Error(`Upload failed: ${error.message}`);
+      }
+
+      console.log('Upload successful:', data);
 
       // Get public URL
       const { data: urlData } = supabase.storage
         .from('website-images')
         .getPublicUrl(data.path);
+
+      if (!urlData.publicUrl) {
+        throw new Error('Failed to get public URL for uploaded image');
+      }
 
       const newImageData: ImageData = {
         url: urlData.publicUrl,
@@ -193,20 +221,12 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               </div>
               
               <div className={`${isMobile ? 'border-t' : 'w-80 border-l'} bg-gray-50 p-4 overflow-y-auto`}>
-                {activeTool === 'adjust' && !hasCroppedImage && (
+                {activeTool === 'adjust' && (
                   <AdjustmentPanel
                     adjustments={adjustments}
                     onChange={setAdjustments}
                     canvas={fabricCanvas}
                   />
-                )}
-                
-                {activeTool === 'adjust' && hasCroppedImage && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-                    <p className="text-sm text-yellow-800">
-                      Adjustments are not available after cropping. Please apply adjustments before cropping.
-                    </p>
-                  </div>
                 )}
                 
                 {activeTool === 'crop' && (
@@ -216,18 +236,10 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   />
                 )}
                 
-                {activeTool === 'filter' && !hasCroppedImage && (
+                {activeTool === 'filter' && (
                   <FilterPanel
                     canvas={fabricCanvas}
                   />
-                )}
-                
-                {activeTool === 'filter' && hasCroppedImage && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-                    <p className="text-sm text-yellow-800">
-                      Filters are not available after cropping. Please apply filters before cropping.
-                    </p>
-                  </div>
                 )}
               </div>
             </div>
@@ -237,7 +249,11 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             <Button variant="outline" onClick={onClose} disabled={isProcessing}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isProcessing}>
+            <Button 
+              onClick={handleSave} 
+              disabled={isProcessing || !fabricCanvas}
+              className="bg-green-600 hover:bg-green-700"
+            >
               {isProcessing ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
