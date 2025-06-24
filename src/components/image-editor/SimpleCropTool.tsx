@@ -159,28 +159,18 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
         console.log('Aspect ratio crop bounds:', cropBounds);
       }
 
-      // Get the current canvas as image data
-      const canvasElement = canvas.getElement();
-      const tempCanvas = document.createElement('canvas');
-      const ctx = tempCanvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Failed to create crop canvas');
-      }
+      // Use Fabric's built-in toDataURL with crop bounds - this handles coordinate conversion correctly
+      const croppedDataURL = canvas.toDataURL({
+        format: 'png',
+        multiplier: 1,
+        left: cropBounds.left,
+        top: cropBounds.top,
+        width: cropBounds.width,
+        height: cropBounds.height,
+        filter: (obj: any) => !obj.excludeFromExport
+      });
 
-      // Set the temp canvas size to the crop area
-      tempCanvas.width = cropBounds.width;
-      tempCanvas.height = cropBounds.height;
-
-      // Extract the cropped area from the main canvas
-      ctx.drawImage(
-        canvasElement,
-        cropBounds.left, cropBounds.top, cropBounds.width, cropBounds.height,
-        0, 0, cropBounds.width, cropBounds.height
-      );
-
-      // Create new image from cropped data
-      const croppedDataURL = tempCanvas.toDataURL('image/png', 1.0);
-      console.log('Created cropped image dataURL');
+      console.log('Created cropped image dataURL using Fabric toDataURL');
 
       // Load the cropped image back to the canvas
       const newImage = await FabricImage.fromURL(croppedDataURL);
@@ -207,13 +197,16 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
 
       canvas.add(newImage);
       
+      // Update current image reference for potential subsequent crops
+      setCurrentImage(newImage);
+      
       // Clean up overlay reference
       if (cropOverlay) {
         setCropOverlay(null);
       }
 
       canvas.renderAll();
-      console.log('Crop applied successfully');
+      console.log('Crop applied successfully using Fabric coordinate system');
       return true;
 
     } catch (error) {
