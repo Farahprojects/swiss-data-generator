@@ -37,11 +37,14 @@ export const handleServicePurchase = async (service: ServicePurchaseData, onErro
 
     console.log("Initiating service purchase:", { service, price });
 
-    const { data, error } = await supabase.functions.invoke('create-guest-checkout', {
+    // Use the proven create-checkout function for guest checkout
+    const { data, error } = await supabase.functions.invoke('create-checkout', {
       body: {
+        mode: 'payment',
         amount: price,
-        email: 'guest@example.com', // Default for guest checkout
         description: `${service.title} - ${service.coachName}`,
+        isGuest: true,
+        email: 'guest@example.com',
         reportData: {
           service_title: service.title,
           service_description: service.description,
@@ -59,31 +62,9 @@ export const handleServicePurchase = async (service: ServicePurchaseData, onErro
       return;
     }
 
-    if (data?.url && data?.sessionId) {
+    if (data?.url) {
       console.log("Service purchase checkout session created:", data.sessionId);
       
-      // Update the payment intent with complete metadata once the session is created
-      try {
-        await supabase.functions.invoke('update-service-purchase-metadata', {
-          body: {
-            sessionId: data.sessionId,
-            metadata: {
-              service_title: service.title,
-              service_description: service.description,
-              coach_slug: service.coachSlug,
-              coach_name: service.coachName,
-              service_price: service.price,
-              purchase_type: 'service',
-              stripe_session_id: data.sessionId,
-              guest_email: 'guest@example.com'
-            }
-          }
-        });
-      } catch (metadataError) {
-        console.warn("Failed to update payment intent metadata:", metadataError);
-        // Don't block the checkout flow for metadata issues
-      }
-
       // Open Stripe checkout in new tab
       window.open(data.url, '_blank');
     } else {
