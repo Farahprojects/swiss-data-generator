@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
@@ -44,25 +45,8 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
     });
   };
 
-  const resetAdjustments = () => {
-    onChange({
-      brightness: 0,
-      contrast: 0,
-      opacity: 0,
-      opacityColor: '#000000',
-      rotation: 0
-    });
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Adjustments</h3>
-        <Button variant="outline" size="sm" onClick={resetAdjustments}>
-          Reset All
-        </Button>
-      </div>
-
       <div className="space-y-4">
         <div>
           <Label className="text-sm font-medium">Brightness</Label>
