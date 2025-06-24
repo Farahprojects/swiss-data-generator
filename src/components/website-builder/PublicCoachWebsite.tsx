@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,10 +65,17 @@ export const PublicCoachWebsite: React.FC = () => {
         .select('*')
         .eq('site_slug', slug)
         .eq('is_published', true)
-        .single();
+        .maybeSingle();
 
-      if (websiteError || !websiteData) {
-        console.error('Website not found:', websiteError);
+      if (websiteError) {
+        console.error('Website query error:', websiteError);
+        setNotFound(true);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!websiteData) {
+        console.log('No website found for slug:', slug);
         setNotFound(true);
         setIsLoading(false);
         return;
@@ -90,10 +96,17 @@ export const PublicCoachWebsite: React.FC = () => {
         .from('website_templates')
         .select('*')
         .eq('id', websiteData.template_id)
-        .single();
+        .maybeSingle();
 
-      if (templateError || !templateData) {
-        console.error('Template not found:', templateError);
+      if (templateError) {
+        console.error('Template query error:', templateError);
+        setNotFound(true);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!templateData) {
+        console.log('No template found for id:', websiteData.template_id);
         setNotFound(true);
         setIsLoading(false);
         return;
