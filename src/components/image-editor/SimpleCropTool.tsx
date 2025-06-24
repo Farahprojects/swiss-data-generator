@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -144,7 +144,6 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     
     try {
       let cropBounds;
-      let sourceImage = currentImage;
 
       if (aspectRatio === 'free') {
         // Get crop bounds from selected image
@@ -160,7 +159,8 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
         console.log('Aspect ratio crop bounds:', cropBounds);
       }
 
-      // Create a temporary canvas to perform the crop
+      // Get the current canvas as image data
+      const canvasElement = canvas.getElement();
       const tempCanvas = document.createElement('canvas');
       const ctx = tempCanvas.getContext('2d');
       if (!ctx) {
@@ -171,24 +171,23 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       tempCanvas.width = cropBounds.width;
       tempCanvas.height = cropBounds.height;
 
-      // Export the current canvas section
-      const sourceCanvas = canvas.getElement();
+      // Extract the cropped area from the main canvas
       ctx.drawImage(
-        sourceCanvas,
+        canvasElement,
         cropBounds.left, cropBounds.top, cropBounds.width, cropBounds.height,
         0, 0, cropBounds.width, cropBounds.height
       );
 
       // Create new image from cropped data
       const croppedDataURL = tempCanvas.toDataURL('image/png', 1.0);
-      console.log('Created cropped image dataURL, length:', croppedDataURL.length);
+      console.log('Created cropped image dataURL');
 
+      // Load the cropped image back to the canvas
+      const newImage = await FabricImage.fromURL(croppedDataURL);
+      
       // Clear the canvas and add the cropped image
       canvas.clear();
       canvas.backgroundColor = '#ffffff';
-
-      // Load the cropped image
-      const newImage = await FabricImage.fromURL(croppedDataURL);
       
       // Scale and center the new image to fit canvas
       const canvasWidth = canvas.getWidth();
@@ -207,9 +206,8 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       });
 
       canvas.add(newImage);
-      setCurrentImage(newImage);
       
-      // Clean up overlay
+      // Clean up overlay reference
       if (cropOverlay) {
         setCropOverlay(null);
       }

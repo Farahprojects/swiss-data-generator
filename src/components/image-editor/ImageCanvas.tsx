@@ -46,7 +46,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     fabricCanvasRef.current = canvas;
     onCanvasReady(canvas);
 
-    // Only load image if not already cropped or if imageUrl is provided
+    // Only load image initially if we have an imageUrl and haven't cropped yet
     if (imageUrl && !cropApplied) {
       loadImageToCanvas(canvas, imageUrl);
     }
@@ -54,7 +54,17 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     return () => {
       canvas.dispose();
     };
-  }, [imageUrl, onCanvasReady, isMobile, cropApplied]);
+  }, [imageUrl, onCanvasReady, isMobile]);
+
+  // Only reload image when cropApplied changes from true to false (reset)
+  useEffect(() => {
+    if (!fabricCanvasRef.current || !imageUrl) return;
+    
+    // If cropApplied just changed to false, reload the original image
+    if (!cropApplied && fabricCanvasRef.current.getObjects().length === 0) {
+      loadImageToCanvas(fabricCanvasRef.current, imageUrl);
+    }
+  }, [cropApplied, imageUrl]);
 
   const loadImageToCanvas = async (canvas: FabricCanvas, url: string) => {
     try {

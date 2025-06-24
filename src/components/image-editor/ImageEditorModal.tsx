@@ -52,19 +52,17 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [activeTool, setActiveTool] = useState<EditorTool>('select');
   const [isProcessing, setIsProcessing] = useState(false);
   const [fabricCanvas, setFabricCanvas] = useState<any>(null);
-  const [cropApplied, setCropApplied] = useState(false);
+  const [hasCroppedImage, setHasCroppedImage] = useState(false);
   const [adjustments, setAdjustments] = useState<ImageAdjustments>({
     brightness: 0,
     contrast: 0,
     saturation: 0,
     rotation: 0
   });
-  const [originalImageData, setOriginalImageData] = useState<string>('');
 
   useEffect(() => {
     if (isOpen && imageData.url) {
-      setOriginalImageData(imageData.url);
-      setCropApplied(false);
+      setHasCroppedImage(false);
       setAdjustments({
         brightness: 0,
         contrast: 0,
@@ -75,8 +73,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   }, [isOpen, imageData.url]);
 
   const handleCropComplete = () => {
-    console.log('Crop completed, setting cropApplied to true');
-    setCropApplied(true);
+    console.log('Crop completed, image now cropped on canvas');
+    setHasCroppedImage(true);
     setActiveTool('select');
   };
 
@@ -85,7 +83,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
     setIsProcessing(true);
     try {
-      console.log('Saving image, cropApplied:', cropApplied);
+      console.log('Saving image, hasCroppedImage:', hasCroppedImage);
       
       // Export canvas as blob - exclude overlay elements
       const dataURL = fabricCanvas.toDataURL({
@@ -154,16 +152,18 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   };
 
   const handleReset = () => {
-    if (fabricCanvas && originalImageData) {
-      setCropApplied(false);
+    if (fabricCanvas) {
+      setHasCroppedImage(false);
       setAdjustments({
         brightness: 0,
         contrast: 0,
         saturation: 0,
         rotation: 0
       });
-      // Force canvas to reload original image
+      // Force canvas to reload original image by clearing it
       fabricCanvas.clear();
+      fabricCanvas.backgroundColor = '#ffffff';
+      fabricCanvas.renderAll();
     }
   };
 
@@ -185,11 +185,11 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             <div className={`flex flex-1 overflow-hidden ${isMobile ? 'flex-col' : 'flex-row'}`}>
               <div className={`${isMobile ? 'flex-1 min-h-0' : 'flex-1'} p-4`}>
                 <ImageCanvas
-                  imageUrl={cropApplied ? '' : imageData.url}
+                  imageUrl={imageData.url}
                   onCanvasReady={setFabricCanvas}
                   activeTool={activeTool}
-                  adjustments={cropApplied ? { brightness: 0, contrast: 0, saturation: 0, rotation: 0 } : adjustments}
-                  cropApplied={cropApplied}
+                  adjustments={hasCroppedImage ? { brightness: 0, contrast: 0, saturation: 0, rotation: 0 } : adjustments}
+                  cropApplied={hasCroppedImage}
                 />
               </div>
               
@@ -201,7 +201,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   />
                 )}
                 
-                {activeTool === 'adjust' && !cropApplied && (
+                {activeTool === 'adjust' && !hasCroppedImage && (
                   <AdjustmentPanel
                     adjustments={adjustments}
                     onChange={setAdjustments}
@@ -209,7 +209,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   />
                 )}
                 
-                {activeTool === 'adjust' && cropApplied && (
+                {activeTool === 'adjust' && hasCroppedImage && (
                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
                     <p className="text-sm text-yellow-800">
                       Adjustments are not available after cropping. Please apply adjustments before cropping.
@@ -217,13 +217,13 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   </div>
                 )}
                 
-                {activeTool === 'filter' && !cropApplied && (
+                {activeTool === 'filter' && !hasCroppedImage && (
                   <FilterPanel
                     canvas={fabricCanvas}
                   />
                 )}
                 
-                {activeTool === 'filter' && cropApplied && (
+                {activeTool === 'filter' && hasCroppedImage && (
                   <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
                     <p className="text-sm text-yellow-800">
                       Filters are not available after cropping. Please apply filters before cropping.
