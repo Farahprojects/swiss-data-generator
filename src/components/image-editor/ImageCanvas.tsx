@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { Canvas as FabricCanvas, FabricImage, filters, Rect } from 'fabric';
 import { ImageAdjustments } from './ImageEditorModal';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -25,12 +25,12 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
   const overlayObjectRef = useRef<Rect | null>(null);
   const canApplyFiltersRef = useRef<boolean>(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return;
+  const calculateCanvasSize = useCallback(() => {
+    if (!containerRef.current) return { width: 600, height: 450 };
 
-    // Calculate responsive canvas size
     const container = containerRef.current;
     const containerWidth = container.clientWidth - 32;
     const containerHeight = container.clientHeight - 32;
@@ -38,9 +38,90 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     const maxWidth = isMobile ? Math.min(containerWidth, 350) : Math.min(containerWidth, 600);
     const maxHeight = isMobile ? Math.min(containerHeight, 300) : Math.min(containerHeight, 450);
 
+    return { width: maxWidth, height: maxHeight };
+  }, [isMobile]);
+
+  const resizeCanvas = useCallback(() => {
+    if (!fabricCanvasRef.current || !containerRef.current) return;
+
+    const canvas = fabricCanvasRef.current;
+    const { width: newWidth, height: newHeight } = calculateCanvasSize();
+    
+    // Store current zoom and viewport transform
+    const currentZoom = canvas.getZoom();
+    const currentVpt = canvas.viewportTransform?.slice() || [1, 0, 0, 1, 0, 0];
+    
+    // Resize canvas
+    canvas.setDimensions({ width: newWidth, height: newHeight });
+    
+    // If we have an image, rescale and recenter it
+    if (imageObjectRef.current) {
+      const img = imageObjectRef.current;
+      const imgWidth = img.width || 1;
+      const imgHeight = img.height || 1;
+      
+      // Calculate new scale to fit the resized canvas
+      const scale = Math.min(newWidth / imgWidth, newHeight / imgHeight) * 0.9;
+      
+      img.scale(scale);
+      canvas.centerObject(img);
+      
+      // If we have an overlay, update its position and size to match the image
+      if (overlayObjectRef.current) {
+        const overlay = overlayObjectRef.current;
+        overlay.set({
+          left: img.left,
+          top: img.top,
+          width: img.getScaledWidth(),
+          height: img.getScaledHeight(),
+          originX: img.originX,
+          originY: img.originY,
+          angle: img.angle
+        });
+      }
+    }
+    
+    canvas.renderAll();
+  }, [calculateCanvasSize]);
+
+  // Handle window resize with debouncing
+  useEffect(() => {
+    const handleResize = () => {
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      
+      resizeTimeoutRef.current = setTimeout(() => {
+        resizeCanvas();
+      }, 150);
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+    };
+  }, [resizeCanvas]);
+
+  // Handle mobile mode changes
+  useEffect(() => {
+    if (fabricCanvasRef.current) {
+      resizeCanvas();
+    }
+  }, [isMobile, resizeCanvas]);
+
+  // Initial canvas setup
+  useEffect(() => {
+    if (!canvasRef.current || !containerRef.current) return;
+
+    const { width, height } = calculateCanvasSize();
+
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: maxWidth,
-      height: maxHeight,
+      width,
+      height,
       backgroundColor: '#ffffff',
     });
 
@@ -55,7 +136,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     return () => {
       canvas.dispose();
     };
-  }, [imageUrl, onCanvasReady, isMobile]);
+  }, [imageUrl, onCanvasReady]);
 
   // Only reload image when cropApplied changes from true to false (reset)
   useEffect(() => {
