@@ -22,9 +22,11 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     scaleX: number;
     scaleY: number;
     angle: number;
-    filters: any[];
+    width: number;
+    height: number;
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cropApplied, setCropApplied] = useState(false);
 
   const aspectRatios = [
     { value: 'free', label: 'Freeform', ratio: null },
@@ -52,7 +54,8 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
           scaleX: imageObj.scaleX || 1,
           scaleY: imageObj.scaleY || 1,
           angle: imageObj.angle || 0,
-          filters: [...(imageObj.filters || [])]
+          width: imageObj.width || 1,
+          height: imageObj.height || 1
         });
       }
     }
@@ -82,16 +85,13 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       hasBorders: false
     });
 
-    // Reset filters
-    originalImage.filters = [...originalImageData.filters];
-    originalImage.applyFilters();
-
     // Clear any selection and disable drawing mode
     canvas.discardActiveObject();
     canvas.selection = false;
     canvas.isDrawingMode = false;
     
     canvas.renderAll();
+    setCropApplied(false);
   };
 
   const enableFreeformCrop = () => {
@@ -133,7 +133,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
   };
 
   const applyAspectRatioCrop = async () => {
-    if (!canvas || !originalImage || aspectRatio === 'free') return;
+    if (!canvas || !originalImage || aspectRatio === 'free' || !originalImageData) return;
 
     const selectedRatio = aspectRatios.find(ar => ar.value === aspectRatio);
     if (!selectedRatio?.ratio) return;
@@ -141,7 +141,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     setIsProcessing(true);
 
     try {
-      // Get the original image element and its natural dimensions
+      // Get the original image element
       const originalElement = originalImage.getElement() as HTMLImageElement;
       if (!originalElement) {
         throw new Error('Cannot access image element');
@@ -167,7 +167,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
         cropY = (naturalHeight - cropHeight) / 2;
       }
 
-      // Create cropped image using canvas
+      // Create cropped image
       const croppedImage = await createCroppedImage(originalElement, {
         x: cropX,
         y: cropY,
@@ -192,6 +192,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       
       canvas.renderAll();
       setOriginalImage(croppedImage);
+      setCropApplied(true);
 
     } catch (error) {
       console.error('Auto-crop failed:', error);
@@ -212,7 +213,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     tempCanvas.width = cropArea.width;
     tempCanvas.height = cropArea.height;
 
-    // Draw the cropped portion at original resolution
+    // Draw the cropped portion
     ctx.drawImage(
       originalElement,
       cropArea.x, cropArea.y, cropArea.width, cropArea.height,
@@ -227,7 +228,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
   };
 
   const applyFreeformCrop = async () => {
-    if (!canvas || !originalImage) return;
+    if (!canvas || !originalImage || !originalImageData) return;
 
     setIsProcessing(true);
 
@@ -243,18 +244,25 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
         throw new Error('Cannot access image element');
       }
 
-      // Get current image bounds on canvas
-      const imgBounds = activeObj.getBoundingRect();
-      const originalScale = originalImageData?.scaleX || 1;
+      // Get current image bounds after user manipulation
+      const currentBounds = activeObj.getBoundingRect();
+      const currentScaleX = activeObj.scaleX || 1;
+      const currentScaleY = activeObj.scaleY || 1;
+      
+      // Calculate what portion of the original image is visible
+      const originalScaleX = originalImageData.scaleX;
+      const originalScaleY = originalImageData.scaleY;
+      
+      // Scale factors between current display and original image
+      const scaleFactorX = originalElement.naturalWidth / (originalImageData.width * originalScaleX);
+      const scaleFactorY = originalElement.naturalHeight / (originalImageData.height * originalScaleY);
       
       // Calculate crop area in original image coordinates
-      const scaleRatio = originalElement.naturalWidth / (originalImage.width || 1);
-      
       const cropArea = {
-        x: Math.max(0, (imgBounds.left - (activeObj.left || 0)) * scaleRatio / originalScale),
-        y: Math.max(0, (imgBounds.top - (activeObj.top || 0)) * scaleRatio / originalScale),
-        width: Math.min(imgBounds.width * scaleRatio / originalScale, originalElement.naturalWidth),
-        height: Math.min(imgBounds.height * scaleRatio / originalScale, originalElement.naturalHeight)
+        x: Math.max(0, Math.abs(currentBounds.left - originalImageData.left) * scaleFactorX / currentScaleX),
+        y: Math.max(0, Math.abs(currentBounds.top - originalImageData.top) * scaleFactorY / currentScaleY),
+        width: Math.min(currentBounds.width * scaleFactorX / currentScaleX, originalElement.naturalWidth),
+        height: Math.min(currentBounds.height * scaleFactorY / currentScaleY, originalElement.naturalHeight)
       };
 
       // Create cropped image
@@ -276,7 +284,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       });
       
       canvas.renderAll();
-      onCropComplete();
+      setCropApplied(true);
 
     } catch (error) {
       console.error('Freeform crop failed:', error);
@@ -288,7 +296,8 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
   const handleApply = () => {
     if (aspectRatio === 'free') {
       applyFreeformCrop();
-    } else {
+    } else if (cropApplied) {
+      // For aspect ratio crops, the crop is already applied, just complete
       onCropComplete();
     }
   };
@@ -327,14 +336,14 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       {aspectRatio === 'free' && (
         <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded">
           <p><strong>Freeform Crop:</strong></p>
-          <p>Click and drag the image corners to select the area you want to keep.</p>
+          <p>Drag the corners and edges of the image to select the area you want to keep, then click Apply Crop.</p>
         </div>
       )}
 
       {aspectRatio !== 'free' && (
         <div className="text-sm text-gray-600 bg-green-50 p-3 rounded">
           <p><strong>Auto Crop:</strong></p>
-          <p>Image automatically cropped to {aspectRatios.find(r => r.value === aspectRatio)?.label} ratio.</p>
+          <p>Image automatically cropped to {aspectRatios.find(r => r.value === aspectRatio)?.label} ratio. Click Apply Crop to save.</p>
         </div>
       )}
 
