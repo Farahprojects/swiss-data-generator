@@ -16,6 +16,14 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
 }) => {
   const [aspectRatio, setAspectRatio] = useState<string>('free');
   const [originalImage, setOriginalImage] = useState<FabricImage | null>(null);
+  const [originalImageData, setOriginalImageData] = useState<{
+    left: number;
+    top: number;
+    scaleX: number;
+    scaleY: number;
+    angle: number;
+    filters: any[];
+  } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const aspectRatios = [
@@ -37,6 +45,15 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       const imageObj = getImageObject();
       if (imageObj && !originalImage) {
         setOriginalImage(imageObj);
+        // Store original state for reset
+        setOriginalImageData({
+          left: imageObj.left || 0,
+          top: imageObj.top || 0,
+          scaleX: imageObj.scaleX || 1,
+          scaleY: imageObj.scaleY || 1,
+          angle: imageObj.angle || 0,
+          filters: [...(imageObj.filters || [])]
+        });
       }
     }
   }, [canvas]);
@@ -48,6 +65,34 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       applyAspectRatioCrop();
     }
   }, [aspectRatio]);
+
+  const resetImageToOriginal = () => {
+    if (!canvas || !originalImage || !originalImageData) return;
+
+    // Reset image properties to original state
+    originalImage.set({
+      left: originalImageData.left,
+      top: originalImageData.top,
+      scaleX: originalImageData.scaleX,
+      scaleY: originalImageData.scaleY,
+      angle: originalImageData.angle,
+      selectable: false,
+      evented: false,
+      hasControls: false,
+      hasBorders: false
+    });
+
+    // Reset filters
+    originalImage.filters = [...originalImageData.filters];
+    originalImage.applyFilters();
+
+    // Clear any selection and disable drawing mode
+    canvas.discardActiveObject();
+    canvas.selection = false;
+    canvas.isDrawingMode = false;
+    
+    canvas.renderAll();
+  };
 
   const enableFreeformCrop = () => {
     if (!canvas || !originalImage) return;
@@ -114,8 +159,16 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       canvas.remove(originalImage);
       canvas.add(croppedImage);
       canvas.centerObject(croppedImage);
+      
+      // Disable selection for auto-cropped images
+      croppedImage.set({
+        selectable: false,
+        evented: false,
+        hasControls: false,
+        hasBorders: false
+      });
+      
       canvas.renderAll();
-
       setOriginalImage(croppedImage);
 
     } catch (error) {
@@ -191,8 +244,16 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       canvas.remove(originalImage);
       canvas.add(croppedImage);
       canvas.centerObject(croppedImage);
+      
+      // Disable selection after cropping
+      croppedImage.set({
+        selectable: false,
+        evented: false,
+        hasControls: false,
+        hasBorders: false
+      });
+      
       canvas.renderAll();
-
       onCropComplete();
 
     } catch (error) {
@@ -211,6 +272,13 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
   };
 
   const handleCancel = () => {
+    // Reset image to original state
+    resetImageToOriginal();
+    
+    // Reset aspect ratio to free
+    setAspectRatio('free');
+    
+    // Complete the crop operation
     onCropComplete();
   };
 
