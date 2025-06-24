@@ -7,7 +7,7 @@ import { CustomizationPanel } from "@/components/website-builder/CustomizationPa
 import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
 import { Button } from "@/components/ui/button";
-import { Eye, Save, Globe } from "lucide-react";
+import { Eye, Globe } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
@@ -36,7 +36,6 @@ export default function WebsiteBuilder() {
   const [customizationData, setCustomizationData] = useState<any>({});
   const [userSlug, setUserSlug] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -220,7 +219,6 @@ export default function WebsiteBuilder() {
   const handleSave = async () => {
     if (!user || !selectedTemplate) return;
 
-    setIsSaving(true);
     try {
       if (website) {
         // Update existing website
@@ -250,11 +248,6 @@ export default function WebsiteBuilder() {
         setWebsite(data);
       }
 
-      toast({
-        title: "Website Saved",
-        description: "Your website has been saved successfully."
-      });
-
     } catch (error: any) {
       logToSupabase("Error saving website", {
         level: 'error',
@@ -267,8 +260,6 @@ export default function WebsiteBuilder() {
         description: "Failed to save website changes."
       });
       throw error; // Re-throw so handlePublish can handle it
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -277,12 +268,8 @@ export default function WebsiteBuilder() {
 
     setIsPublishing(true);
     try {
-      // If no website exists, save first
-      if (!website) {
-        await handleSave();
-        // handleSave will update the website state, but we need to wait for it
-        // The website will be created and the publish modal will be shown
-      }
+      // Always save before publishing
+      await handleSave();
       
       setShowPublishModal(true);
     } catch (error) {
@@ -345,17 +332,8 @@ export default function WebsiteBuilder() {
               </Button>
               
               <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex items-center space-x-2"
-              >
-                <Save className="h-4 w-4" />
-                <span>{isSaving ? 'Saving...' : 'Save'}</span>
-              </Button>
-              
-              <Button
                 onClick={handlePublish}
-                disabled={isPublishing || isSaving}
+                disabled={isPublishing}
                 className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
               >
                 <Globe className="h-4 w-4" />
