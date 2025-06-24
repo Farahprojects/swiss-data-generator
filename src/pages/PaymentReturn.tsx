@@ -120,7 +120,7 @@ const PaymentReturn = () => {
       case 'verifying':
         return <Loader2 className="h-12 w-12 animate-spin text-primary" />;
       case 'success':
-        return <CheckCircle className="h-12 w-12 text-green-500" />;
+        return <CheckCircle className="h-12 w-12 text-primary" />;
       case 'error':
         return <AlertCircle className="h-12 w-12 text-red-500" />;
       default:
@@ -131,13 +131,67 @@ const PaymentReturn = () => {
   const getStatusColor = () => {
     switch (status) {
       case 'success':
-        return 'text-green-600';
+        return 'text-primary';
       case 'error':
         return 'text-red-600';
       default:
         return 'text-primary';
     }
   };
+
+  // Extract first name from report details if available
+  const getFirstName = () => {
+    if (reportDetails?.name) {
+      return reportDetails.name.split(' ')[0];
+    }
+    return '';
+  };
+
+  if (status === 'success' && reportDetails) {
+    return (
+      <div className="h-screen bg-gradient-to-b from-background to-muted/20 flex items-start justify-center pt-20">
+        <div className="container mx-auto px-4">
+          <Card className="max-w-2xl mx-auto border-2 border-primary/20">
+            <CardContent className="p-8 text-center">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <CheckCircle className="h-12 w-12 text-primary" />
+                <div>
+                  <h1 className="text-3xl font-bold text-foreground">Payment Successful!</h1>
+                  <p className="text-muted-foreground">Your report order has been processed</p>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-primary mb-2">Thank you for your purchase!</h3>
+                <p className="text-foreground">
+                  {getFirstName() && `Hi ${getFirstName()}, `}
+                  We've received your payment and your {reportDetails.reportType} report will be processed shortly. 
+                  You'll receive an email at {reportDetails.email} with your completed report.
+                </p>
+              </div>
+
+              <div className="bg-muted p-4 rounded-lg text-sm mb-6">
+                <p><strong>Report Type:</strong> {reportDetails.reportType}</p>
+                <p><strong>Email:</strong> {reportDetails.email}</p>
+                <p><strong>Amount:</strong> ${reportDetails.amount}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Your order has been saved and will be processed within 24 hours.
+                </p>
+              </div>
+
+              <Button 
+                onClick={() => navigate('/report')} 
+                variant="outline"
+                className="mt-4"
+              >
+                Order Another Report
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
@@ -156,17 +210,6 @@ const PaymentReturn = () => {
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">{message}</p>
           
-          {reportDetails && status === 'success' && (
-            <div className="bg-muted p-4 rounded-lg text-sm">
-              <p><strong>Report Type:</strong> {reportDetails.reportType}</p>
-              <p><strong>Email:</strong> {reportDetails.email}</p>
-              <p><strong>Amount:</strong> ${reportDetails.amount}</p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Your order details have been saved to our database and will be processed soon.
-              </p>
-            </div>
-          )}
-          
           {debugInfo && status === 'error' && (
             <div className="bg-red-50 p-4 rounded-lg text-sm">
               <p><strong>Debug Info:</strong></p>
@@ -179,11 +222,11 @@ const PaymentReturn = () => {
           {status === 'error' && (
             <div className="space-y-3">
               <Button 
-                onClick={() => navigate('/')} 
+                onClick={() => navigate('/report')} 
                 variant="outline"
                 className="w-full"
               >
-                Return to Home
+                Return to Report Form
               </Button>
               <Button 
                 onClick={() => window.location.reload()} 
@@ -192,15 +235,6 @@ const PaymentReturn = () => {
                 Try Again
               </Button>
             </div>
-          )}
-          
-          {status === 'success' && (
-            <Button 
-              onClick={() => navigate('/')} 
-              className="w-full"
-            >
-              Order Another Report
-            </Button>
           )}
         </CardContent>
       </Card>
