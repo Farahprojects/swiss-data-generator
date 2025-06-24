@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -30,12 +29,12 @@ const About = () => {
         <section className="py-24 bg-white">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-              <h2 className="text-3xl font-bold mb-8 text-center text-primary">My mission is to restore clarity through rhythm.</h2>
+              <h2 className="text-3xl font-bold mb-8 text-center text-primary">At Therai, our mission is to restore clarity through rhythm.</h2>
               <p className="text-lg mb-6 text-gray-700">
-                We believe that behind every breakthrough lies a pattern an energetic signature waiting to be decoded. By blending journaled experience with the deeper intelligence of cycles and resonance, we help people reconnect with their natural flow where insight, action, and timing align.
+                We believe every breakthrough carries an energetic signature—a pattern waiting to be decoded. By blending lived experience with the intelligence of natural cycles, we guide people back into alignment—where insight, action, and timing converge.
               </p>
               <p className="text-lg mb-6 text-gray-700">
-                At the heart of Therai is the belief that understanding yourself isn't about overthinking. it's about tuning in to the frequency that was already guiding you.
+                True self-understanding doesn't come from overthinking—it comes from tuning in to the frequency that's been guiding you all along.
               </p>
             </div>
           </div>
