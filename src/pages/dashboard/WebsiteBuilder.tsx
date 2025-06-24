@@ -84,10 +84,11 @@ export default function WebsiteBuilder() {
         setWebsite(websiteData);
         setCustomizationData(websiteData.customization_data || {});
         
-        // Find and set the selected template
+        // Find and set the selected template by UUID
         const template = templatesData?.find(t => t.id === websiteData.template_id);
         if (template) {
           setSelectedTemplate(template);
+          console.log("Loaded existing template:", { id: template.id, name: template.name });
         }
       } else {
         // No existing website, but let's check for images in storage only if no saved customization exists
@@ -177,6 +178,7 @@ export default function WebsiteBuilder() {
   };
 
   const handleTemplateSelect = (template: WebsiteTemplate) => {
+    console.log("Template selected:", { id: template.id, name: template.name });
     setSelectedTemplate(template);
     
     // Set default customization data if no existing website
@@ -217,7 +219,16 @@ export default function WebsiteBuilder() {
   };
 
   const handleSave = async () => {
-    if (!user || !selectedTemplate) return;
+    if (!user || !selectedTemplate) {
+      console.error("Cannot save: missing user or selectedTemplate", { 
+        hasUser: !!user, 
+        hasSelectedTemplate: !!selectedTemplate,
+        templateId: selectedTemplate?.id 
+      });
+      throw new Error("Missing user or template data");
+    }
+
+    console.log("Saving website with template ID:", selectedTemplate.id);
 
     try {
       if (website) {
@@ -231,6 +242,7 @@ export default function WebsiteBuilder() {
           .eq('id', website.id);
 
         if (error) throw error;
+        console.log("Website updated successfully");
       } else {
         // Create new website
         const { data, error } = await supabase
@@ -246,13 +258,19 @@ export default function WebsiteBuilder() {
 
         if (error) throw error;
         setWebsite(data);
+        console.log("Website created successfully:", data);
       }
 
     } catch (error: any) {
+      console.error("Save error:", error);
       logToSupabase("Error saving website", {
         level: 'error',
         page: 'WebsiteBuilder',
-        data: { error: error.message }
+        data: { 
+          error: error.message,
+          templateId: selectedTemplate.id,
+          hasUser: !!user 
+        }
       });
       toast({
         variant: "destructive",
@@ -266,6 +284,11 @@ export default function WebsiteBuilder() {
   const handlePublish = async () => {
     if (!user || !selectedTemplate) {
       console.log("Missing user or selectedTemplate", { user: !!user, selectedTemplate: !!selectedTemplate });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please select a template before publishing."
+      });
       return;
     }
 
@@ -278,9 +301,13 @@ export default function WebsiteBuilder() {
       
       console.log("Opening publish modal...");
       setShowPublishModal(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during publish:", error);
-      // Error handling is already done in handleSave
+      toast({
+        variant: "destructive",
+        title: "Publishing Failed",
+        description: error.message || "There was an error preparing your website for publishing."
+      });
     } finally {
       setIsPublishing(false);
     }

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,57 +25,46 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   templates,
   onSelectTemplate
 }) => {
-  // Enhanced template data with distinct designs
+  // Enhanced template data with distinct designs - these map to database templates
   const enhancedTemplates = [
     {
-      id: "modern",
       name: "Modern",
       description: "Clean, contemporary design with bold typography and asymmetric layouts",
-      template_data: { layout: 'modern', colorScheme: 'modern' },
       preview: {
         colors: ["#6366F1", "#3B82F6", "#1E40AF"],
       }
     },
     {
-      id: "classic",
       name: "Classic",
       description: "Timeless design with elegant typography and traditional layouts",
-      template_data: { layout: 'classic', colorScheme: 'elegant' },
       preview: {
         colors: ["#8B5CF6", "#A855F7", "#7C3AED"],
       }
     },
     {
-      id: "minimal",
       name: "Minimal",
       description: "Ultra-clean design focusing on simplicity and whitespace",
-      template_data: { layout: 'minimal', colorScheme: 'minimal' },
       preview: {
         colors: ["#10B981", "#059669", "#047857"],
       }
     },
     {
-      id: "creative",
       name: "Creative",
       description: "Bold, artistic design with vibrant colors and dynamic elements",
-      template_data: { layout: 'creative', colorScheme: 'vibrant' },
       preview: {
         colors: ["#F59E0B", "#EC4899", "#8B5CF6"],
       }
     },
     {
-      id: "professional",
       name: "Professional",
       description: "Corporate-focused design with structured layouts and business appeal",
-      template_data: { layout: 'professional', colorScheme: 'corporate' },
       preview: {
         colors: ["#1E40AF", "#3B82F6", "#60A5FA"],
       }
     }
   ];
 
-  const getTemplateComponent = (template: any) => {
-    const templateType = template.template_data?.layout || 'modern';
+  const getTemplateComponent = (templateName: string) => {
     const defaultCustomizationData = {
       coachName: 'Coach Name',
       tagline: 'Transform Your Life',
@@ -84,12 +74,12 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         { title: 'Career Coaching', description: 'Career guidance', price: '$120/session' }
       ],
       buttonText: 'Book Now',
-      themeColor: template.preview.colors[0],
+      themeColor: enhancedTemplates.find(t => t.name === templateName)?.preview.colors[0] || '#3B82F6',
       fontFamily: 'Inter',
       backgroundStyle: 'solid'
     };
 
-    switch (templateType) {
+    switch (templateName.toLowerCase()) {
       case 'modern':
         return <ModernTemplate customizationData={defaultCustomizationData} isPreview={true} />;
       case 'classic':
@@ -105,11 +95,29 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     }
   };
 
-  const getLivePreview = (template: any) => {
+  const handleTemplateSelect = (enhancedTemplate: any) => {
+    console.log("Template selected:", enhancedTemplate.name);
+    
+    // Find the corresponding database template by name
+    const dbTemplate = templates.find(t => 
+      t.name.toLowerCase() === enhancedTemplate.name.toLowerCase()
+    );
+    
+    if (!dbTemplate) {
+      console.error("Database template not found for:", enhancedTemplate.name);
+      console.log("Available templates:", templates.map(t => ({ id: t.id, name: t.name })));
+      return;
+    }
+    
+    console.log("Found database template:", { id: dbTemplate.id, name: dbTemplate.name });
+    onSelectTemplate(dbTemplate);
+  };
+
+  const getLivePreview = (enhancedTemplate: any) => {
     return (
       <div 
         className="w-full rounded-lg border bg-white shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
-        onClick={() => onSelectTemplate(template)}
+        onClick={() => handleTemplateSelect(enhancedTemplate)}
       >
         {/* Browser Chrome */}
         <div className="h-8 bg-gray-100 border-b flex items-center px-3 space-x-2 rounded-t-lg">
@@ -126,7 +134,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         {/* Scrollable Template Preview */}
         <div className="max-h-72 overflow-auto">
           <div className="w-full">
-            {getTemplateComponent(template)}
+            {getTemplateComponent(enhancedTemplate.name)}
           </div>
         </div>
       </div>
@@ -143,7 +151,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {enhancedTemplates.map((template, index) => (
           <motion.div
-            key={template.id}
+            key={template.name}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -160,7 +168,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                       color: template.preview.colors[0]
                     }}
                   >
-                    {template.template_data?.layout}
+                    {template.name.toLowerCase()}
                   </Badge>
                 </div>
                 <CardDescription className="text-sm leading-relaxed">
