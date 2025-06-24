@@ -50,12 +50,11 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
               className="text-center lg:text-left"
-              style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
             >
               <h1 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}>
                 {customizationData.coachName || "Michael Thompson"}
               </h1>
-              <p className={`text-lg sm:text-xl lg:text-2xl mb-6 sm:mb-8 leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-600'}`}>
+              <p className={`text-lg sm:text-xl lg:text-2xl mb-6 sm:mb-8 leading-relaxed ${hasHeaderImage ? 'text-white' : 'text-gray-600'}`}>
                 {customizationData.tagline || "Executive Leadership & Business Coaching"}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-6 sm:mb-8 justify-center lg:justify-start">
