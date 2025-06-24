@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -7,7 +6,7 @@ import { FabricImage, Rect } from 'fabric';
 
 interface SimpleCropToolProps {
   canvas: any;
-  onCropComplete: () => void;
+  onCropComplete: (applied: boolean) => void;
 }
 
 export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
@@ -235,7 +234,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     console.log('Applying crop...');
     const success = await applyCrop();
     if (success) {
-      onCropComplete();
+      onCropComplete(true); // Crop was actually applied
     }
   };
 
@@ -260,7 +259,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     }
 
     canvas.renderAll();
-    onCropComplete();
+    onCropComplete(false); // Crop was cancelled, not applied
   };
 
   return (

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -72,9 +73,14 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     }
   }, [isOpen, imageData.url]);
 
-  const handleCropComplete = () => {
-    console.log('Crop completed, image now cropped on canvas');
-    setHasCroppedImage(true);
+  const handleCropComplete = (applied: boolean) => {
+    if (applied) {
+      console.log('Crop completed, image now cropped on canvas');
+      setHasCroppedImage(true);
+    } else {
+      console.log('Crop cancelled, adjustments remain available');
+      setHasCroppedImage(false);
+    }
     setActiveTool('select');
   };
 
