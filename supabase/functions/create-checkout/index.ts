@@ -31,47 +31,97 @@ serve(async (req) => {
       successUrl,
       cancelUrl,
       returnPath,
+      email,
+      isGuest,
+      reportData,
+      description,
     } = await req.json();
+
+    console.log("🔄 Creating checkout with data:", { 
+      mode, 
+      amount, 
+      priceId,
+      isGuest: !!isGuest,
+      email: isGuest ? email : "authenticated_user",
+      hasReportData: !!reportData,
+      description
+    });
 
     if (mode === "payment" && !priceId && !amount) {
       throw new Error("For payment mode, either priceId or amount must be provided");
     }
 
-    /* -------- User auth -------- */
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")  || "",
-      Deno.env.get("SUPABASE_ANON_KEY") || "",
-    );
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "No authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userRes, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr || !userRes.user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    const user = userRes.user;
-
-    /* -------- Find / create customer -------- */
+    /* -------- Customer handling based on guest status -------- */
     let customerId: string;
-    const custList = await stripe.customers.list({ email: user.email, limit: 1 });
-    if (custList.data.length) {
-      customerId = custList.data[0].id;
+    let customerEmail: string;
+    let user: any = null;
+
+    if (isGuest) {
+      // Guest checkout flow
+      if (!email || typeof email !== 'string') {
+        throw new Error("Email is required for guest checkout");
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error("Invalid email format");
+      }
+
+      customerEmail = email;
+
+      // Find or create guest customer in Stripe
+      const custList = await stripe.customers.list({ email, limit: 1 });
+      if (custList.data.length) {
+        customerId = custList.data[0].id;
+        console.log("🔍 Found existing Stripe customer for guest:", customerId);
+      } else {
+        const cust = await stripe.customers.create({
+          email,
+          metadata: { guest_checkout: "true" }
+        });
+        customerId = cust.id;
+        console.log("🆕 Created new Stripe customer for guest:", customerId);
+      }
     } else {
-      const cust = await stripe.customers.create({
-        email: user.email,
-        metadata: { user_id: user.id },
-      });
-      customerId = cust.id;
+      // Signed-in user flow
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL") || "",
+        Deno.env.get("SUPABASE_ANON_KEY") || "",
+      );
+
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: "No authorization header" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userRes, error: userErr } = await supabase.auth.getUser(token);
+      if (userErr || !userRes.user) {
+        return new Response(
+          JSON.stringify({ error: "Invalid token" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      user = userRes.user;
+      customerEmail = user.email;
+
+      // Find or create customer for signed-in user
+      const custList = await stripe.customers.list({ email: customerEmail, limit: 1 });
+      if (custList.data.length) {
+        customerId = custList.data[0].id;
+        console.log("🔍 Found existing Stripe customer for user:", customerId);
+      } else {
+        const cust = await stripe.customers.create({
+          email: customerEmail,
+          metadata: { user_id: user.id },
+        });
+        customerId = cust.id;
+        console.log("🆕 Created new Stripe customer for user:", customerId);
+      }
     }
 
     /* -------- Success & cancel URLs -------- */
@@ -79,12 +129,42 @@ serve(async (req) => {
     const paymentStatus = mode === "payment" ? "success" : "setup-success";
     const cancelStatus  = mode === "payment" ? "cancelled" : "setup-cancelled";
 
-    const finalSuccessUrl =
-      successUrl ??
-      `${baseOrigin}/payment-return?status=${paymentStatus}` +
-        (mode === "payment" && amount ? `&amount=${amount}` : "");
-    const finalCancelUrl =
-      cancelUrl ?? `${baseOrigin}/payment-return?status=${cancelStatus}`;
+    let finalSuccessUrl: string;
+    let finalCancelUrl: string;
+
+    if (isGuest) {
+      // For guests, use session_id format for verification
+      finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}`;
+      finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=cancelled`;
+    } else {
+      // For signed-in users, use existing format
+      finalSuccessUrl =
+        successUrl ??
+        `${baseOrigin}/payment-return?status=${paymentStatus}` +
+          (mode === "payment" && amount ? `&amount=${amount}` : "");
+      finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=${cancelStatus}`;
+    }
+
+    /* -------- Prepare metadata -------- */
+    const metadata = isGuest
+      ? {
+          guest_checkout: "true",
+          guest_email: email,
+          amount: amount?.toString() || "",
+          description: description || "Guest report",
+          // Include all report data in metadata for later retrieval
+          ...(reportData || {}),
+        }
+      : {
+          user_id: user.id,
+          return_path: returnPath || "/dashboard",
+        };
+
+    console.log("📋 Session metadata prepared:", {
+      isGuest: !!isGuest,
+      metadataKeys: Object.keys(metadata),
+      customerId
+    });
 
     /* -------- Create checkout session -------- */
     let session: Stripe.Checkout.Session;
@@ -96,15 +176,12 @@ serve(async (req) => {
         customer: customerId,
         success_url: finalSuccessUrl,
         cancel_url: finalCancelUrl,
-        metadata: {
-          user_id: user.id,
-          return_path: returnPath || "/dashboard",
-        },
+        metadata: metadata,
         payment_intent_data: {
-          metadata: { user_id: user.id },
+          metadata: metadata,
           setup_future_usage: "off_session" as const,
         },
-        setup_intent_data: { metadata: { user_id: user.id } },
+        setup_intent_data: { metadata: metadata },
         billing_address_collection: "auto" as const,
         allow_promotion_codes: true,
         customer_update: { address: "auto" as const },
@@ -122,7 +199,10 @@ serve(async (req) => {
               {
                 price_data: {
                   currency: "usd",
-                  product_data: { name: "API Credits Top-up", description: "Top up your API credits" },
+                  product_data: { 
+                    name: description || "Payment",
+                    description: isGuest ? `Guest checkout: ${description}` : "API Credits Top-up"
+                  },
                   unit_amount: Math.round(amount * 100),
                 },
                 quantity: 1,
@@ -136,11 +216,8 @@ serve(async (req) => {
         customer: customerId,
         success_url: finalSuccessUrl,
         cancel_url: finalCancelUrl,
-        metadata: {
-          user_id: user.id,
-          return_path: returnPath || "/dashboard/settings",
-        },
-        setup_intent_data: { metadata: { user_id: user.id } },
+        metadata: metadata,
+        setup_intent_data: { metadata: metadata },
         customer_update:  { address: "auto" },
       });
     } else {
@@ -150,12 +227,32 @@ serve(async (req) => {
       );
     }
 
+    console.log("✅ Stripe session created successfully:", {
+      sessionId: session.id,
+      url: session.url ? "URL_PROVIDED" : "NO_URL",
+      customer: session.customer,
+      amount_total: session.amount_total,
+      isGuest: !!isGuest
+    });
+
     return new Response(
-      JSON.stringify({ sessionId: session.id, url: session.url }),
+      JSON.stringify({ 
+        sessionId: session.id, 
+        url: session.url,
+        debug: {
+          isGuest: !!isGuest,
+          successUrl: finalSuccessUrl,
+          metadata: Object.keys(metadata),
+          amount_cents: amount ? Math.round(amount * 100) : undefined
+        }
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err: any) {
-    console.error("Error creating checkout session:", err);
+    console.error("❌ Error creating checkout session:", {
+      message: err.message,
+      stack: err.stack
+    });
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

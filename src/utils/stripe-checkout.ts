@@ -26,7 +26,7 @@ export const initiateStripeCheckout = async ({
     const currentPath = window.location.pathname + window.location.search;
     storeStripeReturnPath(currentPath);
     
-    // Call the Supabase Edge Function to create a checkout session
+    // Call the unified Supabase Edge Function (now handles both guest and authenticated users)
     const { data, error } = await supabase.functions.invoke("create-checkout", {
       body: {
         mode,
@@ -36,6 +36,7 @@ export const initiateStripeCheckout = async ({
         successUrl: successUrl || window.location.origin + '/payment-return?status=success',
         cancelUrl: cancelUrl || window.location.origin + '/payment-return?status=cancelled',
         returnPath: currentPath,
+        isGuest: false, // This is for authenticated users
       },
     });
 
