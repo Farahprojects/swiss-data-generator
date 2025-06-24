@@ -242,13 +242,9 @@ const UnifiedNavigation = ({
                   <Link to="/login">
                     <Button variant="outline" className="px-4">Log In</Button>
                   </Link>
-                  <Button 
-                    disabled 
-                    className="px-4 opacity-50 cursor-not-allowed"
-                    title="Signup temporarily disabled"
-                  >
-                    Sign Up
-                  </Button>
+                  <Link to="/signup">
+                    <Button className="px-4">Sign Up</Button>
+                  </Link>
                 </>
               )}
             </div>
@@ -284,13 +280,9 @@ const UnifiedNavigation = ({
                 <Link to="/login">
                   <Button variant="outline" className="w-full">Log In</Button>
                 </Link>
-                <Button 
-                  disabled 
-                  className="w-full opacity-50 cursor-not-allowed"
-                  title="Signup temporarily disabled"
-                >
-                  Sign Up
-                </Button>
+                <Link to="/signup">
+                  <Button className="w-full">Sign Up</Button>
+                </Link>
               </div>
             </div>
           </div>

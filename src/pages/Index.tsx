@@ -116,12 +116,14 @@ const Index = () => {
               transition={{ delay: 0.4, duration: 0.6 }}
               className="flex flex-row items-center justify-center gap-4"
             >
-              <Button 
-                size="lg" 
-                className="px-8 py-4 text-lg"
-              >
-                Free Insight
-              </Button>
+              <Link to="/signup">
+                <Button 
+                  size="lg" 
+                  className="px-8 py-4 text-lg"
+                >
+                  Get Started
+                </Button>
+              </Link>
             </motion.div>
           </div>
         </section>
@@ -249,7 +251,7 @@ const Index = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 2.0, duration: 0.6, ease: "easeOut" }}
               >
-                <Link to="/dashboard">
+                <Link to="/signup">
                   <Button 
                     size="lg" 
                     className="text-lg px-12 py-6 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-primary/20"
@@ -258,7 +260,7 @@ const Index = () => {
                   </Button>
                 </Link>
               </motion.div>
-            </motion.div>
+            </div>
           </div>
         </section>
       </main>
