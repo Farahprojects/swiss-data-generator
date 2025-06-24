@@ -264,15 +264,22 @@ export default function WebsiteBuilder() {
   };
 
   const handlePublish = async () => {
-    if (!user || !selectedTemplate) return;
+    if (!user || !selectedTemplate) {
+      console.log("Missing user or selectedTemplate", { user: !!user, selectedTemplate: !!selectedTemplate });
+      return;
+    }
 
+    console.log("Starting publish process...");
     setIsPublishing(true);
     try {
       // Always save before publishing
+      console.log("Saving before publish...");
       await handleSave();
       
+      console.log("Opening publish modal...");
       setShowPublishModal(true);
     } catch (error) {
+      console.error("Error during publish:", error);
       // Error handling is already done in handleSave
     } finally {
       setIsPublishing(false);
@@ -334,7 +341,7 @@ export default function WebsiteBuilder() {
               <Button
                 onClick={handlePublish}
                 disabled={isPublishing}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                className="flex items-center space-x-2 bg-primary hover:bg-primary/90"
               >
                 <Globe className="h-4 w-4" />
                 <span>{getPublishButtonText()}</span>
