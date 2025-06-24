@@ -1,7 +1,7 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Canvas as FabricCanvas, FabricImage, filters } from 'fabric';
 import { ImageAdjustments } from './ImageEditorModal';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ImageCanvasProps {
   imageUrl: string;
@@ -20,13 +20,23 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
   const fabricCanvasRef = useRef<FabricCanvas | null>(null);
   const imageObjectRef = useRef<FabricImage | null>(null);
   const canApplyFiltersRef = useRef<boolean>(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !containerRef.current) return;
+
+    // Calculate responsive canvas size
+    const container = containerRef.current;
+    const containerWidth = container.clientWidth - 32; // Account for padding
+    const containerHeight = container.clientHeight - 32;
+    
+    const maxWidth = isMobile ? Math.min(containerWidth, 350) : Math.min(containerWidth, 600);
+    const maxHeight = isMobile ? Math.min(containerHeight, 300) : Math.min(containerHeight, 450);
 
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: 800,
-      height: 600,
+      width: maxWidth,
+      height: maxHeight,
       backgroundColor: '#ffffff',
     });
 
@@ -102,7 +112,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     return () => {
       canvas.dispose();
     };
-  }, [imageUrl, onCanvasReady]);
+  }, [imageUrl, onCanvasReady, isMobile]);
 
   // Apply adjustments when they change
   useEffect(() => {
@@ -158,7 +168,10 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
   }, [adjustments]);
 
   return (
-    <div className="flex items-center justify-center h-full bg-gray-100 rounded-lg">
+    <div 
+      ref={containerRef}
+      className="flex items-center justify-center h-full bg-gray-100 rounded-lg relative"
+    >
       <canvas
         ref={canvasRef}
         className="border border-gray-300 rounded shadow-lg max-w-full max-h-full"

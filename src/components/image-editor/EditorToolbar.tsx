@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Undo2 
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { EditorTool } from './ImageEditorModal';
 
 interface EditorToolbarProps {
@@ -23,6 +24,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   onToolChange,
   onReset
 }) => {
+  const isMobile = useIsMobile();
+  
   const tools = [
     { id: 'select' as EditorTool, icon: MousePointer, label: 'Select' },
     { id: 'crop' as EditorTool, icon: Crop, label: 'Crop' },
@@ -32,20 +35,20 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   ];
 
   return (
-    <div className="flex items-center justify-between p-4 border-b bg-white">
-      <div className="flex items-center space-x-2">
+    <div className="flex items-center justify-between p-4 border-b bg-white overflow-x-auto">
+      <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
         {tools.map((tool) => {
           const Icon = tool.icon;
           return (
             <Button
               key={tool.id}
               variant={activeTool === tool.id ? 'default' : 'outline'}
-              size="sm"
+              size={isMobile ? 'sm' : 'sm'}
               onClick={() => onToolChange(tool.id)}
-              className="flex items-center space-x-2"
+              className={`flex items-center ${isMobile ? 'px-2' : 'space-x-2'}`}
             >
               <Icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tool.label}</span>
+              {!isMobile && <span>{tool.label}</span>}
             </Button>
           );
         })}
@@ -56,10 +59,10 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           variant="outline"
           size="sm"
           onClick={onReset}
-          className="flex items-center space-x-2"
+          className={`flex items-center ${isMobile ? 'px-2' : 'space-x-2'}`}
         >
           <Undo2 className="h-4 w-4" />
-          <span className="hidden sm:inline">Reset</span>
+          {!isMobile && <span>Reset</span>}
         </Button>
       </div>
     </div>

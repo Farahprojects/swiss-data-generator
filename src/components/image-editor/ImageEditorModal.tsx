@@ -16,6 +16,7 @@ import { FilterPanel } from './FilterPanel';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { ImageData } from '@/types/website-builder';
 
 export type EditorTool = 'select' | 'crop' | 'adjust' | 'filter' | 'rotate';
@@ -46,6 +47,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [activeTool, setActiveTool] = useState<EditorTool>('select');
   const [isProcessing, setIsProcessing] = useState(false);
   const [fabricCanvas, setFabricCanvas] = useState<any>(null);
@@ -148,61 +150,63 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>Edit Image</DialogTitle>
-        </DialogHeader>
-        
-        <div className="flex flex-col h-[70vh]">
-          <EditorToolbar
-            activeTool={activeTool}
-            onToolChange={setActiveTool}
-            onReset={handleReset}
-          />
+      <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 overflow-hidden">
+        <div className="flex flex-col h-full">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle>Edit Image</DialogTitle>
+          </DialogHeader>
           
-          <div className="flex flex-1 overflow-hidden">
-            <div className="flex-1 p-4">
-              <ImageCanvas
-                imageUrl={imageData.url}
-                onCanvasReady={setFabricCanvas}
-                activeTool={activeTool}
-                adjustments={adjustments}
-              />
-            </div>
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <EditorToolbar
+              activeTool={activeTool}
+              onToolChange={setActiveTool}
+              onReset={handleReset}
+            />
             
-            <div className="w-80 border-l bg-gray-50 p-4 overflow-y-auto">
-              {activeTool === 'crop' && (
-                <CropTool
-                  canvas={fabricCanvas}
-                  onCropComplete={() => setActiveTool('select')}
-                />
-              )}
-              
-              {activeTool === 'adjust' && (
-                <AdjustmentPanel
+            <div className={`flex flex-1 overflow-hidden ${isMobile ? 'flex-col' : 'flex-row'}`}>
+              <div className={`${isMobile ? 'flex-1 min-h-0' : 'flex-1'} p-4`}>
+                <ImageCanvas
+                  imageUrl={imageData.url}
+                  onCanvasReady={setFabricCanvas}
+                  activeTool={activeTool}
                   adjustments={adjustments}
-                  onChange={setAdjustments}
-                  canvas={fabricCanvas}
                 />
-              )}
+              </div>
               
-              {activeTool === 'filter' && (
-                <FilterPanel
-                  canvas={fabricCanvas}
-                />
-              )}
+              <div className={`${isMobile ? 'border-t' : 'w-80 border-l'} bg-gray-50 p-4 overflow-y-auto`}>
+                {activeTool === 'crop' && (
+                  <CropTool
+                    canvas={fabricCanvas}
+                    onCropComplete={() => setActiveTool('select')}
+                  />
+                )}
+                
+                {activeTool === 'adjust' && (
+                  <AdjustmentPanel
+                    adjustments={adjustments}
+                    onChange={setAdjustments}
+                    canvas={fabricCanvas}
+                  />
+                )}
+                
+                {activeTool === 'filter' && (
+                  <FilterPanel
+                    canvas={fabricCanvas}
+                  />
+                )}
+              </div>
             </div>
           </div>
+          
+          <DialogFooter className="px-6 py-4 border-t">
+            <Button variant="outline" onClick={onClose} disabled={isProcessing}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={isProcessing}>
+              {isProcessing ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
         </div>
-        
-        <DialogFooter className="px-6 py-4">
-          <Button variant="outline" onClick={onClose} disabled={isProcessing}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={isProcessing}>
-            {isProcessing ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
