@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -51,6 +52,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [activeTool, setActiveTool] = useState<EditorTool>('select');
   const [isProcessing, setIsProcessing] = useState(false);
   const [fabricCanvas, setFabricCanvas] = useState<any>(null);
+  const [cropApplied, setCropApplied] = useState(false);
   const [adjustments, setAdjustments] = useState<ImageAdjustments>({
     brightness: 0,
     contrast: 0,
@@ -62,6 +64,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   useEffect(() => {
     if (isOpen && imageData.url) {
       setOriginalImageData(imageData.url);
+      setCropApplied(false);
       setAdjustments({
         brightness: 0,
         contrast: 0,
@@ -71,11 +74,19 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     }
   }, [isOpen, imageData.url]);
 
+  const handleCropComplete = () => {
+    console.log('Crop completed, setting cropApplied to true');
+    setCropApplied(true);
+    setActiveTool('select');
+  };
+
   const handleSave = async () => {
     if (!fabricCanvas || !user) return;
 
     setIsProcessing(true);
     try {
+      console.log('Saving image, cropApplied:', cropApplied);
+      
       // Export canvas as blob - exclude overlay elements
       const dataURL = fabricCanvas.toDataURL({
         format: 'jpeg',
@@ -83,6 +94,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         multiplier: 1,
         filter: (obj: any) => !obj.excludeFromExport
       });
+
+      console.log('Canvas exported to dataURL, length:', dataURL.length);
 
       // Convert dataURL to blob
       const response = await fetch(dataURL);
@@ -93,7 +106,10 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       const pathParts = originalPath.split('.');
       const extension = pathParts.pop();
       const nameWithoutExt = pathParts.join('.');
-      const newFileName = `${nameWithoutExt}_edited.${extension}`;
+      const timestamp = Date.now();
+      const newFileName = `${nameWithoutExt}_edited_${timestamp}.${extension}`;
+
+      console.log('Uploading file:', newFileName);
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
@@ -114,6 +130,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         url: urlData.publicUrl,
         filePath: data.path
       };
+
+      console.log('Image saved successfully:', newImageData);
 
       onSave(newImageData);
       onClose();
@@ -137,15 +155,15 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
   const handleReset = () => {
     if (fabricCanvas && originalImageData) {
+      setCropApplied(false);
       setAdjustments({
         brightness: 0,
         contrast: 0,
         saturation: 0,
         rotation: 0
       });
-      // Reset canvas to original image
+      // Force canvas to reload original image
       fabricCanvas.clear();
-      // Re-load original image
     }
   };
 
@@ -167,10 +185,11 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             <div className={`flex flex-1 overflow-hidden ${isMobile ? 'flex-col' : 'flex-row'}`}>
               <div className={`${isMobile ? 'flex-1 min-h-0' : 'flex-1'} p-4`}>
                 <ImageCanvas
-                  imageUrl={imageData.url}
+                  imageUrl={cropApplied ? '' : imageData.url}
                   onCanvasReady={setFabricCanvas}
                   activeTool={activeTool}
-                  adjustments={adjustments}
+                  adjustments={cropApplied ? { brightness: 0, contrast: 0, saturation: 0, rotation: 0 } : adjustments}
+                  cropApplied={cropApplied}
                 />
               </div>
               
@@ -178,11 +197,11 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                 {activeTool === 'crop' && (
                   <SimpleCropTool
                     canvas={fabricCanvas}
-                    onCropComplete={() => setActiveTool('select')}
+                    onCropComplete={handleCropComplete}
                   />
                 )}
                 
-                {activeTool === 'adjust' && (
+                {activeTool === 'adjust' && !cropApplied && (
                   <AdjustmentPanel
                     adjustments={adjustments}
                     onChange={setAdjustments}
@@ -190,10 +209,26 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   />
                 )}
                 
-                {activeTool === 'filter' && (
+                {activeTool === 'adjust' && cropApplied && (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+                    <p className="text-sm text-yellow-800">
+                      Adjustments are not available after cropping. Please apply adjustments before cropping.
+                    </p>
+                  </div>
+                )}
+                
+                {activeTool === 'filter' && !cropApplied && (
                   <FilterPanel
                     canvas={fabricCanvas}
                   />
+                )}
+                
+                {activeTool === 'filter' && cropApplied && (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+                    <p className="text-sm text-yellow-800">
+                      Filters are not available after cropping. Please apply filters before cropping.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

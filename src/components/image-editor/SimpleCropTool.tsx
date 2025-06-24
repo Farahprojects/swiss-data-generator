@@ -18,15 +18,6 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [cropOverlay, setCropOverlay] = useState<Rect | null>(null);
   const [currentImage, setCurrentImage] = useState<FabricImage | null>(null);
-  const originalImageRef = useRef<{
-    element: HTMLImageElement;
-    width: number;
-    height: number;
-    left: number;
-    top: number;
-    scaleX: number;
-    scaleY: number;
-  } | null>(null);
 
   const aspectRatios = [
     { value: 'free', label: 'Freeform', ratio: null },
@@ -41,20 +32,8 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     if (!canvas) return;
 
     const imageObj = canvas.getObjects().find((obj: any) => obj.type === 'image');
-    if (imageObj && !originalImageRef.current) {
+    if (imageObj) {
       console.log('Setting up crop tool with image:', imageObj);
-      
-      // Store original image data for reference
-      originalImageRef.current = {
-        element: imageObj.getElement(),
-        width: imageObj.width || 1,
-        height: imageObj.height || 1,
-        left: imageObj.left || 0,
-        top: imageObj.top || 0,
-        scaleX: imageObj.scaleX || 1,
-        scaleY: imageObj.scaleY || 1
-      };
-      
       setCurrentImage(imageObj);
       setupFreeformCrop(imageObj);
     }
@@ -97,7 +76,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
   };
 
   const setupAspectRatioCrop = () => {
-    if (!currentImage || !originalImageRef.current) return;
+    if (!currentImage) return;
 
     const selectedRatio = aspectRatios.find(ar => ar.value === aspectRatio);
     if (!selectedRatio?.ratio) return;
@@ -146,7 +125,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       selectable: true,
       evented: true,
       hasControls: true,
-      excludeFromExport: true // Don't include in final export
+      excludeFromExport: true
     });
 
     canvas.add(overlay);
@@ -156,7 +135,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
   };
 
   const applyCrop = async (): Promise<boolean> => {
-    if (!canvas || !currentImage || !originalImageRef.current) {
+    if (!canvas || !currentImage) {
       console.error('Missing required objects for crop');
       return false;
     }
@@ -165,6 +144,7 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     
     try {
       let cropBounds;
+      let sourceImage = currentImage;
 
       if (aspectRatio === 'free') {
         // Get crop bounds from selected image
@@ -180,44 +160,37 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
         console.log('Aspect ratio crop bounds:', cropBounds);
       }
 
-      // Get the original image element
-      const originalElement = originalImageRef.current.element;
-      if (!originalElement) {
-        console.error('No original image element');
-        return false;
+      // Create a temporary canvas to perform the crop
+      const tempCanvas = document.createElement('canvas');
+      const ctx = tempCanvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to create crop canvas');
       }
 
-      // Calculate crop coordinates relative to the original image
-      const imgBounds = currentImage.getBoundingRect();
-      const scaleX = originalElement.naturalWidth / imgBounds.width;
-      const scaleY = originalElement.naturalHeight / imgBounds.height;
+      // Set the temp canvas size to the crop area
+      tempCanvas.width = cropBounds.width;
+      tempCanvas.height = cropBounds.height;
 
-      const cropX = Math.max(0, (cropBounds.left - imgBounds.left) * scaleX);
-      const cropY = Math.max(0, (cropBounds.top - imgBounds.top) * scaleY);
-      const cropWidth = Math.min(cropBounds.width * scaleX, originalElement.naturalWidth - cropX);
-      const cropHeight = Math.min(cropBounds.height * scaleY, originalElement.naturalHeight - cropY);
+      // Export the current canvas section
+      const sourceCanvas = canvas.getElement();
+      ctx.drawImage(
+        sourceCanvas,
+        cropBounds.left, cropBounds.top, cropBounds.width, cropBounds.height,
+        0, 0, cropBounds.width, cropBounds.height
+      );
 
-      console.log('Crop parameters:', { cropX, cropY, cropWidth, cropHeight });
+      // Create new image from cropped data
+      const croppedDataURL = tempCanvas.toDataURL('image/png', 1.0);
+      console.log('Created cropped image dataURL, length:', croppedDataURL.length);
 
-      // Create cropped image
-      const croppedDataURL = await createCroppedImage(originalElement, {
-        x: cropX,
-        y: cropY,
-        width: cropWidth,
-        height: cropHeight
-      });
+      // Clear the canvas and add the cropped image
+      canvas.clear();
+      canvas.backgroundColor = '#ffffff';
 
-      // Remove old image and overlay
-      canvas.remove(currentImage);
-      if (cropOverlay) {
-        canvas.remove(cropOverlay);
-        setCropOverlay(null);
-      }
-
-      // Add new cropped image
+      // Load the cropped image
       const newImage = await FabricImage.fromURL(croppedDataURL);
       
-      // Scale and center the new image
+      // Scale and center the new image to fit canvas
       const canvasWidth = canvas.getWidth();
       const canvasHeight = canvas.getHeight();
       const scale = Math.min(canvasWidth / newImage.width!, canvasHeight / newImage.height!) * 0.9;
@@ -236,16 +209,10 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
       canvas.add(newImage);
       setCurrentImage(newImage);
       
-      // Update original reference for potential future crops
-      originalImageRef.current = {
-        element: newImage.getElement() as HTMLImageElement,
-        width: newImage.width || 1,
-        height: newImage.height || 1,
-        left: newImage.left || 0,
-        top: newImage.top || 0,
-        scaleX: newImage.scaleX || 1,
-        scaleY: newImage.scaleY || 1
-      };
+      // Clean up overlay
+      if (cropOverlay) {
+        setCropOverlay(null);
+      }
 
       canvas.renderAll();
       console.log('Crop applied successfully');
@@ -257,34 +224,6 @@ export const SimpleCropTool: React.FC<SimpleCropToolProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const createCroppedImage = (originalElement: HTMLImageElement, cropArea: any): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      try {
-        const tempCanvas = document.createElement('canvas');
-        const ctx = tempCanvas.getContext('2d');
-        
-        if (!ctx) {
-          reject(new Error('Failed to create crop canvas'));
-          return;
-        }
-
-        tempCanvas.width = cropArea.width;
-        tempCanvas.height = cropArea.height;
-
-        ctx.drawImage(
-          originalElement,
-          cropArea.x, cropArea.y, cropArea.width, cropArea.height,
-          0, 0, cropArea.width, cropArea.height
-        );
-
-        const croppedDataURL = tempCanvas.toDataURL('image/png', 0.9);
-        resolve(croppedDataURL);
-      } catch (error) {
-        reject(error);
-      }
-    });
   };
 
   const handleApply = async () => {

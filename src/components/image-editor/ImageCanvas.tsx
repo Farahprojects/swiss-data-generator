@@ -9,13 +9,15 @@ interface ImageCanvasProps {
   onCanvasReady: (canvas: FabricCanvas) => void;
   activeTool: string;
   adjustments: ImageAdjustments;
+  cropApplied?: boolean;
 }
 
 export const ImageCanvas: React.FC<ImageCanvasProps> = ({
   imageUrl,
   onCanvasReady,
   activeTool,
-  adjustments
+  adjustments,
+  cropApplied = false
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<FabricCanvas | null>(null);
@@ -44,15 +46,15 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     fabricCanvasRef.current = canvas;
     onCanvasReady(canvas);
 
-    // Load the image
-    if (imageUrl) {
+    // Only load image if not already cropped or if imageUrl is provided
+    if (imageUrl && !cropApplied) {
       loadImageToCanvas(canvas, imageUrl);
     }
 
     return () => {
       canvas.dispose();
     };
-  }, [imageUrl, onCanvasReady, isMobile]);
+  }, [imageUrl, onCanvasReady, isMobile, cropApplied]);
 
   const loadImageToCanvas = async (canvas: FabricCanvas, url: string) => {
     try {
@@ -131,9 +133,13 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
     canvas.renderAll();
   };
 
-  // Apply adjustments when they change
+  // Apply adjustments when they change (only if not cropped)
   useEffect(() => {
-    if (!imageObjectRef.current || !canApplyFiltersRef.current) {
+    if (!imageObjectRef.current || !canApplyFiltersRef.current || cropApplied) {
+      if (cropApplied) {
+        console.log('Skipping filter application - image has been cropped');
+        return;
+      }
       if (!canApplyFiltersRef.current) {
         console.warn('Skipping filter application due to CORS restrictions');
       }
@@ -184,7 +190,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
         console.error('Error applying rotation:', rotationError);
       }
     }
-  }, [adjustments]);
+  }, [adjustments, cropApplied]);
 
   return (
     <div 
@@ -195,9 +201,14 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
         ref={canvasRef}
         className="border border-gray-300 rounded shadow-lg max-w-full max-h-full"
       />
-      {!canApplyFiltersRef.current && (
+      {!canApplyFiltersRef.current && !cropApplied && (
         <div className="absolute top-2 left-2 bg-yellow-100 border border-yellow-400 text-yellow-800 px-2 py-1 rounded text-xs">
           Filters disabled due to image restrictions
+        </div>
+      )}
+      {cropApplied && (
+        <div className="absolute top-2 left-2 bg-green-100 border border-green-400 text-green-800 px-2 py-1 rounded text-xs">
+          Crop applied - ready to save
         </div>
       )}
     </div>
