@@ -1,3 +1,4 @@
+
 /**
  * Simple logger utility that controls logging output based on environment
  * and provides different log levels
@@ -15,29 +16,85 @@ const VERBOSE_LOGGING = isDevelopment;
  * - Only shows debug logs in development
  * - Always shows errors
  * - Can be easily extended to use external logging services
+ * - Automatically sanitizes sensitive data
  */
 export function log(level: LogLevel, message: string, data?: any): void {
   // In production, only show errors and warnings
-  if (!isDevelopment && level === 'debug') return;
+  if (!isDevelopment && (level === 'debug' || level === 'info')) return;
   
   const timestamp = new Date().toISOString();
+  const sanitizedData = data ? sanitizeLogData(data) : undefined;
   
   switch (level) {
     case 'debug':
       if (VERBOSE_LOGGING) {
-        console.log(`[DEBUG] ${message}`, data !== undefined ? data : '');
+        console.log(`[DEBUG] ${message}`, sanitizedData !== undefined ? sanitizedData : '');
       }
       break;
     case 'info':
-      console.log(`[INFO] ${message}`, data !== undefined ? data : '');
+      console.log(`[INFO] ${message}`, sanitizedData !== undefined ? sanitizedData : '');
       break;
     case 'warn':
-      console.warn(`[WARN] ${message}`, data !== undefined ? data : '');
+      console.warn(`[WARN] ${message}`, sanitizedData !== undefined ? sanitizedData : '');
       break;
     case 'error':
-      console.error(`[ERROR] ${message}`, data !== undefined ? data : '');
+      console.error(`[ERROR] ${message}`, sanitizedData !== undefined ? sanitizedData : '');
       break;
   }
+}
+
+/**
+ * Sanitizes log data to remove sensitive information
+ */
+function sanitizeLogData(data: any): any {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  // If it's an error object, just return the message
+  if (data instanceof Error) {
+    return { message: data.message, name: data.name };
+  }
+
+  const sanitized: any = {};
+  
+  // List of sensitive field patterns to exclude
+  const sensitiveFields = [
+    'id',
+    'coach_id', 
+    'user_id',
+    'template_id',
+    'customization_data',
+    'template_data',
+    'token',
+    'password',
+    'secret',
+    'key',
+    'authorization',
+    'auth',
+    'credential',
+    'apiKey',
+    'access_token',
+    'refresh_token',
+    'email',
+    'phone'
+  ];
+
+  // Copy only non-sensitive fields
+  for (const [key, value] of Object.entries(data)) {
+    const lowerKey = key.toLowerCase();
+    
+    if (sensitiveFields.some(field => lowerKey.includes(field))) {
+      // Skip sensitive fields entirely in production
+      if (isDevelopment) {
+        sanitized[key] = '[REDACTED]';
+      }
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  
+  return sanitized;
 }
 
 /**

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +7,7 @@ import { TheraLoader } from "@/components/ui/TheraLoader";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { WebsiteErrorBoundary } from "./WebsiteErrorBoundary";
+import { log } from "@/utils/logUtils";
 
 interface CoachWebsite {
   id: string;
@@ -57,7 +59,7 @@ export const PublicCoachWebsite: React.FC = () => {
     }
 
     try {
-      console.log('Loading website for slug:', slug);
+      log('debug', `Loading public website for slug: ${slug}`);
       
       // Query coach_websites for a published website with this slug
       const { data: websiteData, error: websiteError } = await supabase
@@ -68,20 +70,20 @@ export const PublicCoachWebsite: React.FC = () => {
         .maybeSingle();
 
       if (websiteError) {
-        console.error('Website query error:', websiteError);
+        log('error', 'Website query failed', { slug });
         setNotFound(true);
         setIsLoading(false);
         return;
       }
 
       if (!websiteData) {
-        console.log('No website found for slug:', slug);
+        log('info', `No published website found for slug: ${slug}`);
         setNotFound(true);
         setIsLoading(false);
         return;
       }
 
-      console.log('Website data loaded:', websiteData);
+      log('debug', 'Website data loaded successfully');
 
       // Validate and clean the customization data
       const cleanedData = {
@@ -99,25 +101,25 @@ export const PublicCoachWebsite: React.FC = () => {
         .maybeSingle();
 
       if (templateError) {
-        console.error('Template query error:', templateError);
+        log('error', 'Template query failed', { templateId: websiteData.template_id });
         setNotFound(true);
         setIsLoading(false);
         return;
       }
 
       if (!templateData) {
-        console.log('No template found for id:', websiteData.template_id);
+        log('error', `No template found for website`, { templateId: websiteData.template_id });
         setNotFound(true);
         setIsLoading(false);
         return;
       }
 
-      console.log('Template data loaded:', templateData);
+      log('debug', 'Template data loaded successfully');
       setTemplate(templateData);
       setIsLoading(false);
 
     } catch (error) {
-      console.error('Error loading website:', error);
+      log('error', 'Error loading website', error);
       setNotFound(true);
       setIsLoading(false);
     }
