@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +16,11 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
 
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+
+  // Filter out null services and ensure we have valid service objects
+  const validServices = (customizationData.services || [])
+    .filter((service: any) => service && typeof service === 'object')
+    .filter((service: any) => service.title || service.description || service.price);
 
   return (
     <div className="bg-cream-50" style={{ fontFamily: `${fontFamily}, serif` }}>
@@ -90,39 +96,51 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
             <div className="w-16 sm:w-24 h-1 bg-amber-500 mx-auto"></div>
           </div>
           
-          <div className="space-y-8 sm:space-y-12">
-            {(customizationData.services || []).map((service: any, index: number) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: index * 0.2 }}
-                className={`grid gap-6 lg:gap-8 lg:grid-cols-2 items-center ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}
-              >
-                <div className={index % 2 === 1 ? 'lg:order-2' : 'order-2 lg:order-1'}>
-                  {(service.imageData?.url || service.imageUrl) ? (
-                    <img
-                      src={service.imageData?.url || service.imageUrl}
-                      alt={service.title}
-                      className="w-full h-24 sm:h-32 lg:h-48 object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-full h-24 sm:h-32 lg:h-48 bg-gradient-to-br from-purple-200 to-blue-200 rounded-lg"></div>
-                  )}
-                </div>
-                <div className={`text-center lg:text-left ${index % 2 === 1 ? 'lg:order-1' : 'order-1 lg:order-2'}`}>
-                  <h3 className="text-lg sm:text-xl lg:text-2xl font-serif font-semibold mb-3 sm:mb-4 text-gray-900 break-words">{service.title}</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4 leading-relaxed break-words">{service.description}</p>
-                  <div className="flex items-center justify-center lg:justify-between flex-wrap gap-4">
-                    <span className="text-lg sm:text-xl font-semibold" style={{ color: themeColor }}>{service.price}</span>
-                    <Button variant="outline" style={{ borderColor: themeColor, color: themeColor }} className="min-h-[44px]">
-                      Learn More
-                    </Button>
+          {validServices.length > 0 ? (
+            <div className="space-y-8 sm:space-y-12">
+              {validServices.map((service: any, index: number) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8, delay: index * 0.2 }}
+                  className={`grid gap-6 lg:gap-8 lg:grid-cols-2 items-center ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}
+                >
+                  <div className={index % 2 === 1 ? 'lg:order-2' : 'order-2 lg:order-1'}>
+                    {(service.imageData?.url || service.imageUrl) ? (
+                      <img
+                        src={service.imageData?.url || service.imageUrl}
+                        alt={service.title || 'Service'}
+                        className="w-full h-24 sm:h-32 lg:h-48 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-full h-24 sm:h-32 lg:h-48 bg-gradient-to-br from-purple-200 to-blue-200 rounded-lg"></div>
+                    )}
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                  <div className={`text-center lg:text-left ${index % 2 === 1 ? 'lg:order-1' : 'order-1 lg:order-2'}`}>
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-serif font-semibold mb-3 sm:mb-4 text-gray-900 break-words">
+                      {service.title || 'Service'}
+                    </h3>
+                    <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4 leading-relaxed break-words">
+                      {service.description || 'Professional service description'}
+                    </p>
+                    <div className="flex items-center justify-center lg:justify-between flex-wrap gap-4">
+                      <span className="text-lg sm:text-xl font-semibold" style={{ color: themeColor }}>
+                        {service.price || 'Contact for pricing'}
+                      </span>
+                      <Button variant="outline" style={{ borderColor: themeColor, color: themeColor }} className="min-h-[44px]">
+                        Learn More
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 sm:py-12">
+              <p className="text-gray-500">No services configured yet.</p>
+            </div>
+          )}
         </div>
       </section>
 

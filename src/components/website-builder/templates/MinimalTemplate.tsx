@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +16,11 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
 
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+
+  // Filter out null services and ensure we have valid service objects
+  const validServices = (customizationData.services || [])
+    .filter((service: any) => service && typeof service === 'object')
+    .filter((service: any) => service.title || service.description || service.price);
 
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
@@ -88,31 +94,43 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
       <section className={`${sectionPadding} bg-white`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl sm:text-3xl font-light mb-12 sm:mb-16 text-gray-900 text-center">Services</h2>
-          <div className="space-y-8 sm:space-y-12 lg:space-y-16">
-            {(customizationData.services || []).map((service: any, index: number) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                className="border-b border-gray-100 pb-6 sm:pb-8 lg:pb-12 last:border-b-0"
-              >
-                <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3 items-start lg:items-center">
-                  <h3 className="text-lg sm:text-xl font-light text-gray-900 break-words">{service.title}</h3>
-                  <p className="text-sm sm:text-base text-gray-600 font-light lg:col-span-1 leading-relaxed break-words">{service.description}</p>
-                  <div className="flex items-center justify-between lg:justify-end gap-4 flex-wrap">
-                    <span className="text-base sm:text-lg font-light text-gray-900">{service.price}</span>
-                    <Button 
-                      variant="ghost" 
-                      className="text-gray-600 hover:text-gray-900 font-light p-0 h-auto text-sm sm:text-base"
-                    >
-                      Details →
-                    </Button>
+          {validServices.length > 0 ? (
+            <div className="space-y-8 sm:space-y-12 lg:space-y-16">
+              {validServices.map((service: any, index: number) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: index * 0.2 }}
+                  className="border-b border-gray-100 pb-6 sm:pb-8 lg:pb-12 last:border-b-0"
+                >
+                  <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3 items-start lg:items-center">
+                    <h3 className="text-lg sm:text-xl font-light text-gray-900 break-words">
+                      {service.title || 'Service'}
+                    </h3>
+                    <p className="text-sm sm:text-base text-gray-600 font-light lg:col-span-1 leading-relaxed break-words">
+                      {service.description || 'Professional service description'}
+                    </p>
+                    <div className="flex items-center justify-between lg:justify-end gap-4 flex-wrap">
+                      <span className="text-base sm:text-lg font-light text-gray-900">
+                        {service.price || 'Contact for pricing'}
+                      </span>
+                      <Button 
+                        variant="ghost" 
+                        className="text-gray-600 hover:text-gray-900 font-light p-0 h-auto text-sm sm:text-base"
+                      >
+                        Details →
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 sm:py-12">
+              <p className="text-gray-500 font-light">No services configured yet.</p>
+            </div>
+          )}
         </div>
       </section>
 

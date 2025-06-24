@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +16,11 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
 
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+
+  // Filter out null services and ensure we have valid service objects
+  const validServices = (customizationData.services || [])
+    .filter((service: any) => service && typeof service === 'object')
+    .filter((service: any) => service.title || service.description || service.price);
 
   return (
     <div className="bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
@@ -120,44 +126,54 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
             Creative Services
           </h2>
           
-          <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {(customizationData.services || []).map((service: any, index: number) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50, rotate: Math.random() * 10 - 5 }}
-                animate={{ opacity: 1, y: 0, rotate: 0 }}
-                transition={{ duration: 0.8, delay: index * 0.1 }}
-                whileHover={{ scale: 1.05, rotate: Math.random() * 6 - 3 }}
-                className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl transform transition-all hover:shadow-2xl"
-              >
-                {(service.imageData?.url || service.imageUrl) ? (
-                  <img
-                    src={service.imageData?.url || service.imageUrl}
-                    alt={service.title}
-                    className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-2xl mb-4 sm:mb-6 object-cover"
-                  />
-                ) : (
-                  <div 
-                    className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-2xl mb-4 sm:mb-6 bg-gradient-to-br from-current to-purple-500"
-                    style={{ color: themeColor }}
-                  ></div>
-                )}
-                <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900 break-words">{service.title}</h3>
-                <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed break-words">{service.description}</p>
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <span className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-                    {service.price}
-                  </span>
-                  <Button 
-                    variant="ghost" 
-                    className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-full text-sm sm:text-base"
-                  >
-                    Explore →
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          {validServices.length > 0 ? (
+            <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {validServices.map((service: any, index: number) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 50, rotate: Math.random() * 10 - 5 }}
+                  animate={{ opacity: 1, y: 0, rotate: 0 }}
+                  transition={{ duration: 0.8, delay: index * 0.1 }}
+                  whileHover={{ scale: 1.05, rotate: Math.random() * 6 - 3 }}
+                  className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl transform transition-all hover:shadow-2xl"
+                >
+                  {(service.imageData?.url || service.imageUrl) ? (
+                    <img
+                      src={service.imageData?.url || service.imageUrl}
+                      alt={service.title || 'Service'}
+                      className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-2xl mb-4 sm:mb-6 object-cover"
+                    />
+                  ) : (
+                    <div 
+                      className="w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-2xl mb-4 sm:mb-6 bg-gradient-to-br from-current to-purple-500"
+                      style={{ color: themeColor }}
+                    ></div>
+                  )}
+                  <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-900 break-words">
+                    {service.title || 'Service'}
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed break-words">
+                    {service.description || 'Professional service description'}
+                  </p>
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <span className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+                      {service.price || 'Contact for pricing'}
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-full text-sm sm:text-base"
+                    >
+                      Explore →
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 sm:py-12">
+              <p className="text-gray-500">No services configured yet.</p>
+            </div>
+          )}
         </div>
       </section>
 

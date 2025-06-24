@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +18,11 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
   const headerOpacity = customizationData.headerImageOpacity || 100;
+
+  // Filter out null services and ensure we have valid service objects
+  const validServices = (customizationData.services || [])
+    .filter((service: any) => service && typeof service === 'object')
+    .filter((service: any) => service.title || service.description || service.price);
 
   return (
     <div className="bg-gray-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
@@ -95,35 +101,47 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
       <section className={`${sectionPadding} bg-gray-50`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-8 sm:mb-12 text-gray-900">Services</h2>
-          <div className="space-y-4 sm:space-y-6">
-            {(customizationData.services || []).map((service: any, index: number) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-shadow"
-              >
-                <div className="flex items-start space-x-4">
-                  {(service.imageData?.url || service.imageUrl) ? (
-                    <img
-                      src={service.imageData?.url || service.imageUrl}
-                      alt={service.title}
-                      className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-xl flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" style={{ backgroundColor: themeColor }}></div>
-                  )}
-                  
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-gray-900 break-words">{service.title}</h3>
-                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed break-words">{service.description}</p>
-                    <div className="text-lg sm:text-xl font-bold" style={{ color: themeColor }}>{service.price}</div>
+          {validServices.length > 0 ? (
+            <div className="space-y-4 sm:space-y-6">
+              {validServices.map((service: any, index: number) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  className="bg-white rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  <div className="flex items-start space-x-4">
+                    {(service.imageData?.url || service.imageUrl) ? (
+                      <img
+                        src={service.imageData?.url || service.imageUrl}
+                        alt={service.title || 'Service'}
+                        className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-xl flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" style={{ backgroundColor: themeColor }}></div>
+                    )}
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-gray-900 break-words">
+                        {service.title || 'Service'}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 leading-relaxed break-words">
+                        {service.description || 'Professional service description'}
+                      </p>
+                      <div className="text-lg sm:text-xl font-bold" style={{ color: themeColor }}>
+                        {service.price || 'Contact for pricing'}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 sm:py-12">
+              <p className="text-gray-500">No services configured yet.</p>
+            </div>
+          )}
         </div>
       </section>
 
