@@ -62,7 +62,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
             className="text-white text-center lg:text-left"
-            style={{ textShadow: hasHeaderImage ? '2px 2px 4px rgba(0,0,0,0.7)' : 'none' }}
+            style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
           >
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight">
               {customizationData.coachName || "Alex Johnson"}
