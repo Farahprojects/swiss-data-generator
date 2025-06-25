@@ -1,4 +1,5 @@
 
+
 export interface Service {
   title: string;
   description: string;
@@ -38,4 +39,7 @@ export interface CustomizationData {
   headerImageData?: ImageData;
   aboutImageUrl?: string;
   aboutImageData?: ImageData;
+  footerHeading?: string;
+  footerSubheading?: string;
 }
+
