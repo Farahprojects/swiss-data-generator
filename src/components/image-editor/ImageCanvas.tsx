@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Canvas as FabricCanvas, FabricImage, filters, Rect } from 'fabric';
-import { ImageAdjustments } from './ImageEditorModal';
+import { ImageAdjustments, ColourSettings } from './ImageEditorModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ImageCanvasProps {
@@ -9,6 +9,7 @@ interface ImageCanvasProps {
   onCanvasReady: (canvas: FabricCanvas) => void;
   activeTool: string;
   adjustments: ImageAdjustments;
+  colourSettings: ColourSettings;
   cropApplied?: boolean;
 }
 
@@ -17,6 +18,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
   onCanvasReady,
   activeTool,
   adjustments,
+  colourSettings,
   cropApplied = false
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -238,7 +240,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
 
   // Apply adjustments when they change (only if not cropped)
   useEffect(() => {
-    if (!imageObjectRef.current || !fabricCanvasRef.current || cropApplied || !isCanvasInitialized.current) {
+    if (!fabricCanvasRef.current || cropApplied || !isCanvasInitialized.current) {
       if (cropApplied) {
         console.log('Skipping filter application - image has been cropped');
         return;
@@ -246,58 +248,80 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
       return;
     }
 
-    const img = imageObjectRef.current;
     const canvas = fabricCanvasRef.current;
-    const { brightness, contrast, opacity, opacityColor, rotation } = adjustments;
+    const { brightness, contrast, rotation } = adjustments;
+    const { opacity, color } = colourSettings;
 
     try {
-      // Apply filters (brightness and contrast only)
-      if (canApplyFiltersRef.current) {
-        const imageFilters = [];
+      // Apply image adjustments if we have an image
+      if (imageObjectRef.current) {
+        const img = imageObjectRef.current;
         
-        if (brightness !== 0) {
-          imageFilters.push(new filters.Brightness({
-            brightness: brightness / 100
-          }));
-        }
-        
-        if (contrast !== 0) {
-          imageFilters.push(new filters.Contrast({
-            contrast: contrast / 100
-          }));
-        }
+        // Apply filters (brightness and contrast only)
+        if (canApplyFiltersRef.current) {
+          const imageFilters = [];
+          
+          if (brightness !== 0) {
+            imageFilters.push(new filters.Brightness({
+              brightness: brightness / 100
+            }));
+          }
+          
+          if (contrast !== 0) {
+            imageFilters.push(new filters.Contrast({
+              contrast: contrast / 100
+            }));
+          }
 
-        img.filters = imageFilters;
-        img.applyFilters();
+          img.filters = imageFilters;
+          img.applyFilters();
+        }
+        
+        // Apply rotation
+        img.rotate(rotation);
       }
-      
-      // Apply rotation
-      img.rotate(rotation);
 
-      // Handle opacity overlay
+      // Handle color overlay (works with or without image)
       if (overlayObjectRef.current) {
         canvas.remove(overlayObjectRef.current);
         overlayObjectRef.current = null;
       }
 
       if (opacity > 0) {
+        let overlayConfig;
+        
+        if (imageObjectRef.current) {
+          // If we have an image, overlay on top of it
+          const img = imageObjectRef.current;
+          overlayConfig = {
+            left: img.left,
+            top: img.top,
+            width: img.getScaledWidth(),
+            height: img.getScaledHeight(),
+            originX: img.originX,
+            originY: img.originY,
+            angle: img.angle
+          };
+        } else {
+          // If no image, fill the entire canvas
+          overlayConfig = {
+            left: 0,
+            top: 0,
+            width: canvas.getWidth(),
+            height: canvas.getHeight(),
+            originX: 'left',
+            originY: 'top',
+            angle: 0
+          };
+        }
+
         const overlay = new Rect({
-          left: img.left,
-          top: img.top,
-          width: img.getScaledWidth(),
-          height: img.getScaledHeight(),
-          fill: opacityColor,
+          ...overlayConfig,
+          fill: color,
           opacity: opacity / 100,
           selectable: false,
           evented: false,
           excludeFromExport: false
-        });
-
-        // Position overlay to match image rotation and position
-        overlay.set({
-          originX: img.originX,
-          originY: img.originY,
-          angle: img.angle
         });
 
         canvas.add(overlay);
@@ -305,19 +329,21 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({
       }
       
       canvas.renderAll();
-      console.log('Applied adjustments:', adjustments);
+      console.log('Applied adjustments and color settings:', { adjustments, colourSettings });
       
     } catch (error) {
       console.error('Error applying adjustments:', error);
-      // If filters fail, at least apply rotation
+      // If filters fail, at least apply rotation if we have an image
       try {
-        img.rotate(rotation);
-        canvas.renderAll();
+        if (imageObjectRef.current) {
+          imageObjectRef.current.rotate(rotation);
+          canvas.renderAll();
+        }
       } catch (rotationError) {
         console.error('Error applying rotation:', rotationError);
       }
     }
-  }, [adjustments, cropApplied]);
+  }, [adjustments, colourSettings, cropApplied]);
 
   return (
     <div 
