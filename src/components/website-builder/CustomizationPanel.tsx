@@ -73,6 +73,16 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     }
   };
 
+  const handleImageChange = (imageData: any, field: keyof CustomizationData) => {
+    onUpdate({ ...data, [field]: imageData });
+  };
+
+  const handleServiceImageChange = (imageData: any, serviceIndex: number) => {
+    const updatedServices = [...(data.services || [])];
+    updatedServices[serviceIndex] = { ...updatedServices[serviceIndex], imageData };
+    onUpdate({ ...data, services: updatedServices });
+  };
+
   return (
     <div className="w-80 bg-white border-l border-gray-200 h-full overflow-y-auto">
       <div className="p-4 border-b border-gray-100">
@@ -128,16 +138,12 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
               <CardTitle className="text-sm">Profile & Bio</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="profileImage" className="text-xs font-medium text-gray-700">
-                  Profile Image
-                </Label>
-                <ImageUploader
-                  onImageUpload={(file) => onImageUpload(file, 'profile')}
-                  existingImageUrl={data.profileImageData?.url || data.profileImage}
-                  type="profile"
-                />
-              </div>
+              <ImageUploader
+                value={data.profileImageData || data.profileImage}
+                onChange={(imageData) => handleImageChange(imageData, 'profileImageData')}
+                label="Profile Image"
+                section="header"
+              />
 
               <div>
                 <Label htmlFor="bio" className="text-xs font-medium text-gray-700">
@@ -159,16 +165,12 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
               <CardTitle className="text-sm">Header Image</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="headerImage" className="text-xs font-medium text-gray-700">
-                  Header Image
-                </Label>
-                <ImageUploader
-                  onImageUpload={(file) => onImageUpload(file, 'header')}
-                  existingImageUrl={data.headerImageData?.url || data.headerImageUrl}
-                  type="header"
-                />
-              </div>
+              <ImageUploader
+                value={data.headerImageData || data.headerImageUrl}
+                onChange={(imageData) => handleImageChange(imageData, 'headerImageData')}
+                label="Header Image"
+                section="header"
+              />
             </CardContent>
           </Card>
 
@@ -177,16 +179,12 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
               <CardTitle className="text-sm">About Image</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="aboutImage" className="text-xs font-medium text-gray-700">
-                  About Image
-                </Label>
-                <ImageUploader
-                  onImageUpload={(file) => onImageUpload(file, 'about')}
-                  existingImageUrl={data.aboutImageData?.url || data.aboutImageUrl}
-                  type="about"
-                />
-              </div>
+              <ImageUploader
+                value={data.aboutImageData || data.aboutImageUrl}
+                onChange={(imageData) => handleImageChange(imageData, 'aboutImageData')}
+                label="About Image"
+                section="about"
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -245,17 +243,13 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor={`serviceImage-${index}`} className="text-xs font-medium text-gray-700">
-                      Image
-                    </Label>
-                    <ImageUploader
-                      onImageUpload={(file) => onImageUpload(file, 'service', index)}
-                      existingImageUrl={service.imageData?.url || service.imageUrl}
-                      type="service"
-                      serviceIndex={index}
-                    />
-                  </div>
+                  <ImageUploader
+                    value={service.imageData || service.imageUrl}
+                    onChange={(imageData) => handleServiceImageChange(imageData, index)}
+                    label="Service Image"
+                    section="service"
+                    serviceIndex={index}
+                  />
                 </div>
               ))}
 
