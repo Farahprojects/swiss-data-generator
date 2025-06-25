@@ -1,553 +1,758 @@
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { X, Plus, Upload } from "lucide-react";
-import { CustomizationData, Service } from "@/types/website-builder";
-import { ImageUploader } from "./ImageUploader";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Plus, X, ChevronDown, ChevronUp, Palette, Type, Settings, User, Briefcase, Image as ImageIcon, FileText } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ImageUploader } from "./ImageUploader";
+import type { Service, CustomizationData, ImageData } from "@/types/website-builder";
 
 interface CustomizationPanelProps {
-  data: CustomizationData;
-  onUpdate: (data: CustomizationData) => void;
-  onImageUpload: (file: File, type: 'profile' | 'header' | 'about' | 'service', serviceIndex?: number) => Promise<void>;
+  customizationData: CustomizationData;
+  onChange: (field: string, value: any) => void;
 }
 
+const colorOptions = [
+  { name: 'Modern Blue', value: '#6366F1', category: 'modern' },
+  { name: 'Royal Purple', value: '#8B5CF6', category: 'elegant' },
+  { name: 'Emerald Green', value: '#10B981', category: 'natural' },
+  { name: 'Sunset Orange', value: '#F59E0B', category: 'warm' },
+  { name: 'Crimson Red', value: '#EF4444', category: 'bold' },
+  { name: 'Ocean Blue', value: '#3B82F6', category: 'professional' },
+  { name: 'Forest Green', value: '#059669', category: 'natural' },
+  { name: 'Deep Purple', value: '#7C3AED', category: 'creative' },
+  { name: 'Coral Pink', value: '#EC4899', category: 'vibrant' },
+  { name: 'Navy Blue', value: '#1E40AF', category: 'corporate' }
+];
+
 const fontOptions = [
-  { value: 'Inter', label: 'Inter (Modern)' },
-  { value: 'Playfair Display', label: 'Playfair Display (Elegant)' },
-  { value: 'Poppins', label: 'Poppins (Friendly)' },
-  { value: 'Roboto', label: 'Roboto (Clean)' },
-  { value: 'Merriweather', label: 'Merriweather (Classic)' }
+  { name: 'Inter', value: 'Inter', category: 'Modern Sans-serif', preview: 'Clean and readable' },
+  { name: 'Poppins', value: 'Poppins', category: 'Geometric Sans-serif', preview: 'Friendly and approachable' },
+  { name: 'Montserrat', value: 'Montserrat', category: 'Urban Sans-serif', preview: 'Professional and elegant' },
+  { name: 'Playfair Display', value: 'Playfair Display', category: 'Serif', preview: 'Traditional and sophisticated' },
+  { name: 'Source Sans Pro', value: 'Source Sans Pro', category: 'Humanist Sans-serif', preview: 'Clear and versatile' },
+  { name: 'Lato', value: 'Lato', category: 'Humanist Sans-serif', preview: 'Warm and friendly' },
+  { name: 'Open Sans', value: 'Open Sans', category: 'Humanist Sans-serif', preview: 'Neutral and legible' },
+  { name: 'Merriweather', value: 'Merriweather', category: 'Serif', preview: 'Classical and readable' }
+];
+
+const introFontStyles = [
+  { name: 'Modern', value: 'modern', preview: 'Clean and contemporary' },
+  { name: 'Elegant', value: 'elegant', preview: 'Sophisticated and refined' },
+  { name: 'Bold', value: 'bold', preview: 'Strong and impactful' },
+  { name: 'Handwritten', value: 'handwritten', preview: 'Personal and warm' },
+  { name: 'Classic', value: 'classic', preview: 'Timeless and traditional' },
+  { name: 'Minimal', value: 'minimal', preview: 'Simple and understated' }
 ];
 
 const introColorOptions = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA726', '#AB47BC',
-  '#26A69A', '#FF7043', '#42A5F5', '#66BB6A', '#EF5350',
-  '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#3B82F6',
-  '#8B5A2B', '#2D3748', '#1A202C', '#000000', '#FFFFFF'
+  { name: 'Black', value: '#000000' },
+  { name: 'Dark Gray', value: '#374151' },
+  { name: 'White', value: '#FFFFFF' },
+  { name: 'Light Gray', value: '#D1D5DB' },
+  { name: 'Deep Blue', value: '#1E40AF' },
+  { name: 'Warm Red', value: '#DC2626' },
+  { name: 'Sage', value: '#A7B29C' },
+  { name: 'Sand', value: '#D4B896' }
 ];
 
-export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
-  data,
-  onUpdate,
-  onImageUpload
-}) => {
-  const [buttonColorMode, setButtonColorMode] = useState<'button' | 'text'>('button');
+// Helper function to validate and clean services array
+const validateServices = (services: any[]): Service[] => {
+  if (!Array.isArray(services)) {
+    return [];
+  }
+  
+  return services.filter((service: any) => {
+    // Filter out null, undefined, or invalid service objects
+    return service && 
+           typeof service === 'object' && 
+           service !== null;
+  }).map((service: any) => ({
+    title: service.title || '',
+    description: service.description || '',
+    price: service.price || '',
+    imageUrl: service.imageUrl || '',
+    imageData: service.imageData || undefined
+  }));
+};
 
-  const handleBasicInfoChange = (field: keyof CustomizationData, value: string) => {
-    onUpdate({ ...data, [field]: value });
+export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
+  customizationData,
+  onChange
+}) => {
+  const [openSections, setOpenSections] = useState({
+    hero: true,
+    intro: false,
+    images: false,
+    services: true,
+    cta: false,
+    design: false
+  });
+
+  const toggleSection = (section: string) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [section]: !prev[section as keyof typeof prev]
+    }));
   };
 
-  const handleServiceChange = (index: number, field: keyof Service, value: string) => {
-    const updatedServices = [...(data.services || [])];
-    updatedServices[index] = { ...updatedServices[index], [field]: value };
-    onUpdate({ ...data, services: updatedServices });
+  const handleServiceChange = (index: number, field: string, value: string | ImageData | null) => {
+    const services = validateServices(customizationData.services || []);
+    if (field === 'imageData') {
+      services[index] = { ...services[index], imageData: value as ImageData | undefined };
+    } else {
+      services[index] = { ...services[index], [field]: value };
+    }
+    onChange('services', services);
   };
 
   const addService = () => {
-    const newService: Service = {
-      title: '',
-      description: '',
-      price: ''
-    };
-    onUpdate({ ...data, services: [...(data.services || []), newService] });
+    const services = validateServices(customizationData.services || []);
+    services.push({ title: '', description: '', price: '', imageUrl: '' });
+    onChange('services', services);
   };
 
   const removeService = (index: number) => {
-    const updatedServices = data.services?.filter((_, i) => i !== index) || [];
-    onUpdate({ ...data, services: updatedServices });
+    const services = validateServices(customizationData.services || []);
+    const filteredServices = services.filter((_, i) => i !== index);
+    onChange('services', filteredServices);
   };
 
-  const handleColorChange = (colorType: 'button' | 'text', color: string) => {
-    if (colorType === 'button') {
-      onUpdate({ ...data, buttonColor: color });
-    } else {
-      onUpdate({ ...data, buttonTextColor: color });
-    }
-  };
+  // Ensure we always work with validated services
+  const validServices = validateServices(customizationData.services || []);
 
-  const handleImageChange = (imageData: any, field: keyof CustomizationData) => {
-    onUpdate({ ...data, [field]: imageData });
-  };
-
-  const handleServiceImageChange = (imageData: any, serviceIndex: number) => {
-    const updatedServices = [...(data.services || [])];
-    updatedServices[serviceIndex] = { ...updatedServices[serviceIndex], imageData };
-    onUpdate({ ...data, services: updatedServices });
-  };
+  const SectionHeader = ({ icon: Icon, title, isOpen, section }: any) => (
+    <CollapsibleTrigger asChild>
+      <div className="flex items-center justify-between cursor-pointer p-4 hover:bg-gray-50 transition-colors w-full">
+        <div className="flex items-center space-x-3">
+          <Icon className="h-5 w-5 text-blue-600" />
+          <span className="font-semibold text-gray-900">{title}</span>
+        </div>
+        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+    </CollapsibleTrigger>
+  );
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 h-full overflow-y-auto">
-      <div className="p-4 border-b border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900">Customize Website</h2>
-      </div>
+    <div className="space-y-4">
+      {/* Hero Section */}
+      <Card className="overflow-hidden">
+        <Collapsible open={openSections.hero} onOpenChange={() => toggleSection('hero')}>
+          <SectionHeader 
+            icon={User} 
+            title="Hero" 
+            isOpen={openSections.hero}
+            section="hero"
+          />
+          <AnimatePresence>
+            {openSections.hero && (
+              <CollapsibleContent forceMount>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <CardContent className="space-y-6 pt-0">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="coachName" className="text-sm font-medium text-gray-700">Heading</Label>
+                        <Input
+                          id="coachName"
+                          value={customizationData.coachName || ''}
+                          onChange={(e) => onChange('coachName', e.target.value)}
+                          placeholder="Your main heading"
+                          className="mt-1"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="tagline" className="text-sm font-medium text-gray-700">Sub Heading</Label>
+                        <Input
+                          id="tagline"
+                          value={customizationData.tagline || ''}
+                          onChange={(e) => onChange('tagline', e.target.value)}
+                          placeholder="Your sub heading"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
 
-      <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mx-4 mt-4">
-          <TabsTrigger value="basic" className="text-xs">Basic</TabsTrigger>
-          <TabsTrigger value="content" className="text-xs">Content</TabsTrigger>
-          <TabsTrigger value="services" className="text-xs">Services</TabsTrigger>
-          <TabsTrigger value="design" className="text-xs">Design</TabsTrigger>
-        </TabsList>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Font Style</Label>
+                      <Select
+                        value={customizationData.heroFontStyle || 'modern'}
+                        onValueChange={(value) => onChange('heroFontStyle', value)}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {introFontStyles.map((style) => (
+                            <SelectItem key={style.value} value={style.value}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{style.name}</span>
+                                <span className="text-xs text-gray-500">{style.preview}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-        <TabsContent value="basic" className="px-4 pb-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="coachName" className="text-xs font-medium text-gray-700">
-                  Coach Name
-                </Label>
-                <Input
-                  id="coachName"
-                  value={data.coachName || ''}
-                  onChange={(e) => handleBasicInfoChange('coachName', e.target.value)}
-                  placeholder="Your Name"
-                  className="text-sm"
-                />
-              </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Text Color</Label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {introColorOptions.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => onChange('heroTextColor', color.value)}
+                            className={`relative w-full h-12 rounded-lg border-2 transition-all ${
+                              customizationData.heroTextColor === color.value 
+                                ? 'border-gray-800 scale-105' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
+                            style={{ 
+                              backgroundColor: color.value,
+                              border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
+                            }}
+                            title={color.name}
+                          >
+                            {customizationData.heroTextColor === color.value && (
+                              <div className={`absolute inset-0 flex items-center justify-center ${
+                                color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
+                              }`}>
+                                <div className="text-sm font-medium">✓</div>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-              <div>
-                <Label htmlFor="tagline" className="text-xs font-medium text-gray-700">
-                  Tagline
-                </Label>
-                <Input
-                  id="tagline"
-                  value={data.tagline || ''}
-                  onChange={(e) => handleBasicInfoChange('tagline', e.target.value)}
-                  placeholder="Your Expertise"
-                  className="text-sm"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Text Alignment</Label>
+                      <RadioGroup
+                        value={customizationData.heroAlignment || 'center'}
+                        onValueChange={(value) => onChange('heroAlignment', value as 'left' | 'center' | 'right')}
+                        className="flex space-x-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="left" id="hero-align-left" />
+                          <Label htmlFor="hero-align-left" className="text-sm">Left</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="center" id="hero-align-center" />
+                          <Label htmlFor="hero-align-center" className="text-sm">Center</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="right" id="hero-align-right" />
+                          <Label htmlFor="hero-align-right" className="text-sm">Right</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </CardContent>
+                </motion.div>
+              </CollapsibleContent>
+            )}
+          </AnimatePresence>
+        </Collapsible>
+      </Card>
 
-        <TabsContent value="content" className="px-4 pb-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Profile & Bio</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ImageUploader
-                value={data.profileImageData || data.profileImage}
-                onChange={(imageData) => handleImageChange(imageData, 'profileImageData')}
-                label="Profile Image"
-                section="header"
-              />
+      {/* Intro Section */}
+      <Card className="overflow-hidden">
+        <Collapsible open={openSections.intro} onOpenChange={() => toggleSection('intro')}>
+          <SectionHeader 
+            icon={FileText} 
+            title="Intro" 
+            isOpen={openSections.intro}
+            section="intro"
+          />
+          <AnimatePresence>
+            {openSections.intro && (
+              <CollapsibleContent forceMount>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <CardContent className="space-y-6 pt-0">
+                    <div>
+                      <Label htmlFor="introTitle" className="text-sm font-medium text-gray-700">Section Title</Label>
+                      <Input
+                        id="introTitle"
+                        value={customizationData.introTitle || ''}
+                        onChange={(e) => onChange('introTitle', e.target.value)}
+                        placeholder="Welcome to my page / About Me / etc."
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="bio" className="text-sm font-medium text-gray-700">Paragraph</Label>
+                      <Textarea
+                        id="bio"
+                        value={customizationData.bio || ''}
+                        onChange={(e) => onChange('bio', e.target.value)}
+                        placeholder="Tell your story and describe your approach..."
+                        rows={4}
+                        className="mt-1"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {(customizationData.bio || '').length}/500 characters
+                      </div>
+                    </div>
 
-              <div>
-                <Label htmlFor="bio" className="text-xs font-medium text-gray-700">
-                  Bio
-                </Label>
-                <Textarea
-                  id="bio"
-                  value={data.bio || ''}
-                  onChange={(e) => handleBasicInfoChange('bio', e.target.value)}
-                  placeholder="Tell us about yourself"
-                  className="text-sm"
-                />
-              </div>
-            </CardContent>
-          </Card>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Font Style</Label>
+                      <Select
+                        value={customizationData.introFontStyle || 'modern'}
+                        onValueChange={(value) => onChange('introFontStyle', value)}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {introFontStyles.map((style) => (
+                            <SelectItem key={style.value} value={style.value}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{style.name}</span>
+                                <span className="text-xs text-gray-500">{style.preview}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Header Image</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ImageUploader
-                value={data.headerImageData || data.headerImageUrl}
-                onChange={(imageData) => handleImageChange(imageData, 'headerImageData')}
-                label="Header Image"
-                section="header"
-              />
-            </CardContent>
-          </Card>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Text Color</Label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {introColorOptions.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => onChange('introTextColor', color.value)}
+                            className={`relative w-full h-12 rounded-lg border-2 transition-all ${
+                              customizationData.introTextColor === color.value 
+                                ? 'border-gray-800 scale-105' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
+                            style={{ 
+                              backgroundColor: color.value,
+                              border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
+                            }}
+                            title={color.name}
+                          >
+                            {customizationData.introTextColor === color.value && (
+                              <div className={`absolute inset-0 flex items-center justify-center ${
+                                color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
+                              }`}>
+                                <div className="text-sm font-medium">✓</div>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">About Image</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ImageUploader
-                value={data.aboutImageData || data.aboutImageUrl}
-                onChange={(imageData) => handleImageChange(imageData, 'aboutImageData')}
-                label="About Image"
-                section="about"
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Text Alignment</Label>
+                      <RadioGroup
+                        value={customizationData.introAlignment || 'left'}
+                        onValueChange={(value) => onChange('introAlignment', value as 'left' | 'center' | 'right')}
+                        className="flex space-x-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="left" id="align-left" />
+                          <Label htmlFor="align-left" className="text-sm">Left</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="center" id="align-center" />
+                          <Label htmlFor="align-center" className="text-sm">Center</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="right" id="align-right" />
+                          <Label htmlFor="align-right" className="text-sm">Right</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </CardContent>
+                </motion.div>
+              </CollapsibleContent>
+            )}
+          </AnimatePresence>
+        </Collapsible>
+      </Card>
 
-        <TabsContent value="services" className="px-4 pb-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Services</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {data.services && data.services.map((service, index) => (
-                <div key={index} className="space-y-2 border rounded-md p-3">
-                  <div className="flex justify-between items-center">
-                    <Badge variant="secondary">Service {index + 1}</Badge>
-                    <Button variant="ghost" size="sm" onClick={() => removeService(index)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div>
-                    <Label htmlFor={`serviceTitle-${index}`} className="text-xs font-medium text-gray-700">
-                      Title
-                    </Label>
-                    <Input
-                      id={`serviceTitle-${index}`}
-                      value={service.title || ''}
-                      onChange={(e) => handleServiceChange(index, 'title', e.target.value)}
-                      placeholder="Service Title"
-                      className="text-sm"
+      {/* Images Section */}
+      <Card className="overflow-hidden">
+        <Collapsible open={openSections.images} onOpenChange={() => toggleSection('images')}>
+          <SectionHeader 
+            icon={ImageIcon} 
+            title="Images" 
+            isOpen={openSections.images}
+            section="images"
+          />
+          <AnimatePresence>
+            {openSections.images && (
+              <CollapsibleContent forceMount>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <CardContent className="space-y-6 pt-0">
+                    <ImageUploader
+                      value={customizationData.headerImageData}
+                      onChange={(data) => onChange('headerImageData', data)}
+                      label="Header Background Image"
+                      section="header"
                     />
-                  </div>
-
-                  <div>
-                    <Label htmlFor={`serviceDescription-${index}`} className="text-xs font-medium text-gray-700">
-                      Description
-                    </Label>
-                    <Textarea
-                      id={`serviceDescription-${index}`}
-                      value={service.description || ''}
-                      onChange={(e) => handleServiceChange(index, 'description', e.target.value)}
-                      placeholder="Service Description"
-                      className="text-sm"
+                    
+                    <ImageUploader
+                      value={customizationData.aboutImageData}
+                      onChange={(data) => onChange('aboutImageData', data)}
+                      label="About Section Image"
+                      section="about"
                     />
-                  </div>
+                  </CardContent>
+                </motion.div>
+              </CollapsibleContent>
+            )}
+          </AnimatePresence>
+        </Collapsible>
+      </Card>
 
-                  <div>
-                    <Label htmlFor={`servicePrice-${index}`} className="text-xs font-medium text-gray-700">
-                      Price
-                    </Label>
-                    <Input
-                      id={`servicePrice-${index}`}
-                      value={service.price || ''}
-                      onChange={(e) => handleServiceChange(index, 'price', e.target.value)}
-                      placeholder="Service Price"
-                      className="text-sm"
-                    />
-                  </div>
-
-                  <ImageUploader
-                    value={service.imageData || service.imageUrl}
-                    onChange={(imageData) => handleServiceImageChange(imageData, index)}
-                    label="Service Image"
-                    section="service"
-                    serviceIndex={index}
-                  />
-                </div>
-              ))}
-
-              <Button variant="outline" size="sm" className="w-full justify-center" onClick={addService}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Service
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="design" className="px-4 pb-4 space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Theme & Typography</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="themeColor" className="text-xs font-medium text-gray-700">
-                  Theme Color
-                </Label>
-                <Input
-                  type="color"
-                  id="themeColor"
-                  value={data.themeColor || '#6366F1'}
-                  onChange={(e) => handleBasicInfoChange('themeColor', e.target.value)}
-                  className="h-9 w-full"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="fontFamily" className="text-xs font-medium text-gray-700">
-                  Font Family
-                </Label>
-                <Select
-                  value={data.fontFamily || ''}
-                  onValueChange={(value) => handleBasicInfoChange('fontFamily', value)}
+      {/* Services */}
+      <Card className="overflow-hidden">
+        <Collapsible open={openSections.services} onOpenChange={() => toggleSection('services')}>
+          <SectionHeader 
+            icon={Briefcase} 
+            title="Services & Offerings" 
+            isOpen={openSections.services}
+            section="services"
+          />
+          <AnimatePresence>
+            {openSections.services && (
+              <CollapsibleContent forceMount>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder="Select font family" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fontOptions.map((font) => (
-                      <SelectItem key={font.value} value={font.value}>
-                        {font.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-gray-600">Add your services and pricing</div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={addService}
+                        className="flex items-center space-x-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Add Service</span>
+                      </Button>
+                    </div>
+                    
+                    <AnimatePresence>
+                      {validServices.map((service, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.2 }}
+                          className="border rounded-lg p-4 space-y-3 bg-gray-50"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-gray-900">Service {index + 1}</h4>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeService(index)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 gap-3">
+                            <Input
+                              value={service.title || ''}
+                              onChange={(e) => handleServiceChange(index, 'title', e.target.value)}
+                              placeholder="e.g., Consultation Session"
+                            />
+                            <Textarea
+                              value={service.description || ''}
+                              onChange={(e) => handleServiceChange(index, 'description', e.target.value)}
+                              placeholder="Describe what this service includes..."
+                              rows={2}
+                            />
+                            <Input
+                              value={service.price || ''}
+                              onChange={(e) => handleServiceChange(index, 'price', e.target.value)}
+                              placeholder="e.g., $150/session or $500/package"
+                            />
+                            
+                            <ImageUploader
+                              value={service.imageData}
+                              onChange={(data) => handleServiceChange(index, 'imageData', data)}
+                              label="Service Icon/Image"
+                              section="service"
+                              serviceIndex={index}
+                            />
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    
+                    {validServices.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Briefcase className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                        <p>No services added yet</p>
+                        <p className="text-sm">Click "Add Service" to get started</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </motion.div>
+              </CollapsibleContent>
+            )}
+          </AnimatePresence>
+        </Collapsible>
+      </Card>
 
-              <div>
-                <Label htmlFor="backgroundStyle" className="text-xs font-medium text-gray-700">
-                  Background Style
-                </Label>
-                <Input
-                  id="backgroundStyle"
-                  value={data.backgroundStyle || ''}
-                  onChange={(e) => handleBasicInfoChange('backgroundStyle', e.target.value)}
-                  placeholder="e.g., gradient-to-br from-gray-50 to-blue-50"
-                  className="text-sm"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Call-to-Action Buttons</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="buttonText" className="text-xs font-medium text-gray-700">
-                  Button Text
-                </Label>
-                <Input
-                  id="buttonText"
-                  value={data.buttonText || ''}
-                  onChange={(e) => handleBasicInfoChange('buttonText', e.target.value)}
-                  placeholder="Get Started"
-                  className="text-sm"
-                />
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium text-gray-700 mb-2 block">
-                  Button Style
-                </Label>
-                <RadioGroup
-                  value={data.buttonStyle || 'bordered'}
-                  onValueChange={(value) => handleBasicInfoChange('buttonStyle', value)}
-                  className="flex space-x-4"
+      {/* Call to Action */}
+      <Card className="overflow-hidden">
+        <Collapsible open={openSections.cta} onOpenChange={() => toggleSection('cta')}>
+          <SectionHeader 
+            icon={Settings} 
+            title="Call to Action" 
+            isOpen={openSections.cta}
+            section="cta"
+          />
+          <AnimatePresence>
+            {openSections.cta && (
+              <CollapsibleContent forceMount>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="bordered" id="bordered" />
-                    <Label htmlFor="bordered" className="text-xs">Bordered</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="borderless" id="borderless" />
-                    <Label htmlFor="borderless" className="text-xs">Borderless</Label>
-                  </div>
-                </RadioGroup>
-              </div>
+                  <CardContent className="space-y-6 pt-0">
+                    <div>
+                      <Label htmlFor="buttonText" className="text-sm font-medium text-gray-700">Button Text</Label>
+                      <Input
+                        id="buttonText"
+                        value={customizationData.buttonText || ''}
+                        onChange={(e) => onChange('buttonText', e.target.value)}
+                        placeholder="e.g., Get Started, Contact Me, Learn More"
+                        className="mt-1"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        This text will appear on your main call-to-action buttons
+                      </div>
+                    </div>
 
-              <div>
-                <Label htmlFor="buttonFontFamily" className="text-xs font-medium text-gray-700">
-                  Button Font
-                </Label>
-                <Select
-                  value={data.buttonFontFamily || ''}
-                  onValueChange={(value) => handleBasicInfoChange('buttonFontFamily', value)}
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Button Style</Label>
+                      <RadioGroup
+                        value={customizationData.buttonStyle || 'bordered'}
+                        onValueChange={(value) => onChange('buttonStyle', value as 'bordered' | 'borderless')}
+                        className="flex space-x-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="bordered" id="button-bordered" />
+                          <Label htmlFor="button-bordered" className="text-sm">Bordered</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="borderless" id="button-borderless" />
+                          <Label htmlFor="button-borderless" className="text-sm">Borderless</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Button Color</Label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {introColorOptions.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => onChange('buttonColor', color.value)}
+                            className={`relative w-full h-12 rounded-lg border-2 transition-all ${
+                              customizationData.buttonColor === color.value 
+                                ? 'border-gray-800 scale-105' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
+                            style={{ 
+                              backgroundColor: color.value,
+                              border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
+                            }}
+                            title={color.name}
+                          >
+                            {customizationData.buttonColor === color.value && (
+                              <div className={`absolute inset-0 flex items-center justify-center ${
+                                color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
+                              }`}>
+                                <div className="text-sm font-medium">✓</div>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Button Text Color</Label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {introColorOptions.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => onChange('buttonTextColor', color.value)}
+                            className={`relative w-full h-12 rounded-lg border-2 transition-all ${
+                              customizationData.buttonTextColor === color.value 
+                                ? 'border-gray-800 scale-105' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
+                            style={{ 
+                              backgroundColor: color.value,
+                              border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
+                            }}
+                            title={color.name}
+                          >
+                            {customizationData.buttonTextColor === color.value && (
+                              <div className={`absolute inset-0 flex items-center justify-center ${
+                                color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
+                              }`}>
+                                <div className="text-sm font-medium">✓</div>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="buttonFontFamily" className="text-sm font-medium text-gray-700">Button Font</Label>
+                      <Select
+                        value={customizationData.buttonFontFamily || 'Inter'}
+                        onValueChange={(value) => onChange('buttonFontFamily', value)}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fontOptions.map((font) => (
+                            <SelectItem key={font.value} value={font.value}>
+                              <div className="flex flex-col">
+                                <span style={{ fontFamily: font.value }} className="font-medium">
+                                  {font.name}
+                                </span>
+                                <span className="text-xs text-gray-500">{font.category} • {font.preview}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </motion.div>
+              </CollapsibleContent>
+            )}
+          </AnimatePresence>
+        </Collapsible>
+      </Card>
+
+      {/* Design Settings */}
+      <Card className="overflow-hidden">
+        <Collapsible open={openSections.design} onOpenChange={() => toggleSection('design')}>
+          <SectionHeader 
+            icon={Palette} 
+            title="Design & Styling" 
+            isOpen={openSections.design}
+            section="design"
+          />
+          <AnimatePresence>
+            {openSections.design && (
+              <CollapsibleContent forceMount>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder="Select font family" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fontOptions.map((font) => (
-                      <SelectItem key={font.value} value={font.value}>
-                        {font.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-xs font-medium text-gray-700">
-                    Button Colors
-                  </Label>
-                  <div className="flex bg-gray-100 rounded-md p-1">
-                    <Button
-                      variant={buttonColorMode === 'button' ? 'default' : 'ghost'}
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setButtonColorMode('button')}
-                    >
-                      Button
-                    </Button>
-                    <Button
-                      variant={buttonColorMode === 'text' ? 'default' : 'ghost'}
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setButtonColorMode('text')}
-                    >
-                      Text
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-5 gap-2">
-                  {introColorOptions.map((color) => (
-                    <button
-                      key={color}
-                      className={`w-8 h-8 rounded-md border-2 transition-all ${
-                        (buttonColorMode === 'button' ? data.buttonColor : data.buttonTextColor) === color
-                          ? 'border-gray-800 scale-110'
-                          : 'border-gray-200 hover:border-gray-400'
-                      }`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => handleColorChange(buttonColorMode, color)}
-                      title={buttonColorMode === 'button' ? 'Button Color' : 'Text Color'}
-                    />
-                  ))}
-                </div>
-                
-                <div className="mt-2 text-xs text-gray-500">
-                  {buttonColorMode === 'button' ? 'Button' : 'Text'} Color: {
-                    buttonColorMode === 'button' 
-                      ? (data.buttonColor || 'Default') 
-                      : (data.buttonTextColor || 'Default')
-                  }
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Content Styling</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="introTitle" className="text-xs font-medium text-gray-700">
-                  Intro Title
-                </Label>
-                <Input
-                  id="introTitle"
-                  value={data.introTitle || ''}
-                  onChange={(e) => handleBasicInfoChange('introTitle', e.target.value)}
-                  placeholder="e.g., About Me"
-                  className="text-sm"
-                />
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium text-gray-700 mb-2 block">
-                  Intro Alignment
-                </Label>
-                <RadioGroup
-                  value={data.introAlignment || 'left'}
-                  onValueChange={(value) => handleBasicInfoChange('introAlignment', value)}
-                  className="flex space-x-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="left" id="left" />
-                    <Label htmlFor="left" className="text-xs">Left</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="center" id="center" />
-                    <Label htmlFor="center" className="text-xs">Center</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="right" id="right" />
-                    <Label htmlFor="right" className="text-xs">Right</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div>
-                <Label htmlFor="introFontStyle" className="text-xs font-medium text-gray-700">
-                  Intro Font Style
-                </Label>
-                <Input
-                  id="introFontStyle"
-                  value={data.introFontStyle || ''}
-                  onChange={(e) => handleBasicInfoChange('introFontStyle', e.target.value)}
-                  placeholder="e.g., font-serif font-light"
-                  className="text-sm"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="introTextColor" className="text-xs font-medium text-gray-700">
-                  Intro Text Color
-                </Label>
-                <Input
-                  type="color"
-                  id="introTextColor"
-                  value={data.introTextColor || '#374151'}
-                  onChange={(e) => handleBasicInfoChange('introTextColor', e.target.value)}
-                  className="h-9 w-full"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="heroFontStyle" className="text-xs font-medium text-gray-700">
-                  Hero Font Style
-                </Label>
-                <Input
-                  id="heroFontStyle"
-                  value={data.heroFontStyle || ''}
-                  onChange={(e) => handleBasicInfoChange('heroFontStyle', e.target.value)}
-                  placeholder="e.g., font-bold"
-                  className="text-sm"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="heroTextColor" className="text-xs font-medium text-gray-700">
-                  Hero Text Color
-                </Label>
-                <Input
-                  type="color"
-                  id="heroTextColor"
-                  value={data.heroTextColor || '#FFFFFF'}
-                  onChange={(e) => handleBasicInfoChange('heroTextColor', e.target.value)}
-                  className="h-9 w-full"
-                />
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium text-gray-700 mb-2 block">
-                  Hero Alignment
-                </Label>
-                <RadioGroup
-                  value={data.heroAlignment || 'left'}
-                  onValueChange={(value) => handleBasicInfoChange('heroAlignment', value)}
-                  className="flex space-x-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="left" id="hero-left" />
-                    <Label htmlFor="hero-left" className="text-xs">Left</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="center" id="hero-center" />
-                    <Label htmlFor="hero-center" className="text-xs">Center</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="right" id="hero-right" />
-                    <Label htmlFor="hero-right" className="text-xs">Right</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                  <CardContent className="space-y-6 pt-0">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Brand Color</Label>
+                      <div className="grid grid-cols-5 gap-3">
+                        {colorOptions.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => onChange('themeColor', color.value)}
+                            className={`group relative w-full h-12 rounded-lg border-2 transition-all ${
+                              customizationData.themeColor === color.value 
+                                ? 'border-gray-800 scale-110' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            style={{ backgroundColor: color.value }}
+                            title={color.name}
+                          >
+                            {customizationData.themeColor === color.value && (
+                              <div className="absolute inset-0 flex items-center justify-center text-white">
+                                <div className="w-4 h-4 rounded-full bg-white bg-opacity-30 flex items-center justify-center">
+                                  ✓
+                                </div>
+                              </div>
+                            )}
+                            <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                                {color.name}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="fontFamily" className="text-sm font-medium text-gray-700">Typography</Label>
+                      <Select
+                        value={customizationData.fontFamily || 'Inter'}
+                        onValueChange={(value) => onChange('fontFamily', value)}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fontOptions.map((font) => (
+                            <SelectItem key={font.value} value={font.value}>
+                              <div className="flex flex-col">
+                                <span style={{ fontFamily: font.value }} className="font-medium">
+                                  {font.name}
+                                </span>
+                                <span className="text-xs text-gray-500">{font.category} • {font.preview}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </motion.div>
+              </CollapsibleContent>
+            )}
+          </AnimatePresence>
+        </Collapsible>
+      </Card>
     </div>
   );
 };

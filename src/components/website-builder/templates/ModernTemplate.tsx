@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -39,21 +40,6 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
 
   // Filter out null services and ensure we have valid service objects
   const validServices = validateServices(customizationData.services || []);
-
-  // Helper function to get button styling
-  const getButtonStyles = (isInverted = false) => {
-    const buttonColor = customizationData.buttonColor || themeColor;
-    const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
-    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
-    const buttonStyle = customizationData.buttonStyle || 'bordered';
-    
-    return {
-      fontFamily: `${buttonFontFamily}, sans-serif`,
-      backgroundColor: isInverted ? 'transparent' : buttonColor,
-      color: isInverted ? buttonColor : buttonTextColor,
-      border: buttonStyle === 'bordered' ? `2px solid ${buttonColor}` : 'none',
-    };
-  };
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
@@ -173,8 +159,8 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
             </p>
             <div className={`flex ${customizationData.heroAlignment === 'center' ? 'justify-center' : customizationData.heroAlignment === 'right' ? 'justify-end lg:justify-end' : 'justify-center lg:justify-start'}`}>
               <Button 
-                className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px] hover:opacity-90 transition-opacity"
-                style={getButtonStyles()}
+                className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
+                style={{ backgroundColor: themeColor }}
               >
                 {customizationData.buttonText || "Start Your Journey"}
               </Button>
@@ -255,8 +241,8 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
                           <Button 
                             onClick={() => handlePurchaseClick(service, index)}
                             disabled={purchasingService === index}
-                            className="min-h-[36px] hover:opacity-90 transition-opacity"
-                            style={getButtonStyles()}
+                            className="min-h-[36px]"
+                            style={{ backgroundColor: themeColor }}
                           >
                             {purchasingService === index ? "Processing..." : "Purchase"}
                           </Button>
@@ -287,15 +273,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">Ready to Transform Your Life?</h2>
           <p className="text-sm sm:text-base mb-4 sm:mb-6 opacity-90">Take the first step towards achieving your goals.</p>
-          <Button 
-            className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px] hover:opacity-90 transition-opacity"
-            style={{
-              fontFamily: `${customizationData.buttonFontFamily || fontFamily}, sans-serif`,
-              backgroundColor: '#FFFFFF',
-              color: '#111827',
-              border: customizationData.buttonStyle === 'bordered' ? '2px solid #FFFFFF' : 'none'
-            }}
-          >
+          <Button className="bg-white text-gray-900 hover:bg-gray-100 py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]">
             {customizationData.buttonText || "Book Consultation"}
           </Button>
         </div>

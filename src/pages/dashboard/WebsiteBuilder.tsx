@@ -209,61 +209,6 @@ export default function WebsiteBuilder() {
     }
   };
 
-  const handleImageUpload = async (file: File, type: 'profile' | 'header' | 'about' | 'service', serviceIndex?: number) => {
-    if (!user) return;
-
-    try {
-      // Create file path
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${type}${serviceIndex !== undefined ? `/${serviceIndex}` : ''}/${fileName}`;
-
-      console.log('Uploading to path:', filePath);
-
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('website-images')
-        .upload(filePath, file);
-
-      if (error) throw error;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('website-images')
-        .getPublicUrl(data.path);
-
-      const imageData = {
-        url: urlData.publicUrl,
-        filePath: data.path
-      };
-
-      // Update customization data based on type
-      if (type === 'service' && serviceIndex !== undefined) {
-        const updatedServices = [...(customizationData.services || [])];
-        updatedServices[serviceIndex] = { ...updatedServices[serviceIndex], imageData };
-        setCustomizationData(prev => ({ ...prev, services: updatedServices }));
-      } else {
-        const fieldName = type === 'profile' ? 'profileImageData' : 
-                         type === 'header' ? 'headerImageData' : 
-                         'aboutImageData';
-        setCustomizationData(prev => ({ ...prev, [fieldName]: imageData }));
-      }
-
-      toast({
-        title: "Image uploaded",
-        description: "Your image has been uploaded successfully."
-      });
-
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast({
-        variant: "destructive",
-        title: "Upload failed",
-        description: error.message || "Failed to upload image."
-      });
-    }
-  };
-
   const handleCustomizationChange = (field: string, value: any) => {
     setCustomizationData(prev => {
       const updated = { ...prev, [field]: value };
@@ -485,9 +430,8 @@ export default function WebsiteBuilder() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <CustomizationPanel
-              data={customizationData}
-              onUpdate={setCustomizationData}
-              onImageUpload={handleImageUpload}
+              customizationData={customizationData}
+              onChange={handleCustomizationChange}
             />
             
             <Button

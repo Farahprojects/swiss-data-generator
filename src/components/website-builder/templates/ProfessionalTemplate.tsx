@@ -23,21 +23,6 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
-  // Helper function to get button styling
-  const getButtonStyles = (isInverted = false) => {
-    const buttonColor = customizationData.buttonColor || themeColor;
-    const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
-    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
-    const buttonStyle = customizationData.buttonStyle || 'bordered';
-    
-    return {
-      fontFamily: `${buttonFontFamily}, sans-serif`,
-      backgroundColor: isInverted ? 'transparent' : buttonColor,
-      color: isInverted ? buttonColor : buttonTextColor,
-      border: buttonStyle === 'bordered' ? `2px solid ${buttonColor}` : 'none',
-    };
-  };
-
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
       toast({
@@ -111,18 +96,18 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-6 sm:mb-8 justify-center lg:justify-start">
                 <Button 
-                  className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
-                  style={getButtonStyles()}
+                  className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px]"
+                  style={{ backgroundColor: themeColor }}
                 >
                   {customizationData.buttonText || "Schedule Consultation"}
                 </Button>
                 <Button 
-                  className={`py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity ${
+                  variant="outline" 
+                  className={`py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] ${
                     hasHeaderImage 
                       ? 'border-white text-white hover:bg-white hover:text-gray-900'
                       : 'border-gray-300'
                   }`}
-                  style={getButtonStyles(true)}
                 >
                   Download Brochure
                 </Button>
@@ -239,16 +224,13 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
                     <Button 
                       onClick={() => handlePurchaseClick(service, index)}
                       disabled={purchasingService === index}
-                      className="min-h-[36px] hover:opacity-90 transition-opacity"
-                      style={getButtonStyles()}
+                      className="min-h-[36px]"
+                      style={{ backgroundColor: themeColor }}
                     >
                       {purchasingService === index ? "Processing..." : "Purchase"}
                     </Button>
                   ) : (
-                    <Button 
-                      className="min-h-[36px] hover:opacity-90 transition-opacity"
-                      style={getButtonStyles(true)}
-                    >
+                    <Button variant="outline" size="sm" className="min-h-[36px]">
                       Learn More
                     </Button>
                   )}
@@ -265,21 +247,10 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">Ready to Elevate Your Leadership?</h2>
           <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">Let's discuss how we can accelerate your professional growth.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
-              style={{
-                fontFamily: `${customizationData.buttonFontFamily || fontFamily}, sans-serif`,
-                backgroundColor: '#FFFFFF',
-                color: themeColor,
-                border: customizationData.buttonStyle === 'bordered' ? '2px solid #FFFFFF' : 'none'
-              }}
-            >
+            <Button className="bg-white text-blue-600 hover:bg-gray-100 py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px]">
               {customizationData.buttonText || "Book Strategy Session"}
             </Button>
-            <Button 
-              className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
-              style={getButtonStyles(true)}
-            >
+            <Button variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600 py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px]">
               View Case Studies
             </Button>
           </div>
