@@ -285,7 +285,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
       </section>
 
       {/* CTA Section */}
-      <section className={`${sectionPadding} bg-gray-900`}>
+      <section className={sectionPadding} style={{ backgroundColor: themeColor }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">
             {customizationData.footerHeading || "Ready to Transform Your Life?"}

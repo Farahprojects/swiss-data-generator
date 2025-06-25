@@ -259,7 +259,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
       </section>
 
       {/* Professional CTA */}
-      <section className={`${sectionPadding} bg-blue-800`}>
+      <section className={sectionPadding} style={{ backgroundColor: themeColor }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">
             {customizationData.footerHeading || "Ready to Elevate Your Leadership?"}
