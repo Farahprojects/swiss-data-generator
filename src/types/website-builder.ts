@@ -27,6 +27,10 @@ export interface CustomizationData {
   heroAlignment?: 'left' | 'center' | 'right';
   services?: Service[];
   buttonText?: string;
+  buttonColor?: string;
+  buttonTextColor?: string;
+  buttonFontFamily?: string;
+  buttonStyle?: 'bordered' | 'borderless';
   themeColor?: string;
   fontFamily?: string;
   backgroundStyle?: string;

@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -108,6 +107,30 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
     }
   };
 
+  // Helper function to get button styling
+  const getButtonStyles = (isOutline = false) => {
+    const buttonColor = customizationData.buttonColor || themeColor;
+    const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
+    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
+    const buttonStyle = customizationData.buttonStyle || 'bordered';
+    
+    if (isOutline) {
+      return {
+        fontFamily: `${buttonFontFamily}, sans-serif`,
+        backgroundColor: 'transparent',
+        color: buttonColor,
+        border: buttonStyle === 'bordered' ? `1px solid ${buttonColor}` : 'none',
+      };
+    }
+    
+    return {
+      fontFamily: `${buttonFontFamily}, sans-serif`,
+      backgroundColor: buttonColor,
+      color: buttonTextColor,
+      border: buttonStyle === 'bordered' ? `1px solid ${buttonColor}` : 'none',
+    };
+  };
+
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Ultra Minimal Hero */}
@@ -147,12 +170,8 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
               {customizationData.tagline || "Simplicity in growth. Clarity in purpose."}
             </p>
             <Button 
-              variant="outline"
-              className={`font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] ${
-                hasHeaderImage 
-                  ? 'border-white text-white hover:bg-white hover:text-gray-900' 
-                  : 'border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white'
-              }`}
+              className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] hover:opacity-90 transition-opacity"
+              style={getButtonStyles(true)}
             >
               {customizationData.buttonText || "Connect"}
             </Button>
@@ -225,8 +244,8 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
                         <Button 
                           onClick={() => handlePurchaseClick(service, index)}
                           disabled={purchasingService === index}
-                          className="font-light min-h-[36px]"
-                          style={{ backgroundColor: themeColor }}
+                          className="font-light min-h-[36px] hover:opacity-90 transition-opacity"
+                          style={getButtonStyles()}
                         >
                           {purchasingService === index ? "Processing..." : "Purchase"}
                         </Button>
@@ -257,8 +276,8 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
           <h2 className="text-2xl sm:text-3xl font-light mb-6 sm:mb-8 text-gray-900">Let's Begin</h2>
           <p className="text-base sm:text-lg text-gray-600 font-light mb-8 sm:mb-12">Simple. Focused. Transformative.</p>
           <Button 
-            className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px]"
-            style={{ backgroundColor: themeColor }}
+            className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] hover:opacity-90 transition-opacity"
+            style={getButtonStyles()}
           >
             {customizationData.buttonText || "Start Conversation"}
           </Button>

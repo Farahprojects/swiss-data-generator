@@ -21,6 +21,23 @@ const validateServices = (services: any[]) => {
     .filter((service: any) => service.title || service.description || service.price);
 };
 
+// Helper function to get button styling
+const getButtonStyles = (isInverted = false) => {
+  const buttonColor = customizationData.buttonColor || themeColor;
+  const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
+  const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
+  const buttonStyle = customizationData.buttonStyle || 'bordered';
+  
+  const baseStyles = {
+    fontFamily: `${buttonFontFamily}, serif`,
+    backgroundColor: isInverted ? 'transparent' : buttonColor,
+    color: isInverted ? buttonColor : buttonTextColor,
+    border: buttonStyle === 'bordered' ? `2px solid ${buttonColor}` : 'none',
+  };
+
+  return baseStyles;
+};
+
 export const ClassicTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
@@ -95,8 +112,8 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
               {customizationData.tagline || "Classical Wisdom for Modern Challenges"}
             </p>
             <Button 
-              className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px]"
-              style={{ backgroundColor: themeColor }}
+              className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
+              style={getButtonStyles()}
             >
               {customizationData.buttonText || "Begin Your Journey"}
             </Button>
@@ -177,13 +194,16 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
                         <Button 
                           onClick={() => handlePurchaseClick(service, index)}
                           disabled={purchasingService === index}
-                          className="min-h-[44px]"
-                          style={{ backgroundColor: themeColor }}
+                          className="min-h-[44px] hover:opacity-90 transition-opacity"
+                          style={getButtonStyles()}
                         >
                           {purchasingService === index ? "Processing..." : "Purchase"}
                         </Button>
                       ) : (
-                        <Button variant="outline" style={{ borderColor: themeColor, color: themeColor }} className="min-h-[44px]">
+                        <Button 
+                          className="min-h-[44px] hover:opacity-90 transition-opacity"
+                          style={getButtonStyles(true)}
+                        >
                           Learn More
                         </Button>
                       )}
@@ -206,7 +226,10 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6">Begin Your Transformation</h2>
           <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90 italic">Every journey begins with a single step</p>
           <div className="w-16 sm:w-24 h-1 bg-amber-500 mx-auto mb-6 sm:mb-8"></div>
-          <Button className="bg-white text-gray-900 hover:bg-gray-100 py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px]">
+          <Button 
+            className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
+            style={{...getButtonStyles(), backgroundColor: '#FFFFFF', color: '#111827'}}
+          >
             {customizationData.buttonText || "Schedule Consultation"}
           </Button>
         </div>

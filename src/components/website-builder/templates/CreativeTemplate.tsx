@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -22,6 +21,30 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
     .filter((service: any) => service && typeof service === 'object')
     .filter((service: any) => service.title || service.description || service.price);
 
+  // Helper function to get button styling
+  const getButtonStyles = (isSecondary = false) => {
+    const buttonColor = customizationData.buttonColor || themeColor;
+    const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
+    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
+    const buttonStyle = customizationData.buttonStyle || 'bordered';
+    
+    if (isSecondary) {
+      return {
+        fontFamily: `${buttonFontFamily}, sans-serif`,
+        backgroundColor: 'transparent',
+        color: buttonColor,
+        border: buttonStyle === 'bordered' ? `2px solid ${buttonColor}` : 'none',
+      };
+    }
+    
+    return {
+      fontFamily: `${buttonFontFamily}, sans-serif`,
+      background: `linear-gradient(135deg, ${buttonColor}, #ec4899)`,
+      color: buttonTextColor,
+      border: buttonStyle === 'bordered' ? `2px solid ${buttonColor}` : 'none',
+    };
+  };
+
   return (
     <div className="bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Creative Asymmetric Hero */}
@@ -35,7 +58,6 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
           </div>
         )}
         
-        {/* Header background image with no opacity reduction */}
         {hasHeaderImage && (
           <div 
             className="absolute inset-0 bg-cover bg-center"
@@ -60,13 +82,13 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                 <div className="flex flex-col sm:flex-row flex-wrap gap-4">
                   <Button 
                     className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full shadow-lg transform hover:scale-105 transition-transform min-h-[44px]"
-                    style={{ background: `linear-gradient(135deg, ${themeColor}, #ec4899)` }}
+                    style={getButtonStyles()}
                   >
                     {customizationData.buttonText || "Spark Innovation"}
                   </Button>
                   <Button 
-                    variant="outline" 
                     className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full border-2 hover:bg-white hover:shadow-lg transition-all min-h-[44px]"
+                    style={getButtonStyles(true)}
                   >
                     Explore Methods
                   </Button>
@@ -193,7 +215,15 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
           >
             <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold mb-4 sm:mb-6">Ready to Create Magic?</h2>
             <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">Let's turn your dreams into colorful reality.</p>
-            <Button className="bg-white text-purple-600 hover:bg-gray-100 py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg rounded-full shadow-xl transform hover:scale-105 transition-all min-h-[44px]">
+            <Button 
+              className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg rounded-full shadow-xl transform hover:scale-105 transition-all min-h-[44px]"
+              style={{
+                fontFamily: `${customizationData.buttonFontFamily || fontFamily}, sans-serif`,
+                backgroundColor: '#FFFFFF',
+                color: '#7C3AED',
+                border: customizationData.buttonStyle === 'bordered' ? '2px solid #FFFFFF' : 'none'
+              }}
+            >
               {customizationData.buttonText || "Start Creating"}
             </Button>
           </motion.div>

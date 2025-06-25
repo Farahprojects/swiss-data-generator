@@ -548,9 +548,9 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <CardContent className="pt-0">
+                  <CardContent className="space-y-6 pt-0">
                     <div>
-                      <Label htmlFor="buttonText" className="text-sm font-medium text-gray-700">Primary Button Text</Label>
+                      <Label htmlFor="buttonText" className="text-sm font-medium text-gray-700">Button Text</Label>
                       <Input
                         id="buttonText"
                         value={customizationData.buttonText || ''}
@@ -561,6 +561,108 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       <div className="text-xs text-gray-500 mt-1">
                         This text will appear on your main call-to-action buttons
                       </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Button Style</Label>
+                      <RadioGroup
+                        value={customizationData.buttonStyle || 'bordered'}
+                        onValueChange={(value) => onChange('buttonStyle', value as 'bordered' | 'borderless')}
+                        className="flex space-x-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="bordered" id="button-bordered" />
+                          <Label htmlFor="button-bordered" className="text-sm">Bordered</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="borderless" id="button-borderless" />
+                          <Label htmlFor="button-borderless" className="text-sm">Borderless</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Button Color</Label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {introColorOptions.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => onChange('buttonColor', color.value)}
+                            className={`relative w-full h-12 rounded-lg border-2 transition-all ${
+                              customizationData.buttonColor === color.value 
+                                ? 'border-gray-800 scale-105' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
+                            style={{ 
+                              backgroundColor: color.value,
+                              border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
+                            }}
+                            title={color.name}
+                          >
+                            {customizationData.buttonColor === color.value && (
+                              <div className={`absolute inset-0 flex items-center justify-center ${
+                                color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
+                              }`}>
+                                <div className="text-sm font-medium">✓</div>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Button Text Color</Label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {introColorOptions.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => onChange('buttonTextColor', color.value)}
+                            className={`relative w-full h-12 rounded-lg border-2 transition-all ${
+                              customizationData.buttonTextColor === color.value 
+                                ? 'border-gray-800 scale-105' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
+                            style={{ 
+                              backgroundColor: color.value,
+                              border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
+                            }}
+                            title={color.name}
+                          >
+                            {customizationData.buttonTextColor === color.value && (
+                              <div className={`absolute inset-0 flex items-center justify-center ${
+                                color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
+                              }`}>
+                                <div className="text-sm font-medium">✓</div>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="buttonFontFamily" className="text-sm font-medium text-gray-700">Button Font</Label>
+                      <Select
+                        value={customizationData.buttonFontFamily || 'Inter'}
+                        onValueChange={(value) => onChange('buttonFontFamily', value)}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fontOptions.map((font) => (
+                            <SelectItem key={font.value} value={font.value}>
+                              <div className="flex flex-col">
+                                <span style={{ fontFamily: font.value }} className="font-medium">
+                                  {font.name}
+                                </span>
+                                <span className="text-xs text-gray-500">{font.category} • {font.preview}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </CardContent>
                 </motion.div>

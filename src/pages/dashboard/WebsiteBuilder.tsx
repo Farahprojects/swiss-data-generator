@@ -195,6 +195,10 @@ export default function WebsiteBuilder() {
           { title: 'Career Coaching', description: 'Navigate your career path with confidence', price: '$120/session' }
         ],
         buttonText: 'Book a Consultation',
+        buttonColor: '#3B82F6',
+        buttonTextColor: '#FFFFFF',
+        buttonFontFamily: 'Inter',
+        buttonStyle: 'bordered' as const,
         themeColor: '#3B82F6',
         fontFamily: 'Inter',
         backgroundStyle: 'solid',
