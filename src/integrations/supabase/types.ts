@@ -526,6 +526,9 @@ export type Database = {
       guest_reports: {
         Row: {
           amount_paid: number
+          coach_id: string | null
+          coach_name: string | null
+          coach_slug: string | null
           created_at: string
           edge_function_confirmed: boolean | null
           email: string
@@ -534,18 +537,22 @@ export type Database = {
           id: string
           payment_status: string
           promo_code_used: string | null
+          purchase_type: string | null
           report_content: string | null
           report_data: Json
           report_pdf_data: string | null
           report_pdf_error: string | null
           report_pdf_status: string | null
-          report_type: string
+          report_type: string | null
           stripe_session_id: string
           swiss_data: Json | null
           updated_at: string
         }
         Insert: {
           amount_paid: number
+          coach_id?: string | null
+          coach_name?: string | null
+          coach_slug?: string | null
           created_at?: string
           edge_function_confirmed?: boolean | null
           email: string
@@ -554,18 +561,22 @@ export type Database = {
           id?: string
           payment_status?: string
           promo_code_used?: string | null
+          purchase_type?: string | null
           report_content?: string | null
           report_data?: Json
           report_pdf_data?: string | null
           report_pdf_error?: string | null
           report_pdf_status?: string | null
-          report_type: string
+          report_type?: string | null
           stripe_session_id: string
           swiss_data?: Json | null
           updated_at?: string
         }
         Update: {
           amount_paid?: number
+          coach_id?: string | null
+          coach_name?: string | null
+          coach_slug?: string | null
           created_at?: string
           edge_function_confirmed?: boolean | null
           email?: string
@@ -574,12 +585,13 @@ export type Database = {
           id?: string
           payment_status?: string
           promo_code_used?: string | null
+          purchase_type?: string | null
           report_content?: string | null
           report_data?: Json
           report_pdf_data?: string | null
           report_pdf_error?: string | null
           report_pdf_status?: string | null
-          report_type?: string
+          report_type?: string | null
           stripe_session_id?: string
           swiss_data?: Json | null
           updated_at?: string

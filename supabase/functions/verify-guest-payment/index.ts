@@ -6,6 +6,7 @@
 //   • clearer failures if something is missing
 //   • always sends birth_day + birth_time (or rejects the requst and updates)
 //   • UPDATED: pass guest_report_id as user_id to translator for tracing
+//   • UPDATED: handle coach reports and service routing
 //
 // ---------------------------------------------------------------------------
 
@@ -217,6 +218,22 @@ serve(async (req) => {
 
     // Assemble reportData from metadata
     const md = session.metadata ?? {};
+    
+    // Check if this is a service purchase (not a report)
+    if (md.purchase_type === 'service') {
+      console.log("[guest_verify_payment] Service purchase detected, skipping report creation");
+      return new Response(JSON.stringify({
+        success:        true,
+        verified:       true,
+        paymentStatus:  session.payment_status,
+        amountPaid:     session.amount_total,
+        currency:       session.currency,
+        isService:      true,
+        message:        "Service purchase verified; handled by webhook",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // This is a report purchase - proceed with report creation
     const reportData: ReportData = {
       email:                     md.guest_email || session.customer_details?.email,
       amount:                    md.amount,
@@ -242,40 +259,84 @@ serve(async (req) => {
       name:                      md.guest_name || "Guest",
     };
 
-    // Build translator payload early to fail fast on bad metadata
-    buildTranslatorPayload(reportData);                 // throws if invalid
+    // Only validate translator payload if we have a reportType (for actual reports)
+    if (reportData.reportType) {
+      try {
+        buildTranslatorPayload(reportData);                 // throws if invalid
+      } catch (err: any) {
+        throw new Error(`Invalid report data: ${err.message}`);
+      }
+    }
 
-    // Insert DB record
+    // Insert DB record with coach tracking
+    const insertData: any = {
+      stripe_session_id: session.id,
+      email:             reportData.email,
+      report_type:       reportData.reportType || null,
+      amount_paid:       (session.amount_total ?? 0) / 100,
+      report_data:       reportData,
+      payment_status:    "paid",
+      purchase_type:     md.purchase_type || 'report',
+    };
+
+    // Add coach tracking if present in metadata
+    if (md.coach_slug) {
+      insertData.coach_slug = md.coach_slug;
+      insertData.coach_name = md.coach_name || null;
+      
+      // Resolve coach_id from coach_slug if available
+      if (md.coach_slug) {
+        const { data: coachData } = await supabase
+          .from("coach_websites")
+          .select("coach_id")
+          .eq("site_slug", md.coach_slug)
+          .single();
+        
+        if (coachData?.coach_id) {
+          insertData.coach_id = coachData.coach_id;
+        }
+      }
+    }
+
     const { data: guestRec, error: insertErr } = await supabase
       .from("guest_reports")
-      .insert({
-        stripe_session_id: session.id,
-        email:             reportData.email,
-        report_type:       reportData.reportType,
-        amount_paid:       (session.amount_total ?? 0) / 100,
-        report_data:       reportData,
-        payment_status:    "paid",
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (insertErr) throw new Error(`DB insert failed: ${insertErr.message}`);
 
-    EdgeRuntime.waitUntil(
-      processSwissDataInBackground(guestRec.id, reportData, supabase),
-    );
+    // Only process Swiss data if this is an actual report with reportType
+    if (reportData.reportType) {
+      EdgeRuntime.waitUntil(
+        processSwissDataInBackground(guestRec.id, reportData, supabase),
+      );
 
-    return new Response(JSON.stringify({
-      success:        true,
-      verified:       true,
-      paymentStatus:  session.payment_status,
-      amountPaid:     session.amount_total,
-      currency:       session.currency,
-      reportData:     guestRec.report_data,
-      guestReportId:  guestRec.id,
-      swissProcessing:true,
-      message:        "Payment verified; Swiss processing started",
-    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({
+        success:        true,
+        verified:       true,
+        paymentStatus:  session.payment_status,
+        amountPaid:     session.amount_total,
+        currency:       session.currency,
+        reportData:     guestRec.report_data,
+        guestReportId:  guestRec.id,
+        swissProcessing:true,
+        isCoachReport:  !!md.coach_slug,
+        message:        md.coach_slug ? "Coach report verified; Swiss processing started" : "Payment verified; Swiss processing started",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } else {
+      // Coach purchase without report type - just track the purchase
+      return new Response(JSON.stringify({
+        success:        true,
+        verified:       true,
+        paymentStatus:  session.payment_status,
+        amountPaid:     session.amount_total,
+        currency:       session.currency,
+        guestReportId:  guestRec.id,
+        isCoachReport:  true,
+        message:        "Coach purchase verified and tracked",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
   } catch (err: any) {
     console.error("[guest_verify_payment] Error:", err.message);

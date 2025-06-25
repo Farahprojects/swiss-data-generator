@@ -51,7 +51,7 @@ export const handleServicePurchase = async (service: ServicePurchaseData, onErro
           coach_slug: service.coachSlug,
           coach_name: service.coachName,
           service_price: service.price,
-          purchase_type: 'service'
+          purchase_type: 'service' // This routes to service_purchases table via webhook
         }
       }
     });
