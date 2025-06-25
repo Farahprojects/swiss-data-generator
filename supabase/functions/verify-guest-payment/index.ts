@@ -222,24 +222,40 @@ serve(async (req) => {
     
     // ────────── SERVICE PURCHASES - FIXED HANDLING ──────────
     if (md.purchase_type === 'service') {
-      console.log("[guest_verify_payment] Service purchase detected - processing without report data");
-      
-      // For service purchases, we don't need report data validation
-      // Just return success with coach information for proper redirects
-      return new Response(JSON.stringify({
-        success:        true,
-        verified:       true,
-        paymentStatus:  session.payment_status,
-        amountPaid:     session.amount_total,
-        currency:       session.currency,
-        isService:      true,
-        isCoachReport:  true,
-        coach_slug:     md.coach_slug || null,
-        coach_name:     md.coach_name || null,
-        service_title:  md.service_title || null,
-        message:        "Service purchase verified successfully",
-      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+  console.log("[guest_verify_payment] Service purchase detected - processing without report data");
+
+  const { error: serviceInsertErr } = await supabase
+    .from("service_purchases") // ✅ use your actual table name
+    .upsert({
+      stripe_session_id: session.id,
+      email: session.customer_details?.email ?? null,
+      coach_slug: md.coach_slug ?? null,
+      coach_name: md.coach_name ?? null,
+      service_title: md.service_title ?? null,
+      amount_paid: (session.amount_total ?? 0) / 100,
+      currency: session.currency,
+      purchase_type: 'service',
+      payment_status: 'paid',
+    }, { onConflict: 'stripe_session_id' });
+
+  if (serviceInsertErr) {
+    console.error("[guest_verify_payment] Failed to log service purchase:", serviceInsertErr);
+  }
+
+  return new Response(JSON.stringify({
+    success:        true,
+    verified:       true,
+    paymentStatus:  session.payment_status,
+    amountPaid:     session.amount_total,
+    currency:       session.currency,
+    isService:      true,
+    isCoachReport:  true,
+    coach_slug:     md.coach_slug || null,
+    coach_name:     md.coach_name || null,
+    service_title:  md.service_title || null,
+    message:        "Service purchase verified successfully",
+  }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
 
     // This is a report purchase - proceed with report creation
     const reportData: ReportData = {
