@@ -22,6 +22,9 @@ export interface CustomizationData {
   introAlignment?: 'left' | 'center' | 'right';
   introFontStyle?: string;
   introTextColor?: string;
+  heroFontStyle?: string;
+  heroTextColor?: string;
+  heroAlignment?: 'left' | 'center' | 'right';
   services?: Service[];
   buttonText?: string;
   themeColor?: string;

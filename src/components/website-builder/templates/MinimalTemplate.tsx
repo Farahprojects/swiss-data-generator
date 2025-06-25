@@ -68,6 +68,26 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
     setPurchasingService(null);
   };
 
+  // Get hero styling
+  const getHeroFontClass = (style: string) => {
+    switch (style) {
+      case 'elegant': return 'font-serif font-light';
+      case 'bold': return 'font-bold';
+      case 'handwritten': return 'font-mono';
+      case 'classic': return 'font-serif';
+      case 'minimal': return 'font-light tracking-wide';
+      default: return 'font-normal';
+    }
+  };
+
+  const getHeroAlignmentClass = (alignment: string) => {
+    switch (alignment) {
+      case 'center': return 'text-center';
+      case 'right': return 'text-right';
+      default: return 'text-left';
+    }
+  };
+
   // Get intro styling
   const getIntroFontClass = (style: string) => {
     switch (style) {
@@ -100,18 +120,29 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
           ></div>
         )}
         
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center relative z-10">
+        <div className={`max-w-2xl mx-auto px-4 sm:px-6 relative z-10 ${getHeroAlignmentClass(customizationData.heroAlignment || 'center')}`}>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
             style={{ textShadow: hasHeaderImage ? '2px 2px 4px rgba(0,0,0,0.7)' : 'none' }}
           >
-            <h1 className={`text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-light mb-6 sm:mb-8 tracking-wide leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}>
+            <h1 
+              className={`text-2xl sm:text-3xl lg:text-4xl xl:text-5xl mb-6 sm:mb-8 tracking-wide leading-tight ${
+                hasHeaderImage ? 'text-white' : ''
+              } ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
+              style={{ 
+                color: customizationData.heroTextColor || (hasHeaderImage ? '#FFFFFF' : '#111827')
+              }}
+            >
               {customizationData.coachName || "Maria Chen"}
             </h1>
             <div className={`w-12 sm:w-16 h-px mx-auto mb-6 sm:mb-8 ${hasHeaderImage ? 'bg-white' : 'bg-gray-900'}`}></div>
-            <p className={`text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 font-light leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-600'}`}>
+            <p 
+              className={`text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 font-light leading-relaxed ${
+                hasHeaderImage ? 'text-gray-200' : 'text-gray-600'
+              }`}
+            >
               {customizationData.tagline || "Simplicity in growth. Clarity in purpose."}
             </p>
             <Button 

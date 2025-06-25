@@ -70,6 +70,26 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
     setPurchasingService(null);
   };
 
+  // Get hero styling
+  const getHeroFontClass = (style: string) => {
+    switch (style) {
+      case 'elegant': return 'font-serif font-light';
+      case 'bold': return 'font-bold';
+      case 'handwritten': return 'font-mono';
+      case 'classic': return 'font-serif';
+      case 'minimal': return 'font-light tracking-wide';
+      default: return 'font-normal';
+    }
+  };
+
+  const getHeroAlignmentClass = (alignment: string) => {
+    switch (alignment) {
+      case 'center': return 'text-center lg:text-center';
+      case 'right': return 'text-right lg:text-right';
+      default: return 'text-center lg:text-left';
+    }
+  };
+
   // Get intro styling
   const getIntroFontClass = (style: string) => {
     switch (style) {
@@ -118,16 +138,21 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-white text-center lg:text-left"
+            className={`text-white ${getHeroAlignmentClass(customizationData.heroAlignment || 'left')}`}
             style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
           >
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight">
+            <h1 
+              className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
+              style={{
+                color: customizationData.heroTextColor || '#FFFFFF'
+              }}
+            >
               {customizationData.coachName || "Alex Johnson"}
             </h1>
             <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 text-gray-300 leading-relaxed">
               {customizationData.tagline || "Transforming Lives Through Modern Coaching"}
             </p>
-            <div className="flex justify-center lg:justify-start">
+            <div className={`flex ${customizationData.heroAlignment === 'center' ? 'justify-center' : customizationData.heroAlignment === 'right' ? 'justify-end lg:justify-end' : 'justify-center lg:justify-start'}`}>
               <Button 
                 className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
                 style={{ backgroundColor: themeColor }}
