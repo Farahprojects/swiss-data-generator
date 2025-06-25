@@ -18,6 +18,22 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
   const themeColor = customizationData.themeColor || '#1E40AF';
   const fontFamily = customizationData.fontFamily || 'Inter';
 
+  // Helper function to get button styles
+  const getButtonStyles = () => {
+    const buttonColor = customizationData.buttonColor || themeColor;
+    const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
+    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
+    const buttonStyle = customizationData.buttonStyle || 'bordered';
+    
+    return {
+      backgroundColor: buttonColor,
+      color: buttonTextColor,
+      fontFamily: `${buttonFontFamily}, sans-serif`,
+      border: buttonStyle === 'borderless' ? 'none' : `2px solid ${buttonColor}`,
+      borderRadius: buttonStyle === 'borderless' ? '0' : undefined
+    };
+  };
+
   const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
 
   // Check if header image exists
@@ -97,7 +113,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
               <div className="flex flex-col sm:flex-row gap-4 mb-6 sm:mb-8 justify-center lg:justify-start">
                 <Button 
                   className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px]"
-                  style={{ backgroundColor: themeColor }}
+                  style={getButtonStyles()}
                 >
                   {customizationData.buttonText || "Schedule Consultation"}
                 </Button>
@@ -247,7 +263,10 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">Ready to Elevate Your Leadership?</h2>
           <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">Let's discuss how we can accelerate your professional growth.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button className="bg-white text-blue-600 hover:bg-gray-100 py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px]">
+            <Button 
+              className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px]"
+              style={getButtonStyles()}
+            >
               {customizationData.buttonText || "Book Strategy Session"}
             </Button>
             <Button variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600 py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px]">

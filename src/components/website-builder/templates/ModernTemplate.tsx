@@ -30,6 +30,22 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
   const themeColor = customizationData.themeColor || '#6366F1';
   const fontFamily = customizationData.fontFamily || 'Inter';
 
+  // Helper function to get button styles
+  const getButtonStyles = () => {
+    const buttonColor = customizationData.buttonColor || themeColor;
+    const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
+    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
+    const buttonStyle = customizationData.buttonStyle || 'bordered';
+    
+    return {
+      backgroundColor: buttonColor,
+      color: buttonTextColor,
+      fontFamily: `${buttonFontFamily}, sans-serif`,
+      border: buttonStyle === 'borderless' ? 'none' : `2px solid ${buttonColor}`,
+      borderRadius: buttonStyle === 'borderless' ? '0' : undefined
+    };
+  };
+
   // Only adjust section height for preview, use responsive padding
   const sectionPadding = isPreview ? 'py-6' : 'py-8 sm:py-12 lg:py-16';
   const heroSection = isPreview ? 'py-8' : 'min-h-screen';
@@ -160,7 +176,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
             <div className={`flex ${customizationData.heroAlignment === 'center' ? 'justify-center' : customizationData.heroAlignment === 'right' ? 'justify-end lg:justify-end' : 'justify-center lg:justify-start'}`}>
               <Button 
                 className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
-                style={{ backgroundColor: themeColor }}
+                style={getButtonStyles()}
               >
                 {customizationData.buttonText || "Start Your Journey"}
               </Button>
@@ -273,7 +289,10 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">Ready to Transform Your Life?</h2>
           <p className="text-sm sm:text-base mb-4 sm:mb-6 opacity-90">Take the first step towards achieving your goals.</p>
-          <Button className="bg-white text-gray-900 hover:bg-gray-100 py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]">
+          <Button 
+            className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
+            style={getButtonStyles()}
+          >
             {customizationData.buttonText || "Book Consultation"}
           </Button>
         </div>

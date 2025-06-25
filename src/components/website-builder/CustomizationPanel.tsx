@@ -95,6 +95,8 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     design: false
   });
 
+  const [buttonColorMode, setButtonColorMode] = useState<'button' | 'text'>('button');
+
   const toggleSection = (section: string) => {
     setOpenSections(prev => ({
       ...prev,
@@ -582,62 +584,56 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Button Color</Label>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Button Colors</Label>
+                      <RadioGroup
+                        value={buttonColorMode}
+                        onValueChange={(value) => setButtonColorMode(value as 'button' | 'text')}
+                        className="flex space-x-6 mb-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="button" id="color-button" />
+                          <Label htmlFor="color-button" className="text-sm">Button Color</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="text" id="color-text" />
+                          <Label htmlFor="color-text" className="text-sm">Text Color</Label>
+                        </div>
+                      </RadioGroup>
+                      
                       <div className="grid grid-cols-4 gap-3">
-                        {introColorOptions.map((color) => (
-                          <button
-                            key={color.value}
-                            onClick={() => onChange('buttonColor', color.value)}
-                            className={`relative w-full h-12 rounded-lg border-2 transition-all ${
-                              customizationData.buttonColor === color.value 
-                                ? 'border-gray-800 scale-105' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
-                            style={{ 
-                              backgroundColor: color.value,
-                              border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
-                            }}
-                            title={color.name}
-                          >
-                            {customizationData.buttonColor === color.value && (
-                              <div className={`absolute inset-0 flex items-center justify-center ${
-                                color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
-                              }`}>
-                                <div className="text-sm font-medium">✓</div>
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Button Text Color</Label>
-                      <div className="grid grid-cols-4 gap-3">
-                        {introColorOptions.map((color) => (
-                          <button
-                            key={color.value}
-                            onClick={() => onChange('buttonTextColor', color.value)}
-                            className={`relative w-full h-12 rounded-lg border-2 transition-all ${
-                              customizationData.buttonTextColor === color.value 
-                                ? 'border-gray-800 scale-105' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
-                            style={{ 
-                              backgroundColor: color.value,
-                              border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
-                            }}
-                            title={color.name}
-                          >
-                            {customizationData.buttonTextColor === color.value && (
-                              <div className={`absolute inset-0 flex items-center justify-center ${
-                                color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
-                              }`}>
-                                <div className="text-sm font-medium">✓</div>
-                              </div>
-                            )}
-                          </button>
-                        ))}
+                        {introColorOptions.map((color) => {
+                          const isSelected = buttonColorMode === 'button' 
+                            ? customizationData.buttonColor === color.value
+                            : customizationData.buttonTextColor === color.value;
+                          
+                          return (
+                            <button
+                              key={color.value}
+                              onClick={() => {
+                                const field = buttonColorMode === 'button' ? 'buttonColor' : 'buttonTextColor';
+                                onChange(field, color.value);
+                              }}
+                              className={`relative w-full h-12 rounded-lg border-2 transition-all ${
+                                isSelected 
+                                  ? 'border-gray-800 scale-105' 
+                                  : 'border-gray-200 hover:border-gray-300'
+                              } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
+                              style={{ 
+                                backgroundColor: color.value,
+                                border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
+                              }}
+                              title={color.name}
+                            >
+                              {isSelected && (
+                                <div className={`absolute inset-0 flex items-center justify-center ${
+                                  color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
+                                }`}>
+                                  <div className="text-sm font-medium">✓</div>
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
