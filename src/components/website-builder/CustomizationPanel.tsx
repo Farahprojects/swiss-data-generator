@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Slider } from "@/components/ui/slider";
-import { Plus, X, ChevronDown, ChevronUp, Palette, Type, Settings, User, Briefcase, Image as ImageIcon } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Plus, X, ChevronDown, ChevronUp, Palette, Type, Settings, User, Briefcase, Image as ImageIcon, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageUploader } from "./ImageUploader";
 import type { Service, CustomizationData, ImageData } from "@/types/website-builder";
@@ -42,6 +43,24 @@ const fontOptions = [
   { name: 'Merriweather', value: 'Merriweather', category: 'Serif', preview: 'Classical and readable' }
 ];
 
+const introFontStyles = [
+  { name: 'Modern', value: 'modern', preview: 'Clean and contemporary' },
+  { name: 'Elegant', value: 'elegant', preview: 'Sophisticated and refined' },
+  { name: 'Bold', value: 'bold', preview: 'Strong and impactful' },
+  { name: 'Handwritten', value: 'handwritten', preview: 'Personal and warm' },
+  { name: 'Classic', value: 'classic', preview: 'Timeless and traditional' },
+  { name: 'Minimal', value: 'minimal', preview: 'Simple and understated' }
+];
+
+const introColorOptions = [
+  { name: 'Dark Gray', value: '#374151' },
+  { name: 'Charcoal', value: '#1F2937' },
+  { name: 'Navy', value: '#1E40AF' },
+  { name: 'Forest', value: '#059669' },
+  { name: 'Purple', value: '#7C3AED' },
+  { name: 'Crimson', value: '#DC2626' }
+];
+
 // Helper function to validate and clean services array
 const validateServices = (services: any[]): Service[] => {
   if (!Array.isArray(services)) {
@@ -68,6 +87,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 }) => {
   const [openSections, setOpenSections] = useState({
     basic: true,
+    intro: false,
     images: false,
     services: true,
     cta: false,
@@ -162,9 +182,46 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                         />
                       </div>
                     </div>
+                  </CardContent>
+                </motion.div>
+              </CollapsibleContent>
+            )}
+          </AnimatePresence>
+        </Collapsible>
+      </Card>
+
+      {/* Intro Section */}
+      <Card className="overflow-hidden">
+        <Collapsible open={openSections.intro} onOpenChange={() => toggleSection('intro')}>
+          <SectionHeader 
+            icon={FileText} 
+            title="Intro" 
+            isOpen={openSections.intro}
+            section="intro"
+          />
+          <AnimatePresence>
+            {openSections.intro && (
+              <CollapsibleContent forceMount>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <CardContent className="space-y-6 pt-0">
+                    <div>
+                      <Label htmlFor="introTitle" className="text-sm font-medium text-gray-700">Section Title</Label>
+                      <Input
+                        id="introTitle"
+                        value={customizationData.introTitle || ''}
+                        onChange={(e) => onChange('introTitle', e.target.value)}
+                        placeholder="Welcome to my page / About Me / etc."
+                        className="mt-1"
+                      />
+                    </div>
                     
                     <div>
-                      <Label htmlFor="bio" className="text-sm font-medium text-gray-700">About You</Label>
+                      <Label htmlFor="bio" className="text-sm font-medium text-gray-700">Paragraph</Label>
                       <Textarea
                         id="bio"
                         value={customizationData.bio || ''}
@@ -176,6 +233,75 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       <div className="text-xs text-gray-500 mt-1">
                         {(customizationData.bio || '').length}/500 characters
                       </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Font Style</Label>
+                      <Select
+                        value={customizationData.introFontStyle || 'modern'}
+                        onValueChange={(value) => onChange('introFontStyle', value)}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {introFontStyles.map((style) => (
+                            <SelectItem key={style.value} value={style.value}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{style.name}</span>
+                                <span className="text-xs text-gray-500">{style.preview}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Text Color</Label>
+                      <div className="grid grid-cols-6 gap-2">
+                        {introColorOptions.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => onChange('introTextColor', color.value)}
+                            className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                              customizationData.introTextColor === color.value 
+                                ? 'border-gray-800 scale-110' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            style={{ backgroundColor: color.value }}
+                            title={color.name}
+                          >
+                            {customizationData.introTextColor === color.value && (
+                              <div className="w-full h-full flex items-center justify-center text-white text-xs">
+                                ✓
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-3 block">Text Alignment</Label>
+                      <RadioGroup
+                        value={customizationData.introAlignment || 'left'}
+                        onValueChange={(value) => onChange('introAlignment', value as 'left' | 'center' | 'right')}
+                        className="flex space-x-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="left" id="align-left" />
+                          <Label htmlFor="align-left" className="text-sm">Left</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="center" id="align-center" />
+                          <Label htmlFor="align-center" className="text-sm">Center</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="right" id="align-right" />
+                          <Label htmlFor="align-right" className="text-sm">Right</Label>
+                        </div>
+                      </RadioGroup>
                     </div>
                   </CardContent>
                 </motion.div>

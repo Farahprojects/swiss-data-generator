@@ -69,6 +69,26 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
     setPurchasingService(null);
   };
 
+  // Get intro styling
+  const getIntroFontClass = (style: string) => {
+    switch (style) {
+      case 'elegant': return 'font-serif font-light';
+      case 'bold': return 'font-bold';
+      case 'handwritten': return 'font-mono';
+      case 'classic': return 'font-serif';
+      case 'minimal': return 'font-light tracking-wide';
+      default: return 'font-normal';
+    }
+  };
+
+  const getAlignmentClass = (alignment: string) => {
+    switch (alignment) {
+      case 'center': return 'text-center';
+      case 'right': return 'text-right';
+      default: return 'text-left';
+    }
+  };
+
   return (
     <div className="bg-gray-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Modern Hero with Split Layout */}
@@ -122,9 +142,17 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
       <section className={`${sectionPadding} bg-white`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
-            <div className="text-center lg:text-left">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">About Me</h2>
-              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+            <div className={getAlignmentClass(customizationData.introAlignment || 'left')}>
+              <h2 
+                className={`text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                style={{ color: customizationData.introTextColor || '#111827' }}
+              >
+                {customizationData.introTitle || "About Me"}
+              </h2>
+              <p 
+                className={`text-sm sm:text-base leading-relaxed ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                style={{ color: customizationData.introTextColor || '#6B7280' }}
+              >
                 {customizationData.bio || "I'm passionate about helping individuals unlock their full potential through personalized coaching approaches that blend modern techniques with timeless wisdom."}
               </p>
             </div>

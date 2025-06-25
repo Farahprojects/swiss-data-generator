@@ -67,6 +67,26 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
     setPurchasingService(null);
   };
 
+  // Get intro styling
+  const getIntroFontClass = (style: string) => {
+    switch (style) {
+      case 'elegant': return 'font-serif font-light';
+      case 'bold': return 'font-bold';
+      case 'handwritten': return 'font-mono';
+      case 'classic': return 'font-serif';
+      case 'minimal': return 'font-light tracking-wide';
+      default: return 'font-normal';
+    }
+  };
+
+  const getAlignmentClass = (alignment: string) => {
+    switch (alignment) {
+      case 'center': return 'text-center';
+      case 'right': return 'text-right';
+      default: return 'text-left';
+    }
+  };
+
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Ultra Minimal Hero */}
@@ -114,9 +134,14 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center"
+            className={getAlignmentClass(customizationData.introAlignment || 'left')}
           >
-            <h2 className="text-2xl sm:text-3xl font-light mb-8 sm:mb-12 text-gray-900">About</h2>
+            <h2 
+              className={`text-2xl sm:text-3xl mb-8 sm:mb-12 ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+              style={{ color: customizationData.introTextColor || '#374151' }}
+            >
+              {customizationData.introTitle || "About Me"}
+            </h2>
             
             {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) && (
               <div className="mb-8 sm:mb-12">
@@ -128,7 +153,10 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
               </div>
             )}
             
-            <p className="text-base sm:text-lg text-gray-600 leading-relaxed font-light">
+            <p 
+              className={`text-base sm:text-lg leading-relaxed ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+              style={{ color: customizationData.introTextColor || '#6B7280' }}
+            >
               {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
             </p>
           </motion.div>

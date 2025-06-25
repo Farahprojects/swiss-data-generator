@@ -186,6 +186,10 @@ export default function WebsiteBuilder() {
         coachName: user?.email?.split('@')[0] || 'Your Name',
         tagline: template.template_data?.defaultContent?.hero?.subtitle || 'Professional Coach',
         bio: 'I help people transform their lives through personalized coaching.',
+        introTitle: 'About Me',
+        introAlignment: 'left' as const,
+        introFontStyle: 'modern',
+        introTextColor: '#374151',
         services: [
           { title: 'Life Coaching', description: '1-on-1 sessions to help you achieve your goals', price: '$150/session' },
           { title: 'Career Coaching', description: 'Navigate your career path with confidence', price: '$120/session' }

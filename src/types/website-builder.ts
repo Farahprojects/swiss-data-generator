@@ -18,6 +18,10 @@ export interface CustomizationData {
   profileImageData?: ImageData;
   tagline?: string;
   bio?: string;
+  introTitle?: string;
+  introAlignment?: 'left' | 'center' | 'right';
+  introFontStyle?: string;
+  introTextColor?: string;
   services?: Service[];
   buttonText?: string;
   themeColor?: string;
