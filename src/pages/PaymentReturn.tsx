@@ -76,10 +76,10 @@ const PaymentReturn = () => {
               description: `Your ${result.service_title || 'service'} booking has been confirmed.`,
             });
           } else if (result.isCoachReport) {
-            setMessage('Coach report order confirmed! Your report will be processed shortly.');
+            setMessage('Order confirmed! Your report will be processed shortly.');
             toast({
               title: "Success!",
-              description: `Your coach report order has been processed successfully.`,
+              description: `Your report order has been processed successfully.`,
             });
           } else {
             setMessage('Payment confirmed! Your order has been processed and saved to our database.');
@@ -160,7 +160,7 @@ const PaymentReturn = () => {
       if (verificationResult.coach_slug) {
         return {
           text: "Return to Coach Website",
-          action: () => navigate(`/coach/${verificationResult.coach_slug}`)
+          action: () => navigate(`/${verificationResult.coach_slug}`)
         };
       }
       // Otherwise return to main report form
@@ -210,7 +210,7 @@ const PaymentReturn = () => {
                   {verificationResult.isService 
                     ? `Your ${verificationResult.service_title || 'service'} booking has been confirmed. You'll receive further details via email.`
                     : verificationResult.isCoachReport
-                    ? `Your coach report order has been confirmed and will be processed shortly. You'll receive an email with your completed report.`
+                    ? `Your report order has been confirmed and will be processed shortly. You'll receive an email with your completed report.`
                     : `We've received your payment and your ${verificationResult.reportData?.reportType} report will be processed shortly. You'll receive an email with your completed report.`
                   }
                 </p>
@@ -234,7 +234,7 @@ const PaymentReturn = () => {
                 <p className="text-xs text-muted-foreground mt-2">
                   {verificationResult.isService 
                     ? 'Your booking confirmation has been sent via email.'
-                    : 'Your order has been saved and will be processed within 24 hours.'
+                    : 'Your order has been saved and will be processed within 10min hours.'
                   }
                 </p>
               </div>
