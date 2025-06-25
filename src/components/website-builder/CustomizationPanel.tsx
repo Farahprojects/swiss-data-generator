@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,12 +52,14 @@ const introFontStyles = [
 ];
 
 const introColorOptions = [
+  { name: 'Black', value: '#000000' },
   { name: 'Dark Gray', value: '#374151' },
-  { name: 'Charcoal', value: '#1F2937' },
-  { name: 'Navy', value: '#1E40AF' },
-  { name: 'Forest', value: '#059669' },
-  { name: 'Purple', value: '#7C3AED' },
-  { name: 'Crimson', value: '#DC2626' }
+  { name: 'White', value: '#FFFFFF' },
+  { name: 'Light Gray', value: '#D1D5DB' },
+  { name: 'Deep Blue', value: '#1E40AF' },
+  { name: 'Warm Red', value: '#DC2626' },
+  { name: 'Sage', value: '#A7B29C' },
+  { name: 'Sand', value: '#D4B896' }
 ];
 
 // Helper function to validate and clean services array
@@ -259,24 +260,34 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
                     <div>
                       <Label className="text-sm font-medium text-gray-700 mb-3 block">Text Color</Label>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-4 gap-3">
                         {introColorOptions.map((color) => (
                           <button
                             key={color.value}
                             onClick={() => onChange('introTextColor', color.value)}
-                            className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                            className={`relative w-full h-12 rounded-lg border-2 transition-all ${
                               customizationData.introTextColor === color.value 
-                                ? 'border-gray-800 scale-110' 
+                                ? 'border-gray-800 scale-105' 
                                 : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            style={{ backgroundColor: color.value }}
+                            } ${color.value === '#FFFFFF' ? 'shadow-inner' : ''}`}
+                            style={{ 
+                              backgroundColor: color.value,
+                              border: color.value === '#FFFFFF' ? '2px solid #E5E7EB' : undefined
+                            }}
                             title={color.name}
                           >
                             {customizationData.introTextColor === color.value && (
-                              <div className="w-full h-full flex items-center justify-center text-white text-xs">
-                                ✓
+                              <div className={`absolute inset-0 flex items-center justify-center ${
+                                color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
+                              }`}>
+                                <div className="text-sm font-medium">✓</div>
                               </div>
                             )}
+                            <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                                {color.name}
+                              </div>
+                            </div>
                           </button>
                         ))}
                       </div>
