@@ -92,7 +92,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     images: false,
     services: true,
     cta: false,
-    design: false
+    footer: false
   });
 
   const [buttonColorMode, setButtonColorMode] = useState<'button' | 'text'>('button');
@@ -668,17 +668,17 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
         </Collapsible>
       </Card>
 
-      {/* Design Settings */}
+      {/* Footer */}
       <Card className="overflow-hidden">
-        <Collapsible open={openSections.design} onOpenChange={() => toggleSection('design')}>
+        <Collapsible open={openSections.footer} onOpenChange={() => toggleSection('footer')}>
           <SectionHeader 
             icon={Palette} 
-            title="Design & Styling" 
-            isOpen={openSections.design}
-            section="design"
+            title="Footer" 
+            isOpen={openSections.footer}
+            section="footer"
           />
           <AnimatePresence>
-            {openSections.design && (
+            {openSections.footer && (
               <CollapsibleContent forceMount>
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
@@ -687,6 +687,28 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   transition={{ duration: 0.2 }}
                 >
                   <CardContent className="space-y-6 pt-0">
+                    <div>
+                      <Label htmlFor="footerHeading" className="text-sm font-medium text-gray-700">Footer Heading</Label>
+                      <Input
+                        id="footerHeading"
+                        value={customizationData.footerHeading || ''}
+                        onChange={(e) => onChange('footerHeading', e.target.value)}
+                        placeholder="e.g., Ready to Transform Your Life?"
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="footerSubheading" className="text-sm font-medium text-gray-700">Footer Subheading</Label>
+                      <Input
+                        id="footerSubheading"
+                        value={customizationData.footerSubheading || ''}
+                        onChange={(e) => onChange('footerSubheading', e.target.value)}
+                        placeholder="e.g., Take the first step towards achieving your goals."
+                        className="mt-1"
+                      />
+                    </div>
+
                     <div>
                       <Label className="text-sm font-medium text-gray-700 mb-3 block">Brand Color</Label>
                       <div className="grid grid-cols-5 gap-3">
