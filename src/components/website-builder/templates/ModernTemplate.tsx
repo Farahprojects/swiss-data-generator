@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -144,13 +145,13 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
           <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
             <div className={getAlignmentClass(customizationData.introAlignment || 'left')}>
               <h2 
-                className={`text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                className={`text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
                 style={{ color: customizationData.introTextColor || '#111827' }}
               >
                 {customizationData.introTitle || "About Me"}
               </h2>
               <p 
-                className={`text-sm sm:text-base leading-relaxed ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                className={`text-sm sm:text-base leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
                 style={{ color: customizationData.introTextColor || '#6B7280' }}
               >
                 {customizationData.bio || "I'm passionate about helping individuals unlock their full potential through personalized coaching approaches that blend modern techniques with timeless wisdom."}
