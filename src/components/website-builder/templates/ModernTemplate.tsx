@@ -149,7 +149,12 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
             >
               {customizationData.coachName || "Alex Johnson"}
             </h1>
-            <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 text-gray-300 leading-relaxed">
+            <p 
+              className={`text-base sm:text-lg md:text-xl mb-6 sm:mb-8 leading-relaxed ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
+              style={{
+                color: customizationData.heroTextColor || '#D1D5DB'
+              }}
+            >
               {customizationData.tagline || "Transforming Lives Through Modern Coaching"}
             </p>
             <div className={`flex ${customizationData.heroAlignment === 'center' ? 'justify-center' : customizationData.heroAlignment === 'right' ? 'justify-end lg:justify-end' : 'justify-center lg:justify-start'}`}>

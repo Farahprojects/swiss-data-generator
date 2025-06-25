@@ -139,9 +139,10 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             </h1>
             <div className={`w-12 sm:w-16 h-px mx-auto mb-6 sm:mb-8 ${hasHeaderImage ? 'bg-white' : 'bg-gray-900'}`}></div>
             <p 
-              className={`text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 font-light leading-relaxed ${
-                hasHeaderImage ? 'text-gray-200' : 'text-gray-600'
-              }`}
+              className={`text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 font-light leading-relaxed ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
+              style={{ 
+                color: customizationData.heroTextColor || (hasHeaderImage ? '#E5E7EB' : '#6B7280')
+              }}
             >
               {customizationData.tagline || "Simplicity in growth. Clarity in purpose."}
             </p>

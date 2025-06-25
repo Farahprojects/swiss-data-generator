@@ -173,12 +173,12 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       </div>
                       
                       <div>
-                        <Label htmlFor="tagline" className="text-sm font-medium text-gray-700">Professional Tagline</Label>
+                        <Label htmlFor="tagline" className="text-sm font-medium text-gray-700">Sub Heading</Label>
                         <Input
                           id="tagline"
                           value={customizationData.tagline || ''}
                           onChange={(e) => onChange('tagline', e.target.value)}
-                          placeholder="Your professional tagline"
+                          placeholder="Your sub heading"
                           className="mt-1"
                         />
                       </div>
