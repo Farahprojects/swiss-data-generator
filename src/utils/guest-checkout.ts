@@ -82,10 +82,23 @@ export const verifyGuestPayment = async (sessionId: string) => {
     }
 
     console.log("✅ Guest payment verification result:", data);
+    
+    // Return all properties from the edge function response
     return {
       success: true,
       verified: data.verified,
       reportData: data.reportData,
+      guestReportId: data.guestReportId,
+      paymentStatus: data.paymentStatus,
+      amountPaid: data.amountPaid,
+      currency: data.currency,
+      isService: data.isService,
+      isCoachReport: data.isCoachReport,
+      coach_slug: data.coach_slug,
+      coach_name: data.coach_name,
+      service_title: data.service_title,
+      swissProcessing: data.swissProcessing,
+      message: data.message,
       error: data.error
     };
   } catch (err) {
