@@ -7,6 +7,7 @@
 //   • always sends birth_day + birth_time (or rejects the requst and updates)
 //   • UPDATED: pass guest_report_id as user_id to translator for tracing
 //   • UPDATED: handle coach reports and service routing
+//   • FIXED: properly handle service purchases without report processing
 //
 // ---------------------------------------------------------------------------
 
@@ -219,9 +220,12 @@ serve(async (req) => {
     // Assemble reportData from metadata
     const md = session.metadata ?? {};
     
-    // Check if this is a service purchase (not a report)
+    // ────────── SERVICE PURCHASES - FIXED HANDLING ──────────
     if (md.purchase_type === 'service') {
-      console.log("[guest_verify_payment] Service purchase detected, skipping report creation");
+      console.log("[guest_verify_payment] Service purchase detected - processing without report data");
+      
+      // For service purchases, we don't need report data validation
+      // Just return success with coach information for proper redirects
       return new Response(JSON.stringify({
         success:        true,
         verified:       true,
@@ -229,7 +233,11 @@ serve(async (req) => {
         amountPaid:     session.amount_total,
         currency:       session.currency,
         isService:      true,
-        message:        "Service purchase verified; handled by webhook",
+        isCoachReport:  true,
+        coach_slug:     md.coach_slug || null,
+        coach_name:     md.coach_name || null,
+        service_title:  md.service_title || null,
+        message:        "Service purchase verified successfully",
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -322,6 +330,8 @@ serve(async (req) => {
         guestReportId:  guestRec.id,
         swissProcessing:true,
         isCoachReport:  !!md.coach_slug,
+        coach_slug:     md.coach_slug || null,
+        coach_name:     md.coach_name || null,
         message:        md.coach_slug ? "Coach report verified; Swiss processing started" : "Payment verified; Swiss processing started",
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     } else {
@@ -334,6 +344,8 @@ serve(async (req) => {
         currency:       session.currency,
         guestReportId:  guestRec.id,
         isCoachReport:  true,
+        coach_slug:     md.coach_slug || null,
+        coach_name:     md.coach_name || null,
         message:        "Coach purchase verified and tracked",
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }

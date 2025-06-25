@@ -13,7 +13,7 @@ const PaymentReturn = () => {
   
   const [status, setStatus] = useState<'loading' | 'verifying' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing your payment...');
-  const [reportDetails, setReportDetails] = useState<any>(null);
+  const [verificationResult, setVerificationResult] = useState<any>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   
   // Guard to prevent multiple executions
@@ -56,26 +56,40 @@ const PaymentReturn = () => {
           setMessage('Verifying your payment and saving your order...');
           
           console.log("🔄 Starting payment verification with session ID:", sessionId);
-          const verificationResult = await verifyGuestPayment(sessionId);
-          console.log("📊 Verification result:", verificationResult);
+          const result = await verifyGuestPayment(sessionId);
+          console.log("📊 Verification result:", result);
           
-          if (!verificationResult.success || !verificationResult.verified) {
-            console.error("❌ Payment verification failed:", verificationResult.error);
-            throw new Error(verificationResult.error || 'Payment verification failed');
+          if (!result.success || !result.verified) {
+            console.error("❌ Payment verification failed:", result.error);
+            throw new Error(result.error || 'Payment verification failed');
           }
           
-          // Payment verified and guest report record created
+          // Payment verified successfully
           setStatus('success');
-          setMessage('Payment confirmed! Your order has been processed and saved to our database.');
-          setReportDetails(verificationResult.reportData);
+          setVerificationResult(result);
+          
+          // Set appropriate success message based on purchase type
+          if (result.isService) {
+            setMessage('Service booking confirmed! Your purchase has been processed successfully.');
+            toast({
+              title: "Service Booked!",
+              description: `Your ${result.service_title || 'service'} booking has been confirmed.`,
+            });
+          } else if (result.isCoachReport) {
+            setMessage('Coach report order confirmed! Your report will be processed shortly.');
+            toast({
+              title: "Success!",
+              description: `Your coach report order has been processed successfully.`,
+            });
+          } else {
+            setMessage('Payment confirmed! Your order has been processed and saved to our database.');
+            toast({
+              title: "Success!",
+              description: `Your payment for ${result.reportData?.reportType || 'report'} has been processed successfully.`,
+            });
+          }
           
           console.log("✅ Payment verification completed successfully");
-          
-          toast({
-            title: "Success!",
-            description: `Your payment for ${verificationResult.reportData.reportType} has been processed successfully.`,
-          });
-          
           return;
         }
         
@@ -139,15 +153,41 @@ const PaymentReturn = () => {
     }
   };
 
-  // Extract first name from report details if available
+  // Get the appropriate return button text and action
+  const getReturnButton = () => {
+    if (status === 'success' && verificationResult) {
+      // If it's a coach purchase, return to coach website
+      if (verificationResult.coach_slug) {
+        return {
+          text: "Return to Coach Website",
+          action: () => navigate(`/coach/${verificationResult.coach_slug}`)
+        };
+      }
+      // Otherwise return to main report form
+      return {
+        text: "Order Another Report",
+        action: () => navigate('/report')
+      };
+    }
+    
+    // Default fallback for error states
+    return {
+      text: "Return to Report Form",
+      action: () => navigate('/report')
+    };
+  };
+
+  // Extract first name from verification result if available
   const getFirstName = () => {
-    if (reportDetails?.name) {
-      return reportDetails.name.split(' ')[0];
+    if (verificationResult?.reportData?.name) {
+      return verificationResult.reportData.name.split(' ')[0];
     }
     return '';
   };
 
-  if (status === 'success' && reportDetails) {
+  if (status === 'success' && verificationResult) {
+    const returnButton = getReturnButton();
+    
     return (
       <div className="h-screen bg-gradient-to-b from-background to-muted/20 flex items-start justify-center pt-20">
         <div className="container mx-auto px-4">
@@ -157,7 +197,9 @@ const PaymentReturn = () => {
                 <CheckCircle className="h-12 w-12 text-primary" />
                 <div>
                   <h1 className="text-3xl font-bold text-foreground">Payment Successful!</h1>
-                  <p className="text-muted-foreground">Your report order has been processed</p>
+                  <p className="text-muted-foreground">
+                    {verificationResult.isService ? 'Your service booking has been confirmed' : 'Your order has been processed'}
+                  </p>
                 </div>
               </div>
               
@@ -165,26 +207,44 @@ const PaymentReturn = () => {
                 <h3 className="text-lg font-semibold text-primary mb-2">Thank you for your purchase!</h3>
                 <p className="text-foreground">
                   {getFirstName() && `Hi ${getFirstName()}, `}
-                  We've received your payment and your {reportDetails.reportType} report will be processed shortly. 
-                  You'll receive an email at {reportDetails.email} with your completed report.
+                  {verificationResult.isService 
+                    ? `Your ${verificationResult.service_title || 'service'} booking has been confirmed. You'll receive further details via email.`
+                    : verificationResult.isCoachReport
+                    ? `Your coach report order has been confirmed and will be processed shortly. You'll receive an email with your completed report.`
+                    : `We've received your payment and your ${verificationResult.reportData?.reportType} report will be processed shortly. You'll receive an email with your completed report.`
+                  }
                 </p>
               </div>
 
               <div className="bg-muted p-4 rounded-lg text-sm mb-6">
-                <p><strong>Report Type:</strong> {reportDetails.reportType}</p>
-                <p><strong>Email:</strong> {reportDetails.email}</p>
-                <p><strong>Amount:</strong> ${reportDetails.amount}</p>
+                {verificationResult.isService ? (
+                  <>
+                    <p><strong>Service:</strong> {verificationResult.service_title || 'Service booking'}</p>
+                    {verificationResult.coach_name && <p><strong>Coach:</strong> {verificationResult.coach_name}</p>}
+                    <p><strong>Amount:</strong> ${(verificationResult.amountPaid / 100).toFixed(2)}</p>
+                  </>
+                ) : (
+                  <>
+                    <p><strong>Report Type:</strong> {verificationResult.reportData?.reportType}</p>
+                    <p><strong>Email:</strong> {verificationResult.reportData?.email}</p>
+                    <p><strong>Amount:</strong> ${verificationResult.reportData?.amount}</p>
+                    {verificationResult.coach_name && <p><strong>Coach:</strong> {verificationResult.coach_name}</p>}
+                  </>
+                )}
                 <p className="text-xs text-muted-foreground mt-2">
-                  Your order has been saved and will be processed within 24 hours.
+                  {verificationResult.isService 
+                    ? 'Your booking confirmation has been sent via email.'
+                    : 'Your order has been saved and will be processed within 24 hours.'
+                  }
                 </p>
               </div>
 
               <Button 
-                onClick={() => navigate('/report')} 
+                onClick={returnButton.action}
                 variant="outline"
                 className="mt-4"
               >
-                Order Another Report
+                {returnButton.text}
               </Button>
             </CardContent>
           </Card>
