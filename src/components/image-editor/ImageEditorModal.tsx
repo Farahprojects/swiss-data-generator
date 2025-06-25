@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -11,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ImageCanvas } from './ImageCanvas';
 import { EditorToolbar } from './EditorToolbar';
 import { AdjustmentPanel } from './AdjustmentPanel';
+import { ColourPanel } from './ColourPanel';
 import { SimpleCropTool } from './SimpleCropTool';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,14 +18,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ImageData } from '@/types/website-builder';
 
-export type EditorTool = 'select' | 'crop' | 'adjust';
+export type EditorTool = 'select' | 'adjust' | 'colour' | 'crop';
 
 export interface ImageAdjustments {
   brightness: number;
   contrast: number;
-  opacity: number;
-  opacityColor: string;
   rotation: number;
+}
+
+export interface ColourSettings {
+  opacity: number;
+  color: string;
 }
 
 interface ImageEditorModalProps {
@@ -55,9 +58,11 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [adjustments, setAdjustments] = useState<ImageAdjustments>({
     brightness: 0,
     contrast: 0,
-    opacity: 0,
-    opacityColor: '#000000',
     rotation: 0
+  });
+  const [colourSettings, setColourSettings] = useState<ColourSettings>({
+    opacity: 0,
+    color: '#000000'
   });
 
   useEffect(() => {
@@ -66,9 +71,11 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       setAdjustments({
         brightness: 0,
         contrast: 0,
-        opacity: 0,
-        opacityColor: '#000000',
         rotation: 0
+      });
+      setColourSettings({
+        opacity: 0,
+        color: '#000000'
       });
     }
   }, [isOpen, imageData.url]);
@@ -265,9 +272,11 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       setAdjustments({
         brightness: 0,
         contrast: 0,
-        opacity: 0,
-        opacityColor: '#000000',
         rotation: 0
+      });
+      setColourSettings({
+        opacity: 0,
+        color: '#000000'
       });
       // Force canvas to reload original image by clearing it
       fabricCanvas.clear();
@@ -297,7 +306,8 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   imageUrl={imageData.url}
                   onCanvasReady={setFabricCanvas}
                   activeTool={activeTool}
-                  adjustments={hasCroppedImage ? { brightness: 0, contrast: 0, opacity: 0, opacityColor: '#000000', rotation: 0 } : adjustments}
+                  adjustments={hasCroppedImage ? { brightness: 0, contrast: 0, rotation: 0 } : adjustments}
+                  colourSettings={colourSettings}
                   cropApplied={hasCroppedImage}
                 />
               </div>
@@ -307,6 +317,14 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   <AdjustmentPanel
                     adjustments={adjustments}
                     onChange={setAdjustments}
+                    canvas={fabricCanvas}
+                  />
+                )}
+                
+                {activeTool === 'colour' && (
+                  <ColourPanel
+                    colourSettings={colourSettings}
+                    onChange={setColourSettings}
                     canvas={fabricCanvas}
                   />
                 )}
