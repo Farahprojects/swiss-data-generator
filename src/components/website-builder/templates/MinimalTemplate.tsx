@@ -138,11 +138,8 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             className={getAlignmentClass(customizationData.introAlignment || 'left')}
           >
             <h2 
-              className={`text-2xl sm:text-3xl mb-8 sm:mb-12 ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-              style={{ 
-                color: customizationData.introTextColor || '#374151',
-                textShadow: '0 2px 6px rgba(0,0,0,0.6)'
-              }}
+              className={`text-2xl sm:text-3xl mb-8 sm:mb-12 drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+              style={{ color: customizationData.introTextColor || '#374151' }}
             >
               {customizationData.introTitle || "About Me"}
             </h2>
@@ -158,11 +155,8 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             )}
             
             <p 
-              className={`text-base sm:text-lg leading-relaxed ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-              style={{ 
-                color: customizationData.introTextColor || '#6B7280',
-                textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-              }}
+              className={`text-base sm:text-lg leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+              style={{ color: customizationData.introTextColor || '#6B7280' }}
             >
               {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
             </p>
