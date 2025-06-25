@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -21,23 +22,6 @@ const validateServices = (services: any[]) => {
     .filter((service: any) => service.title || service.description || service.price);
 };
 
-// Helper function to get button styling
-const getButtonStyles = (isInverted = false) => {
-  const buttonColor = customizationData.buttonColor || themeColor;
-  const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
-  const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
-  const buttonStyle = customizationData.buttonStyle || 'bordered';
-  
-  const baseStyles = {
-    fontFamily: `${buttonFontFamily}, serif`,
-    backgroundColor: isInverted ? 'transparent' : buttonColor,
-    color: isInverted ? buttonColor : buttonTextColor,
-    border: buttonStyle === 'bordered' ? `2px solid ${buttonColor}` : 'none',
-  };
-
-  return baseStyles;
-};
-
 export const ClassicTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
@@ -54,6 +38,23 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
 
   // Filter out null services and ensure we have valid service objects
   const validServices = validateServices(customizationData.services || []);
+
+  // Helper function to get button styling - moved inside component to access variables
+  const getButtonStyles = (isInverted = false) => {
+    const buttonColor = customizationData.buttonColor || themeColor;
+    const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
+    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
+    const buttonStyle = customizationData.buttonStyle || 'bordered';
+    
+    const baseStyles = {
+      fontFamily: `${buttonFontFamily}, serif`,
+      backgroundColor: isInverted ? 'transparent' : buttonColor,
+      color: isInverted ? buttonColor : buttonTextColor,
+      border: buttonStyle === 'bordered' ? `2px solid ${buttonColor}` : 'none',
+    };
+
+    return baseStyles;
+  };
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
