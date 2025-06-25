@@ -145,14 +145,20 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
           <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
             <div className={getAlignmentClass(customizationData.introAlignment || 'left')}>
               <h2 
-                className={`text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                style={{ color: customizationData.introTextColor || '#111827' }}
+                className={`text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                style={{ 
+                  color: customizationData.introTextColor || '#111827',
+                  textShadow: '0 2px 6px rgba(0,0,0,0.6)'
+                }}
               >
                 {customizationData.introTitle || "About Me"}
               </h2>
               <p 
-                className={`text-sm sm:text-base leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                style={{ color: customizationData.introTextColor || '#6B7280' }}
+                className={`text-sm sm:text-base leading-relaxed ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                style={{ 
+                  color: customizationData.introTextColor || '#6B7280',
+                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                }}
               >
                 {customizationData.bio || "I'm passionate about helping individuals unlock their full potential through personalized coaching approaches that blend modern techniques with timeless wisdom."}
               </p>
@@ -239,7 +245,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
       </section>
 
       {/* CTA Section */}
-      <section className={sectionPadding} style={{ backgroundColor: themeColor }}>
+      <section className={`${sectionPadding}`} style={{ backgroundColor: themeColor }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">Ready to Transform Your Life?</h2>
           <p className="text-sm sm:text-base mb-4 sm:mb-6 opacity-90">Take the first step towards achieving your goals.</p>
