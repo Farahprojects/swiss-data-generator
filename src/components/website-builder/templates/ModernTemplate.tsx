@@ -1,5 +1,4 @@
 
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -288,8 +287,12 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
       {/* CTA Section */}
       <section className={sectionPadding} style={{ backgroundColor: themeColor }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">Ready to Transform Your Life?</h2>
-          <p className="text-sm sm:text-base mb-4 sm:mb-6 opacity-90">Take the first step towards achieving your goals.</p>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">
+            {customizationData.footerHeading || "Ready to Transform Your Life?"}
+          </h2>
+          <p className="text-sm sm:text-base mb-4 sm:mb-6 opacity-90">
+            {customizationData.footerSubheading || "Take the first step towards achieving your goals."}
+          </p>
           <Button 
             className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
             style={getButtonStyles()}

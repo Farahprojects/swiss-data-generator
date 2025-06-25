@@ -1,5 +1,4 @@
 
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -225,8 +224,12 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
       {/* Elegant CTA */}
       <section className={`${sectionPadding} bg-gray-900 text-white`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6">Begin Your Transformation</h2>
-          <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90 italic">Every journey begins with a single step</p>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6">
+            {customizationData.footerHeading || "Begin Your Transformation"}
+          </h2>
+          <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90 italic">
+            {customizationData.footerSubheading || "Every journey begins with a single step"}
+          </p>
           <div className="w-16 sm:w-24 h-1 bg-amber-500 mx-auto mb-6 sm:mb-8"></div>
           <Button 
             className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"

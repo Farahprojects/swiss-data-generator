@@ -1,5 +1,4 @@
 
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -262,8 +261,12 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
       {/* Professional CTA */}
       <section className={sectionPadding} style={{ backgroundColor: themeColor }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">Ready to Elevate Your Leadership?</h2>
-          <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">Let's discuss how we can accelerate your professional growth.</p>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">
+            {customizationData.footerHeading || "Ready to Elevate Your Leadership?"}
+          </h2>
+          <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">
+            {customizationData.footerSubheading || "Let's discuss how we can accelerate your professional growth."}
+          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px]"
