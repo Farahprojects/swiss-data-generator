@@ -1,4 +1,5 @@
 
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -49,7 +50,7 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
     const baseStyles = {
       fontFamily: `${buttonFontFamily}, serif`,
       backgroundColor: isInverted ? 'transparent' : (buttonStyle === 'bordered' ? 'transparent' : buttonColor),
-      color: isInverted ? buttonColor : (buttonStyle === 'bordered' ? buttonColor : buttonTextColor),
+      color: buttonTextColor,
       border: buttonStyle === 'borderless' ? 'none' : `2px solid ${buttonColor}`,
     };
 
@@ -236,7 +237,7 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
               return {
                 ...getButtonStyles(), 
                 backgroundColor: buttonStyle === 'bordered' ? '#FFFFFF' : buttonColor, 
-                color: buttonStyle === 'bordered' ? '#111827' : buttonTextColor
+                color: buttonTextColor
               };
             })()}
           >
