@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -48,9 +47,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
     
     const baseStyles = {
       fontFamily: `${buttonFontFamily}, serif`,
-      backgroundColor: isInverted ? 'transparent' : buttonColor,
-      color: isInverted ? buttonColor : buttonTextColor,
-      border: buttonStyle === 'bordered' ? `2px solid ${buttonColor}` : 'none',
+      backgroundColor: isInverted ? 'transparent' : (buttonStyle === 'bordered' ? 'transparent' : buttonColor),
+      color: isInverted ? buttonColor : (buttonStyle === 'bordered' ? buttonColor : buttonTextColor),
+      border: buttonStyle === 'borderless' ? 'none' : `2px solid ${buttonColor}`,
     };
 
     return baseStyles;
@@ -229,7 +228,7 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
           <div className="w-16 sm:w-24 h-1 bg-amber-500 mx-auto mb-6 sm:mb-8"></div>
           <Button 
             className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
-            style={{...getButtonStyles(), backgroundColor: '#FFFFFF', color: '#111827'}}
+            style={{...getButtonStyles(), backgroundColor: buttonStyle === 'bordered' ? '#FFFFFF' : buttonColor, color: buttonStyle === 'bordered' ? '#111827' : buttonTextColor}}
           >
             {customizationData.buttonText || "Schedule Consultation"}
           </Button>

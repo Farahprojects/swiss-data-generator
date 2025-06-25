@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -26,8 +27,8 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
     const buttonStyle = customizationData.buttonStyle || 'bordered';
     
     return {
-      backgroundColor: buttonColor,
-      color: buttonTextColor,
+      backgroundColor: buttonStyle === 'bordered' ? 'transparent' : buttonColor,
+      color: buttonStyle === 'bordered' ? buttonColor : buttonTextColor,
       fontFamily: `${buttonFontFamily}, sans-serif`,
       border: buttonStyle === 'borderless' ? 'none' : `2px solid ${buttonColor}`,
       borderRadius: buttonStyle === 'borderless' ? '0' : undefined

@@ -38,8 +38,8 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
     const buttonStyle = customizationData.buttonStyle || 'bordered';
     
     return {
-      backgroundColor: buttonColor,
-      color: buttonTextColor,
+      backgroundColor: buttonStyle === 'bordered' ? 'transparent' : buttonColor,
+      color: buttonStyle === 'bordered' ? buttonColor : buttonTextColor,
       fontFamily: `${buttonFontFamily}, sans-serif`,
       border: buttonStyle === 'borderless' ? 'none' : `2px solid ${buttonColor}`,
       borderRadius: buttonStyle === 'borderless' ? '0' : undefined
