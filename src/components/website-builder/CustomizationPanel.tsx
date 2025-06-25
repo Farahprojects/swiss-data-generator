@@ -141,12 +141,12 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   <CardContent className="space-y-6 pt-0">
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="coachName" className="text-sm font-medium text-gray-700">Coach Name</Label>
+                        <Label htmlFor="coachName" className="text-sm font-medium text-gray-700">Heading</Label>
                         <Input
                           id="coachName"
                           value={customizationData.coachName || ''}
                           onChange={(e) => onChange('coachName', e.target.value)}
-                          placeholder="Your full name"
+                          placeholder="Your main heading"
                           className="mt-1"
                         />
                       </div>
@@ -169,7 +169,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                         id="bio"
                         value={customizationData.bio || ''}
                         onChange={(e) => onChange('bio', e.target.value)}
-                        placeholder="Tell your story and describe your coaching approach..."
+                        placeholder="Tell your story and describe your approach..."
                         rows={4}
                         className="mt-1"
                       />
@@ -245,7 +245,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                 >
                   <CardContent className="space-y-4 pt-0">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-600">Add your coaching services and pricing</div>
+                      <div className="text-sm text-gray-600">Add your services and pricing</div>
                       <Button
                         size="sm"
                         variant="outline"
@@ -283,7 +283,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                             <Input
                               value={service.title || ''}
                               onChange={(e) => handleServiceChange(index, 'title', e.target.value)}
-                              placeholder="e.g., Life Coaching Session"
+                              placeholder="e.g., Consultation Session"
                             />
                             <Textarea
                               value={service.description || ''}
@@ -349,7 +349,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                         id="buttonText"
                         value={customizationData.buttonText || ''}
                         onChange={(e) => onChange('buttonText', e.target.value)}
-                        placeholder="e.g., Book a Consultation, Get Started, Contact Me"
+                        placeholder="e.g., Get Started, Contact Me, Learn More"
                         className="mt-1"
                       />
                       <div className="text-xs text-gray-500 mt-1">
