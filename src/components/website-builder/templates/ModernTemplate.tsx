@@ -92,7 +92,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
 
   return (
     <div className="bg-gray-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-      {/* Modern Hero - Only Coach Name, Tagline, and CTA */}
+      {/* Modern Hero with Split Layout */}
       <section className={`relative ${heroSection} flex items-center`}>
         {/* Only show dark background when no header image */}
         {!hasHeaderImage && (
@@ -113,12 +113,12 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
           ></div>
         )}
         
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 text-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 grid gap-6 lg:grid-cols-2 lg:gap-8 items-center">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-white"
+            className="text-white text-center lg:text-left"
             style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
           >
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight">
@@ -127,7 +127,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
             <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 text-gray-300 leading-relaxed">
               {customizationData.tagline || "Transforming Lives Through Modern Coaching"}
             </p>
-            <div className="flex justify-center">
+            <div className="flex justify-center lg:justify-start">
               <Button 
                 className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
                 style={{ backgroundColor: themeColor }}
@@ -139,53 +139,40 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
         </div>
       </section>
 
-      {/* Separate Intro Card Section */}
-      <section className={`${sectionPadding} bg-gray-50`}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12"
-          >
-            <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
-              <div className={getAlignmentClass(customizationData.introAlignment || 'left')}>
-                <h2 
-                  className={`text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                  style={{ 
-                    color: customizationData.introTextColor || '#111827',
-                    textShadow: '0 2px 6px rgba(0,0,0,0.6)'
-                  }}
-                >
-                  {customizationData.introTitle || "About Me"}
-                </h2>
-                <p 
-                  className={`text-sm sm:text-base leading-relaxed ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                  style={{ 
-                    color: customizationData.introTextColor || '#6B7280',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                  }}
-                >
-                  {customizationData.bio || "I'm passionate about helping individuals unlock their full potential through personalized coaching approaches that blend modern techniques with timeless wisdom."}
-                </p>
-              </div>
-              
-              {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) && (
-                <div className="order-first lg:order-last">
-                  <img
-                    src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
-                    alt="About"
-                    className="w-full h-48 sm:h-64 lg:h-80 object-cover rounded-xl shadow-lg"
-                  />
-                </div>
-              )}
+      {/* About Section */}
+      <section className={`${sectionPadding} bg-white`}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
+            <div className={getAlignmentClass(customizationData.introAlignment || 'left')}>
+              <h2 
+                className={`text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                style={{ color: customizationData.introTextColor || '#111827' }}
+              >
+                {customizationData.introTitle || "About Me"}
+              </h2>
+              <p 
+                className={`text-sm sm:text-base leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                style={{ color: customizationData.introTextColor || '#6B7280' }}
+              >
+                {customizationData.bio || "I'm passionate about helping individuals unlock their full potential through personalized coaching approaches that blend modern techniques with timeless wisdom."}
+              </p>
             </div>
-          </motion.div>
+            
+            {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) && (
+              <div className="order-first lg:order-last">
+                <img
+                  src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
+                  alt="About"
+                  className="w-full h-48 sm:h-64 lg:h-80 object-cover rounded-xl shadow-lg"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
       {/* Services Grid */}
-      <section className={`${sectionPadding} bg-white`}>
+      <section className={`${sectionPadding} bg-gray-50`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-8 sm:mb-12 text-gray-900">Services</h2>
           {validServices.length > 0 ? (
@@ -196,7 +183,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="bg-gray-50 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-shadow"
+                  className="bg-white rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-shadow"
                 >
                   <div className="flex items-start space-x-4">
                     {(service.imageData?.url || service.imageUrl) ? (

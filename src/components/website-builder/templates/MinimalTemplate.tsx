@@ -90,7 +90,7 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
 
   return (
     <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-      {/* Ultra Minimal Hero - Only Coach Name, Tagline, and CTA */}
+      {/* Ultra Minimal Hero */}
       <section className={`${heroSection} flex items-center justify-center relative ${!hasHeaderImage ? 'bg-white' : ''}`}>
         {/* Header background image with no opacity reduction */}
         {hasHeaderImage && (
@@ -128,46 +128,38 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
         </div>
       </section>
 
-      {/* Separate Intro Card Section */}
+      {/* Clean About */}
       <section className={`${sectionPadding} bg-gray-50`}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="bg-white rounded-2xl shadow-lg p-8 sm:p-12 lg:p-16"
+            className={getAlignmentClass(customizationData.introAlignment || 'left')}
           >
-            <div className={`${getAlignmentClass(customizationData.introAlignment || 'left')} max-w-3xl ${customizationData.introAlignment === 'center' ? 'mx-auto' : ''}`}>
-              <h2 
-                className={`text-2xl sm:text-3xl mb-8 sm:mb-12 ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                style={{ 
-                  color: customizationData.introTextColor || '#374151',
-                  textShadow: '0 2px 6px rgba(0,0,0,0.6)'
-                }}
-              >
-                {customizationData.introTitle || "About Me"}
-              </h2>
-              
-              {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) && (
-                <div className={`mb-8 sm:mb-12 ${customizationData.introAlignment === 'center' ? 'text-center' : ''}`}>
-                  <img
-                    src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
-                    alt="About"
-                    className="w-32 h-32 sm:w-48 sm:h-48 lg:w-64 lg:h-64 object-cover rounded-full shadow-lg"
-                  />
-                </div>
-              )}
-              
-              <p 
-                className={`text-base sm:text-lg leading-relaxed ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                style={{ 
-                  color: customizationData.introTextColor || '#6B7280',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-                }}
-              >
-                {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
-              </p>
-            </div>
+            <h2 
+              className={`text-2xl sm:text-3xl mb-8 sm:mb-12 drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+              style={{ color: customizationData.introTextColor || '#374151' }}
+            >
+              {customizationData.introTitle || "About Me"}
+            </h2>
+            
+            {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) && (
+              <div className="mb-8 sm:mb-12">
+                <img
+                  src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
+                  alt="About"
+                  className="w-32 h-32 sm:w-48 sm:h-48 lg:w-64 lg:h-64 object-cover rounded-full mx-auto shadow-lg"
+                />
+              </div>
+            )}
+            
+            <p 
+              className={`text-base sm:text-lg leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+              style={{ color: customizationData.introTextColor || '#6B7280' }}
+            >
+              {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
+            </p>
           </motion.div>
         </div>
       </section>
