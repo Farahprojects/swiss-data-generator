@@ -138,17 +138,13 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
               )}
             </div>
             <div className="lg:col-span-2 order-1 lg:order-2 text-center lg:text-left">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6 text-gray-900">
-                {customizationData.introTitle || "My Philosophy"}
-              </h2>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6 text-gray-900">My Philosophy</h2>
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-4 sm:mb-6">
                 {customizationData.bio || "Drawing from time-tested principles and classical approaches, I believe in the power of deep reflection, meaningful dialogue, and gradual transformation."}
               </p>
               <div className="flex items-center justify-center lg:justify-start text-amber-600">
                 <div className="w-6 sm:w-8 h-0.5 bg-amber-600 mr-3 sm:mr-4"></div>
-                <span className="italic text-sm sm:text-base">
-                  {customizationData.philosophyTagline || "Wisdom through experience"}
-                </span>
+                <span className="italic text-sm sm:text-base">Wisdom through experience</span>
               </div>
             </div>
           </div>
@@ -159,9 +155,7 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
       <section className={`${sectionPadding} bg-amber-50`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-3 sm:mb-4 text-gray-900">
-              {customizationData.servicesTitle || "Services Offered"}
-            </h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-3 sm:mb-4 text-gray-900">Services Offered</h2>
             <div className="w-16 sm:w-24 h-1 bg-amber-500 mx-auto"></div>
           </div>
           

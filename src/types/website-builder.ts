@@ -41,8 +41,6 @@ export interface CustomizationData {
   aboutImageData?: ImageData;
   footerHeading?: string;
   footerSubheading?: string;
-  philosophyTagline?: string;
-  servicesTitle?: string;
 }
 
 export interface CoachWebsite {
