@@ -194,9 +194,6 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                 placeholder="Alex Johnson"
                 isEditable={isEditable}
                 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
-                style={{
-                  color: customizationData.heroTextColor || '#FFFFFF'
-                }}
               />
             </h1>
             <p 
@@ -212,9 +209,6 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                 multiline={true}
                 isEditable={isEditable}
                 className={`text-base sm:text-lg md:text-xl leading-relaxed ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
-                style={{
-                  color: customizationData.heroTextColor || '#D1D5DB'
-                }}
               />
             </p>
             <div className={`flex flex-col sm:flex-row gap-4 ${customizationData.heroAlignment === 'center' ? 'justify-center' : customizationData.heroAlignment === 'right' ? 'justify-end lg:justify-end' : 'justify-center lg:justify-start'}`}>
@@ -250,7 +244,6 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                   placeholder="About Me"
                   isEditable={isEditable}
                   className={`text-xl sm:text-2xl md:text-3xl font-bold drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                  style={{ color: customizationData.introTextColor || '#111827' }}
                 />
               </h2>
               <p 
@@ -264,7 +257,6 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                   multiline={true}
                   isEditable={isEditable}
                   className={`text-sm sm:text-base leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                  style={{ color: customizationData.introTextColor || '#6B7280' }}
                 />
               </p>
             </div>

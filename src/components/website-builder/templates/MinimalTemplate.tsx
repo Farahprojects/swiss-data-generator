@@ -192,9 +192,6 @@ export const MinimalTemplate = ({ customizationData, isPreview = false, onCustom
                 className={`text-2xl sm:text-3xl lg:text-4xl xl:text-5xl tracking-wide leading-tight ${
                   hasHeaderImage ? 'text-white' : ''
                 } ${customizationData.heroFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.heroFontStyle === 'bold' ? 'font-bold' : customizationData.heroFontStyle === 'handwritten' ? 'font-mono' : customizationData.heroFontStyle === 'classic' ? 'font-serif' : customizationData.heroFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
-                style={{ 
-                  color: customizationData.heroTextColor || (hasHeaderImage ? '#FFFFFF' : '#111827')
-                }}
               />
             </h1>
             <div className={`w-12 sm:w-16 h-px mx-auto mb-6 sm:mb-8 ${hasHeaderImage ? 'bg-white' : 'bg-gray-900'}`}></div>
@@ -211,9 +208,6 @@ export const MinimalTemplate = ({ customizationData, isPreview = false, onCustom
                 multiline={true}
                 isEditable={isEditable}
                 className={`text-base sm:text-lg lg:text-xl font-light leading-relaxed ${customizationData.heroFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.heroFontStyle === 'bold' ? 'font-bold' : customizationData.heroFontStyle === 'handwritten' ? 'font-mono' : customizationData.heroFontStyle === 'classic' ? 'font-serif' : customizationData.heroFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
-                style={{ 
-                  color: customizationData.heroTextColor || (hasHeaderImage ? '#E5E7EB' : '#6B7280')
-                }}
               />
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -253,7 +247,6 @@ export const MinimalTemplate = ({ customizationData, isPreview = false, onCustom
                 placeholder="About Me"
                 isEditable={isEditable}
                 className={`text-2xl sm:text-3xl drop-shadow-md ${customizationData.introFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.introFontStyle === 'bold' ? 'font-bold' : customizationData.introFontStyle === 'handwritten' ? 'font-mono' : customizationData.introFontStyle === 'classic' ? 'font-serif' : customizationData.introFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
-                style={{ color: customizationData.introTextColor || '#374151' }}
               />
             </h2>
             
@@ -278,7 +271,6 @@ export const MinimalTemplate = ({ customizationData, isPreview = false, onCustom
                 multiline={true}
                 isEditable={isEditable}
                 className={`text-base sm:text-lg leading-relaxed drop-shadow-md ${customizationData.introFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.introFontStyle === 'bold' ? 'font-bold' : customizationData.introFontStyle === 'handwritten' ? 'font-mono' : customizationData.introFontStyle === 'classic' ? 'font-serif' : customizationData.introFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
-                style={{ color: customizationData.introTextColor || '#6B7280' }}
               />
             </p>
           </motion.div>
