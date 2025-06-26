@@ -36,8 +36,19 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
+  // Create report service card
+  const reportService = !isPreview ? {
+    title: "Personal Insights Report",
+    description: "Get a comprehensive analysis of your personality, strengths, and growth opportunities with our detailed assessment.",
+    price: "$29",
+    isReportService: true
+  } : null;
+
   // Filter out null services and ensure we have valid service objects
   const validServices = validateServices(customizationData.services || []);
+  
+  // Add report service as first item if not in preview
+  const allServices = reportService ? [reportService, ...validServices] : validServices;
 
   // Helper function to get button styling - moved inside component to access variables
   const getButtonStyles = (isInverted = false) => {
@@ -63,6 +74,12 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
         description: "Purchase functionality is disabled in preview mode.",
         variant: "default"
       });
+      return;
+    }
+
+    // Handle report service differently
+    if (service.isReportService) {
+      window.location.href = `/${slug}/vibe`;
       return;
     }
 
@@ -119,15 +136,6 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
               >
                 {customizationData.buttonText || "Begin Your Journey"}
               </Button>
-              {!isPreview && (
-                <Button 
-                  onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
-                  className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
-                  style={getButtonStyles(true)}
-                >
-                  Get Personal Insights
-                </Button>
-              )}
             </div>
           </motion.div>
         </div>
@@ -172,9 +180,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
             <div className="w-16 sm:w-24 h-1 bg-amber-500 mx-auto"></div>
           </div>
           
-          {validServices.length > 0 ? (
+          {allServices.length > 0 ? (
             <div className="space-y-8 sm:space-y-12">
-              {validServices.map((service: any, index: number) => (
+              {allServices.map((service: any, index: number) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
@@ -204,7 +212,15 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
                       <span className="text-lg sm:text-xl font-semibold" style={{ color: themeColor }}>
                         {service.price || 'Contact for pricing'}
                       </span>
-                      {hasValidPrice(service.price) ? (
+                      {service.isReportService ? (
+                        <Button 
+                          onClick={() => handlePurchaseClick(service, index)}
+                          className="min-h-[44px] hover:opacity-90 transition-opacity"
+                          style={getButtonStyles()}
+                        >
+                          Get Report
+                        </Button>
+                      ) : hasValidPrice(service.price) ? (
                         <Button 
                           onClick={() => handlePurchaseClick(service, index)}
                           disabled={purchasingService === index}

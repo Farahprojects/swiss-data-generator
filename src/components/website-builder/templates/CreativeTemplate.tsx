@@ -1,5 +1,10 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { useParams } from "react-router-dom";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
 
 interface TemplateProps {
   customizationData: any;
@@ -7,6 +12,10 @@ interface TemplateProps {
 }
 
 export const CreativeTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
+  const { slug } = useParams<{ slug: string }>();
+  const { toast } = useToast();
+  const [purchasingService, setPurchasingService] = useState<number | null>(null);
+  
   const themeColor = customizationData.themeColor || '#F59E0B';
   const fontFamily = customizationData.fontFamily || 'Poppins';
 
@@ -16,10 +25,56 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
+  // Create report service card
+  const reportService = !isPreview ? {
+    title: "Creative Insights Report",
+    description: "Discover your unique creative potential and unlock innovative pathways to personal and professional growth.",
+    price: "$29",
+    isReportService: true
+  } : null;
+
   // Filter out null services and ensure we have valid service objects
   const validServices = (customizationData.services || [])
     .filter((service: any) => service && typeof service === 'object')
     .filter((service: any) => service.title || service.description || service.price);
+
+  // Add report service as first item if not in preview
+  const allServices = reportService ? [reportService, ...validServices] : validServices;
+
+  const handlePurchaseClick = async (service: any, index: number) => {
+    if (isPreview) {
+      toast({
+        title: "Preview Mode",
+        description: "Purchase functionality is disabled in preview mode.",
+        variant: "default"
+      });
+      return;
+    }
+
+    // Handle report service differently
+    if (service.isReportService) {
+      window.location.href = `/${slug}/vibe`;
+      return;
+    }
+
+    setPurchasingService(index);
+
+    await handleServicePurchase({
+      title: service.title,
+      description: service.description,
+      price: service.price,
+      coachSlug: slug || 'unknown',
+      coachName: customizationData.coachName || 'Coach'
+    }, (error) => {
+      toast({
+        title: "Purchase Failed",
+        description: error,
+        variant: "destructive"
+      });
+    });
+
+    setPurchasingService(null);
+  };
 
   // Helper function to get button styling
   const getButtonStyles = (isSecondary = false) => {
@@ -86,15 +141,6 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                   >
                     {customizationData.buttonText || "Spark Innovation"}
                   </Button>
-                  {!isPreview && (
-                    <Button 
-                      onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
-                      className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full border-2 hover:bg-white hover:shadow-lg transition-all min-h-[44px]"
-                      style={getButtonStyles(true)}
-                    >
-                      Get Creative Report
-                    </Button>
-                  )}
                   <Button 
                     className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full border-2 hover:bg-white hover:shadow-lg transition-all min-h-[44px]"
                     style={getButtonStyles(true)}
@@ -158,9 +204,9 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
             {customizationData.servicesTitle || "Creative Services"}
           </h2>
           
-          {validServices.length > 0 ? (
+          {allServices.length > 0 ? (
             <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {validServices.map((service: any, index: number) => (
+              {allServices.map((service: any, index: number) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 50, rotate: Math.random() * 10 - 5 }}
@@ -191,12 +237,22 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                     <span className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
                       {service.price || 'Contact for pricing'}
                     </span>
-                    <Button 
-                      variant="ghost" 
-                      className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-full text-sm sm:text-base"
-                    >
-                      Explore →
-                    </Button>
+                    {service.isReportService ? (
+                      <Button 
+                        onClick={() => handlePurchaseClick(service, index)}
+                        className="rounded-full text-purple-600 hover:text-purple-800 hover:bg-purple-50 text-sm sm:text-base"
+                        variant="ghost"
+                      >
+                        Get Report
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="ghost" 
+                        className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-full text-sm sm:text-base"
+                      >
+                        Explore →
+                      </Button>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -234,7 +290,7 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
               style={{
                 fontFamily: `${customizationData.buttonFontFamily || fontFamily}, sans-serif`,
                 backgroundColor: '#FFFFFF',
-                color: '#7C3AED',
+                color: themeColor,
                 border: customizationData.buttonStyle === 'bordered' ? '2px solid #FFFFFF' : 'none'
               }}
             >

@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -54,8 +53,19 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
   const headerOpacity = customizationData.headerImageOpacity || 100;
 
+  // Create report service card
+  const reportService = !isPreview ? {
+    title: "Personal Insights Report",
+    description: "Unlock your potential with a comprehensive personality analysis and growth roadmap tailored specifically for you.",
+    price: "$29",
+    isReportService: true
+  } : null;
+
   // Filter out null services and ensure we have valid service objects
   const validServices = validateServices(customizationData.services || []);
+  
+  // Add report service as first item if not in preview
+  const allServices = reportService ? [reportService, ...validServices] : validServices;
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
@@ -64,6 +74,12 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
         description: "Purchase functionality is disabled in preview mode.",
         variant: "default"
       });
+      return;
+    }
+
+    // Handle report service differently
+    if (service.isReportService) {
+      window.location.href = `/${slug}/vibe`;
       return;
     }
 
@@ -180,15 +196,6 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
               >
                 {customizationData.buttonText || "Start Your Journey"}
               </Button>
-              {!isPreview && (
-                <Button 
-                  onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
-                  variant="outline"
-                  className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px] border-white text-white hover:bg-white hover:text-gray-900"
-                >
-                  Get Personal Report
-                </Button>
-              )}
             </div>
           </motion.div>
         </div>
@@ -230,9 +237,9 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
       <section className={`${sectionPadding} bg-gray-50`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-8 sm:mb-12 text-gray-900">Services</h2>
-          {validServices.length > 0 ? (
+          {allServices.length > 0 ? (
             <div className="space-y-4 sm:space-y-6">
-              {validServices.map((service: any, index: number) => (
+              {allServices.map((service: any, index: number) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
@@ -262,7 +269,15 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
                         <div className="text-lg sm:text-xl font-bold" style={{ color: themeColor }}>
                           {service.price || 'Contact for pricing'}
                         </div>
-                        {hasValidPrice(service.price) ? (
+                        {service.isReportService ? (
+                          <Button 
+                            onClick={() => handlePurchaseClick(service, index)}
+                            className="min-h-[36px]"
+                            style={{ backgroundColor: themeColor }}
+                          >
+                            Get Report
+                          </Button>
+                        ) : hasValidPrice(service.price) ? (
                           <Button 
                             onClick={() => handlePurchaseClick(service, index)}
                             disabled={purchasingService === index}

@@ -40,6 +40,17 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
+  // Create report service card
+  const reportService = !isPreview ? {
+    title: "Executive Assessment Report",
+    description: "A comprehensive leadership analysis designed to enhance your executive presence and strategic decision-making capabilities.",
+    price: "$29",
+    isReportService: true
+  } : null;
+
+  // Add report service as first item if not in preview
+  const allServices = reportService ? [reportService, ...(customizationData.services || [])] : (customizationData.services || []);
+
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
       toast({
@@ -47,6 +58,12 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
         description: "Purchase functionality is disabled in preview mode.",
         variant: "default"
       });
+      return;
+    }
+
+    // Handle report service differently
+    if (service.isReportService) {
+      window.location.href = `/${slug}/vibe`;
       return;
     }
 
@@ -82,9 +99,6 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
               <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors text-sm lg:text-base">About</a>
               <a href="#services" className="text-gray-600 hover:text-gray-900 transition-colors text-sm lg:text-base">Services</a>
               <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors text-sm lg:text-base">Contact</a>
-              {!isPreview && (
-                <a href={`/${customizationData.coachSlug || 'coach'}/vibe`} className="text-gray-600 hover:text-gray-900 transition-colors text-sm lg:text-base">Get Report</a>
-              )}
             </nav>
           </div>
         </div>
@@ -121,19 +135,6 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
                 >
                   {customizationData.buttonText || "Schedule Consultation"}
                 </Button>
-                {!isPreview && (
-                  <Button 
-                    onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
-                    variant="outline" 
-                    className={`py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] ${
-                      hasHeaderImage 
-                        ? 'border-white text-white hover:bg-white hover:text-gray-900'
-                        : 'border-gray-300'
-                    }`}
-                  >
-                    Get Personal Report
-                  </Button>
-                )}
                 <Button 
                   variant="outline" 
                   className={`py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] ${
@@ -242,7 +243,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
           </div>
           
           <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {(customizationData.services || []).map((service: any, index: number) => (
+            {allServices.map((service: any, index: number) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
@@ -257,7 +258,15 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
                 <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed break-words">{service.description}</p>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: themeColor }}>{service.price}</div>
-                  {hasValidPrice(service.price) ? (
+                  {service.isReportService ? (
+                    <Button 
+                      onClick={() => handlePurchaseClick(service, index)}
+                      className="min-h-[36px]"
+                      style={{ backgroundColor: themeColor }}
+                    >
+                      Get Report
+                    </Button>
+                  ) : hasValidPrice(service.price) ? (
                     <Button 
                       onClick={() => handlePurchaseClick(service, index)}
                       disabled={purchasingService === index}

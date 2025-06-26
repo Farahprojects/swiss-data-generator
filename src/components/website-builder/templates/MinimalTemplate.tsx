@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -35,8 +36,19 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
+  // Create report service card
+  const reportService = !isPreview ? {
+    title: "Personal Insights Report",
+    description: "A mindful exploration of your authentic self through gentle assessment and thoughtful reflection.",
+    price: "$29",
+    isReportService: true
+  } : null;
+
   // Filter out null services and ensure we have valid service objects
   const validServices = validateServices(customizationData.services || []);
+  
+  // Add report service as first item if not in preview
+  const allServices = reportService ? [reportService, ...validServices] : validServices;
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
@@ -45,6 +57,12 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
         description: "Purchase functionality is disabled in preview mode.",
         variant: "default"
       });
+      return;
+    }
+
+    // Handle report service differently
+    if (service.isReportService) {
+      window.location.href = `/${slug}/vibe`;
       return;
     }
 
@@ -143,7 +161,7 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
           ></div>
         )}
         
-        <div className={`max-w-2xl mx-auto px-4 sm:px-6 relative z-10 ${getHeroAlignmentClass(customizationData.heroAlignment || 'center')}`}>
+        <div className={`max-w-2xl mx-auto px-4 sm:px-6 relative z-10 ${customizationData.heroAlignment === 'center' ? 'text-center' : customizationData.heroAlignment === 'right' ? 'text-right' : 'text-center'}`}>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -153,7 +171,7 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             <h1 
               className={`text-2xl sm:text-3xl lg:text-4xl xl:text-5xl mb-6 sm:mb-8 tracking-wide leading-tight ${
                 hasHeaderImage ? 'text-white' : ''
-              } ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
+              } ${customizationData.heroFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.heroFontStyle === 'bold' ? 'font-bold' : customizationData.heroFontStyle === 'handwritten' ? 'font-mono' : customizationData.heroFontStyle === 'classic' ? 'font-serif' : customizationData.heroFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
               style={{ 
                 color: customizationData.heroTextColor || (hasHeaderImage ? '#FFFFFF' : '#111827')
               }}
@@ -162,7 +180,7 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             </h1>
             <div className={`w-12 sm:w-16 h-px mx-auto mb-6 sm:mb-8 ${hasHeaderImage ? 'bg-white' : 'bg-gray-900'}`}></div>
             <p 
-              className={`text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 font-light leading-relaxed ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
+              className={`text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 font-light leading-relaxed ${customizationData.heroFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.heroFontStyle === 'bold' ? 'font-bold' : customizationData.heroFontStyle === 'handwritten' ? 'font-mono' : customizationData.heroFontStyle === 'classic' ? 'font-serif' : customizationData.heroFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
               style={{ 
                 color: customizationData.heroTextColor || (hasHeaderImage ? '#E5E7EB' : '#6B7280')
               }}
@@ -176,15 +194,6 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
               >
                 {customizationData.buttonText || "Connect"}
               </Button>
-              {!isPreview && (
-                <Button 
-                  onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
-                  className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] hover:opacity-90 transition-opacity"
-                  style={getButtonStyles()}
-                >
-                  Get Report
-                </Button>
-              )}
             </div>
           </motion.div>
         </div>
@@ -197,10 +206,10 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className={getAlignmentClass(customizationData.introAlignment || 'left')}
+            className={customizationData.introAlignment === 'center' ? 'text-center' : customizationData.introAlignment === 'right' ? 'text-right' : 'text-left'}
           >
             <h2 
-              className={`text-2xl sm:text-3xl mb-8 sm:mb-12 drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+              className={`text-2xl sm:text-3xl mb-8 sm:mb-12 drop-shadow-md ${customizationData.introFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.introFontStyle === 'bold' ? 'font-bold' : customizationData.introFontStyle === 'handwritten' ? 'font-mono' : customizationData.introFontStyle === 'classic' ? 'font-serif' : customizationData.introFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
               style={{ color: customizationData.introTextColor || '#374151' }}
             >
               {customizationData.introTitle || "About Me"}
@@ -217,7 +226,7 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             )}
             
             <p 
-              className={`text-base sm:text-lg leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+              className={`text-base sm:text-lg leading-relaxed drop-shadow-md ${customizationData.introFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.introFontStyle === 'bold' ? 'font-bold' : customizationData.introFontStyle === 'handwritten' ? 'font-mono' : customizationData.introFontStyle === 'classic' ? 'font-serif' : customizationData.introFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
               style={{ color: customizationData.introTextColor || '#6B7280' }}
             >
               {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
@@ -232,9 +241,9 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
           <h2 className="text-2xl sm:text-3xl font-light mb-12 sm:mb-16 text-gray-900 text-center">
             {customizationData.servicesTitle || "Services"}
           </h2>
-          {validServices.length > 0 ? (
+          {allServices.length > 0 ? (
             <div className="space-y-8 sm:space-y-12 lg:space-y-16">
-              {validServices.map((service: any, index: number) => (
+              {allServices.map((service: any, index: number) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0 }}
@@ -253,7 +262,15 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
                       <span className="text-base sm:text-lg font-light text-gray-900">
                         {service.price || 'Contact for pricing'}
                       </span>
-                      {hasValidPrice(service.price) ? (
+                      {service.isReportService ? (
+                        <Button 
+                          onClick={() => handlePurchaseClick(service, index)}
+                          className="font-light min-h-[36px] hover:opacity-90 transition-opacity"
+                          style={getButtonStyles()}
+                        >
+                          Get Report
+                        </Button>
+                      ) : hasValidPrice(service.price) ? (
                         <Button 
                           onClick={() => handlePurchaseClick(service, index)}
                           disabled={purchasingService === index}
