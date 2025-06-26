@@ -4,10 +4,12 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
+import { InlineEditableText } from "../InlineEditableText";
 
 interface TemplateProps {
   customizationData: any;
   isPreview?: boolean;
+  onCustomizationChange?: (field: string, value: any) => void;
 }
 
 // Helper function to validate and filter services
@@ -21,13 +23,14 @@ const validateServices = (services: any[]) => {
     .filter((service: any) => service.title || service.description || service.price);
 };
 
-export const ClassicTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
+export const ClassicTemplate = ({ customizationData, isPreview = false, onCustomizationChange }: TemplateProps) => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const [purchasingService, setPurchasingService] = useState<number | null>(null);
   
   const themeColor = customizationData.themeColor || '#8B5CF6';
   const fontFamily = customizationData.fontFamily || 'Playfair Display';
+  const isEditable = !!onCustomizationChange;
 
   const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
   const heroPadding = isPreview ? 'py-8' : 'py-16 sm:py-24 lg:py-32';
@@ -48,6 +51,12 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
   
   // Add report service as first item always (including preview)
   const allServices = [reportService, ...validServices];
+
+  const handleFieldChange = (field: string, value: any) => {
+    if (onCustomizationChange) {
+      onCustomizationChange(field, value);
+    }
+  };
 
   // Helper function to get button styling - moved inside component to access variables
   const getButtonStyles = (isInverted = false) => {
@@ -122,18 +131,37 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
           >
             <div className="w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 mx-auto mb-6 sm:mb-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500"></div>
             <h1 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold mb-4 sm:mb-6 leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}>
-              {customizationData.coachName || "Dr. Sarah Wilson"}
+              <InlineEditableText
+                value={customizationData.coachName || ""}
+                onChange={(value) => handleFieldChange('coachName', value)}
+                placeholder="Dr. Sarah Wilson"
+                isEditable={isEditable}
+                className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}
+              />
             </h1>
             <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto mb-4 sm:mb-6"></div>
             <p className={`text-lg sm:text-xl lg:text-2xl mb-8 sm:mb-10 italic leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-700'}`}>
-              {customizationData.tagline || "Classical Wisdom for Modern Challenges"}
+              <InlineEditableText
+                value={customizationData.tagline || ""}
+                onChange={(value) => handleFieldChange('tagline', value)}
+                placeholder="Classical Wisdom for Modern Challenges"
+                multiline={true}
+                isEditable={isEditable}
+                className={`text-lg sm:text-xl lg:text-2xl italic leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-700'}`}
+              />
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
                 style={getButtonStyles()}
               >
-                {customizationData.buttonText || "Begin Your Journey"}
+                <InlineEditableText
+                  value={customizationData.buttonText || ""}
+                  onChange={(value) => handleFieldChange('buttonText', value)}
+                  placeholder="Begin Your Journey"
+                  isEditable={isEditable}
+                  className="text-inherit"
+                />
               </Button>
             </div>
           </motion.div>
@@ -157,10 +185,23 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
             </div>
             <div className="lg:col-span-2 order-1 lg:order-2 text-center lg:text-left">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6 text-gray-900">
-                {customizationData.introTitle || "My Philosophy"}
+                <InlineEditableText
+                  value={customizationData.introTitle || ""}
+                  onChange={(value) => handleFieldChange('introTitle', value)}
+                  placeholder="My Philosophy"
+                  isEditable={isEditable}
+                  className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-gray-900"
+                />
               </h2>
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-4 sm:mb-6">
-                {customizationData.bio || "Drawing from time-tested principles and classical approaches, I believe in the power of deep reflection, meaningful dialogue, and gradual transformation."}
+                <InlineEditableText
+                  value={customizationData.bio || ""}
+                  onChange={(value) => handleFieldChange('bio', value)}
+                  placeholder="Drawing from time-tested principles and classical approaches, I believe in the power of deep reflection, meaningful dialogue, and gradual transformation."
+                  multiline={true}
+                  isEditable={isEditable}
+                  className="text-base sm:text-lg text-gray-600 leading-relaxed"
+                />
               </p>
               <div className="flex items-center justify-center lg:justify-start text-amber-600">
                 <div className="w-6 sm:w-8 h-0.5 bg-amber-600 mr-3 sm:mr-4"></div>
@@ -255,10 +296,23 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
       <section className={`${sectionPadding} bg-gray-900 text-white`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6">
-            {customizationData.footerHeading || "Begin Your Transformation"}
+            <InlineEditableText
+              value={customizationData.footerHeading || ""}
+              onChange={(value) => handleFieldChange('footerHeading', value)}
+              placeholder="Begin Your Transformation"
+              isEditable={isEditable}
+              className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-white"
+            />
           </h2>
           <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90 italic">
-            {customizationData.footerSubheading || "Every journey begins with a single step"}
+            <InlineEditableText
+              value={customizationData.footerSubheading || ""}
+              onChange={(value) => handleFieldChange('footerSubheading', value)}
+              placeholder="Every journey begins with a single step"
+              multiline={true}
+              isEditable={isEditable}
+              className="text-lg sm:text-xl opacity-90 italic text-white"
+            />
           </p>
           <div className="w-16 sm:w-24 h-1 bg-amber-500 mx-auto mb-6 sm:mb-8"></div>
           <Button 
@@ -274,7 +328,13 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
               };
             })()}
           >
-            {customizationData.buttonText || "Schedule Consultation"}
+            <InlineEditableText
+              value={customizationData.buttonText || ""}
+              onChange={(value) => handleFieldChange('buttonText', value)}
+              placeholder="Schedule Consultation"
+              isEditable={isEditable}
+              className="text-inherit"
+            />
           </Button>
         </div>
       </section>

@@ -4,19 +4,22 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
+import { InlineEditableText } from "../InlineEditableText";
 
 interface TemplateProps {
   customizationData: any;
   isPreview?: boolean;
+  onCustomizationChange?: (field: string, value: any) => void;
 }
 
-export const CreativeTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
+export const CreativeTemplate = ({ customizationData, isPreview = false, onCustomizationChange }: TemplateProps) => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const [purchasingService, setPurchasingService] = useState<number | null>(null);
   
   const themeColor = customizationData.themeColor || '#F59E0B';
   const fontFamily = customizationData.fontFamily || 'Poppins';
+  const isEditable = !!onCustomizationChange;
 
   const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
   const heroSection = isPreview ? 'py-8' : 'min-h-screen';
@@ -39,6 +42,12 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
 
   // Add report service as first item always (including preview)
   const allServices = [reportService, ...validServices];
+
+  const handleFieldChange = (field: string, value: any) => {
+    if (onCustomizationChange) {
+      onCustomizationChange(field, value);
+    }
+  };
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
@@ -128,17 +137,36 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
             >
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl">
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent leading-tight">
-                  {customizationData.coachName || "Jamie Rivers"}
+                  <InlineEditableText
+                    value={customizationData.coachName || ""}
+                    onChange={(value) => handleFieldChange('coachName', value)}
+                    placeholder="Jamie Rivers"
+                    isEditable={isEditable}
+                    className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent leading-tight"
+                  />
                 </h1>
                 <p className="text-lg sm:text-xl mb-6 sm:mb-8 text-gray-700 leading-relaxed">
-                  {customizationData.tagline || "Unleashing Creativity Through Innovative Coaching"}
+                  <InlineEditableText
+                    value={customizationData.tagline || ""}
+                    onChange={(value) => handleFieldChange('tagline', value)}
+                    placeholder="Unleashing Creativity Through Innovative Coaching"
+                    multiline={true}
+                    isEditable={isEditable}
+                    className="text-lg sm:text-xl text-gray-700 leading-relaxed"
+                  />
                 </p>
                 <div className="flex flex-col sm:flex-row flex-wrap gap-4">
                   <Button 
                     className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full shadow-lg transform hover:scale-105 transition-transform min-h-[44px]"
                     style={getButtonStyles()}
                   >
-                    {customizationData.buttonText || "Spark Innovation"}
+                    <InlineEditableText
+                      value={customizationData.buttonText || ""}
+                      onChange={(value) => handleFieldChange('buttonText', value)}
+                      placeholder="Spark Innovation"
+                      isEditable={isEditable}
+                      className="text-inherit"
+                    />
                   </Button>
                   <Button 
                     className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full border-2 hover:bg-white hover:shadow-lg transition-all min-h-[44px]"
@@ -187,10 +215,23 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
             className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 lg:p-12 shadow-xl"
           >
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              {customizationData.introTitle || "Creative Approach"}
+              <InlineEditableText
+                value={customizationData.introTitle || ""}
+                onChange={(value) => handleFieldChange('introTitle', value)}
+                placeholder="Creative Approach"
+                isEditable={isEditable}
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
+              />
             </h2>
             <p className="text-base sm:text-lg text-gray-700 leading-relaxed text-center max-w-3xl mx-auto">
-              {customizationData.bio || "I believe that creativity is the key to unlocking human potential. Through innovative techniques, artistic expression, and out-of-the-box thinking, we'll discover new pathways to growth and success."}
+              <InlineEditableText
+                value={customizationData.bio || ""}
+                onChange={(value) => handleFieldChange('bio', value)}
+                placeholder="I believe that creativity is the key to unlocking human potential. Through innovative techniques, artistic expression, and out-of-the-box thinking, we'll discover new pathways to growth and success."
+                multiline={true}
+                isEditable={isEditable}
+                className="text-base sm:text-lg text-gray-700 leading-relaxed"
+              />
             </p>
           </motion.div>
         </div>
@@ -289,10 +330,23 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
             transition={{ duration: 0.8 }}
           >
             <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold mb-4 sm:mb-6">
-              {customizationData.footerHeading || "Ready to Create Magic?"}
+              <InlineEditableText
+                value={customizationData.footerHeading || ""}
+                onChange={(value) => handleFieldChange('footerHeading', value)}
+                placeholder="Ready to Create Magic?"
+                isEditable={isEditable}
+                className="text-2xl sm:text-3xl lg:text-5xl font-bold text-white"
+              />
             </h2>
             <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">
-              {customizationData.footerSubheading || "Let's turn your dreams into colorful reality."}
+              <InlineEditableText
+                value={customizationData.footerSubheading || ""}
+                onChange={(value) => handleFieldChange('footerSubheading', value)}
+                placeholder="Let's turn your dreams into colorful reality."
+                multiline={true}
+                isEditable={isEditable}
+                className="text-lg sm:text-xl opacity-90 text-white"
+              />
             </p>
             <Button 
               className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg rounded-full shadow-xl transform hover:scale-105 transition-all min-h-[44px]"
@@ -303,7 +357,13 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                 border: customizationData.buttonStyle === 'bordered' ? '2px solid #FFFFFF' : 'none'
               }}
             >
-              {customizationData.buttonText || "Start Creating"}
+              <InlineEditableText
+                value={customizationData.buttonText || ""}
+                onChange={(value) => handleFieldChange('buttonText', value)}
+                placeholder="Start Creating"
+                isEditable={isEditable}
+                className="text-inherit"
+              />
             </Button>
           </motion.div>
         </div>

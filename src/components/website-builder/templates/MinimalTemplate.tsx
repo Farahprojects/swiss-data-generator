@@ -4,10 +4,12 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
+import { InlineEditableText } from "../InlineEditableText";
 
 interface TemplateProps {
   customizationData: any;
   isPreview?: boolean;
+  onCustomizationChange?: (field: string, value: any) => void;
 }
 
 // Helper function to validate and filter services
@@ -21,13 +23,14 @@ const validateServices = (services: any[]) => {
     .filter((service: any) => service.title || service.description || service.price);
 };
 
-export const MinimalTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
+export const MinimalTemplate = ({ customizationData, isPreview = false, onCustomizationChange }: TemplateProps) => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const [purchasingService, setPurchasingService] = useState<number | null>(null);
   
   const themeColor = customizationData.themeColor || '#10B981';
   const fontFamily = customizationData.fontFamily || 'Inter';
+  const isEditable = !!onCustomizationChange;
 
   const sectionPadding = isPreview ? 'py-6' : 'py-16 sm:py-24 lg:py-32';
   const heroSection = isPreview ? 'py-8' : 'min-h-screen';
@@ -48,6 +51,12 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
   
   // Add report service as first item always (including preview)
   const allServices = [reportService, ...validServices];
+
+  const handleFieldChange = (field: string, value: any) => {
+    if (onCustomizationChange) {
+      onCustomizationChange(field, value);
+    }
+  };
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
@@ -175,7 +184,18 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
                 color: customizationData.heroTextColor || (hasHeaderImage ? '#FFFFFF' : '#111827')
               }}
             >
-              {customizationData.coachName || "Maria Chen"}
+              <InlineEditableText
+                value={customizationData.coachName || ""}
+                onChange={(value) => handleFieldChange('coachName', value)}
+                placeholder="Maria Chen"
+                isEditable={isEditable}
+                className={`text-2xl sm:text-3xl lg:text-4xl xl:text-5xl tracking-wide leading-tight ${
+                  hasHeaderImage ? 'text-white' : ''
+                } ${customizationData.heroFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.heroFontStyle === 'bold' ? 'font-bold' : customizationData.heroFontStyle === 'handwritten' ? 'font-mono' : customizationData.heroFontStyle === 'classic' ? 'font-serif' : customizationData.heroFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
+                style={{ 
+                  color: customizationData.heroTextColor || (hasHeaderImage ? '#FFFFFF' : '#111827')
+                }}
+              />
             </h1>
             <div className={`w-12 sm:w-16 h-px mx-auto mb-6 sm:mb-8 ${hasHeaderImage ? 'bg-white' : 'bg-gray-900'}`}></div>
             <p 
@@ -184,14 +204,30 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
                 color: customizationData.heroTextColor || (hasHeaderImage ? '#E5E7EB' : '#6B7280')
               }}
             >
-              {customizationData.tagline || "Simplicity in growth. Clarity in purpose."}
+              <InlineEditableText
+                value={customizationData.tagline || ""}
+                onChange={(value) => handleFieldChange('tagline', value)}
+                placeholder="Simplicity in growth. Clarity in purpose."
+                multiline={true}
+                isEditable={isEditable}
+                className={`text-base sm:text-lg lg:text-xl font-light leading-relaxed ${customizationData.heroFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.heroFontStyle === 'bold' ? 'font-bold' : customizationData.heroFontStyle === 'handwritten' ? 'font-mono' : customizationData.heroFontStyle === 'classic' ? 'font-serif' : customizationData.heroFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
+                style={{ 
+                  color: customizationData.heroTextColor || (hasHeaderImage ? '#E5E7EB' : '#6B7280')
+                }}
+              />
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] hover:opacity-90 transition-opacity"
                 style={getButtonStyles(true)}
               >
-                {customizationData.buttonText || "Connect"}
+                <InlineEditableText
+                  value={customizationData.buttonText || ""}
+                  onChange={(value) => handleFieldChange('buttonText', value)}
+                  placeholder="Connect"
+                  isEditable={isEditable}
+                  className="text-inherit"
+                />
               </Button>
             </div>
           </motion.div>
@@ -211,7 +247,14 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
               className={`text-2xl sm:text-3xl mb-8 sm:mb-12 drop-shadow-md ${customizationData.introFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.introFontStyle === 'bold' ? 'font-bold' : customizationData.introFontStyle === 'handwritten' ? 'font-mono' : customizationData.introFontStyle === 'classic' ? 'font-serif' : customizationData.introFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
               style={{ color: customizationData.introTextColor || '#374151' }}
             >
-              {customizationData.introTitle || "About Me"}
+              <InlineEditableText
+                value={customizationData.introTitle || ""}
+                onChange={(value) => handleFieldChange('introTitle', value)}
+                placeholder="About Me"
+                isEditable={isEditable}
+                className={`text-2xl sm:text-3xl drop-shadow-md ${customizationData.introFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.introFontStyle === 'bold' ? 'font-bold' : customizationData.introFontStyle === 'handwritten' ? 'font-mono' : customizationData.introFontStyle === 'classic' ? 'font-serif' : customizationData.introFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
+                style={{ color: customizationData.introTextColor || '#374151' }}
+              />
             </h2>
             
             {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) && (
@@ -228,7 +271,15 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
               className={`text-base sm:text-lg leading-relaxed drop-shadow-md ${customizationData.introFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.introFontStyle === 'bold' ? 'font-bold' : customizationData.introFontStyle === 'handwritten' ? 'font-mono' : customizationData.introFontStyle === 'classic' ? 'font-serif' : customizationData.introFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
               style={{ color: customizationData.introTextColor || '#6B7280' }}
             >
-              {customizationData.bio || "I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."}
+              <InlineEditableText
+                value={customizationData.bio || ""}
+                onChange={(value) => handleFieldChange('bio', value)}
+                placeholder="I believe in the power of quiet transformation. Through mindful conversations and gentle guidance, we explore pathways to authentic growth."
+                multiline={true}
+                isEditable={isEditable}
+                className={`text-base sm:text-lg leading-relaxed drop-shadow-md ${customizationData.introFontStyle === 'elegant' ? 'font-serif font-light' : customizationData.introFontStyle === 'bold' ? 'font-bold' : customizationData.introFontStyle === 'handwritten' ? 'font-mono' : customizationData.introFontStyle === 'classic' ? 'font-serif' : customizationData.introFontStyle === 'minimal' ? 'font-light tracking-wide' : 'font-normal'}`}
+                style={{ color: customizationData.introTextColor || '#6B7280' }}
+              />
             </p>
           </motion.div>
         </div>
@@ -303,16 +354,35 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
       <section className={`${sectionPadding} bg-gray-50`}>
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-2xl sm:text-3xl font-light mb-6 sm:mb-8 text-gray-900">
-            {customizationData.footerHeading || "Let's Begin"}
+            <InlineEditableText
+              value={customizationData.footerHeading || ""}
+              onChange={(value) => handleFieldChange('footerHeading', value)}
+              placeholder="Let's Begin"
+              isEditable={isEditable}
+              className="text-2xl sm:text-3xl font-light text-gray-900"
+            />
           </h2>
           <p className="text-base sm:text-lg text-gray-600 font-light mb-8 sm:mb-12">
-            {customizationData.footerSubheading || "Simple. Focused. Transformative."}
+            <InlineEditableText
+              value={customizationData.footerSubheading || ""}
+              onChange={(value) => handleFieldChange('footerSubheading', value)}
+              placeholder="Simple. Focused. Transformative."
+              multiline={true}
+              isEditable={isEditable}
+              className="text-base sm:text-lg text-gray-600 font-light"
+            />
           </p>
           <Button 
             className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] hover:opacity-90 transition-opacity"
             style={getButtonStyles()}
           >
-            {customizationData.buttonText || "Start Conversation"}
+            <InlineEditableText
+              value={customizationData.buttonText || ""}
+              onChange={(value) => handleFieldChange('buttonText', value)}
+              placeholder="Start Conversation"
+              isEditable={isEditable}
+              className="text-inherit"
+            />
           </Button>
         </div>
       </section>
