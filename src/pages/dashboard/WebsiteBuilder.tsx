@@ -447,6 +447,8 @@ export default function WebsiteBuilder() {
         isWebsiteBuilderPageMobile={isMobile}
         onOpenModal={handleOpenModal}
         onChangeTemplate={handleChangeTemplate}
+        onPublish={handlePublish}
+        isPublishing={isPublishing}
       />
       
       <div className="fixed inset-0 bg-gray-50 overflow-hidden flex pt-16">

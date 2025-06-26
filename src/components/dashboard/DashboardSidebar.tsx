@@ -18,7 +18,6 @@ import {
   Briefcase,
   Settings,
   Palette,
-  ArrowLeft,
   Crown,
   Type,
   Grid3x3,
@@ -44,6 +43,8 @@ interface WebsiteBuilderMenuProps {
   isWebsiteBuilderPageMobile?: boolean;
   onOpenModal?: (section: string) => void;
   onChangeTemplate?: () => void;
+  onPublish?: () => void;
+  isPublishing?: boolean;
 }
 
 interface MessageMenuProps {
@@ -126,8 +127,21 @@ export function SimpleSidebarMenu(props: SidebarMenuProps) {
                     onClick={() => props.onChangeTemplate?.()}
                     type="button"
                   >
-                    <ArrowLeft />
+                    <Palette />
                     <span>Change Template</span>
+                  </button>
+                </li>
+
+                {/* Publish Button */}
+                <li className="group/menu-item relative">
+                  <button
+                    className="flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none transition-all duration-200 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 text-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+                    onClick={() => props.onPublish?.()}
+                    disabled={props.isPublishing}
+                    type="button"
+                  >
+                    <Globe />
+                    <span>{props.isPublishing ? 'Publishing...' : 'Publish'}</span>
                   </button>
                 </li>
               </ul>

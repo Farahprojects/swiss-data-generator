@@ -30,6 +30,8 @@ interface WebsiteBuilderMenuProps {
   isWebsiteBuilderPageMobile?: boolean;
   onOpenModal?: (section: string) => void;
   onChangeTemplate?: () => void;
+  onPublish?: () => void;
+  isPublishing?: boolean;
 }
 
 interface NavMessageMenuProps {
@@ -49,6 +51,8 @@ const UnifiedNavigation = ({
   isWebsiteBuilderPageMobile,
   onOpenModal,
   onChangeTemplate,
+  onPublish,
+  isPublishing,
 }: UnifiedNavigationProps = {}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -319,6 +323,8 @@ const UnifiedNavigation = ({
                   isWebsiteBuilderPageMobile={isWebsiteBuilderPageMobile && location.pathname === '/dashboard/website-builder'}
                   onOpenModal={onOpenModal}
                   onChangeTemplate={onChangeTemplate}
+                  onPublish={onPublish}
+                  isPublishing={isPublishing}
                 />
               </div>
             </SheetPrimitive.Content>
