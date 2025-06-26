@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +47,8 @@ export default function WebsiteBuilder() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [openModal, setOpenModal] = useState<string | null>(null);
+  const [isPanelExpanded, setIsPanelExpanded] = useState(true);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadTemplatesAndWebsite();
@@ -410,6 +412,37 @@ export default function WebsiteBuilder() {
     setOpenModal(null);
   };
 
+  const handleTogglePanel = () => {
+    setIsPanelExpanded(!isPanelExpanded);
+  };
+
+  useEffect(() => {
+    const handlePreviewTouch = (event: MouseEvent | TouchEvent) => {
+      // Only collapse if panel is expanded and we're not clicking on the panel itself
+      if (isPanelExpanded) {
+        const target = event.target as Element;
+        const isClickingPanel = target.closest('[data-panel="collapsible-section"]');
+        
+        if (!isClickingPanel) {
+          setIsPanelExpanded(false);
+        }
+      }
+    };
+
+    const previewElement = previewRef.current;
+    if (previewElement) {
+      previewElement.addEventListener('click', handlePreviewTouch);
+      previewElement.addEventListener('touchstart', handlePreviewTouch);
+    }
+
+    return () => {
+      if (previewElement) {
+        previewElement.removeEventListener('click', handlePreviewTouch);
+        previewElement.removeEventListener('touchstart', handlePreviewTouch);
+      }
+    };
+  }, [isPanelExpanded]);
+
   if (isLoading) {
     return (
       <TheraLoader message="Loading Website Builder..." size="lg" />
@@ -440,10 +473,17 @@ export default function WebsiteBuilder() {
       <CollapsibleSectionPanel 
         onOpenModal={handleOpenModal}
         onChangeTemplate={() => setSelectedTemplate(null)}
+        isExpanded={isPanelExpanded}
+        onToggle={handleTogglePanel}
       />
 
       {/* Main Preview Area */}
-      <div className="flex-1 ml-16 overflow-auto">
+      <div 
+        ref={previewRef}
+        className={`flex-1 overflow-auto transition-all duration-300 ${
+          isPanelExpanded ? 'ml-64' : 'ml-16'
+        }`}
+      >
         <TemplatePreview
           template={selectedTemplate}
           customizationData={customizationData}
@@ -451,12 +491,11 @@ export default function WebsiteBuilder() {
         />
       </div>
 
-      {/* Floating side menu (unchanged position) */}
+      {/* Floating side menu without Templates button */}
       <FloatingSideMenu
         onPreview={handlePreview}
         onSave={handleSave}
         onPublish={handlePublish}
-        onChangeTemplate={() => setSelectedTemplate(null)}
         isSaving={isSaving}
         isPublishing={isPublishing}
         saveButtonText={getSaveButtonText()}
@@ -464,7 +503,7 @@ export default function WebsiteBuilder() {
         website={website}
       />
 
-      {/* Edit modals (unchanged) */}
+      {/* Edit modals - keep existing code (all modal components) */}
       <HeroEditModal
         isOpen={openModal === 'hero'}
         onClose={handleCloseModal}
@@ -507,7 +546,7 @@ export default function WebsiteBuilder() {
         onChange={handleCustomizationChange}
       />
 
-      {/* Publishing modal (unchanged) */}
+      {/* Publishing modal - keep existing code */}
       {showPublishModal && website && (
         <PublishingModal
           website={website}
