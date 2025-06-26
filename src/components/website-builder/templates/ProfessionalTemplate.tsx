@@ -71,39 +71,6 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
     setPurchasingService(null);
   };
 
-  const insightTypes = [
-    {
-      icon: <Target className="h-8 w-8" />,
-      title: "Purpose Discovery",
-      description: "Uncover your authentic path and core motivations"
-    },
-    {
-      icon: <Users className="h-8 w-8" />,
-      title: "Relationship Dynamics",
-      description: "Understand your connections and communication style"
-    },
-    {
-      icon: <Clock className="h-8 w-8" />,
-      title: "Optimal Timing",
-      description: "Make decisions when the timing is perfectly aligned"
-    },
-    {
-      icon: <TrendingUp className="h-8 w-8" />,
-      title: "Growth Opportunities",
-      description: "Identify areas for personal and professional development"
-    },
-    {
-      icon: <Calendar className="h-8 w-8" />,
-      title: "Life Cycles",
-      description: "Navigate major transitions with confidence and clarity"
-    },
-    {
-      icon: <Shield className="h-8 w-8" />,
-      title: "Core Strengths",
-      description: "Leverage your natural talents and abilities"
-    }
-  ];
-
   return (
     <div className="bg-white min-h-screen" style={{ fontFamily: `${fontFamily}, -apple-system, BlinkMacSystemFont, sans-serif` }}>
       {/* Apple-style Navigation */}
@@ -114,7 +81,6 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
               {customizationData.coachName || "Your Name"}
             </div>
             <nav className="hidden md:flex items-center space-x-8">
-              <a href="#insights" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Insights</a>
               <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">About</a>
               <a href="#services" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Services</a>
             </nav>
@@ -122,7 +88,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
         </div>
       </header>
 
-      {/* Hero Section - Apple Style */}
+      {/* Simplified Hero Section - Apple Style */}
       <section className={`${sectionPadding} relative overflow-hidden`}>
         {hasHeaderImage && (
           <div 
@@ -138,92 +104,29 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-semibold text-gray-900 mb-8 leading-none tracking-tight">
-              Discover.
+              Discover your
               <br />
               <span className="bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
-                Transform.
+                true potential.
               </span>
-              <br />
-              Thrive.
             </h1>
             
             <p className="text-xl sm:text-2xl text-gray-600 mb-12 font-light leading-relaxed max-w-3xl mx-auto">
-              {customizationData.tagline || "Personalized insights that illuminate your path forward"}
+              {customizationData.tagline || "Personalized insights that illuminate your unique path forward"}
             </p>
             
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-              <Button 
-                className="h-12 px-8 text-base font-medium rounded-full transition-all duration-200 hover:scale-105"
-                style={{ backgroundColor: themeColor, color: 'white' }}
-              >
-                {customizationData.buttonText || "Get Your Insights"}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="h-12 px-8 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Learn More
-              </Button>
-            </div>
-
-            {/* Stats - Apple Style */}
-            <div className="grid grid-cols-3 gap-8 max-w-lg mx-auto">
-              <div className="text-center">
-                <div className="text-3xl font-semibold text-gray-900 mb-1">6+</div>
-                <div className="text-sm text-gray-600 font-medium">Insight Areas</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-semibold text-gray-900 mb-1">24h</div>
-                <div className="text-sm text-gray-600 font-medium">Delivery</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-semibold text-gray-900 mb-1">100%</div>
-                <div className="text-sm text-gray-600 font-medium">Personal</div>
-              </div>
-            </div>
+            <Button 
+              className="h-12 px-8 text-base font-medium rounded-full transition-all duration-200 hover:scale-105"
+              style={{ backgroundColor: themeColor, color: 'white' }}
+            >
+              {customizationData.buttonText || "Get Your Insights"}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </motion.div>
         </div>
       </section>
 
-      {/* Insights Grid - Apple Product Style */}
-      <section id="insights" className={`${sectionPadding} bg-gray-50`}>
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl sm:text-5xl font-semibold text-gray-900 mb-6 tracking-tight">
-              Six areas of insight.
-              <br />
-              <span className="text-gray-600">Endless possibilities.</span>
-            </h2>
-            <p className="text-xl text-gray-600 font-light max-w-3xl mx-auto leading-relaxed">
-              Each report is carefully crafted to provide clarity and direction for your unique journey.
-            </p>
-          </div>
-          
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {insightTypes.map((insight, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-3xl p-8 hover:shadow-lg transition-all duration-300 border border-gray-100"
-              >
-                <div 
-                  className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center text-white"
-                  style={{ backgroundColor: themeColor }}
-                >
-                  {insight.icon}
-                </div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-900">{insight.title}</h3>
-                <p className="text-gray-600 leading-relaxed font-light">{insight.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* About Section - Apple Two Column */}
+      {/* Clean About Section - Apple Two Column */}
       <section id="about" className={`${sectionPadding} bg-white`}>
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid gap-16 lg:grid-cols-2 items-center">
@@ -273,14 +176,14 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
         </div>
       </section>
 
-      {/* Services - Apple Card Grid */}
+      {/* Clean Services Section - Apple Card Grid */}
       <section id="services" className={`${sectionPadding} bg-gray-50`}>
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl sm:text-5xl font-semibold mb-6 text-gray-900 tracking-tight">
-              {customizationData.servicesTitle || "Choose your path"}
+              Simple. Clear. Transformative.
             </h2>
-            <p className="text-xl text-gray-600 font-light">Simple. Clear. Transformative.</p>
+            <p className="text-xl text-gray-600 font-light">Choose your path forward</p>
           </div>
           
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -290,7 +193,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-3xl p-8 hover:shadow-xl transition-all duration-300 border border-gray-100 relative overflow-hidden group"
+                className="bg-white rounded-2xl p-8 hover:shadow-lg transition-all duration-300 border border-gray-100 relative overflow-hidden group"
               >
                 {service.isReportService && (
                   <div className="absolute top-6 right-6">
@@ -299,7 +202,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
                 )}
                 
                 <h3 className="text-2xl font-semibold mb-4 text-gray-900">{service.title}</h3>
-                <p className="text-gray-600 mb-8 leading-relaxed font-light text-lg">{service.description}</p>
+                <p className="text-gray-600 mb-8 leading-relaxed font-light">{service.description}</p>
                 
                 <div className="flex items-center justify-between">
                   <div className="text-3xl font-semibold text-gray-900">{service.price}</div>
@@ -335,7 +238,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
         </div>
       </section>
 
-      {/* CTA Section - Apple Style */}
+      {/* Minimal CTA Section */}
       <section className={`${sectionPadding} bg-white`}>
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-4xl sm:text-5xl font-semibold mb-6 text-gray-900 tracking-tight">
@@ -344,26 +247,18 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
           <p className="text-xl text-gray-600 mb-12 font-light leading-relaxed">
             {customizationData.footerSubheading || "Your personalized insights are just a few clicks away."}
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              className="h-14 px-10 text-lg font-medium rounded-full transition-all duration-200 hover:scale-105"
-              style={{ backgroundColor: themeColor, color: 'white' }}
-            >
-              {customizationData.buttonText || "Get Your Insights"}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="h-14 px-10 text-lg font-medium text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Learn More
-            </Button>
-          </div>
+          <Button 
+            className="h-14 px-10 text-lg font-medium rounded-full transition-all duration-200 hover:scale-105"
+            style={{ backgroundColor: themeColor, color: 'white' }}
+          >
+            {customizationData.buttonText || "Get Your Insights"}
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
         </div>
       </section>
 
-      {/* Footer - Apple Minimal */}
-      <footer className="bg-gray-50 py-16">
+      {/* Minimal Footer */}
+      <footer className="bg-white py-16 border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center">
             <div className="text-2xl font-semibold mb-4 text-gray-900 tracking-tight">
