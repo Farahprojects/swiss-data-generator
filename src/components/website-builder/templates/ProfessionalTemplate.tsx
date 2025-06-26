@@ -126,49 +126,43 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
         </div>
       </section>
 
-      {/* Clean About Section - Apple Two Column */}
+      {/* Clean About Section - Apple Inspired */}
       <section id="about" className={`${sectionPadding} bg-white`}>
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid gap-16 lg:grid-cols-2 items-center">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="grid gap-20 lg:grid-cols-2 items-center">
             <div className="order-2 lg:order-1">
               {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) ? (
                 <div className="relative">
                   <img
                     src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
                     alt="About"
-                    className="w-full h-80 lg:h-96 object-cover rounded-3xl shadow-xl"
+                    className="w-full h-96 object-cover rounded-2xl"
                   />
                 </div>
               ) : (
-                <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl h-80 lg:h-96 flex items-center justify-center">
-                  <div className="text-center text-gray-500">
-                    <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-300"></div>
-                    <div className="font-medium">Your Photo</div>
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl h-96 flex items-center justify-center">
+                  <div className="text-center text-gray-400">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-200"></div>
+                    <div className="font-light text-sm">Your Photo</div>
                   </div>
                 </div>
               )}
             </div>
             <div className="order-1 lg:order-2">
-              <h2 className="text-4xl sm:text-5xl font-semibold mb-8 text-gray-900 tracking-tight leading-tight">
+              <h2 className="text-4xl sm:text-5xl font-light mb-8 text-gray-900 tracking-tight leading-tight">
                 {customizationData.introTitle || "Designed for you."}
               </h2>
-              <p className="text-xl text-gray-600 leading-relaxed mb-8 font-light">
-                {customizationData.bio || "Every insight is personalized to your unique story, goals, and timing. No generic advice – just clarity tailored specifically for your journey forward."}
+              <p className="text-xl text-gray-600 leading-relaxed mb-12 font-light">
+                {customizationData.bio || "Every insight is crafted with precision, tailored to your unique story and timing. No generic advice—just clarity designed specifically for your journey."}
               </p>
-              <div className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="w-2 h-2 rounded-full mt-3 flex-shrink-0" style={{ backgroundColor: themeColor }}></div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Precision Matters</h4>
-                    <p className="text-gray-600 font-light">Every detail of your birth information creates a more accurate and meaningful reading.</p>
-                  </div>
+              <div className="space-y-8">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2 text-lg">Precision Matters</h4>
+                  <p className="text-gray-600 font-light leading-relaxed">Every detail creates a more accurate and meaningful reading.</p>
                 </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-2 h-2 rounded-full mt-3 flex-shrink-0" style={{ backgroundColor: themeColor }}></div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Practical Guidance</h4>
-                    <p className="text-gray-600 font-light">Insights you can actually use in your daily life and important decisions.</p>
-                  </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2 text-lg">Practical Guidance</h4>
+                  <p className="text-gray-600 font-light leading-relaxed">Insights you can actually use in your daily life and important decisions.</p>
                 </div>
               </div>
             </div>
