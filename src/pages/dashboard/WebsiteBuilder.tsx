@@ -435,9 +435,9 @@ export default function WebsiteBuilder() {
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-50">
-      {/* Full-screen template preview */}
-      <div className="absolute inset-0 overflow-auto">
+    <div className="fixed inset-0 bg-gray-50 overflow-hidden">
+      {/* Full-screen template preview that takes entire viewport */}
+      <div className="w-full h-full overflow-auto">
         <TemplatePreview
           template={selectedTemplate}
           customizationData={customizationData}
