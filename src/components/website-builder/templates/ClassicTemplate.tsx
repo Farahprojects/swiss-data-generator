@@ -138,7 +138,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
               )}
             </div>
             <div className="lg:col-span-2 order-1 lg:order-2 text-center lg:text-left">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6 text-gray-900">My Philosophy</h2>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6 text-gray-900">
+                {customizationData.introTitle || "My Philosophy"}
+              </h2>
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-4 sm:mb-6">
                 {customizationData.bio || "Drawing from time-tested principles and classical approaches, I believe in the power of deep reflection, meaningful dialogue, and gradual transformation."}
               </p>
