@@ -243,7 +243,16 @@ export const MinimalTemplate = ({ customizationData, isPreview = false, onCustom
       <section className={`${sectionPadding} bg-white`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl sm:text-3xl font-light mb-12 sm:mb-16 text-gray-900 text-center">
-            {customizationData.reportService?.sectionHeading || customizationData.servicesTitle || "Services"}
+            <EnhancedInlineText
+              value={customizationData.servicesTitle || ""}
+              onChange={(value) => handleFieldChange('servicesTitle', value)}
+              placeholder="Services"
+              isEditable={isEditable}
+              fieldName="servicesTitle"
+              formatting={customizationData.servicesTitleFormatting}
+              onCustomizationChange={onCustomizationChange}
+              className="text-2xl sm:text-3xl font-light text-gray-900"
+            />
           </h2>
           {allServices.length > 0 ? (
             <div className="space-y-8 sm:space-y-12 lg:space-y-16">

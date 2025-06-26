@@ -5,7 +5,7 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
-import { Clock, Users, Target, TrendingUp, Shield, Calendar, ArrowRight, Star } from "lucide-react";
+import { ArrowRight, Star } from "lucide-react";
 import { EnhancedInlineText } from "../EnhancedInlineText";
 
 interface TemplateProps {
@@ -119,11 +119,16 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-semibold text-gray-900 mb-8 leading-none tracking-tight">
-              Discover your
-              <br />
-              <span className="bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
-                true potential.
-              </span>
+              <EnhancedInlineText
+                value={customizationData.heroTitle || ""}
+                onChange={(value) => handleFieldChange('heroTitle', value)}
+                placeholder="Discover your true potential."
+                isEditable={isEditable}
+                fieldName="heroTitle"
+                formatting={customizationData.heroTitleFormatting}
+                onCustomizationChange={onCustomizationChange}
+                className="text-5xl sm:text-6xl lg:text-7xl font-semibold text-gray-900 leading-none tracking-tight"
+              />
             </h1>
             
             <p className="text-xl sm:text-2xl text-gray-600 mb-12 font-light leading-relaxed max-w-3xl mx-auto">
@@ -228,9 +233,29 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl sm:text-5xl font-semibold mb-6 text-gray-900 tracking-tight">
-              Simple. Clear. Transformative.
+              <EnhancedInlineText
+                value={customizationData.servicesTitle || ""}
+                onChange={(value) => handleFieldChange('servicesTitle', value)}
+                placeholder="Simple. Clear. Transformative."
+                isEditable={isEditable}
+                fieldName="servicesTitle"
+                formatting={customizationData.servicesTitleFormatting}
+                onCustomizationChange={onCustomizationChange}
+                className="text-4xl sm:text-5xl font-semibold text-gray-900 tracking-tight"
+              />
             </h2>
-            <p className="text-xl text-gray-600 font-light">Choose your path forward</p>
+            <p className="text-xl text-gray-600 font-light">
+              <EnhancedInlineText
+                value={customizationData.servicesSubtitle || ""}
+                onChange={(value) => handleFieldChange('servicesSubtitle', value)}
+                placeholder="Choose your path forward"
+                isEditable={isEditable}
+                fieldName="servicesSubtitle"
+                formatting={customizationData.servicesSubtitleFormatting}
+                onCustomizationChange={onCustomizationChange}
+                className="text-xl text-gray-600 font-light"
+              />
+            </p>
           </div>
           
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -348,7 +373,18 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
                 className="text-2xl font-semibold text-gray-900 tracking-tight"
               />
             </div>
-            <p className="text-gray-600 mb-8 font-light">Personalized insights for your unique journey</p>
+            <p className="text-gray-600 mb-8 font-light">
+              <EnhancedInlineText
+                value={customizationData.footerTagline || ""}
+                onChange={(value) => handleFieldChange('footerTagline', value)}
+                placeholder="Personalized insights for your unique journey"
+                isEditable={isEditable}
+                fieldName="footerTagline"
+                formatting={customizationData.footerTaglineFormatting}
+                onCustomizationChange={onCustomizationChange}
+                className="text-gray-600 font-light"
+              />
+            </p>
             <div className="flex justify-center space-x-8 text-sm text-gray-500 font-medium">
               <span className="hover:text-gray-700 cursor-pointer transition-colors">Privacy</span>
               <span className="hover:text-gray-700 cursor-pointer transition-colors">Terms</span>
