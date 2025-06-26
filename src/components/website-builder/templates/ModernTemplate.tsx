@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -42,27 +43,19 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
   const getButtonStyles = () => {
     const buttonColor = customizationData.buttonColor || themeColor;
     const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
-    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
-    const buttonStyle = customizationData.buttonStyle || 'bordered';
     
     return {
-      backgroundColor: buttonStyle === 'bordered' ? 'transparent' : buttonColor,
+      backgroundColor: buttonColor,
       color: buttonTextColor,
-      fontFamily: `${buttonFontFamily}, sans-serif`,
-      border: buttonStyle === 'borderless' ? 'none' : `2px solid ${buttonColor}`,
-      borderRadius: buttonStyle === 'borderless' ? '0' : undefined
     };
   };
 
-  // Only adjust section height for preview, use responsive padding
   const sectionPadding = isPreview ? 'py-6' : 'py-8 sm:py-12 lg:py-16';
   const heroSection = isPreview ? 'py-8' : 'min-h-screen';
 
-  // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
   const headerOpacity = customizationData.headerImageOpacity || 100;
 
-  // Create report service card with customizable data
   const reportService = {
     title: customizationData.reportService?.title || "Personal Insights Report",
     description: customizationData.reportService?.description || "Unlock your potential with a comprehensive personality analysis and growth roadmap tailored specifically for you.",
@@ -70,10 +63,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
     isReportService: true
   };
 
-  // Filter out null services and ensure we have valid service objects
   const validServices = validateServices(customizationData.services || []);
-  
-  // Add report service as first item always (including preview)
   const allServices = [reportService, ...validServices];
 
   const handlePurchaseClick = async (service: any, index: number) => {
@@ -86,7 +76,6 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
       return;
     }
 
-    // Handle report service differently
     if (service.isReportService) {
       window.location.href = `/${slug}/vibe`;
       return;
@@ -111,51 +100,10 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
     setPurchasingService(null);
   };
 
-  // Get hero styling
-  const getHeroFontClass = (style: string) => {
-    switch (style) {
-      case 'elegant': return 'font-serif font-light';
-      case 'bold': return 'font-bold';
-      case 'handwritten': return 'font-mono';
-      case 'classic': return 'font-serif';
-      case 'minimal': return 'font-light tracking-wide';
-      default: return 'font-normal';
-    }
-  };
-
-  const getHeroAlignmentClass = (alignment: string) => {
-    switch (alignment) {
-      case 'center': return 'text-center lg:text-center';
-      case 'right': return 'text-right lg:text-right';
-      default: return 'text-center lg:text-left';
-    }
-  };
-
-  // Get intro styling
-  const getIntroFontClass = (style: string) => {
-    switch (style) {
-      case 'elegant': return 'font-serif font-light';
-      case 'bold': return 'font-bold';
-      case 'handwritten': return 'font-mono';
-      case 'classic': return 'font-serif';
-      case 'minimal': return 'font-light tracking-wide';
-      default: return 'font-normal';
-    }
-  };
-
-  const getAlignmentClass = (alignment: string) => {
-    switch (alignment) {
-      case 'center': return 'text-center';
-      case 'right': return 'text-right';
-      default: return 'text-left';
-    }
-  };
-
   return (
     <div className="bg-gray-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Modern Hero with Split Layout */}
       <section className={`relative ${heroSection} flex items-center`}>
-        {/* Only show dark background when no header image */}
         {!hasHeaderImage && (
           <>
             <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"></div>
@@ -163,7 +111,6 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
           </>
         )}
         
-        {/* Header background image with optional opacity control */}
         {hasHeaderImage && (
           <div 
             className="absolute inset-0 bg-cover bg-center"
@@ -179,32 +126,22 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className={`text-white ${getHeroAlignmentClass(customizationData.heroAlignment || 'left')}`}
+            className="text-center lg:text-left text-white"
             style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
           >
-            <h1 
-              className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
-              style={{
-                color: customizationData.heroTextColor || '#FFFFFF'
-              }}
-            >
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight">
               <EnhancedInlineText
                 value={customizationData.coachName || ""}
                 onChange={(value) => handleFieldChange('coachName', value)}
                 placeholder="Alex Johnson"
                 isEditable={isEditable}
                 fieldName="coachName"
-                formatting={customizationData.coachNameFormatting || { color: customizationData.heroTextColor || '#FFFFFF' }}
+                formatting={customizationData.coachNameFormatting || { color: '#FFFFFF' }}
                 onCustomizationChange={onCustomizationChange}
-                className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-white"
               />
             </h1>
-            <p 
-              className={`text-base sm:text-lg md:text-xl mb-6 sm:mb-8 leading-relaxed ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
-              style={{
-                color: customizationData.heroTextColor || '#D1D5DB'
-              }}
-            >
+            <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 leading-relaxed">
               <EnhancedInlineText
                 value={customizationData.tagline || ""}
                 onChange={(value) => handleFieldChange('tagline', value)}
@@ -212,12 +149,12 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                 multiline={true}
                 isEditable={isEditable}
                 fieldName="tagline"
-                formatting={customizationData.taglineFormatting || { color: customizationData.heroTextColor || '#D1D5DB' }}
+                formatting={customizationData.taglineFormatting || { color: '#D1D5DB' }}
                 onCustomizationChange={onCustomizationChange}
-                className={`text-base sm:text-lg md:text-xl leading-relaxed ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
+                className="text-base sm:text-lg md:text-xl leading-relaxed text-gray-300"
               />
             </p>
-            <div className={`flex flex-col sm:flex-row gap-4 ${customizationData.heroAlignment === 'center' ? 'justify-center' : customizationData.heroAlignment === 'right' ? 'justify-end lg:justify-end' : 'justify-center lg:justify-start'}`}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Button 
                 className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
                 style={getButtonStyles()}
@@ -242,26 +179,20 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
       <section className={`${sectionPadding} bg-white`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
-            <div className={getAlignmentClass(customizationData.introAlignment || 'left')}>
-              <h2 
-                className={`text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                style={{ color: customizationData.introTextColor || '#111827' }}
-              >
+            <div className="text-left">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">
                 <EnhancedInlineText
                   value={customizationData.introTitle || ""}
                   onChange={(value) => handleFieldChange('introTitle', value)}
                   placeholder="About Me"
                   isEditable={isEditable}
                   fieldName="introTitle"
-                  formatting={customizationData.introTitleFormatting || { color: customizationData.introTextColor || '#111827' }}
+                  formatting={customizationData.introTitleFormatting || { color: '#111827' }}
                   onCustomizationChange={onCustomizationChange}
-                  className={`text-xl sm:text-2xl md:text-3xl font-bold drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                  className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900"
                 />
               </h2>
-              <p 
-                className={`text-sm sm:text-base leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
-                style={{ color: customizationData.introTextColor || '#6B7280' }}
-              >
+              <p className="text-sm sm:text-base leading-relaxed text-gray-600">
                 <EnhancedInlineText
                   value={customizationData.bio || ""}
                   onChange={(value) => handleFieldChange('bio', value)}
@@ -269,9 +200,9 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                   multiline={true}
                   isEditable={isEditable}
                   fieldName="bio"
-                  formatting={customizationData.bioFormatting || { color: customizationData.introTextColor || '#6B7280' }}
+                  formatting={customizationData.bioFormatting || { color: '#6B7280' }}
                   onCustomizationChange={onCustomizationChange}
-                  className={`text-sm sm:text-base leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
+                  className="text-sm sm:text-base leading-relaxed text-gray-600"
                 />
               </p>
             </div>
@@ -293,7 +224,16 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
       <section className={`${sectionPadding} bg-gray-50`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-8 sm:mb-12 text-gray-900">
-            {customizationData.reportService?.sectionHeading || "Services"}
+            <EnhancedInlineText
+              value={customizationData.servicesTitle || ""}
+              onChange={(value) => handleFieldChange('servicesTitle', value)}
+              placeholder="Services"
+              isEditable={isEditable}
+              fieldName="servicesTitle"
+              formatting={customizationData.servicesTitleFormatting}
+              onCustomizationChange={onCustomizationChange}
+              className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900"
+            />
           </h2>
           {allServices.length > 0 ? (
             <div className="space-y-4 sm:space-y-6">
