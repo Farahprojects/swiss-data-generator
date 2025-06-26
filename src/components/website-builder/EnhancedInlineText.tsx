@@ -114,13 +114,13 @@ export const EnhancedInlineText: React.FC<EnhancedInlineTextProps> = ({
     updateFormatting(fieldName, newFormatting);
   };
 
-  const getComputedStyle = () => {
+  const getComputedStyle = (): React.CSSProperties => {
     return {
       fontFamily: formatting.fontFamily || 'inherit',
       fontSize: formatting.fontSize || 'inherit',
       color: formatting.color || 'inherit',
       fontWeight: formatting.fontWeight || 'inherit',
-      textAlign: formatting.textAlign || 'inherit',
+      textAlign: (formatting.textAlign as React.CSSProperties['textAlign']) || 'inherit',
     };
   };
 
