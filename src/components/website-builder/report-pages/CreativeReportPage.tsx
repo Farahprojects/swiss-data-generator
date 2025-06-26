@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ReportForm } from "@/components/shared/ReportForm";
 
 interface CreativeReportPageProps {
   customizationData: any;
@@ -76,55 +77,11 @@ export const CreativeReportPage: React.FC<CreativeReportPageProps> = ({
       <section className="py-12 sm:py-16 lg:py-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 sm:p-10 shadow-xl">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-8 text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Start Your Creative Journey
-            </h2>
-            
-            {/* Creative Form */}
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-3 border-2 border-orange-200 rounded-2xl focus:outline-none focus:border-orange-400 bg-white/70"
-                    placeholder="Your first name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-3 border-2 border-pink-200 rounded-2xl focus:outline-none focus:border-pink-400 bg-white/70"
-                    placeholder="Your last name"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-                <input 
-                  type="email" 
-                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-2xl focus:outline-none focus:border-purple-400 bg-white/70"
-                  placeholder="Your email address"
-                />
-              </div>
-
-              <div className="text-center pt-6">
-                <Button 
-                  className="py-4 px-8 text-lg font-bold rounded-full shadow-lg transform hover:scale-105 transition-transform"
-                  style={{ 
-                    background: `linear-gradient(135deg, ${themeColor}, #ec4899)`,
-                    color: '#FFFFFF'
-                  }}
-                >
-                  Create My Report - $39
-                </Button>
-                <p className="text-sm text-gray-600 mt-4">
-                  ✨ Instant magic • 🎨 Creative insights • 🌟 Lifetime inspiration
-                </p>
-              </div>
-            </div>
+            <ReportForm 
+              coachSlug={coachSlug}
+              themeColor={themeColor}
+              fontFamily={fontFamily}
+            />
           </div>
         </div>
       </section>

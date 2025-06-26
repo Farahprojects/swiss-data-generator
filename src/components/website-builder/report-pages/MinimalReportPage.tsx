@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ReportForm } from "@/components/shared/ReportForm";
 
 interface MinimalReportPageProps {
   customizationData: any;
@@ -55,52 +56,11 @@ export const MinimalReportPage: React.FC<MinimalReportPageProps> = ({
       <section className="py-16 sm:py-24 bg-gray-50">
         <div className="max-w-xl mx-auto px-4 sm:px-6">
           <div className="bg-white p-8 sm:p-10 rounded-none shadow-sm">
-            <h2 className="text-xl sm:text-2xl font-light mb-8 text-gray-900 text-center tracking-wide">
-              Begin Your Journey
-            </h2>
-            
-            {/* Minimal Form */}
-            <div className="space-y-6">
-              <div>
-                <input 
-                  type="text" 
-                  className="w-full px-0 py-3 border-0 border-b border-gray-200 focus:outline-none focus:border-gray-400 bg-transparent text-gray-900 placeholder-gray-400"
-                  placeholder="First name"
-                />
-              </div>
-              
-              <div>
-                <input 
-                  type="text" 
-                  className="w-full px-0 py-3 border-0 border-b border-gray-200 focus:outline-none focus:border-gray-400 bg-transparent text-gray-900 placeholder-gray-400"
-                  placeholder="Last name"
-                />
-              </div>
-              
-              <div>
-                <input 
-                  type="email" 
-                  className="w-full px-0 py-3 border-0 border-b border-gray-200 focus:outline-none focus:border-gray-400 bg-transparent text-gray-900 placeholder-gray-400"
-                  placeholder="Email address"
-                />
-              </div>
-
-              <div className="text-center pt-8">
-                <Button 
-                  className="font-light tracking-wide py-3 px-8 bg-transparent hover:opacity-90 transition-opacity"
-                  style={{ 
-                    backgroundColor: 'transparent',
-                    color: themeColor,
-                    border: `1px solid ${themeColor}`
-                  }}
-                >
-                  Get Report - $29
-                </Button>
-                <p className="text-xs text-gray-400 mt-4 font-light">
-                  Thoughtful • Immediate • Transformative
-                </p>
-              </div>
-            </div>
+            <ReportForm 
+              coachSlug={coachSlug}
+              themeColor={themeColor}
+              fontFamily={fontFamily}
+            />
           </div>
         </div>
       </section>

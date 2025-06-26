@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ReportForm } from "@/components/shared/ReportForm";
 
 interface ClassicReportPageProps {
   customizationData: any;
@@ -56,55 +57,11 @@ export const ClassicReportPage: React.FC<ClassicReportPageProps> = ({
       <section className="py-12 sm:py-16 lg:py-20 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8 lg:p-10 border">
-            <h2 className="text-2xl sm:text-3xl font-serif font-bold mb-6 text-gray-900 text-center">
-              Get Your Personalized Report
-            </h2>
-            
-            {/* Placeholder Form */}
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    placeholder="Enter your first name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    placeholder="Enter your last name"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                <input 
-                  type="email" 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  placeholder="Enter your email"
-                />
-              </div>
-
-              <div className="text-center pt-6">
-                <Button 
-                  className="py-3 px-8 text-lg font-serif"
-                  style={{ 
-                    backgroundColor: themeColor,
-                    color: '#FFFFFF'
-                  }}
-                >
-                  Get My Report - $29
-                </Button>
-                <p className="text-sm text-gray-500 mt-3">
-                  Secure payment • Instant delivery • 30-day guarantee
-                </p>
-              </div>
-            </div>
+            <ReportForm 
+              coachSlug={coachSlug}
+              themeColor={themeColor}
+              fontFamily={fontFamily}
+            />
           </div>
         </div>
       </section>

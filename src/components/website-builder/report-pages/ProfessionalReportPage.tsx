@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ReportForm } from "@/components/shared/ReportForm";
 
 interface ProfessionalReportPageProps {
   customizationData: any;
@@ -86,65 +87,11 @@ export const ProfessionalReportPage: React.FC<ProfessionalReportPageProps> = ({
       <section className="py-12 sm:py-16 lg:py-20 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8 lg:p-10 border">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 text-center">
-              Executive Assessment Request
-            </h2>
-            
-            {/* Professional Form */}
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">First Name *</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your first name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name *</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your last name"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Professional Email *</label>
-                  <input 
-                    type="email" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your email"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Current Position</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., CEO, Director, VP"
-                  />
-                </div>
-              </div>
-
-              <div className="text-center pt-6">
-                <Button 
-                  className="py-4 px-8 text-lg font-semibold"
-                  style={{ 
-                    backgroundColor: themeColor,
-                    color: '#FFFFFF'
-                  }}
-                >
-                  Request Assessment - $89
-                </Button>
-                <p className="text-sm text-gray-500 mt-3">
-                  Secure processing • 24-hour delivery • Full confidentiality
-                </p>
-              </div>
-            </div>
+            <ReportForm 
+              coachSlug={coachSlug}
+              themeColor={themeColor}
+              fontFamily={fontFamily}
+            />
           </div>
         </div>
       </section>

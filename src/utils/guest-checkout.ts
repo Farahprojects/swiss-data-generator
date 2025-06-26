@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ReportFormData } from "@/types/public-report";
 
@@ -6,7 +5,7 @@ export interface GuestCheckoutOptions {
   amount: number;
   email: string;
   description: string;
-  reportData?: ReportFormData;
+  reportData?: ReportFormData & { coachSlug?: string };
   successUrl?: string;
   cancelUrl?: string;
 }
@@ -24,7 +23,8 @@ export const initiateGuestCheckout = async ({
       amount,
       email,
       description,
-      hasReportData: !!reportData
+      hasReportData: !!reportData,
+      coachSlug: reportData?.coachSlug
     });
 
     // Call the unified create-checkout function with isGuest flag

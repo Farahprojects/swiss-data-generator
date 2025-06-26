@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ReportForm } from "@/components/shared/ReportForm";
 
 interface ModernReportPageProps {
   customizationData: any;
@@ -57,55 +58,11 @@ export const ModernReportPage: React.FC<ModernReportPageProps> = ({
       <section className="py-12 sm:py-16 lg:py-20 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 lg:p-10">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 text-center">
-              Get Your Personal Report
-            </h2>
-            
-            {/* Placeholder Form */}
-            <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter your first name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter your last name"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                <input 
-                  type="email" 
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Enter your email"
-                />
-              </div>
-
-              <div className="text-center pt-6">
-                <Button 
-                  className="py-4 px-8 text-lg rounded-lg"
-                  style={{ 
-                    backgroundColor: themeColor,
-                    color: '#FFFFFF'
-                  }}
-                >
-                  Get My Report - $29
-                </Button>
-                <p className="text-sm text-gray-500 mt-3">
-                  Secure checkout • Instant access • Money-back guarantee
-                </p>
-              </div>
-            </div>
+            <ReportForm 
+              coachSlug={coachSlug}
+              themeColor={themeColor}
+              fontFamily={fontFamily}
+            />
           </div>
         </div>
       </section>
@@ -113,7 +70,7 @@ export const ModernReportPage: React.FC<ModernReportPageProps> = ({
       {/* CTA Footer */}
       <section className="py-12 sm:py-16" style={{ backgroundColor: themeColor }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
-          <h3 className="text-xl sm:text-2xl font-bold mb-2">
+          <h3 className="text-2xl sm:text-3xl font-bold mb-4">
             Ready to unlock your potential?
           </h3>
           <p className="text-base opacity-90">
