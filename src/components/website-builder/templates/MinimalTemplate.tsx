@@ -218,7 +218,9 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
       {/* Minimal Services List */}
       <section className={`${sectionPadding} bg-white`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <h2 className="text-2xl sm:text-3xl font-light mb-12 sm:mb-16 text-gray-900 text-center">Services</h2>
+          <h2 className="text-2xl sm:text-3xl font-light mb-12 sm:mb-16 text-gray-900 text-center">
+            {customizationData.servicesTitle || "Services"}
+          </h2>
           {validServices.length > 0 ? (
             <div className="space-y-8 sm:space-y-12 lg:space-y-16">
               {validServices.map((service: any, index: number) => (
@@ -273,8 +275,12 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
       {/* Minimal CTA */}
       <section className={`${sectionPadding} bg-gray-50`}>
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl font-light mb-6 sm:mb-8 text-gray-900">Let's Begin</h2>
-          <p className="text-base sm:text-lg text-gray-600 font-light mb-8 sm:mb-12">Simple. Focused. Transformative.</p>
+          <h2 className="text-2xl sm:text-3xl font-light mb-6 sm:mb-8 text-gray-900">
+            {customizationData.footerHeading || "Let's Begin"}
+          </h2>
+          <p className="text-base sm:text-lg text-gray-600 font-light mb-8 sm:mb-12">
+            {customizationData.footerSubheading || "Simple. Focused. Transformative."}
+          </p>
           <Button 
             className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] hover:opacity-90 transition-opacity"
             style={getButtonStyles()}
