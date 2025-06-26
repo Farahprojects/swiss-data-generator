@@ -1,14 +1,15 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { ReportFormData } from "@/types/public-report";
 
-export interface GuestCheckoutOptions {
+interface CheckoutParams {
   amount: number;
   email: string;
   description: string;
-  reportData?: ReportFormData;
-  successUrl?: string;
-  cancelUrl?: string;
+  reportData: any;
+}
+
+interface CheckoutResult {
+  success: boolean;
+  error?: string;
 }
 
 export const initiateGuestCheckout = async ({
@@ -16,97 +17,49 @@ export const initiateGuestCheckout = async ({
   email,
   description,
   reportData,
-  successUrl,
-  cancelUrl,
-}: GuestCheckoutOptions) => {
+}: CheckoutParams): Promise<CheckoutResult> => {
   try {
-    console.log("🔄 Initiating guest checkout with unified function:", {
-      amount,
-      email,
-      description,
-      hasReportData: !!reportData
-    });
+    console.log('Initiating guest checkout with data:', { amount, email, description, reportData });
 
-    // Call the unified create-checkout function with isGuest flag
-    const { data, error } = await supabase.functions.invoke("create-checkout", {
+    const { data, error } = await supabase.functions.invoke('create-guest-checkout', {
       body: {
-        mode: "payment",
         amount,
         email,
-        isGuest: true,
         description,
-        reportData,
-        successUrl,
-        cancelUrl,
+        reportData: {
+          ...reportData,
+          // Ensure coach attribution is included
+          coachSlug: reportData.coachSlug || null,
+          coachName: reportData.coachName || null,
+        },
       },
     });
 
     if (error) {
-      console.error("❌ Error creating guest checkout session:", error);
-      throw new Error(error.message || "Failed to create checkout session");
-    }
-
-    if (!data?.url) {
-      throw new Error("No checkout URL returned from server");
-    }
-
-    console.log("✅ Guest checkout session created successfully");
-
-    // Redirect to the Stripe checkout URL
-    window.location.href = data.url;
-    return { success: true };
-  } catch (err) {
-    console.error("❌ Failed to initiate guest checkout:", err);
-    return { 
-      success: false, 
-      error: err instanceof Error ? err.message : "Unknown error occurred" 
-    };
-  }
-};
-
-export const verifyGuestPayment = async (sessionId: string) => {
-  try {
-    console.log("🔍 Verifying guest payment for session:", sessionId);
-
-    const { data, error } = await supabase.functions.invoke("verify-guest-payment", {
-      body: { sessionId },
-    });
-
-    if (error) {
-      console.error("❌ Error verifying guest payment:", error);
+      console.error('Checkout function error:', error);
       return {
         success: false,
-        verified: false,
-        error: error.message || "Failed to verify payment"
+        error: error.message || 'Failed to create checkout session',
       };
     }
 
-    console.log("✅ Guest payment verification result:", data);
-    
-    // Return all properties from the edge function response
-    return {
-      success: true,
-      verified: data.verified,
-      reportData: data.reportData,
-      guestReportId: data.guestReportId,
-      paymentStatus: data.paymentStatus,
-      amountPaid: data.amountPaid,
-      currency: data.currency,
-      isService: data.isService,
-      isCoachReport: data.isCoachReport,
-      coach_slug: data.coach_slug,
-      coach_name: data.coach_name,
-      service_title: data.service_title,
-      swissProcessing: data.swissProcessing,
-      message: data.message,
-      error: data.error
-    };
-  } catch (err) {
-    console.error("❌ Failed to verify guest payment:", err);
+    if (data?.url) {
+      console.log('Checkout session created successfully:', data.sessionId);
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
+      return { success: true };
+    } else {
+      console.error('No checkout URL received from function');
+      return {
+        success: false,
+        error: 'No checkout URL received',
+      };
+    }
+  } catch (error) {
+    console.error('Error in initiateGuestCheckout:', error);
     return {
       success: false,
-      verified: false,
-      error: err instanceof Error ? err.message : "Unknown error occurred"
+      error: error instanceof Error ? error.message : 'An unexpected error occurred',
     };
   }
 };
