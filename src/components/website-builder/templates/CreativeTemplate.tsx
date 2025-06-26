@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -101,7 +100,7 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
   };
 
   return (
-    <div className={`bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 ${!isPreview ? 'pt-16' : ''}`} style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+    <div className="bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Creative Asymmetric Hero */}
       <section className={`relative ${heroSection} overflow-hidden`}>
         {/* Only show decorative elements when no header image */}
