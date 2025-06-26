@@ -1,14 +1,20 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TemplateSelector } from "@/components/website-builder/TemplateSelector";
-import { CustomizationPanel } from "@/components/website-builder/CustomizationPanel";
 import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
-import { Button } from "@/components/ui/button";
-import { Eye, Globe, Save } from "lucide-react";
+import { FloatingSideButtons } from "@/components/website-builder/FloatingSideButtons";
+import { SideMenuBar } from "@/components/website-builder/SideMenuBar";
+import { EditCardModal } from "@/components/website-builder/EditCardModal";
+import { HeroModalContent } from "@/components/website-builder/modals/HeroModalContent";
+import { IntroModalContent } from "@/components/website-builder/modals/IntroModalContent";
+import { ImagesModalContent } from "@/components/website-builder/modals/ImagesModalContent";
+import { ServicesModalContent } from "@/components/website-builder/modals/ServicesModalContent";
+import { CtaModalContent } from "@/components/website-builder/modals/CtaModalContent";
+import { FooterModalContent } from "@/components/website-builder/modals/FooterModalContent";
+import { Eye } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
@@ -42,6 +48,7 @@ export default function WebsiteBuilder() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
 
   useEffect(() => {
     loadTemplatesAndWebsite();
@@ -385,11 +392,55 @@ export default function WebsiteBuilder() {
     }
   };
 
-  const getPublishButtonText = () => {
-    if (isPublishing) return 'Publishing...';
-    if (!website) return 'Publish';
-    if (website.is_published) return 'Update Site';
-    return 'Publish Changes';
+  const handleOpenModal = (modalType: string) => {
+    setActiveModal(modalType);
+  };
+
+  const handleCloseModal = () => {
+    setActiveModal(null);
+  };
+
+  const renderModalContent = () => {
+    const props = {
+      customizationData,
+      onChange: handleCustomizationChange
+    };
+
+    switch (activeModal) {
+      case 'hero':
+        return <HeroModalContent {...props} />;
+      case 'intro':
+        return <IntroModalContent {...props} />;
+      case 'images':
+        return <ImagesModalContent {...props} />;
+      case 'services':
+        return <ServicesModalContent {...props} />;
+      case 'cta':
+        return <CtaModalContent {...props} />;
+      case 'footer':
+        return <FooterModalContent {...props} />;
+      default:
+        return null;
+    }
+  };
+
+  const getModalTitle = () => {
+    switch (activeModal) {
+      case 'hero':
+        return 'Edit Hero Section';
+      case 'intro':
+        return 'Edit Intro Section';
+      case 'images':
+        return 'Edit Colors & Images';
+      case 'services':
+        return 'Edit Services';
+      case 'cta':
+        return 'Edit Call-to-Action';
+      case 'footer':
+        return 'Edit Footer';
+      default:
+        return '';
+    }
   };
 
   const getSaveButtonText = () => {
@@ -397,8 +448,14 @@ export default function WebsiteBuilder() {
     return 'Save Draft';
   };
 
+  const getPublishButtonText = () => {
+    if (isPublishing) return 'Publishing...';
+    if (!website) return 'Publish';
+    if (website.is_published) return 'Update Site';
+    return 'Publish Changes';
+  };
+
   if (isLoading) {
-    // Replace spinner with TheraLoader for branding consistency
     return (
       <TheraLoader message="Loading Website Builder..." size="lg" />
     );
@@ -423,8 +480,9 @@ export default function WebsiteBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="border-b bg-white">
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Header with template info and preview button */}
+      <div className="border-b bg-white relative z-30">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -439,65 +497,50 @@ export default function WebsiteBuilder() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                onClick={handlePreview}
-                className="flex items-center space-x-2"
-              >
-                <Eye className="h-4 w-4" />
-                <span>Preview</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex items-center space-x-2"
-              >
-                <Save className="h-4 w-4" />
-                <span>{getSaveButtonText()}</span>
-              </Button>
-              
-              <Button
-                onClick={handlePublish}
-                disabled={isPublishing}
-                className="flex items-center space-x-2 bg-primary hover:bg-primary/90"
-              >
-                <Globe className="h-4 w-4" />
-                <span>{getPublishButtonText()}</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <CustomizationPanel
-              customizationData={customizationData}
-              onChange={handleCustomizationChange}
-            />
-            
-            <Button
-              variant="outline"
-              onClick={() => setSelectedTemplate(null)}
-              className="w-full"
+            <button
+              onClick={handlePreview}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
-              Change Template
-            </Button>
-          </div>
-          
-          <div className="lg:sticky lg:top-6">
-            <TemplatePreview
-              template={selectedTemplate}
-              customizationData={customizationData}
-            />
+              <Eye className="h-4 w-4" />
+              <span>Preview</span>
+            </button>
           </div>
         </div>
       </div>
 
+      {/* Full-width template preview */}
+      <div className="relative">
+        <TemplatePreview
+          template={selectedTemplate}
+          customizationData={customizationData}
+        />
+        
+        {/* Floating side buttons */}
+        <FloatingSideButtons onOpenModal={handleOpenModal} />
+        
+        {/* Side menu bar */}
+        <SideMenuBar
+          onSave={handleSave}
+          onPublish={handlePublish}
+          onChangeTemplate={() => setSelectedTemplate(null)}
+          isSaving={isSaving}
+          isPublishing={isPublishing}
+          saveButtonText={getSaveButtonText()}
+          publishButtonText={getPublishButtonText()}
+          hasUnpublishedChanges={website?.has_unpublished_changes}
+        />
+      </div>
+
+      {/* Edit modals */}
+      <EditCardModal
+        isOpen={!!activeModal}
+        onClose={handleCloseModal}
+        title={getModalTitle()}
+      >
+        {renderModalContent()}
+      </EditCardModal>
+
+      {/* Publishing modal */}
       {showPublishModal && website && (
         <PublishingModal
           website={website}
