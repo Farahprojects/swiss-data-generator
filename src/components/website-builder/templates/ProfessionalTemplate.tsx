@@ -80,7 +80,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
             <div className="text-2xl font-semibold text-gray-900 tracking-tight">
               {customizationData.coachName || "Your Name"}
             </div>
-            <nav className="hidden md:flex items-center space-x-8">
+            <nav className="hidden md:flex items-center space-x-12">
               <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">About</a>
               <a href="#services" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Services</a>
             </nav>
