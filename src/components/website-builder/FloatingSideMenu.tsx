@@ -27,7 +27,7 @@ export const FloatingSideMenu: React.FC<FloatingSideMenuProps> = ({
   website
 }) => {
   return (
-    <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col space-y-3">
+    <div className="fixed right-4 top-1/2 -translate-y-1/2 z-[60] flex flex-col space-y-3">
       <Button
         variant="outline"
         size="sm"

@@ -20,7 +20,7 @@ export const FloatingEditButtons: React.FC<FloatingEditButtonsProps> = ({
   onOpenModal
 }) => {
   return (
-    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex flex-col space-y-3">
+    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-[60] flex flex-col space-y-3">
       {editSections.map((section) => {
         const Icon = section.icon;
         return (
