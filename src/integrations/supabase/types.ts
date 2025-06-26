@@ -288,6 +288,8 @@ export type Database = {
           coach_id: string
           created_at: string
           customization_data: Json
+          draft_customization_data: Json | null
+          has_unpublished_changes: boolean | null
           id: string
           is_published: boolean
           published_at: string | null
@@ -299,6 +301,8 @@ export type Database = {
           coach_id: string
           created_at?: string
           customization_data?: Json
+          draft_customization_data?: Json | null
+          has_unpublished_changes?: boolean | null
           id?: string
           is_published?: boolean
           published_at?: string | null
@@ -310,6 +314,8 @@ export type Database = {
           coach_id?: string
           created_at?: string
           customization_data?: Json
+          draft_customization_data?: Json | null
+          has_unpublished_changes?: boolean | null
           id?: string
           is_published?: boolean
           published_at?: string | null

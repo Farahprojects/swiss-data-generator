@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,7 @@ import { CustomizationPanel } from "@/components/website-builder/CustomizationPa
 import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
 import { Button } from "@/components/ui/button";
-import { Eye, Globe } from "lucide-react";
+import { Eye, Globe, Save } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
@@ -24,6 +25,8 @@ interface CoachWebsite {
   template_id: string;
   site_slug: string;
   customization_data: any;
+  draft_customization_data: any;
+  has_unpublished_changes: boolean;
   is_published: boolean;
 }
 
@@ -36,6 +39,7 @@ export default function WebsiteBuilder() {
   const [customizationData, setCustomizationData] = useState<any>({});
   const [userSlug, setUserSlug] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
 
@@ -81,7 +85,9 @@ export default function WebsiteBuilder() {
 
       if (websiteData) {
         setWebsite(websiteData);
-        setCustomizationData(websiteData.customization_data || {});
+        // Use draft data for editing, fallback to published data if draft is empty
+        const draftData = websiteData.draft_customization_data || websiteData.customization_data || {};
+        setCustomizationData(draftData);
         
         // Find and set the selected template by UUID
         const template = templatesData?.find(t => t.id === websiteData.template_id);
@@ -90,7 +96,7 @@ export default function WebsiteBuilder() {
           console.log("Loaded existing template:", { id: template.id, name: template.name });
         }
       } else {
-        // No existing website, but let's check for images in storage only if no saved customization exists
+        // No existing website, load images from storage only if no saved customization exists
         await loadImagesFromStorageAndPopulate();
       }
 
@@ -210,19 +216,7 @@ export default function WebsiteBuilder() {
   };
 
   const handleCustomizationChange = (field: string, value: any) => {
-    setCustomizationData(prev => {
-      const updated = { ...prev, [field]: value };
-      
-      // Auto-save when images are changed/deleted
-      if (field.includes('Image') || field.includes('imageData')) {
-        // Debounce the save to avoid too many calls
-        setTimeout(() => {
-          handleSave();
-        }, 1000);
-      }
-      
-      return updated;
-    });
+    setCustomizationData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
@@ -232,45 +226,68 @@ export default function WebsiteBuilder() {
         hasSelectedTemplate: !!selectedTemplate,
         templateId: selectedTemplate?.id 
       });
-      throw new Error("Missing user or template data");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Missing user or template data"
+      });
+      return;
     }
 
-    console.log("Saving website with template ID:", selectedTemplate.id);
+    console.log("Saving draft with template ID:", selectedTemplate.id);
+    setIsSaving(true);
 
     try {
       if (website) {
-        // Update existing website
+        // Update existing website draft
         const { error } = await supabase
           .from('coach_websites')
           .update({
             template_id: selectedTemplate.id,
-            customization_data: customizationData
+            draft_customization_data: customizationData,
+            has_unpublished_changes: true
           })
           .eq('id', website.id);
 
         if (error) throw error;
-        console.log("Website updated successfully");
+        
+        // Update local state
+        setWebsite(prev => prev ? {
+          ...prev,
+          template_id: selectedTemplate.id,
+          draft_customization_data: customizationData,
+          has_unpublished_changes: true
+        } : null);
+        
+        console.log("Draft saved successfully");
       } else {
-        // Create new website
+        // Create new website with draft data
         const { data, error } = await supabase
           .from('coach_websites')
           .insert({
             coach_id: user.id,
             template_id: selectedTemplate.id,
             site_slug: userSlug,
-            customization_data: customizationData
+            customization_data: {}, // Empty published data
+            draft_customization_data: customizationData,
+            has_unpublished_changes: true
           })
           .select()
           .single();
 
         if (error) throw error;
         setWebsite(data);
-        console.log("Website created successfully:", data);
+        console.log("Website created with draft data:", data);
       }
+
+      toast({
+        title: "Draft Saved",
+        description: "Your changes have been saved as a draft."
+      });
 
     } catch (error: any) {
       console.error("Save error:", error);
-      logToSupabase("Error saving website", {
+      logToSupabase("Error saving website draft", {
         level: 'error',
         page: 'WebsiteBuilder',
         data: { 
@@ -284,7 +301,8 @@ export default function WebsiteBuilder() {
         title: "Error",
         description: "Failed to save website changes."
       });
-      throw error; // Re-throw so handlePublish can handle it
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -302,8 +320,8 @@ export default function WebsiteBuilder() {
     console.log("Starting publish process...");
     setIsPublishing(true);
     try {
-      // Always save before publishing
-      console.log("Saving before publish...");
+      // Always save draft before publishing
+      console.log("Saving draft before publish...");
       await handleSave();
       
       console.log("Opening publish modal...");
@@ -368,6 +386,11 @@ export default function WebsiteBuilder() {
     return 'Publish Changes';
   };
 
+  const getSaveButtonText = () => {
+    if (isSaving) return 'Saving...';
+    return 'Save Draft';
+  };
+
   if (isLoading) {
     // Replace spinner with TheraLoader for branding consistency
     return (
@@ -400,7 +423,14 @@ export default function WebsiteBuilder() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Website Builder</h1>
-              <p className="text-gray-600">Template: {selectedTemplate.name}</p>
+              <div className="flex items-center space-x-2">
+                <p className="text-gray-600">Template: {selectedTemplate.name}</p>
+                {website?.has_unpublished_changes && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                    Unpublished changes
+                  </span>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center space-x-3">
@@ -411,6 +441,16 @@ export default function WebsiteBuilder() {
               >
                 <Eye className="h-4 w-4" />
                 <span>Preview</span>
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center space-x-2"
+              >
+                <Save className="h-4 w-4" />
+                <span>{getSaveButtonText()}</span>
               </Button>
               
               <Button

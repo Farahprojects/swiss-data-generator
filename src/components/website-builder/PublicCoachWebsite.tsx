@@ -62,9 +62,10 @@ export const PublicCoachWebsite: React.FC = () => {
       log('debug', `Loading public website for slug: ${slug}`);
       
       // Query coach_websites for a published website with this slug
+      // IMPORTANT: Only use published customization_data, not draft data
       const { data: websiteData, error: websiteError } = await supabase
         .from('coach_websites')
-        .select('*')
+        .select('id, template_id, customization_data, is_published')
         .eq('site_slug', slug)
         .eq('is_published', true)
         .maybeSingle();
@@ -85,7 +86,7 @@ export const PublicCoachWebsite: React.FC = () => {
 
       log('debug', 'Website data loaded successfully');
 
-      // Validate and clean the customization data
+      // Validate and clean the customization data - ONLY use published data
       const cleanedData = {
         ...websiteData,
         customization_data: validateCustomizationData(websiteData.customization_data)

@@ -1,5 +1,4 @@
 
-
 export interface Service {
   title: string;
   description: string;
@@ -37,9 +36,23 @@ export interface CustomizationData {
   backgroundStyle?: string;
   headerImageUrl?: string;
   headerImageData?: ImageData;
+  headerImageOpacity?: number;
   aboutImageUrl?: string;
   aboutImageData?: ImageData;
   footerHeading?: string;
   footerSubheading?: string;
 }
 
+export interface CoachWebsite {
+  id: string;
+  coach_id: string;
+  template_id: string;
+  site_slug: string;
+  customization_data: CustomizationData;
+  draft_customization_data: CustomizationData;
+  has_unpublished_changes: boolean;
+  is_published: boolean;
+  published_at?: string;
+  created_at: string;
+  updated_at: string;
+}

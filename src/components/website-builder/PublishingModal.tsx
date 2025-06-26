@@ -1,22 +1,21 @@
 
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Globe, Copy, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Globe, ExternalLink, Copy, CheckCircle } from "lucide-react";
 import { logToSupabase } from "@/utils/batchedLogManager";
 
-interface CoachWebsite {
-  id: string;
-  site_slug: string;
-  is_published: boolean;
-}
-
 interface PublishingModalProps {
-  website: CoachWebsite;
+  website: {
+    id: string;
+    site_slug: string;
+    is_published: boolean;
+    draft_customization_data: any;
+    customization_data: any;
+    has_unpublished_changes: boolean;
+  };
   userSlug: string;
   onClose: () => void;
   onPublished: () => void;
@@ -30,177 +29,202 @@ export const PublishingModal: React.FC<PublishingModalProps> = ({
 }) => {
   const { toast } = useToast();
   const [isPublishing, setIsPublishing] = useState(false);
-  const [customSlug, setCustomSlug] = useState(userSlug || website.site_slug);
-  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isPublished, setIsPublished] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
 
-  const websiteUrl = `https://theraiastro.com/${customSlug}`;
+  const websiteUrl = `${window.location.origin}/coach/${website.site_slug}`;
 
   const handlePublish = async () => {
     setIsPublishing(true);
     
     try {
-      // Update coach_websites table
-      const { error: websiteError } = await supabase
+      console.log("Publishing website...", { websiteId: website.id });
+      
+      // Copy draft data to published data and mark as published
+      const { error } = await supabase
         .from('coach_websites')
         .update({
-          site_slug: customSlug,
+          customization_data: website.draft_customization_data || website.customization_data,
           is_published: true,
+          has_unpublished_changes: false,
           published_at: new Date().toISOString()
         })
         .eq('id', website.id);
 
-      if (websiteError) throw websiteError;
-
-      // Update api_keys table to sync the slug
-      const { error: apiKeyError } = await supabase
-        .from('api_keys')
-        .update({
-          slug_coach: customSlug
-        })
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
-
-      if (apiKeyError) {
-        console.warn('Failed to update api_keys slug:', apiKeyError);
-        // Don't throw here as the website is already published
+      if (error) {
+        console.error("Publish error:", error);
+        throw error;
       }
+
+      console.log("Website published successfully");
+      
+      setIsPublished(true);
+      
+      toast({
+        title: "Website Published! 🎉",
+        description: "Your coaching website is now live and accessible to visitors."
+      });
 
       logToSupabase("Website published successfully", {
         level: 'info',
         page: 'PublishingModal',
-        data: { websiteId: website.id, slug: customSlug }
+        data: { 
+          websiteId: website.id,
+          slug: website.site_slug,
+          url: websiteUrl
+        }
       });
 
-      toast({
-        title: "Website Published!",
-        description: `Your website is now live at ${websiteUrl}`,
-      });
-
-      onPublished();
-      
     } catch (error: any) {
-      logToSupabase("Error publishing website", {
+      console.error("Publishing failed:", error);
+      
+      logToSupabase("Website publishing failed", {
         level: 'error',
         page: 'PublishingModal',
-        data: { error: error.message }
+        data: { 
+          error: error.message,
+          websiteId: website.id,
+          slug: website.site_slug
+        }
       });
       
       toast({
         variant: "destructive",
         title: "Publishing Failed",
-        description: "There was an error publishing your website. Please try again."
+        description: error.message || "There was an error publishing your website. Please try again."
       });
     } finally {
       setIsPublishing(false);
     }
   };
 
-  const handleCopyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(websiteUrl);
-      setCopiedUrl(true);
-      toast({
-        title: "URL Copied",
-        description: "Website URL has been copied to clipboard"
-      });
-      setTimeout(() => setCopiedUrl(false), 2000);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Copy Failed",
-        description: "Failed to copy URL to clipboard"
-      });
+  const copyUrl = () => {
+    navigator.clipboard.writeText(websiteUrl);
+    setUrlCopied(true);
+    setTimeout(() => setUrlCopied(false), 2000);
+    toast({
+      title: "URL Copied",
+      description: "Website URL has been copied to your clipboard."
+    });
+  };
+
+  const openWebsite = () => {
+    window.open(websiteUrl, '_blank');
+  };
+
+  const handleClose = () => {
+    onClose();
+    if (isPublished) {
+      onPublished();
     }
   };
 
-  const validateSlug = (slug: string) => {
-    return /^[a-z0-9-]+$/.test(slug) && slug.length >= 3 && slug.length <= 50;
-  };
-
-  const isValidSlug = validateSlug(customSlug);
-
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={true} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
-            <Globe className="h-5 w-5" />
-            <span>{website.is_published ? 'Update Website' : 'Publish Website'}</span>
+            <Globe className="h-5 w-5 text-blue-600" />
+            <span>
+              {isPublished ? "Website Published!" : "Publish Your Website"}
+            </span>
           </DialogTitle>
-          <DialogDescription>
-            {website.is_published 
-              ? 'Update your live website settings'
-              : 'Make your coaching website live for the world to see'
-            }
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="slug">Website URL</Label>
-            <div className="flex items-center space-x-2 mt-1">
-              <span className="text-sm text-gray-500">theraiastro.com/</span>
-              <Input
-                id="slug"
-                value={customSlug}
-                onChange={(e) => setCustomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                placeholder="your-name"
-                className={!isValidSlug ? 'border-red-300' : ''}
-              />
-            </div>
-            {!isValidSlug && (
-              <p className="text-sm text-red-600 mt-1">
-                URL must be 3-50 characters, letters, numbers, and hyphens only
-              </p>
-            )}
-          </div>
-
-          {website.is_published && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-800">Currently Live</p>
-                  <p className="text-sm text-green-600 break-all">{websiteUrl}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyUrl}
-                  className="flex items-center space-x-1"
-                >
-                  {copiedUrl ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                  <span>{copiedUrl ? 'Copied' : 'Copy'}</span>
-                </Button>
+        <div className="space-y-6">
+          {isPublished ? (
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <CheckCircle className="h-16 w-16 text-green-500" />
               </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Your website is now live! 🎉
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Your coaching website has been published and is accessible to visitors.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-gray-600 text-sm">
+                {website.is_published 
+                  ? "Update your live website with the latest changes?"
+                  : "Ready to make your coaching website live? This will publish your current draft and make it accessible to visitors."
+                }
+              </p>
+              
+              {website.has_unpublished_changes && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  <p className="text-orange-800 text-sm">
+                    <span className="font-medium">Note:</span> You have unpublished changes that will go live when you publish.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">What happens when you publish?</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Your website becomes accessible to everyone</li>
-              <li>• You'll receive a confirmation email with the live link</li>
-              <li>• You can update your content anytime</li>
-              <li>• SEO optimized for search engines</li>
-            </ul>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Your Website URL:
+            </label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={websiteUrl}
+                readOnly
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyUrl}
+                className="shrink-0"
+              >
+                {urlCopied ? <CheckCircle className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            {!isPublished ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleClose}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePublish}
+                  disabled={isPublishing}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {isPublishing ? "Publishing..." : website.is_published ? "Update Site" : "Publish Website"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={openWebsite}
+                  className="flex-1 flex items-center justify-center space-x-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>View Website</span>
+                </Button>
+                <Button
+                  onClick={handleClose}
+                  className="flex-1"
+                >
+                  Done
+                </Button>
+              </>
+            )}
           </div>
         </div>
-
-        <DialogFooter className="space-x-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handlePublish}
-            disabled={!isValidSlug || isPublishing}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {isPublishing ? 'Publishing...' : website.is_published ? 'Update Site' : 'Publish Now'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
