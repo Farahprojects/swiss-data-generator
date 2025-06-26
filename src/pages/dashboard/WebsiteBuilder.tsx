@@ -1,14 +1,18 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TemplateSelector } from "@/components/website-builder/TemplateSelector";
-import { CustomizationPanel } from "@/components/website-builder/CustomizationPanel";
 import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
-import { Button } from "@/components/ui/button";
-import { Eye, Globe, Save } from "lucide-react";
+import { FloatingEditButtons } from "@/components/website-builder/FloatingEditButtons";
+import { FloatingSideMenu } from "@/components/website-builder/FloatingSideMenu";
+import { HeroEditModal } from "@/components/website-builder/modals/HeroEditModal";
+import { IntroEditModal } from "@/components/website-builder/modals/IntroEditModal";
+import { ImagesEditModal } from "@/components/website-builder/modals/ImagesEditModal";
+import { ServicesEditModal } from "@/components/website-builder/modals/ServicesEditModal";
+import { CtaEditModal } from "@/components/website-builder/modals/CtaEditModal";
+import { FooterEditModal } from "@/components/website-builder/modals/FooterEditModal";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
@@ -42,6 +46,7 @@ export default function WebsiteBuilder() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [openModal, setOpenModal] = useState<string | null>(null);
 
   useEffect(() => {
     loadTemplatesAndWebsite();
@@ -397,8 +402,15 @@ export default function WebsiteBuilder() {
     return 'Save Draft';
   };
 
+  const handleOpenModal = (section: string) => {
+    setOpenModal(section);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(null);
+  };
+
   if (isLoading) {
-    // Replace spinner with TheraLoader for branding consistency
     return (
       <TheraLoader message="Loading Website Builder..." size="lg" />
     );
@@ -423,81 +435,75 @@ export default function WebsiteBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="border-b bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Website Builder</h1>
-              <div className="flex items-center space-x-2">
-                <p className="text-gray-600">Template: {selectedTemplate.name}</p>
-                {website?.has_unpublished_changes && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                    Unpublished changes
-                  </span>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                onClick={handlePreview}
-                className="flex items-center space-x-2"
-              >
-                <Eye className="h-4 w-4" />
-                <span>Preview</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex items-center space-x-2"
-              >
-                <Save className="h-4 w-4" />
-                <span>{getSaveButtonText()}</span>
-              </Button>
-              
-              <Button
-                onClick={handlePublish}
-                disabled={isPublishing}
-                className="flex items-center space-x-2 bg-primary hover:bg-primary/90"
-              >
-                <Globe className="h-4 w-4" />
-                <span>{getPublishButtonText()}</span>
-              </Button>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Full-width template preview */}
+      <div className="w-full min-h-screen">
+        <TemplatePreview
+          template={selectedTemplate}
+          customizationData={customizationData}
+        />
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <CustomizationPanel
-              customizationData={customizationData}
-              onChange={handleCustomizationChange}
-            />
-            
-            <Button
-              variant="outline"
-              onClick={() => setSelectedTemplate(null)}
-              className="w-full"
-            >
-              Change Template
-            </Button>
-          </div>
-          
-          <div className="lg:sticky lg:top-6">
-            <TemplatePreview
-              template={selectedTemplate}
-              customizationData={customizationData}
-            />
-          </div>
-        </div>
-      </div>
+      {/* Floating edit buttons */}
+      <FloatingEditButtons onOpenModal={handleOpenModal} />
 
+      {/* Floating side menu */}
+      <FloatingSideMenu
+        onPreview={handlePreview}
+        onSave={handleSave}
+        onPublish={handlePublish}
+        onChangeTemplate={() => setSelectedTemplate(null)}
+        isSaving={isSaving}
+        isPublishing={isPublishing}
+        saveButtonText={getSaveButtonText()}
+        publishButtonText={getPublishButtonText()}
+        website={website}
+      />
+
+      {/* Edit modals */}
+      <HeroEditModal
+        isOpen={openModal === 'hero'}
+        onClose={handleCloseModal}
+        customizationData={customizationData}
+        onChange={handleCustomizationChange}
+      />
+
+      <IntroEditModal
+        isOpen={openModal === 'intro'}
+        onClose={handleCloseModal}
+        customizationData={customizationData}
+        onChange={handleCustomizationChange}
+      />
+
+      <ImagesEditModal
+        isOpen={openModal === 'images'}
+        onClose={handleCloseModal}
+        customizationData={customizationData}
+        onChange={handleCustomizationChange}
+      />
+
+      <ServicesEditModal
+        isOpen={openModal === 'services'}
+        onClose={handleCloseModal}
+        customizationData={customizationData}
+        onChange={handleCustomizationChange}
+      />
+
+      <CtaEditModal
+        isOpen={openModal === 'cta'}
+        onClose={handleCloseModal}
+        customizationData={customizationData}
+        onChange={handleCustomizationChange}
+      />
+
+      <FooterEditModal
+        isOpen={openModal === 'footer'}
+        onClose={handleCloseModal}
+        customizationData={customizationData}
+        onChange={handleCustomizationChange}
+      />
+
+      {/* Publishing modal */}
       {showPublishModal && website && (
         <PublishingModal
           website={website}
