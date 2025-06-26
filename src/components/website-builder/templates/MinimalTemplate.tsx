@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -149,7 +150,7 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
   };
 
   return (
-    <div className="bg-white" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+    <div className={`bg-white ${!isPreview ? 'pt-16' : ''}`} style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Ultra Minimal Hero */}
       <section className={`${heroSection} flex items-center justify-center relative ${!hasHeaderImage ? 'bg-white' : ''}`}>
         {/* Header background image with no opacity reduction */}

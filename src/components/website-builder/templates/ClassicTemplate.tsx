@@ -105,7 +105,7 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
   };
 
   return (
-    <div className="bg-cream-50" style={{ fontFamily: `${fontFamily}, serif` }}>
+    <div className={`bg-cream-50 ${!isPreview ? 'pt-16' : ''}`} style={{ fontFamily: `${fontFamily}, serif` }}>
       {/* Classic Centered Hero */}
       <section className={`relative ${heroPadding} ${!headerImageUrl ? 'bg-gradient-to-b from-amber-50 to-white' : ''}`}>
         {/* Header background image with no opacity reduction */}
