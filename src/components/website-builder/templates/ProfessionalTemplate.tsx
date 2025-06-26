@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -6,23 +5,26 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
 import { Clock, Users, Target, TrendingUp, Shield, Calendar, ArrowRight, Star } from "lucide-react";
+import { EditableSection } from "../EditableSection";
+import { HeroEditModal } from "../edit-modals/HeroEditModal";
+import { AboutEditModal } from "../edit-modals/AboutEditModal";
 
 interface TemplateProps {
   customizationData: any;
   isPreview?: boolean;
+  onCustomizationChange?: (field: string, value: any) => void;
 }
 
-export const ProfessionalTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
+export const ProfessionalTemplate = ({ customizationData, isPreview = false, onCustomizationChange }: TemplateProps) => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const [purchasingService, setPurchasingService] = useState<number | null>(null);
+  const [heroEditOpen, setHeroEditOpen] = useState(false);
+  const [aboutEditOpen, setAboutEditOpen] = useState(false);
   
   const themeColor = customizationData.themeColor || '#007AFF';
   const fontFamily = customizationData.fontFamily || 'Inter';
-
   const sectionPadding = isPreview ? 'py-12' : 'py-16 sm:py-20 lg:py-24';
-
-  // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
   // Create report service card - ALWAYS show it (removed the !isPreview condition)
@@ -35,6 +37,21 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
 
   // Add report service as first item
   const allServices = [reportService, ...(customizationData.services || [])];
+
+  const handleHeroSave = (heroData: any) => {
+    if (onCustomizationChange) {
+      onCustomizationChange('coachName', heroData.coachName);
+      onCustomizationChange('tagline', heroData.tagline);
+      onCustomizationChange('buttonText', heroData.buttonText);
+    }
+  };
+
+  const handleAboutSave = (aboutData: any) => {
+    if (onCustomizationChange) {
+      onCustomizationChange('introTitle', aboutData.introTitle);
+      onCustomizationChange('bio', aboutData.bio);
+    }
+  };
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
@@ -89,7 +106,12 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
       </header>
 
       {/* Simplified Hero Section - Apple Style */}
-      <section className={`${sectionPadding} relative overflow-hidden`}>
+      <EditableSection
+        sectionId="hero"
+        onEdit={() => setHeroEditOpen(true)}
+        isEditable={!!onCustomizationChange}
+        className={`${sectionPadding} relative overflow-hidden`}
+      >
         {hasHeaderImage && (
           <div 
             className="absolute inset-0 bg-cover bg-center opacity-5"
@@ -124,10 +146,15 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
             </Button>
           </motion.div>
         </div>
-      </section>
+      </EditableSection>
 
       {/* Clean About Section - Apple Inspired */}
-      <section id="about" className={`${sectionPadding} bg-white`}>
+      <EditableSection
+        sectionId="about"
+        onEdit={() => setAboutEditOpen(true)}
+        isEditable={!!onCustomizationChange}
+        className={`${sectionPadding} bg-white`}
+      >
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid gap-20 lg:grid-cols-2 items-center">
             <div className="order-2 lg:order-1">
@@ -168,7 +195,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
             </div>
           </div>
         </div>
-      </section>
+      </EditableSection>
 
       {/* Clean Services Section - Apple Card Grid */}
       <section id="services" className={`${sectionPadding} bg-gray-50`}>
@@ -267,6 +294,28 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
           </div>
         </div>
       </footer>
+
+      {/* Edit Modals */}
+      <HeroEditModal
+        isOpen={heroEditOpen}
+        onClose={() => setHeroEditOpen(false)}
+        onSave={handleHeroSave}
+        initialData={{
+          coachName: customizationData.coachName || '',
+          tagline: customizationData.tagline || '',
+          buttonText: customizationData.buttonText || ''
+        }}
+      />
+
+      <AboutEditModal
+        isOpen={aboutEditOpen}
+        onClose={() => setAboutEditOpen(false)}
+        onSave={handleAboutSave}
+        initialData={{
+          introTitle: customizationData.introTitle || '',
+          bio: customizationData.bio || ''
+        }}
+      />
     </div>
   );
 };
