@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +7,7 @@ import { ClassicTemplate } from "./templates/ClassicTemplate";
 import { MinimalTemplate } from "./templates/MinimalTemplate";
 import { CreativeTemplate } from "./templates/CreativeTemplate";
 import { ProfessionalTemplate } from "./templates/ProfessionalTemplate";
+import { AbstractTemplate } from "./templates/AbstractTemplate";
 
 interface WebsiteTemplate {
   id: string;
@@ -61,6 +61,13 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       preview: {
         colors: ["#1E40AF", "#3B82F6", "#60A5FA"],
       }
+    },
+    {
+      name: "Abstract",
+      description: "Sophisticated geometric design with artistic elements and morphing shapes",
+      preview: {
+        colors: ["#6B46C1", "#8B5CF6", "#A855F7"],
+      }
     }
   ];
 
@@ -90,6 +97,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         return <CreativeTemplate customizationData={defaultCustomizationData} isPreview={true} />;
       case 'professional':
         return <ProfessionalTemplate customizationData={defaultCustomizationData} isPreview={true} />;
+      case 'abstract':
+        return <AbstractTemplate customizationData={defaultCustomizationData} isPreview={true} />;
       default:
         return <ModernTemplate customizationData={defaultCustomizationData} isPreview={true} />;
     }

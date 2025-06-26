@@ -1,4 +1,3 @@
-
 import React from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { ModernTemplate } from "./templates/ModernTemplate";
 import { MinimalTemplate } from "./templates/MinimalTemplate";
 import { ProfessionalTemplate } from "./templates/ProfessionalTemplate";
 import { CreativeTemplate } from "./templates/CreativeTemplate";
+import { AbstractTemplate } from "./templates/AbstractTemplate";
 
 interface TemplatePreviewProps {
   template: {
@@ -44,6 +44,8 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
         return <ProfessionalTemplate {...templateProps} />;
       case 'creative':
         return <CreativeTemplate {...templateProps} />;
+      case 'abstract':
+        return <AbstractTemplate {...templateProps} />;
       default:
         return <ClassicTemplate {...templateProps} />;
     }
