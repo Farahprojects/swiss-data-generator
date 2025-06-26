@@ -33,7 +33,6 @@ import CalendarPage from './pages/dashboard/CalendarPage';
 import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
 import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
-import { CoachReportPageWrapper } from './components/website-builder/CoachReportPageWrapper';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,11 +82,8 @@ function App() {
                         <Route path="website-builder" element={<WebsiteBuilder />} />
                       </Route>
                       
-                      {/* Coach report form route - NEW */}
-                      <Route path="/:slug/vibe" element={<CoachReportPageWrapper />} />
-                      
-                      {/* Coach report page route - existing */}
-                      <Route path="/:slug/report" element={<CoachReportPage />} />
+                      {/* Coach report page route */}
+                      <Route path="/:slug/vibe" element={<CoachReportPage />} />
                       
                       {/* Dynamic slug route for published coach websites - moved before catch-all */}
                       <Route path="/:slug" element={<PublicCoachWebsite />} />

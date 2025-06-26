@@ -1,29 +1,14 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { ReportFormData } from "@/types/public-report";
 
-interface CheckoutParams {
+export interface GuestCheckoutOptions {
   amount: number;
   email: string;
   description: string;
-  reportData: any;
-}
-
-interface CheckoutResult {
-  success: boolean;
-  error?: string;
-}
-
-interface VerificationResult {
-  success: boolean;
-  verified: boolean;
-  error?: string;
-  reportData?: any;
-  amountPaid?: number;
-  coach_slug?: string;
-  coach_name?: string;
-  isService?: boolean;
-  isCoachReport?: boolean;
-  service_title?: string;
+  reportData?: ReportFormData;
+  successUrl?: string;
+  cancelUrl?: string;
 }
 
 export const initiateGuestCheckout = async ({
@@ -31,97 +16,97 @@ export const initiateGuestCheckout = async ({
   email,
   description,
   reportData,
-}: CheckoutParams): Promise<CheckoutResult> => {
+  successUrl,
+  cancelUrl,
+}: GuestCheckoutOptions) => {
   try {
-    console.log('Initiating guest checkout with data:', { amount, email, description, reportData });
+    console.log("🔄 Initiating guest checkout with unified function:", {
+      amount,
+      email,
+      description,
+      hasReportData: !!reportData
+    });
 
-    const { data, error } = await supabase.functions.invoke('create-guest-checkout', {
+    // Call the unified create-checkout function with isGuest flag
+    const { data, error } = await supabase.functions.invoke("create-checkout", {
       body: {
+        mode: "payment",
         amount,
         email,
+        isGuest: true,
         description,
-        reportData: {
-          ...reportData,
-          // Ensure coach attribution is included
-          coachSlug: reportData.coachSlug || null,
-          coachName: reportData.coachName || null,
-        },
+        reportData,
+        successUrl,
+        cancelUrl,
       },
     });
 
     if (error) {
-      console.error('Checkout function error:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to create checkout session',
-      };
+      console.error("❌ Error creating guest checkout session:", error);
+      throw new Error(error.message || "Failed to create checkout session");
     }
 
-    if (data?.url) {
-      console.log('Checkout session created successfully:', data.sessionId);
-      // Redirect to Stripe checkout
-      window.location.href = data.url;
-      return { success: true };
-    } else {
-      console.error('No checkout URL received from function');
-      return {
-        success: false,
-        error: 'No checkout URL received',
-      };
+    if (!data?.url) {
+      throw new Error("No checkout URL returned from server");
     }
-  } catch (error) {
-    console.error('Error in initiateGuestCheckout:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred',
+
+    console.log("✅ Guest checkout session created successfully");
+
+    // Redirect to the Stripe checkout URL
+    window.location.href = data.url;
+    return { success: true };
+  } catch (err) {
+    console.error("❌ Failed to initiate guest checkout:", err);
+    return { 
+      success: false, 
+      error: err instanceof Error ? err.message : "Unknown error occurred" 
     };
   }
 };
 
-export const verifyGuestPayment = async (sessionId: string): Promise<VerificationResult> => {
+export const verifyGuestPayment = async (sessionId: string) => {
   try {
-    console.log('Verifying guest payment with session ID:', sessionId);
+    console.log("🔍 Verifying guest payment for session:", sessionId);
 
-    const { data, error } = await supabase.functions.invoke('verify-guest-payment', {
+    const { data, error } = await supabase.functions.invoke("verify-guest-payment", {
       body: { sessionId },
     });
 
     if (error) {
-      console.error('Payment verification error:', error);
+      console.error("❌ Error verifying guest payment:", error);
       return {
         success: false,
         verified: false,
-        error: error.message || 'Failed to verify payment',
+        error: error.message || "Failed to verify payment"
       };
     }
 
-    if (data?.verified) {
-      console.log('Payment verification successful:', data);
-      return {
-        success: true,
-        verified: true,
-        reportData: data.reportData,
-        amountPaid: data.amountPaid,
-        coach_slug: data.coach_slug,
-        coach_name: data.coach_name,
-        isService: data.isService,
-        isCoachReport: data.isCoachReport,
-        service_title: data.service_title,
-      };
-    } else {
-      console.error('Payment verification failed:', data);
-      return {
-        success: false,
-        verified: false,
-        error: data?.error || 'Payment verification failed',
-      };
-    }
-  } catch (error) {
-    console.error('Error in verifyGuestPayment:', error);
+    console.log("✅ Guest payment verification result:", data);
+    
+    // Return all properties from the edge function response
+    return {
+      success: true,
+      verified: data.verified,
+      reportData: data.reportData,
+      guestReportId: data.guestReportId,
+      paymentStatus: data.paymentStatus,
+      amountPaid: data.amountPaid,
+      currency: data.currency,
+      isService: data.isService,
+      isCoachReport: data.isCoachReport,
+      coach_slug: data.coach_slug,
+      coach_name: data.coach_name,
+      service_title: data.service_title,
+      swissProcessing: data.swissProcessing,
+      message: data.message,
+      error: data.error
+    };
+  } catch (err) {
+    console.error("❌ Failed to verify guest payment:", err);
     return {
       success: false,
       verified: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred',
+      error: err instanceof Error ? err.message : "Unknown error occurred"
     };
   }
 };
