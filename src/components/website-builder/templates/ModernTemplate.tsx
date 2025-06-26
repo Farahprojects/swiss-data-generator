@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
-import { InlineEditableText } from "../InlineEditableText";
+import { EnhancedInlineText } from "../EnhancedInlineText";
 
 interface TemplateProps {
   customizationData: any;
@@ -188,11 +188,14 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                 color: customizationData.heroTextColor || '#FFFFFF'
               }}
             >
-              <InlineEditableText
+              <EnhancedInlineText
                 value={customizationData.coachName || ""}
                 onChange={(value) => handleFieldChange('coachName', value)}
                 placeholder="Alex Johnson"
                 isEditable={isEditable}
+                fieldName="coachName"
+                formatting={customizationData.coachNameFormatting || { color: customizationData.heroTextColor || '#FFFFFF' }}
+                onCustomizationChange={onCustomizationChange}
                 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
               />
             </h1>
@@ -202,12 +205,15 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                 color: customizationData.heroTextColor || '#D1D5DB'
               }}
             >
-              <InlineEditableText
+              <EnhancedInlineText
                 value={customizationData.tagline || ""}
                 onChange={(value) => handleFieldChange('tagline', value)}
                 placeholder="Transforming Lives Through Modern Coaching"
                 multiline={true}
                 isEditable={isEditable}
+                fieldName="tagline"
+                formatting={customizationData.taglineFormatting || { color: customizationData.heroTextColor || '#D1D5DB' }}
+                onCustomizationChange={onCustomizationChange}
                 className={`text-base sm:text-lg md:text-xl leading-relaxed ${getHeroFontClass(customizationData.heroFontStyle || 'modern')}`}
               />
             </p>
@@ -216,11 +222,14 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                 className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
                 style={getButtonStyles()}
               >
-                <InlineEditableText
+                <EnhancedInlineText
                   value={customizationData.buttonText || ""}
                   onChange={(value) => handleFieldChange('buttonText', value)}
                   placeholder="Start Your Journey"
                   isEditable={isEditable}
+                  fieldName="buttonText"
+                  formatting={customizationData.buttonTextFormatting}
+                  onCustomizationChange={onCustomizationChange}
                   className="text-inherit"
                 />
               </Button>
@@ -238,11 +247,14 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                 className={`text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
                 style={{ color: customizationData.introTextColor || '#111827' }}
               >
-                <InlineEditableText
+                <EnhancedInlineText
                   value={customizationData.introTitle || ""}
                   onChange={(value) => handleFieldChange('introTitle', value)}
                   placeholder="About Me"
                   isEditable={isEditable}
+                  fieldName="introTitle"
+                  formatting={customizationData.introTitleFormatting || { color: customizationData.introTextColor || '#111827' }}
+                  onCustomizationChange={onCustomizationChange}
                   className={`text-xl sm:text-2xl md:text-3xl font-bold drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
                 />
               </h2>
@@ -250,12 +262,15 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
                 className={`text-sm sm:text-base leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
                 style={{ color: customizationData.introTextColor || '#6B7280' }}
               >
-                <InlineEditableText
+                <EnhancedInlineText
                   value={customizationData.bio || ""}
                   onChange={(value) => handleFieldChange('bio', value)}
                   placeholder="I'm passionate about helping individuals unlock their full potential through personalized coaching approaches that blend modern techniques with timeless wisdom."
                   multiline={true}
                   isEditable={isEditable}
+                  fieldName="bio"
+                  formatting={customizationData.bioFormatting || { color: customizationData.introTextColor || '#6B7280' }}
+                  onCustomizationChange={onCustomizationChange}
                   className={`text-sm sm:text-base leading-relaxed drop-shadow-md ${getIntroFontClass(customizationData.introFontStyle || 'modern')}`}
                 />
               </p>
@@ -356,21 +371,27 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
       <section className={sectionPadding} style={{ backgroundColor: themeColor }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">
-            <InlineEditableText
+            <EnhancedInlineText
               value={customizationData.footerHeading || ""}
               onChange={(value) => handleFieldChange('footerHeading', value)}
               placeholder="Ready to Transform Your Life?"
               isEditable={isEditable}
+              fieldName="footerHeading"
+              formatting={customizationData.footerHeadingFormatting || { color: '#FFFFFF' }}
+              onCustomizationChange={onCustomizationChange}
               className="text-xl sm:text-2xl md:text-3xl font-bold text-white"
             />
           </h2>
           <p className="text-sm sm:text-base mb-4 sm:mb-6 opacity-90">
-            <InlineEditableText
+            <EnhancedInlineText
               value={customizationData.footerSubheading || ""}
               onChange={(value) => handleFieldChange('footerSubheading', value)}
               placeholder="Take the first step towards achieving your goals."
               multiline={true}
               isEditable={isEditable}
+              fieldName="footerSubheading"
+              formatting={customizationData.footerSubheadingFormatting || { color: '#FFFFFF' }}
+              onCustomizationChange={onCustomizationChange}
               className="text-sm sm:text-base opacity-90 text-white"
             />
           </p>
@@ -378,11 +399,14 @@ export const ModernTemplate = ({ customizationData, isPreview = false, onCustomi
             className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
             style={getButtonStyles()}
           >
-            <InlineEditableText
+            <EnhancedInlineText
               value={customizationData.buttonText || ""}
               onChange={(value) => handleFieldChange('buttonText', value)}
               placeholder="Book Consultation"
               isEditable={isEditable}
+              fieldName="buttonText"
+              formatting={customizationData.buttonTextFormatting}
+              onCustomizationChange={onCustomizationChange}
               className="text-inherit"
             />
           </Button>
