@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +13,9 @@ import BirthDetailsForm from '@/components/public-report/BirthDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import SubmissionSection from '@/components/public-report/SubmissionSection';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
+import CoachHeroSection from './report-form/CoachHeroSection';
+import CoachFeaturesSection from './report-form/CoachFeaturesSection';
+import CoachFormStep from './report-form/CoachFormStep';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -194,7 +196,7 @@ export const CoachReportForm: React.FC<CoachReportFormProps> = ({
         returnYear: data.returnYear,
         notes: data.notes,
         promoCode: data.promoCode,
-        coachSlug: coachSlug, // Add coach attribution
+        coachSlug: coachSlug,
         coachName: coachName,
       };
       
@@ -257,55 +259,111 @@ export const CoachReportForm: React.FC<CoachReportFormProps> = ({
     return <SuccessScreen name={userName} email={userEmail} />;
   }
 
-  // Apply coach's theme colors
   const themeColor = customizationData?.themeColor || '#6366F1';
   const fontFamily = customizationData?.fontFamily || 'Inter';
 
   return (
-    <div style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-      <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
-        <ReportTypeSelector
-          control={control}
-          errors={errors}
-          selectedReportType={selectedReportType}
-          showReportGuide={showReportGuide}
-          setShowReportGuide={setShowReportGuide}
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/10">
+      <form onSubmit={handleSubmit(onSubmit)}>
+        {/* Hero Section */}
+        <CoachHeroSection 
+          coachName={coachName}
+          customizationData={customizationData}
         />
 
-        {selectedReportType && (
-          <ContactForm
-            register={register}
+        {/* Features Section */}
+        <CoachFeaturesSection 
+          coachName={coachName}
+          customizationData={customizationData}
+        />
+
+        {/* Report Type Selection */}
+        <CoachFormStep
+          stepNumber={1}
+          title="Choose Your Report Type"
+          themeColor={themeColor}
+          fontFamily={fontFamily}
+          className="bg-muted/10"
+        >
+          <ReportTypeSelector
+            control={control}
             errors={errors}
+            selectedReportType={selectedReportType}
+            showReportGuide={showReportGuide}
+            setShowReportGuide={setShowReportGuide}
           />
+        </CoachFormStep>
+
+        {/* Contact Information */}
+        {selectedReportType && (
+          <CoachFormStep
+            stepNumber={2}
+            title="Contact Information"
+            themeColor={themeColor}
+            fontFamily={fontFamily}
+            className="bg-background"
+          >
+            <ContactForm
+              register={register}
+              errors={errors}
+            />
+          </CoachFormStep>
         )}
 
+        {/* Birth Details */}
         {selectedReportType && (
-          <BirthDetailsForm
-            register={register}
-            setValue={setValue}
-            watch={watch}
-            errors={errors}
-          />
+          <CoachFormStep
+            stepNumber={3}
+            title="Your Birth Details"
+            themeColor={themeColor}
+            fontFamily={fontFamily}
+            className="bg-muted/10"
+          >
+            <BirthDetailsForm
+              register={register}
+              setValue={setValue}
+              watch={watch}
+              errors={errors}
+            />
+          </CoachFormStep>
         )}
 
+        {/* Second Person Details */}
         {requiresSecondPerson && (
-          <SecondPersonForm
-            register={register}
-            setValue={setValue}
-            watch={watch}
-            errors={errors}
-          />
+          <CoachFormStep
+            stepNumber={4}
+            title="Second Person Details"
+            themeColor={themeColor}
+            fontFamily={fontFamily}
+            className="bg-background"
+          >
+            <SecondPersonForm
+              register={register}
+              setValue={setValue}
+              watch={watch}
+              errors={errors}
+            />
+          </CoachFormStep>
         )}
 
+        {/* Submission Section */}
         {selectedReportType && (
-          <SubmissionSection
-            register={register}
-            errors={errors}
-            isProcessing={isProcessing}
-            isPricingLoading={isPricingLoading}
-            promoValidation={promoValidation}
-            onButtonClick={handleButtonClick}
-          />
+          <CoachFormStep
+            stepNumber={requiresSecondPerson ? 5 : 4}
+            title="Complete Your Order"
+            themeColor={themeColor}
+            fontFamily={fontFamily}
+            className="bg-muted/10"
+          >
+            <SubmissionSection
+              register={register}
+              errors={errors}
+              isProcessing={isProcessing}
+              isPricingLoading={isPricingLoading}
+              promoValidation={promoValidation}
+              onButtonClick={handleButtonClick}
+            />
+          </CoachFormStep>
         )}
       </form>
     </div>
