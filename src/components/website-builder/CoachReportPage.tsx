@@ -57,19 +57,19 @@ export const CoachReportPage = () => {
   const renderReportPage = () => {
     switch (templateName) {
       case 'classic':
-        return <ClassicReportPage customizationData={customizationData} />;
+        return <ClassicReportPage customizationData={customizationData} coachSlug={slug!} />;
       case 'modern':
-        return <ModernReportPage customizationData={customizationData} />;
+        return <ModernReportPage customizationData={customizationData} coachSlug={slug!} />;
       case 'minimal':
-        return <MinimalReportPage customizationData={customizationData} />;
+        return <MinimalReportPage customizationData={customizationData} coachSlug={slug!} />;
       case 'creative':
-        return <CreativeReportPage customizationData={customizationData} />;
+        return <CreativeReportPage customizationData={customizationData} coachSlug={slug!} />;
       case 'professional':
-        return <ProfessionalReportPage customizationData={customizationData} />;
+        return <ProfessionalReportPage customizationData={customizationData} coachSlug={slug!} />;
       case 'abstract':
-        return <AbstractReportPage customizationData={customizationData} />;
+        return <AbstractReportPage customizationData={customizationData} coachSlug={slug!} />;
       default:
-        return <ClassicReportPage customizationData={customizationData} />;
+        return <ClassicReportPage customizationData={customizationData} coachSlug={slug!} />;
     }
   };
 

@@ -5,14 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AbstractReportPageProps {
   customizationData: any;
+  coachSlug: string;
   isPreview?: boolean;
 }
 
-export const AbstractReportPage = ({ customizationData, isPreview = false }: AbstractReportPageProps) => {
+export const AbstractReportPage = ({ customizationData, coachSlug, isPreview = false }: AbstractReportPageProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const themeColor = customizationData.themeColor || '#6B46C1';
@@ -107,8 +111,22 @@ export const AbstractReportPage = ({ customizationData, isPreview = false }: Abs
       {/* Background geometric shapes */}
       <GeometricShapes />
       
+      {/* Header with Back Button */}
+      <header className="relative z-10 pt-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/${coachSlug}`)}
+            className="flex items-center space-x-2 text-white/80 hover:text-white mb-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Website</span>
+          </Button>
+        </div>
+      </header>
+      
       {/* Header */}
-      <div className="relative z-10 pt-16 pb-8">
+      <div className="relative z-10 pb-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
