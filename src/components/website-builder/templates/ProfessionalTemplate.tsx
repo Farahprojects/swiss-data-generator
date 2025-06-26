@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -6,8 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
 import { Clock, Users, Target, TrendingUp, Shield, Calendar, ArrowRight, Star } from "lucide-react";
 import { EditableSection } from "../EditableSection";
-import { HeroEditModal } from "../edit-modals/HeroEditModal";
-import { AboutEditModal } from "../edit-modals/AboutEditModal";
+import { InlineEditableText } from "../InlineEditableText";
 
 interface TemplateProps {
   customizationData: any;
@@ -19,13 +19,12 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const [purchasingService, setPurchasingService] = useState<number | null>(null);
-  const [heroEditOpen, setHeroEditOpen] = useState(false);
-  const [aboutEditOpen, setAboutEditOpen] = useState(false);
   
   const themeColor = customizationData.themeColor || '#007AFF';
   const fontFamily = customizationData.fontFamily || 'Inter';
   const sectionPadding = isPreview ? 'py-12' : 'py-16 sm:py-20 lg:py-24';
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+  const isEditable = !!onCustomizationChange;
 
   // Create report service card - ALWAYS show it (removed the !isPreview condition)
   const reportService = {
@@ -38,18 +37,9 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
   // Add report service as first item
   const allServices = [reportService, ...(customizationData.services || [])];
 
-  const handleHeroSave = (heroData: any) => {
+  const handleFieldChange = (field: string, value: any) => {
     if (onCustomizationChange) {
-      onCustomizationChange('coachName', heroData.coachName);
-      onCustomizationChange('tagline', heroData.tagline);
-      onCustomizationChange('buttonText', heroData.buttonText);
-    }
-  };
-
-  const handleAboutSave = (aboutData: any) => {
-    if (onCustomizationChange) {
-      onCustomizationChange('introTitle', aboutData.introTitle);
-      onCustomizationChange('bio', aboutData.bio);
+      onCustomizationChange(field, value);
     }
   };
 
@@ -95,7 +85,12 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="text-2xl font-semibold text-gray-900 tracking-tight mr-16">
-              {customizationData.coachName || "Your Name"}
+              <InlineEditableText
+                value={customizationData.coachName || ""}
+                onChange={(value) => handleFieldChange('coachName', value)}
+                placeholder="Your Name"
+                isEditable={isEditable}
+              />
             </div>
             <nav className="hidden md:flex items-center space-x-8">
               <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">About</a>
@@ -108,8 +103,8 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
       {/* Simplified Hero Section - Apple Style */}
       <EditableSection
         sectionId="hero"
-        onEdit={() => setHeroEditOpen(true)}
-        isEditable={!!onCustomizationChange}
+        onEdit={() => {}} // No longer needed as we have inline editing
+        isEditable={false} // Disable section-level editing since we have inline editing
         className={`${sectionPadding} relative overflow-hidden`}
       >
         {hasHeaderImage && (
@@ -134,14 +129,27 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
             </h1>
             
             <p className="text-xl sm:text-2xl text-gray-600 mb-12 font-light leading-relaxed max-w-3xl mx-auto">
-              {customizationData.tagline || "Personalized insights that illuminate your unique path forward"}
+              <InlineEditableText
+                value={customizationData.tagline || ""}
+                onChange={(value) => handleFieldChange('tagline', value)}
+                placeholder="Personalized insights that illuminate your unique path forward"
+                multiline={true}
+                isEditable={isEditable}
+                className="text-xl sm:text-2xl text-gray-600 font-light leading-relaxed"
+              />
             </p>
             
             <Button 
               className="h-12 px-8 text-base font-medium rounded-full transition-all duration-200 hover:scale-105"
               style={{ backgroundColor: themeColor, color: 'white' }}
             >
-              {customizationData.buttonText || "Get Your Insights"}
+              <InlineEditableText
+                value={customizationData.buttonText || ""}
+                onChange={(value) => handleFieldChange('buttonText', value)}
+                placeholder="Get Your Insights"
+                isEditable={isEditable}
+                className="text-white"
+              />
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </motion.div>
@@ -151,8 +159,8 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
       {/* Clean About Section - Apple Inspired */}
       <EditableSection
         sectionId="about"
-        onEdit={() => setAboutEditOpen(true)}
-        isEditable={!!onCustomizationChange}
+        onEdit={() => {}} // No longer needed as we have inline editing
+        isEditable={false} // Disable section-level editing since we have inline editing
         className={`${sectionPadding} bg-white`}
       >
         <div className="max-w-5xl mx-auto px-6">
@@ -177,10 +185,23 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
             </div>
             <div className="order-1 lg:order-2">
               <h2 className="text-4xl sm:text-5xl font-light mb-8 text-gray-900 tracking-tight leading-tight">
-                {customizationData.introTitle || "Designed for you."}
+                <InlineEditableText
+                  value={customizationData.introTitle || ""}
+                  onChange={(value) => handleFieldChange('introTitle', value)}
+                  placeholder="Designed for you."
+                  isEditable={isEditable}
+                  className="text-4xl sm:text-5xl font-light text-gray-900 tracking-tight leading-tight"
+                />
               </h2>
               <p className="text-xl text-gray-600 leading-relaxed mb-12 font-light">
-                {customizationData.bio || "Every insight is crafted with precision, tailored to your unique story and timing. No generic advice—just clarity designed specifically for your journey."}
+                <InlineEditableText
+                  value={customizationData.bio || ""}
+                  onChange={(value) => handleFieldChange('bio', value)}
+                  placeholder="Every insight is crafted with precision, tailored to your unique story and timing. No generic advice—just clarity designed specifically for your journey."
+                  multiline={true}
+                  isEditable={isEditable}
+                  className="text-xl text-gray-600 leading-relaxed font-light"
+                />
               </p>
               <div className="space-y-8">
                 <div>
@@ -263,16 +284,35 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
       <section className={`${sectionPadding} bg-white`}>
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-4xl sm:text-5xl font-semibold mb-6 text-gray-900 tracking-tight">
-            {customizationData.footerHeading || "Ready to begin?"}
+            <InlineEditableText
+              value={customizationData.footerHeading || ""}
+              onChange={(value) => handleFieldChange('footerHeading', value)}
+              placeholder="Ready to begin?"
+              isEditable={isEditable}
+              className="text-4xl sm:text-5xl font-semibold text-gray-900 tracking-tight"
+            />
           </h2>
           <p className="text-xl text-gray-600 mb-12 font-light leading-relaxed">
-            {customizationData.footerSubheading || "Your personalized insights are just a few clicks away."}
+            <InlineEditableText
+              value={customizationData.footerSubheading || ""}
+              onChange={(value) => handleFieldChange('footerSubheading', value)}
+              placeholder="Your personalized insights are just a few clicks away."
+              multiline={true}
+              isEditable={isEditable}
+              className="text-xl text-gray-600 font-light leading-relaxed"
+            />
           </p>
           <Button 
             className="h-14 px-10 text-lg font-medium rounded-full transition-all duration-200 hover:scale-105"
             style={{ backgroundColor: themeColor, color: 'white' }}
           >
-            {customizationData.buttonText || "Get Your Insights"}
+            <InlineEditableText
+              value={customizationData.buttonText || ""}
+              onChange={(value) => handleFieldChange('buttonText', value)}
+              placeholder="Get Your Insights"
+              isEditable={isEditable}
+              className="text-white"
+            />
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
@@ -283,7 +323,12 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center">
             <div className="text-2xl font-semibold mb-4 text-gray-900 tracking-tight">
-              {customizationData.coachName || "Your Name"}
+              <InlineEditableText
+                value={customizationData.coachName || ""}
+                onChange={(value) => handleFieldChange('coachName', value)}
+                placeholder="Your Name"
+                isEditable={isEditable}
+              />
             </div>
             <p className="text-gray-600 mb-8 font-light">Personalized insights for your unique journey</p>
             <div className="flex justify-center space-x-8 text-sm text-gray-500 font-medium">
@@ -294,28 +339,6 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
           </div>
         </div>
       </footer>
-
-      {/* Edit Modals */}
-      <HeroEditModal
-        isOpen={heroEditOpen}
-        onClose={() => setHeroEditOpen(false)}
-        onSave={handleHeroSave}
-        initialData={{
-          coachName: customizationData.coachName || '',
-          tagline: customizationData.tagline || '',
-          buttonText: customizationData.buttonText || ''
-        }}
-      />
-
-      <AboutEditModal
-        isOpen={aboutEditOpen}
-        onClose={() => setAboutEditOpen(false)}
-        onSave={handleAboutSave}
-        initialData={{
-          introTitle: customizationData.introTitle || '',
-          bio: customizationData.bio || ''
-        }}
-      />
     </div>
   );
 };
