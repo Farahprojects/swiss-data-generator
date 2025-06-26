@@ -5,7 +5,7 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
-import { Clock, Users, Target, TrendingUp, Shield, Calendar } from "lucide-react";
+import { Clock, Users, Target, TrendingUp, Shield, Calendar, ArrowRight, Star } from "lucide-react";
 
 interface TemplateProps {
   customizationData: any;
@@ -17,34 +17,18 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
   const { toast } = useToast();
   const [purchasingService, setPurchasingService] = useState<number | null>(null);
   
-  const themeColor = customizationData.themeColor || '#1E3A8A';
+  const themeColor = customizationData.themeColor || '#007AFF';
   const fontFamily = customizationData.fontFamily || 'Inter';
 
-  // Helper function to get button styles
-  const getButtonStyles = () => {
-    const buttonColor = customizationData.buttonColor || themeColor;
-    const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
-    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
-    const buttonStyle = customizationData.buttonStyle || 'bordered';
-    
-    return {
-      backgroundColor: buttonStyle === 'bordered' ? 'transparent' : buttonColor,
-      color: buttonTextColor,
-      fontFamily: `${buttonFontFamily}, sans-serif`,
-      border: buttonStyle === 'borderless' ? 'none' : `2px solid ${buttonColor}`,
-      borderRadius: buttonStyle === 'borderless' ? '0' : undefined
-    };
-  };
-
-  const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
+  const sectionPadding = isPreview ? 'py-12' : 'py-16 sm:py-20 lg:py-24';
 
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
   // Create report service card
   const reportService = !isPreview ? {
-    title: "Strategic Timing Analysis",
-    description: "Comprehensive astrological insights for executive decision-making and optimal timing in business ventures.",
+    title: "Personal Insights Report",
+    description: "Comprehensive analysis designed for your unique journey and goals.",
     price: "$29",
     isReportService: true
   } : null;
@@ -87,215 +71,200 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
     setPurchasingService(null);
   };
 
-  const reportTypes = [
+  const insightTypes = [
     {
-      icon: <Target className="h-6 w-6" />,
-      title: "Mindset Analysis",
-      description: "Deep psychological insights for leadership development"
+      icon: <Target className="h-8 w-8" />,
+      title: "Purpose Discovery",
+      description: "Uncover your authentic path and core motivations"
     },
     {
-      icon: <Users className="h-6 w-6" />,
-      title: "Compatibility Reports",
-      description: "Team dynamics and partnership compatibility analysis"
+      icon: <Users className="h-8 w-8" />,
+      title: "Relationship Dynamics",
+      description: "Understand your connections and communication style"
     },
     {
-      icon: <Clock className="h-6 w-6" />,
-      title: "Timing Intelligence",
-      description: "Optimal timing for major decisions and launches"
+      icon: <Clock className="h-8 w-8" />,
+      title: "Optimal Timing",
+      description: "Make decisions when the timing is perfectly aligned"
     },
     {
-      icon: <TrendingUp className="h-6 w-6" />,
-      title: "Career Transitions",
-      description: "Strategic guidance for professional pivots"
+      icon: <TrendingUp className="h-8 w-8" />,
+      title: "Growth Opportunities",
+      description: "Identify areas for personal and professional development"
     },
     {
-      icon: <Calendar className="h-6 w-6" />,
-      title: "Solar Return Analysis",
-      description: "Annual strategic planning and goal setting"
+      icon: <Calendar className="h-8 w-8" />,
+      title: "Life Cycles",
+      description: "Navigate major transitions with confidence and clarity"
     },
     {
-      icon: <Shield className="h-6 w-6" />,
-      title: "Essence Profiling",
-      description: "Core personality strengths and leadership style"
+      icon: <Shield className="h-8 w-8" />,
+      title: "Core Strengths",
+      description: "Leverage your natural talents and abilities"
     }
   ];
 
   return (
-    <div className="bg-slate-50 min-h-screen" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-      {/* Professional Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+    <div className="bg-white min-h-screen" style={{ fontFamily: `${fontFamily}, -apple-system, BlinkMacSystemFont, sans-serif` }}>
+      {/* Apple-style Navigation */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="text-xl sm:text-2xl font-bold text-slate-900" style={{ color: themeColor }}>
-              {customizationData.coachName || "Strategic Advisor"}
+            <div className="text-2xl font-semibold text-gray-900 tracking-tight">
+              {customizationData.coachName || "Your Name"}
             </div>
-            <nav className="hidden md:flex space-x-8">
-              <a href="#services" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Services</a>
-              <a href="#methodology" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Methodology</a>
-              <a href="#contact" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">Contact</a>
+            <nav className="hidden md:flex items-center space-x-8">
+              <a href="#insights" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Insights</a>
+              <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">About</a>
+              <a href="#services" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Services</a>
             </nav>
           </div>
         </div>
       </header>
 
-      {/* Executive Hero */}
-      <section className={`${sectionPadding} ${!hasHeaderImage ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' : 'relative'}`}>
+      {/* Hero Section - Apple Style */}
+      <section className={`${sectionPadding} relative overflow-hidden`}>
         {hasHeaderImage && (
           <div 
-            className="absolute inset-0 bg-cover bg-center"
+            className="absolute inset-0 bg-cover bg-center opacity-5"
             style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
-          >
-            <div className="absolute inset-0 bg-slate-900/70"></div>
-          </div>
+          />
         )}
         
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid gap-12 lg:grid-cols-2 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-center lg:text-left"
-            >
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-white">
-                Strategic Timing<br />
-                <span style={{ color: themeColor === '#1E3A8A' ? '#60A5FA' : themeColor }}>Intelligence</span>
-              </h1>
-              <p className="text-xl lg:text-2xl mb-8 leading-relaxed text-slate-300">
-                {customizationData.tagline || "Astrological insights for executive decision-making and optimal business timing"}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-center lg:justify-start">
-                <Button 
-                  className="py-4 px-8 text-lg font-semibold"
-                  style={getButtonStyles()}
-                >
-                  {customizationData.buttonText || "Get Strategic Analysis"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="py-4 px-8 text-lg font-semibold border-white text-white hover:bg-white hover:text-slate-900"
-                >
-                  View Sample Report
-                </Button>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-8 text-sm text-slate-400 justify-center lg:justify-start">
-                <div className="flex items-center space-x-2">
-                  <Shield className="h-4 w-4" />
-                  <span>Confidential Analysis</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4" />
-                  <span>24-48 Hour Delivery</span>
-                </div>
-              </div>
-            </motion.div>
+        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-semibold text-gray-900 mb-8 leading-none tracking-tight">
+              Discover.
+              <br />
+              <span className="bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
+                Transform.
+              </span>
+              <br />
+              Thrive.
+            </h1>
             
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative"
-            >
-              <div className="bg-white rounded-xl p-8 shadow-2xl border border-slate-200">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold mb-2 text-slate-900">6</div>
-                    <div className="text-slate-600 text-sm">Specialized Reports</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold mb-2 text-slate-900">24h</div>
-                    <div className="text-slate-600 text-sm">Delivery Time</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold mb-2 text-slate-900">100%</div>
-                    <div className="text-slate-600 text-sm">Personalized</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold mb-2 text-slate-900">±1min</div>
-                    <div className="text-slate-600 text-sm">Birth Time Precision</div>
-                  </div>
-                </div>
+            <p className="text-xl sm:text-2xl text-gray-600 mb-12 font-light leading-relaxed max-w-3xl mx-auto">
+              {customizationData.tagline || "Personalized insights that illuminate your path forward"}
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+              <Button 
+                className="h-12 px-8 text-base font-medium rounded-full transition-all duration-200 hover:scale-105"
+                style={{ backgroundColor: themeColor, color: 'white' }}
+              >
+                {customizationData.buttonText || "Get Your Insights"}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="h-12 px-8 text-base font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Learn More
+              </Button>
+            </div>
+
+            {/* Stats - Apple Style */}
+            <div className="grid grid-cols-3 gap-8 max-w-lg mx-auto">
+              <div className="text-center">
+                <div className="text-3xl font-semibold text-gray-900 mb-1">6+</div>
+                <div className="text-sm text-gray-600 font-medium">Insight Areas</div>
               </div>
-            </motion.div>
-          </div>
+              <div className="text-center">
+                <div className="text-3xl font-semibold text-gray-900 mb-1">24h</div>
+                <div className="text-sm text-gray-600 font-medium">Delivery</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-semibold text-gray-900 mb-1">100%</div>
+                <div className="text-sm text-gray-600 font-medium">Personal</div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Report Types Grid */}
-      <section className={`${sectionPadding} bg-white`}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-slate-900">
-              Strategic Analysis Services
+      {/* Insights Grid - Apple Product Style */}
+      <section id="insights" className={`${sectionPadding} bg-gray-50`}>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl sm:text-5xl font-semibold text-gray-900 mb-6 tracking-tight">
+              Six areas of insight.
+              <br />
+              <span className="text-gray-600">Endless possibilities.</span>
             </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Comprehensive astrological insights designed for executive decision-making and strategic planning
+            <p className="text-xl text-gray-600 font-light max-w-3xl mx-auto leading-relaxed">
+              Each report is carefully crafted to provide clarity and direction for your unique journey.
             </p>
           </div>
           
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {reportTypes.map((report, index) => (
+            {insightTypes.map((insight, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-slate-50 rounded-lg p-6 hover:shadow-lg transition-all duration-300 border border-slate-200 hover:border-slate-300"
+                className="bg-white rounded-3xl p-8 hover:shadow-lg transition-all duration-300 border border-gray-100"
               >
                 <div 
-                  className="w-12 h-12 rounded-lg mb-4 flex items-center justify-center text-white"
+                  className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center text-white"
                   style={{ backgroundColor: themeColor }}
                 >
-                  {report.icon}
+                  {insight.icon}
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-slate-900">{report.title}</h3>
-                <p className="text-slate-600 leading-relaxed">{report.description}</p>
+                <h3 className="text-xl font-semibold mb-4 text-gray-900">{insight.title}</h3>
+                <p className="text-gray-600 leading-relaxed font-light">{insight.description}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* About Section */}
-      <section id="methodology" className={`${sectionPadding} bg-slate-100`}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="grid gap-12 lg:grid-cols-2 items-center">
+      {/* About Section - Apple Two Column */}
+      <section id="about" className={`${sectionPadding} bg-white`}>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid gap-16 lg:grid-cols-2 items-center">
             <div className="order-2 lg:order-1">
               {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) ? (
-                <img
-                  src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
-                  alt="Professional"
-                  className="w-full h-64 lg:h-80 object-cover rounded-lg shadow-lg"
-                />
+                <div className="relative">
+                  <img
+                    src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
+                    alt="About"
+                    className="w-full h-80 lg:h-96 object-cover rounded-3xl shadow-xl"
+                  />
+                </div>
               ) : (
-                <div className="bg-gradient-to-br from-slate-200 to-slate-300 rounded-lg h-64 lg:h-80 flex items-center justify-center">
-                  <div className="text-center text-slate-600">
-                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-400"></div>
-                    <div>Strategic Advisor Portrait</div>
+                <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl h-80 lg:h-96 flex items-center justify-center">
+                  <div className="text-center text-gray-500">
+                    <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-300"></div>
+                    <div className="font-medium">Your Photo</div>
                   </div>
                 </div>
               )}
             </div>
             <div className="order-1 lg:order-2">
-              <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-slate-900">
-                {customizationData.introTitle || "Precision-Based Methodology"}
+              <h2 className="text-4xl sm:text-5xl font-semibold mb-8 text-gray-900 tracking-tight leading-tight">
+                {customizationData.introTitle || "Designed for you."}
               </h2>
-              <p className="text-lg text-slate-600 leading-relaxed mb-6">
-                {customizationData.bio || "Our strategic timing analysis combines traditional astrological wisdom with modern executive needs. Each report is meticulously crafted using precise birth data to provide actionable insights for leadership decisions, optimal timing, and strategic planning."}
+              <p className="text-xl text-gray-600 leading-relaxed mb-8 font-light">
+                {customizationData.bio || "Every insight is personalized to your unique story, goals, and timing. No generic advice – just clarity tailored specifically for your journey forward."}
               </p>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0" style={{ backgroundColor: themeColor }}></div>
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className="w-2 h-2 rounded-full mt-3 flex-shrink-0" style={{ backgroundColor: themeColor }}></div>
                   <div>
-                    <h4 className="font-semibold text-slate-900">Birth Chart Precision</h4>
-                    <p className="text-slate-600">Exact birth time analysis for accurate planetary positioning</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">Precision Matters</h4>
+                    <p className="text-gray-600 font-light">Every detail of your birth information creates a more accurate and meaningful reading.</p>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0" style={{ backgroundColor: themeColor }}></div>
+                <div className="flex items-start space-x-4">
+                  <div className="w-2 h-2 rounded-full mt-3 flex-shrink-0" style={{ backgroundColor: themeColor }}></div>
                   <div>
-                    <h4 className="font-semibold text-slate-900">Executive Context</h4>
-                    <p className="text-slate-600">Insights tailored for leadership and business applications</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">Practical Guidance</h4>
+                    <p className="text-gray-600 font-light">Insights you can actually use in your daily life and important decisions.</p>
                   </div>
                 </div>
               </div>
@@ -304,14 +273,14 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
         </div>
       </section>
 
-      {/* Services */}
-      <section id="services" className={`${sectionPadding} bg-white`}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-slate-900">
-              {customizationData.servicesTitle || "Professional Services"}
+      {/* Services - Apple Card Grid */}
+      <section id="services" className={`${sectionPadding} bg-gray-50`}>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl sm:text-5xl font-semibold mb-6 text-gray-900 tracking-tight">
+              {customizationData.servicesTitle || "Choose your path"}
             </h2>
-            <p className="text-xl text-slate-600">Strategic guidance and personalized analysis</p>
+            <p className="text-xl text-gray-600 font-light">Simple. Clear. Transformative.</p>
           </div>
           
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -321,31 +290,41 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-lg p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200"
+                className="bg-white rounded-3xl p-8 hover:shadow-xl transition-all duration-300 border border-gray-100 relative overflow-hidden group"
               >
-                <h3 className="text-xl font-semibold mb-4 text-slate-900">{service.title}</h3>
-                <p className="text-slate-600 mb-6 leading-relaxed">{service.description}</p>
+                {service.isReportService && (
+                  <div className="absolute top-6 right-6">
+                    <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                  </div>
+                )}
+                
+                <h3 className="text-2xl font-semibold mb-4 text-gray-900">{service.title}</h3>
+                <p className="text-gray-600 mb-8 leading-relaxed font-light text-lg">{service.description}</p>
+                
                 <div className="flex items-center justify-between">
-                  <div className="text-2xl font-bold" style={{ color: themeColor }}>{service.price}</div>
+                  <div className="text-3xl font-semibold text-gray-900">{service.price}</div>
                   {service.isReportService ? (
                     <Button 
                       onClick={() => handlePurchaseClick(service, index)}
+                      className="h-12 px-6 rounded-full font-medium transition-all duration-200 hover:scale-105"
                       style={{ backgroundColor: themeColor, color: 'white' }}
-                      className="hover:opacity-90"
                     >
-                      Get Analysis
+                      Get Started
                     </Button>
                   ) : hasValidPrice(service.price) ? (
                     <Button 
                       onClick={() => handlePurchaseClick(service, index)}
                       disabled={purchasingService === index}
+                      className="h-12 px-6 rounded-full font-medium transition-all duration-200 hover:scale-105"
                       style={{ backgroundColor: themeColor, color: 'white' }}
-                      className="hover:opacity-90"
                     >
                       {purchasingService === index ? "Processing..." : "Purchase"}
                     </Button>
                   ) : (
-                    <Button variant="outline" className="border-slate-300">
+                    <Button 
+                      variant="outline" 
+                      className="h-12 px-6 rounded-full font-medium border-gray-300 hover:border-gray-400 transition-colors"
+                    >
                       Learn More
                     </Button>
                   )}
@@ -356,41 +335,45 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className={sectionPadding} style={{ backgroundColor: themeColor }}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-6">
-            {customizationData.footerHeading || "Ready for Strategic Clarity?"}
+      {/* CTA Section - Apple Style */}
+      <section className={`${sectionPadding} bg-white`}>
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <h2 className="text-4xl sm:text-5xl font-semibold mb-6 text-gray-900 tracking-tight">
+            {customizationData.footerHeading || "Ready to begin?"}
           </h2>
-          <p className="text-xl mb-8 opacity-90">
-            {customizationData.footerSubheading || "Get personalized timing insights for your most important decisions."}
+          <p className="text-xl text-gray-600 mb-12 font-light leading-relaxed">
+            {customizationData.footerSubheading || "Your personalized insights are just a few clicks away."}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
-              className="py-4 px-8 text-lg font-semibold"
-              style={getButtonStyles()}
+              className="h-14 px-10 text-lg font-medium rounded-full transition-all duration-200 hover:scale-105"
+              style={{ backgroundColor: themeColor, color: 'white' }}
             >
-              {customizationData.buttonText || "Start Analysis"}
+              {customizationData.buttonText || "Get Your Insights"}
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button variant="outline" className="border-white text-white hover:bg-white hover:text-slate-900 py-4 px-8 text-lg font-semibold">
-              View Methodology
+            <Button 
+              variant="ghost" 
+              className="h-14 px-10 text-lg font-medium text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Learn More
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Professional Footer */}
-      <footer className="bg-slate-900 text-white py-12">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      {/* Footer - Apple Minimal */}
+      <footer className="bg-gray-50 py-16">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="text-center">
-            <div className="text-2xl font-bold mb-4" style={{ color: themeColor }}>
-              {customizationData.coachName || "Strategic Advisor"}
+            <div className="text-2xl font-semibold mb-4 text-gray-900 tracking-tight">
+              {customizationData.coachName || "Your Name"}
             </div>
-            <p className="text-slate-400 mb-6">Strategic timing intelligence for executive decisions</p>
-            <div className="flex justify-center space-x-8 text-sm text-slate-500">
-              <span>Privacy Policy</span>
-              <span>Terms of Service</span>
-              <span>Contact</span>
+            <p className="text-gray-600 mb-8 font-light">Personalized insights for your unique journey</p>
+            <div className="flex justify-center space-x-8 text-sm text-gray-500 font-medium">
+              <span className="hover:text-gray-700 cursor-pointer transition-colors">Privacy</span>
+              <span className="hover:text-gray-700 cursor-pointer transition-colors">Terms</span>
+              <span className="hover:text-gray-700 cursor-pointer transition-colors">Contact</span>
             </div>
           </div>
         </div>
