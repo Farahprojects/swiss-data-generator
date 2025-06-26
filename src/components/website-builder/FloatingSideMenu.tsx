@@ -1,7 +1,7 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, Globe, Save, ArrowLeft } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FloatingSideMenuProps {
   onPreview: () => void;
@@ -26,67 +26,6 @@ export const FloatingSideMenu: React.FC<FloatingSideMenuProps> = ({
   publishButtonText,
   website
 }) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    // On mobile, show as a compact top bar
-    return (
-      <div className="fixed top-4 left-4 right-4 z-40 flex justify-between items-center">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onChangeTemplate}
-          className="flex items-center space-x-1 bg-white shadow-lg border-2"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          <span className="text-xs">Back</span>
-        </Button>
-        
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onPreview}
-            className="flex items-center space-x-1 bg-white shadow-lg border-2"
-          >
-            <Eye className="h-3 w-3" />
-            <span className="text-xs">Preview</span>
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onSave}
-            disabled={isSaving}
-            className="flex items-center space-x-1 bg-white shadow-lg border-2"
-          >
-            <Save className="h-3 w-3" />
-            <span className="text-xs">{isSaving ? 'Saving...' : 'Save'}</span>
-          </Button>
-          
-          <Button
-            size="sm"
-            onClick={onPublish}
-            disabled={isPublishing}
-            className="flex items-center space-x-1 bg-primary hover:bg-primary/90 shadow-lg"
-          >
-            <Globe className="h-3 w-3" />
-            <span className="text-xs">{isPublishing ? 'Publishing...' : 'Publish'}</span>
-          </Button>
-        </div>
-
-        {website?.has_unpublished_changes && (
-          <div className="absolute -bottom-8 right-0">
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-              Changes
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Desktop layout remains the same
   return (
     <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col space-y-3">
       <Button
