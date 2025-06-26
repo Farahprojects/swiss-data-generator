@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { User, FileText, Image, Briefcase, Settings, Palette, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
@@ -7,8 +7,6 @@ import { User, FileText, Image, Briefcase, Settings, Palette, ChevronLeft, Chevr
 interface CollapsibleSectionPanelProps {
   onOpenModal: (section: string) => void;
   onChangeTemplate: () => void;
-  isExpanded: boolean;
-  onToggle: () => void;
 }
 
 const editSections = [
@@ -22,14 +20,17 @@ const editSections = [
 
 export const CollapsibleSectionPanel: React.FC<CollapsibleSectionPanelProps> = ({
   onOpenModal,
-  onChangeTemplate,
-  isExpanded,
-  onToggle
+  onChangeTemplate
 }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const togglePanel = () => {
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <TooltipProvider>
       <div
-        data-panel="collapsible-section"
         className={`fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-[60] transition-all duration-300 ease-in-out ${
           isExpanded ? 'w-64' : 'w-16'
         }`}
@@ -42,7 +43,7 @@ export const CollapsibleSectionPanel: React.FC<CollapsibleSectionPanelProps> = (
           <Button
             variant="ghost"
             size="sm"
-            onClick={onToggle}
+            onClick={togglePanel}
             className="p-2 hover:bg-gray-100"
           >
             {isExpanded ? (

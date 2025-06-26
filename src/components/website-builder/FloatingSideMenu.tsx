@@ -1,12 +1,13 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Eye, Globe, Save } from "lucide-react";
+import { Eye, Globe, Save, ArrowLeft } from "lucide-react";
 
 interface FloatingSideMenuProps {
   onPreview: () => void;
   onSave: () => void;
   onPublish: () => void;
+  onChangeTemplate: () => void;
   isSaving: boolean;
   isPublishing: boolean;
   saveButtonText: string;
@@ -18,6 +19,7 @@ export const FloatingSideMenu: React.FC<FloatingSideMenuProps> = ({
   onPreview,
   onSave,
   onPublish,
+  onChangeTemplate,
   isSaving,
   isPublishing,
   saveButtonText,
@@ -55,6 +57,16 @@ export const FloatingSideMenu: React.FC<FloatingSideMenuProps> = ({
       >
         <Globe className="h-4 w-4" />
         <span className="text-xs font-medium text-center">{isPublishing ? 'Publishing...' : 'Publish'}</span>
+      </Button>
+      
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onChangeTemplate}
+        className="w-20 h-16 flex flex-col items-center justify-center space-y-1 bg-white shadow-lg border-2 hover:shadow-xl transition-all duration-200 hover:scale-105"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        <span className="text-xs font-medium text-center">Templates</span>
       </Button>
       
       {website?.has_unpublished_changes && (
