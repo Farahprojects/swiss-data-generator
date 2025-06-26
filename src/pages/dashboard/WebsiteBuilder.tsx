@@ -493,7 +493,6 @@ export default function WebsiteBuilder() {
             <TemplatePreview
               template={selectedTemplate}
               customizationData={customizationData}
-              onCustomizationChange={handleCustomizationChange}
             />
           </div>
         </div>

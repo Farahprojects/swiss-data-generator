@@ -5,27 +5,27 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
-import { ArrowRight, Star } from "lucide-react";
-import { EnhancedInlineText } from "../EnhancedInlineText";
+import { Clock, Users, Target, TrendingUp, Shield, Calendar, ArrowRight, Star } from "lucide-react";
 
 interface TemplateProps {
   customizationData: any;
   isPreview?: boolean;
-  onCustomizationChange?: (field: string, value: any) => void;
 }
 
-export const ProfessionalTemplate = ({ customizationData, isPreview = false, onCustomizationChange }: TemplateProps) => {
+export const ProfessionalTemplate = ({ customizationData, isPreview = false }: TemplateProps) => {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const [purchasingService, setPurchasingService] = useState<number | null>(null);
   
   const themeColor = customizationData.themeColor || '#007AFF';
   const fontFamily = customizationData.fontFamily || 'Inter';
-  const sectionPadding = isPreview ? 'py-12' : 'py-16 sm:py-20 lg:py-24';
-  const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
-  const isEditable = !!onCustomizationChange;
 
-  // Create report service card - ALWAYS show it
+  const sectionPadding = isPreview ? 'py-12' : 'py-16 sm:py-20 lg:py-24';
+
+  // Check if header image exists
+  const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+
+  // Create report service card - ALWAYS show it (removed the !isPreview condition)
   const reportService = {
     title: "Personal Insights Report",
     description: "Comprehensive analysis designed for your unique journey and goals.",
@@ -35,12 +35,6 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
 
   // Add report service as first item
   const allServices = [reportService, ...(customizationData.services || [])];
-
-  const handleFieldChange = (field: string, value: any) => {
-    if (onCustomizationChange) {
-      onCustomizationChange(field, value);
-    }
-  };
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
@@ -84,16 +78,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="text-2xl font-semibold text-gray-900 tracking-tight mr-16">
-              <EnhancedInlineText
-                value={customizationData.coachName || ""}
-                onChange={(value) => handleFieldChange('coachName', value)}
-                placeholder="Your Name"
-                isEditable={isEditable}
-                fieldName="coachName"
-                formatting={customizationData.coachNameFormatting}
-                onCustomizationChange={onCustomizationChange}
-                className="text-2xl font-semibold text-gray-900 tracking-tight"
-              />
+              {customizationData.coachName || "Your Name"}
             </div>
             <nav className="hidden md:flex items-center space-x-8">
               <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">About</a>
@@ -119,46 +104,22 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-semibold text-gray-900 mb-8 leading-none tracking-tight">
-              <EnhancedInlineText
-                value={customizationData.heroTitle || ""}
-                onChange={(value) => handleFieldChange('heroTitle', value)}
-                placeholder="Discover your true potential."
-                isEditable={isEditable}
-                fieldName="heroTitle"
-                formatting={customizationData.heroTitleFormatting}
-                onCustomizationChange={onCustomizationChange}
-                className="text-5xl sm:text-6xl lg:text-7xl font-semibold text-gray-900 leading-none tracking-tight"
-              />
+              Discover your
+              <br />
+              <span className="bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
+                true potential.
+              </span>
             </h1>
             
             <p className="text-xl sm:text-2xl text-gray-600 mb-12 font-light leading-relaxed max-w-3xl mx-auto">
-              <EnhancedInlineText
-                value={customizationData.tagline || ""}
-                onChange={(value) => handleFieldChange('tagline', value)}
-                placeholder="Personalized insights that illuminate your unique path forward"
-                multiline={true}
-                isEditable={isEditable}
-                fieldName="tagline"
-                formatting={customizationData.taglineFormatting}
-                onCustomizationChange={onCustomizationChange}
-                className="text-xl sm:text-2xl text-gray-600 font-light leading-relaxed"
-              />
+              {customizationData.tagline || "Personalized insights that illuminate your unique path forward"}
             </p>
             
             <Button 
               className="h-12 px-8 text-base font-medium rounded-full transition-all duration-200 hover:scale-105"
               style={{ backgroundColor: themeColor, color: 'white' }}
             >
-              <EnhancedInlineText
-                value={customizationData.buttonText || ""}
-                onChange={(value) => handleFieldChange('buttonText', value)}
-                placeholder="Get Your Insights"
-                isEditable={isEditable}
-                fieldName="buttonText"
-                formatting={customizationData.buttonTextFormatting}
-                onCustomizationChange={onCustomizationChange}
-                className="text-white"
-              />
+              {customizationData.buttonText || "Get Your Insights"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </motion.div>
@@ -166,7 +127,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
       </section>
 
       {/* Clean About Section - Apple Inspired */}
-      <section className={`${sectionPadding} bg-white`}>
+      <section id="about" className={`${sectionPadding} bg-white`}>
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid gap-20 lg:grid-cols-2 items-center">
             <div className="order-2 lg:order-1">
@@ -189,29 +150,10 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
             </div>
             <div className="order-1 lg:order-2">
               <h2 className="text-4xl sm:text-5xl font-light mb-8 text-gray-900 tracking-tight leading-tight">
-                <EnhancedInlineText
-                  value={customizationData.introTitle || ""}
-                  onChange={(value) => handleFieldChange('introTitle', value)}
-                  placeholder="Designed for you."
-                  isEditable={isEditable}
-                  fieldName="introTitle"
-                  formatting={customizationData.introTitleFormatting}
-                  onCustomizationChange={onCustomizationChange}
-                  className="text-4xl sm:text-5xl font-light text-gray-900 tracking-tight leading-tight"
-                />
+                {customizationData.introTitle || "Designed for you."}
               </h2>
               <p className="text-xl text-gray-600 leading-relaxed mb-12 font-light">
-                <EnhancedInlineText
-                  value={customizationData.bio || ""}
-                  onChange={(value) => handleFieldChange('bio', value)}
-                  placeholder="Every insight is crafted with precision, tailored to your unique story and timing. No generic advice—just clarity designed specifically for your journey."
-                  multiline={true}
-                  isEditable={isEditable}
-                  fieldName="bio"
-                  formatting={customizationData.bioFormatting}
-                  onCustomizationChange={onCustomizationChange}
-                  className="text-xl text-gray-600 leading-relaxed font-light"
-                />
+                {customizationData.bio || "Every insight is crafted with precision, tailored to your unique story and timing. No generic advice—just clarity designed specifically for your journey."}
               </p>
               <div className="space-y-8">
                 <div>
@@ -233,29 +175,9 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20">
             <h2 className="text-4xl sm:text-5xl font-semibold mb-6 text-gray-900 tracking-tight">
-              <EnhancedInlineText
-                value={customizationData.servicesTitle || ""}
-                onChange={(value) => handleFieldChange('servicesTitle', value)}
-                placeholder="Simple. Clear. Transformative."
-                isEditable={isEditable}
-                fieldName="servicesTitle"
-                formatting={customizationData.servicesTitleFormatting}
-                onCustomizationChange={onCustomizationChange}
-                className="text-4xl sm:text-5xl font-semibold text-gray-900 tracking-tight"
-              />
+              Simple. Clear. Transformative.
             </h2>
-            <p className="text-xl text-gray-600 font-light">
-              <EnhancedInlineText
-                value={customizationData.servicesSubtitle || ""}
-                onChange={(value) => handleFieldChange('servicesSubtitle', value)}
-                placeholder="Choose your path forward"
-                isEditable={isEditable}
-                fieldName="servicesSubtitle"
-                formatting={customizationData.servicesSubtitleFormatting}
-                onCustomizationChange={onCustomizationChange}
-                className="text-xl text-gray-600 font-light"
-              />
-            </p>
+            <p className="text-xl text-gray-600 font-light">Choose your path forward</p>
           </div>
           
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -314,44 +236,16 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
       <section className={`${sectionPadding} bg-white`}>
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-4xl sm:text-5xl font-semibold mb-6 text-gray-900 tracking-tight">
-            <EnhancedInlineText
-              value={customizationData.footerHeading || ""}
-              onChange={(value) => handleFieldChange('footerHeading', value)}
-              placeholder="Ready to begin?"
-              isEditable={isEditable}
-              fieldName="footerHeading"
-              formatting={customizationData.footerHeadingFormatting}
-              onCustomizationChange={onCustomizationChange}
-              className="text-4xl sm:text-5xl font-semibold text-gray-900 tracking-tight"
-            />
+            {customizationData.footerHeading || "Ready to begin?"}
           </h2>
           <p className="text-xl text-gray-600 mb-12 font-light leading-relaxed">
-            <EnhancedInlineText
-              value={customizationData.footerSubheading || ""}
-              onChange={(value) => handleFieldChange('footerSubheading', value)}
-              placeholder="Your personalized insights are just a few clicks away."
-              multiline={true}
-              isEditable={isEditable}
-              fieldName="footerSubheading"
-              formatting={customizationData.footerSubheadingFormatting}
-              onCustomizationChange={onCustomizationChange}
-              className="text-xl text-gray-600 font-light leading-relaxed"
-            />
+            {customizationData.footerSubheading || "Your personalized insights are just a few clicks away."}
           </p>
           <Button 
             className="h-14 px-10 text-lg font-medium rounded-full transition-all duration-200 hover:scale-105"
             style={{ backgroundColor: themeColor, color: 'white' }}
           >
-            <EnhancedInlineText
-              value={customizationData.buttonText || ""}
-              onChange={(value) => handleFieldChange('buttonText', value)}
-              placeholder="Get Your Insights"
-              isEditable={isEditable}
-              fieldName="buttonText"
-              formatting={customizationData.buttonTextFormatting}
-              onCustomizationChange={onCustomizationChange}
-              className="text-white"
-            />
+            {customizationData.buttonText || "Get Your Insights"}
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
@@ -362,29 +256,9 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false, onC
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center">
             <div className="text-2xl font-semibold mb-4 text-gray-900 tracking-tight">
-              <EnhancedInlineText
-                value={customizationData.coachName || ""}
-                onChange={(value) => handleFieldChange('coachName', value)}
-                placeholder="Your Name"
-                isEditable={isEditable}
-                fieldName="coachName"
-                formatting={customizationData.coachNameFormatting}
-                onCustomizationChange={onCustomizationChange}
-                className="text-2xl font-semibold text-gray-900 tracking-tight"
-              />
+              {customizationData.coachName || "Your Name"}
             </div>
-            <p className="text-gray-600 mb-8 font-light">
-              <EnhancedInlineText
-                value={customizationData.footerTagline || ""}
-                onChange={(value) => handleFieldChange('footerTagline', value)}
-                placeholder="Personalized insights for your unique journey"
-                isEditable={isEditable}
-                fieldName="footerTagline"
-                formatting={customizationData.footerTaglineFormatting}
-                onCustomizationChange={onCustomizationChange}
-                className="text-gray-600 font-light"
-              />
-            </p>
+            <p className="text-gray-600 mb-8 font-light">Personalized insights for your unique journey</p>
             <div className="flex justify-center space-x-8 text-sm text-gray-500 font-medium">
               <span className="hover:text-gray-700 cursor-pointer transition-colors">Privacy</span>
               <span className="hover:text-gray-700 cursor-pointer transition-colors">Terms</span>
