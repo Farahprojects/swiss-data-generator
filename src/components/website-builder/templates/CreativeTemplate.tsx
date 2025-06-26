@@ -86,6 +86,15 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                   >
                     {customizationData.buttonText || "Spark Innovation"}
                   </Button>
+                  {!isPreview && (
+                    <Button 
+                      onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
+                      className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full border-2 hover:bg-white hover:shadow-lg transition-all min-h-[44px]"
+                      style={getButtonStyles(true)}
+                    >
+                      Get Creative Report
+                    </Button>
+                  )}
                   <Button 
                     className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full border-2 hover:bg-white hover:shadow-lg transition-all min-h-[44px]"
                     style={getButtonStyles(true)}

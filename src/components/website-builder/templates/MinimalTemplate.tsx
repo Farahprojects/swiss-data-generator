@@ -169,12 +169,23 @@ export const MinimalTemplate = ({ customizationData, isPreview = false }: Templa
             >
               {customizationData.tagline || "Simplicity in growth. Clarity in purpose."}
             </p>
-            <Button 
-              className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] hover:opacity-90 transition-opacity"
-              style={getButtonStyles(true)}
-            >
-              {customizationData.buttonText || "Connect"}
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] hover:opacity-90 transition-opacity"
+                style={getButtonStyles(true)}
+              >
+                {customizationData.buttonText || "Connect"}
+              </Button>
+              {!isPreview && (
+                <Button 
+                  onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
+                  className="font-light tracking-wide py-3 px-6 sm:py-3 sm:px-8 min-h-[44px] hover:opacity-90 transition-opacity"
+                  style={getButtonStyles()}
+                >
+                  Get Report
+                </Button>
+              )}
+            </div>
           </motion.div>
         </div>
       </section>

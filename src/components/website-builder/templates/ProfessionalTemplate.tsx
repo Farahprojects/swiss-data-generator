@@ -82,6 +82,9 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
               <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors text-sm lg:text-base">About</a>
               <a href="#services" className="text-gray-600 hover:text-gray-900 transition-colors text-sm lg:text-base">Services</a>
               <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors text-sm lg:text-base">Contact</a>
+              {!isPreview && (
+                <a href={`/${customizationData.coachSlug || 'coach'}/vibe`} className="text-gray-600 hover:text-gray-900 transition-colors text-sm lg:text-base">Get Report</a>
+              )}
             </nav>
           </div>
         </div>
@@ -118,6 +121,19 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
                 >
                   {customizationData.buttonText || "Schedule Consultation"}
                 </Button>
+                {!isPreview && (
+                  <Button 
+                    onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
+                    variant="outline" 
+                    className={`py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] ${
+                      hasHeaderImage 
+                        ? 'border-white text-white hover:bg-white hover:text-gray-900'
+                        : 'border-gray-300'
+                    }`}
+                  >
+                    Get Personal Report
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   className={`py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg min-h-[44px] ${

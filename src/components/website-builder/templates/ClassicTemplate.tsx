@@ -112,12 +112,23 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
             <p className={`text-lg sm:text-xl lg:text-2xl mb-8 sm:mb-10 italic leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-700'}`}>
               {customizationData.tagline || "Classical Wisdom for Modern Challenges"}
             </p>
-            <Button 
-              className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
-              style={getButtonStyles()}
-            >
-              {customizationData.buttonText || "Begin Your Journey"}
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
+                style={getButtonStyles()}
+              >
+                {customizationData.buttonText || "Begin Your Journey"}
+              </Button>
+              {!isPreview && (
+                <Button 
+                  onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
+                  className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
+                  style={getButtonStyles(true)}
+                >
+                  Get Personal Insights
+                </Button>
+              )}
+            </div>
           </motion.div>
         </div>
       </section>

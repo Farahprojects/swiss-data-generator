@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
@@ -31,6 +32,7 @@ import WebsiteBuilder from './pages/dashboard/WebsiteBuilder';
 import CalendarPage from './pages/dashboard/CalendarPage';
 import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
 import PreviewWebsite from './pages/PreviewWebsite';
+import { CoachReportPage } from './components/website-builder/CoachReportPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,6 +81,9 @@ function App() {
                         <Route path="settings" element={<UserSettings />} />
                         <Route path="website-builder" element={<WebsiteBuilder />} />
                       </Route>
+                      
+                      {/* Coach report page route */}
+                      <Route path="/:slug/vibe" element={<CoachReportPage />} />
                       
                       {/* Dynamic slug route for published coach websites - moved before catch-all */}
                       <Route path="/:slug" element={<PublicCoachWebsite />} />

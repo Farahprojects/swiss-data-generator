@@ -173,13 +173,22 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
             >
               {customizationData.tagline || "Transforming Lives Through Modern Coaching"}
             </p>
-            <div className={`flex ${customizationData.heroAlignment === 'center' ? 'justify-center' : customizationData.heroAlignment === 'right' ? 'justify-end lg:justify-end' : 'justify-center lg:justify-start'}`}>
+            <div className={`flex flex-col sm:flex-row gap-4 ${customizationData.heroAlignment === 'center' ? 'justify-center' : customizationData.heroAlignment === 'right' ? 'justify-end lg:justify-end' : 'justify-center lg:justify-start'}`}>
               <Button 
                 className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px]"
                 style={getButtonStyles()}
               >
                 {customizationData.buttonText || "Start Your Journey"}
               </Button>
+              {!isPreview && (
+                <Button 
+                  onClick={() => window.location.href = `/${customizationData.coachSlug || 'coach'}/vibe`}
+                  variant="outline"
+                  className="py-3 px-6 sm:py-4 sm:px-8 text-sm sm:text-base min-h-[44px] border-white text-white hover:bg-white hover:text-gray-900"
+                >
+                  Get Personal Report
+                </Button>
+              )}
             </div>
           </motion.div>
         </div>
