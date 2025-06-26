@@ -16,6 +16,7 @@ import { FooterEditModal } from "@/components/website-builder/modals/FooterEditM
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface WebsiteTemplate {
   id: string;
@@ -37,6 +38,7 @@ interface CoachWebsite {
 export default function WebsiteBuilder() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [templates, setTemplates] = useState<WebsiteTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<WebsiteTemplate | null>(null);
   const [website, setWebsite] = useState<CoachWebsite | null>(null);
@@ -435,7 +437,7 @@ export default function WebsiteBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className={`min-h-screen bg-gray-50 relative ${isMobile ? 'pb-20 pt-16' : ''}`}>
       {/* Full-width template preview */}
       <div className="w-full min-h-screen">
         <TemplatePreview
