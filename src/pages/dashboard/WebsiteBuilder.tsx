@@ -49,6 +49,12 @@ export default function WebsiteBuilder() {
   const [openModal, setOpenModal] = useState<string | null>(null);
   const [isPanelExpanded, setIsPanelExpanded] = useState(true);
   const previewRef = useRef<HTMLDivElement>(null);
+  const isPanelExpandedRef = useRef(isPanelExpanded);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isPanelExpandedRef.current = isPanelExpanded;
+  }, [isPanelExpanded]);
 
   useEffect(() => {
     loadTemplatesAndWebsite();
@@ -416,32 +422,33 @@ export default function WebsiteBuilder() {
     setIsPanelExpanded(!isPanelExpanded);
   };
 
+  // Touch-to-collapse functionality
   useEffect(() => {
-    const handlePreviewTouch = (event: MouseEvent | TouchEvent) => {
-      // Only collapse if panel is expanded and we're not clicking on the panel itself
-      if (isPanelExpanded) {
-        const target = event.target as Element;
-        const isClickingPanel = target.closest('[data-panel="collapsible-section"]');
-        
-        if (!isClickingPanel) {
-          setIsPanelExpanded(false);
-        }
+    const handlePreviewClick = (event: MouseEvent) => {
+      // Only collapse if panel is expanded
+      if (!isPanelExpandedRef.current) return;
+      
+      const target = event.target as Element;
+      
+      // Check if the click is on the panel or its children
+      const isClickingPanel = target.closest('[data-panel="collapsible-section"]');
+      
+      // If not clicking on the panel, collapse it
+      if (!isClickingPanel) {
+        console.log('Collapsing panel due to preview area click');
+        setIsPanelExpanded(false);
       }
     };
 
     const previewElement = previewRef.current;
     if (previewElement) {
-      previewElement.addEventListener('click', handlePreviewTouch);
-      previewElement.addEventListener('touchstart', handlePreviewTouch);
+      previewElement.addEventListener('click', handlePreviewClick);
+      
+      return () => {
+        previewElement.removeEventListener('click', handlePreviewClick);
+      };
     }
-
-    return () => {
-      if (previewElement) {
-        previewElement.removeEventListener('click', handlePreviewTouch);
-        previewElement.removeEventListener('touchstart', handlePreviewTouch);
-      }
-    };
-  }, [isPanelExpanded]);
+  }, []); // No dependencies to avoid re-creating listeners
 
   if (isLoading) {
     return (
@@ -491,7 +498,7 @@ export default function WebsiteBuilder() {
         />
       </div>
 
-      {/* Floating side menu without Templates button */}
+      {/* Floating side menu */}
       <FloatingSideMenu
         onPreview={handlePreview}
         onSave={handleSave}

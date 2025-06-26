@@ -26,6 +26,11 @@ export const CollapsibleSectionPanel: React.FC<CollapsibleSectionPanelProps> = (
   isExpanded,
   onToggle
 }) => {
+  const handleButtonClick = (callback: () => void) => (event: React.MouseEvent) => {
+    event.stopPropagation();
+    callback();
+  };
+
   return (
     <TooltipProvider>
       <div
@@ -42,7 +47,7 @@ export const CollapsibleSectionPanel: React.FC<CollapsibleSectionPanelProps> = (
           <Button
             variant="ghost"
             size="sm"
-            onClick={onToggle}
+            onClick={handleButtonClick(onToggle)}
             className="p-2 hover:bg-gray-100"
           >
             {isExpanded ? (
@@ -63,7 +68,7 @@ export const CollapsibleSectionPanel: React.FC<CollapsibleSectionPanelProps> = (
                 <Button
                   key={section.id}
                   variant="ghost"
-                  onClick={() => onOpenModal(section.id)}
+                  onClick={handleButtonClick(() => onOpenModal(section.id))}
                   className="w-full h-12 flex items-center justify-start space-x-3 px-4 hover:bg-gray-100 transition-colors"
                 >
                   <Icon className="h-5 w-5 text-gray-600" />
@@ -77,7 +82,7 @@ export const CollapsibleSectionPanel: React.FC<CollapsibleSectionPanelProps> = (
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    onClick={() => onOpenModal(section.id)}
+                    onClick={handleButtonClick(() => onOpenModal(section.id))}
                     className="w-12 h-12 flex items-center justify-center hover:bg-gray-100 transition-colors"
                   >
                     <Icon className="h-5 w-5 text-gray-600" />
@@ -97,7 +102,7 @@ export const CollapsibleSectionPanel: React.FC<CollapsibleSectionPanelProps> = (
             {isExpanded ? (
               <Button
                 variant="outline"
-                onClick={onChangeTemplate}
+                onClick={handleButtonClick(onChangeTemplate)}
                 className="w-full h-12 flex items-center justify-start space-x-3 px-4 hover:bg-gray-50 transition-colors"
               >
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
@@ -108,7 +113,7 @@ export const CollapsibleSectionPanel: React.FC<CollapsibleSectionPanelProps> = (
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
-                    onClick={onChangeTemplate}
+                    onClick={handleButtonClick(onChangeTemplate)}
                     className="w-12 h-12 flex items-center justify-center hover:bg-gray-50 transition-colors"
                   >
                     <ArrowLeft className="h-5 w-5 text-gray-600" />
