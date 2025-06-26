@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TemplateSelector } from "@/components/website-builder/TemplateSelector";
 import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
-import { FloatingEditButtons } from "@/components/website-builder/FloatingEditButtons";
+import { CollapsibleSectionPanel } from "@/components/website-builder/CollapsibleSectionPanel";
 import { FloatingSideMenu } from "@/components/website-builder/FloatingSideMenu";
 import { HeroEditModal } from "@/components/website-builder/modals/HeroEditModal";
 import { IntroEditModal } from "@/components/website-builder/modals/IntroEditModal";
@@ -435,9 +435,15 @@ export default function WebsiteBuilder() {
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-50 overflow-hidden">
-      {/* Full-screen template preview that takes entire viewport */}
-      <div className="w-full h-full overflow-auto">
+    <div className="fixed inset-0 bg-gray-50 overflow-hidden flex">
+      {/* Collapsible Section Panel */}
+      <CollapsibleSectionPanel 
+        onOpenModal={handleOpenModal}
+        onChangeTemplate={() => setSelectedTemplate(null)}
+      />
+
+      {/* Main Preview Area */}
+      <div className="flex-1 ml-16 overflow-auto">
         <TemplatePreview
           template={selectedTemplate}
           customizationData={customizationData}
@@ -445,10 +451,7 @@ export default function WebsiteBuilder() {
         />
       </div>
 
-      {/* Floating edit buttons */}
-      <FloatingEditButtons onOpenModal={handleOpenModal} />
-
-      {/* Floating side menu */}
+      {/* Floating side menu (unchanged position) */}
       <FloatingSideMenu
         onPreview={handlePreview}
         onSave={handleSave}
@@ -461,7 +464,7 @@ export default function WebsiteBuilder() {
         website={website}
       />
 
-      {/* Edit modals */}
+      {/* Edit modals (unchanged) */}
       <HeroEditModal
         isOpen={openModal === 'hero'}
         onClose={handleCloseModal}
@@ -504,7 +507,7 @@ export default function WebsiteBuilder() {
         onChange={handleCustomizationChange}
       />
 
-      {/* Publishing modal */}
+      {/* Publishing modal (unchanged) */}
       {showPublishModal && website && (
         <PublishingModal
           website={website}
