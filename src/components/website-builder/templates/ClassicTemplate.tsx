@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -36,19 +35,19 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
-  // Create report service card
-  const reportService = !isPreview ? {
-    title: "Personal Insights Report",
-    description: "Get a comprehensive analysis of your personality, strengths, and growth opportunities with our detailed assessment.",
-    price: "$29",
+  // Create report service card with customizable data
+  const reportService = {
+    title: customizationData.reportService?.title || "Personal Insights Report",
+    description: customizationData.reportService?.description || "Get a comprehensive analysis of your personality, strengths, and growth opportunities with our detailed assessment.",
+    price: customizationData.reportService?.price || "$29",
     isReportService: true
-  } : null;
+  };
 
   // Filter out null services and ensure we have valid service objects
   const validServices = validateServices(customizationData.services || []);
   
-  // Add report service as first item if not in preview
-  const allServices = reportService ? [reportService, ...validServices] : validServices;
+  // Add report service as first item always (including preview)
+  const allServices = [reportService, ...validServices];
 
   // Helper function to get button styling - moved inside component to access variables
   const getButtonStyles = (isInverted = false) => {
@@ -176,7 +175,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
       <section className={`${sectionPadding} bg-amber-50`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-3 sm:mb-4 text-gray-900">Services Offered</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-3 sm:mb-4 text-gray-900">
+              {customizationData.reportService?.sectionHeading || "Services Offered"}
+            </h2>
             <div className="w-16 sm:w-24 h-1 bg-amber-500 mx-auto"></div>
           </div>
           

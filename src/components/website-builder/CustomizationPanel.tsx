@@ -90,6 +90,7 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     hero: true,
     intro: false,
     images: false,
+    reportService: false,
     services: true,
     cta: false,
     footer: false
@@ -128,6 +129,11 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
   // Ensure we always work with validated services
   const validServices = validateServices(customizationData.services || []);
+
+  const handleReportServiceChange = (field: string, value: string) => {
+    const reportService = customizationData.reportService || {};
+    onChange('reportService', { ...reportService, [field]: value });
+  };
 
   const SectionHeader = ({ icon: Icon, title, isOpen, section }: any) => (
     <CollapsibleTrigger asChild>
@@ -425,6 +431,81 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       label="About Section Image"
                       section="about"
                     />
+                  </CardContent>
+                </motion.div>
+              </CollapsibleContent>
+            )}
+          </AnimatePresence>
+        </Collapsible>
+      </Card>
+
+      {/* Report Service Section */}
+      <Card className="overflow-hidden">
+        <Collapsible open={openSections.reportService} onOpenChange={() => toggleSection('reportService')}>
+          <SectionHeader 
+            icon={FileText} 
+            title="Personal Report Service" 
+            isOpen={openSections.reportService}
+            section="reportService"
+          />
+          <AnimatePresence>
+            {openSections.reportService && (
+              <CollapsibleContent forceMount>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <CardContent className="space-y-6 pt-0">
+                    <div className="text-sm text-gray-600 mb-4">
+                      Configure your personal insights report service that appears as the first service offering.
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="reportTitle" className="text-sm font-medium text-gray-700">Report Title</Label>
+                      <Input
+                        id="reportTitle"
+                        value={customizationData.reportService?.title || ''}
+                        onChange={(e) => handleReportServiceChange('title', e.target.value)}
+                        placeholder="e.g., Personal Insights Report"
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="reportDescription" className="text-sm font-medium text-gray-700">Report Description</Label>
+                      <Textarea
+                        id="reportDescription"
+                        value={customizationData.reportService?.description || ''}
+                        onChange={(e) => handleReportServiceChange('description', e.target.value)}
+                        placeholder="Describe what your personal report includes..."
+                        rows={3}
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="reportPrice" className="text-sm font-medium text-gray-700">Report Price</Label>
+                      <Input
+                        id="reportPrice"
+                        value={customizationData.reportService?.price || ''}
+                        onChange={(e) => handleReportServiceChange('price', e.target.value)}
+                        placeholder="e.g., $29"
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="reportSectionHeading" className="text-sm font-medium text-gray-700">Section Heading (Optional)</Label>
+                      <Input
+                        id="reportSectionHeading"
+                        value={customizationData.reportService?.sectionHeading || ''}
+                        onChange={(e) => handleReportServiceChange('sectionHeading', e.target.value)}
+                        placeholder="e.g., Get Your Personal Report"
+                        className="mt-1"
+                      />
+                    </div>
                   </CardContent>
                 </motion.div>
               </CollapsibleContent>

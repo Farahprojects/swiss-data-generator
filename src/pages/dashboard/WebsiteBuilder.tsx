@@ -196,6 +196,12 @@ export default function WebsiteBuilder() {
         introAlignment: 'left' as const,
         introFontStyle: 'modern',
         introTextColor: '#374151',
+        reportService: {
+          title: 'Personal Insights Report',
+          description: 'Get a comprehensive analysis of your personality, strengths, and growth opportunities.',
+          price: '$29',
+          sectionHeading: 'Services Offered'
+        },
         services: [
           { title: 'Life Coaching', description: '1-on-1 sessions to help you achieve your goals', price: '$150/session' },
           { title: 'Career Coaching', description: 'Navigate your career path with confidence', price: '$120/session' }

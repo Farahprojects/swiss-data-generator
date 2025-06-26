@@ -7,6 +7,13 @@ export interface Service {
   imageData?: ImageData;
 }
 
+export interface ReportService {
+  title: string;
+  description: string;
+  price: string;
+  sectionHeading?: string;
+}
+
 export interface ImageData {
   url: string;
   filePath: string;
@@ -26,6 +33,7 @@ export interface CustomizationData {
   heroTextColor?: string;
   heroAlignment?: 'left' | 'center' | 'right';
   services?: Service[];
+  reportService?: ReportService;
   buttonText?: string;
   buttonColor?: string;
   buttonTextColor?: string;

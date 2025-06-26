@@ -53,19 +53,19 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
   const headerOpacity = customizationData.headerImageOpacity || 100;
 
-  // Create report service card
-  const reportService = !isPreview ? {
-    title: "Personal Insights Report",
-    description: "Unlock your potential with a comprehensive personality analysis and growth roadmap tailored specifically for you.",
-    price: "$29",
+  // Create report service card with customizable data
+  const reportService = {
+    title: customizationData.reportService?.title || "Personal Insights Report",
+    description: customizationData.reportService?.description || "Unlock your potential with a comprehensive personality analysis and growth roadmap tailored specifically for you.",
+    price: customizationData.reportService?.price || "$29",
     isReportService: true
-  } : null;
+  };
 
   // Filter out null services and ensure we have valid service objects
   const validServices = validateServices(customizationData.services || []);
   
-  // Add report service as first item if not in preview
-  const allServices = reportService ? [reportService, ...validServices] : validServices;
+  // Add report service as first item always (including preview)
+  const allServices = [reportService, ...validServices];
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
@@ -236,7 +236,9 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
       {/* Services Grid */}
       <section className={`${sectionPadding} bg-gray-50`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-8 sm:mb-12 text-gray-900">Services</h2>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-8 sm:mb-12 text-gray-900">
+            {customizationData.reportService?.sectionHeading || "Services"}
+          </h2>
           {allServices.length > 0 ? (
             <div className="space-y-4 sm:space-y-6">
               {allServices.map((service: any, index: number) => (
