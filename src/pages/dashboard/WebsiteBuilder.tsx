@@ -441,6 +441,7 @@ export default function WebsiteBuilder() {
         <TemplatePreview
           template={selectedTemplate}
           customizationData={customizationData}
+          isFullScreen={true}
         />
       </div>
 
