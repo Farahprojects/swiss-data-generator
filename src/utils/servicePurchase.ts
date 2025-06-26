@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ServicePurchaseData {
   title: string;
@@ -9,86 +9,48 @@ export interface ServicePurchaseData {
   coachName: string;
 }
 
-export const parsePrice = (priceString: string): number | null => {
-  if (!priceString || typeof priceString !== 'string') return null;
-  
-  // Remove common currency symbols and extract numbers
-  const cleaned = priceString.replace(/[$£€¥₹]/g, '').trim();
-  
-  // Match patterns like "150", "150.00", "150/session", "$150 per hour"
-  const match = cleaned.match(/(\d+(?:\.\d{2})?)/);
-  
-  if (match) {
-    const price = parseFloat(match[1]);
-    return price > 0 ? price : null;
-  }
-  
-  return null;
+export const hasValidPrice = (price: string): boolean => {
+  if (!price) return false;
+  const cleanPrice = price.replace(/[$,\s]/g, '');
+  const numericPrice = parseFloat(cleanPrice);
+  return !isNaN(numericPrice) && numericPrice > 0;
 };
 
-export const handleServicePurchase = async (service: ServicePurchaseData, onError?: (error: string) => void) => {
+export const handleServicePurchase = async (
+  serviceData: ServicePurchaseData,
+  onError: (error: string) => void
+) => {
   try {
-    const price = parsePrice(service.price);
-    
-    if (!price) {
-      onError?.("Invalid price format");
+    console.log('Processing service purchase:', serviceData);
+
+    // For report services, redirect to vibe page instead of checkout
+    if (serviceData.title.toLowerCase().includes('report') || 
+        serviceData.title.toLowerCase().includes('insights') ||
+        serviceData.title.toLowerCase().includes('assessment')) {
+      window.location.href = `/${serviceData.coachSlug}/vibe`;
       return;
     }
 
-    console.log("Initiating service purchase:", { service, price });
-
-    // Use the proven create-checkout function for guest checkout
-    const { data, error } = await supabase.functions.invoke('create-checkout', {
+    const response = await supabase.functions.invoke('create-service-payment', {
       body: {
-        mode: 'payment',
-        amount: price,
-        description: `${service.title} - ${service.coachName}`,
-        isGuest: true,
+        amount: parseFloat(serviceData.price.replace(/[$,\s]/g, '')) * 100,
         email: 'guest@example.com',
-        reportData: {
-          service_title: service.title,
-          service_description: service.description,
-          coach_slug: service.coachSlug,
-          coach_name: service.coachName,
-          service_price: service.price,
-          purchase_type: 'service' // This routes to service_purchases table via webhook
-        }
-      }
+        description: `${serviceData.title} - ${serviceData.coachName}`,
+        serviceData: serviceData,
+      },
     });
 
-    if (error) {
-      console.error("Checkout creation failed:", error);
-      onError?.(error.message || "Failed to create checkout session");
-      return;
+    if (response.error) {
+      throw new Error(response.error.message);
     }
 
-    if (data?.url) {
-      console.log("Service purchase checkout session created:", data.sessionId);
-      
-      // Open Stripe checkout in new tab
-      window.open(data.url, '_blank');
+    if (response.data?.url) {
+      window.open(response.data.url, '_blank');
     } else {
-      onError?.("No checkout URL received");
+      throw new Error('No checkout URL received');
     }
-
-  } catch (error: any) {
-    console.error("Service purchase error:", error);
-    onError?.(error.message || "An unexpected error occurred");
+  } catch (error) {
+    console.error('Service purchase error:', error);
+    onError(error instanceof Error ? error.message : 'An unexpected error occurred');
   }
-};
-
-export const hasValidPrice = (price: string): boolean => {
-  if (!price || typeof price !== 'string') return false;
-  
-  const lowerPrice = price.toLowerCase();
-  
-  // Check for contact/inquiry indicators
-  if (lowerPrice.includes('contact') || 
-      lowerPrice.includes('inquiry') || 
-      lowerPrice.includes('quote') ||
-      lowerPrice.includes('pricing')) {
-    return false;
-  }
-  
-  return parsePrice(price) !== null;
 };
