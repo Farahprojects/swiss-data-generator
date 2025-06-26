@@ -1,3 +1,4 @@
+
 import { Link, useLocation } from "react-router-dom";
 import { 
   Home, 
@@ -11,7 +12,13 @@ import {
   Star,
   Archive,
   Trash,
-  Calendar
+  Calendar,
+  User,
+  Image,
+  Briefcase,
+  Settings,
+  Palette,
+  ArrowLeft
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,6 +33,14 @@ import {
 
 // Props for message filter
 type MessageFilterType = "inbox" | "sent" | "starred" | "archive" | "trash";
+
+// Props for website builder
+interface WebsiteBuilderMenuProps {
+  isWebsiteBuilderPageMobile?: boolean;
+  onOpenModal?: (section: string) => void;
+  onChangeTemplate?: () => void;
+}
+
 interface MessageMenuProps {
   isMessagesPageMobile?: boolean;
   activeFilter?: MessageFilterType;
@@ -33,9 +48,11 @@ interface MessageMenuProps {
   onFilterChange?: (filter: MessageFilterType) => void;
 }
 
+interface SidebarMenuProps extends MessageMenuProps, WebsiteBuilderMenuProps {}
+
 const sidebarItems = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar }, // added!
+  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
   { name: "Clients", href: "/dashboard/clients", icon: Users },
   { name: "Messages", href: "/dashboard/messages", icon: Mail },
   { name: "Reports", href: "/dashboard/reports", icon: FileText },
@@ -51,8 +68,17 @@ const messageMenuItems = [
   { name: "Trash", filter: "trash", icon: Trash },
 ];
 
+const websiteBuilderSections = [
+  { id: 'hero', label: 'Edit Hero', icon: User },
+  { id: 'intro', label: 'Edit Intro', icon: FileText },
+  { id: 'images', label: 'Edit Images', icon: Image },
+  { id: 'services', label: 'Edit Services', icon: Briefcase },
+  { id: 'cta', label: 'Edit CTA', icon: Settings },
+  { id: 'footer', label: 'Edit Footer', icon: Palette },
+];
+
 // Combined navigation menu for mobile use (shows both dashboard & message filters if relevant)
-export function SimpleSidebarMenu(props: MessageMenuProps) {
+export function SimpleSidebarMenu(props: SidebarMenuProps) {
   const location = useLocation();
 
   return (
@@ -84,6 +110,45 @@ export function SimpleSidebarMenu(props: MessageMenuProps) {
             </ul>
           </div>
         </div>
+
+        {/* Website Builder section editing (visible only if website builder page on mobile) */}
+        {props.isWebsiteBuilderPageMobile && (
+          <>
+            <hr className="my-3 border-t border-gray-300 opacity-60" />
+            <div className="relative flex w-full min-w-0 flex-col p-2">
+              <div className="mb-2 text-xs font-semibold text-muted-foreground/80 tracking-wide select-none">Edit Sections</div>
+              <div className="w-full text-sm">
+                <ul className="flex w-full min-w-0 flex-col gap-1">
+                  {websiteBuilderSections.map((section) => (
+                    <li key={section.id} className="group/menu-item relative">
+                      <button
+                        className="flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none transition-all duration-200 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 text-foreground hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => props.onOpenModal?.(section.id)}
+                        type="button"
+                      >
+                        <section.icon />
+                        <span>{section.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                  
+                  {/* Templates Button */}
+                  <li className="group/menu-item relative mt-2 pt-2 border-t border-gray-200">
+                    <button
+                      className="flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none transition-all duration-200 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 text-foreground hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => props.onChangeTemplate?.()}
+                      type="button"
+                    >
+                      <ArrowLeft />
+                      <span>Change Template</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Message filters section (visible only if messages page on mobile) */}
         {props.isMessagesPageMobile && (
           <>

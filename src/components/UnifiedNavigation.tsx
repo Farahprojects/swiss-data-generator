@@ -24,6 +24,14 @@ import { useSearchParams } from 'react-router-dom';
 
 // Add types for message nav
 type MessageFilterType = "inbox" | "sent" | "starred" | "archive" | "trash";
+
+// Add types for website builder nav
+interface WebsiteBuilderMenuProps {
+  isWebsiteBuilderPageMobile?: boolean;
+  onOpenModal?: (section: string) => void;
+  onChangeTemplate?: () => void;
+}
+
 interface NavMessageMenuProps {
   isMessagesPageMobile?: boolean;
   activeFilter?: MessageFilterType;
@@ -31,12 +39,17 @@ interface NavMessageMenuProps {
   onFilterChange?: (filter: MessageFilterType) => void;
 }
 
+interface UnifiedNavigationProps extends NavMessageMenuProps, WebsiteBuilderMenuProps {}
+
 const UnifiedNavigation = ({
   isMessagesPageMobile,
   activeFilter,
   unreadCount,
   onFilterChange,
-}: NavMessageMenuProps = {}) => {
+  isWebsiteBuilderPageMobile,
+  onOpenModal,
+  onChangeTemplate,
+}: UnifiedNavigationProps = {}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,6 +75,7 @@ const UnifiedNavigation = ({
   );
   const isDashboardPage = location.pathname.startsWith('/dashboard');
   const isMessagesPage = location.pathname === '/dashboard/messages';
+  const isWebsiteBuilderPage = location.pathname === '/dashboard/website-builder';
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -302,6 +316,9 @@ const UnifiedNavigation = ({
                   activeFilter={activeFilter}
                   unreadCount={unreadCount}
                   onFilterChange={onFilterChange}
+                  isWebsiteBuilderPageMobile={isWebsiteBuilderPageMobile && location.pathname === '/dashboard/website-builder'}
+                  onOpenModal={onOpenModal}
+                  onChangeTemplate={onChangeTemplate}
                 />
               </div>
             </SheetPrimitive.Content>

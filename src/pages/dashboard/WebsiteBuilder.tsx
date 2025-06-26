@@ -5,7 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { TemplateSelector } from "@/components/website-builder/TemplateSelector";
 import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
-import { CollapsibleSectionPanel } from "@/components/website-builder/CollapsibleSectionPanel";
 import { FloatingSideMenu } from "@/components/website-builder/FloatingSideMenu";
 import { HeroEditModal } from "@/components/website-builder/modals/HeroEditModal";
 import { IntroEditModal } from "@/components/website-builder/modals/IntroEditModal";
@@ -16,6 +15,8 @@ import { FooterEditModal } from "@/components/website-builder/modals/FooterEditM
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
+import UnifiedNavigation from "@/components/UnifiedNavigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface WebsiteTemplate {
   id: string;
@@ -37,6 +38,7 @@ interface CoachWebsite {
 export default function WebsiteBuilder() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [templates, setTemplates] = useState<WebsiteTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<WebsiteTemplate | null>(null);
   const [website, setWebsite] = useState<CoachWebsite | null>(null);
@@ -47,7 +49,6 @@ export default function WebsiteBuilder() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [openModal, setOpenModal] = useState<string | null>(null);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   useEffect(() => {
     loadTemplatesAndWebsite();
@@ -411,6 +412,10 @@ export default function WebsiteBuilder() {
     setOpenModal(null);
   };
 
+  const handleChangeTemplate = () => {
+    setSelectedTemplate(null);
+  };
+
   if (isLoading) {
     return (
       <TheraLoader message="Loading Website Builder..." size="lg" />
@@ -436,91 +441,92 @@ export default function WebsiteBuilder() {
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-50 overflow-hidden flex">
-      {/* Collapsible Section Panel */}
-      <CollapsibleSectionPanel 
+    <>
+      {/* Pass website builder props to UnifiedNavigation */}
+      <UnifiedNavigation
+        isWebsiteBuilderPageMobile={isMobile}
         onOpenModal={handleOpenModal}
-        onChangeTemplate={() => setSelectedTemplate(null)}
-        isOpen={isPanelOpen}
-        onOpenChange={setIsPanelOpen}
+        onChangeTemplate={handleChangeTemplate}
       />
+      
+      <div className="fixed inset-0 bg-gray-50 overflow-hidden flex pt-16">
+        {/* Main Preview Area */}
+        <div className="flex-1 overflow-auto">
+          <TemplatePreview
+            template={selectedTemplate}
+            customizationData={customizationData}
+            isFullScreen={true}
+          />
+        </div>
 
-      {/* Main Preview Area */}
-      <div className="flex-1 overflow-auto">
-        <TemplatePreview
-          template={selectedTemplate}
-          customizationData={customizationData}
-          isFullScreen={true}
-        />
-      </div>
-
-      {/* Floating side menu */}
-      <FloatingSideMenu
-        onPreview={handlePreview}
-        onSave={handleSave}
-        onPublish={handlePublish}
-        isSaving={isSaving}
-        isPublishing={isPublishing}
-        saveButtonText={getSaveButtonText()}
-        publishButtonText={getPublishButtonText()}
-        website={website}
-      />
-
-      {/* Edit modals - keep existing code (all modal components) */}
-      <HeroEditModal
-        isOpen={openModal === 'hero'}
-        onClose={handleCloseModal}
-        customizationData={customizationData}
-        onChange={handleCustomizationChange}
-      />
-
-      <IntroEditModal
-        isOpen={openModal === 'intro'}
-        onClose={handleCloseModal}
-        customizationData={customizationData}
-        onChange={handleCustomizationChange}
-      />
-
-      <ImagesEditModal
-        isOpen={openModal === 'images'}
-        onClose={handleCloseModal}
-        customizationData={customizationData}
-        onChange={handleCustomizationChange}
-      />
-
-      <ServicesEditModal
-        isOpen={openModal === 'services'}
-        onClose={handleCloseModal}
-        customizationData={customizationData}
-        onChange={handleCustomizationChange}
-      />
-
-      <CtaEditModal
-        isOpen={openModal === 'cta'}
-        onClose={handleCloseModal}
-        customizationData={customizationData}
-        onChange={handleCustomizationChange}
-      />
-
-      <FooterEditModal
-        isOpen={openModal === 'footer'}
-        onClose={handleCloseModal}
-        customizationData={customizationData}
-        onChange={handleCustomizationChange}
-      />
-
-      {/* Publishing modal - keep existing code */}
-      {showPublishModal && website && (
-        <PublishingModal
+        {/* Floating side menu */}
+        <FloatingSideMenu
+          onPreview={handlePreview}
+          onSave={handleSave}
+          onPublish={handlePublish}
+          isSaving={isSaving}
+          isPublishing={isPublishing}
+          saveButtonText={getSaveButtonText()}
+          publishButtonText={getPublishButtonText()}
           website={website}
-          userSlug={userSlug}
-          onClose={() => setShowPublishModal(false)}
-          onPublished={() => {
-            setShowPublishModal(false);
-            loadTemplatesAndWebsite();
-          }}
         />
-      )}
-    </div>
+
+        {/* Edit modals - keep existing code (all modal components) */}
+        <HeroEditModal
+          isOpen={openModal === 'hero'}
+          onClose={handleCloseModal}
+          customizationData={customizationData}
+          onChange={handleCustomizationChange}
+        />
+
+        <IntroEditModal
+          isOpen={openModal === 'intro'}
+          onClose={handleCloseModal}
+          customizationData={customizationData}
+          onChange={handleCustomizationChange}
+        />
+
+        <ImagesEditModal
+          isOpen={openModal === 'images'}
+          onClose={handleCloseModal}
+          customizationData={customizationData}
+          onChange={handleCustomizationChange}
+        />
+
+        <ServicesEditModal
+          isOpen={openModal === 'services'}
+          onClose={handleCloseModal}
+          customizationData={customizationData}
+          onChange={handleCustomizationChange}
+        />
+
+        <CtaEditModal
+          isOpen={openModal === 'cta'}
+          onClose={handleCloseModal}
+          customizationData={customizationData}
+          onChange={handleCustomizationChange}
+        />
+
+        <FooterEditModal
+          isOpen={openModal === 'footer'}
+          onClose={handleCloseModal}
+          customizationData={customizationData}
+          onChange={handleCustomizationChange}
+        />
+
+        {/* Publishing modal - keep existing code */}
+        {showPublishModal && website && (
+          <PublishingModal
+            website={website}
+            userSlug={userSlug}
+            onClose={() => setShowPublishModal(false)}
+            onPublished={() => {
+              setShowPublishModal(false);
+              loadTemplatesAndWebsite();
+            }}
+          />
+        )}
+      </div>
+    </>
   );
 }
