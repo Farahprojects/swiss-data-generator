@@ -119,6 +119,7 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
 
       {/* Creative About with Floating Elements */}
       <section className={`${sectionPadding} relative`}>
+        {/* Only show decorative elements when no header image */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-10 left-4 sm:left-10 w-12 h-12 sm:w-16 sm:h-16 lg:w-32 lg:h-32 bg-yellow-300 rounded-full opacity-30 animate-float"></div>
           <div className="absolute bottom-10 right-4 sm:right-10 w-8 h-8 sm:w-12 sm:h-12 lg:w-24 lg:h-24 bg-pink-300 rounded-full opacity-40 animate-float" style={{ animationDelay: '1s' }}></div>
@@ -132,7 +133,7 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
             className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 lg:p-12 shadow-xl"
           >
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-8 text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Creative Approach
+              {customizationData.introTitle || "Creative Approach"}
             </h2>
             <p className="text-base sm:text-lg text-gray-700 leading-relaxed text-center max-w-3xl mx-auto">
               {customizationData.bio || "I believe that creativity is the key to unlocking human potential. Through innovative techniques, artistic expression, and out-of-the-box thinking, we'll discover new pathways to growth and success."}
@@ -145,7 +146,7 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
       <section className={sectionPadding}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-12 sm:mb-16 bg-gradient-to-r from-orange-500 to-purple-500 bg-clip-text text-transparent">
-            Creative Services
+            {customizationData.servicesTitle || "Creative Services"}
           </h2>
           
           {validServices.length > 0 ? (
@@ -213,8 +214,12 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold mb-4 sm:mb-6">Ready to Create Magic?</h2>
-            <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">Let's turn your dreams into colorful reality.</p>
+            <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold mb-4 sm:mb-6">
+              {customizationData.footerHeading || "Ready to Create Magic?"}
+            </h2>
+            <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">
+              {customizationData.footerSubheading || "Let's turn your dreams into colorful reality."}
+            </p>
             <Button 
               className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg rounded-full shadow-xl transform hover:scale-105 transition-all min-h-[44px]"
               style={{
