@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -13,10 +14,9 @@ import { AdjustmentPanel } from './AdjustmentPanel';
 import { ColourPanel } from './ColourPanel';
 import { SimpleCropTool } from './SimpleCropTool';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import type { ImageData } from '@/types/website-builder';
+import { ImageManager, ImageData } from '@/services/imageManager';
 
 export type EditorTool = 'select' | 'adjust' | 'colour' | 'crop';
 
@@ -91,36 +91,6 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setActiveTool('select');
   };
 
-  const validateDataURL = (dataURL: string): boolean => {
-    try {
-      // Check if it's a valid data URL format
-      if (!dataURL.startsWith('data:')) {
-        console.error('Invalid data URL format');
-        return false;
-      }
-
-      // Check if it has reasonable length (not empty)
-      if (dataURL.length < 100) {
-        console.error('Data URL too short, likely invalid');
-        return false;
-      }
-
-      // Try to decode base64 part to verify it's valid
-      const base64Data = dataURL.split(',')[1];
-      if (!base64Data) {
-        console.error('No base64 data found in data URL');
-        return false;
-      }
-
-      // Verify base64 is decodable
-      atob(base64Data.substring(0, 100)); // Test decode first 100 chars
-      return true;
-    } catch (error) {
-      console.error('Data URL validation failed:', error);
-      return false;
-    }
-  };
-
   const convertDataURLToBlob = async (dataURL: string): Promise<Blob> => {
     try {
       const response = await fetch(dataURL);
@@ -180,14 +150,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         filter: (obj: any) => !obj.excludeFromExport
       });
 
-      console.log('Canvas exported to dataURL, validating...');
-
-      // Validate the data URL
-      if (!validateDataURL(dataURL)) {
-        throw new Error('Generated image data is invalid');
-      }
-
-      console.log('Data URL validation passed, converting to blob...');
+      console.log('Canvas exported to dataURL, converting to blob...');
 
       // Convert to blob with error handling
       const blob = await convertDataURLToBlob(dataURL);
@@ -201,41 +164,13 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         type: blob.type
       });
 
-      // Generate unique filename
-      const originalPath = imageData.filePath;
-      const pathParts = originalPath.split('.');
-      const extension = pathParts.pop() || 'jpg';
-      const nameWithoutExt = pathParts.join('.');
-      const timestamp = Date.now();
-      const newFileName = `${nameWithoutExt}_edited_${timestamp}.${extension}`;
-
-      console.log('Uploading to Supabase:', newFileName);
-
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('website-images')
-        .upload(newFileName, blob, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: blob.type
-        });
-
-      if (error) {
-        console.error('Supabase upload error:', error);
-        throw new Error(`Upload failed: ${error.message}`);
-      }
-
-      console.log('Upload successful:', data);
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('website-images')
-        .getPublicUrl(data.path);
-
-      const newImageData: ImageData = {
-        url: urlData.publicUrl,
-        filePath: data.path
-      };
+      // Use ImageManager to save edited image
+      const newImageData = await ImageManager.saveEditedImage(blob, {
+        userId: user.id,
+        section,
+        serviceIndex,
+        originalImageData: imageData
+      });
 
       console.log('Image saved successfully:', newImageData);
 

@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { X, Upload, Image as ImageIcon, Edit } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getValidImageUrl, hasValidImage } from '@/utils/imageValidation';
+import { ImageManager, ImageData } from '@/services/imageManager';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,11 +19,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ImageEditorModal } from '@/components/image-editor/ImageEditorModal';
-
-interface ImageData {
-  url: string;
-  filePath: string;
-}
 
 interface ImageUploaderProps {
   value?: string | ImageData;
@@ -56,52 +51,15 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        variant: "destructive",
-        title: "Invalid file type",
-        description: "Please select an image file."
-      });
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        variant: "destructive",
-        title: "File too large",
-        description: "Please select an image under 5MB."
-      });
-      return;
-    }
-
     setIsUploading(true);
 
     try {
-      // Create file path
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const newFilePath = `${user.id}/${section}${serviceIndex !== undefined ? `/${serviceIndex}` : ''}/${fileName}`;
-
-      console.log('Uploading to path:', newFilePath);
-
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('website-images')
-        .upload(newFilePath, file);
-
-      if (error) throw error;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('website-images')
-        .getPublicUrl(data.path);
-
-      const imageData: ImageData = {
-        url: urlData.publicUrl,
-        filePath: data.path
-      };
+      const imageData = await ImageManager.uploadImage(file, {
+        userId: user.id,
+        section,
+        serviceIndex,
+        existingImageData: value
+      });
 
       onChange(imageData);
 
@@ -128,37 +86,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     setIsDeleting(true);
     
     try {
-      let pathToDelete = filePath;
-      
-      // If we don't have the stored file path, try to extract it from URL
-      if (!pathToDelete && imageUrl) {
-        console.log('Extracting path from URL:', imageUrl);
-        const url = new URL(imageUrl);
-        const pathParts = url.pathname.split('/');
-        // For Supabase URLs: /storage/v1/object/public/website-images/{path}
-        const bucketIndex = pathParts.indexOf('website-images');
-        if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
-          pathToDelete = pathParts.slice(bucketIndex + 1).join('/');
-        }
-      }
-
-      console.log('Attempting to delete file at path:', pathToDelete);
-
-      if (pathToDelete) {
-        // Delete from storage
-        const { error } = await supabase.storage
-          .from('website-images')
-          .remove([pathToDelete]);
-
-        if (error) {
-          console.error('Storage deletion error:', error);
-          // Don't throw here - the file might already be deleted
-        } else {
-          console.log('Successfully deleted from storage:', pathToDelete);
-        }
-      }
-
-      // Always clear the image from the UI and data
+      await ImageManager.deleteImage(value);
       onChange(null);
 
       toast({
