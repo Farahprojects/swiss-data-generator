@@ -77,7 +77,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="text-2xl font-semibold text-gray-900 tracking-tight">
+            <div className="text-2xl font-semibold text-gray-900 tracking-tight mr-16">
               {customizationData.coachName || "Your Name"}
             </div>
             <nav className="hidden md:flex items-center space-x-8">
