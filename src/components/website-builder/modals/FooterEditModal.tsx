@@ -76,12 +76,12 @@ export const FooterEditModal: React.FC<FooterEditModalProps> = ({
 
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-3 block">Brand Color</Label>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-10 gap-2">
                 {colorOptions.map((color) => (
                   <button
                     key={color.value}
                     onClick={() => onChange('themeColor', color.value)}
-                    className={`group relative w-full h-12 rounded-lg border-2 transition-all ${
+                    className={`group relative w-full h-8 rounded-md border-2 transition-all ${
                       customizationData.themeColor === color.value 
                         ? 'border-gray-800 scale-110' 
                         : 'border-gray-200 hover:border-gray-300'
@@ -91,16 +91,11 @@ export const FooterEditModal: React.FC<FooterEditModalProps> = ({
                   >
                     {customizationData.themeColor === color.value && (
                       <div className="absolute inset-0 flex items-center justify-center text-white">
-                        <div className="w-4 h-4 rounded-full bg-white bg-opacity-30 flex items-center justify-center">
+                        <div className="w-3 h-3 rounded-full bg-white bg-opacity-30 flex items-center justify-center text-xs">
                           ✓
                         </div>
                       </div>
                     )}
-                    <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                        {color.name}
-                      </div>
-                    </div>
                   </button>
                 ))}
               </div>

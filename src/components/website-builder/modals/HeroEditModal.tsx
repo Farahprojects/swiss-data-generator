@@ -97,12 +97,12 @@ export const HeroEditModal: React.FC<HeroEditModalProps> = ({
 
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-3 block">Text Color</Label>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-8 gap-2">
                 {introColorOptions.map((color) => (
                   <button
                     key={color.value}
                     onClick={() => onChange('heroTextColor', color.value)}
-                    className={`relative w-full h-12 rounded-lg border-2 transition-all ${
+                    className={`relative w-full h-8 rounded-md border-2 transition-all ${
                       customizationData.heroTextColor === color.value 
                         ? 'border-gray-800 scale-105' 
                         : 'border-gray-200 hover:border-gray-300'
@@ -117,7 +117,7 @@ export const HeroEditModal: React.FC<HeroEditModalProps> = ({
                       <div className={`absolute inset-0 flex items-center justify-center ${
                         color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
                       }`}>
-                        <div className="text-sm font-medium">✓</div>
+                        <div className="text-xs font-medium">✓</div>
                       </div>
                     )}
                   </button>

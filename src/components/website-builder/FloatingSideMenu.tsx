@@ -66,7 +66,7 @@ export const FloatingSideMenu: React.FC<FloatingSideMenuProps> = ({
         className="w-20 h-16 flex flex-col items-center justify-center space-y-1 bg-white shadow-lg border-2 hover:shadow-xl transition-all duration-200 hover:scale-105"
       >
         <ArrowLeft className="h-4 w-4" />
-        <span className="text-xs font-medium text-center">Change Template</span>
+        <span className="text-xs font-medium text-center">Templates</span>
       </Button>
       
       {website?.has_unpublished_changes && (
