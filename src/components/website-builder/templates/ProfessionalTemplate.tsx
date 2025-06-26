@@ -73,21 +73,6 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
 
   return (
     <div className="bg-white min-h-screen" style={{ fontFamily: `${fontFamily}, -apple-system, BlinkMacSystemFont, sans-serif` }}>
-      {/* Apple-style Navigation */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="text-2xl font-semibold text-gray-900 tracking-tight mr-16">
-              {customizationData.coachName || "Your Name"}
-            </div>
-            <nav className="hidden md:flex items-center space-x-8">
-              <a href="#about" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">About</a>
-              <a href="#services" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Services</a>
-            </nav>
-          </div>
-        </div>
-      </header>
-
       {/* Simplified Hero Section - Apple Style */}
       <section className={`${sectionPadding} relative overflow-hidden`}>
         {hasHeaderImage && (
