@@ -290,6 +290,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
                           </Button>
                         ) : (
                           <Button 
+                            onClick={() => handlePurchaseClick(service, index)}
                             variant="ghost" 
                             className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-full text-sm sm:text-base"
                           >

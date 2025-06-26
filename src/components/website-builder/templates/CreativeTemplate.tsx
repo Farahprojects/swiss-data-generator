@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -25,21 +24,21 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
-  // Create report service card
-  const reportService = !isPreview ? {
-    title: "Creative Insights Report",
-    description: "Discover your unique creative potential and unlock innovative pathways to personal and professional growth.",
-    price: "$29",
+  // Create report service card with customizable data
+  const reportService = {
+    title: customizationData.reportService?.title || "Creative Insights Report",
+    description: customizationData.reportService?.description || "Discover your unique creative potential and unlock innovative pathways to personal and professional growth.",
+    price: customizationData.reportService?.price || "$29",
     isReportService: true
-  } : null;
+  };
 
   // Filter out null services and ensure we have valid service objects
   const validServices = (customizationData.services || [])
     .filter((service: any) => service && typeof service === 'object')
     .filter((service: any) => service.title || service.description || service.price);
 
-  // Add report service as first item if not in preview
-  const allServices = reportService ? [reportService, ...validServices] : validServices;
+  // Add report service as first item always (including preview)
+  const allServices = [reportService, ...validServices];
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
@@ -201,7 +200,7 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
       <section className={sectionPadding}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center mb-12 sm:mb-16 bg-gradient-to-r from-orange-500 to-purple-500 bg-clip-text text-transparent">
-            {customizationData.servicesTitle || "Creative Services"}
+            {customizationData.reportService?.sectionHeading || "Creative Services"}
           </h2>
           
           {allServices.length > 0 ? (
@@ -245,8 +244,18 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                       >
                         Get Report
                       </Button>
+                    ) : hasValidPrice(service.price) ? (
+                      <Button 
+                        onClick={() => handlePurchaseClick(service, index)}
+                        disabled={purchasingService === index}
+                        className="rounded-full text-purple-600 hover:text-purple-800 hover:bg-purple-50 text-sm sm:text-base"
+                        variant="ghost"
+                      >
+                        {purchasingService === index ? "Processing..." : "Purchase"}
+                      </Button>
                     ) : (
                       <Button 
+                        onClick={() => handlePurchaseClick(service, index)}
                         variant="ghost" 
                         className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-full text-sm sm:text-base"
                       >
