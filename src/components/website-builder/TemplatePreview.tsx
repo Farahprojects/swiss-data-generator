@@ -10,6 +10,7 @@ interface TemplatePreviewProps {
   template: any;
   customizationData: any;
   onCustomizationChange?: (field: string, value: any) => void;
+  isPublicView?: boolean;
 }
 
 const templateComponents = {
@@ -23,7 +24,8 @@ const templateComponents = {
 export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
   template,
   customizationData,
-  onCustomizationChange
+  onCustomizationChange,
+  isPublicView = false
 }) => {
   const TemplateComponent = templateComponents[template.name as keyof typeof templateComponents];
 
@@ -41,7 +43,7 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
         <TemplateComponent 
           customizationData={customizationData} 
           isPreview={true}
-          onCustomizationChange={onCustomizationChange}
+          onCustomizationChange={!isPublicView ? onCustomizationChange : undefined}
         />
       </div>
     </div>
