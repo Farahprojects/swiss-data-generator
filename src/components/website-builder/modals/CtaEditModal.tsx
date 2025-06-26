@@ -102,7 +102,7 @@ export const CtaEditModal: React.FC<CtaEditModalProps> = ({
                 </div>
               </RadioGroup>
               
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-8 gap-2">
                 {introColorOptions.map((color) => {
                   const isSelected = buttonColorMode === 'button' 
                     ? customizationData.buttonColor === color.value
@@ -115,7 +115,7 @@ export const CtaEditModal: React.FC<CtaEditModalProps> = ({
                         const field = buttonColorMode === 'button' ? 'buttonColor' : 'buttonTextColor';
                         onChange(field, color.value);
                       }}
-                      className={`relative w-full h-12 rounded-lg border-2 transition-all ${
+                      className={`relative w-8 h-8 rounded-full border-2 transition-all ${
                         isSelected 
                           ? 'border-gray-800 scale-105' 
                           : 'border-gray-200 hover:border-gray-300'
@@ -130,7 +130,7 @@ export const CtaEditModal: React.FC<CtaEditModalProps> = ({
                         <div className={`absolute inset-0 flex items-center justify-center ${
                           color.value === '#FFFFFF' || color.value === '#D1D5DB' ? 'text-gray-800' : 'text-white'
                         }`}>
-                          <div className="text-sm font-medium">✓</div>
+                          <div className="text-xs">✓</div>
                         </div>
                       )}
                     </button>

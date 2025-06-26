@@ -81,7 +81,7 @@ export const FooterEditModal: React.FC<FooterEditModalProps> = ({
                   <button
                     key={color.value}
                     onClick={() => onChange('themeColor', color.value)}
-                    className={`group relative w-full h-8 rounded-md border-2 transition-all ${
+                    className={`group relative w-8 h-8 rounded-full border-2 transition-all ${
                       customizationData.themeColor === color.value 
                         ? 'border-gray-800 scale-110' 
                         : 'border-gray-200 hover:border-gray-300'
@@ -91,9 +91,7 @@ export const FooterEditModal: React.FC<FooterEditModalProps> = ({
                   >
                     {customizationData.themeColor === color.value && (
                       <div className="absolute inset-0 flex items-center justify-center text-white">
-                        <div className="w-3 h-3 rounded-full bg-white bg-opacity-30 flex items-center justify-center text-xs">
-                          ✓
-                        </div>
+                        <div className="text-xs">✓</div>
                       </div>
                     )}
                   </button>
