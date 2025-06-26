@@ -25,16 +25,16 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
   // Check if header image exists
   const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
 
-  // Create report service card
-  const reportService = !isPreview ? {
+  // Create report service card - ALWAYS show it (removed the !isPreview condition)
+  const reportService = {
     title: "Personal Insights Report",
     description: "Comprehensive analysis designed for your unique journey and goals.",
     price: "$29",
     isReportService: true
-  } : null;
+  };
 
-  // Add report service as first item if not in preview
-  const allServices = reportService ? [reportService, ...(customizationData.services || [])] : (customizationData.services || []);
+  // Add report service as first item
+  const allServices = [reportService, ...(customizationData.services || [])];
 
   const handlePurchaseClick = async (service: any, index: number) => {
     if (isPreview) {
