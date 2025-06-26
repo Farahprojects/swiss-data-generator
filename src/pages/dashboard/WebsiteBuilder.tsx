@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -47,14 +47,7 @@ export default function WebsiteBuilder() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [openModal, setOpenModal] = useState<string | null>(null);
-  const [isPanelExpanded, setIsPanelExpanded] = useState(true);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const isPanelExpandedRef = useRef(isPanelExpanded);
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    isPanelExpandedRef.current = isPanelExpanded;
-  }, [isPanelExpanded]);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   useEffect(() => {
     loadTemplatesAndWebsite();
@@ -418,38 +411,6 @@ export default function WebsiteBuilder() {
     setOpenModal(null);
   };
 
-  const handleTogglePanel = () => {
-    setIsPanelExpanded(!isPanelExpanded);
-  };
-
-  // Touch-to-collapse functionality
-  useEffect(() => {
-    const handlePreviewClick = (event: MouseEvent) => {
-      // Only collapse if panel is expanded
-      if (!isPanelExpandedRef.current) return;
-      
-      const target = event.target as Element;
-      
-      // Check if the click is on the panel or its children
-      const isClickingPanel = target.closest('[data-panel="collapsible-section"]');
-      
-      // If not clicking on the panel, collapse it
-      if (!isClickingPanel) {
-        console.log('Collapsing panel due to preview area click');
-        setIsPanelExpanded(false);
-      }
-    };
-
-    const previewElement = previewRef.current;
-    if (previewElement) {
-      previewElement.addEventListener('click', handlePreviewClick);
-      
-      return () => {
-        previewElement.removeEventListener('click', handlePreviewClick);
-      };
-    }
-  }, []); // No dependencies to avoid re-creating listeners
-
   if (isLoading) {
     return (
       <TheraLoader message="Loading Website Builder..." size="lg" />
@@ -480,17 +441,12 @@ export default function WebsiteBuilder() {
       <CollapsibleSectionPanel 
         onOpenModal={handleOpenModal}
         onChangeTemplate={() => setSelectedTemplate(null)}
-        isExpanded={isPanelExpanded}
-        onToggle={handleTogglePanel}
+        isOpen={isPanelOpen}
+        onOpenChange={setIsPanelOpen}
       />
 
       {/* Main Preview Area */}
-      <div 
-        ref={previewRef}
-        className={`flex-1 overflow-auto transition-all duration-300 ${
-          isPanelExpanded ? 'ml-64' : 'ml-16'
-        }`}
-      >
+      <div className="flex-1 overflow-auto">
         <TemplatePreview
           template={selectedTemplate}
           customizationData={customizationData}

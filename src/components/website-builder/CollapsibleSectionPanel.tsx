@@ -1,14 +1,15 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { User, FileText, Image, Briefcase, Settings, Palette, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { User, FileText, Image, Briefcase, Settings, Palette, Menu, ArrowLeft } from "lucide-react";
 
 interface CollapsibleSectionPanelProps {
   onOpenModal: (section: string) => void;
   onChangeTemplate: () => void;
-  isExpanded: boolean;
-  onToggle: () => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const editSections = [
@@ -23,110 +24,61 @@ const editSections = [
 export const CollapsibleSectionPanel: React.FC<CollapsibleSectionPanelProps> = ({
   onOpenModal,
   onChangeTemplate,
-  isExpanded,
-  onToggle
+  isOpen,
+  onOpenChange
 }) => {
-  const handleButtonClick = (callback: () => void) => (event: React.MouseEvent) => {
-    event.stopPropagation();
-    callback();
-  };
-
   return (
     <TooltipProvider>
-      <div
-        data-panel="collapsible-section"
-        className={`fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-[60] transition-all duration-300 ease-in-out ${
-          isExpanded ? 'w-64' : 'w-16'
-        }`}
-      >
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          {isExpanded && (
-            <h2 className="text-lg font-semibold text-gray-900">Edit Sections</h2>
-          )}
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        <SheetTrigger asChild>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            onClick={handleButtonClick(onToggle)}
-            className="p-2 hover:bg-gray-100"
+            className="fixed left-4 top-4 z-[70] bg-white shadow-lg border-2 hover:shadow-xl transition-all duration-200 hover:scale-105"
           >
-            {isExpanded ? (
-              <ChevronLeft className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
+            <Menu className="h-4 w-4" />
           </Button>
-        </div>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 p-0">
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Edit Sections</h2>
+          </div>
 
-        {/* Section Buttons */}
-        <div className="p-2 space-y-2">
-          {editSections.map((section) => {
-            const Icon = section.icon;
-            
-            if (isExpanded) {
+          {/* Section Buttons */}
+          <div className="p-2 space-y-2">
+            {editSections.map((section) => {
+              const Icon = section.icon;
+              
               return (
                 <Button
                   key={section.id}
                   variant="ghost"
-                  onClick={handleButtonClick(() => onOpenModal(section.id))}
+                  onClick={() => onOpenModal(section.id)}
                   className="w-full h-12 flex items-center justify-start space-x-3 px-4 hover:bg-gray-100 transition-colors"
                 >
                   <Icon className="h-5 w-5 text-gray-600" />
                   <span className="text-sm font-medium text-gray-900">{section.label}</span>
                 </Button>
               );
-            }
+            })}
+          </div>
 
-            return (
-              <Tooltip key={section.id}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleButtonClick(() => onOpenModal(section.id))}
-                    className="w-12 h-12 flex items-center justify-center hover:bg-gray-100 transition-colors"
-                  >
-                    <Icon className="h-5 w-5 text-gray-600" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={10}>
-                  <p>{section.label}</p>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-
-        {/* Templates Button */}
-        <div className="absolute bottom-4 left-2 right-2">
-          <div className="border-t border-gray-200 pt-4">
-            {isExpanded ? (
+          {/* Templates Button */}
+          <div className="absolute bottom-4 left-2 right-2">
+            <div className="border-t border-gray-200 pt-4">
               <Button
                 variant="outline"
-                onClick={handleButtonClick(onChangeTemplate)}
+                onClick={onChangeTemplate}
                 className="w-full h-12 flex items-center justify-start space-x-3 px-4 hover:bg-gray-50 transition-colors"
               >
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
                 <span className="text-sm font-medium text-gray-900">Templates</span>
               </Button>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    onClick={handleButtonClick(onChangeTemplate)}
-                    className="w-12 h-12 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                  >
-                    <ArrowLeft className="h-5 w-5 text-gray-600" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={10}>
-                  <p>Templates</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+            </div>
           </div>
-        </div>
-      </div>
+        </SheetContent>
+      </Sheet>
     </TooltipProvider>
   );
 };
