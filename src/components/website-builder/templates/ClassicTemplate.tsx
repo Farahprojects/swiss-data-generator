@@ -1,9 +1,11 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
+import { getValidImageUrl, hasValidImage } from "@/utils/imageValidation";
 
 interface TemplateProps {
   customizationData: any;
@@ -32,8 +34,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
   const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
   const heroPadding = isPreview ? 'py-8' : 'py-16 sm:py-24 lg:py-32';
 
-  // Check if header image exists
-  const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+  // Check if header image exists and is valid
+  const headerImageUrl = getValidImageUrl(customizationData.headerImageData || customizationData.headerImageUrl);
+  const aboutImageUrl = getValidImageUrl(customizationData.aboutImageData || customizationData.aboutImageUrl);
 
   // Create report service card with customizable data
   const reportService = {
@@ -104,12 +107,12 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
   return (
     <div className="bg-cream-50" style={{ fontFamily: `${fontFamily}, serif` }}>
       {/* Classic Centered Hero */}
-      <section className={`relative ${heroPadding} ${!hasHeaderImage ? 'bg-gradient-to-b from-amber-50 to-white' : ''}`}>
+      <section className={`relative ${heroPadding} ${!headerImageUrl ? 'bg-gradient-to-b from-amber-50 to-white' : ''}`}>
         {/* Header background image with no opacity reduction */}
-        {hasHeaderImage && (
+        {headerImageUrl && (
           <div 
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+            style={{ backgroundImage: `url(${headerImageUrl})` }}
           ></div>
         )}
         
@@ -118,14 +121,14 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            style={{ textShadow: hasHeaderImage ? '2px 2px 4px rgba(0,0,0,0.7)' : 'none' }}
+            style={{ textShadow: headerImageUrl ? '2px 2px 4px rgba(0,0,0,0.7)' : 'none' }}
           >
             <div className="w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 mx-auto mb-6 sm:mb-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500"></div>
-            <h1 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold mb-4 sm:mb-6 leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}>
+            <h1 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold mb-4 sm:mb-6 leading-tight ${headerImageUrl ? 'text-white' : 'text-gray-900'}`}>
               {customizationData.coachName || "Dr. Sarah Wilson"}
             </h1>
             <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto mb-4 sm:mb-6"></div>
-            <p className={`text-lg sm:text-xl lg:text-2xl mb-8 sm:mb-10 italic leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-700'}`}>
+            <p className={`text-lg sm:text-xl lg:text-2xl mb-8 sm:mb-10 italic leading-relaxed ${headerImageUrl ? 'text-gray-200' : 'text-gray-700'}`}>
               {customizationData.tagline || "Classical Wisdom for Modern Challenges"}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -145,9 +148,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-3 lg:gap-12 items-center">
             <div className="lg:col-span-1 order-2 lg:order-1">
-              {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) ? (
+              {aboutImageUrl ? (
                 <img
-                  src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
+                  src={aboutImageUrl}
                   alt="Philosophy"
                   className="w-full h-32 sm:h-48 lg:h-64 object-cover rounded-lg"
                 />
@@ -183,65 +186,69 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
           
           {allServices.length > 0 ? (
             <div className="space-y-8 sm:space-y-12">
-              {allServices.map((service: any, index: number) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.8, delay: index * 0.2 }}
-                  className={`grid gap-6 lg:gap-8 lg:grid-cols-2 items-center ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}
-                >
-                  <div className={index % 2 === 1 ? 'lg:order-2' : 'order-2 lg:order-1'}>
-                    {(service.imageData?.url || service.imageUrl) ? (
-                      <img
-                        src={service.imageData?.url || service.imageUrl}
-                        alt={service.title || 'Service'}
-                        className="w-full h-24 sm:h-32 lg:h-48 object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-full h-24 sm:h-32 lg:h-48 bg-gradient-to-br from-purple-200 to-blue-200 rounded-lg"></div>
-                    )}
-                  </div>
-                  <div className={`text-center lg:text-left ${index % 2 === 1 ? 'lg:order-1' : 'order-1 lg:order-2'}`}>
-                    <h3 className="text-lg sm:text-xl lg:text-2xl font-serif font-semibold mb-3 sm:mb-4 text-gray-900 break-words">
-                      {service.title || 'Service'}
-                    </h3>
-                    <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4 leading-relaxed break-words">
-                      {service.description || 'Professional service description'}
-                    </p>
-                    <div className="flex items-center justify-center lg:justify-between flex-wrap gap-4">
-                      <span className="text-lg sm:text-xl font-semibold" style={{ color: themeColor }}>
-                        {service.price || 'Contact for pricing'}
-                      </span>
-                      {service.isReportService ? (
-                        <Button 
-                          onClick={() => handlePurchaseClick(service, index)}
-                          className="min-h-[44px] hover:opacity-90 transition-opacity"
-                          style={getButtonStyles()}
-                        >
-                          Get Report
-                        </Button>
-                      ) : hasValidPrice(service.price) ? (
-                        <Button 
-                          onClick={() => handlePurchaseClick(service, index)}
-                          disabled={purchasingService === index}
-                          className="min-h-[44px] hover:opacity-90 transition-opacity"
-                          style={getButtonStyles()}
-                        >
-                          {purchasingService === index ? "Processing..." : "Purchase"}
-                        </Button>
+              {allServices.map((service: any, index: number) => {
+                const serviceImageUrl = getValidImageUrl(service.imageData || service.imageUrl);
+                
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8, delay: index * 0.2 }}
+                    className={`grid gap-6 lg:gap-8 lg:grid-cols-2 items-center ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}
+                  >
+                    <div className={index % 2 === 1 ? 'lg:order-2' : 'order-2 lg:order-1'}>
+                      {serviceImageUrl ? (
+                        <img
+                          src={serviceImageUrl}
+                          alt={service.title || 'Service'}
+                          className="w-full h-24 sm:h-32 lg:h-48 object-cover rounded-lg"
+                        />
                       ) : (
-                        <Button 
-                          className="min-h-[44px] hover:opacity-90 transition-opacity"
-                          style={getButtonStyles(true)}
-                        >
-                          Learn More
-                        </Button>
+                        <div className="w-full h-24 sm:h-32 lg:h-48 bg-gradient-to-br from-purple-200 to-blue-200 rounded-lg"></div>
                       )}
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                    <div className={`text-center lg:text-left ${index % 2 === 1 ? 'lg:order-1' : 'order-1 lg:order-2'}`}>
+                      <h3 className="text-lg sm:text-xl lg:text-2xl font-serif font-semibold mb-3 sm:mb-4 text-gray-900 break-words">
+                        {service.title || 'Service'}
+                      </h3>
+                      <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4 leading-relaxed break-words">
+                        {service.description || 'Professional service description'}
+                      </p>
+                      <div className="flex items-center justify-center lg:justify-between flex-wrap gap-4">
+                        <span className="text-lg sm:text-xl font-semibold" style={{ color: themeColor }}>
+                          {service.price || 'Contact for pricing'}
+                        </span>
+                        {service.isReportService ? (
+                          <Button 
+                            onClick={() => handlePurchaseClick(service, index)}
+                            className="min-h-[44px] hover:opacity-90 transition-opacity"
+                            style={getButtonStyles()}
+                          >
+                            Get Report
+                          </Button>
+                        ) : hasValidPrice(service.price) ? (
+                          <Button 
+                            onClick={() => handlePurchaseClick(service, index)}
+                            disabled={purchasingService === index}
+                            className="min-h-[44px] hover:opacity-90 transition-opacity"
+                            style={getButtonStyles()}
+                          >
+                            {purchasingService === index ? "Processing..." : "Purchase"}
+                          </Button>
+                        ) : (
+                          <Button 
+                            className="min-h-[44px] hover:opacity-90 transition-opacity"
+                            style={getButtonStyles(true)}
+                          >
+                            Learn More
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8 sm:py-12">

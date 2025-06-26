@@ -7,6 +7,7 @@ import { X, Upload, Image as ImageIcon, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { getValidImageUrl, hasValidImage } from '@/utils/imageValidation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,8 +48,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [showImageEditor, setShowImageEditor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle both old string format and new ImageData format
-  const imageUrl = typeof value === 'string' ? value : value?.url;
+  // Get valid image URL using validation utility
+  const imageUrl = getValidImageUrl(value);
   const filePath = typeof value === 'object' && value?.filePath ? value.filePath : null;
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,7 +123,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   };
 
   const handleRemove = async () => {
-    if (!imageUrl || !user) return;
+    if (!user) return;
 
     setIsDeleting(true);
     
@@ -194,12 +195,22 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       <div className="space-y-3">
         <Label className="text-sm font-medium text-gray-700">{label}</Label>
         
-        {imageUrl && imageUrl.trim() !== '' ? (
+        {imageUrl ? (
           <div className="relative">
             <img
               src={imageUrl}
               alt={label}
               className="w-full h-32 object-cover rounded-lg border"
+              onError={(e) => {
+                console.error('Image failed to load:', imageUrl);
+                // Remove broken image from data
+                onChange(null);
+                toast({
+                  variant: "destructive",
+                  title: "Broken image removed",
+                  description: "The image link was invalid and has been removed."
+                });
+              }}
             />
             <div className="absolute top-2 right-2 flex space-x-1">
               <Button

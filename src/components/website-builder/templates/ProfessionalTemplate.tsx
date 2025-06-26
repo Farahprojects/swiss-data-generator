@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
+import { getValidImageUrl, hasValidImage } from "@/utils/imageValidation";
 import { Clock, Users, Target, TrendingUp, Shield, Calendar, ArrowRight, Star } from "lucide-react";
 
 interface TemplateProps {
@@ -22,10 +23,11 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
 
   const sectionPadding = isPreview ? 'py-12' : 'py-16 sm:py-20 lg:py-24';
 
-  // Check if header image exists
-  const hasHeaderImage = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+  // Check if header image exists and is valid
+  const headerImageUrl = getValidImageUrl(customizationData.headerImageData || customizationData.headerImageUrl);
+  const aboutImageUrl = getValidImageUrl(customizationData.aboutImageData || customizationData.aboutImageUrl);
 
-  // Create report service card - ALWAYS show it (removed the !isPreview condition)
+  // Create report service card - ALWAYS show it
   const reportService = {
     title: "Personal Insights Report",
     description: "Comprehensive analysis designed for your unique journey and goals.",
@@ -75,10 +77,10 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
     <div className="bg-white min-h-screen" style={{ fontFamily: `${fontFamily}, -apple-system, BlinkMacSystemFont, sans-serif` }}>
       {/* Simplified Hero Section - Apple Style */}
       <section className={`${sectionPadding} relative overflow-hidden`}>
-        {hasHeaderImage && (
+        {headerImageUrl && (
           <div 
             className="absolute inset-0 bg-cover bg-center opacity-5"
-            style={{ backgroundImage: `url(${customizationData.headerImageData?.url || customizationData.headerImageUrl})` }}
+            style={{ backgroundImage: `url(${headerImageUrl})` }}
           />
         )}
         
@@ -116,10 +118,10 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid gap-20 lg:grid-cols-2 items-center">
             <div className="order-2 lg:order-1">
-              {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) ? (
+              {aboutImageUrl ? (
                 <div className="relative">
                   <img
-                    src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
+                    src={aboutImageUrl}
                     alt="About"
                     className="w-full h-96 object-cover rounded-2xl"
                   />
