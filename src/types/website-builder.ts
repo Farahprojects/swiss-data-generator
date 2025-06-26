@@ -1,4 +1,3 @@
-
 export interface Service {
   title: string;
   description: string;
@@ -41,6 +40,9 @@ export interface CustomizationData {
   aboutImageData?: ImageData;
   footerHeading?: string;
   footerSubheading?: string;
+  philosophyTitle?: string;
+  philosophyTagline?: string;
+  servicesTitle?: string;
 }
 
 export interface CoachWebsite {

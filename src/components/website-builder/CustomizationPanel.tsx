@@ -313,6 +313,28 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     </div>
 
                     <div>
+                      <Label htmlFor="philosophyTitle" className="text-sm font-medium text-gray-700">Philosophy Section Title</Label>
+                      <Input
+                        id="philosophyTitle"
+                        value={customizationData.philosophyTitle || ''}
+                        onChange={(e) => onChange('philosophyTitle', e.target.value)}
+                        placeholder="My Philosophy"
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="philosophyTagline" className="text-sm font-medium text-gray-700">Philosophy Tagline</Label>
+                      <Input
+                        id="philosophyTagline"
+                        value={customizationData.philosophyTagline || ''}
+                        onChange={(e) => onChange('philosophyTagline', e.target.value)}
+                        placeholder="Wisdom through experience"
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
                       <Label className="text-sm font-medium text-gray-700 mb-3 block">Font Style</Label>
                       <Select
                         value={customizationData.introFontStyle || 'modern'}
@@ -452,6 +474,17 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   transition={{ duration: 0.2 }}
                 >
                   <CardContent className="space-y-4 pt-0">
+                    <div>
+                      <Label htmlFor="servicesTitle" className="text-sm font-medium text-gray-700">Services Section Title</Label>
+                      <Input
+                        id="servicesTitle"
+                        value={customizationData.servicesTitle || ''}
+                        onChange={(e) => onChange('servicesTitle', e.target.value)}
+                        placeholder="Services Offered"
+                        className="mt-1"
+                      />
+                    </div>
+
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-600">Add your services and pricing</div>
                       <Button
