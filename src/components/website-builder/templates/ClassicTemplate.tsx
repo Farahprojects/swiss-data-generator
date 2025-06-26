@@ -1,10 +1,11 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
-import { InlineEditableText } from "../InlineEditableText";
+import { EnhancedInlineText } from "../EnhancedInlineText";
 
 interface TemplateProps {
   customizationData: any;
@@ -62,11 +63,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false, onCustom
   const getButtonStyles = (isInverted = false) => {
     const buttonColor = customizationData.buttonColor || themeColor;
     const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
-    const buttonFontFamily = customizationData.buttonFontFamily || fontFamily;
     const buttonStyle = customizationData.buttonStyle || 'bordered';
     
     const baseStyles = {
-      fontFamily: `${buttonFontFamily}, serif`,
       backgroundColor: isInverted ? 'transparent' : (buttonStyle === 'bordered' ? 'transparent' : buttonColor),
       color: buttonTextColor,
       border: buttonStyle === 'borderless' ? 'none' : `2px solid ${buttonColor}`,
@@ -131,22 +130,28 @@ export const ClassicTemplate = ({ customizationData, isPreview = false, onCustom
           >
             <div className="w-16 h-16 sm:w-24 sm:h-24 lg:w-32 lg:h-32 mx-auto mb-6 sm:mb-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500"></div>
             <h1 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold mb-4 sm:mb-6 leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}>
-              <InlineEditableText
+              <EnhancedInlineText
                 value={customizationData.coachName || ""}
                 onChange={(value) => handleFieldChange('coachName', value)}
                 placeholder="Dr. Sarah Wilson"
                 isEditable={isEditable}
+                fieldName="coachName"
+                formatting={customizationData.coachNameFormatting || { color: hasHeaderImage ? '#FFFFFF' : '#111827' }}
+                onCustomizationChange={onCustomizationChange}
                 className={`text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold leading-tight ${hasHeaderImage ? 'text-white' : 'text-gray-900'}`}
               />
             </h1>
             <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto mb-4 sm:mb-6"></div>
             <p className={`text-lg sm:text-xl lg:text-2xl mb-8 sm:mb-10 italic leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-700'}`}>
-              <InlineEditableText
+              <EnhancedInlineText
                 value={customizationData.tagline || ""}
                 onChange={(value) => handleFieldChange('tagline', value)}
                 placeholder="Classical Wisdom for Modern Challenges"
                 multiline={true}
                 isEditable={isEditable}
+                fieldName="tagline"
+                formatting={customizationData.taglineFormatting || { color: hasHeaderImage ? '#E5E7EB' : '#374151' }}
+                onCustomizationChange={onCustomizationChange}
                 className={`text-lg sm:text-xl lg:text-2xl italic leading-relaxed ${hasHeaderImage ? 'text-gray-200' : 'text-gray-700'}`}
               />
             </p>
@@ -155,11 +160,14 @@ export const ClassicTemplate = ({ customizationData, isPreview = false, onCustom
                 className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
                 style={getButtonStyles()}
               >
-                <InlineEditableText
+                <EnhancedInlineText
                   value={customizationData.buttonText || ""}
                   onChange={(value) => handleFieldChange('buttonText', value)}
                   placeholder="Begin Your Journey"
                   isEditable={isEditable}
+                  fieldName="buttonText"
+                  formatting={customizationData.buttonTextFormatting}
+                  onCustomizationChange={onCustomizationChange}
                   className="text-inherit"
                 />
               </Button>
@@ -185,21 +193,27 @@ export const ClassicTemplate = ({ customizationData, isPreview = false, onCustom
             </div>
             <div className="lg:col-span-2 order-1 lg:order-2 text-center lg:text-left">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6 text-gray-900">
-                <InlineEditableText
+                <EnhancedInlineText
                   value={customizationData.introTitle || ""}
                   onChange={(value) => handleFieldChange('introTitle', value)}
                   placeholder="My Philosophy"
                   isEditable={isEditable}
+                  fieldName="introTitle"
+                  formatting={customizationData.introTitleFormatting}
+                  onCustomizationChange={onCustomizationChange}
                   className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-gray-900"
                 />
               </h2>
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-4 sm:mb-6">
-                <InlineEditableText
+                <EnhancedInlineText
                   value={customizationData.bio || ""}
                   onChange={(value) => handleFieldChange('bio', value)}
                   placeholder="Drawing from time-tested principles and classical approaches, I believe in the power of deep reflection, meaningful dialogue, and gradual transformation."
                   multiline={true}
                   isEditable={isEditable}
+                  fieldName="bio"
+                  formatting={customizationData.bioFormatting}
+                  onCustomizationChange={onCustomizationChange}
                   className="text-base sm:text-lg text-gray-600 leading-relaxed"
                 />
               </p>
@@ -296,43 +310,47 @@ export const ClassicTemplate = ({ customizationData, isPreview = false, onCustom
       <section className={`${sectionPadding} bg-gray-900 text-white`}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold mb-4 sm:mb-6">
-            <InlineEditableText
+            <EnhancedInlineText
               value={customizationData.footerHeading || ""}
               onChange={(value) => handleFieldChange('footerHeading', value)}
               placeholder="Begin Your Transformation"
               isEditable={isEditable}
+              fieldName="footerHeading"
+              formatting={customizationData.footerHeadingFormatting || { color: '#FFFFFF' }}
+              onCustomizationChange={onCustomizationChange}
               className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-white"
             />
           </h2>
           <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90 italic">
-            <InlineEditableText
+            <EnhancedInlineText
               value={customizationData.footerSubheading || ""}
               onChange={(value) => handleFieldChange('footerSubheading', value)}
               placeholder="Every journey begins with a single step"
               multiline={true}
               isEditable={isEditable}
+              fieldName="footerSubheading"
+              formatting={customizationData.footerSubheadingFormatting || { color: '#FFFFFF' }}
+              onCustomizationChange={onCustomizationChange}
               className="text-lg sm:text-xl opacity-90 italic text-white"
             />
           </p>
           <div className="w-16 sm:w-24 h-1 bg-amber-500 mx-auto mb-6 sm:mb-8"></div>
           <Button 
             className="py-3 px-6 sm:py-4 sm:px-10 text-base sm:text-lg min-h-[44px] hover:opacity-90 transition-opacity"
-            style={(() => {
-              const buttonColor = customizationData.buttonColor || themeColor;
-              const buttonTextColor = customizationData.buttonTextColor || '#FFFFFF';
-              const buttonStyle = customizationData.buttonStyle || 'bordered';
-              return {
-                ...getButtonStyles(), 
-                backgroundColor: buttonStyle === 'bordered' ? '#FFFFFF' : buttonColor, 
-                color: buttonTextColor
-              };
-            })()}
+            style={{
+              ...getButtonStyles(), 
+              backgroundColor: '#FFFFFF', 
+              color: customizationData.buttonTextColor || '#000000'
+            }}
           >
-            <InlineEditableText
+            <EnhancedInlineText
               value={customizationData.buttonText || ""}
               onChange={(value) => handleFieldChange('buttonText', value)}
               placeholder="Schedule Consultation"
               isEditable={isEditable}
+              fieldName="buttonText"
+              formatting={customizationData.buttonTextFormatting}
+              onCustomizationChange={onCustomizationChange}
               className="text-inherit"
             />
           </Button>
