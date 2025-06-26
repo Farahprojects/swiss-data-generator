@@ -313,17 +313,6 @@ export const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                     </div>
 
                     <div>
-                      <Label htmlFor="philosophyTitle" className="text-sm font-medium text-gray-700">Philosophy Section Title</Label>
-                      <Input
-                        id="philosophyTitle"
-                        value={customizationData.philosophyTitle || ''}
-                        onChange={(e) => onChange('philosophyTitle', e.target.value)}
-                        placeholder="My Philosophy"
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div>
                       <Label htmlFor="philosophyTagline" className="text-sm font-medium text-gray-700">Philosophy Tagline</Label>
                       <Input
                         id="philosophyTagline"
