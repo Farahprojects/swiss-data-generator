@@ -172,7 +172,9 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-3 lg:gap-12 items-center">
             <div className="lg:col-span-2 text-center lg:text-left">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 text-gray-900">Professional Excellence</h2>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 text-gray-900">
+                {customizationData.introTitle || "Professional Excellence"}
+              </h2>
               <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-4 sm:mb-6">
                 {customizationData.bio || "With over 15 years of experience in executive coaching and leadership development, I partner with senior leaders and organizations to drive sustainable performance improvements and strategic growth."}
               </p>
@@ -217,7 +219,9 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
       <section id="services" className={`${sectionPadding} bg-gray-50`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 text-gray-900">Executive Services</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 text-gray-900">
+              {customizationData.servicesTitle || "Executive Services"}
+            </h2>
             <p className="text-lg sm:text-xl text-gray-600">Tailored solutions for leadership excellence</p>
           </div>
           
