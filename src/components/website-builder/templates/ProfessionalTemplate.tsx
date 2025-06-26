@@ -74,7 +74,7 @@ export const ProfessionalTemplate = ({ customizationData, isPreview = false }: T
   };
 
   return (
-    <div className="bg-white min-h-screen" style={{ fontFamily: `${fontFamily}, -apple-system, BlinkMacSystemFont, sans-serif` }}>
+    <div className={`bg-white min-h-screen ${!isPreview ? 'pt-16' : ''}`} style={{ fontFamily: `${fontFamily}, -apple-system, BlinkMacSystemFont, sans-serif` }}>
       {/* Simplified Hero Section - Apple Style */}
       <section className={`${sectionPadding} relative overflow-hidden`}>
         {headerImageUrl && (

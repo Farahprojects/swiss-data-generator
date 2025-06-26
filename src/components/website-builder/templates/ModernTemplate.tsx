@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -143,7 +144,7 @@ export const ModernTemplate = ({ customizationData, isPreview = false }: Templat
   };
 
   return (
-    <div className="bg-gray-50" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+    <div className={`bg-gray-50 ${!isPreview ? 'pt-16' : ''}`} style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Modern Hero with Split Layout */}
       <section className={`relative ${heroSection} flex items-center`}>
         {/* Only show dark background when no header image */}
