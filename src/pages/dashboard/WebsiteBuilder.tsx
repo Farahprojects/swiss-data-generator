@@ -57,7 +57,7 @@ export default function WebsiteBuilder() {
     loadTemplatesAndWebsite();
   }, [user]);
 
-  // Auto-save functionality
+  // Auto-save functionality with improved change detection
   const handleAutoSave = async (data: any) => {
     if (!user || !selectedTemplate) return;
 
@@ -124,7 +124,7 @@ export default function WebsiteBuilder() {
     }
   };
 
-  const { resetAutoSave } = useAutoSave({
+  const { resetAutoSave, markUserInteraction } = useAutoSave({
     data: customizationData,
     onSave: handleAutoSave,
     delay: 500,
@@ -320,6 +320,8 @@ export default function WebsiteBuilder() {
   };
 
   const handleCustomizationChange = (field: string, value: any) => {
+    // Mark that this is a user-initiated change
+    markUserInteraction();
     setCustomizationData(prev => ({ ...prev, [field]: value }));
   };
 
