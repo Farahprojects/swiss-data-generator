@@ -1,11 +1,9 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
-import { getValidImageUrl, hasValidImage } from "@/utils/imageValidation";
 
 interface TemplateProps {
   customizationData: any;
@@ -35,8 +33,8 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
   const heroPadding = isPreview ? 'py-8' : 'py-16 sm:py-24 lg:py-32';
 
   // Check if header image exists and is valid
-  const headerImageUrl = getValidImageUrl(customizationData.headerImageData || customizationData.headerImageUrl);
-  const aboutImageUrl = getValidImageUrl(customizationData.aboutImageData || customizationData.aboutImageUrl);
+  const headerImageUrl = customizationData.headerImageData?.url || customizationData.headerImageUrl;
+  const aboutImageUrl = customizationData.aboutImageData?.url || customizationData.aboutImageUrl;
 
   // Create report service card with customizable data
   const reportService = {
@@ -191,7 +189,7 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
           {allServices.length > 0 ? (
             <div className="space-y-8 sm:space-y-12">
               {allServices.map((service: any, index: number) => {
-                const serviceImageUrl = getValidImageUrl(service.imageData || service.imageUrl);
+                const serviceImageUrl = service.imageData?.url || service.imageUrl;
                 
                 return (
                   <motion.div
