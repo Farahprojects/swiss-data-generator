@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, CreditCard, Eye } from 'lucide-react';
+import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, CreditCard, Eye, Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
@@ -248,6 +248,7 @@ const UnifiedNavigation = ({
                           </>
                         ) : (
                           <>
+                            <Upload className="h-4 w-4" />
                             <span className="hidden md:inline">Publish</span>
                           </>
                         )}
