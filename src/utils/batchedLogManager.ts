@@ -39,13 +39,14 @@ class BatchedLogManager {
   // Queue for retry
   private queuedLogs: LogBatch[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private idleCallbackId: number | null = null;
   private isFlushInProgress = false;
   private retryCount = 0;
   private maxRetries = 3;
 
   private constructor() {
     if (typeof window !== 'undefined') {
-      this.setupUnloadHandler();
+      this.setupModernEventHandlers();
     }
   }
 
@@ -118,10 +119,7 @@ class BatchedLogManager {
     this.currentBatch = null;
 
     // Clear any scheduled flushes
-    if (this.flushTimer) {
-      clearTimeout(this.flushTimer);
-      this.flushTimer = null;
-    }
+    this.clearScheduledFlush();
 
     // Process queue
     await this.processQueue();
@@ -207,14 +205,27 @@ class BatchedLogManager {
     });
   }
 
-  // Schedule a flush after a delay (throttled)
+  // Schedule a flush after a delay (reduced from 5s to 3s for more frequent flushing)
   private scheduleFlush(): void {
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
     }
 
-    // Flush after 5 seconds of inactivity
-    this.flushTimer = setTimeout(() => this.flushNow(), 5000);
+    // Flush after 3 seconds of inactivity (reduced from 5 seconds)
+    this.flushTimer = setTimeout(() => this.flushNow(), 3000);
+  }
+
+  // Clear scheduled flush timers
+  private clearScheduledFlush(): void {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    
+    if (this.idleCallbackId) {
+      cancelIdleCallback(this.idleCallbackId);
+      this.idleCallbackId = null;
+    }
   }
 
   // Enrich batch with user data
@@ -316,14 +327,74 @@ class BatchedLogManager {
     return safeMeta;
   }
 
-  // Handle page unload events to flush logs
-  private setupUnloadHandler(): void {
-    window.addEventListener('beforeunload', () => {
-      // Synchronous version for unload events
-      this.flushNow().catch(() => {
-        // Can't handle errors in unload
-      });
+  // Setup modern event handlers to replace deprecated beforeunload
+  private setupModernEventHandlers(): void {
+    // Use Page Visibility API instead of beforeunload
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        // Page is being hidden, flush logs immediately
+        this.flushWithBeacon();
+      }
     });
+
+    // Use pagehide event as a fallback
+    window.addEventListener('pagehide', () => {
+      this.flushWithBeacon();
+    });
+
+    // Schedule idle callback flushing
+    this.scheduleIdleFlush();
+  }
+
+  // Flush logs using navigator.sendBeacon for reliability during page unload
+  private flushWithBeacon(): void {
+    if (!this.currentBatch || this.currentBatch.logs.length === 0) return;
+
+    try {
+      // Prepare batch data
+      const batchToFlush = { ...this.currentBatch };
+      batchToFlush.endTime = new Date().toISOString();
+
+      // Try to send with beacon if available
+      if (navigator.sendBeacon) {
+        const payload = JSON.stringify({
+          batch: batchToFlush,
+          timestamp: new Date().toISOString()
+        });
+
+        // Use sendBeacon for reliable delivery
+        const sent = navigator.sendBeacon('/api/log-batch', payload);
+        
+        if (sent) {
+          console.log('Logs sent via sendBeacon');
+          this.currentBatch = null;
+          return;
+        }
+      }
+
+      // Fallback to regular flush if beacon fails
+      this.flushNow().catch(err => {
+        console.error('Final flush failed:', err);
+      });
+    } catch (error) {
+      console.error('Error in beacon flush:', error);
+    }
+  }
+
+  // Schedule flushing during browser idle periods
+  private scheduleIdleFlush(): void {
+    if (typeof requestIdleCallback === 'function') {
+      this.idleCallbackId = requestIdleCallback(() => {
+        if (this.currentBatch && this.currentBatch.logs.length > 0) {
+          this.flushNow().catch(err => {
+            console.error('Idle flush failed:', err);
+          });
+        }
+        
+        // Schedule next idle flush
+        setTimeout(() => this.scheduleIdleFlush(), 10000); // Every 10 seconds
+      });
+    }
   }
 }
 
