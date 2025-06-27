@@ -1,3 +1,4 @@
+
 import React from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,12 +55,6 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
   if (isFullScreen && !isPublicView) {
     return (
       <div className={`fixed inset-0 bg-white z-50 overflow-auto ${!isPublicView ? 'pt-16' : ''}`}>
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Preview: {template.name}</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
         <div className="min-h-screen">
           {renderTemplate()}
         </div>
