@@ -49,8 +49,12 @@ const About = () => {
               {/* Founder Card */}
               <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all">
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-24 h-24 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-full mb-6 flex items-center justify-center">
-                    <Star className="w-12 h-12 text-primary" />
+                  <div className="w-24 h-24 mb-6 rounded-full overflow-hidden">
+                    <img 
+                      src="/lovable-uploads/97523ce9-e477-4fb9-9a9c-f8cf223342c6.png" 
+                      alt="Peter Farah" 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <h3 className="text-2xl font-bold mb-2 text-primary">Peter Farah</h3>
                   <p className="text-lg font-medium text-gray-700 mb-2">Founder and Creator</p>
