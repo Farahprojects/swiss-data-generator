@@ -87,61 +87,7 @@ export const ServicesEditModal: React.FC<ServicesEditModalProps> = ({
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Report Service Section */}
-          <Card>
-            <CardContent className="space-y-6 pt-6">
-              <div className="text-sm text-gray-600 mb-4">
-                Configure your personal insights report service that appears as the first service offering.
-              </div>
-              
-              <div>
-                <Label htmlFor="reportTitle" className="text-sm font-medium text-gray-700">Report Title</Label>
-                <Input
-                  id="reportTitle"
-                  value={customizationData.reportService?.title || ''}
-                  onChange={(e) => handleReportServiceChange('title', e.target.value)}
-                  placeholder="e.g., Personal Insights Report"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="reportDescription" className="text-sm font-medium text-gray-700">Report Description</Label>
-                <Textarea
-                  id="reportDescription"
-                  value={customizationData.reportService?.description || ''}
-                  onChange={(e) => handleReportServiceChange('description', e.target.value)}
-                  placeholder="Describe what your personal report includes..."
-                  rows={3}
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="reportPrice" className="text-sm font-medium text-gray-700">Report Price</Label>
-                <Input
-                  id="reportPrice"
-                  value={customizationData.reportService?.price || ''}
-                  onChange={(e) => handleReportServiceChange('price', e.target.value)}
-                  placeholder="e.g., $29"
-                  className="mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="reportSectionHeading" className="text-sm font-medium text-gray-700">Section Heading (Optional)</Label>
-                <Input
-                  id="reportSectionHeading"
-                  value={customizationData.reportService?.sectionHeading || ''}
-                  onChange={(e) => handleReportServiceChange('sectionHeading', e.target.value)}
-                  placeholder="e.g., Get Your Personal Report"
-                  className="mt-1"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Services Section */}
+          {/* Services Section - Now First */}
           <Card>
             <CardContent className="space-y-4 pt-6">
               <div className="flex items-center justify-between">
@@ -216,6 +162,60 @@ export const ServicesEditModal: React.FC<ServicesEditModalProps> = ({
                   <p className="text-sm">Click "Add Service" to get started</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Report Service Section - Now Second */}
+          <Card>
+            <CardContent className="space-y-6 pt-6">
+              <div className="text-sm text-gray-600 mb-4">
+                Configure your personal insights report service that appears as the first service offering.
+              </div>
+              
+              <div>
+                <Label htmlFor="reportTitle" className="text-sm font-medium text-gray-700">Report Title</Label>
+                <Input
+                  id="reportTitle"
+                  value={customizationData.reportService?.title || ''}
+                  onChange={(e) => handleReportServiceChange('title', e.target.value)}
+                  placeholder="e.g., Personal Insights Report"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="reportDescription" className="text-sm font-medium text-gray-700">Report Description</Label>
+                <Textarea
+                  id="reportDescription"
+                  value={customizationData.reportService?.description || ''}
+                  onChange={(e) => handleReportServiceChange('description', e.target.value)}
+                  placeholder="Describe what your personal report includes..."
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="reportPrice" className="text-sm font-medium text-gray-700">Report Price</Label>
+                <Input
+                  id="reportPrice"
+                  value={customizationData.reportService?.price || ''}
+                  onChange={(e) => handleReportServiceChange('price', e.target.value)}
+                  placeholder="e.g., $29"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="reportSectionHeading" className="text-sm font-medium text-gray-700">Section Heading (Optional)</Label>
+                <Input
+                  id="reportSectionHeading"
+                  value={customizationData.reportService?.sectionHeading || ''}
+                  onChange={(e) => handleReportServiceChange('sectionHeading', e.target.value)}
+                  placeholder="e.g., Get Your Personal Report"
+                  className="mt-1"
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
