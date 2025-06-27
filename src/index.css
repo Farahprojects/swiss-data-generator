@@ -153,11 +153,6 @@ nav.fixed {
   background-color: white;
 }
 
-/* Override any conflicting sticky positioning */
-.sticky {
-  position: fixed !important;
-}
-
 /* Utility classes for better responsiveness */
 .full-width-container {
   width: 100%;
