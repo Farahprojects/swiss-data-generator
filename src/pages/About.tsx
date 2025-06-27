@@ -45,7 +45,7 @@ const About = () => {
         <section className="py-24 bg-gradient-to-b from-background to-accent/20">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold mb-16 text-center text-primary">Our Team</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Founder Card */}
               <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all">
                 <div className="flex flex-col items-center text-center">
@@ -107,6 +107,26 @@ const About = () => {
                     Powering the AI tools that assist and inspire the development of our platform,
                     enabling innovative solutions and enhanced user experiences through advanced
                     artificial intelligence.
+                  </p>
+                </div>
+              </div>
+
+              {/* Lovable Card */}
+              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-24 h-24 mb-6 rounded-full overflow-hidden bg-white flex items-center justify-center p-4">
+                    <img 
+                      src="/lovable-uploads/a247971a-7a36-4d5c-bdb5-e00ae893ab87.png" 
+                      alt="Lovable" 
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2 text-primary">Lovable</h3>
+                  <p className="text-lg font-medium text-gray-700 mb-2">Development Platform</p>
+                  <p className="text-gray-600">
+                    The AI-powered development platform that enables rapid prototyping and 
+                    deployment of web applications, providing the technical foundation for 
+                    bringing innovative ideas to life.
                   </p>
                 </div>
               </div>
