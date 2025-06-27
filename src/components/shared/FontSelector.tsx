@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,8 +23,38 @@ export const FontSelector = ({
   triggerSize = 'sm'
 }: FontSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   
   const currentFontData = getFontByValue(currentFont);
+  
+  useEffect(() => {
+    if (isOpen && scrollAreaRef.current && contentRef.current) {
+      // Debug measurements
+      const scrollArea = scrollAreaRef.current;
+      const content = contentRef.current;
+      
+      console.log('=== FONT SELECTOR DEBUG ===');
+      console.log('ScrollArea height:', scrollArea.offsetHeight);
+      console.log('ScrollArea clientHeight:', scrollArea.clientHeight);
+      console.log('ScrollArea scrollHeight:', scrollArea.scrollHeight);
+      console.log('Content height:', content.offsetHeight);
+      console.log('Content scrollHeight:', content.scrollHeight);
+      console.log('Number of fonts:', FONT_REGISTRY.length);
+      console.log('Can scroll?', scrollArea.scrollHeight > scrollArea.clientHeight);
+      console.log('ScrollArea classes:', scrollArea.className);
+      console.log('Content classes:', content.className);
+      
+      // Check if there are any overflow issues
+      const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        console.log('Viewport height:', (viewport as HTMLElement).offsetHeight);
+        console.log('Viewport scrollHeight:', (viewport as HTMLElement).scrollHeight);
+      }
+      
+      console.log('========================');
+    }
+  }, [isOpen]);
   
   const renderFontButton = (font: typeof FONT_REGISTRY[0]) => (
     <Button
@@ -73,8 +103,8 @@ export const FontSelector = ({
               </TabsList>
               
               <TabsContent value="all">
-                <ScrollArea className="h-48">
-                  <div className="space-y-1 pr-2">
+                <ScrollArea className="h-48" ref={scrollAreaRef}>
+                  <div className="space-y-1 pr-2" ref={contentRef}>
                     {FONT_REGISTRY.map(renderFontButton)}
                   </div>
                 </ScrollArea>
@@ -107,8 +137,8 @@ export const FontSelector = ({
           ) : (
             <div className="space-y-2">
               <div className="text-sm font-medium mb-2">Font Family</div>
-              <ScrollArea className="h-48">
-                <div className="space-y-1 pr-2">
+              <ScrollArea className="h-48" ref={scrollAreaRef}>
+                <div className="space-y-1 pr-2" ref={contentRef}>
                   {FONT_REGISTRY.map(renderFontButton)}
                 </div>
               </ScrollArea>
