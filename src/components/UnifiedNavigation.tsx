@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -227,19 +228,20 @@ const UnifiedNavigation = ({
                   {isWebsiteBuilderPage && (
                     <div className="flex items-center space-x-2">
                       <Button
-                        variant="outline"
+                        variant={isMobile ? "ghost" : "outline"}
                         size="sm"
                         onClick={handlePreview}
-                        className="flex items-center gap-2"
+                        className={`flex items-center gap-2 ${isMobile ? 'border-0 bg-transparent hover:bg-transparent p-2' : ''}`}
                       >
                         <Eye className="h-4 w-4" />
                         <span className="hidden md:inline">Preview</span>
                       </Button>
                       <Button
+                        variant={isMobile ? "ghost" : "default"}
                         size="sm"
                         onClick={onPublish}
                         disabled={isPublishing}
-                        className="flex items-center gap-2"
+                        className={`flex items-center gap-2 ${isMobile ? 'border-0 bg-transparent hover:bg-transparent p-2' : ''}`}
                       >
                         {isPublishing ? (
                           <>
