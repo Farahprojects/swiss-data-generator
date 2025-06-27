@@ -1,4 +1,5 @@
 
+
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -106,27 +107,29 @@ export const FooterEditModal: React.FC<FooterEditModalProps> = ({
             </div>
             
             <div>
-              <Label htmlFor="fontFamily" className="text-sm font-medium text-gray-700">Typography</Label>
-              <Select
-                value={customizationData.fontFamily || 'Inter'}
-                onValueChange={(value) => onChange('fontFamily', value)}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-48">
-                  {fontOptions.map((font) => (
-                    <SelectItem key={font.value} value={font.value}>
-                      <div className="flex flex-col">
-                        <span style={{ fontFamily: font.value }} className="font-medium">
-                          {font.name}
-                        </span>
-                        <span className="text-xs text-gray-500">{font.category} • {font.preview}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="fontFamily" className="text-sm font-medium text-gray-700">Text Font</Label>
+              <div className="w-1/2">
+                <Select
+                  value={customizationData.fontFamily || 'Inter'}
+                  onValueChange={(value) => onChange('fontFamily', value)}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-48">
+                    {fontOptions.map((font) => (
+                      <SelectItem key={font.value} value={font.value}>
+                        <div className="flex flex-col">
+                          <span style={{ fontFamily: font.value }} className="font-medium">
+                            {font.name}
+                          </span>
+                          <span className="text-xs text-gray-500">{font.category} • {font.preview}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -134,3 +137,4 @@ export const FooterEditModal: React.FC<FooterEditModalProps> = ({
     </Dialog>
   );
 };
+
