@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Star, Award, Rocket } from "lucide-react";
+import { Star, Award, Rocket, Linkedin, X } from "lucide-react";
 
 const About = () => {
   return (
@@ -54,12 +54,32 @@ const About = () => {
                   </div>
                   <h3 className="text-2xl font-bold mb-2 text-primary">Peter Farah</h3>
                   <p className="text-lg font-medium text-gray-700 mb-2">Founder and Creator</p>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 mb-4">
                     Passionate entrepreneur blending technology, astrology, and psychology to build
                     innovative, user-focused platforms. Driven by curiosity, creativity, and a
                     commitment to deep understanding.
                   </p>
-                  <p className="text-sm text-gray-500 mt-4">Australia</p>
+                  <p className="text-sm text-gray-500 mb-4">Australia</p>
+                  
+                  {/* Social Media Icons */}
+                  <div className="flex space-x-4">
+                    <a
+                      href="https://www.linkedin.com/public-profile/settings?trk=d_flagship3_profile_self_view_public_profile"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <Linkedin className="w-6 h-6" />
+                    </a>
+                    <a
+                      href="https://x.com/farahprojects"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <X className="w-6 h-6" />
+                    </a>
+                  </div>
                 </div>
               </div>
 
