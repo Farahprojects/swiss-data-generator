@@ -151,11 +151,15 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
               {aboutImageUrl ? (
                 <img
                   src={aboutImageUrl}
-                  alt="Philosophy"
-                  className="w-full h-32 sm:h-48 lg:h-64 object-cover rounded-lg"
+                  alt="About me"
+                  className="w-full h-32 sm:h-48 lg:h-64 object-cover rounded-lg shadow-lg"
                 />
               ) : (
-                <div className="w-full h-32 sm:h-48 lg:h-64 bg-gradient-to-br from-purple-200 to-pink-200 rounded-lg"></div>
+                <div className="w-full h-32 sm:h-48 lg:h-64 bg-gradient-to-br from-purple-200 to-pink-200 rounded-lg flex items-center justify-center">
+                  <div className="text-center text-gray-500 p-4">
+                    <div className="text-sm opacity-75">Upload an about image to replace this placeholder</div>
+                  </div>
+                </div>
               )}
             </div>
             <div className="lg:col-span-2 order-1 lg:order-2 text-center lg:text-left">
@@ -202,10 +206,14 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
                         <img
                           src={serviceImageUrl}
                           alt={service.title || 'Service'}
-                          className="w-full h-24 sm:h-32 lg:h-48 object-cover rounded-lg"
+                          className="w-full h-24 sm:h-32 lg:h-48 object-cover rounded-lg shadow-lg"
                         />
                       ) : (
-                        <div className="w-full h-24 sm:h-32 lg:h-48 bg-gradient-to-br from-purple-200 to-blue-200 rounded-lg"></div>
+                        <div className="w-full h-24 sm:h-32 lg:h-48 bg-gradient-to-br from-purple-200 to-blue-200 rounded-lg flex items-center justify-center">
+                          <div className="text-center text-gray-500 p-4">
+                            <div className="text-xs opacity-75">Upload a service image to replace this placeholder</div>
+                          </div>
+                        </div>
                       )}
                     </div>
                     <div className={`text-center lg:text-left ${index % 2 === 1 ? 'lg:order-1' : 'order-1 lg:order-2'}`}>
