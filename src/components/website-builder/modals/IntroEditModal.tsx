@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { FontSelector } from "@/components/shared/FontSelector";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FONT_REGISTRY } from "@/utils/fontRegistry";
 import { X } from "lucide-react";
 
 interface IntroEditModalProps {
@@ -75,12 +76,26 @@ export const IntroEditModal: React.FC<IntroEditModalProps> = ({
 
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-3 block">Font Family</Label>
-              <FontSelector
-                onFontSelect={(fontClass) => onChange('fontFamily', fontClass)}
-                currentFont={customizationData.fontFamily || 'font-inter'}
-                triggerVariant="outline"
-                triggerSize="default"
-              />
+              <Select
+                value={customizationData.fontFamily || 'font-inter'}
+                onValueChange={(value) => onChange('fontFamily', value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select font family" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FONT_REGISTRY.map((font) => (
+                    <SelectItem key={font.value} value={font.value}>
+                      <div className={`${font.class} flex flex-col items-start`}>
+                        <span className="font-medium">{font.name}</span>
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {font.category}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
