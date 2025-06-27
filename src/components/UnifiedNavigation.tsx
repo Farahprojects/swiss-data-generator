@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, CreditCard } from 'lucide-react';
+import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, CreditCard, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
@@ -107,6 +107,20 @@ const UnifiedNavigation = ({
     openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
   };
 
+  const handlePreview = () => {
+    try {
+      // Generate a unique preview ID
+      const previewId = Date.now().toString();
+      
+      // Open preview in new tab
+      const previewUrl = `/preview/${previewId}`;
+      window.open(previewUrl, '_blank');
+      
+    } catch (error) {
+      console.error('Error opening preview:', error);
+    }
+  };
+
   const showHeaderSearch =
     isLoggedIn &&
     isMessagesPage &&
@@ -208,53 +222,87 @@ const UnifiedNavigation = ({
             {/* Call to Action Buttons or User Menu */}
             <div className="flex items-center space-x-4">
               {isLoggedIn ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="p-0 h-auto rounded-full">
-                      <UserAvatar size="sm" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-48">
-                    <div className="px-4 py-2 text-sm">
-                      <p className="font-medium">{user.email}</p>
+                <>
+                  {/* Website Builder Action Buttons */}
+                  {isWebsiteBuilderPage && (
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreview}
+                        className="flex items-center gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span className="hidden md:inline">Preview</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={onPublish}
+                        disabled={isPublishing}
+                        className="flex items-center gap-2"
+                      >
+                        {isPublishing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span className="hidden md:inline">Publishing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="hidden md:inline">Publish</span>
+                          </>
+                        )}
+                      </Button>
                     </div>
-                    <DropdownMenuSeparator />
-                    
-                    <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      General
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
-                      <User className="mr-2 h-4 w-4" />
-                      Account Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Billing
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
-                      <Bell className="mr-2 h-4 w-4" />
-                      Notifications
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('support')}>
-                      <LifeBuoy className="mr-2 h-4 w-4" />
-                      Support
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuSeparator />
-                    
-                    <DropdownMenuItem onClick={() => navigate('/dashboard/api-keys')}>
-                      API Keys
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuSeparator />
-                    
-                    <DropdownMenuItem onClick={handleSignOut} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  )}
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="p-0 h-auto rounded-full">
+                        <UserAvatar size="sm" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-48">
+                      <div className="px-4 py-2 text-sm">
+                        <p className="font-medium">{user.email}</p>
+                      </div>
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        General
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
+                        <User className="mr-2 h-4 w-4" />
+                        Account Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Billing
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
+                        <Bell className="mr-2 h-4 w-4" />
+                        Notifications
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleOpenSettings('support')}>
+                        <LifeBuoy className="mr-2 h-4 w-4" />
+                        Support
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem onClick={() => navigate('/dashboard/api-keys')}>
+                        API Keys
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem onClick={handleSignOut} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
               ) : (
                 <>
                   <Link to="/login">

@@ -1,11 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoSave } from "@/hooks/useAutoSave";
-import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
 import { TemplateSelector } from "@/components/website-builder/TemplateSelector";
 import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
@@ -456,19 +453,6 @@ export default function WebsiteBuilder() {
       <div className="fixed inset-0 bg-gray-50 overflow-hidden flex pt-16">
         {/* Auto-save indicator */}
         <AutoSaveIndicator status={autoSaveStatus} />
-
-        {/* Preview Button - positioned at top right of content area */}
-        <div className="absolute top-4 right-4 z-50">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePreview}
-            className="flex items-center gap-2 bg-white shadow-lg border-2 hover:shadow-xl transition-all duration-200 hover:scale-105"
-          >
-            <Eye className="h-4 w-4" />
-            <span className="hidden md:inline font-medium">Preview</span>
-          </Button>
-        </div>
 
         {/* Main Preview Area */}
         <div className="flex-1 overflow-auto">
