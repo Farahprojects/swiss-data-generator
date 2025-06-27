@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -139,12 +140,6 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                     style={getButtonStyles()}
                   >
                     {customizationData.buttonText || "Spark Innovation"}
-                  </Button>
-                  <Button 
-                    className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full border-2 hover:bg-white hover:shadow-lg transition-all min-h-[44px]"
-                    style={getButtonStyles(true)}
-                  >
-                    Explore Methods
                   </Button>
                 </div>
               </div>
