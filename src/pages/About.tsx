@@ -94,8 +94,12 @@ const About = () => {
               {/* OpenAI Support Card */}
               <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all">
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-24 h-24 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-full mb-6 flex items-center justify-center">
-                    <Rocket className="w-12 h-12 text-primary" />
+                  <div className="w-24 h-24 mb-6 rounded-full overflow-hidden bg-white flex items-center justify-center p-4">
+                    <img 
+                      src="/lovable-uploads/3ae82216-0e7c-428d-9da6-9d37b2dca09a.png" 
+                      alt="OpenAI" 
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                   <h3 className="text-2xl font-bold mb-2 text-primary">OpenAI</h3>
                   <p className="text-lg font-medium text-gray-700 mb-2">Creative Technology Support</p>
