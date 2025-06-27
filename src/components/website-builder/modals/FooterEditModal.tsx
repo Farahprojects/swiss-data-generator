@@ -1,5 +1,3 @@
-
-
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +11,7 @@ interface FooterEditModalProps {
   onClose: () => void;
   customizationData: any;
   onChange: (field: string, value: any) => void;
+  templateName?: string;
 }
 
 const colorOptions = [
@@ -43,8 +42,11 @@ export const FooterEditModal: React.FC<FooterEditModalProps> = ({
   isOpen,
   onClose,
   customizationData,
-  onChange
+  onChange,
+  templateName
 }) => {
+  const colorSectionLabel = templateName === 'Creative' ? 'Button Text Color' : 'Brand Color';
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -82,7 +84,7 @@ export const FooterEditModal: React.FC<FooterEditModalProps> = ({
             </div>
 
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-3 block">Brand Color</Label>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">{colorSectionLabel}</Label>
               <div className="grid grid-cols-10 gap-2">
                 {colorOptions.map((color) => (
                   <button
@@ -137,4 +139,3 @@ export const FooterEditModal: React.FC<FooterEditModalProps> = ({
     </Dialog>
   );
 };
-
