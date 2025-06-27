@@ -67,20 +67,20 @@ const About = () => {
                       href="https://www.linkedin.com/public-profile/settings?trk=d_flagship3_profile_self_view_public_profile"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary hover:text-primary/80 transition-colors"
+                      className="text-black hover:text-gray-700 transition-colors"
                     >
-                      <Linkedin className="w-6 h-6" />
+                      <Linkedin className="w-5 h-5" />
                     </a>
                     <a
                       href="https://x.com/farahprojects"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-primary hover:text-primary/80 transition-colors"
+                      className="hover:opacity-80 transition-opacity"
                     >
                       <img 
                         src="/lovable-uploads/0b87b08c-6306-4b6b-9156-4d375f61b05f.png" 
                         alt="X (formerly Twitter)" 
-                        className="w-6 h-6 hover:opacity-80 transition-opacity"
+                        className="w-5 h-5"
                       />
                     </a>
                   </div>
