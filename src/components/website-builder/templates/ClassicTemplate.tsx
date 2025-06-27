@@ -1,10 +1,10 @@
-
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { handleServicePurchase, hasValidPrice } from "@/utils/servicePurchase";
+import { getValidImageUrl } from "@/utils/imageValidation";
 
 interface TemplateProps {
   customizationData: any;
@@ -33,9 +33,9 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
   const sectionPadding = isPreview ? 'py-6' : 'py-12 sm:py-16 lg:py-20';
   const heroPadding = isPreview ? 'py-8' : 'py-16 sm:py-24 lg:py-32';
 
-  // Check if header image exists - match Creative template exactly
-  const headerImageUrl = customizationData.headerImageData?.url || customizationData.headerImageUrl;
-  const aboutImageUrl = customizationData.aboutImageData?.url || customizationData.aboutImageUrl;
+  // Use the same image validation logic as Creative template
+  const headerImageUrl = getValidImageUrl(customizationData.headerImageData) || getValidImageUrl(customizationData.headerImageUrl);
+  const aboutImageUrl = getValidImageUrl(customizationData.aboutImageData) || getValidImageUrl(customizationData.aboutImageUrl);
 
   // Create report service card with customizable data
   const reportService = {
@@ -107,7 +107,7 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
     <div className="bg-cream-50" style={{ fontFamily: `${fontFamily}, serif` }}>
       {/* Classic Centered Hero */}
       <section className={`relative ${heroPadding} ${!headerImageUrl ? 'bg-gradient-to-b from-amber-50 to-white' : ''}`}>
-        {/* Header background image - match Creative template exactly */}
+        {/* Header background image - now using proper validation */}
         {headerImageUrl && (
           <div 
             className="absolute inset-0 bg-cover bg-center"
@@ -147,7 +147,7 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-3 lg:gap-12 items-center">
             <div className="lg:col-span-1 order-2 lg:order-1">
-              {/* About image - match Creative template exactly */}
+              {/* About image - now using proper validation */}
               {aboutImageUrl ? (
                 <img
                   src={aboutImageUrl}
@@ -191,8 +191,8 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
           {allServices.length > 0 ? (
             <div className="space-y-8 sm:space-y-12">
               {allServices.map((service: any, index: number) => {
-                // Service image - match Creative template exactly
-                const serviceImageUrl = service.imageData?.url || service.imageUrl;
+                // Service image - now using proper validation
+                const serviceImageUrl = getValidImageUrl(service.imageData) || getValidImageUrl(service.imageUrl);
                 
                 return (
                   <motion.div
@@ -203,7 +203,7 @@ export const ClassicTemplate = ({ customizationData, isPreview = false }: Templa
                     className={`grid gap-6 lg:gap-8 lg:grid-cols-2 items-center ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}
                   >
                     <div className={index % 2 === 1 ? 'lg:order-2' : 'order-2 lg:order-1'}>
-                      {/* Service image rendering - match Creative template exactly */}
+                      {/* Service image rendering - now using proper validation */}
                       {serviceImageUrl ? (
                         <img
                           src={serviceImageUrl}
