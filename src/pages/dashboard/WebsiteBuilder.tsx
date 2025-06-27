@@ -457,7 +457,7 @@ export default function WebsiteBuilder() {
         <AutoSaveIndicator status={autoSaveStatus} />
 
         {/* Preview button at top */}
-        <div className="absolute top-20 right-4 z-50">
+        <div className="absolute top-4 right-4 z-50">
           <Button
             variant="outline"
             size="sm"
