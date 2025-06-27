@@ -1,4 +1,5 @@
 
+
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useParams } from "react-router-dom";
@@ -134,7 +135,7 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
                 <p className="text-lg sm:text-xl mb-6 sm:mb-8 text-gray-700 leading-relaxed">
                   {customizationData.tagline || "Unleashing Creativity Through Innovative Coaching"}
                 </p>
-                <div className="flex flex-col sm:flex-row flex-wrap gap-4">
+                <div className="flex justify-center">
                   <Button 
                     className="py-3 px-6 sm:py-4 sm:px-8 text-base sm:text-lg rounded-full shadow-lg transform hover:scale-105 transition-transform min-h-[44px]"
                     style={getButtonStyles()}
@@ -175,6 +176,25 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
         </div>
         
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6">
+          {/* Round About Me Image */}
+          {(customizationData.aboutImageData?.url || customizationData.aboutImageUrl) && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+              className="flex justify-center mb-8 sm:mb-12"
+            >
+              <div className="relative">
+                <img
+                  src={customizationData.aboutImageData?.url || customizationData.aboutImageUrl}
+                  alt="About me"
+                  className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 rounded-full object-cover shadow-2xl ring-4 ring-white/50"
+                />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-orange-400/20 to-purple-400/20"></div>
+              </div>
+            </motion.div>
+          )}
+          
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -306,3 +326,4 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
     </div>
   );
 };
+
