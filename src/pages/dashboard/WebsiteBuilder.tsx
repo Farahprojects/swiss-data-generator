@@ -6,6 +6,7 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { TemplateSelector } from "@/components/website-builder/TemplateSelector";
 import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
+import { FloatingSideMenu } from "@/components/website-builder/FloatingSideMenu";
 import { AutoSaveIndicator } from "@/components/website-builder/AutoSaveIndicator";
 import { TemplateSwitchConfirmDialog } from "@/components/website-builder/TemplateSwithConfirmDialog";
 import { HeroEditModal } from "@/components/website-builder/modals/HeroEditModal";
@@ -19,8 +20,6 @@ import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
 
 interface WebsiteTemplate {
   id: string;
@@ -456,19 +455,6 @@ export default function WebsiteBuilder() {
         {/* Auto-save indicator */}
         <AutoSaveIndicator status={autoSaveStatus} />
 
-        {/* Preview button at top */}
-        <div className="absolute top-4 right-4 z-50">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePreview}
-            className="bg-white shadow-lg border-2 hover:shadow-xl transition-all duration-200 hover:scale-105"
-          >
-            <Eye className="h-4 w-4" />
-            {!isMobile && <span className="ml-2 text-sm font-medium">Preview</span>}
-          </Button>
-        </div>
-
         {/* Main Preview Area */}
         <div className="flex-1 overflow-auto">
           <TemplatePreview
@@ -477,6 +463,11 @@ export default function WebsiteBuilder() {
             isFullScreen={true}
           />
         </div>
+
+        {/* Floating side menu - only Preview button */}
+        <FloatingSideMenu
+          onPreview={handlePreview}
+        />
 
         {/* Template switch confirmation dialog */}
         <TemplateSwitchConfirmDialog
