@@ -3,8 +3,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=GT+Sectra:wght@400;500;700&display=swap');
-
 @layer base {
   :root {
     --background: 0 0% 100%;
