@@ -54,11 +54,18 @@ export const FontSelector = ({
           {currentFontData?.name || 'Select Font'}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
-        <div className="p-4">
+      <PopoverContent 
+        className="w-64 p-0 z-[100]" 
+        align="start"
+        side="bottom"
+        sideOffset={5}
+        avoidCollisions={true}
+        collisionPadding={20}
+      >
+        <div className="p-3">
           {showCategories ? (
             <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-4">
+              <TabsList className="grid w-full grid-cols-4 mb-3">
                 <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
                 <TabsTrigger value="sans-serif" className="text-xs">Sans</TabsTrigger>
                 <TabsTrigger value="serif" className="text-xs">Serif</TabsTrigger>
@@ -66,32 +73,32 @@ export const FontSelector = ({
               </TabsList>
               
               <TabsContent value="all">
-                <ScrollArea className="h-64">
-                  <div className="space-y-1 pr-3">
+                <ScrollArea className="h-48">
+                  <div className="space-y-1 pr-2">
                     {FONT_REGISTRY.map(renderFontButton)}
                   </div>
                 </ScrollArea>
               </TabsContent>
               
               <TabsContent value="sans-serif">
-                <ScrollArea className="h-64">
-                  <div className="space-y-1 pr-3">
+                <ScrollArea className="h-48">
+                  <div className="space-y-1 pr-2">
                     {getFontsByCategory('sans-serif').map(renderFontButton)}
                   </div>
                 </ScrollArea>
               </TabsContent>
               
               <TabsContent value="serif">
-                <ScrollArea className="h-64">
-                  <div className="space-y-1 pr-3">
+                <ScrollArea className="h-48">
+                  <div className="space-y-1 pr-2">
                     {getFontsByCategory('serif').map(renderFontButton)}
                   </div>
                 </ScrollArea>
               </TabsContent>
               
               <TabsContent value="display">
-                <ScrollArea className="h-64">
-                  <div className="space-y-1 pr-3">
+                <ScrollArea className="h-48">
+                  <div className="space-y-1 pr-2">
                     {getFontsByCategory('display').map(renderFontButton)}
                   </div>
                 </ScrollArea>
@@ -99,9 +106,9 @@ export const FontSelector = ({
             </Tabs>
           ) : (
             <div className="space-y-2">
-              <div className="text-sm font-medium mb-3">Font Family</div>
-              <ScrollArea className="h-64">
-                <div className="space-y-1 pr-3">
+              <div className="text-sm font-medium mb-2">Font Family</div>
+              <ScrollArea className="h-48">
+                <div className="space-y-1 pr-2">
                   {FONT_REGISTRY.map(renderFontButton)}
                 </div>
               </ScrollArea>
