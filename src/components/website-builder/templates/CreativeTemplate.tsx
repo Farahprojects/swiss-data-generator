@@ -121,14 +121,15 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
           ></div>
         )}
         
-        <div className={`relative z-10 ${heroSection} flex items-center`}>
+        <div className={`relative z-10 ${heroSection} flex items-center ${hasHeaderImage ? "justify-center" : ""}`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1, type: "spring" }}
+              className={hasHeaderImage ? "lg:col-span-2 text-center" : ""}
             >
-              <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl">
+              <div className={`bg-white/80 backdrop-blur-sm rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl ${hasHeaderImage ? "mt-16 sm:mt-24 lg:mt-32" : ""}`}>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent leading-tight">
                   {customizationData.coachName || "Jamie Rivers"}
                 </h1>
@@ -146,23 +147,25 @@ export const CreativeTemplate = ({ customizationData, isPreview = false }: Templ
               </div>
             </motion.div>
             
-            <motion.div
-              initial={{ opacity: 0, rotate: -10 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              transition={{ duration: 1, delay: 0.3 }}
-              className="relative mt-8 lg:mt-0"
-            >
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="h-12 sm:h-16 lg:h-32 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl transform rotate-3"></div>
-                  <div className="h-16 sm:h-24 lg:h-48 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl transform -rotate-2"></div>
+            {!hasHeaderImage && (
+              <motion.div
+                initial={{ opacity: 0, rotate: -10 }}
+                animate={{ opacity: 1, rotate: 0 }}
+                transition={{ duration: 1, delay: 0.3 }}
+                className="relative mt-8 lg:mt-0"
+              >
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="h-12 sm:h-16 lg:h-32 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl transform rotate-3"></div>
+                    <div className="h-16 sm:h-24 lg:h-48 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl transform -rotate-2"></div>
+                  </div>
+                  <div className="space-y-3 sm:space-y-4 mt-3 sm:mt-4 lg:mt-8">
+                    <div className="h-14 sm:h-20 lg:h-40 bg-gradient-to-br from-blue-400 to-teal-500 rounded-2xl transform rotate-1"></div>
+                    <div className="h-12 sm:h-18 lg:h-36 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl transform -rotate-3"></div>
+                  </div>
                 </div>
-                <div className="space-y-3 sm:space-y-4 mt-3 sm:mt-4 lg:mt-8">
-                  <div className="h-14 sm:h-20 lg:h-40 bg-gradient-to-br from-blue-400 to-teal-500 rounded-2xl transform rotate-1"></div>
-                  <div className="h-12 sm:h-18 lg:h-36 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl transform -rotate-3"></div>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
           </div>
         </div>
       </section>
