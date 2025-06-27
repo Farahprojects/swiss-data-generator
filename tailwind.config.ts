@@ -106,7 +106,10 @@ export default {
 				'opensans': ['Open Sans', 'sans-serif'],
 				'lato': ['Lato', 'sans-serif'],
 				'montserrat': ['Montserrat', 'sans-serif'],
+				'poppins': ['Poppins', 'sans-serif'],
 				'gt-sectra': ['GT Sectra', 'serif'],
+				'playfair': ['Playfair Display', 'serif'],
+				'merriweather': ['Merriweather', 'serif'],
 			}
 		}
 	},
