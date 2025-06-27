@@ -28,34 +28,6 @@ export const FontSelector = ({
   
   const currentFontData = getFontByValue(currentFont);
   
-  useEffect(() => {
-    if (isOpen && scrollAreaRef.current && contentRef.current) {
-      // Debug measurements
-      const scrollArea = scrollAreaRef.current;
-      const content = contentRef.current;
-      
-      console.log('=== FONT SELECTOR DEBUG ===');
-      console.log('ScrollArea height:', scrollArea.offsetHeight);
-      console.log('ScrollArea clientHeight:', scrollArea.clientHeight);
-      console.log('ScrollArea scrollHeight:', scrollArea.scrollHeight);
-      console.log('Content height:', content.offsetHeight);
-      console.log('Content scrollHeight:', content.scrollHeight);
-      console.log('Number of fonts:', FONT_REGISTRY.length);
-      console.log('Can scroll?', scrollArea.scrollHeight > scrollArea.clientHeight);
-      console.log('ScrollArea classes:', scrollArea.className);
-      console.log('Content classes:', content.className);
-      
-      // Check if there are any overflow issues
-      const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        console.log('Viewport height:', (viewport as HTMLElement).offsetHeight);
-        console.log('Viewport scrollHeight:', (viewport as HTMLElement).scrollHeight);
-      }
-      
-      console.log('========================');
-    }
-  }, [isOpen]);
-  
   const renderFontButton = (font: typeof FONT_REGISTRY[0]) => (
     <Button
       key={font.value}
@@ -85,14 +57,14 @@ export const FontSelector = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-64 p-0 z-[100]" 
+        className="w-64 p-0 z-[100] overflow-visible" 
         align="start"
         side="bottom"
         sideOffset={5}
         avoidCollisions={true}
         collisionPadding={20}
       >
-        <div className="p-3">
+        <div className="p-3 overflow-visible">
           {showCategories ? (
             <Tabs defaultValue="all" className="w-full">
               <TabsList className="grid w-full grid-cols-4 mb-3">
@@ -103,7 +75,7 @@ export const FontSelector = ({
               </TabsList>
               
               <TabsContent value="all">
-                <ScrollArea className="h-48" ref={scrollAreaRef}>
+                <ScrollArea className="h-48 overflow-y-auto" ref={scrollAreaRef}>
                   <div className="space-y-1 pr-2" ref={contentRef}>
                     {FONT_REGISTRY.map(renderFontButton)}
                   </div>
@@ -111,7 +83,7 @@ export const FontSelector = ({
               </TabsContent>
               
               <TabsContent value="sans-serif">
-                <ScrollArea className="h-48">
+                <ScrollArea className="h-48 overflow-y-auto">
                   <div className="space-y-1 pr-2">
                     {getFontsByCategory('sans-serif').map(renderFontButton)}
                   </div>
@@ -119,7 +91,7 @@ export const FontSelector = ({
               </TabsContent>
               
               <TabsContent value="serif">
-                <ScrollArea className="h-48">
+                <ScrollArea className="h-48 overflow-y-auto">
                   <div className="space-y-1 pr-2">
                     {getFontsByCategory('serif').map(renderFontButton)}
                   </div>
@@ -127,7 +99,7 @@ export const FontSelector = ({
               </TabsContent>
               
               <TabsContent value="display">
-                <ScrollArea className="h-48">
+                <ScrollArea className="h-48 overflow-y-auto">
                   <div className="space-y-1 pr-2">
                     {getFontsByCategory('display').map(renderFontButton)}
                   </div>
@@ -137,7 +109,7 @@ export const FontSelector = ({
           ) : (
             <div className="space-y-2">
               <div className="text-sm font-medium mb-2">Font Family</div>
-              <ScrollArea className="h-48" ref={scrollAreaRef}>
+              <ScrollArea className="h-48 overflow-y-auto" ref={scrollAreaRef}>
                 <div className="space-y-1 pr-2" ref={contentRef}>
                   {FONT_REGISTRY.map(renderFontButton)}
                 </div>
