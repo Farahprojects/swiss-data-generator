@@ -1,11 +1,10 @@
-
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { FontSelector } from "@/components/shared/FontSelector";
 import { X } from "lucide-react";
 
 interface HeroEditModalProps {
@@ -14,6 +13,15 @@ interface HeroEditModalProps {
   customizationData: any;
   onChange: (field: string, value: any) => void;
 }
+
+const introFontStyles = [
+  { name: 'Modern', value: 'modern', preview: 'Clean and contemporary' },
+  { name: 'Elegant', value: 'elegant', preview: 'Sophisticated and refined' },
+  { name: 'Bold', value: 'bold', preview: 'Strong and impactful' },
+  { name: 'Handwritten', value: 'handwritten', preview: 'Personal and warm' },
+  { name: 'Classic', value: 'classic', preview: 'Timeless and traditional' },
+  { name: 'Minimal', value: 'minimal', preview: 'Simple and understated' }
+];
 
 const introColorOptions = [
   { name: 'Black', value: '#000000' },
@@ -71,13 +79,25 @@ export const HeroEditModal: React.FC<HeroEditModalProps> = ({
             </div>
 
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-3 block">Font Family</Label>
-              <FontSelector
-                onFontSelect={(fontClass) => onChange('fontFamily', fontClass)}
-                currentFont={customizationData.fontFamily || 'font-inter'}
-                triggerVariant="outline"
-                triggerSize="default"
-              />
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Font Style</Label>
+              <Select
+                value={customizationData.heroFontStyle || 'modern'}
+                onValueChange={(value) => onChange('heroFontStyle', value)}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {introFontStyles.map((style) => (
+                    <SelectItem key={style.value} value={style.value}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{style.name}</span>
+                        <span className="text-xs text-gray-500">{style.preview}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
