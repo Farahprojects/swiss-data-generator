@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -80,7 +79,7 @@ export const HeroEditModal: React.FC<HeroEditModalProps> = ({
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select font family" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-48">
                   {FONT_REGISTRY.map((font) => (
                     <SelectItem key={font.value} value={font.value}>
                       <div className={`${font.class} flex flex-col items-start`}>
