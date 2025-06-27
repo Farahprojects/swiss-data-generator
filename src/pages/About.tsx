@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Star, Award, Rocket, Linkedin, X } from "lucide-react";
+import { Star, Award, Rocket, Linkedin } from "lucide-react";
 
 const About = () => {
   return (
@@ -77,7 +77,11 @@ const About = () => {
                       rel="noopener noreferrer"
                       className="text-primary hover:text-primary/80 transition-colors"
                     >
-                      <X className="w-6 h-6" />
+                      <img 
+                        src="/lovable-uploads/0b87b08c-6306-4b6b-9156-4d375f61b05f.png" 
+                        alt="X (formerly Twitter)" 
+                        className="w-6 h-6 hover:opacity-80 transition-opacity"
+                      />
                     </a>
                   </div>
                 </div>
