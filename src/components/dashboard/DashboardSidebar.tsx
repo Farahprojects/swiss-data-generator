@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from "react-router-dom";
 import { 
   Home, 
@@ -120,7 +119,7 @@ export function SimpleSidebarMenu(props: SidebarMenuProps) {
                   </li>
                 ))}
                 
-                {/* Templates Button */}
+                {/* Change Template Button */}
                 <li className="group/menu-item relative mt-2 pt-2 border-t border-gray-200">
                   <button
                     className="flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none transition-all duration-200 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 text-foreground hover:bg-accent hover:text-accent-foreground"

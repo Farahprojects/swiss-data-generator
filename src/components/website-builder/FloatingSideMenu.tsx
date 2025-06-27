@@ -1,23 +1,15 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Eye, Save } from "lucide-react";
+import { Eye } from "lucide-react";
 
 interface FloatingSideMenuProps {
   onPreview: () => void;
-  onSave: () => void;
-  onPublish: () => void;
-  isSaving: boolean;
-  isPublishing: boolean;
-  saveButtonText: string;
-  publishButtonText: string;
   website?: any;
 }
 
 export const FloatingSideMenu: React.FC<FloatingSideMenuProps> = ({
   onPreview,
-  onSave,
-  isSaving,
   website
 }) => {
   return (
@@ -30,17 +22,6 @@ export const FloatingSideMenu: React.FC<FloatingSideMenuProps> = ({
       >
         <Eye className="h-4 w-4" />
         <span className="text-xs font-medium">Preview</span>
-      </Button>
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onSave}
-        disabled={isSaving}
-        className="w-20 h-16 flex flex-col items-center justify-center space-y-1 bg-white shadow-lg border-2 hover:shadow-xl transition-all duration-200 hover:scale-105"
-      >
-        <Save className="h-4 w-4" />
-        <span className="text-xs font-medium text-center">{isSaving ? 'Saving...' : 'Save'}</span>
       </Button>
       
       {website?.has_unpublished_changes && (

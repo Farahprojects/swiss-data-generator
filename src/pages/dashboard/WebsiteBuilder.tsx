@@ -2,10 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAutoSave } from "@/hooks/useAutoSave";
 import { TemplateSelector } from "@/components/website-builder/TemplateSelector";
 import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
 import { FloatingSideMenu } from "@/components/website-builder/FloatingSideMenu";
+import { AutoSaveIndicator } from "@/components/website-builder/AutoSaveIndicator";
+import { TemplateSwitchConfirmDialog } from "@/components/website-builder/TemplateSwithConfirmDialog";
 import { HeroEditModal } from "@/components/website-builder/modals/HeroEditModal";
 import { IntroEditModal } from "@/components/website-builder/modals/IntroEditModal";
 import { ImagesEditModal } from "@/components/website-builder/modals/ImagesEditModal";
@@ -45,14 +48,102 @@ export default function WebsiteBuilder() {
   const [customizationData, setCustomizationData] = useState<any>({});
   const [userSlug, setUserSlug] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [openModal, setOpenModal] = useState<string | null>(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [showTemplateSwitchDialog, setShowTemplateSwitchDialog] = useState(false);
 
   useEffect(() => {
     loadTemplatesAndWebsite();
   }, [user]);
+
+  // Auto-save functionality
+  const handleAutoSave = async (data: any) => {
+    if (!user || !selectedTemplate) return;
+
+    setAutoSaveStatus('saving');
+    
+    try {
+      if (website) {
+        // Update existing website draft
+        const { error } = await supabase
+          .from('coach_websites')
+          .update({
+            template_id: selectedTemplate.id,
+            draft_customization_data: data,
+            has_unpublished_changes: true
+          })
+          .eq('id', website.id);
+
+        if (error) throw error;
+        
+        // Update local state
+        setWebsite(prev => prev ? {
+          ...prev,
+          template_id: selectedTemplate.id,
+          draft_customization_data: data,
+          has_unpublished_changes: true
+        } : null);
+      } else {
+        // Create new website with draft data
+        const { data: newWebsite, error } = await supabase
+          .from('coach_websites')
+          .insert({
+            coach_id: user.id,
+            template_id: selectedTemplate.id,
+            site_slug: userSlug,
+            customization_data: {}, // Empty published data
+            draft_customization_data: data,
+            has_unpublished_changes: true
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        setWebsite(newWebsite);
+      }
+
+      setAutoSaveStatus('saved');
+      // Clear saved status after 2 seconds
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+
+    } catch (error: any) {
+      console.error("Auto-save error:", error);
+      setAutoSaveStatus('error');
+      setTimeout(() => setAutoSaveStatus('idle'), 3000);
+      
+      logToSupabase("Error auto-saving website draft", {
+        level: 'error',
+        page: 'WebsiteBuilder',
+        data: { 
+          error: error.message,
+          templateId: selectedTemplate?.id,
+          hasUser: !!user 
+        }
+      });
+    }
+  };
+
+  const { resetAutoSave } = useAutoSave({
+    data: customizationData,
+    onSave: handleAutoSave,
+    delay: 500,
+    enabled: !!selectedTemplate && !!user
+  });
+
+  // Add beforeunload protection for unpublished changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (website?.has_unpublished_changes) {
+        e.preventDefault();
+        e.returnValue = 'You have unpublished changes. Are you sure you want to leave?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [website?.has_unpublished_changes]);
 
   const loadTemplatesAndWebsite = async () => {
     if (!user) return;
@@ -225,98 +316,12 @@ export default function WebsiteBuilder() {
         ...customizationData
       };
       setCustomizationData(defaultData);
+      resetAutoSave(); // Reset auto-save to prevent immediate save of default data
     }
   };
 
   const handleCustomizationChange = (field: string, value: any) => {
     setCustomizationData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async () => {
-    if (!user || !selectedTemplate) {
-      console.error("Cannot save: missing user or selectedTemplate", { 
-        hasUser: !!user, 
-        hasSelectedTemplate: !!selectedTemplate,
-        templateId: selectedTemplate?.id 
-      });
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Missing user or template data"
-      });
-      return;
-    }
-
-    console.log("Saving draft with template ID:", selectedTemplate.id);
-    setIsSaving(true);
-
-    try {
-      if (website) {
-        // Update existing website draft
-        const { error } = await supabase
-          .from('coach_websites')
-          .update({
-            template_id: selectedTemplate.id,
-            draft_customization_data: customizationData,
-            has_unpublished_changes: true
-          })
-          .eq('id', website.id);
-
-        if (error) throw error;
-        
-        // Update local state
-        setWebsite(prev => prev ? {
-          ...prev,
-          template_id: selectedTemplate.id,
-          draft_customization_data: customizationData,
-          has_unpublished_changes: true
-        } : null);
-        
-        console.log("Draft saved successfully");
-      } else {
-        // Create new website with draft data
-        const { data, error } = await supabase
-          .from('coach_websites')
-          .insert({
-            coach_id: user.id,
-            template_id: selectedTemplate.id,
-            site_slug: userSlug,
-            customization_data: {}, // Empty published data
-            draft_customization_data: customizationData,
-            has_unpublished_changes: true
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        setWebsite(data);
-        console.log("Website created with draft data:", data);
-      }
-
-      toast({
-        title: "Draft Saved",
-        description: "Your changes have been saved as a draft."
-      });
-
-    } catch (error: any) {
-      console.error("Save error:", error);
-      logToSupabase("Error saving website draft", {
-        level: 'error',
-        page: 'WebsiteBuilder',
-        data: { 
-          error: error.message,
-          templateId: selectedTemplate.id,
-          hasUser: !!user 
-        }
-      });
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save website changes."
-      });
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const handlePublish = async () => {
@@ -333,10 +338,6 @@ export default function WebsiteBuilder() {
     console.log("Starting publish process...");
     setIsPublishing(true);
     try {
-      // Always save draft before publishing
-      console.log("Saving draft before publish...");
-      await handleSave();
-      
       console.log("Opening publish modal...");
       setShowPublishModal(true);
     } catch (error: any) {
@@ -392,18 +393,6 @@ export default function WebsiteBuilder() {
     }
   };
 
-  const getPublishButtonText = () => {
-    if (isPublishing) return 'Publishing...';
-    if (!website) return 'Publish';
-    if (website.is_published) return 'Update Site';
-    return 'Publish Changes';
-  };
-
-  const getSaveButtonText = () => {
-    if (isSaving) return 'Saving...';
-    return 'Save Draft';
-  };
-
   const handleOpenModal = (section: string) => {
     setOpenModal(section);
   };
@@ -413,7 +402,18 @@ export default function WebsiteBuilder() {
   };
 
   const handleChangeTemplate = () => {
+    if (website?.has_unpublished_changes) {
+      setShowTemplateSwitchDialog(true);
+    } else {
+      proceedWithTemplateChange();
+    }
+  };
+
+  const proceedWithTemplateChange = () => {
     setSelectedTemplate(null);
+    setCustomizationData({});
+    resetAutoSave();
+    setShowTemplateSwitchDialog(false);
   };
 
   if (isLoading) {
@@ -452,6 +452,9 @@ export default function WebsiteBuilder() {
       />
       
       <div className="fixed inset-0 bg-gray-50 overflow-hidden flex pt-16">
+        {/* Auto-save indicator */}
+        <AutoSaveIndicator status={autoSaveStatus} />
+
         {/* Main Preview Area */}
         <div className="flex-1 overflow-auto">
           <TemplatePreview
@@ -461,16 +464,23 @@ export default function WebsiteBuilder() {
           />
         </div>
 
-        {/* Floating side menu */}
+        {/* Floating side menu - now only has Preview button */}
         <FloatingSideMenu
           onPreview={handlePreview}
-          onSave={handleSave}
-          onPublish={handlePublish}
-          isSaving={isSaving}
-          isPublishing={isPublishing}
-          saveButtonText={getSaveButtonText()}
-          publishButtonText={getPublishButtonText()}
+          onSave={() => {}} // Remove save functionality
+          onPublish={() => {}} // Remove publish functionality  
+          isSaving={false} // Remove saving state
+          isPublishing={false} // Remove publishing state
+          saveButtonText="" // Remove save button text
+          publishButtonText="" // Remove publish button text
           website={website}
+        />
+
+        {/* Template switch confirmation dialog */}
+        <TemplateSwitchConfirmDialog
+          isOpen={showTemplateSwitchDialog}
+          onClose={() => setShowTemplateSwitchDialog(false)}
+          onConfirm={proceedWithTemplateChange}
         />
 
         {/* Edit modals - keep existing code (all modal components) */}
