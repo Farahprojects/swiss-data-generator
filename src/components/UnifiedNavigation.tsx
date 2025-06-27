@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -140,14 +139,13 @@ const UnifiedNavigation = ({
     setSearchParams(next, { replace: true });
   };
 
-  // Determine if we are on a dashboard page where sidebar/burger is shown
+  // Show burger menu for website builder on BOTH mobile AND desktop
   const showDashboardBurgerMenu =
     isLoggedIn &&
     (
       isDashboardClientsPage ||
-      (isDashboardPageWithBurgerMenu && isMobile) ||
-      (isMainDashboard && isMobile) ||
-      (isDashboardPageWithBurgerMenu && !isMobile) // <-- add: show burger on desktop for these pages too
+      (isDashboardPageWithBurgerMenu) ||
+      (isMainDashboard && isMobile)
     );
 
   // Determine nav wrapper padding
@@ -224,40 +222,6 @@ const UnifiedNavigation = ({
             <div className="flex items-center space-x-4">
               {isLoggedIn ? (
                 <>
-                  {/* Website Builder Action Buttons */}
-                  {isWebsiteBuilderPage && (
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant={isMobile ? "ghost" : "outline"}
-                        size="sm"
-                        onClick={handlePreview}
-                        className={`flex items-center gap-2 ${isMobile ? 'border-0 bg-transparent hover:bg-transparent p-2' : ''}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span className="hidden md:inline">Preview</span>
-                      </Button>
-                      <Button
-                        variant={isMobile ? "ghost" : "default"}
-                        size="sm"
-                        onClick={onPublish}
-                        disabled={isPublishing}
-                        className={`flex items-center gap-2 ${isMobile ? 'border-0 bg-transparent hover:bg-transparent p-2' : ''}`}
-                      >
-                        {isPublishing ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span className="hidden md:inline">Publishing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Globe className="h-4 w-4" />
-                            <span className="hidden md:inline">Publish</span>
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                  
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="p-0 h-auto rounded-full">
@@ -371,7 +335,7 @@ const UnifiedNavigation = ({
                   activeFilter={activeFilter}
                   unreadCount={unreadCount}
                   onFilterChange={onFilterChange}
-                  isWebsiteBuilderPageMobile={isWebsiteBuilderPageMobile && location.pathname === '/dashboard/website-builder'}
+                  isWebsiteBuilderPageMobile={location.pathname === '/dashboard/website-builder'}
                   onOpenModal={onOpenModal}
                   onChangeTemplate={onChangeTemplate}
                   onPublish={onPublish}
