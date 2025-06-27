@@ -8,7 +8,6 @@ import { TemplatePreview } from "@/components/website-builder/TemplatePreview";
 import { PublishingModal } from "@/components/website-builder/PublishingModal";
 import { AutoSaveIndicator } from "@/components/website-builder/AutoSaveIndicator";
 import { TemplateSwitchConfirmDialog } from "@/components/website-builder/TemplateSwithConfirmDialog";
-import { FixedWebsiteBuilderPanel } from "@/components/website-builder/FixedWebsiteBuilderPanel";
 import { HeroEditModal } from "@/components/website-builder/modals/HeroEditModal";
 import { IntroEditModal } from "@/components/website-builder/modals/IntroEditModal";
 import { ImagesEditModal } from "@/components/website-builder/modals/ImagesEditModal";
@@ -453,16 +452,7 @@ export default function WebsiteBuilder() {
         isPublishing={isPublishing}
       />
       
-      {/* Fixed left panel for desktop */}
-      {!isMobile && (
-        <FixedWebsiteBuilderPanel
-          onPreview={handlePreview}
-          onPublish={handlePublish}
-          isPublishing={isPublishing}
-        />
-      )}
-      
-      <div className={`fixed inset-0 bg-gray-50 overflow-hidden flex pt-16 ${!isMobile ? 'pl-16' : ''}`}>
+      <div className="fixed inset-0 bg-gray-50 overflow-hidden flex pt-16">
         {/* Auto-save indicator */}
         <AutoSaveIndicator status={autoSaveStatus} />
 
