@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Type } from 'lucide-react';
 import { FONT_REGISTRY, getFontsByCategory, getFontByValue } from '@/utils/fontRegistry';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
 
 interface FontSelectorProps {
   onFontSelect: (fontClass: string) => void;
@@ -56,68 +57,70 @@ export const FontSelector = ({
           {currentFontData?.name || 'Select Font'}
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-64 p-0 z-[100] overflow-visible" 
-        align="start"
-        side="bottom"
-        sideOffset={5}
-        avoidCollisions={true}
-        collisionPadding={20}
-      >
-        <div className="p-3 overflow-visible">
-          {showCategories ? (
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-3">
-                <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
-                <TabsTrigger value="sans-serif" className="text-xs">Sans</TabsTrigger>
-                <TabsTrigger value="serif" className="text-xs">Serif</TabsTrigger>
-                <TabsTrigger value="display" className="text-xs">Display</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="all">
-                <ScrollArea className="h-48 overflow-y-auto" ref={scrollAreaRef}>
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+          className="z-[9999] w-64 rounded-md border bg-popover p-0 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+          align="start"
+          side="bottom"
+          sideOffset={5}
+          avoidCollisions={true}
+          collisionPadding={20}
+        >
+          <div className="p-3">
+            {showCategories ? (
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 mb-3">
+                  <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
+                  <TabsTrigger value="sans-serif" className="text-xs">Sans</TabsTrigger>
+                  <TabsTrigger value="serif" className="text-xs">Serif</TabsTrigger>
+                  <TabsTrigger value="display" className="text-xs">Display</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="all">
+                  <div className="h-48 overflow-y-auto overscroll-contain" ref={scrollAreaRef}>
+                    <div className="space-y-1 pr-2" ref={contentRef}>
+                      {FONT_REGISTRY.map(renderFontButton)}
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="sans-serif">
+                  <div className="h-48 overflow-y-auto overscroll-contain">
+                    <div className="space-y-1 pr-2">
+                      {getFontsByCategory('sans-serif').map(renderFontButton)}
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="serif">
+                  <div className="h-48 overflow-y-auto overscroll-contain">
+                    <div className="space-y-1 pr-2">
+                      {getFontsByCategory('serif').map(renderFontButton)}
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="display">
+                  <div className="h-48 overflow-y-auto overscroll-contain">
+                    <div className="space-y-1 pr-2">
+                      {getFontsByCategory('display').map(renderFontButton)}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-sm font-medium mb-2">Font Family</div>
+                <div className="h-48 overflow-y-auto overscroll-contain" ref={scrollAreaRef}>
                   <div className="space-y-1 pr-2" ref={contentRef}>
                     {FONT_REGISTRY.map(renderFontButton)}
                   </div>
-                </ScrollArea>
-              </TabsContent>
-              
-              <TabsContent value="sans-serif">
-                <ScrollArea className="h-48 overflow-y-auto">
-                  <div className="space-y-1 pr-2">
-                    {getFontsByCategory('sans-serif').map(renderFontButton)}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-              
-              <TabsContent value="serif">
-                <ScrollArea className="h-48 overflow-y-auto">
-                  <div className="space-y-1 pr-2">
-                    {getFontsByCategory('serif').map(renderFontButton)}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-              
-              <TabsContent value="display">
-                <ScrollArea className="h-48 overflow-y-auto">
-                  <div className="space-y-1 pr-2">
-                    {getFontsByCategory('display').map(renderFontButton)}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-            </Tabs>
-          ) : (
-            <div className="space-y-2">
-              <div className="text-sm font-medium mb-2">Font Family</div>
-              <ScrollArea className="h-48 overflow-y-auto" ref={scrollAreaRef}>
-                <div className="space-y-1 pr-2" ref={contentRef}>
-                  {FONT_REGISTRY.map(renderFontButton)}
                 </div>
-              </ScrollArea>
-            </div>
-          )}
-        </div>
-      </PopoverContent>
+              </div>
+            )}
+          </div>
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
     </Popover>
   );
 };
