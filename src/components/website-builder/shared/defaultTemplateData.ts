@@ -1,8 +1,10 @@
 
 import { CustomizationData } from "@/types/website-builder";
+import { getFontStyleByName } from "@/utils/fontRegistry";
 
 export const getDefaultTemplateData = (templateName: string, themeColor?: string): CustomizationData => {
   const defaultThemeColor = themeColor || getDefaultThemeColor(templateName);
+  const fontStyle = getFontStyleByName('modern');
   
   return {
     coachName: 'Sarah Johnson',
@@ -41,10 +43,10 @@ export const getDefaultTemplateData = (templateName: string, themeColor?: string
     buttonText: 'Book a Consultation',
     buttonColor: defaultThemeColor,
     buttonTextColor: '#FFFFFF',
-    buttonFontFamily: 'Inter',
+    buttonFontFamily: fontStyle.value,
     buttonStyle: 'bordered' as const,
     themeColor: defaultThemeColor,
-    fontFamily: 'Inter',
+    fontFamily: fontStyle.value,
     backgroundStyle: 'solid',
     footerHeading: 'Ready to Transform Your Life?',
     footerSubheading: 'Schedule your consultation today and take the first step towards achieving your goals.'
