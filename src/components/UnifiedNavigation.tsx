@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -224,8 +223,8 @@ const UnifiedNavigation = ({
             <div className="flex items-center space-x-4">
               {isLoggedIn ? (
                 <>
-                  {/* Website Builder Action Buttons */}
-                  {isWebsiteBuilderPage && (
+                  {/* Website Builder Action Buttons - only show on mobile or when not on website builder page */}
+                  {isWebsiteBuilderPage && (isMobile || isWebsiteBuilderPageMobile) && (
                     <div className="flex items-center space-x-2">
                       <Button
                         variant={isMobile ? "ghost" : "outline"}
