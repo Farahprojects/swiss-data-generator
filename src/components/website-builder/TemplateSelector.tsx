@@ -8,6 +8,7 @@ import { MinimalTemplate } from "./templates/MinimalTemplate";
 import { CreativeTemplate } from "./templates/CreativeTemplate";
 import { ProfessionalTemplate } from "./templates/ProfessionalTemplate";
 import { AbstractTemplate } from "./templates/AbstractTemplate";
+import { getDefaultTemplateData } from "./shared/defaultTemplateData";
 
 interface WebsiteTemplate {
   id: string;
@@ -72,19 +73,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   ];
 
   const getTemplateComponent = (templateName: string) => {
-    const defaultCustomizationData = {
-      coachName: 'Coach Name',
-      tagline: 'Transform Your Life',
-      bio: 'Professional coaching services to help you achieve your goals.',
-      services: [
-        { title: 'Life Coaching', description: '1-on-1 sessions', price: '$150/session' },
-        { title: 'Career Coaching', description: 'Career guidance', price: '$120/session' }
-      ],
-      buttonText: 'Book Now',
-      themeColor: enhancedTemplates.find(t => t.name === templateName)?.preview.colors[0] || '#3B82F6',
-      fontFamily: 'Inter',
-      backgroundStyle: 'solid'
-    };
+    // Use the shared default data for consistent appearance
+    const defaultCustomizationData = getDefaultTemplateData(templateName);
 
     switch (templateName.toLowerCase()) {
       case 'modern':

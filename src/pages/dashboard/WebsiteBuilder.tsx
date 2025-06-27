@@ -19,6 +19,7 @@ import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getDefaultTemplateData, mergeWithDefaults } from "@/components/website-builder/shared/defaultTemplateData";
 
 interface WebsiteTemplate {
   id: string;
@@ -283,38 +284,19 @@ export default function WebsiteBuilder() {
     console.log("Template selected:", { id: template.id, name: template.name });
     setSelectedTemplate(template);
     
-    // Set default customization data if no existing website
+    // Set default customization data if no existing website using shared defaults
     if (!website) {
-      const defaultData = {
-        coachName: user?.email?.split('@')[0] || 'Your Name',
-        tagline: template.template_data?.defaultContent?.hero?.subtitle || 'Professional Coach',
-        bio: 'I help people transform their lives through personalized coaching.',
-        introTitle: 'About Me',
-        introAlignment: 'left' as const,
-        introFontStyle: 'modern',
-        introTextColor: '#374151',
-        reportService: {
-          title: 'Personal Insights Report',
-          description: 'Get a comprehensive analysis of your personality, strengths, and growth opportunities.',
-          price: '$29',
-          sectionHeading: 'Services Offered'
-        },
-        services: [
-          { title: 'Life Coaching', description: '1-on-1 sessions to help you achieve your goals', price: '$150/session' },
-          { title: 'Career Coaching', description: 'Navigate your career path with confidence', price: '$120/session' }
-        ],
-        buttonText: 'Book a Consultation',
-        buttonColor: '#3B82F6',
-        buttonTextColor: '#FFFFFF',
-        buttonFontFamily: 'Inter',
-        buttonStyle: 'bordered' as const,
-        themeColor: '#3B82F6',
-        fontFamily: 'Inter',
-        backgroundStyle: 'solid',
-        // Preserve any existing images from storage
-        ...customizationData
+      const defaultData = getDefaultTemplateData(template.name);
+      
+      // Merge with any existing customization data (like images from storage)
+      const mergedData = {
+        ...defaultData,
+        ...customizationData,
+        // Preserve user's email-based coach name if available
+        coachName: user?.email?.split('@')[0] || defaultData.coachName
       };
-      setCustomizationData(defaultData);
+      
+      setCustomizationData(mergedData);
       resetAutoSave(); // Reset auto-save to prevent immediate save of default data
     }
   };

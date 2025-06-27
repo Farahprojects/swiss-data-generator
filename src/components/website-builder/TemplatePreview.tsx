@@ -8,6 +8,7 @@ import { MinimalTemplate } from "./templates/MinimalTemplate";
 import { ProfessionalTemplate } from "./templates/ProfessionalTemplate";
 import { CreativeTemplate } from "./templates/CreativeTemplate";
 import { AbstractTemplate } from "./templates/AbstractTemplate";
+import { mergeWithDefaults } from "./shared/defaultTemplateData";
 
 interface TemplatePreviewProps {
   template: {
@@ -29,8 +30,11 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
   onClose
 }) => {
   const renderTemplate = () => {
+    // Merge user customization data with defaults for consistent appearance
+    const mergedData = mergeWithDefaults(customizationData || {}, template.name);
+    
     const templateProps = {
-      customizationData: customizationData || {},
+      customizationData: mergedData,
       isPreview: !isPublicView
     };
 
