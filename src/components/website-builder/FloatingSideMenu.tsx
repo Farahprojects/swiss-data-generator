@@ -5,12 +5,10 @@ import { Eye } from "lucide-react";
 
 interface FloatingSideMenuProps {
   onPreview: () => void;
-  website?: any;
 }
 
 export const FloatingSideMenu: React.FC<FloatingSideMenuProps> = ({
-  onPreview,
-  website
+  onPreview
 }) => {
   return (
     <div className="fixed right-4 top-1/2 -translate-y-1/2 z-[60] flex flex-col space-y-3">
@@ -23,14 +21,6 @@ export const FloatingSideMenu: React.FC<FloatingSideMenuProps> = ({
         <Eye className="h-4 w-4" />
         <span className="text-xs font-medium">Preview</span>
       </Button>
-      
-      {website?.has_unpublished_changes && (
-        <div className="w-20 px-2 py-1 text-center">
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-            Changes
-          </span>
-        </div>
-      )}
     </div>
   );
 };

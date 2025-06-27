@@ -464,16 +464,9 @@ export default function WebsiteBuilder() {
           />
         </div>
 
-        {/* Floating side menu - now only has Preview button */}
+        {/* Floating side menu - only Preview button */}
         <FloatingSideMenu
           onPreview={handlePreview}
-          onSave={() => {}} // Remove save functionality
-          onPublish={() => {}} // Remove publish functionality  
-          isSaving={false} // Remove saving state
-          isPublishing={false} // Remove publishing state
-          saveButtonText="" // Remove save button text
-          publishButtonText="" // Remove publish button text
-          website={website}
         />
 
         {/* Template switch confirmation dialog */}
