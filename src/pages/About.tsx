@@ -67,7 +67,7 @@ const About = () => {
                       href="https://www.linkedin.com/public-profile/settings?trk=d_flagship3_profile_self_view_public_profile"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-black hover:text-gray-700 transition-colors"
+                      className="text-black hover:text-gray-700 transition-colors transform hover:scale-110 transition-transform duration-200"
                     >
                       <Linkedin className="w-5 h-5" />
                     </a>
@@ -75,12 +75,12 @@ const About = () => {
                       href="https://x.com/farahprojects"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:opacity-80 transition-opacity"
+                      className="transform hover:scale-110 transition-transform duration-200"
                     >
                       <img 
                         src="/lovable-uploads/0b87b08c-6306-4b6b-9156-4d375f61b05f.png" 
                         alt="X (formerly Twitter)" 
-                        className="w-5 h-5"
+                        className="w-[18px] h-[18px]"
                       />
                     </a>
                   </div>
