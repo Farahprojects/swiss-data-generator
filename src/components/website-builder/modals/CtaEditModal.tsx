@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -153,7 +154,7 @@ export const CtaEditModal: React.FC<CtaEditModalProps> = ({
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-48">
                   {fontOptions.map((font) => (
                     <SelectItem key={font.value} value={font.value}>
                       <div className="flex flex-col">

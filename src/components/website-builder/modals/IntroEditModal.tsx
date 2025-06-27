@@ -83,7 +83,7 @@ export const IntroEditModal: React.FC<IntroEditModalProps> = ({
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select font family" />
                 </SelectTrigger>
-                <SelectContent side="top">
+                <SelectContent side="top" className="max-h-48">
                   {FONT_REGISTRY.map((font) => (
                     <SelectItem key={font.value} value={font.value}>
                       <div className={`${font.class} flex flex-col items-start`}>
