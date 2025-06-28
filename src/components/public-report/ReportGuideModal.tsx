@@ -27,7 +27,7 @@ const reportGuides = [
     type: 'Essence',
     icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'They Self Report',
-    price: '$25',
+    price: '$10',
     bestFor: 'Self-understanding',
     description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
     details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
@@ -41,7 +41,7 @@ const reportGuides = [
     type: 'Sync',
     icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'Compatibility Report',
-    price: '$25',
+    price: '$10',
     bestFor: 'Compatibility',
     description: 'How your energy aligns with someone - connection, tension, and flow.',
     details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
@@ -54,7 +54,7 @@ const reportGuides = [
     type: 'Mindset',
     icon: <Brain className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'Mindset Report',
-    price: '$3',
+    price: '$2',
     bestFor: 'Mental clarity',
     description: 'Mood + mental clarity snapshot',
     details: 'Get insights into your current mental state, thought patterns, and cognitive strengths for better decision-making.'
@@ -63,7 +63,7 @@ const reportGuides = [
     type: 'Flow',
     icon: <Repeat className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'Flow Report',
-    price: '$3',
+    price: '$2',
     bestFor: 'Emotional rhythm',
     description: 'Creative/emotional openness over 7 days',
     details: 'Track your creative and emotional rhythms throughout the week to optimize your creative output and emotional well-being.'
@@ -72,7 +72,7 @@ const reportGuides = [
     type: 'Focus',
     icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'Focus Report',
-    price: '$3',
+    price: '$2',
     bestFor: 'Productivity',
     description: 'Best hours today for deep work or rest',
     details: 'Identify your optimal times for concentration, productivity, and rest based on your personal energy cycles.'
@@ -81,7 +81,7 @@ const reportGuides = [
     type: 'Monthly',
     icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'Energy Month Report',
-    price: '$3',
+    price: '$2',
     bestFor: 'Monthly planning',
     description: 'Your personalized forecast for the current month',
     details: 'Get monthly themes, key opportunities, and timing guidance for important decisions and activities.'
