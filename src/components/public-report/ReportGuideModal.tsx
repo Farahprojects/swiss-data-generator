@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -27,7 +26,7 @@ const reportGuides = [
   {
     type: 'Essence',
     icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Essence Report',
+    title: 'They Self Report',
     price: '$25',
     bestFor: 'Self-understanding',
     description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
@@ -41,7 +40,7 @@ const reportGuides = [
   {
     type: 'Sync',
     icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Sync Report',
+    title: 'Compatibility Report',
     price: '$25',
     bestFor: 'Compatibility',
     description: 'How your energy aligns with someone - connection, tension, and flow.',
@@ -81,7 +80,7 @@ const reportGuides = [
   {
     type: 'Monthly',
     icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Monthly Report',
+    title: 'Energy Month Report',
     price: '$3',
     bestFor: 'Monthly planning',
     description: 'Your personalized forecast for the current month',
