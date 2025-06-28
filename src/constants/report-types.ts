@@ -1,12 +1,11 @@
-
 import { ReportTypeOption } from '@/types/public-report';
 
 export const reportTypes: ReportTypeOption[] = [
-  { value: 'sync', label: 'Sync Report' },
-  { value: 'essence', label: 'Essence Report' },
+  { value: 'sync', label: 'Compatibility Report' },
+  { value: 'essence', label: 'They Self Report' },
   { value: 'flow', label: 'Flow Report' },
   { value: 'mindset', label: 'Mindset Report' },
-  { value: 'monthly', label: 'Monthly Report' },
+  { value: 'monthly', label: 'Energy Month Report' },
   { value: 'focus', label: 'Focus Report' },
 ];
 
