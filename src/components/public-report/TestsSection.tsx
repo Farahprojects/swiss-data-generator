@@ -81,10 +81,10 @@ const testData: Test[] = [
 
 const reportGuides = [
   {
-    type: 'Essence',
+    type: 'They Self',
     icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'They Self Report',
-    price: '$25',
+    price: '$10',
     bestFor: 'Self-understanding',
     description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
     details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
@@ -95,16 +95,16 @@ const reportGuides = [
     ]
   },
   {
-    type: 'Sync',
+    type: 'Compatibility',
     icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'Compatibility Report',
-    price: '$25',
+    price: '$10',
     bestFor: 'Compatibility',
     description: 'How your energy aligns with someone - connection, tension, and flow.',
     details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
     subTypes: [
-      'Personal Sync – Romantic, emotional, or close social connection',
-      'Professional Sync – Team dynamics, leadership compatibility, working styles'
+      'Personal – Romantic, emotional, or close social connection',
+      'Professional  – Team dynamics, leadership compatibility, working styles'
     ]
   },
   {
