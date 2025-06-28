@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -26,7 +25,7 @@ interface Test {
 const testData: Test[] = [
   {
     id: "Essence",
-    name: "Essence",
+    name: "They Self",
     description: "Understand your core thought patterns",
     slug: "Essence",
     time: "5 min",
@@ -35,7 +34,7 @@ const testData: Test[] = [
   },
   {
     id: "Sync",
-    name: "Sync",
+    name: "Compatibility",
     description: "Understand your interpersonal dynamics",
     slug: "relationships",
     time: "10 min",
@@ -53,7 +52,7 @@ const testData: Test[] = [
   },
   {
     id: "Monthly",
-    name: "Monthly",
+    name: "Energy Month",
     description: "Discover your natural professional approach",
     slug: "Monthly ",
     time: "12 min",
@@ -84,7 +83,7 @@ const reportGuides = [
   {
     type: 'Essence',
     icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Essence Report',
+    title: 'They Self Report',
     price: '$25',
     bestFor: 'Self-understanding',
     description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
@@ -98,7 +97,7 @@ const reportGuides = [
   {
     type: 'Sync',
     icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Sync Report',
+    title: 'Compatibility Report',
     price: '$25',
     bestFor: 'Compatibility',
     description: 'How your energy aligns with someone - connection, tension, and flow.',
@@ -120,7 +119,7 @@ const reportGuides = [
   {
     type: 'Monthly',
     icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Monthly Report',
+    title: 'Energy Month Report',
     price: '$3',
     bestFor: 'Monthly planning',
     description: 'Your personalized forecast for the current month',
@@ -195,7 +194,7 @@ export default function TestsSection() {
                         <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
-                            alt="Essence Report" 
+                            alt="They Self Report" 
                             className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
@@ -203,7 +202,7 @@ export default function TestsSection() {
                         <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
-                            alt="Sync Report" 
+                            alt="Compatibility Report" 
                             className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
@@ -219,7 +218,7 @@ export default function TestsSection() {
                         <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
-                            alt="Monthly Report" 
+                            alt="Energy Month Report" 
                             className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
