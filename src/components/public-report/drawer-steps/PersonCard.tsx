@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -115,7 +116,7 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
 
   return (
     <>
-      <Card className="border-2 border-primary/20 max-w-none w-full mx-4">
+      <Card className="border-2 border-primary/20 max-w-none w-full">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>
         </CardHeader>
