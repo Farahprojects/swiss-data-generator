@@ -86,11 +86,11 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
   const formatDateForDisplay = (dateStr: string) => {
     if (!dateStr) return 'Select date';
     const date = new Date(dateStr);
-    // Use compact format: "Jan 1 '24" to save space
-    const month = date.toLocaleDateString('en-US', { month: 'short' });
-    const day = date.getDate();
-    const year = date.getFullYear().toString().slice(-2);
-    return `${month} ${day} '${year}`;
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
   };
 
   const formatTimeForDisplay = (timeStr: string) => {
@@ -154,18 +154,18 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
             </div>
           )}
 
-          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
               {isMobile ? (
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full h-12 justify-start text-left font-normal px-3"
+                  className="w-full h-12 justify-start text-left font-normal"
                   onClick={() => setDatePickerOpen(true)}
                 >
-                  <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">{formatDateForDisplay(birthDate)}</span>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {formatDateForDisplay(birthDate)}
                 </Button>
               ) : (
                 <Input
@@ -188,11 +188,11 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full h-12 justify-start text-left font-normal px-3"
+                  className="w-full h-12 justify-start text-left font-normal"
                   onClick={() => setTimePickerOpen(true)}
                 >
-                  <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">{formatTimeForDisplay(birthTime)}</span>
+                  <Clock className="h-4 w-4 mr-2" />
+                  {formatTimeForDisplay(birthTime)}
                 </Button>
               ) : (
                 <Input
