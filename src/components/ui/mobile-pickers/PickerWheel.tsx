@@ -1,4 +1,5 @@
 
+
 import React, {
   useEffect,
   useState,
@@ -58,24 +59,31 @@ function PickerWheel<T extends string | number = string>({
   useEffect(() => {
     const idx = options.indexOf(value);
     if (idx !== -1) {
-      const finalY = -idx * itemHeight;
+      // Calculate position so selected item aligns with center
+      const centerTop = (height - itemHeight) / 2;
+      const finalY = centerTop - idx * itemHeight;
       // Always snap back to selected value
       rawY.set(finalY);
       y.set(finalY); // Ensures spring is synced too
     }
-  }, [value, options, itemHeight, rawY, y]);
+  }, [value, options, itemHeight, rawY, y, height]);
 
   // Convert y‑offset → nearest option index
   const nearestIndex = useCallback(
-    (yPos: number) => clamp(Math.round(-yPos / itemHeight), 0, options.length - 1),
-    [itemHeight, options.length]
+    (yPos: number) => {
+      const centerTop = (height - itemHeight) / 2;
+      const adjustedY = centerTop - yPos;
+      return clamp(Math.round(adjustedY / itemHeight), 0, options.length - 1);
+    },
+    [itemHeight, options.length, height]
   );
 
   // Snap helper (springs & fires onChange)
   const snapTo = useCallback(
     (target: number, velocity = 0) => {
       const idx = nearestIndex(target);
-      const finalY = -idx * itemHeight;
+      const centerTop = (height - itemHeight) / 2;
+      const finalY = centerTop - idx * itemHeight;
 
       const controls = animate(rawY, finalY, {
         type: 'spring',
@@ -88,7 +96,7 @@ function PickerWheel<T extends string | number = string>({
         if (options[idx] !== value) onChange(options[idx]);
       });
     },
-    [nearestIndex, itemHeight, rawY, options, onChange, value]
+    [nearestIndex, rawY, options, onChange, value, height, itemHeight]
   );
 
   /* --------------------------------------------------------------------- */
@@ -100,9 +108,11 @@ function PickerWheel<T extends string | number = string>({
   const onDragEnd = (_: PointerEvent, info: PanInfo) => {
     setDrag({ isDragging: false });
 
-    const minY = -(options.length - 1) * itemHeight;
+    const centerTop = (height - itemHeight) / 2;
+    const minY = centerTop - (options.length - 1) * itemHeight;
+    const maxY = centerTop;
     const rubber = 0.4 * itemHeight;
-    const clamped = clamp(rawY.get(), minY - rubber, rubber);
+    const clamped = clamp(rawY.get(), minY - rubber, maxY + rubber);
 
     // project momentum (0.2 multiplier tuned for mobile feel)
     const projected = clamped + info.velocity.y * 0.2;
@@ -176,10 +186,10 @@ function PickerWheel<T extends string | number = string>({
         onDragStart={onDragStart}
         onDrag={onDrag}
         onDragEnd={onDragEnd}
-        style={{ y, top: centerTop }}
+        style={{ y }}
       >
         {options.map((opt, i) => (
-          <PickerItem key={String(opt)} index={i} itemHeight={itemHeight} y={y} value={opt} />
+          <PickerItem key={String(opt)} index={i} itemHeight={itemHeight} y={y} value={opt} centerTop={centerTop} />
         ))}
       </motion.div>
     </div>
@@ -193,11 +203,12 @@ interface ItemProps {
   index: number;
   itemHeight: number;
   y: ReturnType<typeof useSpring>;
+  centerTop: number;
 }
 
-const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y }) => {
-  // Distance from centre (0 = centred)
-  const d = useTransform(y, (latest) => Math.abs(index + latest / itemHeight));
+const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y, centerTop }) => {
+  // Distance from centre (0 = centred) - adjusted for new positioning
+  const d = useTransform(y, (latest) => Math.abs((centerTop - latest) / itemHeight - index));
 
   const opacity = useTransform(d, [0, 1, 2], [1, 0.4, 0.1]);
   const scale = useTransform(d, [0, 1], [1, 0.85]);
@@ -226,3 +237,4 @@ const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y }) => {
 PickerItem.displayName = 'PickerItem';
 
 export default PickerWheel;
+
