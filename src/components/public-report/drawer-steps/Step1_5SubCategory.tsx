@@ -91,7 +91,7 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
       className="space-y-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-900">{getCategoryTitle(selectedCategory)} Focus</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{getCategoryTitle(selectedCategory)}</h2>
         <p className="text-gray-600">Choose your specific area of insight</p>
       </div>
 
