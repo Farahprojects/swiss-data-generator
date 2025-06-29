@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { reportSchema } from '@/schemas/report-form-schema';
-import { ReportFormData } from '@/types/public-report';
 
-export type DrawerStep = 1 | 2 | 3;
+export type DrawerStep = 1 | 2 | 3 | 4;
 
 export interface DrawerFormData {
-  reportCategory: 'professional' | 'relational' | 'personal';
+  reportCategory: 'the-self' | 'compatibility' | 'snapshot';
+  reportSubCategory: string;
   reportType: string;
   relationshipType?: string;
   essenceType?: string;
@@ -33,6 +33,7 @@ export const useMobileDrawerForm = () => {
     mode: 'onBlur',
     defaultValues: {
       reportCategory: undefined,
+      reportSubCategory: '',
       reportType: '',
       name: '',
       email: '',
@@ -45,7 +46,7 @@ export const useMobileDrawerForm = () => {
   });
 
   const nextStep = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep((prev) => (prev + 1) as DrawerStep);
     }
   };
@@ -67,27 +68,36 @@ export const useMobileDrawerForm = () => {
     setCurrentStep(1);
   };
 
-  const mapCategoryToReportType = (category: string) => {
+  const mapCategoryToReportType = (category: string, subCategory: string) => {
     switch (category) {
-      case 'professional':
+      case 'the-self':
         return 'essence';
-      case 'relational':
+      case 'compatibility':
         return 'sync';
-      case 'personal':
-        return 'essence';
+      case 'snapshot':
+        switch (subCategory) {
+          case 'focus':
+            return 'focus';
+          case 'monthly':
+            return 'monthly';
+          case 'mindset':
+            return 'mindset';
+          default:
+            return 'focus';
+        }
       default:
         return 'essence';
     }
   };
 
-  const mapCategoryToSubType = (category: string) => {
+  const mapCategoryToSubType = (category: string, subCategory: string) => {
     switch (category) {
-      case 'professional':
-        return { essenceType: 'professional' };
-      case 'relational':
-        return { relationshipType: 'personal' };
-      case 'personal':
-        return { essenceType: 'personal' };
+      case 'the-self':
+        return { essenceType: subCategory };
+      case 'compatibility':
+        return { relationshipType: subCategory };
+      case 'snapshot':
+        return {}; // Snapshot reports don't need sub-types
       default:
         return { essenceType: 'personal' };
     }

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Controller } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { Briefcase, Heart, User } from 'lucide-react';
+import { User, Heart, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Step1ReportTypeProps {
@@ -13,26 +13,26 @@ interface Step1ReportTypeProps {
 
 const reportCategories = [
   {
-    value: 'professional',
-    title: 'Professional',
-    description: 'Career, business, work dynamics',
-    icon: Briefcase,
+    value: 'the-self',
+    title: 'The Self',
+    description: 'Personal growth and self-discovery',
+    icon: User,
     color: 'bg-blue-50 border-blue-200 hover:bg-blue-100',
     selectedColor: 'bg-blue-100 border-blue-500',
   },
   {
-    value: 'relational',
-    title: 'Relational',
-    description: 'Love, relationships, compatibility',
+    value: 'compatibility',
+    title: 'Compatibility',
+    description: 'Relationship dynamics and synergy',
     icon: Heart,
     color: 'bg-pink-50 border-pink-200 hover:bg-pink-100',
     selectedColor: 'bg-pink-100 border-pink-500',
   },
   {
-    value: 'personal',
-    title: 'Personal',
-    description: 'Self-discovery, life path, essence',
-    icon: User,
+    value: 'snapshot',
+    title: 'Snapshot',
+    description: 'Current life focus and timing',
+    icon: Target,
     color: 'bg-green-50 border-green-200 hover:bg-green-100',
     selectedColor: 'bg-green-100 border-green-500',
   },
@@ -48,8 +48,8 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
       className="space-y-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-900">Choose Your Report Type</h2>
-        <p className="text-gray-600">What area would you like insight into?</p>
+        <h2 className="text-2xl font-bold text-gray-900">Choose Your Insight Area</h2>
+        <p className="text-gray-600">What area would you like guidance on?</p>
       </div>
 
       <Controller
@@ -98,7 +98,7 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
             className="w-full h-12 text-lg font-semibold"
             size="lg"
           >
-            Next: Enter Details
+            Next: Choose Focus
           </Button>
         </motion.div>
       )}

@@ -10,6 +10,7 @@ import {
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import Step1ReportType from './drawer-steps/Step1ReportType';
+import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
 import Step3Payment from './drawer-steps/Step3Payment';
 import { ReportFormData } from '@/types/public-report';
@@ -33,6 +34,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const { isProcessing, submitReport } = useReportSubmission();
 
   const reportCategory = watch('reportCategory');
+  const reportSubCategory = watch('reportSubCategory');
 
   const handleClose = () => {
     onClose();
@@ -42,8 +44,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const onSubmit = async (data: any) => {
     // Map drawer form data to the expected ReportFormData format
     const mappedData: ReportFormData = {
-      reportType: mapCategoryToReportType(data.reportCategory),
-      ...mapCategoryToSubType(data.reportCategory),
+      reportType: mapCategoryToReportType(data.reportCategory, data.reportSubCategory),
+      ...mapCategoryToSubType(data.reportCategory, data.reportSubCategory),
       name: data.name,
       email: data.email,
       birthDate: data.birthDate,
@@ -67,7 +69,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   // Progress dots
   const ProgressDots = () => (
     <div className="flex justify-center space-x-2 mb-6">
-      {[1, 2, 3].map((step) => (
+      {[1, 2, 3, 4].map((step) => (
         <div
           key={step}
           className={`w-2 h-2 rounded-full transition-colors duration-200 ${
@@ -102,6 +104,17 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             )}
             
             {currentStep === 2 && (
+              <Step1_5SubCategory
+                key="step1_5"
+                control={control}
+                onNext={nextStep}
+                onPrev={prevStep}
+                selectedCategory={reportCategory}
+                selectedSubCategory={reportSubCategory}
+              />
+            )}
+            
+            {currentStep === 3 && (
               <Step2BirthDetails
                 key="step2"
                 register={register}
@@ -113,7 +126,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               />
             )}
             
-            {currentStep === 3 && (
+            {currentStep === 4 && (
               <Step3Payment
                 key="step3"
                 register={register}
