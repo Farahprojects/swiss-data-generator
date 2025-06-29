@@ -66,15 +66,15 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // Progress dots
   const ProgressDots = () => (
-    <div className="flex justify-center space-x-2 mb-8">
+    <div className="flex justify-center space-x-2 mb-6">
       {[1, 2, 3].map((step) => (
         <div
           key={step}
-          className={`w-2 h-2 rounded-full transition-all duration-300 ${
+          className={`w-2 h-2 rounded-full transition-colors duration-200 ${
             step === currentStep
-              ? 'bg-gray-900 scale-110'
+              ? 'bg-primary'
               : step < currentStep
-              ? 'bg-gray-600'
+              ? 'bg-primary/60'
               : 'bg-gray-300'
           }`}
         />
@@ -85,9 +85,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   return (
     <Drawer open={isOpen} onOpenChange={handleClose}>
       <DrawerContent className="h-[90vh] flex flex-col">
-        <DrawerHeader className="flex-shrink-0 pt-6 pb-0">
+        <DrawerHeader className="flex-shrink-0">
           <ProgressDots />
-          <DrawerTitle className="sr-only">Report Configuration</DrawerTitle>
+          <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
         </DrawerHeader>
         
         <div className="flex-1 overflow-y-auto px-6 pb-6">
