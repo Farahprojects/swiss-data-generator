@@ -147,21 +147,21 @@ const PersonCard = ({
   /* Render helpers                                                       */
   /* -------------------------------------------------------------------- */
 
-  // Simplified PickerButton with proper event handling
+  // PickerButton using onMouseDown instead of onClick for better mobile response
   const PickerButton: React.FC<{
     label: string;
     icon: typeof Calendar | typeof Clock;
-    onClick: (e: React.MouseEvent) => void;
+    onMouseDown: (e: React.MouseEvent) => void;
     aria: string;
-  }> = ({ label, icon: Icon, onClick, aria }) => (
+  }> = ({ label, icon: Icon, onMouseDown, aria }) => (
     <Button
       type="button"
       variant="outline"
       aria-label={aria}
-      onClick={(e) => {
+      onMouseDown={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        onClick(e);
+        onMouseDown(e);
       }}
       className="flex w-full items-center gap-2 px-3 h-12"
     >
@@ -172,12 +172,9 @@ const PersonCard = ({
     </Button>
   );
 
-  // Simplified click handlers without complex timing logic
+  // Click handlers using mousedown for instant response
   const handleDatePickerClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('Date picker button clicked');
+    console.log('Date picker mousedown triggered');
     
     // Close time picker if open to prevent conflicts
     if (timePickerOpen) {
@@ -189,10 +186,7 @@ const PersonCard = ({
   }, [timePickerOpen]);
 
   const handleTimePickerClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('Time picker button clicked');
+    console.log('Time picker mousedown triggered');
     
     // Close date picker if open to prevent conflicts
     if (datePickerOpen) {
@@ -275,7 +269,7 @@ const PersonCard = ({
                 <PickerButton
                   label={formatDateForDisplay(birthDate)}
                   icon={Calendar}
-                  onClick={handleDatePickerClick}
+                  onMouseDown={handleDatePickerClick}
                   aria="Open date picker"
                 />
               ) : (
@@ -302,7 +296,7 @@ const PersonCard = ({
                 <PickerButton
                   label={formatTimeForDisplay(birthTime)}
                   icon={Clock}
-                  onClick={handleTimePickerClick}
+                  onMouseDown={handleTimePickerClick}
                   aria="Open time picker"
                 />
               ) : (

@@ -20,7 +20,7 @@ const MobilePickerModal = ({
   children 
 }: MobilePickerModalProps) => {
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isOpen && (
         <>
           {/* Backdrop */}
@@ -28,16 +28,22 @@ const MobilePickerModal = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="fixed inset-0 bg-black/50 z-50"
             onClick={onClose}
           />
           
-          {/* Modal */}
+          {/* Modal - Reduced animation duration for faster response */}
           <motion.div
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
-            transition={{ type: "spring", damping: 30, stiffness: 400 }}
+            transition={{ 
+              type: "spring", 
+              damping: 35, 
+              stiffness: 500,
+              duration: 0.2
+            }}
             className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-xl shadow-xl"
           >
             {/* Header */}
