@@ -95,10 +95,11 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
         >
           <Button
             onClick={onNext}
-            className="w-full h-12 text-lg font-semibold"
+            variant="outline"
+            className="w-full h-12 text-lg font-semibold border-2 border-purple-500 text-purple-500 bg-white hover:bg-purple-50"
             size="lg"
           >
-            Next: Choose Focus
+            Choose Focus
           </Button>
         </motion.div>
       )}

@@ -174,10 +174,11 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
         >
           <Button
             onClick={onNext}
-            className="w-full h-12 text-lg font-semibold"
+            variant="outline"
+            className="w-full h-12 text-lg font-semibold border-2 border-purple-500 text-purple-500 bg-white hover:bg-purple-50"
             size="lg"
           >
-            Next: Review & Pay
+            Review & Pay
           </Button>
         </motion.div>
       )}

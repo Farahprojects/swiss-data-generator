@@ -81,7 +81,7 @@ const Step3Payment = ({ register, watch, errors, onPrev, onSubmit, isProcessing 
         <CollapsibleTrigger asChild>
           <Button
             variant="outline"
-            className="w-full h-12 justify-start"
+            className="w-full h-12 justify-start border-2 border-purple-500 text-purple-500 bg-white hover:bg-purple-50"
             type="button"
           >
             <Tag className="h-4 w-4 mr-2" />
@@ -114,7 +114,8 @@ const Step3Payment = ({ register, watch, errors, onPrev, onSubmit, isProcessing 
         <Button
           onClick={onSubmit}
           disabled={isProcessing}
-          className="w-full h-14 text-lg font-semibold"
+          variant="outline"
+          className="w-full h-14 text-lg font-semibold border-2 border-purple-500 text-purple-500 bg-white hover:bg-purple-50"
           size="lg"
         >
           <CreditCard className="h-5 w-5 mr-2" />

@@ -136,7 +136,7 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
         <Button
           onClick={onPrev}
           variant="outline"
-          className="flex-1 h-12 text-lg font-semibold"
+          className="flex-1 h-12 text-lg font-semibold border-2 border-purple-500 text-purple-500 bg-white hover:bg-purple-50"
           size="lg"
         >
           Back
@@ -150,10 +150,11 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
           >
             <Button
               onClick={onNext}
-              className="w-full h-12 text-lg font-semibold"
+              variant="outline"
+              className="w-full h-12 text-lg font-semibold border-2 border-purple-500 text-purple-500 bg-white hover:bg-purple-50"
               size="lg"
             >
-              Next: Your Details
+              Your Details
             </Button>
           </motion.div>
         )}
