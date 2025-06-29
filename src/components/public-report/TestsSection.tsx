@@ -164,8 +164,8 @@ export default function TestsSection() {
             </p>
           </div>
           
-          <div className="flex flex-col md:grid md:grid-cols-12 gap-8 items-center">
-            <div className="w-full md:col-span-6 order-2 md:order-1">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+            <div className="md:col-span-6">
               <div className="space-y-0">
                 {testData.map((test) => (
                   <TestCard
@@ -182,8 +182,8 @@ export default function TestsSection() {
               </div>
             </div>
             
-            <div className="w-full md:col-span-6 order-1 md:order-2">
-              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg" style={{ height: "300px" }}>
+            <div className="md:col-span-6">
+              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg" style={{ height: "400px" }}>
                 {testData.map((test) => {
                   return (
                     <div 
