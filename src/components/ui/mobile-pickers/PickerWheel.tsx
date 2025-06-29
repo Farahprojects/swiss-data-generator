@@ -1,3 +1,4 @@
+
 import React, {
   useEffect,
   useState,
@@ -57,13 +58,12 @@ function PickerWheel<T extends string | number = string>({
   useEffect(() => {
     const idx = options.indexOf(value);
     if (idx !== -1) {
-      // Stop any in-flight animations before setting new position
-      if (!isDragging && y.isAnimating()) {
-        y.stop();
-      }
-      rawY.set(-idx * itemHeight);
+      const finalY = -idx * itemHeight;
+      // Always snap back to selected value
+      rawY.set(finalY);
+      y.set(finalY); // Ensures spring is synced too
     }
-  }, [value, options, itemHeight, rawY, isDragging, y]);
+  }, [value, options, itemHeight, rawY, y]);
 
   // Convert y‑offset → nearest option index
   const nearestIndex = useCallback(
@@ -150,6 +150,17 @@ function PickerWheel<T extends string | number = string>({
         style={{ height: gradientH }}
       />
 
+      {/* Highlight background for selected item */}
+      <div
+        className="pointer-events-none absolute inset-x-0 z-0"
+        style={{
+          top: centerTop,
+          height: itemHeight,
+          backgroundColor: 'rgba(0,0,0,0.03)',
+          borderRadius: 6,
+        }}
+      />
+
       {/* selection lane – clean iOS style with just thin borders */}
       <div
         className="pointer-events-none absolute inset-x-0 z-10 border-t border-b border-neutral-300 dark:border-neutral-600"
@@ -176,7 +187,7 @@ function PickerWheel<T extends string | number = string>({
 }
 
 /* --------------------------------------------------------------------- */
-// Individual row
+// Individual row - enhanced for better alignment and selection visibility
 interface ItemProps {
   value: string | number;
   index: number;
@@ -188,20 +199,27 @@ const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y }) => {
   // Distance from centre (0 = centred)
   const d = useTransform(y, (latest) => Math.abs(index + latest / itemHeight));
 
-  const opacity = useTransform(d, [0, 1, 2], [1, 0.55, 0.15]);
-  const scale = useTransform(d, [0, 1.2], [1, 0.85]);
-  const weight = useTransform(d, (dist) => (dist < 0.5 ? 600 : 400));
+  const opacity = useTransform(d, [0, 1, 2], [1, 0.4, 0.1]);
+  const scale = useTransform(d, [0, 1], [1, 0.85]);
+  const weight = useTransform(d, (dist) => (dist < 0.5 ? 700 : 400));
+  const color = useTransform(d, (dist) =>
+    dist < 0.5 ? '#111827' : '#9CA3AF' // Tailwind: neutral-900 vs neutral-400
+  );
 
   return (
     <motion.div
       role="option"
       aria-selected={d.get() < 0.5}
       className="flex items-center justify-center h-full"
-      style={{ height: itemHeight, opacity, scale }}
+      style={{
+        height: itemHeight,
+        opacity,
+        scale,
+        color,
+        fontWeight: weight,
+      }}
     >
-      <motion.span style={{ fontWeight: weight }} className="text-lg text-neutral-900 dark:text-neutral-100">
-        {value}
-      </motion.span>
+      <motion.span className="text-lg">{value}</motion.span>
     </motion.div>
   );
 });
