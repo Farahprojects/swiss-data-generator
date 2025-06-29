@@ -30,6 +30,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     mapCategoryToSubType,
     promoValidation,
     isValidatingPromo,
+    setPromoValidation,
   } = useMobileDrawerForm();
 
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
@@ -46,7 +47,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const onSubmit = async (data: any) => {
     console.log('🚀 Mobile drawer form submission started');
     console.log('📝 Form data:', data);
-    console.log('🎫 Promo validation:', promoValidation);
 
     // Map drawer form data to the expected ReportFormData format
     const mappedData: ReportFormData = {
@@ -74,24 +74,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
     console.log('🔄 Mapped data for submission:', mappedData);
 
-    // Create proper promo validation state for submission
-    const promoValidationState = {
-      status: promoValidation?.isValid 
-        ? (promoValidation.isFree ? 'valid-free' : 'valid-discount')
-        : (data.promoCode ? 'invalid' : 'none'),
-      message: promoValidation?.message || '',
-      discountPercent: promoValidation?.discountPercent || 0
-    } as const;
-
-    console.log('🎯 Promo validation state:', promoValidationState);
-
-    await submitReport(mappedData, promoValidationState, () => {});
+    // Use the same submission logic as desktop
+    await submitReport(mappedData, promoValidation, setPromoValidation);
     handleClose();
-  };
-
-  const handleFormSubmit = () => {
-    console.log('🎬 Form submit triggered');
-    handleSubmit(onSubmit)();
   };
 
   // Progress dots
@@ -161,7 +146,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 watch={watch}
                 errors={errors}
                 onPrev={prevStep}
-                onSubmit={handleFormSubmit}
+                onSubmit={handleSubmit(onSubmit)}
                 isProcessing={isProcessing}
                 promoValidation={promoValidation}
                 isValidatingPromo={isValidatingPromo}

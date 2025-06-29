@@ -8,7 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DrawerFormData } from '@/hooks/useMobileDrawerForm';
-import { PromoCodeValidation } from '@/utils/promoCodeValidation';
+
+interface PromoValidationState {
+  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
+  message: string;
+  discountPercent: number;
+}
 
 interface Step3PaymentProps {
   register: UseFormRegister<DrawerFormData>;
@@ -17,7 +22,7 @@ interface Step3PaymentProps {
   onPrev: () => void;
   onSubmit: () => void;
   isProcessing: boolean;
-  promoValidation: PromoCodeValidation | null;
+  promoValidation: PromoValidationState;
   isValidatingPromo: boolean;
 }
 
@@ -73,7 +78,7 @@ const Step3Payment = ({
   const calculatePricing = () => {
     const basePrice = getBasePrice();
     
-    if (!promoCode || !promoValidation?.isValid) {
+    if (!promoCode || promoValidation.status !== 'valid-free' && promoValidation.status !== 'valid-discount') {
       return {
         basePrice,
         discount: 0,
@@ -103,10 +108,10 @@ const Step3Payment = ({
     if (isValidatingPromo) {
       return <Loader2 className="h-4 w-4 animate-spin text-gray-400" />;
     }
-    if (promoValidation?.isValid) {
+    if (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount') {
       return <CheckCircle className="h-4 w-4 text-green-500" />;
     }
-    if (promoCode && !promoValidation?.isValid) {
+    if (promoCode && promoValidation.status === 'invalid') {
       return <AlertCircle className="h-4 w-4 text-red-500" />;
     }
     return null;
@@ -116,10 +121,10 @@ const Step3Payment = ({
     if (isValidatingPromo) {
       return 'Validating promo code...';
     }
-    return promoValidation?.message || '';
+    return promoValidation.message || '';
   };
 
-  const canProceed = !promoCode || !isValidatingPromo;
+  const canProceed = !isValidatingPromo;
 
   const handleSubmitClick = () => {
     console.log('💰 Payment button clicked');
@@ -223,7 +228,7 @@ const Step3Payment = ({
               <div className={`text-sm p-3 rounded-lg ${
                 isValidatingPromo 
                   ? 'bg-gray-50 text-gray-600'
-                  : promoValidation?.isValid
+                  : promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount'
                   ? 'bg-green-50 text-green-700 border border-green-200'
                   : 'bg-red-50 text-red-700 border border-red-200'
               }`}>
@@ -247,6 +252,7 @@ const Step3Payment = ({
           variant="outline"
           className="w-full h-14 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent disabled:opacity-50"
           size="lg"
+          type="button"
         >
           <CreditCard className="h-5 w-5 mr-2" />
           {isProcessing 

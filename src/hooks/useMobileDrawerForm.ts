@@ -32,6 +32,13 @@ export interface DrawerFormData {
   notes?: string;
 }
 
+// Proper promo validation state interface to match desktop
+interface PromoValidationState {
+  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
+  message: string;
+  discountPercent: number;
+}
+
 export const useMobileDrawerForm = () => {
   const [currentStep, setCurrentStep] = useState<DrawerStep>(1);
   const [isOpen, setIsOpen] = useState(false);
@@ -57,9 +64,22 @@ export const useMobileDrawerForm = () => {
     },
   });
 
-  // Add promo validation to the hook
+  // Use the same promo validation hook as desktop
   const promoCode = form.watch('promoCode') || '';
   const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode);
+
+  // Convert to the state format expected by useReportSubmission
+  const promoValidationState: PromoValidationState = {
+    status: promoValidation?.isValid 
+      ? (promoValidation.isFree ? 'valid-free' : 'valid-discount')
+      : (promoCode ? 'invalid' : 'none'),
+    message: promoValidation?.message || '',
+    discountPercent: promoValidation?.discountPercent || 0
+  };
+
+  const setPromoValidation = (state: PromoValidationState) => {
+    // This will be handled by the hook automatically
+  };
 
   const nextStep = () => {
     if (currentStep < 4) {
@@ -129,7 +149,8 @@ export const useMobileDrawerForm = () => {
     closeDrawer,
     mapCategoryToReportType,
     mapCategoryToSubType,
-    promoValidation,
+    promoValidation: promoValidationState,
     isValidatingPromo,
+    setPromoValidation,
   };
 };
