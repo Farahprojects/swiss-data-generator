@@ -47,17 +47,48 @@ function PickerWheel<T extends string | number = string>({
   /* --------------------------------------------------------------------- */
   // Refs & motion values
   const containerRef = useRef<HTMLDivElement>(null);
-  const rawY = useMotionValue(0); // raw drag offset
+  
+  // Calculate initial position based on current value
+  const initialPosition = useMemo(() => {
+    const idx = options.indexOf(value);
+    return idx !== -1 ? -idx * itemHeight : 0;
+  }, [options, value, itemHeight]);
+
+  const rawY = useMotionValue(initialPosition); // Initialize with correct position
   const y = useSpring(rawY, { stiffness: 400, damping: 45, mass: 0.8 });
 
-  const [{ isDragging }, setDrag] = useState({ isDragging: false });
+  const [{ isDragging, isInitialized }, setDrag] = useState({ 
+    isDragging: false, 
+    isInitialized: false 
+  });
 
   /* --------------------------------------------------------------------- */
-  // Keep wheel in sync with external value
+  // Initialize position on mount
   useEffect(() => {
+    if (!isInitialized) {
+      const idx = options.indexOf(value);
+      if (idx !== -1) {
+        rawY.set(-idx * itemHeight);
+        console.log(`PickerWheel initialized: value=${value}, index=${idx}, position=${-idx * itemHeight}`);
+      }
+      setDrag(prev => ({ ...prev, isInitialized: true }));
+    }
+  }, [options, value, itemHeight, rawY, isInitialized]);
+
+  // Keep wheel in sync with external value changes (but not during drag or initial load)
+  useEffect(() => {
+    if (!isInitialized || isDragging) return;
+    
     const idx = options.indexOf(value);
-    if (idx !== -1) rawY.set(-idx * itemHeight);
-  }, [value, options, itemHeight, rawY]);
+    const currentPosition = rawY.get();
+    const expectedPosition = -idx * itemHeight;
+    
+    // Only reposition if there's a significant difference (avoid micro-adjustments)
+    if (idx !== -1 && Math.abs(currentPosition - expectedPosition) > itemHeight * 0.1) {
+      console.log(`PickerWheel repositioning: value=${value}, from=${currentPosition} to=${expectedPosition}`);
+      rawY.set(expectedPosition);
+    }
+  }, [value, options, itemHeight, rawY, isDragging, isInitialized]);
 
   // Convert y‑offset → nearest option index
   const nearestIndex = useCallback(
@@ -79,7 +110,10 @@ function PickerWheel<T extends string | number = string>({
       });
 
       controls.then(() => {
-        if (options[idx] !== value) onChange(options[idx]);
+        if (options[idx] !== value) {
+          console.log(`PickerWheel onChange: ${value} -> ${options[idx]}`);
+          onChange(options[idx]);
+        }
       });
     },
     [nearestIndex, itemHeight, rawY, options, onChange, value]
@@ -87,12 +121,18 @@ function PickerWheel<T extends string | number = string>({
 
   /* --------------------------------------------------------------------- */
   // Drag handlers
-  const onDragStart = () => setDrag({ isDragging: true });
+  const onDragStart = () => {
+    console.log('PickerWheel drag start');
+    setDrag(prev => ({ ...prev, isDragging: true }));
+  };
+  
   const onDrag = (_: PointerEvent, info: PanInfo) => {
     rawY.set(rawY.get() + info.delta.y);
   };
+  
   const onDragEnd = (_: PointerEvent, info: PanInfo) => {
-    setDrag({ isDragging: false });
+    console.log('PickerWheel drag end');
+    setDrag(prev => ({ ...prev, isDragging: false }));
 
     const minY = -(options.length - 1) * itemHeight;
     const rubber = 0.4 * itemHeight;
