@@ -25,7 +25,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, onExplor
 
   return (
     <div 
-      className="py-2 px-4 cursor-pointer transition-all duration-300"
+      className="py-1 px-4 cursor-pointer transition-all duration-300"
       onMouseEnter={() => {
         onHover();
         setIsHovered(true);
