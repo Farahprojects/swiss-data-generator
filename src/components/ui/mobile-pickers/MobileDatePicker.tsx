@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PickerWheel from './PickerWheel';
 import { useDebounced } from '@/hooks/useDebounced';
@@ -57,11 +56,11 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
   const [selectedYear, setSelectedYear] = useState<number>(initialDate.year);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Validate date string format
+  // Validate date string format - FIXED: Convert regex match to boolean
   const isValidDate = useCallback((dateStr: string): boolean => {
     if (!dateStr) return false;
     const date = new Date(dateStr);
-    return !isNaN(date.getTime()) && dateStr.match(/^\d{4}-\d{2}-\d{2}$/);
+    return !isNaN(date.getTime()) && !!dateStr.match(/^\d{4}-\d{2}-\d{2}$/);
   }, []);
 
   // Get days for selected month/year

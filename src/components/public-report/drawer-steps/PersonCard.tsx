@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   UseFormRegister,
@@ -148,17 +147,22 @@ const PersonCard = ({
   /* Render helpers                                                       */
   /* -------------------------------------------------------------------- */
 
+  // Updated PickerButton with proper event handling
   const PickerButton: React.FC<{
     label: string;
     icon: typeof Calendar | typeof Clock;
-    onClick: () => void;
+    onClick: (e: React.MouseEvent) => void;
     aria: string;
   }> = ({ label, icon: Icon, onClick, aria }) => (
     <Button
       type="button"
       variant="outline"
       aria-label={aria}
-      onClick={onClick}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick(e);
+      }}
       className="flex w-full items-center gap-2 px-3 h-12"
     >
       <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -167,6 +171,19 @@ const PersonCard = ({
       </span>
     </Button>
   );
+
+  // Updated click handlers with proper event handling
+  const handleDatePickerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDatePickerOpen(true);
+  };
+
+  const handleTimePickerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTimePickerOpen(true);
+  };
 
   /* -------------------------------------------------------------------- */
   /* JSX                                                                  */
@@ -229,7 +246,7 @@ const PersonCard = ({
                 <PickerButton
                   label={formatDateForDisplay(birthDate)}
                   icon={Calendar}
-                  onClick={() => setDatePickerOpen(true)}
+                  onClick={handleDatePickerClick}
                   aria="Open date picker"
                 />
               ) : (
@@ -256,7 +273,7 @@ const PersonCard = ({
                 <PickerButton
                   label={formatTimeForDisplay(birthTime)}
                   icon={Clock}
-                  onClick={() => setTimePickerOpen(true)}
+                  onClick={handleTimePickerClick}
                   aria="Open time picker"
                 />
               ) : (
