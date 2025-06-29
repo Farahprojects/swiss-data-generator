@@ -25,7 +25,7 @@ const PickerWheel = ({
   const selectedIndex = options.indexOf(value);
   const centerOffset = (height - itemHeight) / 2;
 
-  // Initialize position only once when component mounts or value changes from external source
+  // Initialize position to center the selected item
   useEffect(() => {
     if (selectedIndex >= 0 && !isInitialized) {
       const targetY = -selectedIndex * itemHeight;
@@ -40,9 +40,13 @@ const PickerWheel = ({
       const currentY = y.get();
       const expectedY = -selectedIndex * itemHeight;
       
-      // Only update if the position doesn't match the expected position
       if (Math.abs(currentY - expectedY) > itemHeight / 2) {
-        y.set(expectedY);
+        animate(y, expectedY, {
+          type: "spring",
+          damping: 30,
+          stiffness: 300,
+          duration: 0.3
+        });
       }
     }
   }, [value, isDragging, selectedIndex, itemHeight, y]);
@@ -55,11 +59,9 @@ const PickerWheel = ({
 
   // Calculate momentum and final position based on velocity
   const calculateMomentumTarget = useCallback((currentY: number, velocity: number) => {
-    // Apply momentum with realistic physics
-    const momentumDistance = velocity * 0.1;
+    const momentumDistance = velocity * 0.15;
     const targetY = currentY + momentumDistance;
     
-    // Snap to nearest item
     const targetIndex = Math.round(-targetY / itemHeight);
     const clampedIndex = Math.max(0, Math.min(options.length - 1, targetIndex));
     
@@ -75,11 +77,9 @@ const PickerWheel = ({
 
   const handleDrag = useCallback(
     (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      // Update selection in real-time during drag
       const currentY = y.get();
       const currentIndex = getCurrentSelectedIndex(currentY);
       
-      // Only update if the index has changed
       if (currentIndex !== selectedIndex && options[currentIndex] !== value) {
         onChange(options[currentIndex]);
       }
@@ -94,20 +94,17 @@ const PickerWheel = ({
       const currentY = y.get();
       const velocity = info.velocity.y;
       
-      // Calculate momentum target
       const { finalY, finalIndex } = calculateMomentumTarget(currentY, velocity);
       
-      // Animate to final position with smooth physics
       const controls = animate(y, finalY, {
         type: "spring",
-        damping: 40,
-        stiffness: 200,
+        damping: 35,
+        stiffness: 300,
         mass: 1,
-        restDelta: 0.1,
-        restSpeed: 0.1
+        restDelta: 0.5,
+        restSpeed: 0.5
       });
       
-      // Update selected value when animation completes
       controls.then(() => {
         if (options[finalIndex] !== value) {
           onChange(options[finalIndex]);
@@ -117,15 +114,10 @@ const PickerWheel = ({
     [y, calculateMomentumTarget, onChange, options, value]
   );
 
-  // Real-time position-based transforms for visual feedback
-  const currentIndexTransform = useTransform(y, (yValue) => {
-    return Math.round(-yValue / itemHeight);
-  });
-
-  // Memoized drag constraints to prevent recalculation
+  // Memoized drag constraints
   const dragConstraints = useMemo(() => ({
-    top: -(options.length - 1) * itemHeight - itemHeight * 0.5,
-    bottom: itemHeight * 0.5
+    top: -(options.length - 1) * itemHeight - itemHeight * 0.3,
+    bottom: itemHeight * 0.3
   }), [options.length, itemHeight]);
 
   return (
@@ -134,9 +126,9 @@ const PickerWheel = ({
       className="relative overflow-hidden select-none"
       style={{ height }}
     >
-      {/* Selection indicator */}
+      {/* Subtle selection indicator - much more minimal */}
       <div 
-        className="absolute left-0 right-0 border-t border-b border-gray-300 bg-gray-50/50 pointer-events-none z-10"
+        className="absolute left-0 right-0 pointer-events-none z-10"
         style={{ 
           top: centerOffset,
           height: itemHeight
@@ -148,14 +140,14 @@ const PickerWheel = ({
         drag="y"
         dragConstraints={dragConstraints}
         dragElastic={{
-          top: 0.05,
-          bottom: 0.05
+          top: 0.03,
+          bottom: 0.03
         }}
         dragTransition={{
-          bounceStiffness: 300,
-          bounceDamping: 40,
-          power: 0.2,
-          timeConstant: 150
+          bounceStiffness: 400,
+          bounceDamping: 30,
+          power: 0.3,
+          timeConstant: 120
         }}
         onDragStart={handleDragStart}
         onDrag={handleDrag}
@@ -183,7 +175,7 @@ const PickerWheel = ({
   );
 };
 
-// Separate component for individual picker items to optimize rendering
+// iOS-style picker item with proper visual hierarchy
 const PickerItem = React.memo(({ 
   option, 
   index, 
@@ -203,18 +195,23 @@ const PickerItem = React.memo(({
     return Math.abs(index - centerIndex);
   });
 
-  // Dynamic opacity based on distance from center
-  const opacity = useTransform(distanceFromCenter, [0, 1, 2], [1, 0.7, 0.3]);
+  // iOS-style opacity: center item is fully opaque, others fade out
+  const opacity = useTransform(distanceFromCenter, [0, 1, 2, 3], [1, 0.6, 0.3, 0.1]);
   
-  // Dynamic scale based on distance from center
-  const scale = useTransform(distanceFromCenter, [0, 1, 2], [1, 0.95, 0.85]);
+  // iOS-style scale: center item is normal size, others slightly smaller
+  const scale = useTransform(distanceFromCenter, [0, 1, 2], [1, 0.9, 0.8]);
 
-  // Dynamic color based on distance from center
-  const isCenter = useTransform(distanceFromCenter, (distance) => distance < 0.5);
+  // iOS-style font weight: center item is bold, others are normal
+  const fontWeight = useTransform(distanceFromCenter, (distance) => distance < 0.5 ? 600 : 400);
+  
+  // iOS-style color: center item is black, others are gray
+  const textColor = useTransform(distanceFromCenter, (distance) => 
+    distance < 0.5 ? '#000000' : '#666666'
+  );
   
   return (
     <motion.div
-      className="flex items-center justify-center text-lg font-medium transition-colors duration-150"
+      className="flex items-center justify-center text-lg transition-all duration-100"
       style={{ 
         height: itemHeight,
         opacity,
@@ -223,8 +220,10 @@ const PickerItem = React.memo(({
     >
       <motion.span
         style={{
-          color: useTransform(isCenter, (isCentered) => isCentered ? '#000' : '#666')
+          fontWeight,
+          color: textColor
         }}
+        className="select-none"
       >
         {option}
       </motion.span>

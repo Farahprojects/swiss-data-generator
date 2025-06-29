@@ -56,7 +56,6 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
       {/* Hour Picker */}
       <div className="flex-1">
         <PickerWheel
-          key={`hour-${selectedHour}`}
           options={hours}
           value={selectedHour}
           onChange={(value) => setSelectedHour(value as number)}
@@ -68,7 +67,6 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
       {/* Minute Picker */}
       <div className="flex-1">
         <PickerWheel
-          key={`minute-${selectedMinute}`}
           options={minutes.map(m => m.toString().padStart(2, '0'))}
           value={selectedMinute.toString().padStart(2, '0')}
           onChange={(value) => setSelectedMinute(parseInt(value as string))}
@@ -80,7 +78,6 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
       {/* Period Picker */}
       <div className="flex-1">
         <PickerWheel
-          key={`period-${selectedPeriod}`}
           options={periods}
           value={selectedPeriod}
           onChange={(value) => setSelectedPeriod(value as 'AM' | 'PM')}
