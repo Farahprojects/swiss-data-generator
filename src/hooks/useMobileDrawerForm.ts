@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { reportSchema } from '@/schemas/report-form-schema';
+import { usePromoValidation } from '@/hooks/usePromoValidation';
 
 export type DrawerStep = 1 | 2 | 3 | 4;
 
@@ -55,6 +56,10 @@ export const useMobileDrawerForm = () => {
       notes: '',
     },
   });
+
+  // Add promo validation to the hook
+  const promoCode = form.watch('promoCode') || '';
+  const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode);
 
   const nextStep = () => {
     if (currentStep < 4) {
@@ -124,5 +129,7 @@ export const useMobileDrawerForm = () => {
     closeDrawer,
     mapCategoryToReportType,
     mapCategoryToSubType,
+    promoValidation,
+    isValidatingPromo,
   };
 };

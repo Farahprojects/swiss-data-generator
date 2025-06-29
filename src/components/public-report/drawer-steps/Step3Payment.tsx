@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DrawerFormData } from '@/hooks/useMobileDrawerForm';
-import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { PromoCodeValidation } from '@/utils/promoCodeValidation';
 
 interface Step3PaymentProps {
   register: UseFormRegister<DrawerFormData>;
@@ -17,17 +17,26 @@ interface Step3PaymentProps {
   onPrev: () => void;
   onSubmit: () => void;
   isProcessing: boolean;
+  promoValidation: PromoCodeValidation | null;
+  isValidatingPromo: boolean;
 }
 
-const Step3Payment = ({ register, watch, errors, onPrev, onSubmit, isProcessing }: Step3PaymentProps) => {
+const Step3Payment = ({ 
+  register, 
+  watch, 
+  errors, 
+  onPrev, 
+  onSubmit, 
+  isProcessing,
+  promoValidation,
+  isValidatingPromo 
+}: Step3PaymentProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
-
-  const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode);
 
   const getReportTitle = (category: string, subCategory: string) => {
     switch (category) {
@@ -111,6 +120,20 @@ const Step3Payment = ({ register, watch, errors, onPrev, onSubmit, isProcessing 
   };
 
   const canProceed = !promoCode || !isValidatingPromo;
+
+  const handleSubmitClick = () => {
+    console.log('💰 Payment button clicked');
+    console.log('🎫 Current promo validation:', promoValidation);
+    console.log('⏳ Is validating:', isValidatingPromo);
+    console.log('✅ Can proceed:', canProceed);
+    
+    if (!canProceed) {
+      console.log('❌ Cannot proceed - validation in progress');
+      return;
+    }
+    
+    onSubmit();
+  };
 
   return (
     <motion.div
@@ -219,7 +242,7 @@ const Step3Payment = ({ register, watch, errors, onPrev, onSubmit, isProcessing 
         className="space-y-4"
       >
         <Button
-          onClick={onSubmit}
+          onClick={handleSubmitClick}
           disabled={isProcessing || !canProceed}
           variant="outline"
           className="w-full h-14 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent disabled:opacity-50"

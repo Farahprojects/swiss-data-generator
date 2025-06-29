@@ -28,6 +28,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     prevStep,
     mapCategoryToReportType,
     mapCategoryToSubType,
+    promoValidation,
+    isValidatingPromo,
   } = useMobileDrawerForm();
 
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
@@ -42,6 +44,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   };
 
   const onSubmit = async (data: any) => {
+    console.log('🚀 Mobile drawer form submission started');
+    console.log('📝 Form data:', data);
+    console.log('🎫 Promo validation:', promoValidation);
+
     // Map drawer form data to the expected ReportFormData format
     const mappedData: ReportFormData = {
       reportType: mapCategoryToReportType(data.reportCategory, data.reportSubCategory),
@@ -54,15 +60,37 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       birthLatitude: data.birthLatitude,
       birthLongitude: data.birthLongitude,
       birthPlaceId: data.birthPlaceId,
+      // Include second person data for compatibility reports
+      secondPersonName: data.secondPersonName,
+      secondPersonBirthDate: data.secondPersonBirthDate,
+      secondPersonBirthTime: data.secondPersonBirthTime,
+      secondPersonBirthLocation: data.secondPersonBirthLocation,
+      secondPersonLatitude: data.secondPersonLatitude,
+      secondPersonLongitude: data.secondPersonLongitude,
+      secondPersonPlaceId: data.secondPersonPlaceId,
       promoCode: data.promoCode,
       notes: data.notes,
     };
 
-    await submitReport(mappedData, { status: 'none', message: '', discountPercent: 0 }, () => {});
+    console.log('🔄 Mapped data for submission:', mappedData);
+
+    // Create proper promo validation state for submission
+    const promoValidationState = {
+      status: promoValidation?.isValid 
+        ? (promoValidation.isFree ? 'valid-free' : 'valid-discount')
+        : (data.promoCode ? 'invalid' : 'none'),
+      message: promoValidation?.message || '',
+      discountPercent: promoValidation?.discountPercent || 0
+    } as const;
+
+    console.log('🎯 Promo validation state:', promoValidationState);
+
+    await submitReport(mappedData, promoValidationState, () => {});
     handleClose();
   };
 
   const handleFormSubmit = () => {
+    console.log('🎬 Form submit triggered');
     handleSubmit(onSubmit)();
   };
 
@@ -135,6 +163,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 onPrev={prevStep}
                 onSubmit={handleFormSubmit}
                 isProcessing={isProcessing}
+                promoValidation={promoValidation}
+                isValidatingPromo={isValidatingPromo}
               />
             )}
           </AnimatePresence>
