@@ -42,7 +42,8 @@ const MobileReportTrigger = () => {
             <Button
               onClick={() => setIsDrawerOpen(true)}
               size="lg"
-              className="h-14 px-8 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-white font-semibold text-lg"
+              variant="outline"
+              className="h-14 px-8 rounded-full border-2 border-primary bg-white text-primary hover:bg-primary/5 shadow-lg font-semibold text-lg"
             >
               <Sparkles className="h-5 w-5 mr-2" />
               Get Your Report

@@ -17,7 +17,8 @@ const HeroSection = () => {
         <div className="mb-16">
           <Button 
             size="lg"
-            className="h-16 px-12 text-lg font-medium rounded-2xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border border-primary/20"
+            variant="outline"
+            className="h-16 px-12 text-lg font-medium rounded-2xl border-2 border-primary bg-white text-primary hover:bg-primary/5 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
           >
             Get Your Report
             <ArrowRight className="ml-3 h-5 w-5" />
