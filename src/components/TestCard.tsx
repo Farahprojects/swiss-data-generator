@@ -33,8 +33,8 @@ export const TestCard = ({ title, description, path, isActive, onHover, onExplor
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-center justify-between">
-        <div className="flex-1 text-left">
-          <h3 className={`text-2xl md:text-4xl font-black transition-all duration-300 whitespace-nowrap ${
+        <div className="flex-1 text-center md:text-left">
+          <h3 className={`text-3xl md:text-4xl font-black transition-all duration-300 whitespace-nowrap tracking-tight ${
             isActive || isHovered 
               ? 'text-primary' 
               : 'text-gray-900'
