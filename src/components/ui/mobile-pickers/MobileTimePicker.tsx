@@ -14,12 +14,12 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
 
   const hours = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
   const minutes = Array.from({ length: 60 }, (_, i) => i); // 0-59
-  const periods = ['AM', 'PM'];
+  const periods = ['AM', 'PM'] as const;
 
   // Convert 24-hour to 12-hour format
   const convertTo12Hour = (time24: string) => {
     const [hours, minutes] = time24.split(':').map(Number);
-    const period = hours >= 12 ? 'PM' : 'AM';
+    const period: 'AM' | 'PM' = hours >= 12 ? 'PM' : 'AM';
     const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
     return { hour: hour12, minute: minutes, period };
   };
