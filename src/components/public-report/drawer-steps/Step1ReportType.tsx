@@ -17,24 +17,18 @@ const reportCategories = [
     title: 'Professional',
     description: 'Career, business, work dynamics',
     icon: Briefcase,
-    color: 'bg-blue-50 border-blue-200 hover:bg-blue-100',
-    selectedColor: 'bg-blue-100 border-blue-500',
   },
   {
     value: 'relational',
     title: 'Relational',
     description: 'Love, relationships, compatibility',
     icon: Heart,
-    color: 'bg-pink-50 border-pink-200 hover:bg-pink-100',
-    selectedColor: 'bg-pink-100 border-pink-500',
   },
   {
     value: 'personal',
     title: 'Personal',
     description: 'Self-discovery, life path, essence',
     icon: User,
-    color: 'bg-green-50 border-green-200 hover:bg-green-100',
-    selectedColor: 'bg-green-100 border-green-500',
   },
 ];
 
@@ -45,11 +39,11 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
+      className="space-y-8"
     >
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-900">Choose Your Report Type</h2>
-        <p className="text-gray-600">What area would you like insight into?</p>
+      <div className="text-center space-y-3">
+        <h2 className="text-2xl font-semibold text-gray-900">Choose Your Report Type</h2>
+        <p className="text-gray-500 text-base">What area would you like insight into?</p>
       </div>
 
       <Controller
@@ -66,18 +60,20 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
                   key={category.value}
                   type="button"
                   onClick={() => field.onChange(category.value)}
-                  className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-200 ${
-                    isSelected ? category.selectedColor : category.color
+                  className={`w-full p-5 rounded-2xl border transition-all duration-200 text-left ${
+                    isSelected 
+                      ? 'bg-gray-50 border-gray-300 shadow-sm' 
+                      : 'bg-white border-gray-200 hover:bg-gray-25 hover:border-gray-250'
                   }`}
                   whileTap={{ scale: 0.98 }}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className={`p-3 rounded-full ${isSelected ? 'bg-white' : 'bg-white/70'}`}>
-                      <IconComponent className="h-6 w-6 text-gray-700" />
+                    <div className="flex-shrink-0">
+                      <IconComponent className={`h-6 w-6 ${isSelected ? 'text-gray-700' : 'text-gray-500'}`} />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">{category.title}</h3>
-                      <p className="text-sm text-gray-600">{category.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-medium text-gray-900 mb-1">{category.title}</h3>
+                      <p className="text-sm text-gray-500 leading-relaxed">{category.description}</p>
                     </div>
                   </div>
                 </motion.button>
@@ -92,13 +88,14 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="pt-2"
         >
           <Button
             onClick={onNext}
-            className="w-full h-12 text-lg font-semibold"
+            className="w-full h-12 text-base font-medium bg-gray-900 hover:bg-gray-800 text-white rounded-xl"
             size="lg"
           >
-            Next: Enter Details
+            Continue
           </Button>
         </motion.div>
       )}
