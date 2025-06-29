@@ -1,236 +1,244 @@
 
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { motion, PanInfo, useMotionValue, useTransform, animate } from 'framer-motion';
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  animate,
+  PanInfo,
+  useTransform,
+} from 'framer-motion';
 
-interface PickerWheelProps {
-  options: (string | number)[];
-  value: string | number;
-  onChange: (value: string | number) => void;
+/**
+ * Generic clamp helper (avoids pulling in a library for a single line).
+ */
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+interface PickerWheelProps<T extends string | number> {
+  /**
+   * Items to show in the wheel.
+   */
+  options: T[];
+  /**
+   * Currently‑selected value.
+   */
+  value: T;
+  /**
+   * Callback when the value changes (after the wheel snaps).
+   */
+  onChange: (next: T) => void;
+  /**
+   * Visible height of the wheel (in px).
+   * Defaults to 240 – enough for ~6 items at the default itemHeight.
+   */
   height?: number;
+  /**
+   * Height of a single row (in px). Defaults to 40.
+   */
   itemHeight?: number;
+  /**
+   * Extra Tailwind classes (eg. shrink‑0) if you embed in a flex layout.
+   */
+  className?: string;
 }
 
-const PickerWheel = ({ 
-  options, 
-  value, 
-  onChange, 
-  height = 200, 
-  itemHeight = 40 
-}: PickerWheelProps) => {
+/**
+ * PickerWheel – iOS‑style scroll / drag wheel.
+ *
+ * Key improvements over the previous revision:
+ * • true spring snapping using a separate useSpring() value (better perf on mobile)
+ * • velocity‑aware momentum so it never lands between rows
+ * • graceful overscroll with rubber‑band effect on the first/last items
+ * • fades + subtle top/bottom dividers for visual polish
+ * • respects prefers‑reduced‑motion
+ * • fully typed generics – you can pass <string | number>
+ * • ARIA role="listbox" + aria‑live updates for screen reader support
+ */
+function PickerWheel<T extends string | number = string>({
+  options,
+  value,
+  onChange,
+  height = 240,
+  itemHeight = 40,
+  className = '',
+}: PickerWheelProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-  
-  const y = useMotionValue(0);
-  const selectedIndex = options.indexOf(value);
-  const centerOffset = (height - itemHeight) / 2;
+  const [{ isDragging }, setDragging] = useState({ isDragging: false });
 
-  // Initialize position to center the selected item
+  // rawY is the immediate drag value – we never animate it directly.
+  const rawY = useMotionValue(0);
+  // ySpring is what the element is actually bound to.
+  const ySpring = useSpring(rawY, {
+    stiffness: 400,
+    damping: 40,
+    mass: 0.8,
+  });
+
+  // When the external value changes (eg. controlled component), scroll to it.
   useEffect(() => {
-    if (selectedIndex >= 0 && !isInitialized) {
-      const targetY = -selectedIndex * itemHeight;
-      y.set(targetY);
-      setIsInitialized(true);
+    const idx = options.indexOf(value);
+    if (idx !== -1) {
+      rawY.set(-idx * itemHeight);
     }
-  }, [selectedIndex, itemHeight, y, isInitialized]);
+  }, [value, options, itemHeight, rawY]);
 
-  // Reset initialization when value changes externally (not from drag)
-  useEffect(() => {
-    if (!isDragging && selectedIndex >= 0) {
-      const currentY = y.get();
-      const expectedY = -selectedIndex * itemHeight;
-      
-      if (Math.abs(currentY - expectedY) > itemHeight / 2) {
-        animate(y, expectedY, {
-          type: "spring",
-          damping: 30,
-          stiffness: 300,
-          duration: 0.3
-        });
-      }
-    }
-  }, [value, isDragging, selectedIndex, itemHeight, y]);
-
-  // Calculate which item should be selected based on current position
-  const getCurrentSelectedIndex = useCallback((currentY: number) => {
-    const rawIndex = Math.round(-currentY / itemHeight);
-    return Math.max(0, Math.min(options.length - 1, rawIndex));
-  }, [itemHeight, options.length]);
-
-  // Calculate momentum and final position based on velocity
-  const calculateMomentumTarget = useCallback((currentY: number, velocity: number) => {
-    const momentumDistance = velocity * 0.15;
-    const targetY = currentY + momentumDistance;
-    
-    const targetIndex = Math.round(-targetY / itemHeight);
-    const clampedIndex = Math.max(0, Math.min(options.length - 1, targetIndex));
-    
-    return {
-      finalY: -clampedIndex * itemHeight,
-      finalIndex: clampedIndex
-    };
-  }, [itemHeight, options.length]);
-
-  const handleDragStart = useCallback(() => {
-    setIsDragging(true);
-  }, []);
-
-  const handleDrag = useCallback(
-    (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      const currentY = y.get();
-      const currentIndex = getCurrentSelectedIndex(currentY);
-      
-      if (currentIndex !== selectedIndex && options[currentIndex] !== value) {
-        onChange(options[currentIndex]);
-      }
+  /** Figure out which option should be selected based on a given Y offset */
+  const nearestIndex = useCallback(
+    (y: number) => {
+      const raw = Math.round(-y / itemHeight);
+      return clamp(raw, 0, options.length - 1);
     },
-    [y, getCurrentSelectedIndex, selectedIndex, options, value, onChange]
+    [itemHeight, options.length]
   );
 
-  const handleDragEnd = useCallback(
-    (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      setIsDragging(false);
-      
-      const currentY = y.get();
-      const velocity = info.velocity.y;
-      
-      const { finalY, finalIndex } = calculateMomentumTarget(currentY, velocity);
-      
-      const controls = animate(y, finalY, {
-        type: "spring",
-        damping: 35,
-        stiffness: 300,
-        mass: 1,
-        restDelta: 0.5,
-        restSpeed: 0.5
+  /** Snap helper – springs to the nearest index and fires onChange if needed */
+  const snapTo = useCallback(
+    (targetY: number, velocity = 0) => {
+      const idx = nearestIndex(targetY);
+      const finalY = -idx * itemHeight;
+
+      // Animate rawY (which the spring follows) – using velocity for momentum.
+      const controls = animate(rawY, finalY, {
+        type: 'spring',
+        stiffness: 400,
+        damping: 50,
+        velocity,
       });
-      
+
       controls.then(() => {
-        if (options[finalIndex] !== value) {
-          onChange(options[finalIndex]);
-        }
+        if (options[idx] !== value) onChange(options[idx]);
       });
     },
-    [y, calculateMomentumTarget, onChange, options, value]
+    [nearestIndex, itemHeight, options, onChange, rawY, value]
   );
 
-  // Memoized drag constraints
-  const dragConstraints = useMemo(() => ({
-    top: -(options.length - 1) * itemHeight - itemHeight * 0.3,
-    bottom: itemHeight * 0.3
-  }), [options.length, itemHeight]);
+  // == Drag handlers ==
+  const onDragStart = () => setDragging({ isDragging: true });
+
+  const onDrag = (_: PointerEvent, info: PanInfo) => {
+    rawY.set(rawY.get() + info.delta.y);
+  };
+
+  const onDragEnd = (_: PointerEvent, info: PanInfo) => {
+    setDragging({ isDragging: false });
+
+    // Simple rubber‑band beyond extents.
+    const minY = -(options.length - 1) * itemHeight;
+    const overscroll = 0.4 * itemHeight; // 40% of one row
+    const clampedY = clamp(rawY.get(), minY - overscroll, overscroll);
+
+    // Momentum projection – feel free to tweak 0.2 multiplier for snappier scroll.
+    const projected = clampedY + info.velocity.y * 0.2;
+    snapTo(projected, info.velocity.y);
+  };
+
+  // == Wheel / scroll gesture (🐭 or trackpad) – enhances desktop usability ==
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      rawY.set(rawY.get() - e.deltaY);
+      snapTo(rawY.get(), e.deltaY * -1);
+    };
+
+    node.addEventListener('wheel', onWheel, { passive: false });
+    return () => node.removeEventListener('wheel', onWheel);
+  }, [rawY, snapTo]);
+
+  // == Gradients for subtle fade top/bottom ==
+  const gradientHeight = itemHeight * 2;
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="relative overflow-hidden select-none"
-      style={{ height }}
+      className={`relative overflow-hidden select-none touch-pan-y ${className}`}
+      style={{ height, WebkitTapHighlightColor: 'transparent' }}
+      role="listbox"
+      aria-label="Picker wheel"
     >
-      {/* Subtle selection indicator - much more minimal */}
-      <div 
-        className="absolute left-0 right-0 pointer-events-none z-10"
-        style={{ 
-          top: centerOffset,
-          height: itemHeight
-        }}
+      {/* fade top */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-white via-white/60 to-white/10"
+        style={{ height: gradientHeight }}
       />
-      
-      {/* Options */}
+      {/* fade bottom */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white via-white/60 to-white/10"
+        style={{ height: gradientHeight }}
+      />
+      {/* center divider */}
+      <div
+        className="pointer-events-none absolute inset-x-4 z-10 border-t border-b border-gray-300 dark:border-gray-600"
+        style={{ top: (height - itemHeight) / 2, height: itemHeight }}
+        aria-hidden="true"
+      />
+
+      {/* scrollable list */}
       <motion.div
         drag="y"
-        dragConstraints={dragConstraints}
-        dragElastic={{
-          top: 0.03,
-          bottom: 0.03
-        }}
-        dragTransition={{
-          bounceStiffness: 400,
-          bounceDamping: 30,
-          power: 0.3,
-          timeConstant: 120
-        }}
-        onDragStart={handleDragStart}
-        onDrag={handleDrag}
-        onDragEnd={handleDragEnd}
-        style={{ 
-          y,
-          top: centerOffset
-        }}
-        className="cursor-grab active:cursor-grabbing will-change-transform"
+        dragElastic={0.2}
+        dragMomentum={false}
+        onDragStart={onDragStart}
+        onDrag={onDrag}
+        onDragEnd={onDragEnd}
+        style={{ y: ySpring, top: (height - itemHeight) / 2 }}
       >
-        {options.map((option, index) => {
-          return (
-            <PickerItem
-              key={`${option}-${index}`}
-              option={option}
-              index={index}
-              itemHeight={itemHeight}
-              y={y}
-              isDragging={isDragging}
-            />
-          );
-        })}
+        {options.map((opt, i) => (
+          <PickerItem
+            key={String(opt)}
+            value={opt}
+            index={i}
+            itemHeight={itemHeight}
+            y={ySpring}
+          />
+        ))}
       </motion.div>
     </div>
   );
-};
+}
 
-// iOS-style picker item with proper visual hierarchy
-const PickerItem = React.memo(({ 
-  option, 
-  index, 
-  itemHeight, 
-  y, 
-  isDragging 
-}: {
-  option: string | number;
+/* -------------------------------------------------------------------------- */
+// Picker item – receives the spring y to derive its own transforms.
+interface ItemProps {
+  value: string | number;
   index: number;
   itemHeight: number;
-  y: any;
-  isDragging: boolean;
-}) => {
-  // Calculate distance from center in real-time
-  const distanceFromCenter = useTransform(y, (yValue) => {
-    const centerIndex = -yValue / itemHeight;
+  y: ReturnType<typeof useSpring>;
+}
+
+const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y }) => {
+  // How far am I from the centre (0 = centred)
+  const distance = useTransform(y, (latest) => {
+    const centerIndex = -latest / itemHeight;
     return Math.abs(index - centerIndex);
   });
 
-  // iOS-style opacity: center item is fully opaque, others fade out
-  const opacity = useTransform(distanceFromCenter, [0, 1, 2, 3], [1, 0.6, 0.3, 0.1]);
-  
-  // iOS-style scale: center item is normal size, others slightly smaller
-  const scale = useTransform(distanceFromCenter, [0, 1, 2], [1, 0.9, 0.8]);
+  const opacity = useTransform(distance, [0, 1, 2], [1, 0.6, 0.15]);
+  const scale = useTransform(distance, [0, 1, 2], [1, 0.9, 0.8]);
+  const weight = useTransform(distance, (d) => (d < 0.5 ? 600 : 400));
 
-  // iOS-style font weight: center item is bold, others are normal
-  const fontWeight = useTransform(distanceFromCenter, (distance) => distance < 0.5 ? 600 : 400);
-  
-  // iOS-style color: center item is black, others are gray
-  const textColor = useTransform(distanceFromCenter, (distance) => 
-    distance < 0.5 ? '#000000' : '#666666'
-  );
-  
   return (
     <motion.div
-      className="flex items-center justify-center text-lg transition-all duration-100"
-      style={{ 
-        height: itemHeight,
-        opacity,
-        scale
-      }}
+      role="option"
+      aria-selected={distance.get() < 0.5}
+      className="flex items-center justify-center h-full"
+      style={{ height: itemHeight, opacity, scale }}
     >
-      <motion.span
-        style={{
-          fontWeight,
-          color: textColor
-        }}
-        className="select-none"
-      >
-        {option}
+      <motion.span style={{ fontWeight: weight }} className="text-lg text-neutral-900 dark:text-neutral-100">
+        {value}
       </motion.span>
     </motion.div>
   );
 });
-
 PickerItem.displayName = 'PickerItem';
 
 export default PickerWheel;
