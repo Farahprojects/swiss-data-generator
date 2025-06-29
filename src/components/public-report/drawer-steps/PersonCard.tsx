@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState } from 'react';
 import {
   UseFormRegister,
   UseFormSetValue,
@@ -143,19 +144,6 @@ const PersonCard = ({
     }
   };
 
-  // FIX: Proper event handling for picker buttons to prevent double-click issue
-  const handleDatePickerOpen = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDatePickerOpen(true);
-  }, []);
-
-  const handleTimePickerOpen = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setTimePickerOpen(true);
-  }, []);
-
   /* -------------------------------------------------------------------- */
   /* Render helpers                                                       */
   /* -------------------------------------------------------------------- */
@@ -163,7 +151,7 @@ const PersonCard = ({
   const PickerButton: React.FC<{
     label: string;
     icon: typeof Calendar | typeof Clock;
-    onClick: (e: React.MouseEvent) => void;
+    onClick: () => void;
     aria: string;
   }> = ({ label, icon: Icon, onClick, aria }) => (
     <Button
@@ -241,7 +229,7 @@ const PersonCard = ({
                 <PickerButton
                   label={formatDateForDisplay(birthDate)}
                   icon={Calendar}
-                  onClick={handleDatePickerOpen}
+                  onClick={() => setDatePickerOpen(true)}
                   aria="Open date picker"
                 />
               ) : (
@@ -268,7 +256,7 @@ const PersonCard = ({
                 <PickerButton
                   label={formatTimeForDisplay(birthTime)}
                   icon={Clock}
-                  onClick={handleTimePickerOpen}
+                  onClick={() => setTimePickerOpen(true)}
                   aria="Open time picker"
                 />
               ) : (
