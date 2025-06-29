@@ -20,6 +20,13 @@ export interface DrawerFormData {
   birthLatitude?: number;
   birthLongitude?: number;
   birthPlaceId?: string;
+  secondPersonName?: string;
+  secondPersonBirthDate?: string;
+  secondPersonBirthTime?: string;
+  secondPersonBirthLocation?: string;
+  secondPersonLatitude?: number;
+  secondPersonLongitude?: number;
+  secondPersonPlaceId?: string;
   promoCode?: string;
   notes?: string;
 }
@@ -40,6 +47,10 @@ export const useMobileDrawerForm = () => {
       birthDate: '',
       birthTime: '',
       birthLocation: '',
+      secondPersonName: '',
+      secondPersonBirthDate: '',
+      secondPersonBirthTime: '',
+      secondPersonBirthLocation: '',
       promoCode: '',
       notes: '',
     },

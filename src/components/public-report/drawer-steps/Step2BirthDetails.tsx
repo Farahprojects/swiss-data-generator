@@ -1,14 +1,11 @@
 
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
-import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
-import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { DrawerFormData } from '@/hooks/useMobileDrawerForm';
+import PersonCard from './PersonCard';
 
 interface Step2BirthDetailsProps {
   register: UseFormRegister<DrawerFormData>;
@@ -20,43 +17,34 @@ interface Step2BirthDetailsProps {
 }
 
 const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }: Step2BirthDetailsProps) => {
-  const [hasInteracted, setHasInteracted] = useState({
-    name: false,
-    email: false,
-    birthDate: false,
-    birthTime: false,
-    birthLocation: false,
-  });
+  const [showSecondPerson, setShowSecondPerson] = useState(false);
 
-  const birthLocation = watch('birthLocation') || '';
+  const reportCategory = watch('reportCategory');
+  const isCompatibilityReport = reportCategory === 'compatibility';
+
+  // Watch first person fields
   const name = watch('name');
   const email = watch('email');
   const birthDate = watch('birthDate');
   const birthTime = watch('birthTime');
+  const birthLocation = watch('birthLocation');
 
-  const handlePlaceSelect = (placeData: PlaceData) => {
-    setValue('birthLocation', placeData.name);
-    setHasInteracted(prev => ({ ...prev, birthLocation: true }));
-    
-    if (placeData.latitude && placeData.longitude) {
-      setValue('birthLatitude', placeData.latitude);
-      setValue('birthLongitude', placeData.longitude);
-    }
-    
-    if (placeData.placeId) {
-      setValue('birthPlaceId', placeData.placeId);
-    }
+  // Watch second person fields
+  const secondPersonName = watch('secondPersonName');
+  const secondPersonBirthDate = watch('secondPersonBirthDate');
+  const secondPersonBirthTime = watch('secondPersonBirthTime');
+  const secondPersonBirthLocation = watch('secondPersonBirthLocation');
+
+  const isFirstPersonComplete = name && email && birthDate && birthTime && birthLocation;
+  const isSecondPersonComplete = secondPersonName && secondPersonBirthDate && secondPersonBirthTime && secondPersonBirthLocation;
+
+  const canProceed = isCompatibilityReport 
+    ? (isFirstPersonComplete && isSecondPersonComplete)
+    : isFirstPersonComplete;
+
+  const handleAddSecondPerson = () => {
+    setShowSecondPerson(true);
   };
-
-  const handleFieldInteraction = (fieldName: string) => {
-    setHasInteracted(prev => ({ ...prev, [fieldName]: true }));
-  };
-
-  const shouldShowError = (fieldName: keyof typeof hasInteracted, error: any) => {
-    return hasInteracted[fieldName] && error;
-  };
-
-  const isFormValid = name && email && birthDate && birthTime && birthLocation;
 
   return (
     <motion.div
@@ -76,97 +64,70 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="text-center flex-1">
-          <h2 className="text-2xl font-bold text-gray-900">Your Birth Details</h2>
-          <p className="text-gray-600">We need these to create your personalized report</p>
+          <h2 className="text-2xl font-bold text-gray-900">Birth Details</h2>
+          <p className="text-gray-600">
+            {isCompatibilityReport 
+              ? "We need both people's details for your compatibility report" 
+              : "We need these to create your personalized report"
+            }
+          </p>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name *</Label>
-            <Input
-              id="name"
-              {...register('name')}
-              placeholder="Enter your full name"
-              className="h-12"
-              onFocus={() => handleFieldInteraction('name')}
-              onBlur={() => handleFieldInteraction('name')}
-            />
-            {shouldShowError('name', errors.name) && (
-              <p className="text-sm text-red-500">{errors.name?.message}</p>
-            )}
-          </div>
+      <div className="space-y-6">
+        {/* First Person Card */}
+        <PersonCard
+          personNumber={1}
+          title={isCompatibilityReport ? "Your Details" : "Your Birth Details"}
+          register={register}
+          setValue={setValue}
+          watch={watch}
+          errors={errors}
+        />
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address *</Label>
-            <Input
-              id="email"
-              type="email"
-              {...register('email')}
-              placeholder="your@email.com"
-              className="h-12"
-              onFocus={() => handleFieldInteraction('email')}
-              onBlur={() => handleFieldInteraction('email')}
-            />
-            {shouldShowError('email', errors.email) && (
-              <p className="text-sm text-red-500">{errors.email?.message}</p>
-            )}
-          </div>
-        </div>
+        {/* Add Second Person Button */}
+        {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Button
+              onClick={handleAddSecondPerson}
+              variant="outline"
+              className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+              size="lg"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Partner's Details
+            </Button>
+          </motion.div>
+        )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="birthDate">Birth Date *</Label>
-            <Input
-              id="birthDate"
-              type="date"
-              {...register('birthDate')}
-              className="h-12"
-              onFocus={() => handleFieldInteraction('birthDate')}
-              onBlur={() => handleFieldInteraction('birthDate')}
-            />
-            {shouldShowError('birthDate', errors.birthDate) && (
-              <p className="text-sm text-red-500">{errors.birthDate?.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="birthTime">Birth Time *</Label>
-            <Input
-              id="birthTime"
-              type="time"
-              {...register('birthTime')}
-              step="60"
-              className="h-12"
-              onFocus={() => handleFieldInteraction('birthTime')}
-              onBlur={() => handleFieldInteraction('birthTime')}
-            />
-            {shouldShowError('birthTime', errors.birthTime) && (
-              <p className="text-sm text-red-500">{errors.birthTime?.message}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <PlaceAutocomplete
-            label="Birth Location *"
-            value={birthLocation}
-            onChange={(value) => {
-              setValue('birthLocation', value);
-              if (!hasInteracted.birthLocation && value) {
-                handleFieldInteraction('birthLocation');
-              }
-            }}
-            onPlaceSelect={handlePlaceSelect}
-            placeholder="Enter birth city, state, country"
-            id="birthLocation"
-            error={shouldShowError('birthLocation', errors.birthLocation) ? errors.birthLocation?.message : undefined}
-          />
-        </div>
+        {/* Second Person Card */}
+        <AnimatePresence>
+          {isCompatibilityReport && showSecondPerson && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <PersonCard
+                personNumber={2}
+                title="Partner's Details"
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {isFormValid && (
+      {/* Next Button */}
+      {canProceed && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
