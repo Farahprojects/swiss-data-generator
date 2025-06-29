@@ -87,7 +87,7 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
     if (!dateStr) return 'Select date';
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { 
-      month: 'long', 
+      month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
     });
