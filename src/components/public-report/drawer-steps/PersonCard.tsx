@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   UseFormRegister,
@@ -35,17 +36,12 @@ interface PersonCardProps {
 }
 
 /**
- * A reusable card collecting the birth data for a person (A or B).
- * The biggest UX pain‑point we had was the mobile "date / time" buttons not
- * aligning nicely with the surrounding inputs – the text could spill outside
- * the outline and the icon/text pair were not vertically centred.
- *
- * Fixes applied:
- *  1. Re‑styled the <Button> used as the display for date & time so that it
- *     behaves like an Input (same height, padding, radius).
- *  2. Explicit flex container inside Button to guarantee icon + label stay
- *     centred and truncates gracefully when the label is long.
- *  3. Minor a11y improvements (aria‑labels on the buttons).
+ * Mobile picker buttons were previously using `truncate`, which added an
+ * ellipsis when the date string overflowed.  For short strings like
+ * "Jan 28, 2025" we *never* want that – show the whole year.  We now:
+ *   • Drop `truncate` & allow natural text sizing.
+ *   • Use `text-sm` so the full date fits comfortably on small phones.
+ *   • Keep flex‑layout so icon + label stay centred.
  */
 const PersonCard = ({
   personNumber,
@@ -70,9 +66,9 @@ const PersonCard = ({
   const isSecondPerson = personNumber === 2;
   const prefix = isSecondPerson ? 'secondPerson' : '';
 
-  // ---------------------------------------------------------------------------
-  // Helpers – names, errors & formatting
-  // ---------------------------------------------------------------------------
+  /* -------------------------------------------------------------------- */
+  /* Helpers                                                              */
+  /* -------------------------------------------------------------------- */
 
   const name = watch(isSecondPerson ? 'secondPersonName' : 'name') || '';
   const email = watch('email') || '';
@@ -83,23 +79,22 @@ const PersonCard = ({
   const birthLocation =
     watch(isSecondPerson ? 'secondPersonBirthLocation' : 'birthLocation') || '';
 
-  const handleFieldInteraction = (fieldName: string) => {
+  const handleFieldInteraction = (fieldName: string) =>
     setHasInteracted((prev) => ({ ...prev, [fieldName]: true }));
-  };
 
   const shouldShowError = (
     fieldName: keyof typeof hasInteracted,
-    error: any
+    error: any,
   ) => hasInteracted[fieldName] && error;
 
   const getFieldName = (field: string) =>
-    isSecondPerson
-      ? (`secondPerson${field.charAt(0).toUpperCase()}${field.slice(1)}` as keyof DrawerFormData)
-      : (field as keyof DrawerFormData);
+    (isSecondPerson
+      ? `secondPerson${field.charAt(0).toUpperCase()}${field.slice(1)}`
+      : field) as keyof DrawerFormData;
 
   const getError = (field: string) => {
     const fieldName = getFieldName(field);
-    return errors[fieldName as keyof DrawerFormData];
+    return errors[fieldName];
   };
 
   const formatDateForDisplay = (dateStr: string) => {
@@ -144,44 +139,38 @@ const PersonCard = ({
       setValue(latField, placeData.latitude);
       setValue(lngField, placeData.longitude);
     }
-
     if (placeData.placeId) {
       setValue(placeIdField, placeData.placeId);
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // Render helpers – so we don’t repeat the flex wrapper twice
-  // ---------------------------------------------------------------------------
+  /* -------------------------------------------------------------------- */
+  /* Render helpers                                                       */
+  /* -------------------------------------------------------------------- */
 
-  const RenderPickerButton = (
-    {
-      label,
-      icon: Icon,
-      onClick,
-      aria,
-    }: {
-      label: string;
-      icon: typeof Calendar | typeof Clock;
-      onClick: () => void;
-      aria: string;
-    },
-  ) => (
+  const PickerButton: React.FC<{
+    label: string;
+    icon: typeof Calendar | typeof Clock;
+    onClick: () => void;
+    aria: string;
+  }> = ({ label, icon: Icon, onClick, aria }) => (
     <Button
       type="button"
       variant="outline"
       aria-label={aria}
-      className="w-full h-12 px-3 flex items-center gap-2 overflow-hidden"
       onClick={onClick}
+      className="flex w-full items-center gap-2 px-3 h-12"
     >
       <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <span className="truncate text-left font-normal grow">{label}</span>
+      <span className="grow text-left font-normal text-sm whitespace-nowrap">
+        {label}
+      </span>
     </Button>
   );
 
-  // ---------------------------------------------------------------------------
-  // JSX
-  // ---------------------------------------------------------------------------
+  /* -------------------------------------------------------------------- */
+  /* JSX                                                                  */
+  /* -------------------------------------------------------------------- */
 
   return (
     <>
@@ -192,7 +181,7 @@ const PersonCard = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 px-6">
-          {/* NAME */}
+          {/* NAME ------------------------------------------------------- */}
           <div className="space-y-2">
             <Label htmlFor={`${prefix}name`}>Full Name *</Label>
             <Input
@@ -210,7 +199,7 @@ const PersonCard = ({
             )}
           </div>
 
-          {/* EMAIL – only for first person */}
+          {/* EMAIL (only first person) ----------------------------------- */}
           {!isSecondPerson && (
             <div className="space-y-2">
               <Label htmlFor="email">Email Address *</Label>
@@ -231,13 +220,13 @@ const PersonCard = ({
             </div>
           )}
 
-          {/* DATE & TIME */}
+          {/* DATE & TIME ------------------------------------------------- */}
           <div className="grid grid-cols-2 gap-6">
             {/* DATE */}
             <div className="space-y-2">
               <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
               {isMobile ? (
-                <RenderPickerButton
+                <PickerButton
                   label={formatDateForDisplay(birthDate)}
                   icon={Calendar}
                   onClick={() => setDatePickerOpen(true)}
@@ -264,7 +253,7 @@ const PersonCard = ({
             <div className="space-y-2">
               <Label htmlFor={`${prefix}birthTime`}>Birth Time *</Label>
               {isMobile ? (
-                <RenderPickerButton
+                <PickerButton
                   label={formatTimeForDisplay(birthTime)}
                   icon={Clock}
                   onClick={() => setTimePickerOpen(true)}
@@ -289,7 +278,7 @@ const PersonCard = ({
             </div>
           </div>
 
-          {/* LOCATION */}
+          {/* LOCATION ---------------------------------------------------- */}
           <div className="space-y-2">
             <PlaceAutocomplete
               label="Birth Location *"
@@ -312,7 +301,7 @@ const PersonCard = ({
         </CardContent>
       </Card>
 
-      {/* MOBILE PICKER MODALS -------------------------------------------------- */}
+      {/* MOBILE PICKER MODALS ------------------------------------------ */}
       <MobilePickerModal
         isOpen={datePickerOpen}
         onClose={() => setDatePickerOpen(false)}
