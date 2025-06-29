@@ -1,4 +1,5 @@
 
+
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -165,8 +166,9 @@ export default function TestsSection() {
             </p>
           </div>
           
-          <div className="flex flex-col md:grid md:grid-cols-12 gap-8 md:items-center">
-            <div className="w-full md:col-span-6">
+          {/* Desktop layout - side by side */}
+          <div className="hidden md:grid md:grid-cols-12 gap-8 md:items-center">
+            <div className="md:col-span-6">
               <div className="space-y-0">
                 {testData.map((test) => (
                   <TestCard
@@ -183,8 +185,8 @@ export default function TestsSection() {
               </div>
             </div>
             
-            <div className="w-full md:col-span-6">
-              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-64 md:h-96">
+            <div className="md:col-span-6">
+              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-96">
                 {testData.map((test) => {
                   return (
                     <div 
@@ -256,6 +258,101 @@ export default function TestsSection() {
                 })}
               </div>
             </div>
+          </div>
+
+          {/* Mobile layout - test cards within container */}
+          <div className="block md:hidden">
+            <div className="space-y-0">
+              {testData.map((test) => (
+                <TestCard
+                  key={test.id}
+                  title={test.name}
+                  description=""
+                  path={test.slug}
+                  isActive={selectedTest.id === test.id}
+                  onHover={() => setSelectedTest(test)}
+                  onExplore={() => setShowReportGuide(true)}
+                  icon={LucideIcons.Sparkles}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Mobile full-width image section - outside containers */}
+      <div className="block md:hidden mt-8">
+        <div className="w-screen relative -mx-4 px-4">
+          <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-64">
+            {testData.map((test) => {
+              return (
+                <div 
+                  key={test.id}
+                  className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
+                >
+                  {test.id === 'Essence' ? (
+                    <div className="w-full h-full bg-white">
+                      <img 
+                        src={test.imageSrc} 
+                        alt="They Self Report" 
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    </div>
+                  ) : test.id === 'Sync' ? (
+                    <div className="w-full h-full bg-white">
+                      <img 
+                        src={test.imageSrc} 
+                        alt="Compatibility Report" 
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    </div>
+                  ) : test.id === 'Flow' ? (
+                    <div className="w-full h-full bg-white">
+                      <img 
+                        src={test.imageSrc} 
+                        alt="Flow Report" 
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    </div>
+                  ) : test.id === 'Monthly' ? (
+                    <div className="w-full h-full bg-white">
+                      <img 
+                        src={test.imageSrc} 
+                        alt="Energy Month Report" 
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    </div>
+                  ) : test.id === 'Mindset' ? (
+                    <div className="w-full h-full bg-white">
+                      <img 
+                        src={test.imageSrc} 
+                        alt="Mindset Report" 
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    </div>
+                  ) : test.id === 'Focus' ? (
+                    <div className="w-full h-full bg-white">
+                      <img 
+                        src={test.imageSrc} 
+                        alt="Focus Report" 
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    </div>
+                  ) : (
+                    <ReportCard
+                      type={getReportGuide(test.id).type}
+                      icon={getReportGuide(test.id).icon}
+                      title={getReportGuide(test.id).title}
+                      price={getReportGuide(test.id).price}
+                      bestFor={getReportGuide(test.id).bestFor}
+                      description={getReportGuide(test.id).description}
+                      details={getReportGuide(test.id).details}
+                      subTypes={getReportGuide(test.id).subTypes}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
