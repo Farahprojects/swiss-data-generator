@@ -12,6 +12,25 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
   const minutes = useMemo(() => Array.from({ length: 60 }, (_, i) => i), []); // 0-59
   const periods: ('AM' | 'PM')[] = useMemo(() => ['AM', 'PM'], []);
 
+  // Convert 24-hour to 12-hour format - moved to top to fix hoisting issue
+  const convertTo12Hour = (time24: string) => {
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period: 'AM' | 'PM' = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return { hour: hour12, minute: minutes, period };
+  };
+
+  // Convert 12-hour to 24-hour format - moved to top to fix hoisting issue
+  const convertTo24Hour = (hour: number, minute: number, period: 'AM' | 'PM') => {
+    let hour24 = hour;
+    if (period === 'AM' && hour === 12) {
+      hour24 = 0;
+    } else if (period === 'PM' && hour !== 12) {
+      hour24 = hour + 12;
+    }
+    return `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  };
+
   // Helper function to parse initial time from value prop
   const parseInitialTime = useCallback((timeValue: string) => {
     if (!timeValue) {
@@ -29,25 +48,6 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
   const [selectedMinute, setSelectedMinute] = useState<number>(initialTime.minute);
   const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>(initialTime.period);
   const [isInitialized, setIsInitialized] = useState(false);
-
-  // Convert 24-hour to 12-hour format
-  const convertTo12Hour = (time24: string) => {
-    const [hours, minutes] = time24.split(':').map(Number);
-    const period: 'AM' | 'PM' = hours >= 12 ? 'PM' : 'AM';
-    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    return { hour: hour12, minute: minutes, period };
-  };
-
-  // Convert 12-hour to 24-hour format
-  const convertTo24Hour = (hour: number, minute: number, period: 'AM' | 'PM') => {
-    let hour24 = hour;
-    if (period === 'AM' && hour === 12) {
-      hour24 = 0;
-    } else if (period === 'PM' && hour !== 12) {
-      hour24 = hour + 12;
-    }
-    return `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-  };
 
   // Validate time string format
   const isValidTime = useCallback((timeStr: string): boolean => {
