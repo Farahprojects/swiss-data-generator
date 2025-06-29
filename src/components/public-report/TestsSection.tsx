@@ -1,5 +1,3 @@
-
-
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -282,8 +280,8 @@ export default function TestsSection() {
       
       {/* Mobile full-width image section - outside containers */}
       <div className="block md:hidden mt-8">
-        <div className="w-screen relative -mx-4 px-4">
-          <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-64">
+        <div className="w-screen relative -mx-4">
+          <div className="w-full overflow-hidden relative shadow-lg h-64">
             {testData.map((test) => {
               return (
                 <div 
@@ -295,7 +293,7 @@ export default function TestsSection() {
                       <img 
                         src={test.imageSrc} 
                         alt="They Self Report" 
-                        className="w-full h-full object-cover rounded-xl"
+                        className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
                   ) : test.id === 'Sync' ? (
@@ -303,7 +301,7 @@ export default function TestsSection() {
                       <img 
                         src={test.imageSrc} 
                         alt="Compatibility Report" 
-                        className="w-full h-full object-cover rounded-xl"
+                        className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
                   ) : test.id === 'Flow' ? (
@@ -311,7 +309,7 @@ export default function TestsSection() {
                       <img 
                         src={test.imageSrc} 
                         alt="Flow Report" 
-                        className="w-full h-full object-cover rounded-xl"
+                        className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
                   ) : test.id === 'Monthly' ? (
@@ -319,7 +317,7 @@ export default function TestsSection() {
                       <img 
                         src={test.imageSrc} 
                         alt="Energy Month Report" 
-                        className="w-full h-full object-cover rounded-xl"
+                        className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
                   ) : test.id === 'Mindset' ? (
@@ -327,7 +325,7 @@ export default function TestsSection() {
                       <img 
                         src={test.imageSrc} 
                         alt="Mindset Report" 
-                        className="w-full h-full object-cover rounded-xl"
+                        className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
                   ) : test.id === 'Focus' ? (
@@ -335,7 +333,7 @@ export default function TestsSection() {
                       <img 
                         src={test.imageSrc} 
                         alt="Focus Report" 
-                        className="w-full h-full object-cover rounded-xl"
+                        className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
                   ) : (
