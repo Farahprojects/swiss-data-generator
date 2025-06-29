@@ -236,12 +236,12 @@ const ConfirmEmail: React.FC = () => {
   const iconVariants = {
     loading: {
       rotate: 360,
-      transition: { repeat: Infinity, duration: 1.2, ease: 'linear' },
+      transition: { repeat: Infinity, duration: 1.2 },
     },
     error: {
       scale: [1, 1.1, 1],
       rotate: [0, -10, 10, -10, 10, 0],
-      transition: { duration: 0.8, ease: 'easeInOut' },
+      transition: { duration: 0.8 },
     },
     success: {},
   };
