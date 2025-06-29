@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import PickerWheel from './PickerWheel';
 
 interface MobileDatePickerProps {
@@ -11,6 +11,7 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
   const [selectedMonth, setSelectedMonth] = useState<number>(1);
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const isUpdatingFromValue = useRef(false);
 
   // 3-letter month abbreviations for iOS-style picker
   const months = useMemo(() => [
@@ -24,7 +25,7 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
     return Array.from({ length: 111 }, (_, i) => currentYear - 100 + i);
   }, []);
 
-  // Get days for selected month/year
+  // Get days for selected month/year - memoized to prevent unnecessary recreations
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month, 0).getDate();
   };
@@ -41,46 +42,64 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
       const date = new Date(value);
       if (!isNaN(date.getTime())) {
         console.log(`MobileDatePicker initializing with value: ${value}`);
+        isUpdatingFromValue.current = true;
         setSelectedMonth(date.getMonth() + 1);
         setSelectedDay(date.getDate());
         setSelectedYear(date.getFullYear());
+        isUpdatingFromValue.current = false;
       }
     }
   }, [value]);
 
-  // Update value when selections change
+  // Handle day adjustment when month/year changes
   useEffect(() => {
-    // Adjust day if it's invalid for the selected month/year
-    const maxDays = getDaysInMonth(selectedMonth, selectedYear);
-    const adjustedDay = Math.min(selectedDay, maxDays);
-    
-    if (adjustedDay !== selectedDay) {
-      setSelectedDay(adjustedDay);
+    if (!isUpdatingFromValue.current) {
+      const maxDays = getDaysInMonth(selectedMonth, selectedYear);
+      if (selectedDay > maxDays) {
+        console.log(`Adjusting day from ${selectedDay} to ${maxDays} for ${selectedMonth}/${selectedYear}`);
+        setSelectedDay(maxDays);
+        return; // Don't update onChange here, let the next effect handle it
+      }
     }
+  }, [selectedMonth, selectedYear, selectedDay]);
 
-    const dateString = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-${adjustedDay.toString().padStart(2, '0')}`;
-    console.log(`MobileDatePicker onChange: ${dateString}`);
-    onChange(dateString);
+  // Update value when selections change (but not during initialization)
+  useEffect(() => {
+    if (!isUpdatingFromValue.current) {
+      const maxDays = getDaysInMonth(selectedMonth, selectedYear);
+      const adjustedDay = Math.min(selectedDay, maxDays);
+      
+      const dateString = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-${adjustedDay.toString().padStart(2, '0')}`;
+      console.log(`MobileDatePicker onChange: ${dateString}`);
+      onChange(dateString);
+    }
   }, [selectedMonth, selectedDay, selectedYear, onChange]);
 
-  // Create stable keys for the pickers to prevent remounting
-  const monthPickerKey = `month-${months[selectedMonth - 1]}`;
-  const dayPickerKey = `day-${selectedDay}`;
-  const yearPickerKey = `year-${selectedYear}`;
+  const handleMonthChange = (value: string) => {
+    const monthIndex = months.indexOf(value) + 1;
+    console.log(`Month changed to: ${value} (${monthIndex})`);
+    setSelectedMonth(monthIndex);
+  };
+
+  const handleDayChange = (value: number) => {
+    console.log(`Day changed to: ${value}`);
+    setSelectedDay(value);
+  };
+
+  const handleYearChange = (value: number) => {
+    console.log(`Year changed to: ${value}`);
+    setSelectedYear(value);
+  };
 
   return (
     <div className="flex items-center justify-center space-x-4 py-4">
       {/* Month Picker */}
       <div className="flex-1">
         <PickerWheel
-          key={monthPickerKey}
+          key="month-picker"
           options={months}
           value={months[selectedMonth - 1]}
-          onChange={(value) => {
-            const monthIndex = months.indexOf(value as string) + 1;
-            console.log(`Month changed to: ${value} (${monthIndex})`);
-            setSelectedMonth(monthIndex);
-          }}
+          onChange={handleMonthChange}
           height={240}
           itemHeight={40}
         />
@@ -89,13 +108,10 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
       {/* Day Picker */}
       <div className="flex-1">
         <PickerWheel
-          key={dayPickerKey}
+          key="day-picker"
           options={days}
           value={selectedDay}
-          onChange={(value) => {
-            console.log(`Day changed to: ${value}`);
-            setSelectedDay(value as number);
-          }}
+          onChange={handleDayChange}
           height={240}
           itemHeight={40}
         />
@@ -104,13 +120,10 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
       {/* Year Picker */}
       <div className="flex-1">
         <PickerWheel
-          key={yearPickerKey}
+          key="year-picker"
           options={years}
           value={selectedYear}
-          onChange={(value) => {
-            console.log(`Year changed to: ${value}`);
-            setSelectedYear(value as number);
-          }}
+          onChange={handleYearChange}
           height={240}
           itemHeight={40}
         />
