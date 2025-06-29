@@ -60,6 +60,7 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
       {/* Month Picker */}
       <div className="flex-1">
         <PickerWheel
+          key={`month-${selectedMonth}`}
           options={months}
           value={months[selectedMonth - 1]}
           onChange={(value) => {
@@ -74,6 +75,7 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
       {/* Day Picker */}
       <div className="flex-1">
         <PickerWheel
+          key={`day-${selectedDay}-${daysInMonth}`}
           options={days}
           value={selectedDay}
           onChange={(value) => setSelectedDay(value as number)}
@@ -85,6 +87,7 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
       {/* Year Picker */}
       <div className="flex-1">
         <PickerWheel
+          key={`year-${selectedYear}`}
           options={years}
           value={selectedYear}
           onChange={(value) => setSelectedYear(value as number)}

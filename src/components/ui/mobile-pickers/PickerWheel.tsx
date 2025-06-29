@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, PanInfo, useMotionValue, useTransform, animate } from 'framer-motion';
 
 interface PickerWheelProps {
@@ -19,23 +19,44 @@ const PickerWheel = ({
 }: PickerWheelProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const y = useMotionValue(0);
   const selectedIndex = options.indexOf(value);
   const centerOffset = (height - itemHeight) / 2;
 
-  // Initialize position based on selected value
+  // Initialize position only once when component mounts or value changes from external source
   useEffect(() => {
-    if (selectedIndex >= 0) {
+    if (selectedIndex >= 0 && !isInitialized) {
       const targetY = -selectedIndex * itemHeight;
       y.set(targetY);
+      setIsInitialized(true);
     }
-  }, [selectedIndex, itemHeight, y]);
+  }, [selectedIndex, itemHeight, y, isInitialized]);
+
+  // Reset initialization when value changes externally (not from drag)
+  useEffect(() => {
+    if (!isDragging && selectedIndex >= 0) {
+      const currentY = y.get();
+      const expectedY = -selectedIndex * itemHeight;
+      
+      // Only update if the position doesn't match the expected position
+      if (Math.abs(currentY - expectedY) > itemHeight / 2) {
+        y.set(expectedY);
+      }
+    }
+  }, [value, isDragging, selectedIndex, itemHeight, y]);
+
+  // Calculate which item should be selected based on current position
+  const getCurrentSelectedIndex = useCallback((currentY: number) => {
+    const rawIndex = Math.round(-currentY / itemHeight);
+    return Math.max(0, Math.min(options.length - 1, rawIndex));
+  }, [itemHeight, options.length]);
 
   // Calculate momentum and final position based on velocity
   const calculateMomentumTarget = useCallback((currentY: number, velocity: number) => {
-    // Apply momentum based on velocity with more realistic physics
-    const momentumDistance = velocity * 0.15; // Reduced for more control
+    // Apply momentum with realistic physics
+    const momentumDistance = velocity * 0.1;
     const targetY = currentY + momentumDistance;
     
     // Snap to nearest item
@@ -54,9 +75,16 @@ const PickerWheel = ({
 
   const handleDrag = useCallback(
     (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      // Visual feedback during drag is handled by framer-motion automatically
+      // Update selection in real-time during drag
+      const currentY = y.get();
+      const currentIndex = getCurrentSelectedIndex(currentY);
+      
+      // Only update if the index has changed
+      if (currentIndex !== selectedIndex && options[currentIndex] !== value) {
+        onChange(options[currentIndex]);
+      }
     },
-    []
+    [y, getCurrentSelectedIndex, selectedIndex, options, value, onChange]
   );
 
   const handleDragEnd = useCallback(
@@ -72,37 +100,33 @@ const PickerWheel = ({
       // Animate to final position with smooth physics
       const controls = animate(y, finalY, {
         type: "spring",
-        damping: Math.abs(velocity) > 800 ? 35 : 45, // More damping for smoother motion
-        stiffness: Math.abs(velocity) > 800 ? 120 : 150, // Adjusted stiffness
-        mass: 1.2, // Slightly heavier feel
+        damping: 40,
+        stiffness: 200,
+        mass: 1,
         restDelta: 0.1,
         restSpeed: 0.1
       });
       
       // Update selected value when animation completes
       controls.then(() => {
-        onChange(options[finalIndex]);
+        if (options[finalIndex] !== value) {
+          onChange(options[finalIndex]);
+        }
       });
     },
-    [y, calculateMomentumTarget, onChange, options]
+    [y, calculateMomentumTarget, onChange, options, value]
   );
 
-  // Transform for visual effects during drag
-  const opacity = useTransform(y, (value) => {
-    const currentIndex = Math.round(-value / itemHeight);
-    return (index: number) => {
-      const distance = Math.abs(index - currentIndex);
-      return Math.max(0.3, 1 - distance * 0.25);
-    };
+  // Real-time position-based transforms for visual feedback
+  const currentIndexTransform = useTransform(y, (yValue) => {
+    return Math.round(-yValue / itemHeight);
   });
 
-  const scale = useTransform(y, (value) => {
-    const currentIndex = Math.round(-value / itemHeight);
-    return (index: number) => {
-      const distance = Math.abs(index - currentIndex);
-      return Math.max(0.85, 1 - distance * 0.08);
-    };
-  });
+  // Memoized drag constraints to prevent recalculation
+  const dragConstraints = useMemo(() => ({
+    top: -(options.length - 1) * itemHeight - itemHeight * 0.5,
+    bottom: itemHeight * 0.5
+  }), [options.length, itemHeight]);
 
   return (
     <div 
@@ -122,10 +146,7 @@ const PickerWheel = ({
       {/* Options */}
       <motion.div
         drag="y"
-        dragConstraints={{
-          top: -(options.length - 1) * itemHeight - itemHeight * 0.5,
-          bottom: itemHeight * 0.5
-        }}
+        dragConstraints={dragConstraints}
         dragElastic={{
           top: 0.05,
           bottom: 0.05
@@ -146,39 +167,71 @@ const PickerWheel = ({
         className="cursor-grab active:cursor-grabbing will-change-transform"
       >
         {options.map((option, index) => {
-          const currentIndex = selectedIndex >= 0 ? selectedIndex : 0;
-          const distance = Math.abs(index - currentIndex);
-          const itemOpacity = isDragging ? Math.max(0.3, 1 - distance * 0.2) : Math.max(0.3, 1 - distance * 0.25);
-          const itemScale = isDragging ? Math.max(0.9, 1 - distance * 0.05) : Math.max(0.85, 1 - distance * 0.08);
-          const textColor = distance === 0 && !isDragging ? '#000' : '#666';
-          
           return (
-            <motion.div
+            <PickerItem
               key={`${option}-${index}`}
-              className="flex items-center justify-center text-lg font-medium transition-colors duration-150"
-              style={{ 
-                height: itemHeight,
-                opacity: itemOpacity,
-                transform: `scale(${itemScale})`,
-                color: textColor
-              }}
-              animate={{
-                opacity: itemOpacity,
-                scale: itemScale,
-                color: textColor
-              }}
-              transition={{
-                duration: isDragging ? 0.1 : 0.3,
-                ease: "easeOut"
-              }}
-            >
-              {option}
-            </motion.div>
+              option={option}
+              index={index}
+              itemHeight={itemHeight}
+              y={y}
+              isDragging={isDragging}
+            />
           );
         })}
       </motion.div>
     </div>
   );
 };
+
+// Separate component for individual picker items to optimize rendering
+const PickerItem = React.memo(({ 
+  option, 
+  index, 
+  itemHeight, 
+  y, 
+  isDragging 
+}: {
+  option: string | number;
+  index: number;
+  itemHeight: number;
+  y: any;
+  isDragging: boolean;
+}) => {
+  // Calculate distance from center in real-time
+  const distanceFromCenter = useTransform(y, (yValue) => {
+    const centerIndex = -yValue / itemHeight;
+    return Math.abs(index - centerIndex);
+  });
+
+  // Dynamic opacity based on distance from center
+  const opacity = useTransform(distanceFromCenter, [0, 1, 2], [1, 0.7, 0.3]);
+  
+  // Dynamic scale based on distance from center
+  const scale = useTransform(distanceFromCenter, [0, 1, 2], [1, 0.95, 0.85]);
+
+  // Dynamic color based on distance from center
+  const isCenter = useTransform(distanceFromCenter, (distance) => distance < 0.5);
+  
+  return (
+    <motion.div
+      className="flex items-center justify-center text-lg font-medium transition-colors duration-150"
+      style={{ 
+        height: itemHeight,
+        opacity,
+        scale
+      }}
+    >
+      <motion.span
+        style={{
+          color: useTransform(isCenter, (isCentered) => isCentered ? '#000' : '#666')
+        }}
+      >
+        {option}
+      </motion.span>
+    </motion.div>
+  );
+});
+
+PickerItem.displayName = 'PickerItem';
 
 export default PickerWheel;
