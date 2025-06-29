@@ -308,7 +308,11 @@ const PersonCard = ({
         onConfirm={() => setDatePickerOpen(false)}
         title="Select Birth Date"
       >
-        <MobileDatePicker value={birthDate} onChange={handleDateChange} />
+        <MobileDatePicker 
+          key={datePickerOpen ? 'date-open' : 'date-closed'}
+          value={birthDate} 
+          onChange={handleDateChange} 
+        />
       </MobilePickerModal>
 
       <MobilePickerModal
@@ -317,7 +321,11 @@ const PersonCard = ({
         onConfirm={() => setTimePickerOpen(false)}
         title="Select Birth Time"
       >
-        <MobileTimePicker value={birthTime} onChange={handleTimeChange} />
+        <MobileTimePicker 
+          key={timePickerOpen ? 'time-open' : 'time-closed'}
+          value={birthTime} 
+          onChange={handleTimeChange} 
+        />
       </MobilePickerModal>
     </>
   );
