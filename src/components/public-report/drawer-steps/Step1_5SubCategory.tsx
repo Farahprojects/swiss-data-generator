@@ -91,8 +91,7 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
       className="space-y-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-900">Choose your insight</h2>
-        <p className="text-gray-600">Please choose your specific area of insight</p>
+        <h2 className="text-2xl font-bold text-gray-900">What area would you like guidance on?</h2>
       </div>
 
       <Controller
@@ -154,7 +153,7 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
               className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
               size="lg"
             >
-              Next
+              Choose Insight
             </Button>
           </motion.div>
         )}
