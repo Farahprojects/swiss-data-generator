@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -164,7 +165,7 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
                   className="w-full h-12 justify-start text-left font-normal"
                   onClick={() => setDatePickerOpen(true)}
                 >
-                  <Calendar className="h-4 w-4 mr-2" />
+                  <Calendar className="h-4 w-4 mr-1" />
                   {formatDateForDisplay(birthDate)}
                 </Button>
               ) : (
@@ -191,7 +192,7 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
                   className="w-full h-12 justify-start text-left font-normal"
                   onClick={() => setTimePickerOpen(true)}
                 >
-                  <Clock className="h-4 w-4 mr-2" />
+                  <Clock className="h-4 w-4 mr-1" />
                   {formatTimeForDisplay(birthTime)}
                 </Button>
               ) : (
