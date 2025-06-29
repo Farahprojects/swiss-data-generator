@@ -1,4 +1,3 @@
-
 import React, {
   useEffect,
   useState,
@@ -15,51 +14,27 @@ import {
   useTransform,
 } from 'framer-motion';
 
-/**
- * Generic clamp helper (avoids pulling in a library for a single line).
- */
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max);
+// Helper – clamp a value between two bounds
+const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
 
 interface PickerWheelProps<T extends string | number> {
-  /**
-   * Items to show in the wheel.
-   */
   options: T[];
-  /**
-   * Currently‑selected value.
-   */
   value: T;
-  /**
-   * Callback when the value changes (after the wheel snaps).
-   */
   onChange: (next: T) => void;
-  /**
-   * Visible height of the wheel (in px).
-   * Defaults to 240 – enough for ~6 items at the default itemHeight.
-   */
-  height?: number;
-  /**
-   * Height of a single row (in px). Defaults to 40.
-   */
-  itemHeight?: number;
-  /**
-   * Extra Tailwind classes (eg. shrink‑0) if you embed in a flex layout.
-   */
-  className?: string;
+  height?: number; // visible height of the wheel
+  itemHeight?: number; // height of each row
+  className?: string; // extra Tailwind classes
 }
 
 /**
- * PickerWheel – iOS‑style scroll / drag wheel.
+ * PickerWheel – polished iOS‑style scroll wheel.
  *
- * Key improvements over the previous revision:
- * • true spring snapping using a separate useSpring() value (better perf on mobile)
- * • velocity‑aware momentum so it never lands between rows
- * • graceful overscroll with rubber‑band effect on the first/last items
- * • fades + subtle top/bottom dividers for visual polish
- * • respects prefers‑reduced‑motion
- * • fully typed generics – you can pass <string | number>
- * • ARIA role="listbox" + aria‑live updates for screen reader support
+ * Features
+ * • true spring snapping + momentum
+ * • rubber‑band overscroll
+ * • fade masks top/bottom
+ * • translucent "selection lane" with blur (matches native iOS)
+ * • a11y listbox semantics
  */
 function PickerWheel<T extends string | number = string>({
   options,
@@ -69,45 +44,36 @@ function PickerWheel<T extends string | number = string>({
   itemHeight = 40,
   className = '',
 }: PickerWheelProps<T>) {
+  /* --------------------------------------------------------------------- */
+  // Refs & motion values
   const containerRef = useRef<HTMLDivElement>(null);
-  const [{ isDragging }, setDragging] = useState({ isDragging: false });
+  const rawY = useMotionValue(0); // raw drag offset
+  const y = useSpring(rawY, { stiffness: 400, damping: 45, mass: 0.8 });
 
-  // rawY is the immediate drag value – we never animate it directly.
-  const rawY = useMotionValue(0);
-  // ySpring is what the element is actually bound to.
-  const ySpring = useSpring(rawY, {
-    stiffness: 400,
-    damping: 40,
-    mass: 0.8,
-  });
+  const [{ isDragging }, setDrag] = useState({ isDragging: false });
 
-  // When the external value changes (eg. controlled component), scroll to it.
+  /* --------------------------------------------------------------------- */
+  // Keep wheel in sync with external value
   useEffect(() => {
     const idx = options.indexOf(value);
-    if (idx !== -1) {
-      rawY.set(-idx * itemHeight);
-    }
+    if (idx !== -1) rawY.set(-idx * itemHeight);
   }, [value, options, itemHeight, rawY]);
 
-  /** Figure out which option should be selected based on a given Y offset */
+  // Convert y‑offset → nearest option index
   const nearestIndex = useCallback(
-    (y: number) => {
-      const raw = Math.round(-y / itemHeight);
-      return clamp(raw, 0, options.length - 1);
-    },
+    (yPos: number) => clamp(Math.round(-yPos / itemHeight), 0, options.length - 1),
     [itemHeight, options.length]
   );
 
-  /** Snap helper – springs to the nearest index and fires onChange if needed */
+  // Snap helper (springs & fires onChange)
   const snapTo = useCallback(
-    (targetY: number, velocity = 0) => {
-      const idx = nearestIndex(targetY);
+    (target: number, velocity = 0) => {
+      const idx = nearestIndex(target);
       const finalY = -idx * itemHeight;
 
-      // Animate rawY (which the spring follows) – using velocity for momentum.
       const controls = animate(rawY, finalY, {
         type: 'spring',
-        stiffness: 400,
+        stiffness: 420,
         damping: 50,
         velocity,
       });
@@ -116,30 +82,29 @@ function PickerWheel<T extends string | number = string>({
         if (options[idx] !== value) onChange(options[idx]);
       });
     },
-    [nearestIndex, itemHeight, options, onChange, rawY, value]
+    [nearestIndex, itemHeight, rawY, options, onChange, value]
   );
 
-  // == Drag handlers ==
-  const onDragStart = () => setDragging({ isDragging: true });
-
+  /* --------------------------------------------------------------------- */
+  // Drag handlers
+  const onDragStart = () => setDrag({ isDragging: true });
   const onDrag = (_: PointerEvent, info: PanInfo) => {
     rawY.set(rawY.get() + info.delta.y);
   };
-
   const onDragEnd = (_: PointerEvent, info: PanInfo) => {
-    setDragging({ isDragging: false });
+    setDrag({ isDragging: false });
 
-    // Simple rubber‑band beyond extents.
     const minY = -(options.length - 1) * itemHeight;
-    const overscroll = 0.4 * itemHeight; // 40% of one row
-    const clampedY = clamp(rawY.get(), minY - overscroll, overscroll);
+    const rubber = 0.4 * itemHeight;
+    const clamped = clamp(rawY.get(), minY - rubber, rubber);
 
-    // Momentum projection – feel free to tweak 0.2 multiplier for snappier scroll.
-    const projected = clampedY + info.velocity.y * 0.2;
+    // project momentum (0.2 multiplier tuned for mobile feel)
+    const projected = clamped + info.velocity.y * 0.2;
     snapTo(projected, info.velocity.y);
   };
 
-  // == Wheel / scroll gesture (🐭 or trackpad) – enhances desktop usability ==
+  /* --------------------------------------------------------------------- */
+  // Wheel / trackpad scroll for desktop
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
@@ -147,40 +112,46 @@ function PickerWheel<T extends string | number = string>({
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       rawY.set(rawY.get() - e.deltaY);
-      snapTo(rawY.get(), e.deltaY * -1);
+      snapTo(rawY.get(), -e.deltaY);
     };
 
     node.addEventListener('wheel', onWheel, { passive: false });
     return () => node.removeEventListener('wheel', onWheel);
   }, [rawY, snapTo]);
 
-  // == Gradients for subtle fade top/bottom ==
-  const gradientHeight = itemHeight * 2;
+  /* --------------------------------------------------------------------- */
+  // Styling helpers
+  const centerTop = (height - itemHeight) / 2;
+  const gradientH = itemHeight * 2; // fade height
 
   return (
     <div
       ref={containerRef}
-      className={`relative overflow-hidden select-none touch-pan-y ${className}`}
-      style={{ height, WebkitTapHighlightColor: 'transparent' }}
       role="listbox"
       aria-label="Picker wheel"
+      className={`relative overflow-hidden select-none touch-pan-y ${className}`}
+      style={{ height }}
     >
-      {/* fade top */}
+      {/* top fade */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-white via-white/60 to-white/10"
-        style={{ height: gradientHeight }}
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-white via-white/70 to-transparent dark:from-neutral-900 dark:via-neutral-900/70"
+        style={{ height: gradientH }}
       />
-      {/* fade bottom */}
+
+      {/* bottom fade */}
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white via-white/60 to-white/10"
-        style={{ height: gradientHeight }}
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-white via-white/70 to-transparent dark:from-neutral-900 dark:via-neutral-900/70"
+        style={{ height: gradientH }}
       />
-      {/* center divider */}
+
+      {/* translucent selection lane (blurred) */}
       <div
-        className="pointer-events-none absolute inset-x-4 z-10 border-t border-b border-gray-300 dark:border-gray-600"
-        style={{ top: (height - itemHeight) / 2, height: itemHeight }}
+        className="pointer-events-none absolute inset-x-0 z-10 flex justify-stretch"
+        style={{ top: centerTop, height: itemHeight }}
         aria-hidden="true"
-      />
+      >
+        <div className="flex-1 backdrop-blur-sm bg-white/65 dark:bg-neutral-800/40 border-y border-neutral-300 dark:border-neutral-600" />
+      </div>
 
       {/* scrollable list */}
       <motion.div
@@ -190,24 +161,18 @@ function PickerWheel<T extends string | number = string>({
         onDragStart={onDragStart}
         onDrag={onDrag}
         onDragEnd={onDragEnd}
-        style={{ y: ySpring, top: (height - itemHeight) / 2 }}
+        style={{ y, top: centerTop }}
       >
         {options.map((opt, i) => (
-          <PickerItem
-            key={String(opt)}
-            value={opt}
-            index={i}
-            itemHeight={itemHeight}
-            y={ySpring}
-          />
+          <PickerItem key={String(opt)} index={i} itemHeight={itemHeight} y={y} value={opt} />
         ))}
       </motion.div>
     </div>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-// Picker item – receives the spring y to derive its own transforms.
+/* --------------------------------------------------------------------- */
+// Individual row
 interface ItemProps {
   value: string | number;
   index: number;
@@ -216,20 +181,17 @@ interface ItemProps {
 }
 
 const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y }) => {
-  // How far am I from the centre (0 = centred)
-  const distance = useTransform(y, (latest) => {
-    const centerIndex = -latest / itemHeight;
-    return Math.abs(index - centerIndex);
-  });
+  // Distance from centre (0 = centred)
+  const d = useTransform(y, (latest) => Math.abs(index + latest / itemHeight));
 
-  const opacity = useTransform(distance, [0, 1, 2], [1, 0.6, 0.15]);
-  const scale = useTransform(distance, [0, 1, 2], [1, 0.9, 0.8]);
-  const weight = useTransform(distance, (d) => (d < 0.5 ? 600 : 400));
+  const opacity = useTransform(d, [0, 1, 2], [1, 0.55, 0.15]);
+  const scale = useTransform(d, [0, 1.2], [1, 0.85]);
+  const weight = useTransform(d, (dist) => (dist < 0.5 ? 600 : 400));
 
   return (
     <motion.div
       role="option"
-      aria-selected={distance.get() < 0.5}
+      aria-selected={d.get() < 0.5}
       className="flex items-center justify-center h-full"
       style={{ height: itemHeight, opacity, scale }}
     >
