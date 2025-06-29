@@ -136,7 +136,7 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
         <Button
           onClick={onPrev}
           variant="outline"
-          className="flex-1 h-12 text-lg font-semibold border-2 border-purple-500 text-purple-500 bg-white hover:bg-purple-50"
+          className="flex-1 h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
           size="lg"
         >
           Back
@@ -151,7 +151,7 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
             <Button
               onClick={onNext}
               variant="outline"
-              className="w-full h-12 text-lg font-semibold border-2 border-purple-500 text-purple-500 bg-white hover:bg-purple-50"
+              className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
               size="lg"
             >
               Your Details

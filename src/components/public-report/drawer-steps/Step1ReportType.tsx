@@ -96,7 +96,7 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
           <Button
             onClick={onNext}
             variant="outline"
-            className="w-full h-12 text-lg font-semibold border-2 border-purple-500 text-purple-500 bg-white hover:bg-purple-50"
+            className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
             size="lg"
           >
             Choose Focus
