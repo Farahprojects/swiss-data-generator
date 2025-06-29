@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PickerWheel from './PickerWheel';
 
 interface MobileTimePickerProps {
@@ -8,24 +8,28 @@ interface MobileTimePickerProps {
 }
 
 const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
-  const [selectedHour, setSelectedHour] = useState<number>(12);
-  const [selectedMinute, setSelectedMinute] = useState<number>(0);
-  const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>('AM');
-
   const hours = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []); // 1-12
   const minutes = useMemo(() => Array.from({ length: 60 }, (_, i) => i), []); // 0-59
   const periods: ('AM' | 'PM')[] = useMemo(() => ['AM', 'PM'], []);
 
   // Convert 24-hour to 12-hour format
-  const convertTo12Hour = (time24: string) => {
+  const convertTo12Hour = useCallback((time24: string) => {
+    if (!time24) {
+      return { hour: 12, minute: 0, period: 'AM' as const };
+    }
+    
     const [hours, minutes] = time24.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) {
+      return { hour: 12, minute: 0, period: 'AM' as const };
+    }
+    
     const period: 'AM' | 'PM' = hours >= 12 ? 'PM' : 'AM';
     const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
     return { hour: hour12, minute: minutes, period };
-  };
+  }, []);
 
   // Convert 12-hour to 24-hour format
-  const convertTo24Hour = (hour: number, minute: number, period: 'AM' | 'PM') => {
+  const convertTo24Hour = useCallback((hour: number, minute: number, period: 'AM' | 'PM') => {
     let hour24 = hour;
     if (period === 'AM' && hour === 12) {
       hour24 = 0;
@@ -33,43 +37,77 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
       hour24 = hour + 12;
     }
     return `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-  };
+  }, []);
 
-  // Initialize from value
+  // Initialize state directly from value prop
+  const initialTime = useMemo(() => convertTo12Hour(value), [convertTo12Hour, value]);
+  
+  const [selectedHour, setSelectedHour] = useState<number>(initialTime.hour);
+  const [selectedMinute, setSelectedMinute] = useState<number>(initialTime.minute);
+  const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>(initialTime.period);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Debounced onChange to prevent excessive calls
+  const debouncedOnChange = useCallback((timeString: string) => {
+    console.log(`MobileTimePicker onChange: ${timeString}`);
+    onChange(timeString);
+  }, [onChange]);
+
+  // Synchronize with external value changes only once
   useEffect(() => {
-    if (value) {
+    if (value && !isInitialized) {
       const { hour, minute, period } = convertTo12Hour(value);
       console.log(`MobileTimePicker initializing with value: ${value} -> ${hour}:${minute} ${period}`);
+      
       setSelectedHour(hour);
       setSelectedMinute(minute);
       setSelectedPeriod(period);
+      setIsInitialized(true);
+    } else if (!value && !isInitialized) {
+      setIsInitialized(true);
     }
-  }, [value]);
+  }, [value, isInitialized, convertTo12Hour]);
 
-  // Update value when selections change
+  // Update value when selections change (only after initialization)
   useEffect(() => {
-    const time24 = convertTo24Hour(selectedHour, selectedMinute, selectedPeriod);
-    console.log(`MobileTimePicker onChange: ${selectedHour}:${selectedMinute} ${selectedPeriod} -> ${time24}`);
-    onChange(time24);
-  }, [selectedHour, selectedMinute, selectedPeriod, onChange]);
+    if (!isInitialized) return;
 
-  // Create stable keys for the pickers to prevent remounting
-  const hourPickerKey = `hour-${selectedHour}`;
-  const minutePickerKey = `minute-${selectedMinute}`;
-  const periodPickerKey = `period-${selectedPeriod}`;
+    const time24 = convertTo24Hour(selectedHour, selectedMinute, selectedPeriod);
+    debouncedOnChange(time24);
+  }, [selectedHour, selectedMinute, selectedPeriod, isInitialized, convertTo24Hour, debouncedOnChange]);
+
+  // Handle hour change
+  const handleHourChange = useCallback((value: number) => {
+    console.log(`Hour changed to: ${value}`);
+    setSelectedHour(value);
+  }, []);
+
+  // Handle minute change
+  const handleMinuteChange = useCallback((value: string) => {
+    const numValue = parseInt(value, 10);
+    console.log(`Minute changed to: ${value} (${numValue})`);
+    setSelectedMinute(numValue);
+  }, []);
+
+  // Handle period change
+  const handlePeriodChange = useCallback((value: 'AM' | 'PM') => {
+    console.log(`Period changed to: ${value}`);
+    setSelectedPeriod(value);
+  }, []);
+
+  // Don't render until initialized to prevent flicker
+  if (!isInitialized) {
+    return <div className="h-[240px] w-full" />;
+  }
 
   return (
     <div className="flex items-center justify-center space-x-4 py-4">
       {/* Hour Picker */}
       <div className="flex-1">
         <PickerWheel
-          key={hourPickerKey}
           options={hours}
           value={selectedHour}
-          onChange={(value) => {
-            console.log(`Hour changed to: ${value}`);
-            setSelectedHour(value as number);
-          }}
+          onChange={handleHourChange}
           height={240}
           itemHeight={40}
         />
@@ -78,14 +116,9 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
       {/* Minute Picker */}
       <div className="flex-1">
         <PickerWheel
-          key={minutePickerKey}
           options={minutes.map(m => m.toString().padStart(2, '0'))}
           value={selectedMinute.toString().padStart(2, '0')}
-          onChange={(value) => {
-            const numValue = parseInt(value as string);
-            console.log(`Minute changed to: ${value} (${numValue})`);
-            setSelectedMinute(numValue);
-          }}
+          onChange={handleMinuteChange}
           height={240}
           itemHeight={40}
         />
@@ -94,13 +127,9 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
       {/* Period Picker */}
       <div className="flex-1">
         <PickerWheel
-          key={periodPickerKey}
           options={periods}
           value={selectedPeriod}
-          onChange={(value) => {
-            console.log(`Period changed to: ${value}`);
-            setSelectedPeriod(value as 'AM' | 'PM');
-          }}
+          onChange={handlePeriodChange}
           height={240}
           itemHeight={40}
         />
