@@ -49,13 +49,13 @@ const DesktopStickyTrigger = ({ onGetReportClick }: DesktopStickyTriggerProps) =
             stiffness: 300, 
             damping: 30 
           }}
-          className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 px-4"
+          className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[100] px-8 max-w-[calc(100vw-2rem)]"
         >
           <Button
             onClick={handleClick}
             size="lg"
             variant="outline"
-            className="h-16 px-12 text-lg font-medium rounded-2xl border-2 border-primary bg-white text-primary hover:bg-primary/5 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 whitespace-nowrap"
+            className="h-16 px-12 text-lg font-medium rounded-2xl border-2 border-primary/80 backdrop-blur-sm bg-white/95 text-primary hover:bg-primary/5 hover:border-primary shadow-xl hover:shadow-xl transform hover:scale-105 transition-all duration-300 whitespace-nowrap min-w-fit"
           >
             Unlock Insight
           </Button>

@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileReportDrawer from './MobileReportDrawer';
@@ -37,15 +36,14 @@ const MobileReportTrigger = () => {
               stiffness: 300, 
               damping: 30 
             }}
-            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-4"
+            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[100] px-6 max-w-[calc(100vw-2rem)] pb-safe"
           >
             <Button
               onClick={() => setIsDrawerOpen(true)}
               size="lg"
               variant="outline"
-              className="h-14 px-8 rounded-full border-2 border-primary bg-white text-primary hover:bg-primary/5 shadow-lg font-semibold text-lg whitespace-nowrap"
+              className="h-14 px-8 rounded-full border-2 border-primary/80 backdrop-blur-sm bg-white/95 text-primary hover:bg-primary/5 hover:border-primary shadow-xl font-semibold text-lg whitespace-nowrap min-w-fit"
             >
-              <Sparkles className="h-5 w-5 mr-2" />
               Unlock Insight
             </Button>
           </motion.div>
