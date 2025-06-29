@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -164,8 +165,8 @@ export default function TestsSection() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-            <div className="md:col-span-6">
+          <div className="flex flex-col md:grid md:grid-cols-12 gap-8 md:items-center">
+            <div className="w-full md:col-span-6">
               <div className="space-y-0">
                 {testData.map((test) => (
                   <TestCard
@@ -182,8 +183,8 @@ export default function TestsSection() {
               </div>
             </div>
             
-            <div className="md:col-span-6">
-              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg" style={{ height: "400px" }}>
+            <div className="w-full md:col-span-6">
+              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-64 md:h-96">
                 {testData.map((test) => {
                   return (
                     <div 
