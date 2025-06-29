@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -116,11 +115,11 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
 
   return (
     <>
-      <Card className="border-2 border-primary/20">
+      <Card className="border-2 border-primary/20 max-w-none w-full mx-4">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-6">
           <div className="space-y-2">
             <Label htmlFor={`${prefix}name`}>Full Name *</Label>
             <Input
@@ -154,7 +153,7 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
               {isMobile ? (
