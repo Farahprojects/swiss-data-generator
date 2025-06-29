@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -5,7 +6,6 @@ import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import HeroSection from '@/components/public-report/HeroSection';
-import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import ContactForm from '@/components/public-report/ContactForm';
 import BirthDetailsForm from '@/components/public-report/BirthDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
@@ -31,7 +31,7 @@ const PublicReport = () => {
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
-    mode: 'onBlur', // Changed from 'onChange' to 'onBlur' for better UX
+    mode: 'onBlur',
     defaultValues: {
       reportType: '',
       relationshipType: '',
@@ -102,6 +102,15 @@ const PublicReport = () => {
     )(e);
   };
 
+  const handleReportSelect = (reportType: string) => {
+    setValue('reportType', reportType);
+    // Scroll to next section
+    const contactSection = document.querySelector('#contact-form');
+    if (contactSection) {
+      contactSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   if (reportCreated && userName && userEmail) {
     return <SuccessScreen name={userName} email={userEmail} />;
   }
@@ -110,23 +119,22 @@ const PublicReport = () => {
     <div className="overflow-y-auto -mt-16">
       <HeroSection />
       
-      <TestsSection />
+      <TestsSection 
+        control={control}
+        errors={errors}
+        selectedReportType={selectedReportType}
+        onReportSelect={handleReportSelect}
+      />
 
       <div>
         <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
-          <ReportTypeSelector
-            control={control}
-            errors={errors}
-            selectedReportType={selectedReportType}
-            showReportGuide={showReportGuide}
-            setShowReportGuide={setShowReportGuide}
-          />
-
           {selectedReportType && (
-            <ContactForm
-              register={register}
-              errors={errors}
-            />
+            <div id="contact-form">
+              <ContactForm
+                register={register}
+                errors={errors}
+              />
+            </div>
           )}
 
           {selectedReportType && (

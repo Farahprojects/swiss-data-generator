@@ -1,5 +1,3 @@
-
-
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -13,6 +11,10 @@ import {
   Target,
   CalendarDays,
 } from 'lucide-react';
+import { Control, Controller, FieldErrors } from 'react-hook-form';
+import { ReportFormData } from '@/types/public-report';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { relationshipTypes, essenceTypes } from '@/constants/report-types';
 
 interface Test {
   id: string;
@@ -22,6 +24,7 @@ interface Test {
   time: string;
   color: string;
   imageSrc: string;
+  reportValue: string;
 }
 
 const testData: Test[] = [
@@ -32,7 +35,8 @@ const testData: Test[] = [
     slug: "Essence",
     time: "5 min",
     color: "bg-blue-500",
-    imageSrc: "/lovable-uploads/aa1bc8da-b181-46c3-92ce-7058a107633f.png"
+    imageSrc: "/lovable-uploads/aa1bc8da-b181-46c3-92ce-7058a107633f.png",
+    reportValue: "essence"
   },
   {
     id: "Sync",
@@ -41,7 +45,8 @@ const testData: Test[] = [
     slug: "relationships",
     time: "10 min",
     color: "bg-pink-500",
-    imageSrc: "/lovable-uploads/71cede7b-0de9-4397-897f-29009a07c012.png"
+    imageSrc: "/lovable-uploads/71cede7b-0de9-4397-897f-29009a07c012.png",
+    reportValue: "sync"
   },
   {
     id: "Flow",
@@ -50,7 +55,8 @@ const testData: Test[] = [
     slug: "Flow",
     time: "15 min",
     color: "bg-green-500",
-    imageSrc: "/lovable-uploads/c245dba6-7af4-444f-a486-44594e57c9fd.png"
+    imageSrc: "/lovable-uploads/c245dba6-7af4-444f-a486-44594e57c9fd.png",
+    reportValue: "flow"
   },
   {
     id: "Monthly",
@@ -59,7 +65,8 @@ const testData: Test[] = [
     slug: "Monthly ",
     time: "12 min",
     color: "bg-orange-500",
-    imageSrc: "/lovable-uploads/62526a29-1fcb-4df9-a3fe-398ec868e224.png"
+    imageSrc: "/lovable-uploads/62526a29-1fcb-4df9-a3fe-398ec868e224.png",
+    reportValue: "monthly"
   },
   {
     id: "Mindset",
@@ -68,7 +75,8 @@ const testData: Test[] = [
     slug: "well-being",
     time: "8 min",
     color: "bg-teal-500",
-    imageSrc: "/lovable-uploads/a017ee13-6392-4278-aaf0-ef361c8dfde0.png"
+    imageSrc: "/lovable-uploads/a017ee13-6392-4278-aaf0-ef361c8dfde0.png",
+    reportValue: "mindset"
   },
   {
     id: "Focus",
@@ -77,7 +85,8 @@ const testData: Test[] = [
     slug: "life-shift",
     time: "10 min",
     color: "bg-purple-500",
-    imageSrc: "/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png"
+    imageSrc: "/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png",
+    reportValue: "focus"
   },
 ];
 
@@ -147,23 +156,53 @@ const reportGuides = [
   }
 ];
 
-export default function TestsSection() {
+interface TestsSectionProps {
+  control?: Control<ReportFormData>;
+  errors?: FieldErrors<ReportFormData>;
+  selectedReportType?: string;
+  onReportSelect?: (reportType: string) => void;
+}
+
+export default function TestsSection({ 
+  control, 
+  errors, 
+  selectedReportType, 
+  onReportSelect 
+}: TestsSectionProps) {
   const [selectedTest, setSelectedTest] = useState(testData[0]);
   const [showReportGuide, setShowReportGuide] = useState(false);
   
   const getReportGuide = (testId: string) => {
     return reportGuides.find(guide => guide.type === testId) || reportGuides[0];
   };
+
+  const handleCardClick = (test: Test) => {
+    if (onReportSelect) {
+      onReportSelect(test.reportValue);
+    }
+  };
+
+  const requiresEssenceType = selectedReportType === 'essence';
+  const requiresRelationshipType = selectedReportType === 'sync';
   
   return (
     <div id="tests" className="py-16 bg-white">
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
           <div className="mb-10 text-center">
-            <h2 className="text-4xl font-bold text-neutral-800 mb-4">Where Do You Want Insight Right Now?</h2>
+            <h2 className="text-4xl font-bold text-neutral-800 mb-4">Choose Your Report Type</h2>
             <p className="text-lg text-neutral-600 max-w-3xl mx-auto">
               Unlock the deeper patterns behind how you think, lead, and evolve
             </p>
+            {!control && (
+              <button
+                type="button"
+                onClick={() => setShowReportGuide(true)}
+                className="text-foreground hover:text-primary font-bold underline mx-auto block mt-4"
+              >
+                Not sure which report to choose? Click here.
+              </button>
+            )}
           </div>
           
           {/* Desktop layout - side by side */}
@@ -171,18 +210,92 @@ export default function TestsSection() {
             <div className="md:col-span-6">
               <div className="space-y-0">
                 {testData.map((test) => (
-                  <TestCard
+                  <div 
                     key={test.id}
-                    title={test.name}
-                    description=""
-                    path={test.slug}
-                    isActive={selectedTest.id === test.id}
-                    onHover={() => setSelectedTest(test)}
-                    onExplore={() => setShowReportGuide(true)}
-                    icon={LucideIcons.Sparkles}
-                  />
+                    onClick={() => handleCardClick(test)}
+                    className={`cursor-pointer transition-all duration-300 ${
+                      selectedReportType === test.reportValue ? 'ring-2 ring-primary bg-primary/5' : ''
+                    }`}
+                  >
+                    <TestCard
+                      title={test.name}
+                      description={test.description}
+                      path={test.slug}
+                      isActive={selectedTest.id === test.id || selectedReportType === test.reportValue}
+                      onHover={() => setSelectedTest(test)}
+                      onExplore={() => control ? handleCardClick(test) : setShowReportGuide(true)}
+                      icon={LucideIcons.Sparkles}
+                    />
+                  </div>
                 ))}
               </div>
+              
+              {/* Sub-options inline */}
+              {control && selectedReportType && (
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  {requiresEssenceType && (
+                    <div className="space-y-2">
+                      <div className="text-lg font-semibold text-primary">Choose your report style</div>
+                      <Controller
+                        control={control}
+                        name="essenceType"
+                        render={({ field }) => (
+                          <ToggleGroup
+                            type="single"
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="justify-start flex-wrap gap-2"
+                          >
+                            {essenceTypes.map((type) => (
+                              <ToggleGroupItem 
+                                key={type.value} 
+                                value={type.value}
+                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary text-sm px-3 py-1"
+                              >
+                                {type.label}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        )}
+                      />
+                      {errors?.essenceType && (
+                        <p className="text-sm text-destructive">{errors.essenceType.message}</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {requiresRelationshipType && (
+                    <div className="space-y-2">
+                      <div className="text-lg font-semibold text-primary">Choose your report style</div>
+                      <Controller
+                        control={control}
+                        name="relationshipType"
+                        render={({ field }) => (
+                          <ToggleGroup
+                            type="single"
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="justify-start flex-wrap gap-2"
+                          >
+                            {relationshipTypes.map((type) => (
+                              <ToggleGroupItem 
+                                key={type.value} 
+                                value={type.value}
+                                className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary text-sm px-3 py-1"
+                              >
+                                {type.label}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        )}
+                      />
+                      {errors?.relationshipType && (
+                        <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="md:col-span-6">
@@ -262,97 +375,173 @@ export default function TestsSection() {
 
           {/* Mobile layout - test cards within container */}
           <div className="block md:hidden">
-            <div className="space-y-0">
+            <div className="space-y-2">
               {testData.map((test) => (
-                <TestCard
+                <div 
                   key={test.id}
-                  title={test.name}
-                  description=""
-                  path={test.slug}
-                  isActive={selectedTest.id === test.id}
-                  onHover={() => setSelectedTest(test)}
-                  onExplore={() => setShowReportGuide(true)}
-                  icon={LucideIcons.Sparkles}
-                />
+                  onClick={() => handleCardClick(test)}
+                  className={`cursor-pointer transition-all duration-300 rounded-lg ${
+                    selectedReportType === test.reportValue ? 'ring-2 ring-primary bg-primary/5' : ''
+                  }`}
+                >
+                  <TestCard
+                    title={test.name}
+                    description={test.description}
+                    path={test.slug}
+                    isActive={selectedTest.id === test.id || selectedReportType === test.reportValue}
+                    onHover={() => setSelectedTest(test)}
+                    onExplore={() => control ? handleCardClick(test) : setShowReportGuide(true)}
+                    icon={LucideIcons.Sparkles}
+                  />
+                </div>
               ))}
             </div>
+            
+            {/* Sub-options inline for mobile */}
+            {control && selectedReportType && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                {requiresEssenceType && (
+                  <div className="space-y-2">
+                    <div className="text-lg font-semibold text-primary text-center">Choose your report style</div>
+                    <Controller
+                      control={control}
+                      name="essenceType"
+                      render={({ field }) => (
+                        <ToggleGroup
+                          type="single"
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="justify-center flex-wrap gap-2"
+                        >
+                          {essenceTypes.map((type) => (
+                            <ToggleGroupItem 
+                              key={type.value} 
+                              value={type.value}
+                              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary text-sm px-3 py-1"
+                            >
+                              {type.label}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
+                      )}
+                    />
+                    {errors?.essenceType && (
+                      <p className="text-sm text-destructive text-center">{errors.essenceType.message}</p>
+                    )}
+                  </div>
+                )}
+                
+                {requiresRelationshipType && (
+                  <div className="space-y-2">
+                    <div className="text-lg font-semibold text-primary text-center">Choose your report style</div>
+                    <Controller
+                      control={control}
+                      name="relationshipType"
+                      render={({ field }) => (
+                        <ToggleGroup
+                          type="single"
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="justify-center flex-wrap gap-2"
+                        >
+                          {relationshipTypes.map((type) => (
+                            <ToggleGroupItem 
+                              key={type.value} 
+                              value={type.value}
+                              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary text-sm px-3 py-1"
+                            >
+                              {type.label}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
+                      )}
+                    />
+                    {errors?.relationshipType && (
+                      <p className="text-sm text-destructive text-center">{errors.relationshipType.message}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
       
       {/* Mobile full-width image section - outside containers */}
       <div className="block md:hidden mt-8">
-        <div className="w-screen relative -mx-4 px-4">
-          <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-64">
-            {testData.map((test) => {
-              return (
-                <div 
-                  key={test.id}
-                  className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
-                >
-                  {test.id === 'Essence' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="They Self Report" 
-                        className="w-full h-full object-cover rounded-xl"
+        <div className="w-screen -mx-4">
+          <div className="px-4">
+            <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-64">
+              {testData.map((test) => {
+                return (
+                  <div 
+                    key={test.id}
+                    className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
+                  >
+                    {test.id === 'Essence' ? (
+                      <div className="w-full h-full bg-white">
+                        <img 
+                          src={test.imageSrc} 
+                          alt="They Self Report" 
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      </div>
+                    ) : test.id === 'Sync' ? (
+                      <div className="w-full h-full bg-white">
+                        <img 
+                          src={test.imageSrc} 
+                          alt="Compatibility Report" 
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      </div>
+                    ) : test.id === 'Flow' ? (
+                      <div className="w-full h-full bg-white">
+                        <img 
+                          src={test.imageSrc} 
+                          alt="Flow Report" 
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      </div>
+                    ) : test.id === 'Monthly' ? (
+                      <div className="w-full h-full bg-white">
+                        <img 
+                          src={test.imageSrc} 
+                          alt="Energy Month Report" 
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      </div>
+                    ) : test.id === 'Mindset' ? (
+                      <div className="w-full h-full bg-white">
+                        <img 
+                          src={test.imageSrc} 
+                          alt="Mindset Report" 
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      </div>
+                    ) : test.id === 'Focus' ? (
+                      <div className="w-full h-full bg-white">
+                        <img 
+                          src={test.imageSrc} 
+                          alt="Focus Report" 
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      </div>
+                    ) : (
+                      <ReportCard
+                        type={getReportGuide(test.id).type}
+                        icon={getReportGuide(test.id).icon}
+                        title={getReportGuide(test.id).title}
+                        price={getReportGuide(test.id).price}
+                        bestFor={getReportGuide(test.id).bestFor}
+                        description={getReportGuide(test.id).description}
+                        details={getReportGuide(test.id).details}
+                        subTypes={getReportGuide(test.id).subTypes}
                       />
-                    </div>
-                  ) : test.id === 'Sync' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="Compatibility Report" 
-                        className="w-full h-full object-cover rounded-xl"
-                      />
-                    </div>
-                  ) : test.id === 'Flow' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="Flow Report" 
-                        className="w-full h-full object-cover rounded-xl"
-                      />
-                    </div>
-                  ) : test.id === 'Monthly' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="Energy Month Report" 
-                        className="w-full h-full object-cover rounded-xl"
-                      />
-                    </div>
-                  ) : test.id === 'Mindset' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="Mindset Report" 
-                        className="w-full h-full object-cover rounded-xl"
-                      />
-                    </div>
-                  ) : test.id === 'Focus' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="Focus Report" 
-                        className="w-full h-full object-cover rounded-xl"
-                      />
-                    </div>
-                  ) : (
-                    <ReportCard
-                      type={getReportGuide(test.id).type}
-                      icon={getReportGuide(test.id).icon}
-                      title={getReportGuide(test.id).title}
-                      price={getReportGuide(test.id).price}
-                      bestFor={getReportGuide(test.id).bestFor}
-                      description={getReportGuide(test.id).description}
-                      details={getReportGuide(test.id).details}
-                      subTypes={getReportGuide(test.id).subTypes}
-                    />
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
