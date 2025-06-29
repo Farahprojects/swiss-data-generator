@@ -14,7 +14,7 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
 
   const hours = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
   const minutes = Array.from({ length: 60 }, (_, i) => i); // 0-59
-  const periods = ['AM', 'PM'] as const;
+  const periods: ('AM' | 'PM')[] = ['AM', 'PM'];
 
   // Convert 24-hour to 12-hour format
   const convertTo12Hour = (time24: string) => {
