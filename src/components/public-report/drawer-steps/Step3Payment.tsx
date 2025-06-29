@@ -2,12 +2,13 @@
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CreditCard, Tag } from 'lucide-react';
+import { ArrowLeft, CreditCard, Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DrawerFormData } from '@/hooks/useMobileDrawerForm';
+import { usePromoValidation } from '@/hooks/usePromoValidation';
 
 interface Step3PaymentProps {
   register: UseFormRegister<DrawerFormData>;
@@ -22,22 +23,94 @@ const Step3Payment = ({ register, watch, errors, onPrev, onSubmit, isProcessing 
   const [showPromoCode, setShowPromoCode] = useState(false);
   
   const reportCategory = watch('reportCategory');
+  const reportSubCategory = watch('reportSubCategory');
   const name = watch('name');
+  const promoCode = watch('promoCode') || '';
 
-  const getReportTitle = (category: string) => {
+  const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode);
+
+  const getReportTitle = (category: string, subCategory: string) => {
     switch (category) {
-      case 'professional':
-        return 'Professional Essence Report';
-      case 'relational':
-        return 'Relationship Compatibility Report';
-      case 'personal':
-        return 'Personal Essence Report';
+      case 'the-self':
+        switch (subCategory) {
+          case 'professional': return 'Professional Essence Report';
+          case 'relational': return 'Relational Essence Report';
+          case 'personal': return 'Personal Essence Report';
+          default: return 'Personal Essence Report';
+        }
+      case 'compatibility':
+        switch (subCategory) {
+          case 'professional': return 'Professional Compatibility Report';
+          case 'personal': return 'Personal Compatibility Report';
+          default: return 'Personal Compatibility Report';
+        }
+      case 'snapshot':
+        switch (subCategory) {
+          case 'focus': return 'Focus Snapshot Report';
+          case 'monthly': return 'Monthly Energy Report';
+          case 'mindset': return 'Mindset Report';
+          default: return 'Focus Snapshot Report';
+        }
       default:
         return 'Personal Report';
     }
   };
 
-  const getReportPrice = () => '$10.00'; // This would integrate with your pricing logic
+  const getBasePrice = () => {
+    // Base pricing logic - this should ideally come from a pricing service
+    return 10.00;
+  };
+
+  const calculatePricing = () => {
+    const basePrice = getBasePrice();
+    
+    if (!promoCode || !promoValidation?.isValid) {
+      return {
+        basePrice,
+        discount: 0,
+        discountPercent: 0,
+        finalPrice: basePrice,
+        isFree: false
+      };
+    }
+
+    const discountPercent = promoValidation.discountPercent;
+    const discount = basePrice * (discountPercent / 100);
+    const finalPrice = basePrice - discount;
+    
+    return {
+      basePrice,
+      discount,
+      discountPercent,
+      finalPrice: Math.max(0, finalPrice),
+      isFree: discountPercent === 100
+    };
+  };
+
+  const pricing = calculatePricing();
+  const reportTitle = getReportTitle(reportCategory, reportSubCategory);
+
+  const getPromoValidationIcon = () => {
+    if (isValidatingPromo) {
+      return <Loader2 className="h-4 w-4 animate-spin text-gray-400" />;
+    }
+    if (promoValidation?.isValid) {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    }
+    if (promoCode && !promoValidation?.isValid) {
+      return <AlertCircle className="h-4 w-4 text-red-500" />;
+    }
+    return null;
+  };
+
+  const getPromoValidationMessage = () => {
+    if (isValidatingPromo) {
+      return 'Validating promo code...';
+    }
+    return promoValidation?.message || '';
+  };
+
+  const canProceed = !promoCode || !isValidatingPromo;
 
   return (
     <motion.div
@@ -65,14 +138,28 @@ const Step3Payment = ({ register, watch, errors, onPrev, onSubmit, isProcessing 
       {/* Order Summary */}
       <div className="bg-gray-50 rounded-lg p-4 space-y-3">
         <h3 className="font-semibold text-gray-900">Order Summary</h3>
-        <div className="flex justify-between items-center">
-          <span className="text-gray-700">{getReportTitle(reportCategory)}</span>
-          <span className="font-semibold">{getReportPrice()}</span>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-700">{reportTitle}</span>
+            <span className="font-medium">${pricing.basePrice.toFixed(2)}</span>
+          </div>
+          
+          {pricing.discount > 0 && (
+            <div className="flex justify-between items-center text-green-600">
+              <span>Discount ({pricing.discountPercent}%)</span>
+              <span>-${pricing.discount.toFixed(2)}</span>
+            </div>
+          )}
         </div>
+        
         <hr className="border-gray-200" />
-        <div className="flex justify-between items-center font-semibold">
+        
+        <div className="flex justify-between items-center font-semibold text-lg">
           <span>Total</span>
-          <span>{getReportPrice()}</span>
+          <span className={pricing.isFree ? 'text-green-600' : 'text-gray-900'}>
+            {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
+          </span>
         </div>
       </div>
 
@@ -89,16 +176,36 @@ const Step3Payment = ({ register, watch, errors, onPrev, onSubmit, isProcessing 
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-3">
-          <div className="space-y-2">
-            <Label htmlFor="promoCode">Promo Code</Label>
-            <Input
-              id="promoCode"
-              {...register('promoCode')}
-              placeholder="Enter promo code"
-              className="h-12"
-            />
-            {errors.promoCode && (
-              <p className="text-sm text-red-500">{errors.promoCode.message}</p>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="promoCode">Promo Code</Label>
+              <div className="relative">
+                <Input
+                  id="promoCode"
+                  {...register('promoCode')}
+                  placeholder="Enter promo code"
+                  className="h-12 pr-10"
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  {getPromoValidationIcon()}
+                </div>
+              </div>
+              {errors.promoCode && (
+                <p className="text-sm text-red-500">{errors.promoCode.message}</p>
+              )}
+            </div>
+            
+            {/* Promo validation feedback */}
+            {(promoCode || isValidatingPromo) && (
+              <div className={`text-sm p-3 rounded-lg ${
+                isValidatingPromo 
+                  ? 'bg-gray-50 text-gray-600'
+                  : promoValidation?.isValid
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {getPromoValidationMessage()}
+              </div>
             )}
           </div>
         </CollapsibleContent>
@@ -113,18 +220,23 @@ const Step3Payment = ({ register, watch, errors, onPrev, onSubmit, isProcessing 
       >
         <Button
           onClick={onSubmit}
-          disabled={isProcessing}
+          disabled={isProcessing || !canProceed}
           variant="outline"
-          className="w-full h-14 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+          className="w-full h-14 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent disabled:opacity-50"
           size="lg"
         >
           <CreditCard className="h-5 w-5 mr-2" />
-          {isProcessing ? 'Processing...' : `Get My Report - ${getReportPrice()}`}
+          {isProcessing 
+            ? 'Processing...' 
+            : pricing.isFree 
+            ? 'Get My Free Report'
+            : `Get My Report - $${pricing.finalPrice.toFixed(2)}`
+          }
         </Button>
         
         <p className="text-xs text-gray-500 text-center">
           Your report will be delivered to your email within minutes. 
-          Secure payment processed by Stripe.
+          {!pricing.isFree && 'Secure payment processed by Stripe.'}
         </p>
       </motion.div>
     </motion.div>
