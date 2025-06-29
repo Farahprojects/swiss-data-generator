@@ -37,16 +37,16 @@ const MobileReportTrigger = () => {
               stiffness: 300, 
               damping: 30 
             }}
-            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50"
+            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-4"
           >
             <Button
               onClick={() => setIsDrawerOpen(true)}
               size="lg"
               variant="outline"
-              className="h-14 px-8 rounded-full border-2 border-primary bg-white text-primary hover:bg-primary/5 shadow-lg font-semibold text-lg"
+              className="h-14 px-8 rounded-full border-2 border-primary bg-white text-primary hover:bg-primary/5 shadow-lg font-semibold text-lg whitespace-nowrap"
             >
               <Sparkles className="h-5 w-5 mr-2" />
-              Get Your Report
+              Unlock Insight
             </Button>
           </motion.div>
         )}
