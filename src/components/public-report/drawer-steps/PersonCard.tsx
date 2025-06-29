@@ -36,7 +36,7 @@ interface PersonCardProps {
 
 /**
  * A reusable card collecting the birth data for a person (A or B).
- * The biggest UX pain‑point we had was the mobile “date / time” buttons not
+ * The biggest UX pain‑point we had was the mobile "date / time" buttons not
  * aligning nicely with the surrounding inputs – the text could spill outside
  * the outline and the icon/text pair were not vertically centred.
  *
@@ -105,7 +105,7 @@ const PersonCard = ({
   const formatDateForDisplay = (dateStr: string) => {
     if (!dateStr) return 'Select date';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en‑US', {
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
