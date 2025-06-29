@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
+import { UseFormRegister, UseFormWatch, UseFormHandleSubmit, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CreditCard, Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,8 @@ interface Step3PaymentProps {
   watch: UseFormWatch<DrawerFormData>;
   errors: FieldErrors<DrawerFormData>;
   onPrev: () => void;
-  onSubmit: () => void;
+  handleSubmit: UseFormHandleSubmit<DrawerFormData>;
+  onSubmit: (data: DrawerFormData) => void;
   isProcessing: boolean;
   promoValidation: PromoValidationState;
   isValidatingPromo: boolean;
@@ -31,7 +32,8 @@ const Step3Payment = ({
   watch, 
   errors, 
   onPrev, 
-  onSubmit, 
+  handleSubmit,
+  onSubmit,
   isProcessing,
   promoValidation,
   isValidatingPromo 
@@ -126,7 +128,12 @@ const Step3Payment = ({
 
   const canProceed = !isValidatingPromo;
 
-  const handleSubmitClick = () => {
+  // Use the exact same pattern as desktop
+  const handleButtonClick = (e: React.MouseEvent) => {
+    console.log('🖱️ Mobile button clicked!', e);
+    e.preventDefault();
+    e.stopPropagation();
+    
     console.log('💰 Payment button clicked');
     console.log('🎫 Current promo validation:', promoValidation);
     console.log('⏳ Is validating:', isValidatingPromo);
@@ -137,7 +144,15 @@ const Step3Payment = ({
       return;
     }
     
-    onSubmit();
+    handleSubmit(
+      (data) => {
+        console.log('✅ Mobile form validation passed, submitting:', data);
+        onSubmit(data);
+      },
+      (errors) => {
+        console.log('❌ Mobile form validation failed:', errors);
+      }
+    )(e);
   };
 
   return (
@@ -154,6 +169,7 @@ const Step3Payment = ({
           size="sm"
           onClick={onPrev}
           className="p-2"
+          type="button"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -247,7 +263,7 @@ const Step3Payment = ({
         className="space-y-4"
       >
         <Button
-          onClick={handleSubmitClick}
+          onClick={handleButtonClick}
           disabled={isProcessing || !canProceed}
           variant="outline"
           className="w-full h-14 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent disabled:opacity-50"

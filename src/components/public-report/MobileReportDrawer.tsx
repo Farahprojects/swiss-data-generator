@@ -105,7 +105,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
         </DrawerHeader>
         
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 pb-6">
           <AnimatePresence mode="wait">
             {currentStep === 1 && (
               <Step1ReportType
@@ -146,14 +146,15 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 watch={watch}
                 errors={errors}
                 onPrev={prevStep}
-                onSubmit={handleSubmit(onSubmit)}
+                handleSubmit={handleSubmit}
+                onSubmit={onSubmit}
                 isProcessing={isProcessing}
                 promoValidation={promoValidation}
                 isValidatingPromo={isValidatingPromo}
               />
             )}
           </AnimatePresence>
-        </div>
+        </form>
       </DrawerContent>
     </Drawer>
   );
