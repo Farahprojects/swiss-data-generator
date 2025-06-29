@@ -48,8 +48,7 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
       className="space-y-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-900">Choose Your Insight Area</h2>
-        <p className="text-gray-600">What area would you like guidance on?</p>
+        <h2 className="text-2xl font-bold text-gray-900">What area would you like guidance on?</h2>
       </div>
 
       <Controller
@@ -99,7 +98,7 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
             className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
             size="lg"
           >
-            Choose Focus
+            Choose Insight
           </Button>
         </motion.div>
       )}
