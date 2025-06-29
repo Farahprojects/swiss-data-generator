@@ -25,6 +25,14 @@ const PublicReport = () => {
     }
   };
 
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+  };
+
+  const handleOpenDrawer = () => {
+    setIsDrawerOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <HeroSection onGetReportClick={handleGetReportClick} />
@@ -33,11 +41,14 @@ const PublicReport = () => {
       <div id="report-form">
         <ReportForm />
       </div>
-      <MobileReportTrigger />
+      <MobileReportTrigger 
+        isDrawerOpen={isDrawerOpen}
+        onOpenDrawer={handleOpenDrawer}
+      />
       <DesktopStickyTrigger onGetReportClick={handleGetReportClick} />
       <MobileReportDrawer 
         isOpen={isDrawerOpen} 
-        onClose={() => setIsDrawerOpen(false)} 
+        onClose={handleCloseDrawer} 
       />
     </div>
   );
