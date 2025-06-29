@@ -116,11 +116,11 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
 
   return (
     <>
-      <Card className="border-2 border-primary/20 w-full max-w-none">
+      <Card className="border-2 border-primary/20">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold text-gray-900">{title}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 px-8">
+        <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor={`${prefix}name`}>Full Name *</Label>
             <Input
@@ -154,18 +154,18 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
               {isMobile ? (
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full h-12 justify-start text-left font-normal px-4"
+                  className="w-full h-12 justify-start text-left font-normal"
                   onClick={() => setDatePickerOpen(true)}
                 >
-                  <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">{formatDateForDisplay(birthDate)}</span>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {formatDateForDisplay(birthDate)}
                 </Button>
               ) : (
                 <Input
@@ -188,11 +188,11 @@ const PersonCard = ({ personNumber, title, register, setValue, watch, errors }: 
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full h-12 justify-start text-left font-normal px-4"
+                  className="w-full h-12 justify-start text-left font-normal"
                   onClick={() => setTimePickerOpen(true)}
                 >
-                  <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">{formatTimeForDisplay(birthTime)}</span>
+                  <Clock className="h-4 w-4 mr-2" />
+                  {formatTimeForDisplay(birthTime)}
                 </Button>
               ) : (
                 <Input
