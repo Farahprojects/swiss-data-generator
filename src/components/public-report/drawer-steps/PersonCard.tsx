@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useCallback, useRef } from 'react';
 import {
   UseFormRegister,
   UseFormSetValue,
@@ -60,6 +61,11 @@ const PersonCard = ({
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+  
+  // Add click state management to prevent double clicks
+  const [isDateClicking, setIsDateClicking] = useState(false);
+  const [isTimeClicking, setIsTimeClicking] = useState(false);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
@@ -172,18 +178,90 @@ const PersonCard = ({
     </Button>
   );
 
-  // Updated click handlers with proper event handling
-  const handleDatePickerClick = (e: React.MouseEvent) => {
+  // Improved click handlers with debouncing and state management
+  const handleDatePickerClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDatePickerOpen(true);
-  };
+    
+    console.log('Date picker button clicked, current state:', { datePickerOpen, isDateClicking });
+    
+    // Prevent double clicks
+    if (isDateClicking) {
+      console.log('Date picker click ignored - already clicking');
+      return;
+    }
+    
+    setIsDateClicking(true);
+    
+    // Clear existing timeout
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+    
+    // Use setTimeout to ensure state updates are processed
+    setTimeout(() => {
+      console.log('Opening date picker');
+      setDatePickerOpen(true);
+      
+      // Reset clicking state after a short delay
+      clickTimeoutRef.current = setTimeout(() => {
+        setIsDateClicking(false);
+      }, 300);
+    }, 0);
+  }, [datePickerOpen, isDateClicking]);
 
-  const handleTimePickerClick = (e: React.MouseEvent) => {
+  const handleTimePickerClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setTimePickerOpen(true);
-  };
+    
+    console.log('Time picker button clicked, current state:', { timePickerOpen, isTimeClicking });
+    
+    // Prevent double clicks
+    if (isTimeClicking) {
+      console.log('Time picker click ignored - already clicking');
+      return;
+    }
+    
+    setIsTimeClicking(true);
+    
+    // Clear existing timeout
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+    
+    // Use setTimeout to ensure state updates are processed
+    setTimeout(() => {
+      console.log('Opening time picker');
+      setTimePickerOpen(true);
+      
+      // Reset clicking state after a short delay
+      clickTimeoutRef.current = setTimeout(() => {
+        setIsTimeClicking(false);
+      }, 300);
+    }, 0);
+  }, [timePickerOpen, isTimeClicking]);
+
+  // Improved modal close handlers
+  const handleDatePickerClose = useCallback(() => {
+    console.log('Closing date picker');
+    setDatePickerOpen(false);
+    setIsDateClicking(false);
+  }, []);
+
+  const handleTimePickerClose = useCallback(() => {
+    console.log('Closing time picker');
+    setTimePickerOpen(false);
+    setIsTimeClicking(false);
+  }, []);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
 
   /* -------------------------------------------------------------------- */
   /* JSX                                                                  */
@@ -321,8 +399,8 @@ const PersonCard = ({
       {/* MOBILE PICKER MODALS ------------------------------------------ */}
       <MobilePickerModal
         isOpen={datePickerOpen}
-        onClose={() => setDatePickerOpen(false)}
-        onConfirm={() => setDatePickerOpen(false)}
+        onClose={handleDatePickerClose}
+        onConfirm={handleDatePickerClose}
         title="Select Birth Date"
       >
         <MobileDatePicker 
@@ -333,8 +411,8 @@ const PersonCard = ({
 
       <MobilePickerModal
         isOpen={timePickerOpen}
-        onClose={() => setTimePickerOpen(false)}
-        onConfirm={() => setTimePickerOpen(false)}
+        onClose={handleTimePickerClose}
+        onConfirm={handleTimePickerClose}
         title="Select Birth Time"
       >
         <MobileTimePicker 
