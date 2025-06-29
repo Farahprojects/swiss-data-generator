@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
+import { useIsMobile } from '@/hooks/use-mobile';
 import HeroSection from '@/components/public-report/HeroSection';
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import ContactForm from '@/components/public-report/ContactForm';
@@ -13,6 +14,7 @@ import SubmissionSection from '@/components/public-report/SubmissionSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 import TestsSection from '@/components/public-report/TestsSection';
+import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
 import Footer from '@/components/Footer';
 
 interface PromoValidationState {
@@ -28,6 +30,8 @@ const PublicReport = () => {
     message: '',
     discountPercent: 0
   });
+  
+  const isMobile = useIsMobile();
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -112,53 +116,59 @@ const PublicReport = () => {
       
       <TestsSection />
 
-      <div>
-        <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
-          <ReportTypeSelector
-            control={control}
-            errors={errors}
-            selectedReportType={selectedReportType}
-            showReportGuide={showReportGuide}
-            setShowReportGuide={setShowReportGuide}
-          />
-
-          {selectedReportType && (
-            <ContactForm
-              register={register}
+      {/* Mobile: Show only trigger button and drawer */}
+      {isMobile ? (
+        <MobileReportTrigger />
+      ) : (
+        /* Desktop: Show traditional form */
+        <div>
+          <form onSubmit={handleSubmit(onSubmit)} className="min-h-screen">
+            <ReportTypeSelector
+              control={control}
               errors={errors}
+              selectedReportType={selectedReportType}
+              showReportGuide={showReportGuide}
+              setShowReportGuide={setShowReportGuide}
             />
-          )}
 
-          {selectedReportType && (
-            <BirthDetailsForm
-              register={register}
-              setValue={setValue}
-              watch={watch}
-              errors={errors}
-            />
-          )}
+            {selectedReportType && (
+              <ContactForm
+                register={register}
+                errors={errors}
+              />
+            )}
 
-          {requiresSecondPerson && (
-            <SecondPersonForm
-              register={register}
-              setValue={setValue}
-              watch={watch}
-              errors={errors}
-            />
-          )}
+            {selectedReportType && (
+              <BirthDetailsForm
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+              />
+            )}
 
-          {selectedReportType && (
-            <SubmissionSection
-              register={register}
-              errors={errors}
-              isProcessing={isProcessing}
-              isPricingLoading={isPricingLoading}
-              promoValidation={promoValidation}
-              onButtonClick={handleButtonClick}
-            />
-          )}
-        </form>
-      </div>
+            {requiresSecondPerson && (
+              <SecondPersonForm
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+              />
+            )}
+
+            {selectedReportType && (
+              <SubmissionSection
+                register={register}
+                errors={errors}
+                isProcessing={isProcessing}
+                isPricingLoading={isPricingLoading}
+                promoValidation={promoValidation}
+                onButtonClick={handleButtonClick}
+              />
+            )}
+          </form>
+        </div>
+      )}
 
       <FeaturesSection />
       <Footer />
