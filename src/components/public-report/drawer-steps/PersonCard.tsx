@@ -309,7 +309,6 @@ const PersonCard = ({
         title="Select Birth Date"
       >
         <MobileDatePicker 
-          key={datePickerOpen ? 'date-open' : 'date-closed'}
           value={birthDate} 
           onChange={handleDateChange} 
         />
@@ -322,7 +321,6 @@ const PersonCard = ({
         title="Select Birth Time"
       >
         <MobileTimePicker 
-          key={timePickerOpen ? 'time-open' : 'time-closed'}
           value={birthTime} 
           onChange={handleTimeChange} 
         />
