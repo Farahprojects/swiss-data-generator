@@ -88,103 +88,107 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
-      transition={{ duration: 0.3 }}
-      className="space-y-6"
-    >
-      <div className="flex items-center space-x-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onPrev}
-          className="p-2"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="text-center flex-1">
-          <h2 className="text-2xl font-bold text-gray-900">Birth Details</h2>
-          <p className="text-gray-600">
-            {isCompatibilityReport 
-              ? "We need both people's details for your compatibility report" 
-              : "We need these to create your personalized report"
-            }
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        {/* First Person Card */}
-        <PersonCard
-          personNumber={1}
-          title={isCompatibilityReport ? "Your Details" : "Your Birth Details"}
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          errors={errors}
-          hasTriedToSubmit={hasTriedToSubmit}
-        />
-
-        {/* Add Second Person Button */}
-        {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+    <div className="min-h-full">
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -50 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6"
+      >
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onPrev}
+            className="p-2"
           >
-            <Button
-              onClick={handleAddSecondPerson}
-              variant="outline"
-              className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-              size="lg"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Partner's Details
-            </Button>
-          </motion.div>
-        )}
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="text-center flex-1">
+            <h2 className="text-2xl font-bold text-gray-900">Birth Details</h2>
+            <p className="text-gray-600">
+              {isCompatibilityReport 
+                ? "We need both people's details for your compatibility report" 
+                : "We need these to create your personalized report"
+              }
+            </p>
+          </div>
+        </div>
 
-        {/* Second Person Card */}
-        <AnimatePresence>
-          {isCompatibilityReport && showSecondPerson && (
+        <div className="space-y-6">
+          {/* First Person Card */}
+          <PersonCard
+            personNumber={1}
+            title={isCompatibilityReport ? "Your Details" : "Your Birth Details"}
+            register={register}
+            setValue={setValue}
+            watch={watch}
+            errors={errors}
+            hasTriedToSubmit={hasTriedToSubmit}
+          />
+
+          {/* Add Second Person Button */}
+          {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
+              transition={{ delay: 0.2 }}
+              className="mb-6"
             >
-              <PersonCard
-                personNumber={2}
-                title="Partner's Details"
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                hasTriedToSubmit={hasTriedToSubmit}
-              />
+              <Button
+                onClick={handleAddSecondPerson}
+                variant="outline"
+                className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+                size="lg"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Add Partner's Details
+              </Button>
             </motion.div>
           )}
-        </AnimatePresence>
-      </div>
 
-      {/* Review & Pay Button */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Button
-          onClick={handleReviewAndPay}
-          variant="outline"
-          className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-          size="lg"
+          {/* Second Person Card */}
+          <AnimatePresence>
+            {isCompatibilityReport && showSecondPerson && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <PersonCard
+                  personNumber={2}
+                  title="Partner's Details"
+                  register={register}
+                  setValue={setValue}
+                  watch={watch}
+                  errors={errors}
+                  hasTriedToSubmit={hasTriedToSubmit}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Review & Pay Button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="pb-6"
         >
-          Review & Pay
-        </Button>
+          <Button
+            onClick={handleReviewAndPay}
+            variant="outline"
+            className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+            size="lg"
+          >
+            Review & Pay
+          </Button>
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };
 

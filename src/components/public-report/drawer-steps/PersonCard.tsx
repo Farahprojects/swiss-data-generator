@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   UseFormRegister,
   UseFormSetValue,
@@ -50,6 +50,7 @@ const PersonCard = ({
   });
 
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
@@ -87,6 +88,25 @@ const PersonCard = ({
     const fieldName = getFieldName(field);
     return errors[fieldName];
   };
+
+  // Custom input focus handler to prevent browser auto-scroll
+  const handleInputFocus = useCallback((event: React.FocusEvent<HTMLInputElement>) => {
+    if (isMobile) {
+      // Prevent browser's default scroll behavior
+      event.preventDefault();
+      
+      // Custom scroll behavior with smooth animation
+      setTimeout(() => {
+        if (cardRef.current) {
+          cardRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+        }
+      }, 100);
+    }
+  }, [isMobile]);
 
   const handleDateChange = (date: string) => {
     const fieldName = getFieldName('birthDate');
@@ -157,7 +177,7 @@ const PersonCard = ({
   /* -------------------------------------------------------------------- */
 
   return (
-    <Card className="border-2 border-primary/20 w-full max-w-none">
+    <Card ref={cardRef} className="border-2 border-primary/20 w-full max-w-none mb-4">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold text-gray-900">
           {title}
@@ -172,7 +192,10 @@ const PersonCard = ({
             {...register(getFieldName('name') as any)}
             placeholder="Enter full name"
             className={`h-12 ${shouldShowError('name', getError('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-            onFocus={() => handleFieldInteraction('name')}
+            onFocus={(e) => {
+              handleFieldInteraction('name');
+              handleInputFocus(e);
+            }}
             onBlur={() => handleFieldInteraction('name')}
           />
           {shouldShowError('name', getError('name')) && (
@@ -190,7 +213,10 @@ const PersonCard = ({
               {...register('email' as any)}
               placeholder="your@email.com"
               className={`h-12 ${shouldShowError('email', errors.email) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-              onFocus={() => handleFieldInteraction('email')}
+              onFocus={(e) => {
+                handleFieldInteraction('email');
+                handleInputFocus(e);
+              }}
               onBlur={() => handleFieldInteraction('email')}
             />
             {shouldShowError('email', errors.email) && (
@@ -222,7 +248,10 @@ const PersonCard = ({
                 type="date"
                 {...register(getFieldName('birthDate') as any)}
                 className={`h-12 ${shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                onFocus={() => handleFieldInteraction('birthDate')}
+                onFocus={(e) => {
+                  handleFieldInteraction('birthDate');
+                  handleInputFocus(e);
+                }}
                 onBlur={() => handleFieldInteraction('birthDate')}
               />
             )}
@@ -253,7 +282,10 @@ const PersonCard = ({
                 step="60"
                 {...register(getFieldName('birthTime') as any)}
                 className={`h-12 ${shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                onFocus={() => handleFieldInteraction('birthTime')}
+                onFocus={(e) => {
+                  handleFieldInteraction('birthTime');
+                  handleInputFocus(e);
+                }}
                 onBlur={() => handleFieldInteraction('birthTime')}
               />
             )}

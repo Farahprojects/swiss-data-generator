@@ -151,7 +151,11 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     <Drawer open={isOpen} onOpenChange={handleClose} dismissible={false}>
       <DrawerContent 
         className="flex flex-col rounded-none [&>div:first-child]:hidden"
-        style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+        style={{ 
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
+          maxHeight: 'none',
+          height: 'auto'
+        }}
       >
         {/* Close button - positioned absolutely in top-right */}
         <button
@@ -168,13 +172,13 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         </button>
 
         {currentView === 'form' && (
-          <>
+          <div className="flex flex-col min-h-full">
             <DrawerHeader className="flex-shrink-0 pt-12 pb-4">
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
             
-            <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ touchAction: 'pan-y' }}>
+            <div className="flex-1 px-6 pb-6">
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (
                   <Step1ReportType
@@ -225,11 +229,11 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 )}
               </AnimatePresence>
             </div>
-          </>
+          </div>
         )}
 
         {currentView === 'success' && submittedData && (
-          <div className="flex-1 overflow-y-auto pt-12" style={{ touchAction: 'pan-y' }}>
+          <div className="flex-1 pt-12">
             <SuccessScreen 
               name={submittedData.name} 
               email={submittedData.email}
@@ -239,7 +243,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {currentView === 'report-viewer' && reportData && submittedData && (
-          <div className="flex-1 overflow-hidden pt-12">
+          <div className="flex-1 pt-12">
             <MobileReportViewer
               reportContent={reportData.content}
               reportPdfData={reportData.pdfData}
