@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, Check, X } from 'lucide-react';
-import { MobileDatePicker, MobileTimePicker } from '@/components/ui/mobile-pickers';
+import InlineDateWheel from './InlineDateWheel';
+import InlineTimeWheel from './InlineTimeWheel';
 
 interface InlineDateTimeSelectorProps {
   type: 'date' | 'time';
@@ -28,23 +29,21 @@ const InlineDateTimeSelector = ({
 }: InlineDateTimeSelectorProps) => {
   const [localValue, setLocalValue] = useState(value);
 
-  // Sync local value when prop changes
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
 
   const handleLocalChange = (newValue: string) => {
     setLocalValue(newValue);
-    onChange(newValue);
   };
 
   const handleConfirm = () => {
+    onChange(localValue);
     onConfirm();
   };
 
   const handleCancel = () => {
-    setLocalValue(value); // Reset to original value
-    onChange(value);
+    setLocalValue(value);
     onCancel();
   };
 
@@ -71,74 +70,65 @@ const InlineDateTimeSelector = ({
 
   return (
     <div className="relative">
-      {/* Trigger Button */}
       <Button
         type="button"
         variant="outline"
-        className={`flex w-full items-center gap-2 px-3 h-12 ${
-          hasError ? 'border-red-500 ring-1 ring-red-500' : ''
-        }`}
-        style={{ 
-          touchAction: 'manipulation',
-          WebkitTapHighlightColor: 'transparent'
-        }}
+        className={`flex w-full items-center gap-2 px-3 h-12 justify-start font-normal ${
+          hasError ? 'border-red-500 bg-red-50' : 'hover:bg-gray-50'
+        } ${isOpen ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
       >
-        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="grow text-left font-normal text-sm">
+        <Icon className="h-4 w-4 shrink-0 text-gray-500" />
+        <span className="text-left text-sm text-gray-900">
           {formatDisplayValue(localValue)}
         </span>
       </Button>
 
-      {/* Inline Picker */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-lg mt-2"
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-lg mt-1"
           >
-            <div className="p-4">
+            <div className="p-3">
+              <div className="mb-3">
+                <h3 className="text-sm font-medium text-gray-900 text-center">
+                  Select {type === 'date' ? 'Date' : 'Time'}
+                </h3>
+              </div>
+              
               {type === 'date' ? (
-                <MobileDatePicker 
+                <InlineDateWheel 
                   value={localValue} 
                   onChange={handleLocalChange} 
                 />
               ) : (
-                <MobileTimePicker 
+                <InlineTimeWheel 
                   value={localValue} 
                   onChange={handleLocalChange} 
                 />
               )}
               
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200">
+              <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={handleCancel}
-                  className="flex items-center gap-2"
-                  style={{ 
-                    touchAction: 'manipulation',
-                    WebkitTapHighlightColor: 'transparent'
-                  }}
+                  className="text-gray-600 hover:text-gray-800"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3 mr-1" />
                   Cancel
                 </Button>
                 <Button
                   type="button"
                   size="sm"
                   onClick={handleConfirm}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                  style={{ 
-                    touchAction: 'manipulation',
-                    WebkitTapHighlightColor: 'transparent'
-                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  <Check className="h-4 w-4" />
+                  <Check className="h-3 w-3 mr-1" />
                   Done
                 </Button>
               </div>
