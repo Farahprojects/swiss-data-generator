@@ -133,6 +133,21 @@ const PersonCard = ({
     if (placeData.placeId) {
       setValue(placeIdField, placeData.placeId);
     }
+
+    // Additional layout stabilization for mobile
+    if (isMobile) {
+      setTimeout(() => {
+        // Ensure the card remains properly visible after place selection
+        const currentCard = document.querySelector(`[data-person="${personNumber}"]`);
+        if (currentCard) {
+          currentCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        }
+      }, 200);
+    }
   };
 
   // Date selector handlers
@@ -176,7 +191,7 @@ const PersonCard = ({
   /* -------------------------------------------------------------------- */
 
   return (
-    <Card className="border-2 border-primary/20 w-full mb-4">
+    <Card className="border-2 border-primary/20 w-full mb-4" data-person={personNumber}>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold text-gray-900">
           {title}

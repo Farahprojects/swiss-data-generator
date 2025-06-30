@@ -61,6 +61,30 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       window.location.reload();
     };
 
+    // Layout stabilization after place selection
+    const stabilizeLayout = () => {
+      // Small delay to allow Google popup to fully close
+      setTimeout(() => {
+        // Ensure form layout is stable
+        const container = document.getElementById(`${id}-container`);
+        if (container) {
+          // Force layout recalculation
+          container.style.height = '48px';
+          container.style.minHeight = '48px';
+        }
+        
+        // Gentle scroll adjustment to maintain proper positioning
+        const parentCard = container?.closest('.border-2');
+        if (parentCard) {
+          parentCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        }
+      }, 150);
+    };
+
     useEffect(() => {
       if (!isLoaded || showFallback || !window.google || disabled) {
         return;
@@ -77,8 +101,13 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
         autocompleteElement.setAttribute('placeholder', placeholder);
         autocompleteElement.value = localValue;
         
+        // Mobile-specific styling
         autocompleteElement.style.width = '100%';
         autocompleteElement.style.height = '40px';
+        autocompleteElement.style.fontSize = '16px'; // Prevent zoom on iOS
+        autocompleteElement.style.border = 'none';
+        autocompleteElement.style.outline = 'none';
+        autocompleteElement.style.background = 'transparent';
         
         const container = document.getElementById(`${id}-container`);
         if (container) {
@@ -118,6 +147,9 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
                 onPlaceSelect(placeData);
               }
               
+              // Stabilize layout after selection
+              stabilizeLayout();
+              
               if (placeData.latitude && placeData.longitude) {
                 console.log(`📍 Coordinates: ${placeData.latitude}, ${placeData.longitude}`);
               } else {
@@ -126,6 +158,8 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
             } catch (error) {
               console.error('Error processing place selection:', error);
               toast.error('Could not process place selection');
+              // Still stabilize layout even on error
+              stabilizeLayout();
             }
           });
         } else {
@@ -173,8 +207,9 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
               onChange={handleManualInput}
               placeholder={placeholder}
               disabled={disabled}
-              className="flex-1"
+              className="flex-1 h-12"
               required={required}
+              style={{ fontSize: '16px' }}
             />
             {isError && !disabled && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -199,10 +234,15 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
         ) : (
           <div 
             id={`${id}-container`} 
-            className="min-h-[40px] border rounded-md bg-background px-3 py-2"
+            className="relative h-12 min-h-12 border rounded-md bg-background px-3 py-2 mobile-autocomplete-container"
+            style={{
+              isolation: 'isolate',
+              contain: 'layout style',
+              fontSize: '16px'
+            }}
           >
             {!isLoaded && (
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="flex items-center gap-2 text-muted-foreground h-full">
                 <Loader2 className="h-4 w-4 animate-spin" /> 
                 Loading location services...
               </div>

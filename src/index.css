@@ -103,6 +103,44 @@ select {
   transition: none;
 }
 
+/* Google Maps autocomplete mobile fixes */
+.mobile-autocomplete-container {
+  position: relative;
+  isolation: isolate;
+  contain: layout style;
+}
+
+/* Ensure Google autocomplete popup doesn't interfere with drawer */
+@media (max-width: 768px) {
+  /* Google Maps autocomplete popup styling */
+  gmp-place-autocomplete {
+    font-size: 16px !important;
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+  }
+  
+  /* Prevent Google popup from causing layout shifts */
+  .mobile-autocomplete-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: -1;
+  }
+  
+  /* Stabilize autocomplete container */
+  .mobile-autocomplete-container {
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    overflow: visible;
+  }
+}
+
 /* Ensure smooth scrolling without browser interference */
 html {
   scroll-behavior: smooth;
