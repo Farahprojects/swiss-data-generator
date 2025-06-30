@@ -53,6 +53,41 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     }
   }, []);
 
+  const loadGoogleWebComponents = useCallback(() => {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      console.error('❌ Not in browser environment for web components');
+      return;
+    }
+
+    // Check if already loaded
+    if (document.querySelector('[src*="@googlemaps/web-components"]')) {
+      console.log('✅ Google Maps Web Components already loaded');
+      return;
+    }
+
+    try {
+      console.log('🔄 Loading Google Maps Web Components...');
+      
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/@googlemaps/web-components';
+      script.async = true;
+      script.defer = true;
+      script.onerror = () => {
+        console.error('❌ Error loading Google Maps Web Components');
+        setIsError(true);
+        setErrorMessage('Failed to load Google Maps Web Components');
+      };
+      
+      document.head.appendChild(script);
+      console.log('✅ Google Maps Web Components script added');
+    } catch (error) {
+      console.error('❌ Error in loadGoogleWebComponents:', error);
+      setIsError(true);
+      setErrorMessage(`Web components loading error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, []);
+
   const loadGoogleMapsScript = useCallback((key: string) => {
     // Check if we're in browser environment
     if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -103,11 +138,12 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
         await fetchApiKey();
       } else if (!isLoaded && !isError) {
         loadGoogleMapsScript(apiKey);
+        loadGoogleWebComponents(); // 🔥 Load web components for gmp-place-autocomplete
       }
     };
     
     loadMaps();
-  }, [apiKey, isLoaded, isError, fetchApiKey, loadGoogleMapsScript]);
+  }, [apiKey, isLoaded, isError, fetchApiKey, loadGoogleMapsScript, loadGoogleWebComponents]);
 
   return { isLoaded, isError, apiKey, errorMessage };
 };
