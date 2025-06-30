@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -26,7 +27,7 @@ const reportGuides = [
   {
     type: 'Essence',
     icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'They Self Report',
+    title: 'The Self Report',
     price: '$10',
     bestFor: 'Self-understanding',
     description: 'A deep snapshot of who you are and what life\'s asking from you right now.',

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
@@ -25,7 +26,7 @@ interface Test {
 const testData: Test[] = [
   {
     id: "Essence",
-    name: "They Self",
+    name: "The Self",
     description: "Understand your core thought patterns",
     slug: "Essence",
     time: "5 min",
@@ -81,9 +82,9 @@ const testData: Test[] = [
 
 const reportGuides = [
   {
-    type: 'They Self',
+    type: 'The Self',
     icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'They Self Report',
+    title: 'The Self Report',
     price: '$10',
     bestFor: 'Self-understanding',
     description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
@@ -195,7 +196,7 @@ export default function TestsSection() {
                         <div className="w-full h-full bg-white">
                           <img 
                             src={test.imageSrc} 
-                            alt="They Self Report" 
+                            alt="The Self Report" 
                             className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
@@ -292,7 +293,7 @@ export default function TestsSection() {
                     <div className="w-full h-full bg-white">
                       <img 
                         src={test.imageSrc} 
-                        alt="They Self Report" 
+                        alt="The Self Report" 
                         className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
