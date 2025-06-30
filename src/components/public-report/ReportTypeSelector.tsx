@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Control, Controller, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { User, Heart, Target, Calendar, Brain } from 'lucide-react';
+import { User, Heart, Target, Calendar, Brain, Briefcase } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { relationshipTypes, essenceTypes } from '@/constants/report-types';
@@ -64,6 +64,44 @@ const snapshotSubCategories = [
     description: 'Mental clarity insights and unlock your cognitive patterns',
     icon: Brain,
     reportType: 'mindset',
+  },
+];
+
+// Detailed essence types with icons and descriptions
+const detailedEssenceTypes = [
+  {
+    value: 'personal',
+    title: 'Personal',
+    description: 'Deep self-awareness and unlock your authentic potential',
+    icon: User,
+  },
+  {
+    value: 'professional',
+    title: 'Professional',
+    description: 'Career mastery and unlock your professional strengths',
+    icon: Briefcase,
+  },
+  {
+    value: 'relational',
+    title: 'Relational',
+    description: 'Master connections and deepen your relationship',
+    icon: Heart,
+  },
+];
+
+// Detailed relationship types with icons and descriptions
+const detailedRelationshipTypes = [
+  {
+    value: 'personal',
+    title: 'Personal',
+    description: 'Romantic chemistry and build deeper personal bonds',
+    icon: Heart,
+  },
+  {
+    value: 'professional',
+    title: 'Professional',
+    description: 'Unlock powerful collaboration dynamics with a team',
+    icon: Briefcase,
   },
 ];
 
@@ -208,7 +246,8 @@ const ReportTypeSelector = ({
                   name="essenceType"
                   render={({ field }) => (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                      {essenceTypes.map((type) => {
+                      {detailedEssenceTypes.map((type) => {
+                        const IconComponent = type.icon;
                         const isSelected = field.value === type.value;
                         
                         return (
@@ -216,15 +255,21 @@ const ReportTypeSelector = ({
                             key={type.value}
                             type="button"
                             onClick={() => field.onChange(type.value)}
-                            className={`w-full p-4 rounded-xl border transition-all duration-200 shadow-sm bg-white/60 backdrop-blur-sm hover:shadow-md active:scale-[0.98] ${
+                            className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                               isSelected 
-                                ? 'border-primary shadow-md bg-primary/5' 
+                                ? 'border-primary shadow-lg bg-primary/5' 
                                 : 'border-neutral-200 hover:border-neutral-300'
                             }`}
                             whileTap={{ scale: 0.98 }}
                           >
-                            <div className="text-center">
-                              <h4 className="text-lg font-semibold text-gray-900">{type.label}</h4>
+                            <div className="flex gap-4 items-center">
+                              <div className="bg-white shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
+                                <IconComponent className="h-6 w-6 text-gray-700" />
+                              </div>
+                              <div className="flex-1 text-left">
+                                <h3 className="text-lg font-semibold text-gray-900">{type.title}</h3>
+                                <p className="text-sm text-muted-foreground">{type.description}</p>
+                              </div>
                             </div>
                           </motion.button>
                         );
@@ -268,7 +313,8 @@ const ReportTypeSelector = ({
                   name="relationshipType"
                   render={({ field }) => (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                      {relationshipTypes.map((type) => {
+                      {detailedRelationshipTypes.map((type) => {
+                        const IconComponent = type.icon;
                         const isSelected = field.value === type.value;
                         
                         return (
@@ -276,15 +322,21 @@ const ReportTypeSelector = ({
                             key={type.value}
                             type="button"
                             onClick={() => field.onChange(type.value)}
-                            className={`w-full p-4 rounded-xl border transition-all duration-200 shadow-sm bg-white/60 backdrop-blur-sm hover:shadow-md active:scale-[0.98] ${
+                            className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                               isSelected 
-                                ? 'border-primary shadow-md bg-primary/5' 
+                                ? 'border-primary shadow-lg bg-primary/5' 
                                 : 'border-neutral-200 hover:border-neutral-300'
                             }`}
                             whileTap={{ scale: 0.98 }}
                           >
-                            <div className="text-center">
-                              <h4 className="text-lg font-semibold text-gray-900">{type.label}</h4>
+                            <div className="flex gap-4 items-center">
+                              <div className="bg-white shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
+                                <IconComponent className="h-6 w-6 text-gray-700" />
+                              </div>
+                              <div className="flex-1 text-left">
+                                <h3 className="text-lg font-semibold text-gray-900">{type.title}</h3>
+                                <p className="text-sm text-muted-foreground">{type.description}</p>
+                              </div>
                             </div>
                           </motion.button>
                         );
