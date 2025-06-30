@@ -3,9 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useGoogleMapsScript } from '../hooks/useGoogleMapsScript';
 import { usePlaceSelection } from '../hooks/usePlaceSelection';
-import { useLayoutStabilization } from '../hooks/useLayoutStabilization';
-import { useAutocompleteElement } from '../hooks/useAutocompleteElement';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { PlaceData } from '../utils/extractPlaceData';
 import type { HTMLGmpPlaceAutocompleteElement } from '@/types/googleMaps';
 
@@ -30,18 +27,12 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
   onShowFallback,
   retryCount
 }) => {
-  // All hooks MUST be called unconditionally at the top level
   const { isLoaded, isError } = useGoogleMapsScript();
   const autocompleteRef = useRef<HTMLGmpPlaceAutocompleteElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isProcessingSelection, setIsProcessingSelection] = useState(false);
-  
-  // Use consistent mobile detection hook
-  const isMobile = useIsMobile();
 
   const handlePlaceSelect = usePlaceSelection(onChange, onPlaceSelect);
-  const stabilizeLayout = useLayoutStabilization(isMobile);
-  const { createAutocompleteElement, createMobileBackdrop } = useAutocompleteElement();
 
   // Handle error state
   useEffect(() => {
@@ -58,26 +49,24 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       const timeout = setTimeout(() => {
         console.warn('Google Maps load timeout after 6 seconds. Showing fallback.');
         onShowFallback();
-      }, 6000); // 6 seconds timeout
+      }, 6000);
 
       return () => clearTimeout(timeout);
     }
   }, [isLoaded, isError, onShowFallback]);
 
-  // Main setup effect
+  // Unified setup effect - single implementation for all devices
   useEffect(() => {
-    // Debug logging
     console.log('[DEBUG] Setup effect triggered:', { 
       isLoaded, 
       google: !!window?.google, 
       disabled,
-      isMobile,
       windowExists: typeof window !== 'undefined'
     });
 
     // Early returns for invalid states
     if (!isLoaded || typeof window === 'undefined' || !window.google || disabled) {
-      console.warn('[SKIP INIT]', { isLoaded, google: !!window?.google, disabled, isMobile });
+      console.warn('[SKIP INIT]', { isLoaded, google: !!window?.google, disabled });
       return;
     }
     
@@ -99,40 +88,28 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
         container.removeChild(container.firstChild);
       }
 
-      const autocompleteElement = createAutocompleteElement(
-        id,
-        placeholder,
-        value,
-        isMobile,
-        containerRef
-      );
-
-      if (!autocompleteElement) return;
-
-      if (isMobile) {
-        const backdrop = createMobileBackdrop();
-        container.appendChild(backdrop);
-      }
+      // Create unified autocomplete element
+      const autocompleteElement = document.createElement('gmp-place-autocomplete') as HTMLGmpPlaceAutocompleteElement;
+      autocompleteElement.id = `${id}-autocomplete`;
+      autocompleteElement.setAttribute('placeholder', placeholder);
+      autocompleteElement.value = value;
+      
+      // Unified styling - responsive by default
+      autocompleteElement.style.width = '100%';
+      autocompleteElement.style.height = '40px';
+      autocompleteElement.style.fontSize = '16px';
+      autocompleteElement.style.border = 'none';
+      autocompleteElement.style.outline = 'none';
+      autocompleteElement.style.background = 'transparent';
       
       container.appendChild(autocompleteElement);
       autocompleteRef.current = autocompleteElement;
       
-      // Enhanced event handling with proper cleanup
+      // Unified event handling
       autocompleteElement.addEventListener('gmp-select', async (event: Event) => {
-        // Prevent any scroll during processing
-        if (isMobile) {
-          event.preventDefault();
-          event.stopPropagation();
-          setIsProcessingSelection(true);
-        }
-        
+        setIsProcessingSelection(true);
         await handlePlaceSelect(event);
-        
-        // Enhanced stabilization for mobile
-        if (isMobile) {
-          stabilizeLayout(containerRef);
-          setIsProcessingSelection(false);
-        }
+        setIsProcessingSelection(false);
       });
       
       console.log('✅ Google Place Autocomplete element successfully created');
@@ -141,7 +118,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       console.error('Error setting up place autocomplete:', error);
       onShowFallback();
     }
-  }, [isLoaded, value, id, placeholder, onChange, onPlaceSelect, disabled, retryCount, isMobile, handlePlaceSelect, stabilizeLayout, createAutocompleteElement, createMobileBackdrop, onShowFallback]);
+  }, [isLoaded, value, id, placeholder, onChange, onPlaceSelect, disabled, retryCount, handlePlaceSelect, onShowFallback]);
 
   // Sync value with autocomplete element
   useEffect(() => {
@@ -155,12 +132,8 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       <div 
         ref={containerRef}
         id={`${id}-container`} 
-        className={`relative h-12 min-h-12 max-h-12 border rounded-md bg-background px-3 py-2 ${
-          isMobile ? 'mobile-autocomplete-isolated' : 'mobile-autocomplete-container'
-        }`}
+        className="relative h-12 min-h-12 max-h-12 border rounded-md bg-background px-3 py-2"
         style={{
-          isolation: 'isolate',
-          contain: isMobile ? 'layout style size' : 'layout style',
           fontSize: '16px',
           overflow: 'hidden'
         }}
@@ -173,8 +146,8 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
         )}
       </div>
       
-      {/* Processing overlay for mobile */}
-      {isProcessingSelection && isMobile && (
+      {/* Processing overlay */}
+      {isProcessingSelection && (
         <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10 rounded-md">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
         </div>
