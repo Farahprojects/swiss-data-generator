@@ -103,25 +103,37 @@ select {
   transition: none;
 }
 
-/* Google Maps autocomplete mobile fixes */
+/* Google Maps autocomplete mobile fixes - Enhanced isolation */
 .mobile-autocomplete-container {
   position: relative;
   isolation: isolate;
   contain: layout style;
 }
 
+/* New isolated mobile autocomplete for complete containment */
+.mobile-autocomplete-isolated {
+  position: relative;
+  isolation: isolate;
+  contain: layout style size;
+  transform: translateZ(0); /* Force new stacking context */
+  will-change: auto;
+}
+
 /* Ensure Google autocomplete popup doesn't interfere with drawer */
 @media (max-width: 768px) {
-  /* Google Maps autocomplete popup styling */
+  /* Enhanced Google Maps autocomplete popup styling */
   gmp-place-autocomplete {
     font-size: 16px !important;
     border: none !important;
     outline: none !important;
     background: transparent !important;
+    position: relative !important;
+    z-index: 1 !important;
   }
   
-  /* Prevent Google popup from causing layout shifts */
-  .mobile-autocomplete-container::after {
+  /* Prevent Google popup from causing layout shifts - Enhanced */
+  .mobile-autocomplete-container::after,
+  .mobile-autocomplete-isolated::after {
     content: '';
     position: absolute;
     top: 0;
@@ -130,14 +142,35 @@ select {
     bottom: 0;
     pointer-events: none;
     z-index: -1;
+    background: transparent;
   }
   
-  /* Stabilize autocomplete container */
-  .mobile-autocomplete-container {
+  /* Stabilize autocomplete container with strict containment */
+  .mobile-autocomplete-container,
+  .mobile-autocomplete-isolated {
     height: 48px !important;
     min-height: 48px !important;
     max-height: 48px !important;
-    overflow: visible;
+    overflow: hidden !important;
+    transform: translateZ(0);
+  }
+  
+  /* Isolate Google Maps popup from drawer context */
+  .mobile-autocomplete-isolated gmp-place-autocomplete {
+    contain: layout style;
+    transform: translateZ(0);
+  }
+  
+  /* Prevent Google popup from affecting drawer scroll */
+  .mobile-autocomplete-isolated {
+    overscroll-behavior: contain;
+    scroll-behavior: auto;
+  }
+  
+  /* Force Google autocomplete to respect container boundaries */
+  .mobile-autocomplete-isolated * {
+    max-width: 100% !important;
+    overflow: hidden !important;
   }
 }
 
@@ -164,5 +197,17 @@ html {
     width: 100%;
     height: auto;
     overflow: visible;
+  }
+  
+  /* Enhanced drawer stability during autocomplete */
+  [data-vaul-drawer-wrapper] {
+    transform: translateZ(0);
+    contain: layout;
+  }
+  
+  /* Prevent Google Maps from interfering with drawer positioning */
+  [data-vaul-drawer] {
+    isolation: isolate;
+    contain: layout style;
   }
 }

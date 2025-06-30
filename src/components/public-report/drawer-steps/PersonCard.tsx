@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   UseFormRegister,
   UseFormSetValue,
@@ -14,13 +13,13 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Calendar, Clock, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportFormData } from '@/types/public-report';
+import { Button } from '@/components/ui/button';
 
 interface PersonCardProps {
   personNumber: 1 | 2;
@@ -117,6 +116,7 @@ const PersonCard = ({
     setValue(fieldName, time);
   };
 
+  // Enhanced place selection handler with complete layout stabilization
   const handlePlaceSelect = (placeData: PlaceData) => {
     const locationField = getFieldName('birthLocation');
     const latField = getFieldName('birthLatitude');
@@ -134,19 +134,32 @@ const PersonCard = ({
       setValue(placeIdField, placeData.placeId);
     }
 
-    // Additional layout stabilization for mobile
+    // Enhanced layout stabilization for mobile with proper timing
     if (isMobile) {
+      // Prevent scroll interference during Google's cleanup
+      document.body.style.pointerEvents = 'none';
+      
       setTimeout(() => {
-        // Ensure the card remains properly visible after place selection
+        // Re-enable interactions
+        document.body.style.pointerEvents = '';
+        
+        // Force layout recalculation
         const currentCard = document.querySelector(`[data-person="${personNumber}"]`);
         if (currentCard) {
-          currentCard.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'nearest',
-            inline: 'nearest'
-          });
+          // Ensure card is properly positioned
+          const cardRect = currentCard.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+          
+          // Only scroll if card is not fully visible
+          if (cardRect.bottom > viewportHeight || cardRect.top < 0) {
+            currentCard.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
         }
-      }, 200);
+      }, 400); // Extended timeout to ensure Google's DOM cleanup is complete
     }
   };
 
