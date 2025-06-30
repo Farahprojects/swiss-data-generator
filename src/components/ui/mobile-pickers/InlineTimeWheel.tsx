@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import PickerWheel from './PickerWheel';
 
 interface InlineTimeWheelProps {
@@ -42,23 +42,55 @@ const InlineTimeWheel = ({ value, onChange }: InlineTimeWheelProps) => {
   const [selectedMinute, setSelectedMinute] = useState<number>(initialTime.minute);
   const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>(initialTime.period);
 
+  // Debounce timer ref
+  const debounceTimer = useRef<NodeJS.Timeout>();
+
+  // Debounced onChange to prevent rapid updates during scrolling
+  const debouncedOnChange = useCallback((hour: number, minute: number, period: 'AM' | 'PM') => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    
+    debounceTimer.current = setTimeout(() => {
+      const time24 = convertTo24Hour(hour, minute, period);
+      onChange(time24);
+    }, 100); // 100ms debounce
+  }, [onChange, convertTo24Hour]);
+
   useEffect(() => {
-    const time24 = convertTo24Hour(selectedHour, selectedMinute, selectedPeriod);
-    onChange(time24);
-  }, [selectedHour, selectedMinute, selectedPeriod, onChange, convertTo24Hour]);
+    debouncedOnChange(selectedHour, selectedMinute, selectedPeriod);
+  }, [selectedHour, selectedMinute, selectedPeriod, debouncedOnChange]);
 
-  const handleHourChange = useCallback((value: number) => {
-    setSelectedHour(value);
+  // Cleanup debounce timer
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
   }, []);
 
-  const handleMinuteChange = useCallback((value: string) => {
-    const numValue = parseInt(value);
-    setSelectedMinute(numValue);
-  }, []);
+  const handleHourChange = useCallback((newValue: number) => {
+    // Only update if different to prevent unnecessary re-renders
+    if (newValue !== selectedHour) {
+      setSelectedHour(newValue);
+    }
+  }, [selectedHour]);
 
-  const handlePeriodChange = useCallback((value: 'AM' | 'PM') => {
-    setSelectedPeriod(value);
-  }, []);
+  const handleMinuteChange = useCallback((newValue: string) => {
+    const numValue = parseInt(newValue);
+    // Only update if different to prevent unnecessary re-renders
+    if (numValue !== selectedMinute) {
+      setSelectedMinute(numValue);
+    }
+  }, [selectedMinute]);
+
+  const handlePeriodChange = useCallback((newValue: 'AM' | 'PM') => {
+    // Only update if different to prevent unnecessary re-renders
+    if (newValue !== selectedPeriod) {
+      setSelectedPeriod(newValue);
+    }
+  }, [selectedPeriod]);
 
   return (
     <div className="flex items-center justify-center gap-8 px-4 py-2">

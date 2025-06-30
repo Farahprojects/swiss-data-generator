@@ -54,6 +54,10 @@ function PickerWheel<T extends string | number = string>({
   const y = useSpring(rawY, { stiffness: 400, damping: 45, mass: 0.8 });
 
   const [{ isDragging }, setDrag] = useState({ isDragging: false });
+  
+  // Track if value change came from internal picker interaction
+  const isInternalUpdate = useRef(false);
+  const lastExternalValue = useRef(value);
 
   // Create infinite options array if infinite mode is enabled
   const infiniteOptions = useMemo(() => {
@@ -75,8 +79,19 @@ function PickerWheel<T extends string | number = string>({
   }, [infinite, infiniteOptions.length, options.length]);
 
   /* --------------------------------------------------------------------- */
-  // Keep wheel in sync with external value
+  // Keep wheel in sync with external value - only when not dragging and truly external
   useEffect(() => {
+    // Don't sync during drag or if this is an internal update
+    if (isDragging || isInternalUpdate.current) {
+      isInternalUpdate.current = false; // Reset flag
+      return;
+    }
+
+    // Only sync if value actually changed externally
+    if (value === lastExternalValue.current) {
+      return;
+    }
+
     const idx = options.indexOf(value);
     if (idx !== -1) {
       // Calculate position so selected item aligns with center
@@ -91,8 +106,10 @@ function PickerWheel<T extends string | number = string>({
       const finalY = centerTop - targetIndex * itemHeight;
       rawY.set(finalY);
       y.set(finalY);
+      
+      lastExternalValue.current = value;
     }
-  }, [value, options, itemHeight, rawY, y, height, infinite, centerRepetitionStart]);
+  }, [value, options, itemHeight, rawY, y, height, infinite, centerRepetitionStart, isDragging]);
 
   // Convert y‑offset → nearest option index (handles infinite mode)
   const nearestIndex = useCallback(
@@ -150,6 +167,9 @@ function PickerWheel<T extends string | number = string>({
       controls.then(() => {
         const actualIndex = nearestIndex(targetY);
         if (options[actualIndex] !== value) {
+          // Mark this as internal update to prevent sync conflicts
+          isInternalUpdate.current = true;
+          lastExternalValue.current = options[actualIndex];
           onChange(options[actualIndex]);
         }
       });

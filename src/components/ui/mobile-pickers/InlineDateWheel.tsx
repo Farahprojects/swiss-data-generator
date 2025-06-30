@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import PickerWheel from './PickerWheel';
 
 interface InlineDateWheelProps {
@@ -51,6 +51,9 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
   const [selectedDay, setSelectedDay] = useState<number>(initialDate.day);
   const [selectedYear, setSelectedYear] = useState<number>(initialDate.year);
 
+  // Debounce timer ref
+  const debounceTimer = useRef<NodeJS.Timeout>();
+
   const getDaysInMonth = useCallback((month: number, year: number) => {
     return new Date(year, month, 0).getDate();
   }, []);
@@ -61,6 +64,21 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
     [daysInMonth]
   );
 
+  // Debounced onChange to prevent rapid updates during scrolling
+  const debouncedOnChange = useCallback((month: number, day: number, year: number) => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    
+    debounceTimer.current = setTimeout(() => {
+      const maxDays = getDaysInMonth(month, year);
+      const adjustedDay = Math.min(day, maxDays);
+      
+      const dateString = `${year}-${month.toString().padStart(2, '0')}-${adjustedDay.toString().padStart(2, '0')}`;
+      onChange(dateString);
+    }, 100); // 100ms debounce
+  }, [onChange, getDaysInMonth]);
+
   useEffect(() => {
     const maxDays = getDaysInMonth(selectedMonth, selectedYear);
     const adjustedDay = Math.min(selectedDay, maxDays);
@@ -70,22 +88,39 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
       return;
     }
 
-    const dateString = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-${adjustedDay.toString().padStart(2, '0')}`;
-    onChange(dateString);
-  }, [selectedMonth, selectedDay, selectedYear, onChange, getDaysInMonth]);
+    debouncedOnChange(selectedMonth, adjustedDay, selectedYear);
+  }, [selectedMonth, selectedDay, selectedYear, debouncedOnChange, getDaysInMonth]);
 
-  const handleMonthChange = useCallback((value: string) => {
-    const monthIndex = months.indexOf(value) + 1;
-    setSelectedMonth(monthIndex);
-  }, [months]);
-
-  const handleDayChange = useCallback((value: number) => {
-    setSelectedDay(value);
+  // Cleanup debounce timer
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
   }, []);
 
-  const handleYearChange = useCallback((value: number) => {
-    setSelectedYear(value);
-  }, []);
+  const handleMonthChange = useCallback((newValue: string) => {
+    const monthIndex = months.indexOf(newValue) + 1;
+    // Only update if different to prevent unnecessary re-renders
+    if (monthIndex !== selectedMonth) {
+      setSelectedMonth(monthIndex);
+    }
+  }, [months, selectedMonth]);
+
+  const handleDayChange = useCallback((newValue: number) => {
+    // Only update if different to prevent unnecessary re-renders
+    if (newValue !== selectedDay) {
+      setSelectedDay(newValue);
+    }
+  }, [selectedDay]);
+
+  const handleYearChange = useCallback((newValue: number) => {
+    // Only update if different to prevent unnecessary re-renders  
+    if (newValue !== selectedYear) {
+      setSelectedYear(newValue);
+    }
+  }, [selectedYear]);
 
   return (
     <div className="flex items-center justify-center gap-8 px-4 py-2">
