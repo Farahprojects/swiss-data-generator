@@ -3,7 +3,6 @@ import React from 'react';
 import { Controller } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { User, Heart, Target } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface Step1ReportTypeProps {
   control: any;
@@ -64,7 +63,11 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
                 <motion.button
                   key={category.value}
                   type="button"
-                  onClick={() => field.onChange(category.value)}
+                  onClick={() => {
+                    field.onChange(category.value);
+                    // Auto-advance to next step after selection
+                    setTimeout(() => onNext(), 100);
+                  }}
                   className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-200 ${
                     isSelected ? category.selectedColor : category.color
                   }`}
@@ -85,23 +88,6 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
           </div>
         )}
       />
-
-      {selectedCategory && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Button
-            onClick={onNext}
-            variant="outline"
-            className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-            size="lg"
-          >
-            Choose Insight
-          </Button>
-        </motion.div>
-      )}
     </motion.div>
   );
 };

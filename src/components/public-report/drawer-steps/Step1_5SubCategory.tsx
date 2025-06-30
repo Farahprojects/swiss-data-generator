@@ -2,7 +2,7 @@
 import React from 'react';
 import { Controller } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { User, Briefcase, Heart, Target, Calendar, Brain } from 'lucide-react';
+import { User, Briefcase, Heart, Target, Calendar, Brain, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Step1_5SubCategoryProps {
@@ -73,15 +73,6 @@ const subCategoryOptions = {
 const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selectedSubCategory }: Step1_5SubCategoryProps) => {
   const options = subCategoryOptions[selectedCategory as keyof typeof subCategoryOptions] || [];
   
-  const getCategoryTitle = (category: string) => {
-    switch (category) {
-      case 'the-self': return 'The Self';
-      case 'compatibility': return 'Compatibility';
-      case 'snapshot': return 'Snapshot';
-      default: return '';
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
@@ -107,7 +98,11 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
                 <motion.button
                   key={option.value}
                   type="button"
-                  onClick={() => field.onChange(option.value)}
+                  onClick={() => {
+                    field.onChange(option.value);
+                    // Auto-advance to next step after selection
+                    setTimeout(() => onNext(), 100);
+                  }}
                   className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-200 ${
                     isSelected 
                       ? 'bg-primary/10 border-primary' 
@@ -131,32 +126,16 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
         )}
       />
 
-      <div className="flex space-x-3">
+      {/* Compact back button with icon */}
+      <div className="flex justify-start">
         <Button
           onClick={onPrev}
           variant="outline"
-          className="flex-1 h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-          size="lg"
+          className="inline-flex items-center gap-2 px-4 py-2 h-10 text-sm font-medium border-2 border-primary text-primary bg-white hover:bg-accent"
         >
+          <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        
-        {selectedSubCategory && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex-1"
-          >
-            <Button
-              onClick={onNext}
-              variant="outline"
-              className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-              size="lg"
-            >
-              Choose Insight
-            </Button>
-          </motion.div>
-        )}
       </div>
     </motion.div>
   );
