@@ -36,9 +36,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     disabled = false,
     error
   }, ref) => {
-    // Hook MUST be called unconditionally at the top level
     const { isLoaded, isError, apiKey, errorMessage } = useGoogleMapsScript();
-    
     const autocompleteRef = useRef<HTMLGmpPlaceAutocompleteElement | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [localValue, setLocalValue] = useState(value);
@@ -46,41 +44,16 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     const [retryCount, setRetryCount] = useState(0);
     const [isProcessingSelection, setIsProcessingSelection] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
-    const [isClient, setIsClient] = useState(false);
-
-    // Client-side hydration check
-    useEffect(() => {
-      setIsClient(true);
-    }, []);
 
     // Detect mobile environment
     useEffect(() => {
-      if (!isClient) return;
-      
       const checkMobile = () => {
         setIsMobile(window.innerWidth <= 768);
       };
       checkMobile();
       window.addEventListener('resize', checkMobile);
       return () => window.removeEventListener('resize', checkMobile);
-    }, [isClient]);
-
-    // Wait for Google's custom element to be defined
-    const waitForGmpAutocomplete = async (timeout = 5000): Promise<boolean> => {
-      if (!isClient || !('customElements' in window)) return false;
-
-      try {
-        await Promise.race([
-          customElements.whenDefined('gmp-place-autocomplete'),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
-        ]);
-        console.log('✅ gmp-place-autocomplete element is ready');
-        return true;
-      } catch (err) {
-        console.error('❌ gmp-place-autocomplete not ready in time:', err);
-        return false;
-      }
-    };
+    }, []);
 
     const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
@@ -166,14 +139,11 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     };
 
     useEffect(() => {
-      if (!isClient || !isLoaded || showFallback || !window.google || disabled) {
+      if (!isLoaded || showFallback || !window.google || disabled) {
         return;
       }
       
-      const initialize = async () => {
-        console.log('📦 Google Maps script loaded:', isLoaded);
-        console.log('💡 Attempting to create autocomplete component');
-        
+      try {
         if (autocompleteRef.current) {
           autocompleteRef.current.value = localValue;
           return;
@@ -186,15 +156,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           return;
         }
 
-        // Wait for the custom element to be defined
-        const ready = await waitForGmpAutocomplete();
-        if (!ready) {
-          console.log('🔄 Custom element not ready, falling back to manual input');
-          setShowFallback(true);
-          return;
-        }
-
-        // Clear container only once after confirmed ready
+        // Clear container
         while (container.firstChild) {
           container.removeChild(container.firstChild);
         }
@@ -294,10 +256,12 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
             }
           }
         });
-      };
-
-      initialize();
-    }, [isClient, isLoaded, localValue, id, placeholder, onChange, onPlaceSelect, showFallback, disabled, retryCount, isMobile]);
+        
+      } catch (error) {
+        console.error('Error setting up place autocomplete:', error);
+        setShowFallback(true);
+      }
+    }, [isLoaded, localValue, id, placeholder, onChange, onPlaceSelect, showFallback, disabled, retryCount, isMobile]);
 
     useEffect(() => {
       if (isError) {
@@ -314,11 +278,6 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
         }
       }
     }, [value]);
-
-    // Skip rendering on server-side
-    if (!isClient) {
-      return null;
-    }
 
     const shouldShowFallback = showFallback || isError || disabled;
 
