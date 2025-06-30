@@ -5,6 +5,7 @@ import { useGoogleMapsScript } from '../hooks/useGoogleMapsScript';
 import { usePlaceSelection } from '../hooks/usePlaceSelection';
 import { useLayoutStabilization } from '../hooks/useLayoutStabilization';
 import { useAutocompleteElement } from '../hooks/useAutocompleteElement';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { PlaceData } from '../utils/extractPlaceData';
 import type { HTMLGmpPlaceAutocompleteElement } from '@/types/googleMaps';
 
@@ -34,21 +35,13 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
   const autocompleteRef = useRef<HTMLGmpPlaceAutocompleteElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isProcessingSelection, setIsProcessingSelection] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  
+  // Use consistent mobile detection hook
+  const isMobile = useIsMobile();
 
   const handlePlaceSelect = usePlaceSelection(onChange, onPlaceSelect);
   const stabilizeLayout = useLayoutStabilization(isMobile);
   const { createAutocompleteElement, createMobileBackdrop } = useAutocompleteElement();
-
-  // Detect mobile environment
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Handle error state
   useEffect(() => {
@@ -78,12 +71,13 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       isLoaded, 
       google: !!window?.google, 
       disabled,
+      isMobile,
       windowExists: typeof window !== 'undefined'
     });
 
     // Early returns for invalid states
     if (!isLoaded || typeof window === 'undefined' || !window.google || disabled) {
-      console.warn('[SKIP INIT]', { isLoaded, google: !!window?.google, disabled });
+      console.warn('[SKIP INIT]', { isLoaded, google: !!window?.google, disabled, isMobile });
       return;
     }
     
