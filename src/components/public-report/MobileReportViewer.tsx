@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Download, FileText, ArrowLeft } from 'lucide-react';
+import { Download, FileText, ArrowLeft, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
+import { useToast } from '@/hooks/use-toast';
 
 interface MobileReportViewerProps {
   reportContent: string;
@@ -19,6 +20,8 @@ const MobileReportViewer = ({
   customerName,
   onBack 
 }: MobileReportViewerProps) => {
+  const { toast } = useToast();
+
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
       console.warn('No PDF data available for download');
@@ -51,6 +54,32 @@ const MobileReportViewer = ({
     }
   };
 
+  const handleCopyToClipboard = async () => {
+    try {
+      // Clean the HTML content to get plain text
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = reportContent;
+      const cleanText = tempDiv.textContent || tempDiv.innerText || '';
+      
+      await navigator.clipboard.writeText(cleanText);
+      
+      toast({
+        title: "Copied to clipboard!",
+        description: "Your report has been copied and is ready to paste anywhere.",
+        variant: "success"
+      });
+      
+      console.log('📋 Report copied to clipboard');
+    } catch (error) {
+      console.error('❌ Error copying to clipboard:', error);
+      toast({
+        title: "Copy failed",
+        description: "Unable to copy to clipboard. Please try selecting and copying the text manually.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -73,17 +102,28 @@ const MobileReportViewer = ({
           <h2 className="text-lg font-semibold text-gray-900">Your Report</h2>
           <p className="text-sm text-gray-600">Generated for {customerName}</p>
         </div>
-        {reportPdfData && (
+        <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={handleDownloadPdf}
+            onClick={handleCopyToClipboard}
             className="flex items-center gap-2"
           >
-            <Download className="h-4 w-4" />
-            PDF
+            <Copy className="h-4 w-4" />
+            Copy
           </Button>
-        )}
+          {reportPdfData && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadPdf}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              PDF
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Report Content */}
@@ -97,6 +137,31 @@ const MobileReportViewer = ({
           </CardHeader>
           <CardContent>
             <ReportRenderer content={reportContent} />
+          </CardContent>
+        </Card>
+
+        {/* Copy to Clipboard Section */}
+        <Card className="mt-4 border-0 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                <Copy className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Copy Report Text</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Copy your report content to paste into notes, messages, or any app
+                </p>
+              </div>
+              <Button 
+                onClick={handleCopyToClipboard}
+                variant="outline"
+                className="w-full"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Report to Clipboard
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
