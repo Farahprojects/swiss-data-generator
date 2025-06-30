@@ -70,6 +70,19 @@ const subCategoryOptions = {
   ],
 };
 
+const getHeadingText = (category: string) => {
+  switch (category) {
+    case 'the-self':
+      return 'Choose area of Personal Self to get Guidance';
+    case 'compatibility':
+      return 'Select the type of insights to compare';
+    case 'snapshot':
+      return 'What area would you like guidance on?';
+    default:
+      return 'What area would you like guidance on?';
+  }
+};
+
 const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selectedSubCategory }: Step1_5SubCategoryProps) => {
   const options = subCategoryOptions[selectedCategory as keyof typeof subCategoryOptions] || [];
   
@@ -82,7 +95,7 @@ const Step1_5SubCategory = ({ control, onNext, onPrev, selectedCategory, selecte
       className="space-y-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">What area would you like guidance on?</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{getHeadingText(selectedCategory)}</h2>
       </div>
 
       <Controller
