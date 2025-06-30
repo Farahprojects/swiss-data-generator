@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Drawer,
@@ -15,6 +15,7 @@ import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
 import Step3Payment from './drawer-steps/Step3Payment';
 import SuccessScreen from './SuccessScreen';
+import MobileReportViewer from './MobileReportViewer';
 import { ReportFormData } from '@/types/public-report';
 
 interface MobileReportDrawerProps {
@@ -22,9 +23,12 @@ interface MobileReportDrawerProps {
   onClose: () => void;
 }
 
+type DrawerView = 'form' | 'success' | 'report-viewer';
+
 const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [currentView, setCurrentView] = useState<DrawerView>('form');
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
+  const [reportData, setReportData] = useState<{ content: string; pdfData?: string | null } | null>(null);
 
   const {
     form,
@@ -40,11 +44,36 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
 
+  // Check for Stripe return URL parameters
+  useEffect(() => {
+    if (isOpen) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      const status = urlParams.get('status');
+      
+      if (sessionId && status === 'success') {
+        console.log('🔄 Detected Stripe return with session:', sessionId);
+        
+        // Extract email from URL or storage if available
+        const email = urlParams.get('email') || localStorage.getItem('pending_report_email');
+        if (email) {
+          setSubmittedData({ name: 'Customer', email });
+          setCurrentView('success');
+          
+          // Clean up URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+          localStorage.removeItem('pending_report_email');
+        }
+      }
+    }
+  }, [isOpen]);
+
   const handleClose = () => {
     onClose();
     form.reset();
-    setShowSuccess(false);
+    setCurrentView('form');
     setSubmittedData(null);
+    setReportData(null);
   };
 
   // Convert promo validation to the state format expected by useReportSubmission
@@ -70,13 +99,14 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       email: data.email
     });
 
-    // Use the exact same submission logic as desktop
+    // Store email for potential Stripe return
+    localStorage.setItem('pending_report_email', data.email);
+
+    // Submit the report
     await submitReport(data, promoValidationState, setPromoValidation);
     
-    // Show success screen for free reports, paid reports will redirect to Stripe
-    if (reportCreated) {
-      setShowSuccess(true);
-    }
+    // Show success screen for all submissions (free reports and before Stripe redirect)
+    setCurrentView('success');
   };
 
   const handleFormSubmit = () => {
@@ -84,7 +114,17 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     handleSubmit(onSubmit)();
   };
 
-  // Progress dots
+  const handleViewReport = (reportContent: string, reportPdfData?: string | null) => {
+    console.log('📖 Opening report viewer');
+    setReportData({ content: reportContent, pdfData: reportPdfData });
+    setCurrentView('report-viewer');
+  };
+
+  const handleBackFromReport = () => {
+    setCurrentView('success');
+  };
+
+  // Progress dots for form steps
   const ProgressDots = () => (
     <div className="flex justify-center space-x-2 mb-6">
       {[1, 2, 3, 4].map((step) => (
@@ -102,81 +142,90 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     </div>
   );
 
-  // Show success screen if report was created successfully
-  if (showSuccess && submittedData) {
-    return (
-      <Drawer open={isOpen} onOpenChange={handleClose}>
-        <DrawerContent className="h-[90vh] flex flex-col">
-          <div className="flex-1 overflow-y-auto p-6">
-            <SuccessScreen 
-              name={submittedData.name} 
-              email={submittedData.email} 
-            />
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
     <Drawer open={isOpen} onOpenChange={handleClose}>
       <DrawerContent className="h-[90vh] flex flex-col">
-        <DrawerHeader className="flex-shrink-0">
-          <ProgressDots />
-          <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
-        </DrawerHeader>
-        
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
-          <AnimatePresence mode="wait">
-            {currentStep === 1 && (
-              <Step1ReportType
-                key="step1"
-                control={control}
-                setValue={setValue}
-                onNext={nextStep}
-                selectedCategory={reportCategory}
-              />
-            )}
+        {currentView === 'form' && (
+          <>
+            <DrawerHeader className="flex-shrink-0">
+              <ProgressDots />
+              <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
+            </DrawerHeader>
             
-            {currentStep === 2 && (
-              <Step1_5SubCategory
-                key="step1_5"
-                control={control}
-                setValue={setValue}
-                onNext={nextStep}
-                onPrev={prevStep}
-                selectedCategory={reportCategory}
-                selectedSubCategory={reportSubCategory}
-              />
-            )}
-            
-            {currentStep === 3 && (
-              <Step2BirthDetails
-                key="step2"
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                onNext={nextStep}
-                onPrev={prevStep}
-              />
-            )}
-            
-            {currentStep === 4 && (
-              <Step3Payment
-                key="step3"
-                register={register}
-                watch={watch}
-                errors={errors}
-                onPrev={prevStep}
-                onSubmit={handleFormSubmit}
-                isProcessing={isProcessing}
-                promoValidation={promoValidationState}
-                isValidatingPromo={isValidatingPromo}
-              />
-            )}
-          </AnimatePresence>
-        </div>
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              <AnimatePresence mode="wait">
+                {currentStep === 1 && (
+                  <Step1ReportType
+                    key="step1"
+                    control={control}
+                    setValue={setValue}
+                    onNext={nextStep}
+                    selectedCategory={reportCategory}
+                  />
+                )}
+                
+                {currentStep === 2 && (
+                  <Step1_5SubCategory
+                    key="step1_5"
+                    control={control}
+                    setValue={setValue}
+                    onNext={nextStep}
+                    onPrev={prevStep}
+                    selectedCategory={reportCategory}
+                    selectedSubCategory={reportSubCategory}
+                  />
+                )}
+                
+                {currentStep === 3 && (
+                  <Step2BirthDetails
+                    key="step2"
+                    register={register}
+                    setValue={setValue}
+                    watch={watch}
+                    errors={errors}
+                    onNext={nextStep}
+                    onPrev={prevStep}
+                  />
+                )}
+                
+                {currentStep === 4 && (
+                  <Step3Payment
+                    key="step3"
+                    register={register}
+                    watch={watch}
+                    errors={errors}
+                    onPrev={prevStep}
+                    onSubmit={handleFormSubmit}
+                    isProcessing={isProcessing}
+                    promoValidation={promoValidationState}
+                    isValidatingPromo={isValidatingPromo}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+          </>
+        )}
+
+        {currentView === 'success' && submittedData && (
+          <div className="flex-1 overflow-y-auto">
+            <SuccessScreen 
+              name={submittedData.name} 
+              email={submittedData.email}
+              onViewReport={handleViewReport}
+            />
+          </div>
+        )}
+
+        {currentView === 'report-viewer' && reportData && submittedData && (
+          <div className="flex-1 overflow-hidden">
+            <MobileReportViewer
+              reportContent={reportData.content}
+              reportPdfData={reportData.pdfData}
+              customerName={submittedData.name}
+              onBack={handleBackFromReport}
+            />
+          </div>
+        )}
       </DrawerContent>
     </Drawer>
   );
