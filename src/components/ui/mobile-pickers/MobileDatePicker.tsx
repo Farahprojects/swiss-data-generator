@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PickerWheel from './PickerWheel';
 import { useDebounced } from '@/hooks/useDebounced';
@@ -56,7 +57,7 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
   const [selectedYear, setSelectedYear] = useState<number>(initialDate.year);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Validate date string format - FIXED: Convert regex match to boolean
+  // Validate date string format
   const isValidDate = useCallback((dateStr: string): boolean => {
     if (!dateStr) return false;
     const date = new Date(dateStr);
@@ -140,7 +141,7 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
 
   return (
     <div className="flex items-center justify-center space-x-4 py-4">
-      {/* Month Picker */}
+      {/* Month Picker - with infinite scrolling */}
       <div className="flex-1">
         <PickerWheel
           options={months}
@@ -148,10 +149,11 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
           onChange={handleMonthChange}
           height={240}
           itemHeight={40}
+          infinite={true}
         />
       </div>
 
-      {/* Day Picker */}
+      {/* Day Picker - with infinite scrolling */}
       <div className="flex-1">
         <PickerWheel
           options={days}
@@ -159,10 +161,11 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
           onChange={handleDayChange}
           height={240}
           itemHeight={40}
+          infinite={true}
         />
       </div>
 
-      {/* Year Picker */}
+      {/* Year Picker - with infinite scrolling */}
       <div className="flex-1">
         <PickerWheel
           options={years}
@@ -170,6 +173,7 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
           onChange={handleYearChange}
           height={240}
           itemHeight={40}
+          infinite={true}
         />
       </div>
     </div>

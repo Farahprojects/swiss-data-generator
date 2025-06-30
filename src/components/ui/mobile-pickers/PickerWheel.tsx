@@ -1,5 +1,3 @@
-
-
 import React, {
   useEffect,
   useState,
@@ -26,10 +24,11 @@ interface PickerWheelProps<T extends string | number> {
   height?: number; // visible height of the wheel
   itemHeight?: number; // height of each row
   className?: string; // extra Tailwind classes
+  infinite?: boolean; // enable infinite scrolling
 }
 
 /**
- * PickerWheel – polished iOS‑style scroll wheel.
+ * PickerWheel – polished iOS‑style scroll wheel with optional infinite scrolling.
  *
  * Features
  * • true spring snapping + momentum
@@ -37,6 +36,7 @@ interface PickerWheelProps<T extends string | number> {
  * • fade masks top/bottom
  * • clean selection lane with thin divider lines (iOS style)
  * • a11y listbox semantics
+ * • infinite looping support
  */
 function PickerWheel<T extends string | number = string>({
   options,
@@ -45,6 +45,7 @@ function PickerWheel<T extends string | number = string>({
   height = 240,
   itemHeight = 40,
   className = '',
+  infinite = false,
 }: PickerWheelProps<T>) {
   /* --------------------------------------------------------------------- */
   // Refs & motion values
@@ -54,6 +55,25 @@ function PickerWheel<T extends string | number = string>({
 
   const [{ isDragging }, setDrag] = useState({ isDragging: false });
 
+  // Create infinite options array if infinite mode is enabled
+  const infiniteOptions = useMemo(() => {
+    if (!infinite) return options;
+    
+    // Create 5 repetitions for smooth infinite scrolling
+    const repetitions = 5;
+    const repeated = [];
+    for (let i = 0; i < repetitions; i++) {
+      repeated.push(...options);
+    }
+    return repeated;
+  }, [options, infinite]);
+
+  // Calculate the center repetition index for infinite mode
+  const centerRepetitionStart = useMemo(() => {
+    if (!infinite) return 0;
+    return Math.floor(infiniteOptions.length / options.length / 2) * options.length;
+  }, [infinite, infiniteOptions.length, options.length]);
+
   /* --------------------------------------------------------------------- */
   // Keep wheel in sync with external value
   useEffect(() => {
@@ -61,31 +81,66 @@ function PickerWheel<T extends string | number = string>({
     if (idx !== -1) {
       // Calculate position so selected item aligns with center
       const centerTop = (height - itemHeight) / 2;
-      const finalY = centerTop - idx * itemHeight;
-      // Always snap back to selected value
+      let targetIndex = idx;
+      
+      // For infinite mode, use the center repetition
+      if (infinite) {
+        targetIndex = centerRepetitionStart + idx;
+      }
+      
+      const finalY = centerTop - targetIndex * itemHeight;
       rawY.set(finalY);
-      y.set(finalY); // Ensures spring is synced too
+      y.set(finalY);
     }
-  }, [value, options, itemHeight, rawY, y, height]);
+  }, [value, options, itemHeight, rawY, y, height, infinite, centerRepetitionStart]);
 
-  // Convert y‑offset → nearest option index
+  // Convert y‑offset → nearest option index (handles infinite mode)
   const nearestIndex = useCallback(
     (yPos: number) => {
       const centerTop = (height - itemHeight) / 2;
       const adjustedY = centerTop - yPos;
-      return clamp(Math.round(adjustedY / itemHeight), 0, options.length - 1);
+      let virtualIndex = clamp(Math.round(adjustedY / itemHeight), 0, infiniteOptions.length - 1);
+      
+      // For infinite mode, map virtual index back to actual option index
+      if (infinite) {
+        return virtualIndex % options.length;
+      }
+      
+      return virtualIndex;
     },
-    [itemHeight, options.length, height]
+    [itemHeight, infiniteOptions.length, height, infinite, options.length]
   );
 
   // Snap helper (springs & fires onChange)
   const snapTo = useCallback(
     (target: number, velocity = 0) => {
-      const idx = nearestIndex(target);
       const centerTop = (height - itemHeight) / 2;
-      const finalY = centerTop - idx * itemHeight;
+      let targetY = target;
+      
+      if (infinite) {
+        // Calculate which virtual index we're closest to
+        const adjustedY = centerTop - target;
+        let virtualIndex = Math.round(adjustedY / itemHeight);
+        
+        // Handle boundary wrapping for infinite scroll
+        if (virtualIndex < centerRepetitionStart - options.length) {
+          // Wrap to end of center repetition
+          virtualIndex = centerRepetitionStart + options.length - 1;
+        } else if (virtualIndex >= centerRepetitionStart + options.length * 2) {
+          // Wrap to start of center repetition
+          virtualIndex = centerRepetitionStart;
+        }
+        
+        // Clamp to valid range
+        virtualIndex = clamp(virtualIndex, 0, infiniteOptions.length - 1);
+        targetY = centerTop - virtualIndex * itemHeight;
+      } else {
+        // Original finite scrolling logic
+        const idx = nearestIndex(target);
+        targetY = centerTop - idx * itemHeight;
+      }
 
-      const controls = animate(rawY, finalY, {
+      const controls = animate(rawY, targetY, {
         type: 'spring',
         stiffness: 420,
         damping: 50,
@@ -93,10 +148,13 @@ function PickerWheel<T extends string | number = string>({
       });
 
       controls.then(() => {
-        if (options[idx] !== value) onChange(options[idx]);
+        const actualIndex = nearestIndex(targetY);
+        if (options[actualIndex] !== value) {
+          onChange(options[actualIndex]);
+        }
       });
     },
-    [nearestIndex, rawY, options, onChange, value, height, itemHeight]
+    [nearestIndex, rawY, options, onChange, value, height, itemHeight, infinite, centerRepetitionStart, infiniteOptions.length]
   );
 
   /* --------------------------------------------------------------------- */
@@ -108,15 +166,21 @@ function PickerWheel<T extends string | number = string>({
   const onDragEnd = (_: PointerEvent, info: PanInfo) => {
     setDrag({ isDragging: false });
 
-    const centerTop = (height - itemHeight) / 2;
-    const minY = centerTop - (options.length - 1) * itemHeight;
-    const maxY = centerTop;
-    const rubber = 0.4 * itemHeight;
-    const clamped = clamp(rawY.get(), minY - rubber, maxY + rubber);
+    if (infinite) {
+      // For infinite mode, just snap to nearest without rubber band constraints
+      const projected = rawY.get() + info.velocity.y * 0.2;
+      snapTo(projected, info.velocity.y);
+    } else {
+      // Original finite scrolling with rubber band
+      const centerTop = (height - itemHeight) / 2;
+      const minY = centerTop - (options.length - 1) * itemHeight;
+      const maxY = centerTop;
+      const rubber = 0.4 * itemHeight;
+      const clamped = clamp(rawY.get(), minY - rubber, maxY + rubber);
 
-    // project momentum (0.2 multiplier tuned for mobile feel)
-    const projected = clamped + info.velocity.y * 0.2;
-    snapTo(projected, info.velocity.y);
+      const projected = clamped + info.velocity.y * 0.2;
+      snapTo(projected, info.velocity.y);
+    }
   };
 
   /* --------------------------------------------------------------------- */
@@ -181,15 +245,22 @@ function PickerWheel<T extends string | number = string>({
       {/* scrollable list */}
       <motion.div
         drag="y"
-        dragElastic={0.2}
+        dragElastic={infinite ? 0 : 0.2}
         dragMomentum={false}
         onDragStart={onDragStart}
         onDrag={onDrag}
         onDragEnd={onDragEnd}
         style={{ y }}
       >
-        {options.map((opt, i) => (
-          <PickerItem key={String(opt)} index={i} itemHeight={itemHeight} y={y} value={opt} centerTop={centerTop} />
+        {infiniteOptions.map((opt, i) => (
+          <PickerItem 
+            key={`${String(opt)}-${i}`} 
+            index={i} 
+            itemHeight={itemHeight} 
+            y={y} 
+            value={opt} 
+            centerTop={centerTop} 
+          />
         ))}
       </motion.div>
     </div>
@@ -237,4 +308,3 @@ const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y, centerT
 PickerItem.displayName = 'PickerItem';
 
 export default PickerWheel;
-

@@ -12,7 +12,7 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
   const minutes = useMemo(() => Array.from({ length: 60 }, (_, i) => i), []); // 0-59
   const periods: ('AM' | 'PM')[] = useMemo(() => ['AM', 'PM'], []);
 
-  // Convert 24-hour to 12-hour format - moved to top to fix hoisting issue
+  // Convert 24-hour to 12-hour format
   const convertTo12Hour = (time24: string) => {
     const [hours, minutes] = time24.split(':').map(Number);
     const period: 'AM' | 'PM' = hours >= 12 ? 'PM' : 'AM';
@@ -20,7 +20,7 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
     return { hour: hour12, minute: minutes, period };
   };
 
-  // Convert 12-hour to 24-hour format - moved to top to fix hoisting issue
+  // Convert 12-hour to 24-hour format
   const convertTo24Hour = (hour: number, minute: number, period: 'AM' | 'PM') => {
     let hour24 = hour;
     if (period === 'AM' && hour === 12) {
@@ -112,7 +112,7 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
 
   return (
     <div className="flex items-center justify-center space-x-4 py-4">
-      {/* Hour Picker */}
+      {/* Hour Picker - with infinite scrolling */}
       <div className="flex-1">
         <PickerWheel
           options={hours}
@@ -120,10 +120,11 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
           onChange={handleHourChange}
           height={240}
           itemHeight={40}
+          infinite={true}
         />
       </div>
 
-      {/* Minute Picker */}
+      {/* Minute Picker - with infinite scrolling */}
       <div className="flex-1">
         <PickerWheel
           options={minutes.map(m => m.toString().padStart(2, '0'))}
@@ -131,10 +132,11 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
           onChange={handleMinuteChange}
           height={240}
           itemHeight={40}
+          infinite={true}
         />
       </div>
 
-      {/* Period Picker */}
+      {/* Period Picker - no infinite scrolling needed (only AM/PM) */}
       <div className="flex-1">
         <PickerWheel
           options={periods}
@@ -142,6 +144,7 @@ const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
           onChange={handlePeriodChange}
           height={240}
           itemHeight={40}
+          infinite={false}
         />
       </div>
     </div>
