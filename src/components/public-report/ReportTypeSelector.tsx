@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { User, Heart, Target, Calendar, Brain } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { relationshipTypes, essenceTypes } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
@@ -202,32 +201,39 @@ const ReportTypeSelector = ({
 
             {/* Essence Type Selection - Only show after the-self is selected */}
             {showEssenceOptions && (
-              <div className="space-y-2">
-                <div className="text-xl font-bold text-primary text-center">Choose your report style *</div>
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold text-primary text-center">Choose your report style *</h3>
                 <Controller
                   control={control}
                   name="essenceType"
                   render={({ field }) => (
-                    <ToggleGroup
-                      type="single"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      className="justify-center flex-wrap gap-2"
-                    >
-                      {essenceTypes.map((type) => (
-                        <ToggleGroupItem 
-                          key={type.value} 
-                          value={type.value}
-                          className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
-                        >
-                          {type.label}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                      {essenceTypes.map((type) => {
+                        const isSelected = field.value === type.value;
+                        
+                        return (
+                          <motion.button
+                            key={type.value}
+                            type="button"
+                            onClick={() => field.onChange(type.value)}
+                            className={`w-full p-4 rounded-xl border transition-all duration-200 shadow-sm bg-white/60 backdrop-blur-sm hover:shadow-md active:scale-[0.98] ${
+                              isSelected 
+                                ? 'border-primary shadow-md bg-primary/5' 
+                                : 'border-neutral-200 hover:border-neutral-300'
+                            }`}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="text-center">
+                              <h4 className="text-lg font-semibold text-gray-900">{type.label}</h4>
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
                   )}
                 />
                 {errors.essenceType && (
-                  <p className="text-sm text-destructive">{errors.essenceType.message}</p>
+                  <p className="text-sm text-destructive text-center">{errors.essenceType.message}</p>
                 )}
               </div>
             )}
@@ -255,32 +261,39 @@ const ReportTypeSelector = ({
 
             {/* Relationship Type Selection - Only show after compatibility is selected */}
             {showRelationshipOptions && (
-              <div className="space-y-2">
-                <div className="text-xl font-bold text-primary text-center">Choose your report style *</div>
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold text-primary text-center">Choose your report style *</h3>
                 <Controller
                   control={control}
                   name="relationshipType"
                   render={({ field }) => (
-                    <ToggleGroup
-                      type="single"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      className="justify-center flex-wrap gap-2"
-                    >
-                      {relationshipTypes.map((type) => (
-                        <ToggleGroupItem 
-                          key={type.value} 
-                          value={type.value}
-                          className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:bg-primary/10 hover:text-primary flex-shrink-0 text-sm px-4 py-2"
-                        >
-                          {type.label}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                      {relationshipTypes.map((type) => {
+                        const isSelected = field.value === type.value;
+                        
+                        return (
+                          <motion.button
+                            key={type.value}
+                            type="button"
+                            onClick={() => field.onChange(type.value)}
+                            className={`w-full p-4 rounded-xl border transition-all duration-200 shadow-sm bg-white/60 backdrop-blur-sm hover:shadow-md active:scale-[0.98] ${
+                              isSelected 
+                                ? 'border-primary shadow-md bg-primary/5' 
+                                : 'border-neutral-200 hover:border-neutral-300'
+                            }`}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="text-center">
+                              <h4 className="text-lg font-semibold text-gray-900">{type.label}</h4>
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
                   )}
                 />
                 {errors.relationshipType && (
-                  <p className="text-sm text-destructive">{errors.relationshipType.message}</p>
+                  <p className="text-sm text-destructive text-center">{errors.relationshipType.message}</p>
                 )}
               </div>
             )}
