@@ -44,7 +44,7 @@ const subCategoryOptions = {
     {
       value: 'professional',
       title: 'Professional',
-      description: 'Team synergy and unlock powerful collaboration dynamics',
+      description: 'Unlock powerful collaboration dynamics',
       icon: Briefcase,
     },
   ],
