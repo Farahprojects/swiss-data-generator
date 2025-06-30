@@ -1,8 +1,7 @@
-
 import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
-import ReportGuideModal from "./ReportGuideModal";
+import ReportGuideResponsive from "./ReportGuideResponsive";
 import * as LucideIcons from "lucide-react";
 import {
   UserCircle,
@@ -367,7 +366,7 @@ export default function TestsSection() {
         </div>
       </div>
       
-      <ReportGuideModal 
+      <ReportGuideResponsive 
         isOpen={showReportGuide} 
         onClose={handleCloseReportGuide}
         targetReportType={targetReportType}

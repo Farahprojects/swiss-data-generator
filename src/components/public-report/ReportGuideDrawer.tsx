@@ -1,12 +1,12 @@
 
 import React, { useEffect, useRef } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from '@/components/ui/dialog';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from '@/components/ui/drawer';
 import { Card, CardContent } from '@/components/ui/card';
 import { X } from 'lucide-react';
 import {
@@ -18,7 +18,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 
-interface ReportGuideModalProps {
+interface ReportGuideDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   targetReportType?: string | null;
@@ -100,18 +100,18 @@ const reorderedReportGuides = [
   reportGuides.find(guide => guide.type === 'Flow')!,
 ];
 
-const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModalProps) => {
+const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDrawerProps) => {
   const targetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen && targetReportType && targetRef.current) {
-      // Wait for the modal to fully render before scrolling
+      // Wait for the drawer to fully render before scrolling
       setTimeout(() => {
         targetRef.current?.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'center' 
         });
-      }, 100);
+      }, 300);
     }
   }, [isOpen, targetReportType]);
 
@@ -142,21 +142,21 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
   };
 
   return (
-    <div className="hidden md:block">
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </DialogClose>
+    <Drawer open={isOpen} onOpenChange={onClose}>
+      <DrawerContent className="max-h-[85vh]">
+        <DrawerClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-10">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DrawerClose>
 
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center mb-6">
-              Report Guide – What Each Report Gives You
-            </DialogTitle>
-          </DialogHeader>
+        <DrawerHeader className="pb-4">
+          <DrawerTitle className="text-xl font-bold text-center">
+            Report Guide – What Each Report Gives You
+          </DrawerTitle>
+        </DrawerHeader>
 
-          <div className="grid md:grid-cols-2 gap-4">
+        <div className="px-4 pb-6 overflow-y-auto">
+          <div className="space-y-4">
             {reorderedReportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
               
@@ -170,7 +170,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                   }`}
                   ref={isTargeted ? targetRef : null}
                 >
-                  <CardContent className="p-6 space-y-3">
+                  <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <h3 className="font-bold text-lg text-primary flex items-center">
                         {report.icon}
@@ -216,10 +216,10 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
               Still not sure? All reports provide valuable insights – choose the one that resonates most with your current needs.
             </p>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 };
 
-export default ReportGuideModal;
+export default ReportGuideDrawer;
