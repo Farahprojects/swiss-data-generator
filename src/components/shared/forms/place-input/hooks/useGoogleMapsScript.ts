@@ -53,7 +53,38 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     }
   }, []);
 
-  const loadGoogleMapsScript = useCallback((key: string) => {
+  const loadGoogleWebComponents = useCallback(() => {
+    return new Promise<void>((resolve, reject) => {
+      // Check if web components are already loaded
+      if (customElements.get('gmp-place-autocomplete')) {
+        console.log('✅ Google Web Components already loaded');
+        resolve();
+        return;
+      }
+
+      console.log('🔄 Loading Google Web Components...');
+      
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/@googlemaps/web-components@0.8.0/dist/index.js';
+      script.type = 'module';
+      script.onload = () => {
+        console.log('✅ Google Web Components script loaded');
+        // Wait for the custom element to be defined
+        customElements.whenDefined('gmp-place-autocomplete').then(() => {
+          console.log('✅ gmp-place-autocomplete element ready');
+          resolve();
+        }).catch(reject);
+      };
+      script.onerror = () => {
+        console.error('❌ Error loading Google Web Components script');
+        reject(new Error('Failed to load Google Web Components'));
+      };
+      
+      document.head.appendChild(script);
+    });
+  }, []);
+
+  const loadGoogleMapsScript = useCallback(async (key: string) => {
     // Check if we're in browser environment
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       console.error('❌ Not in browser environment');
@@ -63,17 +94,31 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     }
 
     if (window.google?.maps) {
-      console.log('✅ Google Maps script already loaded');
-      setIsLoaded(true);
+      console.log('✅ Google Maps script already loaded, loading web components...');
+      try {
+        await loadGoogleWebComponents();
+        setIsLoaded(true);
+      } catch (error) {
+        console.error('❌ Error loading web components:', error);
+        setIsError(true);
+        setErrorMessage('Failed to load Google Web Components');
+      }
       return;
     }
     
     try {
       console.log('🔄 Loading Google Maps script...');
       
-      window.initGooglePlacesCallback = () => {
-        console.log('✅ Google Maps script loaded successfully');
-        setIsLoaded(true);
+      window.initGooglePlacesCallback = async () => {
+        console.log('✅ Google Maps script loaded successfully, loading web components...');
+        try {
+          await loadGoogleWebComponents();
+          setIsLoaded(true);
+        } catch (error) {
+          console.error('❌ Error loading web components:', error);
+          setIsError(true);
+          setErrorMessage('Failed to load Google Web Components');
+        }
       };
       
       const script = document.createElement('script');
@@ -92,7 +137,7 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       setIsError(true);
       setErrorMessage(`Script loading error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }, []);
+  }, [loadGoogleWebComponents]);
 
   useEffect(() => {
     const loadMaps = async () => {
@@ -102,7 +147,7 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       if (!apiKey) {
         await fetchApiKey();
       } else if (!isLoaded && !isError) {
-        loadGoogleMapsScript(apiKey);
+        await loadGoogleMapsScript(apiKey);
       }
     };
     
