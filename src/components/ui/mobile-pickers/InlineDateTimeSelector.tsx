@@ -120,22 +120,21 @@ const InlineDateTimeSelector = ({
                   />
                 )}
                 
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-                  <Button
+                <div className="flex justify-end gap-8 mt-6 pt-4 border-t border-gray-100">
+                  <button
                     type="button"
-                    variant="ghost"
                     onClick={handleCancel}
-                    className="text-gray-600 hover:text-gray-800"
+                    className="text-blue-600 text-lg font-normal hover:text-blue-800 transition-colors bg-transparent border-none p-0 cursor-pointer"
                   >
                     Cancel
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     type="button"
                     onClick={handleConfirm}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="text-blue-600 text-lg font-semibold hover:text-blue-800 transition-colors bg-transparent border-none p-0 cursor-pointer"
                   >
                     Done
-                  </Button>
+                  </button>
                 </div>
               </div>
             </motion.div>

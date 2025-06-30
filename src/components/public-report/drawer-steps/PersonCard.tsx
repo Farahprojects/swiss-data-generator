@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import {
   UseFormRegister,
@@ -215,7 +214,24 @@ const PersonCard = ({
           <div className="space-y-2">
             <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
             {isMobile ? (
-              <div onClick={handleDateSelectorOpen}>
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDateSelectorOpen}
+                  className={`flex w-full items-center gap-2 px-3 h-12 justify-start font-normal ${
+                    shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 bg-red-50' : 'hover:bg-gray-50'
+                  } ${activeSelector === 'date' ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
+                >
+                  <Calendar className="h-4 w-4 shrink-0 text-gray-500" />
+                  <span className="text-left text-sm text-gray-900">
+                    {birthDate ? new Date(birthDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    }) : 'Select date'}
+                  </span>
+                </Button>
                 <InlineDateTimeSelector
                   type="date"
                   value={birthDate}
@@ -246,7 +262,26 @@ const PersonCard = ({
           <div className="space-y-2">
             <Label htmlFor={`${prefix}birthTime`}>Birth Time *</Label>
             {isMobile ? (
-              <div onClick={handleTimeSelectorOpen}>
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTimeSelectorOpen}
+                  className={`flex w-full items-center gap-2 px-3 h-12 justify-start font-normal ${
+                    shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 bg-red-50' : 'hover:bg-gray-50'
+                  } ${activeSelector === 'time' ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
+                >
+                  <Clock className="h-4 w-4 shrink-0 text-gray-500" />
+                  <span className="text-left text-sm text-gray-900">
+                    {birthTime ? (() => {
+                      const [hours, minutes] = birthTime.split(':');
+                      const hour24 = parseInt(hours, 10);
+                      const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+                      const period = hour24 >= 12 ? 'PM' : 'AM';
+                      return `${hour12}:${minutes} ${period}`;
+                    })() : 'Select time'}
+                  </span>
+                </Button>
                 <InlineDateTimeSelector
                   type="time"
                   value={birthTime}
