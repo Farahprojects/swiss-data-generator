@@ -18,6 +18,7 @@ interface Step2BirthDetailsProps {
 
 const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }: Step2BirthDetailsProps) => {
   const [showSecondPerson, setShowSecondPerson] = useState(false);
+  const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
 
   const reportCategory = watch('reportCategory');
   const isCompatibilityReport = reportCategory === 'compatibility';
@@ -44,6 +45,46 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
 
   const handleAddSecondPerson = () => {
     setShowSecondPerson(true);
+  };
+
+  const scrollToFirstError = () => {
+    // Find the first error field and scroll to it
+    const errorFields = [
+      { field: 'name', element: document.querySelector('#name') },
+      { field: 'email', element: document.querySelector('#email') },
+      { field: 'birthDate', element: document.querySelector('#birthDate') },
+      { field: 'birthTime', element: document.querySelector('#birthTime') },
+      { field: 'birthLocation', element: document.querySelector('#birthLocation') },
+      { field: 'secondPersonName', element: document.querySelector('#secondPersonName') },
+      { field: 'secondPersonBirthDate', element: document.querySelector('#secondPersonBirthDate') },
+      { field: 'secondPersonBirthTime', element: document.querySelector('#secondPersonBirthTime') },
+      { field: 'secondPersonBirthLocation', element: document.querySelector('#secondPersonBirthLocation') },
+    ];
+
+    for (const { field, element } of errorFields) {
+      if (errors[field as keyof FieldErrors<DrawerFormData>] && element) {
+        element.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+        break;
+      }
+    }
+  };
+
+  const handleReviewAndPay = () => {
+    setHasTriedToSubmit(true);
+    
+    // Check if form is valid before proceeding
+    if (canProceed) {
+      onNext();
+    } else {
+      // Scroll to first error after a brief delay to allow error states to update
+      setTimeout(() => {
+        scrollToFirstError();
+      }, 100);
+    }
   };
 
   return (
@@ -83,6 +124,7 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
           setValue={setValue}
           watch={watch}
           errors={errors}
+          hasTriedToSubmit={hasTriedToSubmit}
         />
 
         {/* Add Second Person Button */}
@@ -120,29 +162,28 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
                 setValue={setValue}
                 watch={watch}
                 errors={errors}
+                hasTriedToSubmit={hasTriedToSubmit}
               />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Next Button */}
-      {canProceed && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+      {/* Review & Pay Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Button
+          onClick={handleReviewAndPay}
+          variant="outline"
+          className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+          size="lg"
         >
-          <Button
-            onClick={onNext}
-            variant="outline"
-            className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-            size="lg"
-          >
-            Review & Pay
-          </Button>
-        </motion.div>
-      )}
+          Review & Pay
+        </Button>
+      </motion.div>
     </motion.div>
   );
 };

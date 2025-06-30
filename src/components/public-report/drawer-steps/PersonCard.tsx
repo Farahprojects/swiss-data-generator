@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import {
@@ -32,6 +32,7 @@ interface PersonCardProps {
   setValue: UseFormSetValue<DrawerFormData>;
   watch: UseFormWatch<DrawerFormData>;
   errors: FieldErrors<DrawerFormData>;
+  hasTriedToSubmit: boolean;
 }
 
 /**
@@ -49,6 +50,7 @@ const PersonCard = ({
   setValue,
   watch,
   errors,
+  hasTriedToSubmit,
 }: PersonCardProps) => {
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
@@ -81,10 +83,11 @@ const PersonCard = ({
   const handleFieldInteraction = (fieldName: string) =>
     setHasInteracted((prev) => ({ ...prev, [fieldName]: true }));
 
+  // Updated error display logic - show errors if user tried to submit OR has interacted with field
   const shouldShowError = (
     fieldName: keyof typeof hasInteracted,
     error: any,
-  ) => hasInteracted[fieldName] && error;
+  ) => (hasTriedToSubmit || hasInteracted[fieldName]) && error;
 
   const getFieldName = (field: string) =>
     (isSecondPerson
@@ -147,13 +150,14 @@ const PersonCard = ({
   /* Render helpers                                                       */
   /* -------------------------------------------------------------------- */
 
-  // PickerButton using onMouseDown instead of onClick for better mobile response
+  // Enhanced PickerButton with error styling
   const PickerButton: React.FC<{
     label: string;
     icon: typeof Calendar | typeof Clock;
     onMouseDown: (e: React.MouseEvent) => void;
     aria: string;
-  }> = ({ label, icon: Icon, onMouseDown, aria }) => (
+    hasError?: boolean;
+  }> = ({ label, icon: Icon, onMouseDown, aria, hasError }) => (
     <Button
       type="button"
       variant="outline"
@@ -163,12 +167,15 @@ const PersonCard = ({
         e.stopPropagation();
         onMouseDown(e);
       }}
-      className="flex w-full items-center gap-2 px-3 h-12"
+      className={`flex w-full items-center gap-2 px-3 h-12 ${
+        hasError ? 'border-red-500 ring-1 ring-red-500' : ''
+      }`}
     >
       <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
       <span className="grow text-left font-normal text-sm whitespace-nowrap">
         {label}
       </span>
+      {hasError && <AlertCircle className="h-4 w-4 text-red-500" />}
     </Button>
   );
 
@@ -208,6 +215,14 @@ const PersonCard = ({
     setTimePickerOpen(false);
   }, []);
 
+  // Enhanced error message component
+  const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
+    <div className="flex items-center gap-2 text-sm text-red-500 mt-1">
+      <AlertCircle className="h-4 w-4 shrink-0" />
+      <span>{message}</span>
+    </div>
+  );
+
   /* -------------------------------------------------------------------- */
   /* JSX                                                                  */
   /* -------------------------------------------------------------------- */
@@ -228,14 +243,12 @@ const PersonCard = ({
               id={`${prefix}name`}
               {...register(getFieldName('name'))}
               placeholder="Enter full name"
-              className="h-12"
+              className={`h-12 ${shouldShowError('name', getError('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
               onFocus={() => handleFieldInteraction('name')}
               onBlur={() => handleFieldInteraction('name')}
             />
             {shouldShowError('name', getError('name')) && (
-              <p className="text-sm text-red-500">
-                {getError('name')?.message as string}
-              </p>
+              <ErrorMessage message={getError('name')?.message as string} />
             )}
           </div>
 
@@ -248,14 +261,12 @@ const PersonCard = ({
                 type="email"
                 {...register('email')}
                 placeholder="your@email.com"
-                className="h-12"
+                className={`h-12 ${shouldShowError('email', errors.email) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
                 onFocus={() => handleFieldInteraction('email')}
                 onBlur={() => handleFieldInteraction('email')}
               />
               {shouldShowError('email', errors.email) && (
-                <p className="text-sm text-red-500">
-                  {errors.email?.message as string}
-                </p>
+                <ErrorMessage message={errors.email?.message as string} />
               )}
             </div>
           )}
@@ -271,21 +282,20 @@ const PersonCard = ({
                   icon={Calendar}
                   onMouseDown={handleDatePickerClick}
                   aria="Open date picker"
+                  hasError={shouldShowError('birthDate', getError('birthDate'))}
                 />
               ) : (
                 <Input
                   id={`${prefix}birthDate`}
                   type="date"
                   {...register(getFieldName('birthDate'))}
-                  className="h-12"
+                  className={`h-12 ${shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
                   onFocus={() => handleFieldInteraction('birthDate')}
                   onBlur={() => handleFieldInteraction('birthDate')}
                 />
               )}
               {shouldShowError('birthDate', getError('birthDate')) && (
-                <p className="text-sm text-red-500">
-                  {getError('birthDate')?.message as string}
-                </p>
+                <ErrorMessage message={getError('birthDate')?.message as string} />
               )}
             </div>
 
@@ -298,6 +308,7 @@ const PersonCard = ({
                   icon={Clock}
                   onMouseDown={handleTimePickerClick}
                   aria="Open time picker"
+                  hasError={shouldShowError('birthTime', getError('birthTime'))}
                 />
               ) : (
                 <Input
@@ -305,15 +316,13 @@ const PersonCard = ({
                   type="time"
                   step="60"
                   {...register(getFieldName('birthTime'))}
-                  className="h-12"
+                  className={`h-12 ${shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
                   onFocus={() => handleFieldInteraction('birthTime')}
                   onBlur={() => handleFieldInteraction('birthTime')}
                 />
               )}
               {shouldShowError('birthTime', getError('birthTime')) && (
-                <p className="text-sm text-red-500">
-                  {getError('birthTime')?.message as string}
-                </p>
+                <ErrorMessage message={getError('birthTime')?.message as string} />
               )}
             </div>
           </div>
