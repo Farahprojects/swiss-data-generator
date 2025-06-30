@@ -85,55 +85,62 @@ const InlineDateTimeSelector = ({
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 320, opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-lg mt-1"
-          >
-            <div className="p-4">
-              <div className="mb-4">
-                <h3 className="text-sm font-medium text-gray-900 text-center">
-                  Select {type === 'date' ? 'Date' : 'Time'}
-                </h3>
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black/20 z-40" 
+              onClick={handleCancel}
+            />
+            
+            {/* Full width picker */}
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="fixed left-4 right-4 top-1/2 -translate-y-1/2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
+            >
+              <div className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 text-center">
+                    Select {type === 'date' ? 'Date' : 'Time'}
+                  </h3>
+                </div>
+                
+                {type === 'date' ? (
+                  <InlineDateWheel 
+                    value={localValue} 
+                    onChange={handleLocalChange} 
+                  />
+                ) : (
+                  <InlineTimeWheel 
+                    value={localValue} 
+                    onChange={handleLocalChange} 
+                  />
+                )}
+                
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleCancel}
+                    className="text-gray-600 hover:text-gray-800"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleConfirm}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Done
+                  </Button>
+                </div>
               </div>
-              
-              {type === 'date' ? (
-                <InlineDateWheel 
-                  value={localValue} 
-                  onChange={handleLocalChange} 
-                />
-              ) : (
-                <InlineTimeWheel 
-                  value={localValue} 
-                  onChange={handleLocalChange} 
-                />
-              )}
-              
-              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCancel}
-                  className="text-gray-600 hover:text-gray-800"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleConfirm}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Check className="h-3 w-3 mr-1" />
-                  Done
-                </Button>
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
