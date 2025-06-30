@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PickerWheel from './PickerWheel';
 import { useDebounced } from '@/hooks/useDebounced';
@@ -145,7 +144,7 @@ const MobileDatePicker = ({ value, onChange }: MobileDatePickerProps) => {
       <div className="flex-1">
         <PickerWheel
           options={months}
-          value={months[selectedMonth - 1]}
+          value={months[selectedMonth - 1] ?? months[0]}
           onChange={handleMonthChange}
           height={240}
           itemHeight={40}

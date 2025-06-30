@@ -1,3 +1,4 @@
+
 import React, {
   useEffect,
   useState,
@@ -160,9 +161,31 @@ function PickerWheel<T extends string | number = string>({
   /* --------------------------------------------------------------------- */
   // Drag handlers
   const onDragStart = () => setDrag({ isDragging: true });
+  
   const onDrag = (_: PointerEvent, info: PanInfo) => {
-    rawY.set(rawY.get() + info.delta.y);
+    const currentY = rawY.get() + info.delta.y;
+    rawY.set(currentY);
+
+    if (infinite) {
+      const totalItems = infiniteOptions.length;
+      const totalHeight = totalItems * itemHeight;
+      const centerTop = (height - itemHeight) / 2;
+
+      const currentOffset = centerTop - currentY;
+      const currentIndex = Math.round(currentOffset / itemHeight);
+
+      // Wrap when scrolled too far from center repetition
+      const logicalIndex = currentIndex % options.length;
+      const distanceFromCenter = currentIndex - (centerRepetitionStart + logicalIndex);
+
+      if (Math.abs(distanceFromCenter) > options.length * 1.5) {
+        const newVirtualIndex = centerRepetitionStart + logicalIndex;
+        const newY = centerTop - newVirtualIndex * itemHeight;
+        rawY.set(newY); // Hard reset to center
+      }
+    }
   };
+
   const onDragEnd = (_: PointerEvent, info: PanInfo) => {
     setDrag({ isDragging: false });
 
