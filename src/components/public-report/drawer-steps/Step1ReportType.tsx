@@ -14,19 +14,19 @@ const reportCategories = [
   {
     value: 'the-self',
     title: 'Personal',
-    description: 'Self-awareness and inner growth',
+    description: 'Unlock your authentic self and discover your hidden potential',
     icon: User,
   },
   {
     value: 'compatibility',
     title: 'Compatibility',
-    description: 'Relationship dynamics and synergy',
+    description: 'Discover relationship dynamics and unlock deeper connections',
     icon: Heart,
   },
   {
     value: 'snapshot',
     title: 'Snapshot',
-    description: 'Current life focus and timing',
+    description: 'Perfect timing insights for your current life chapter',
     icon: Target,
   },
 ];
