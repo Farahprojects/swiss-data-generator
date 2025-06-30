@@ -11,14 +11,27 @@ export const useViewportHeight = () => {
     // Set initial height
     updateViewportHeight();
 
-    // Update on resize (handles keyboard show/hide)
-    window.addEventListener('resize', updateViewportHeight);
-    window.addEventListener('orientationchange', updateViewportHeight);
+    // Update on resize and orientation change (handles keyboard show/hide)
+    const handleResize = () => {
+      // Use requestAnimationFrame to ensure smooth updates
+      requestAnimationFrame(updateViewportHeight);
+    };
+
+    window.addEventListener('resize', handleResize, { passive: true });
+    window.addEventListener('orientationchange', handleResize, { passive: true });
+    
+    // Also handle visual viewport changes for better keyboard support
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize, { passive: true });
+    }
 
     // Cleanup
     return () => {
-      window.removeEventListener('resize', updateViewportHeight);
-      window.removeEventListener('orientationchange', updateViewportHeight);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
     };
   }, []);
 };

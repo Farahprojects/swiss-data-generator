@@ -11,7 +11,6 @@ import { X } from 'lucide-react';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
-import { useViewportHeight } from '@/hooks/useViewportHeight';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
@@ -33,8 +32,22 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const [reportData, setReportData] = useState<{ content: string; pdfData?: string | null } | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-  // Initialize viewport height management
-  useViewportHeight();
+  // Enhanced viewport height management with --vh custom property
+  useEffect(() => {
+    const updateVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    updateVH();
+    window.addEventListener('resize', updateVH);
+    window.addEventListener('orientationchange', updateVH);
+    
+    return () => {
+      window.removeEventListener('resize', updateVH);
+      window.removeEventListener('orientationchange', updateVH);
+    };
+  }, []);
 
   const {
     form,
@@ -50,7 +63,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
 
-  // Keyboard detection and auto-scroll prevention
+  // Enhanced keyboard detection and auto-scroll prevention
   useEffect(() => {
     let initialViewportHeight = window.innerHeight;
 
@@ -66,6 +79,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       
       // Keyboard is likely visible if viewport shrunk significantly
       setKeyboardVisible(heightDifference > 150);
+      
+      // Update --vh when viewport changes
+      const vh = currentHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
     };
 
     const handleFocusIn = (event: FocusEvent) => {
@@ -204,9 +221,13 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         className={`flex flex-col rounded-none [&>div:first-child]:hidden ${
           keyboardVisible ? 'keyboard-visible' : ''
         }`}
-        style={{ 
-          height: 'calc(100vh - env(keyboard-inset-height, 0px))',
-          maxHeight: 'calc(100vh - env(keyboard-inset-height, 0px))'
+        style={{
+          height: 'calc(var(--vh, 1vh) * 100)',
+          maxHeight: 'calc(var(--vh, 1vh) * 100)',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'none',
+          touchAction: 'manipulation',
         }}
       >
         {/* Close button - positioned absolutely in top-right */}

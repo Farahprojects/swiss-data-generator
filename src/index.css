@@ -31,7 +31,7 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     
-    /* Dynamic viewport height */
+    /* Dynamic viewport height - initialized by JS */
     --vh: 1vh;
   }
 
@@ -72,7 +72,7 @@
   }
 }
 
-/* Mobile viewport height utilities */
+/* Enhanced mobile viewport height utilities using --vh custom property */
 .h-screen-safe {
   height: calc(var(--vh, 1vh) * 100);
 }
@@ -85,9 +85,12 @@
   max-height: calc(var(--vh, 1vh) * 100);
 }
 
-/* Mobile keyboard and scroll fixes */
+/* Mobile keyboard and scroll fixes with keyboard inset support */
 .keyboard-visible {
-  /* Adjust layout when keyboard is visible */
+  /* Enhanced keyboard handling - prevent content shifts */
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  /* Support for keyboard inset height on supporting browsers */
   padding-bottom: env(keyboard-inset-height, 0px);
 }
 
@@ -174,14 +177,17 @@ select {
   }
 }
 
-/* Ensure smooth scrolling without browser interference */
+/* Enhanced mobile layout stability using --vh */
 html {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  /* Prevent elastic scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
 }
 
-/* Mobile input focus improvements */
+/* Mobile input focus improvements with keyboard inset support */
 @media (max-width: 768px) {
   /* Prevent layout shifts on focus */
   input:focus,
@@ -199,15 +205,41 @@ html {
     overflow: visible;
   }
   
-  /* Enhanced drawer stability during autocomplete */
+  /* Enhanced drawer stability during autocomplete with --vh support */
   [data-vaul-drawer-wrapper] {
     transform: translateZ(0);
     contain: layout;
+    height: calc(var(--vh, 1vh) * 100);
   }
   
   /* Prevent Google Maps from interfering with drawer positioning */
   [data-vaul-drawer] {
     isolation: isolate;
     contain: layout style;
+    height: calc(var(--vh, 1vh) * 100);
+    max-height: calc(var(--vh, 1vh) * 100);
+  }
+  
+  /* Enhanced keyboard handling - prevent Chrome from adding white space */
+  body {
+    position: fixed;
+    width: 100%;
+    height: calc(var(--vh, 1vh) * 100);
+    overflow: hidden;
+  }
+  
+  /* Ensure main content uses proper height calculation */
+  #root {
+    height: calc(var(--vh, 1vh) * 100);
+    max-height: calc(var(--vh, 1vh) * 100);
+    overflow: hidden;
+  }
+}
+
+/* Additional keyboard inset height support for modern browsers */
+@supports (height: env(keyboard-inset-height)) {
+  .keyboard-visible {
+    height: calc(calc(var(--vh, 1vh) * 100) - env(keyboard-inset-height, 0px));
+    max-height: calc(calc(var(--vh, 1vh) * 100) - env(keyboard-inset-height, 0px));
   }
 }
