@@ -79,10 +79,12 @@ const ReportTypeSelector = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
 
-  const requiresEssenceType = selectedReportType === 'essence';
-  const requiresReturnYear = selectedReportType === 'return';
-  const requiresRelationshipType = selectedReportType === 'sync' || selectedReportType === 'compatibility';
+  // Only show options after user has actually selected a category
   const showSnapshotSubCategories = selectedCategory === 'snapshot';
+  const showEssenceOptions = selectedCategory === 'the-self' && selectedReportType === 'essence';
+  const showRelationshipOptions = selectedCategory === 'compatibility' && (selectedReportType === 'sync' || selectedReportType === 'compatibility');
+  
+  const requiresReturnYear = selectedReportType === 'return';
 
   const getCurrentYear = () => new Date().getFullYear();
 
@@ -147,7 +149,7 @@ const ReportTypeSelector = ({
               />
             </div>
 
-            {/* Snapshot Subcategory Selection */}
+            {/* Snapshot Subcategory Selection - Only show after snapshot is selected */}
             {showSnapshotSubCategories && (
               <div className="space-y-4">
                 <h3 className="text-xl font-bold text-primary text-center">Choose your snapshot type</h3>
@@ -198,8 +200,8 @@ const ReportTypeSelector = ({
               </div>
             )}
 
-            {/* Essence Type Selection */}
-            {requiresEssenceType && (
+            {/* Essence Type Selection - Only show after the-self is selected */}
+            {showEssenceOptions && (
               <div className="space-y-2">
                 <div className="text-xl font-bold text-primary text-center">Choose your report style *</div>
                 <Controller
@@ -251,8 +253,8 @@ const ReportTypeSelector = ({
               </div>
             )}
 
-            {/* Relationship Type Selection */}
-            {requiresRelationshipType && (
+            {/* Relationship Type Selection - Only show after compatibility is selected */}
+            {showRelationshipOptions && (
               <div className="space-y-2">
                 <div className="text-xl font-bold text-primary text-center">Choose your report style *</div>
                 <Controller

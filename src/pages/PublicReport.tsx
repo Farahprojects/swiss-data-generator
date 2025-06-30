@@ -5,7 +5,6 @@ import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
 import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
-import DesktopStickyTrigger from '@/components/public-report/DesktopStickyTrigger';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -48,7 +47,7 @@ const PublicReport = () => {
         isDrawerOpen={isDrawerOpen}
         onOpenDrawer={handleOpenDrawer}
       />
-      <DesktopStickyTrigger onGetReportClick={handleGetReportClick} />
+      {/* Desktop sticky CTA removed - form is inline on desktop */}
       <MobileReportDrawer 
         isOpen={isDrawerOpen} 
         onClose={handleCloseDrawer} 
