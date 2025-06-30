@@ -143,7 +143,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   );
 
   return (
-    <Drawer open={isOpen} onOpenChange={handleClose}>
+    <Drawer open={isOpen} onOpenChange={handleClose} dismissible={false}>
       <DrawerContent className="h-[90vh] flex flex-col">
         {currentView === 'form' && (
           <>
