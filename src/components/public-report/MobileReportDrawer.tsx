@@ -24,7 +24,6 @@ interface MobileReportDrawerProps {
 const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const {
     form,
@@ -45,17 +44,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const reportSubCategory = watch('reportSubCategory');
 
   const handleClose = () => {
-    // Don't allow closing if a picker is open
-    if (isPickerOpen) return;
-    
     onClose();
     form.reset();
     setShowSuccess(false);
     setSubmittedData(null);
-  };
-
-  const handlePickerStateChange = (isOpen: boolean) => {
-    setIsPickerOpen(isOpen);
   };
 
   const onSubmit = async (data: any) => {
@@ -143,12 +135,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   }
 
   return (
-    <Drawer 
-      open={isOpen} 
-      onOpenChange={handleClose}
-      // Disable swipe-to-close when picker is open
-      dismissible={!isPickerOpen}
-    >
+    <Drawer open={isOpen} onOpenChange={handleClose}>
       <DrawerContent className="h-[90vh] flex flex-col">
         <DrawerHeader className="flex-shrink-0">
           <ProgressDots />
@@ -186,7 +173,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 errors={errors}
                 onNext={nextStep}
                 onPrev={prevStep}
-                onPickerStateChange={handlePickerStateChange}
               />
             )}
             

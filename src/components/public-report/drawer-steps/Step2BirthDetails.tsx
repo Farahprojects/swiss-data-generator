@@ -14,18 +14,9 @@ interface Step2BirthDetailsProps {
   errors: FieldErrors<DrawerFormData>;
   onNext: () => void;
   onPrev: () => void;
-  onPickerStateChange?: (isOpen: boolean) => void;
 }
 
-const Step2BirthDetails = ({ 
-  register, 
-  setValue, 
-  watch, 
-  errors, 
-  onNext, 
-  onPrev, 
-  onPickerStateChange 
-}: Step2BirthDetailsProps) => {
+const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }: Step2BirthDetailsProps) => {
   const [showSecondPerson, setShowSecondPerson] = useState(false);
   const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
 
@@ -134,7 +125,6 @@ const Step2BirthDetails = ({
           watch={watch}
           errors={errors}
           hasTriedToSubmit={hasTriedToSubmit}
-          onPickerStateChange={onPickerStateChange}
         />
 
         {/* Add Second Person Button */}
@@ -173,7 +163,6 @@ const Step2BirthDetails = ({
                 watch={watch}
                 errors={errors}
                 hasTriedToSubmit={hasTriedToSubmit}
-                onPickerStateChange={onPickerStateChange}
               />
             </motion.div>
           )}
