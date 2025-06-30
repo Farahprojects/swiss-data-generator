@@ -1,5 +1,3 @@
-
-
 import React, {
   useEffect,
   useState,
@@ -37,6 +35,7 @@ interface PickerWheelProps<T extends string | number> {
  * • fade masks top/bottom
  * • clean selection lane with thin divider lines (iOS style)
  * • a11y listbox semantics
+ * • enhanced touch handling to prevent parent modal interference
  */
 function PickerWheel<T extends string | number = string>({
   options,
@@ -100,13 +99,22 @@ function PickerWheel<T extends string | number = string>({
   );
 
   /* --------------------------------------------------------------------- */
-  // Drag handlers
-  const onDragStart = () => setDrag({ isDragging: true });
-  const onDrag = (_: PointerEvent, info: PanInfo) => {
-    rawY.set(rawY.get() + info.delta.y);
+  // Enhanced drag handlers to prevent parent modal interference
+  const onDragStart = (event: PointerEvent) => {
+    setDrag({ isDragging: true });
+    // Prevent parent elements from handling this gesture
+    event.stopPropagation();
   };
-  const onDragEnd = (_: PointerEvent, info: PanInfo) => {
+
+  const onDrag = (event: PointerEvent, info: PanInfo) => {
+    rawY.set(rawY.get() + info.delta.y);
+    // Prevent parent scrolling/dragging
+    event.stopPropagation();
+  };
+
+  const onDragEnd = (event: PointerEvent, info: PanInfo) => {
     setDrag({ isDragging: false });
+    event.stopPropagation();
 
     const centerTop = (height - itemHeight) / 2;
     const minY = centerTop - (options.length - 1) * itemHeight;
@@ -127,6 +135,7 @@ function PickerWheel<T extends string | number = string>({
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       rawY.set(rawY.get() - e.deltaY);
       snapTo(rawY.get(), -e.deltaY);
     };
@@ -145,8 +154,11 @@ function PickerWheel<T extends string | number = string>({
       ref={containerRef}
       role="listbox"
       aria-label="Picker wheel"
-      className={`relative overflow-hidden select-none touch-pan-y ${className}`}
-      style={{ height }}
+      className={`relative overflow-hidden select-none ${className}`}
+      style={{ 
+        height,
+        touchAction: 'pan-y' // Hint to browser about intended scroll direction
+      }}
     >
       {/* top fade */}
       <div
@@ -187,6 +199,7 @@ function PickerWheel<T extends string | number = string>({
         onDrag={onDrag}
         onDragEnd={onDragEnd}
         style={{ y }}
+        className="touch-pan-y"
       >
         {options.map((opt, i) => (
           <PickerItem key={String(opt)} index={i} itemHeight={itemHeight} y={y} value={opt} centerTop={centerTop} />
@@ -237,4 +250,3 @@ const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y, centerT
 PickerItem.displayName = 'PickerItem';
 
 export default PickerWheel;
-

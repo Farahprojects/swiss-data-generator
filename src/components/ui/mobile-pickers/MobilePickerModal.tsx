@@ -2,7 +2,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { X, Check } from 'lucide-react';
 
 interface MobilePickerModalProps {
   isOpen: boolean;
@@ -10,6 +9,7 @@ interface MobilePickerModalProps {
   onConfirm: () => void;
   title: string;
   children: React.ReactNode;
+  disableBackdropClose?: boolean;
 }
 
 const MobilePickerModal = ({ 
@@ -17,8 +17,15 @@ const MobilePickerModal = ({
   onClose, 
   onConfirm, 
   title, 
-  children 
+  children,
+  disableBackdropClose = false
 }: MobilePickerModalProps) => {
+  const handleBackdropClick = () => {
+    if (!disableBackdropClose) {
+      onClose();
+    }
+  };
+
   return (
     <AnimatePresence mode="wait">
       {isOpen && (
@@ -30,7 +37,7 @@ const MobilePickerModal = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="fixed inset-0 bg-black/50 z-50"
-            onClick={onClose}
+            onClick={handleBackdropClick}
           />
           
           {/* Modal - Reduced animation duration for faster response */}
@@ -46,15 +53,15 @@ const MobilePickerModal = ({
             }}
             className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-xl shadow-xl"
           >
-            {/* Header */}
+            {/* Header - Apple Style */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className="text-gray-600 hover:text-gray-800"
+                className="text-gray-600 hover:text-gray-800 hover:bg-transparent font-normal text-base px-2"
               >
-                <X className="h-5 w-5" />
+                Cancel
               </Button>
               
               <h3 className="text-lg font-semibold text-gray-900">
@@ -65,9 +72,9 @@ const MobilePickerModal = ({
                 variant="ghost"
                 size="sm"
                 onClick={onConfirm}
-                className="text-primary hover:text-primary/80"
+                className="text-blue-600 hover:text-blue-700 hover:bg-transparent font-semibold text-base px-2"
               >
-                <Check className="h-5 w-5" />
+                Done
               </Button>
             </div>
             

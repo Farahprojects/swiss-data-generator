@@ -1,151 +1,141 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Clock } from 'lucide-react';
+import MobilePickerModal from './MobilePickerModal';
 import PickerWheel from './PickerWheel';
 
 interface MobileTimePickerProps {
-  value: string; // HH:MM format (24-hour)
+  value: string;
   onChange: (time: string) => void;
+  placeholder?: string;
+  className?: string;
+  onModalStateChange?: (isOpen: boolean) => void;
+  disableBackdropClose?: boolean;
 }
 
-const MobileTimePicker = ({ value, onChange }: MobileTimePickerProps) => {
-  const hours = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []); // 1-12
-  const minutes = useMemo(() => Array.from({ length: 60 }, (_, i) => i), []); // 0-59
-  const periods: ('AM' | 'PM')[] = useMemo(() => ['AM', 'PM'], []);
+export const MobileTimePicker = ({
+  value,
+  onChange,
+  placeholder = "Select time",
+  className = "",
+  onModalStateChange,
+  disableBackdropClose = false
+}: MobileTimePickerProps) => {
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Convert 24-hour to 12-hour format - moved to top to fix hoisting issue
-  const convertTo12Hour = (time24: string) => {
-    const [hours, minutes] = time24.split(':').map(Number);
-    const period: 'AM' | 'PM' = hours >= 12 ? 'PM' : 'AM';
-    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    return { hour: hour12, minute: minutes, period };
+  // Generate options for the pickers
+  const hours = Array.from({ length: 12 }, (_, i) => i + 1);
+  const minutes = [0, 15, 30, 45];
+  const periods = ['AM', 'PM'];
+
+  // Parse current value
+  const parseTime = (timeString: string) => {
+    if (!timeString) return { hour: 12, minute: 0, period: 'AM' };
+    
+    const [time, period] = timeString.split(' ');
+    const [hourStr, minuteStr] = time.split(':');
+    let hour = parseInt(hourStr);
+    
+    // Convert 24-hour to 12-hour
+    if (hour === 0) hour = 12;
+    if (hour > 12) hour = hour - 12;
+    
+    return {
+      hour: hour,
+      minute: parseInt(minuteStr),
+      period: period || 'AM'
+    };
   };
 
-  // Convert 12-hour to 24-hour format - moved to top to fix hoisting issue
-  const convertTo24Hour = (hour: number, minute: number, period: 'AM' | 'PM') => {
-    let hour24 = hour;
-    if (period === 'AM' && hour === 12) {
+  const currentTime = parseTime(value);
+  const [selectedHour, setSelectedHour] = useState(currentTime.hour);
+  const [selectedMinute, setSelectedMinute] = useState(currentTime.minute);
+  const [selectedPeriod, setSelectedPeriod] = useState(currentTime.period);
+
+  const handleOpen = () => {
+    const current = parseTime(value);
+    setSelectedHour(current.hour);
+    setSelectedMinute(current.minute);
+    setSelectedPeriod(current.period);
+    setIsOpen(true);
+    onModalStateChange?.(true);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    onModalStateChange?.(false);
+  };
+
+  const handleConfirm = () => {
+    // Convert 12-hour to 24-hour format
+    let hour24 = selectedHour;
+    if (selectedPeriod === 'AM' && selectedHour === 12) {
       hour24 = 0;
-    } else if (period === 'PM' && hour !== 12) {
-      hour24 = hour + 12;
-    }
-    return `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-  };
-
-  // Helper function to parse initial time from value prop
-  const parseInitialTime = useCallback((timeValue: string) => {
-    if (!timeValue) {
-      return { hour: 12, minute: 0, period: 'AM' as 'AM' | 'PM' };
+    } else if (selectedPeriod === 'PM' && selectedHour !== 12) {
+      hour24 = selectedHour + 12;
     }
     
-    const { hour, minute, period } = convertTo12Hour(timeValue);
-    return { hour, minute, period };
-  }, []);
+    const timeString = `${hour24.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`;
+    onChange(timeString);
+    handleClose();
+  };
 
-  // Initialize state directly from value prop
-  const initialTime = useMemo(() => parseInitialTime(value), [parseInitialTime, value]);
-  
-  const [selectedHour, setSelectedHour] = useState<number>(initialTime.hour);
-  const [selectedMinute, setSelectedMinute] = useState<number>(initialTime.minute);
-  const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>(initialTime.period);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Validate time string format
-  const isValidTime = useCallback((timeStr: string): boolean => {
-    if (!timeStr) return false;
-    return !!timeStr.match(/^\d{2}:\d{2}$/);
-  }, []);
-
-  // Debounced onChange to prevent excessive calls
-  const debouncedOnChange = useCallback((timeString: string) => {
-    if (isValidTime(timeString)) {
-      console.log(`MobileTimePicker onChange: ${timeString}`);
-      onChange(timeString);
-    }
-  }, [onChange, isValidTime]);
-
-  // Synchronize with external value changes only once
-  useEffect(() => {
-    if (value && !isInitialized) {
-      const parsedTime = parseInitialTime(value);
-      console.log(`MobileTimePicker initializing with value: ${value}`, parsedTime);
-      
-      setSelectedHour(parsedTime.hour);
-      setSelectedMinute(parsedTime.minute);
-      setSelectedPeriod(parsedTime.period);
-      setIsInitialized(true);
-    } else if (!value && !isInitialized) {
-      setIsInitialized(true);
-    }
-  }, [value, isInitialized, parseInitialTime]);
-
-  // Update value when selections change (only after initialization)
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    const time24 = convertTo24Hour(selectedHour, selectedMinute, selectedPeriod);
-    debouncedOnChange(time24);
-  }, [selectedHour, selectedMinute, selectedPeriod, isInitialized, debouncedOnChange]);
-
-  // Handle hour change
-  const handleHourChange = useCallback((value: number) => {
-    console.log(`Hour changed to: ${value}`);
-    setSelectedHour(value);
-  }, []);
-
-  // Handle minute change
-  const handleMinuteChange = useCallback((value: string) => {
-    const numValue = parseInt(value);
-    console.log(`Minute changed to: ${value} (${numValue})`);
-    setSelectedMinute(numValue);
-  }, []);
-
-  // Handle period change
-  const handlePeriodChange = useCallback((value: 'AM' | 'PM') => {
-    console.log(`Period changed to: ${value}`);
-    setSelectedPeriod(value);
-  }, []);
-
-  // Don't render until initialized to prevent flicker
-  if (!isInitialized) {
-    return <div className="h-[240px] w-full" />;
-  }
+  const formatDisplayValue = (timeString: string) => {
+    if (!timeString) return '';
+    const parsed = parseTime(timeString);
+    return `${parsed.hour}:${parsed.minute.toString().padStart(2, '0')} ${parsed.period}`;
+  };
 
   return (
-    <div className="flex items-center justify-center space-x-4 py-4">
-      {/* Hour Picker */}
-      <div className="flex-1">
-        <PickerWheel
-          options={hours}
-          value={selectedHour}
-          onChange={handleHourChange}
-          height={240}
-          itemHeight={40}
-        />
-      </div>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        className={`w-full justify-start text-left font-normal ${className} ${
+          !value ? 'text-muted-foreground' : ''
+        }`}
+        onClick={handleOpen}
+      >
+        <Clock className="mr-2 h-4 w-4" />
+        {value ? formatDisplayValue(value) : placeholder}
+      </Button>
 
-      {/* Minute Picker */}
-      <div className="flex-1">
-        <PickerWheel
-          options={minutes.map(m => m.toString().padStart(2, '0'))}
-          value={selectedMinute.toString().padStart(2, '0')}
-          onChange={handleMinuteChange}
-          height={240}
-          itemHeight={40}
-        />
-      </div>
-
-      {/* Period Picker */}
-      <div className="flex-1">
-        <PickerWheel
-          options={periods}
-          value={selectedPeriod}
-          onChange={handlePeriodChange}
-          height={240}
-          itemHeight={40}
-        />
-      </div>
-    </div>
+      <MobilePickerModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        onConfirm={handleConfirm}
+        title="Select Time"
+        disableBackdropClose={disableBackdropClose}
+      >
+        <div className="flex gap-4 h-48 items-center justify-center">
+          <div className="w-16">
+            <PickerWheel
+              options={hours}
+              value={selectedHour}
+              onChange={setSelectedHour}
+              height={192}
+            />
+          </div>
+          <div className="text-2xl font-semibold text-gray-500 pt-2">:</div>
+          <div className="w-16">
+            <PickerWheel
+              options={minutes}
+              value={selectedMinute}
+              onChange={setSelectedMinute}
+              height={192}
+            />
+          </div>
+          <div className="w-16">
+            <PickerWheel
+              options={periods}
+              value={selectedPeriod}
+              onChange={setSelectedPeriod}
+              height={192}
+            />
+          </div>
+        </div>
+      </MobilePickerModal>
+    </>
   );
 };
-
-export default MobileTimePicker;
