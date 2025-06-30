@@ -30,7 +30,7 @@ const subCategoryOptions = {
     {
       value: 'relational',
       title: 'Relational',
-      description: 'Master connections and deepen your relationship patterns',
+      description: 'Master connections and deepen your relationship',
       icon: Heart,
     },
   ],
