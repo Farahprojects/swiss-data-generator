@@ -2,7 +2,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { X, Check } from 'lucide-react';
 
 interface MobilePickerModalProps {
   isOpen: boolean;
@@ -52,9 +51,9 @@ const MobilePickerModal = ({
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className="text-gray-600 hover:text-gray-800"
+                className="text-gray-600 hover:text-gray-800 font-normal"
               >
-                <X className="h-5 w-5" />
+                Cancel
               </Button>
               
               <h3 className="text-lg font-semibold text-gray-900">
@@ -65,9 +64,9 @@ const MobilePickerModal = ({
                 variant="ghost"
                 size="sm"
                 onClick={onConfirm}
-                className="text-primary hover:text-primary/80"
+                className="text-blue-600 hover:text-blue-700 font-semibold"
               >
-                <Check className="h-5 w-5" />
+                Done
               </Button>
             </div>
             
