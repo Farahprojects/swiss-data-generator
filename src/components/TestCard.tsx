@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { LucideIcon } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TestCardProps {
   title: string;
@@ -14,6 +15,7 @@ interface TestCardProps {
 
 export const TestCard = ({ title, description, path, isActive, onHover, onExplore, icon: Icon }: TestCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleExploreClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -23,14 +25,23 @@ export const TestCard = ({ title, description, path, isActive, onHover, onExplor
     }
   };
 
+  const handleCardClick = () => {
+    if (isMobile && onExplore) {
+      onExplore();
+    }
+  };
+
   return (
     <div 
-      className="py-1 px-4 cursor-pointer transition-all duration-300"
+      className={`py-1 px-4 transition-all duration-300 ${
+        isMobile ? 'cursor-pointer' : 'cursor-pointer'
+      }`}
       onMouseEnter={() => {
         onHover();
         setIsHovered(true);
       }}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={isMobile ? handleCardClick : undefined}
     >
       <div className="flex items-center justify-between">
         <div className="flex-1 text-center md:text-left">

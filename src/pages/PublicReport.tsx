@@ -7,6 +7,7 @@ import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
 import DesktopStickyTrigger from '@/components/public-report/DesktopStickyTrigger';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
+import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const PublicReport = () => {
@@ -52,6 +53,7 @@ const PublicReport = () => {
         isOpen={isDrawerOpen} 
         onClose={handleCloseDrawer} 
       />
+      <Footer />
     </div>
   );
 };
