@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Drawer,
@@ -13,6 +13,7 @@ import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
 import Step3Payment from './drawer-steps/Step3Payment';
+import SuccessScreen from './SuccessScreen';
 import { ReportFormData } from '@/types/public-report';
 
 interface MobileReportDrawerProps {
@@ -21,6 +22,9 @@ interface MobileReportDrawerProps {
 }
 
 const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
+
   const {
     form,
     currentStep,
@@ -34,7 +38,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   } = useMobileDrawerForm();
 
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
-  const { isProcessing, submitReport } = useReportSubmission();
+  const { isProcessing, submitReport, reportCreated } = useReportSubmission();
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -42,11 +46,19 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const handleClose = () => {
     onClose();
     form.reset();
+    setShowSuccess(false);
+    setSubmittedData(null);
   };
 
   const onSubmit = async (data: any) => {
     console.log('🚀 Mobile drawer form submission started');
     console.log('📝 Form data:', data);
+
+    // Store submitted data for success screen
+    setSubmittedData({
+      name: data.name,
+      email: data.email
+    });
 
     // Map drawer form data to the expected ReportFormData format
     const mappedData: ReportFormData = {
@@ -76,7 +88,16 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
     // Use the same submission logic as desktop
     await submitReport(mappedData, promoValidation, setPromoValidation);
-    handleClose();
+    
+    // Show success screen for free reports, paid reports will redirect to Stripe
+    if (reportCreated) {
+      setShowSuccess(true);
+    }
+  };
+
+  const handleFormSubmit = () => {
+    console.log('📋 Form submit triggered from Step3Payment');
+    handleSubmit(onSubmit)();
   };
 
   // Progress dots
@@ -97,6 +118,22 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     </div>
   );
 
+  // Show success screen if report was created successfully
+  if (showSuccess && submittedData) {
+    return (
+      <Drawer open={isOpen} onOpenChange={handleClose}>
+        <DrawerContent className="h-[90vh] flex flex-col">
+          <div className="flex-1 overflow-y-auto p-6">
+            <SuccessScreen 
+              name={submittedData.name} 
+              email={submittedData.email} 
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Drawer open={isOpen} onOpenChange={handleClose}>
       <DrawerContent className="h-[90vh] flex flex-col">
@@ -105,7 +142,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
         </DrawerHeader>
         
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
           <AnimatePresence mode="wait">
             {currentStep === 1 && (
               <Step1ReportType
@@ -146,13 +183,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 watch={watch}
                 errors={errors}
                 onPrev={prevStep}
-                handleSubmit={handleSubmit}
-                onSubmit={onSubmit}
+                onSubmit={handleFormSubmit}
                 isProcessing={isProcessing}
               />
             )}
           </AnimatePresence>
-        </form>
+        </div>
       </DrawerContent>
     </Drawer>
   );

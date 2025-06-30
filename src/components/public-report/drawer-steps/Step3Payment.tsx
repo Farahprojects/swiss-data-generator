@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { UseFormRegister, UseFormWatch, UseFormHandleSubmit, FieldErrors } from 'react-hook-form';
+import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CreditCard, Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,7 @@ interface Step3PaymentProps {
   watch: UseFormWatch<DrawerFormData>;
   errors: FieldErrors<DrawerFormData>;
   onPrev: () => void;
-  handleSubmit: UseFormHandleSubmit<DrawerFormData>;
-  onSubmit: (data: DrawerFormData) => void;
+  onSubmit: () => void;
   isProcessing: boolean;
 }
 
@@ -25,7 +24,6 @@ const Step3Payment = ({
   watch, 
   errors, 
   onPrev, 
-  handleSubmit,
   onSubmit,
   isProcessing
 }: Step3PaymentProps) => {
@@ -134,16 +132,8 @@ const Step3Payment = ({
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    // Then proceed with form submission
-    handleSubmit(
-      (data) => {
-        console.log('✅ Mobile form validation passed, submitting:', data);
-        onSubmit(data);
-      },
-      (errors) => {
-        console.log('❌ Mobile form validation failed:', errors);
-      }
-    )(e);
+    // Then proceed with form submission via parent
+    onSubmit();
   };
 
   return (
