@@ -15,7 +15,7 @@ interface Step1ReportTypeProps {
 const reportCategories = [
   {
     value: 'the-self',
-    title: 'Personal',
+    title: 'The Self',
     description: 'Unlock your authentic self and discover your hidden potential',
     icon: User,
     reportType: 'essence',
