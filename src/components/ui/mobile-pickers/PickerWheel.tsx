@@ -1,4 +1,5 @@
 
+
 import React, {
   useEffect,
   useState,
@@ -36,7 +37,6 @@ interface PickerWheelProps<T extends string | number> {
  * • fade masks top/bottom
  * • clean selection lane with thin divider lines (iOS style)
  * • a11y listbox semantics
- * • enhanced touch handling to prevent gesture conflicts
  */
 function PickerWheel<T extends string | number = string>({
   options,
@@ -100,19 +100,12 @@ function PickerWheel<T extends string | number = string>({
   );
 
   /* --------------------------------------------------------------------- */
-  // Enhanced drag handlers with event stopping
-  const onDragStart = (event: PointerEvent) => {
-    event.stopPropagation();
-    setDrag({ isDragging: true });
-  };
-  
-  const onDrag = (event: PointerEvent, info: PanInfo) => {
-    event.stopPropagation();
+  // Drag handlers
+  const onDragStart = () => setDrag({ isDragging: true });
+  const onDrag = (_: PointerEvent, info: PanInfo) => {
     rawY.set(rawY.get() + info.delta.y);
   };
-  
-  const onDragEnd = (event: PointerEvent, info: PanInfo) => {
-    event.stopPropagation();
+  const onDragEnd = (_: PointerEvent, info: PanInfo) => {
     setDrag({ isDragging: false });
 
     const centerTop = (height - itemHeight) / 2;
@@ -134,7 +127,6 @@ function PickerWheel<T extends string | number = string>({
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      e.stopPropagation();
       rawY.set(rawY.get() - e.deltaY);
       snapTo(rawY.get(), -e.deltaY);
     };
@@ -153,11 +145,8 @@ function PickerWheel<T extends string | number = string>({
       ref={containerRef}
       role="listbox"
       aria-label="Picker wheel"
-      className={`relative overflow-hidden select-none ${className}`}
-      style={{ 
-        height,
-        touchAction: 'pan-y' // Only allow vertical scrolling
-      }}
+      className={`relative overflow-hidden select-none touch-pan-y ${className}`}
+      style={{ height }}
     >
       {/* top fade */}
       <div
@@ -189,17 +178,15 @@ function PickerWheel<T extends string | number = string>({
         aria-hidden="true"
       />
 
-      {/* scrollable list with enhanced drag constraints */}
+      {/* scrollable list */}
       <motion.div
         drag="y"
         dragElastic={0.2}
         dragMomentum={false}
-        dragConstraints={{ top: 0, bottom: 0 }}
         onDragStart={onDragStart}
         onDrag={onDrag}
         onDragEnd={onDragEnd}
         style={{ y }}
-        className="cursor-grab active:cursor-grabbing"
       >
         {options.map((opt, i) => (
           <PickerItem key={String(opt)} index={i} itemHeight={itemHeight} y={y} value={opt} centerTop={centerTop} />
@@ -234,7 +221,7 @@ const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y, centerT
     <motion.div
       role="option"
       aria-selected={d.get() < 0.5}
-      className="flex items-center justify-center h-full pointer-events-none"
+      className="flex items-center justify-center h-full"
       style={{
         height: itemHeight,
         opacity,
@@ -250,3 +237,4 @@ const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y, centerT
 PickerItem.displayName = 'PickerItem';
 
 export default PickerWheel;
+
