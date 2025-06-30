@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import {
   UseFormRegister,
@@ -63,6 +62,12 @@ const PersonCard = ({
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+  
+  // Store original values when pickers open
+  const [originalValues, setOriginalValues] = useState({
+    birthDate: '',
+    birthTime: ''
+  });
 
   const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
@@ -173,6 +178,10 @@ const PersonCard = ({
       className={`flex w-full items-center gap-2 px-3 h-12 ${
         hasError ? 'border-red-500 ring-1 ring-red-500' : ''
       }`}
+      style={{ 
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent'
+      }}
     >
       <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
       <span className="grow text-left font-normal text-sm whitespace-nowrap">
@@ -182,39 +191,69 @@ const PersonCard = ({
     </Button>
   );
 
-  // Click handlers using mousedown for instant response
+  // Date picker handlers with original value tracking
   const handleDatePickerClick = useCallback((e: React.MouseEvent) => {
     console.log('Date picker mousedown triggered');
     
-    // Close time picker if open to prevent conflicts
+    // Store original value before opening
+    setOriginalValues(prev => ({
+      ...prev,
+      birthDate: birthDate
+    }));
+    
     if (timePickerOpen) {
       setTimePickerOpen(false);
     }
     
-    // Toggle date picker state
-    setDatePickerOpen(prev => !prev);
-  }, [timePickerOpen]);
+    setDatePickerOpen(true);
+  }, [timePickerOpen, birthDate]);
 
+  const handleDatePickerClose = useCallback(() => {
+    console.log('Closing date picker (cancel)');
+    // Revert to original value
+    if (originalValues.birthDate !== birthDate) {
+      setValue(getFieldName('birthDate'), originalValues.birthDate);
+    }
+    setDatePickerOpen(false);
+  }, [originalValues.birthDate, birthDate, setValue, getFieldName]);
+
+  const handleDatePickerConfirm = useCallback(() => {
+    console.log('Confirming date picker (done)');
+    // Keep current value and mark as interacted
+    setHasInteracted((prev) => ({ ...prev, birthDate: true }));
+    setDatePickerOpen(false);
+  }, []);
+
+  // Time picker handlers with original value tracking
   const handleTimePickerClick = useCallback((e: React.MouseEvent) => {
     console.log('Time picker mousedown triggered');
     
-    // Close date picker if open to prevent conflicts
+    // Store original value before opening
+    setOriginalValues(prev => ({
+      ...prev,
+      birthTime: birthTime
+    }));
+    
     if (datePickerOpen) {
       setDatePickerOpen(false);
     }
     
-    // Toggle time picker state
-    setTimePickerOpen(prev => !prev);
-  }, [datePickerOpen]);
-
-  // Simple modal close handlers
-  const handleDatePickerClose = useCallback(() => {
-    console.log('Closing date picker');
-    setDatePickerOpen(false);
-  }, []);
+    setTimePickerOpen(true);
+  }, [datePickerOpen, birthTime]);
 
   const handleTimePickerClose = useCallback(() => {
-    console.log('Closing time picker');
+    console.log('Closing time picker (cancel)');
+    // Revert to original value
+    if (originalValues.birthTime !== birthTime) {
+      setValue(getFieldName('birthTime'), originalValues.birthTime);
+    }
+    setTimePickerOpen(false);
+  }, [originalValues.birthTime, birthTime, setValue, getFieldName]);
+
+  const handleTimePickerConfirm = useCallback(() => {
+    console.log('Confirming time picker (done)');
+    // Keep current value and mark as interacted
+    setHasInteracted((prev) => ({ ...prev, birthTime: true }));
     setTimePickerOpen(false);
   }, []);
 
@@ -353,11 +392,11 @@ const PersonCard = ({
         </CardContent>
       </Card>
 
-      {/* MOBILE PICKER MODALS ------------------------------------------ */}
+      {/* MOBILE PICKER MODALS with separate confirm/cancel handlers */}
       <MobilePickerModal
         isOpen={datePickerOpen}
         onClose={handleDatePickerClose}
-        onConfirm={handleDatePickerClose}
+        onConfirm={handleDatePickerConfirm}
         title="Select Birth Date"
       >
         <MobileDatePicker 
@@ -369,7 +408,7 @@ const PersonCard = ({
       <MobilePickerModal
         isOpen={timePickerOpen}
         onClose={handleTimePickerClose}
-        onConfirm={handleTimePickerClose}
+        onConfirm={handleTimePickerConfirm}
         title="Select Birth Time"
       >
         <MobileTimePicker 

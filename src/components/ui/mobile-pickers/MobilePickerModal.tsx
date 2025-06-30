@@ -18,6 +18,20 @@ const MobilePickerModal = ({
   title, 
   children 
 }: MobilePickerModalProps) => {
+  const handleCancelClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Cancel button clicked');
+    onClose();
+  };
+
+  const handleConfirmClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Done button clicked');
+    onConfirm();
+  };
+
   return (
     <AnimatePresence mode="wait">
       {isOpen && (
@@ -32,7 +46,7 @@ const MobilePickerModal = ({
             onClick={onClose}
           />
           
-          {/* Modal - Reduced animation duration for faster response */}
+          {/* Modal */}
           <motion.div
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
@@ -50,8 +64,13 @@ const MobilePickerModal = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onClose}
-                className="text-gray-600 hover:text-gray-800 font-normal"
+                onClick={handleCancelClick}
+                className="text-gray-600 hover:text-gray-800 font-normal min-h-[44px] min-w-[44px]"
+                style={{ 
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  WebkitAppearance: 'none'
+                }}
               >
                 Cancel
               </Button>
@@ -63,8 +82,13 @@ const MobilePickerModal = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onConfirm}
-                className="text-blue-600 hover:text-blue-700 font-semibold"
+                onClick={handleConfirmClick}
+                className="text-blue-600 hover:text-blue-700 font-semibold min-h-[44px] min-w-[44px]"
+                style={{ 
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  WebkitAppearance: 'none'
+                }}
               >
                 Done
               </Button>
