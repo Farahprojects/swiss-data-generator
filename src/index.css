@@ -7,82 +7,59 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 210 40% 96.1%;
-    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-
-    --header-height: 64px;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    
+    /* Dynamic viewport height */
+    --vh: 1vh;
   }
 
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 258 76% 20%;
-    --sidebar-accent-foreground: 258 76% 94%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 }
 
@@ -90,191 +67,20 @@
   * {
     @apply border-border;
   }
-
-  html {
-    background-color: white;
-  }
-
   body {
-    background-color: white !important;
-    @apply text-foreground;
-    overflow-x: hidden;
-    padding-top: var(--header-height);
-  }
-  
-  .font-gt-sectra {
-    font-family: 'GT Sectra', serif;
+    @apply bg-background text-foreground;
   }
 }
 
-/* Dashboard layout fixes */
-.dashboard-layout {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  width: 100%;
-  background-color: white;
+/* Mobile viewport height utilities */
+.h-screen-safe {
+  height: calc(var(--vh, 1vh) * 100);
 }
 
-.dashboard-content {
-  display: flex;
-  flex-grow: 1;
-  width: 100%;
-  background-color: white;
+.min-h-screen-safe {
+  min-height: calc(var(--vh, 1vh) * 100);
 }
 
-/* Ensure header is truly fixed and spans full width */
-nav.fixed {
-  width: 100vw;
-  max-width: 100vw;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: var(--header-height);
-  z-index: 50;
-}
-
-/* Fix sidebar positioning - remove the margin that causes white lines */
-[data-sidebar="sidebar"] {
-  padding-top: 0;
-  height: calc(100vh - var(--header-height));
-  top: var(--header-height);
-}
-
-/* Ensure SidebarInset doesn't have extra margin causing white lines */
-[data-sidebar="inset"] {
-  flex: 1;
-  width: 100%;
-  max-width: 100%;
-  min-height: calc(100vh - var(--header-height));
-  margin-top: 0;
-  background-color: white;
-}
-
-/* Utility classes for better responsiveness */
-.full-width-container {
-  width: 100%;
-  max-width: 100%;
-  background-color: white;
-}
-
-.content-container {
-  width: 100%;
-  height: 100%;
-  background-color: white;
-}
-
-/* Sidebar menu button customization for black text */
-[data-sidebar="menu-button"] {
-  color: black !important;
-}
-
-[data-sidebar="menu-button"]:hover {
-  background-color: #f0edff !important;
-  color: #6366f1 !important;
-}
-
-[data-sidebar="menu-button"][data-active="true"] {
-  background-color: #f0edff !important;
-  color: #6366f1 !important;
-}
-
-/* Google Maps Autocomplete Mobile Fixes */
-.pac-container {
-  z-index: 9999 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-  border: 1px solid hsl(var(--border)) !important;
-  background-color: hsl(var(--background)) !important;
-}
-
-/* Mobile-specific fixes for Google Maps autocomplete */
-@media (max-width: 768px) {
-  .pac-container {
-    position: absolute !important;
-    max-width: 90vw !important;
-    width: calc(100% - 2rem) !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    margin: 0 !important;
-    top: auto !important;
-    bottom: auto !important;
-    max-height: 250px !important;
-    overflow-y: auto !important;
-  }
-  
-  .pac-item {
-    padding: 16px !important;
-    border-bottom: 1px solid hsl(var(--border)) !important;
-    font-size: 16px !important;
-    line-height: 1.5 !important;
-    cursor: pointer !important;
-    touch-action: manipulation !important;
-  }
-  
-  .pac-item:hover,
-  .pac-item-selected {
-    background-color: hsl(var(--accent)) !important;
-  }
-  
-  .pac-item-query {
-    color: hsl(var(--foreground)) !important;
-    font-weight: 500 !important;
-  }
-  
-  .pac-matched {
-    font-weight: 600 !important;
-    color: hsl(var(--primary)) !important;
-  }
-  
-  /* Ensure the birth details container can accommodate the dropdown */
-  .birth-details-container,
-  [data-testid="birth-details"],
-  .form-step-container {
-    position: relative !important;
-    overflow: visible !important;
-    min-height: 400px !important;
-  }
-  
-  /* Style the Google Maps autocomplete input container */
-  [id$="-container"] {
-    position: relative !important;
-    z-index: 1 !important;
-  }
-  
-  /* Ensure proper stacking for the autocomplete dropdown */
-  gmp-place-autocomplete {
-    position: relative !important;
-    display: block !important;
-    width: 100% !important;
-  }
-}
-
-/* Desktop autocomplete styling improvements */
-@media (min-width: 769px) {
-  .pac-container {
-    border-radius: 8px !important;
-    border: 1px solid hsl(var(--border)) !important;
-    background-color: hsl(var(--background)) !important;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-  }
-  
-  .pac-item {
-    padding: 10px 14px !important;
-    border-bottom: 1px solid hsl(var(--border)) !important;
-  }
-  
-  .pac-item:hover,
-  .pac-item-selected {
-    background-color: hsl(var(--accent)) !important;
-  }
-  
-  .pac-item-query {
-    color: hsl(var(--foreground)) !important;
-  }
-  
-  .pac-matched {
-    color: hsl(var(--primary)) !important;
-    font-weight: 600 !important;
-  }
+.max-h-screen-safe {
+  max-height: calc(var(--vh, 1vh) * 100);
 }

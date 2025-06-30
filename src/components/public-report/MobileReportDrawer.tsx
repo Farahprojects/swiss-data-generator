@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,6 +11,7 @@ import { X } from 'lucide-react';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { useViewportHeight } from '@/hooks/useViewportHeight';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
@@ -29,6 +31,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const [currentView, setCurrentView] = useState<DrawerView>('form');
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
   const [reportData, setReportData] = useState<{ content: string; pdfData?: string | null } | null>(null);
+
+  // Initialize viewport height management
+  useViewportHeight();
 
   const {
     form,
@@ -144,7 +149,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   return (
     <Drawer open={isOpen} onOpenChange={handleClose} dismissible={false}>
-      <DrawerContent className="h-[100dvh] max-h-[100dvh] flex flex-col rounded-none [&>div:first-child]:hidden">
+      <DrawerContent 
+        className="flex flex-col rounded-none [&>div:first-child]:hidden"
+        style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+      >
         {/* Close button - positioned absolutely in top-right */}
         <button
           onClick={handleClose}
