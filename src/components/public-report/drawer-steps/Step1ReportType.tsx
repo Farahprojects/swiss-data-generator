@@ -13,27 +13,21 @@ interface Step1ReportTypeProps {
 const reportCategories = [
   {
     value: 'the-self',
-    title: 'The Self',
-    description: 'Personal growth and self-discovery',
+    title: 'Personal',
+    description: 'Self-awareness and inner growth',
     icon: User,
-    color: 'bg-blue-50 border-blue-200 hover:bg-blue-100',
-    selectedColor: 'bg-blue-100 border-blue-500',
   },
   {
     value: 'compatibility',
     title: 'Compatibility',
     description: 'Relationship dynamics and synergy',
     icon: Heart,
-    color: 'bg-pink-50 border-pink-200 hover:bg-pink-100',
-    selectedColor: 'bg-pink-100 border-pink-500',
   },
   {
     value: 'snapshot',
     title: 'Snapshot',
     description: 'Current life focus and timing',
     icon: Target,
-    color: 'bg-green-50 border-green-200 hover:bg-green-100',
-    selectedColor: 'bg-green-100 border-green-500',
   },
 ];
 
@@ -47,14 +41,14 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
       className="space-y-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-900">What area would you like guidance on?</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">What area would you like guidance on?</h2>
       </div>
 
       <Controller
         control={control}
         name="reportCategory"
         render={({ field }) => (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {reportCategories.map((category) => {
               const IconComponent = category.icon;
               const isSelected = field.value === category.value;
@@ -68,18 +62,20 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
                     // Auto-advance to next step after selection
                     setTimeout(() => onNext(), 100);
                   }}
-                  className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-200 ${
-                    isSelected ? category.selectedColor : category.color
+                  className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
+                    isSelected 
+                      ? 'border-primary shadow-lg' 
+                      : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-3 rounded-full ${isSelected ? 'bg-white' : 'bg-white/70'}`}>
+                  <div className="flex gap-4 items-center">
+                    <div className="bg-white shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
                       <IconComponent className="h-6 w-6 text-gray-700" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 text-left">
                       <h3 className="text-lg font-semibold text-gray-900">{category.title}</h3>
-                      <p className="text-sm text-gray-600">{category.description}</p>
+                      <p className="text-sm text-muted-foreground">{category.description}</p>
                     </div>
                   </div>
                 </motion.button>
