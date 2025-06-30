@@ -5,6 +5,9 @@ export const reportSchema = z.object({
   reportType: z.string().min(1, 'Please select a report type'),
   relationshipType: z.string().optional(),
   essenceType: z.string().optional(),
+  // Mobile-specific fields that help populate the above
+  reportCategory: z.string().optional(),
+  reportSubCategory: z.string().optional(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   birthDate: z.string().min(1, 'Birth date is required'),

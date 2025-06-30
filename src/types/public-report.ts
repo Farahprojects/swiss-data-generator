@@ -19,6 +19,9 @@ export interface ReportFormData {
   reportType: string;
   relationshipType?: string;
   essenceType?: string;
+  // Mobile-specific fields
+  reportCategory?: string;
+  reportSubCategory?: string;
   name: string;
   email: string;
   birthDate: string;

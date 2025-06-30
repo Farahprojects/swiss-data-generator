@@ -1,11 +1,13 @@
 
 import React from 'react';
-import { Controller } from 'react-hook-form';
+import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { User, Heart, Target } from 'lucide-react';
+import { ReportFormData } from '@/types/public-report';
 
 interface Step1ReportTypeProps {
   control: any;
+  setValue: UseFormSetValue<ReportFormData>;
   onNext: () => void;
   selectedCategory: string;
 }
@@ -16,22 +18,25 @@ const reportCategories = [
     title: 'Personal',
     description: 'Unlock your authentic self and discover your hidden potential',
     icon: User,
+    reportType: 'essence',
   },
   {
     value: 'compatibility',
     title: 'Compatibility',
     description: 'Discover relationship dynamics and unlock deeper connections',
     icon: Heart,
+    reportType: 'sync',
   },
   {
     value: 'snapshot',
     title: 'Snapshot',
     description: 'Perfect timing insights for your current life chapter',
     icon: Target,
+    reportType: 'focus',
   },
 ];
 
-const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeProps) => {
+const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1ReportTypeProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
@@ -59,6 +64,8 @@ const Step1ReportType = ({ control, onNext, selectedCategory }: Step1ReportTypeP
                   type="button"
                   onClick={() => {
                     field.onChange(category.value);
+                    // Also set the reportType for desktop compatibility
+                    setValue('reportType', category.reportType);
                     // Auto-advance to next step after selection
                     setTimeout(() => onNext(), 100);
                   }}

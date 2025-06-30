@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/drawer';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
+import { usePromoValidation } from '@/hooks/usePromoValidation';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
@@ -30,15 +31,11 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     currentStep,
     nextStep,
     prevStep,
-    mapCategoryToReportType,
-    mapCategoryToSubType,
-    promoValidation,
-    isValidatingPromo,
-    setPromoValidation,
   } = useMobileDrawerForm();
 
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
   const { isProcessing, submitReport, reportCreated } = useReportSubmission();
+  const { promoValidation, isValidatingPromo } = usePromoValidation();
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -50,7 +47,20 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     setSubmittedData(null);
   };
 
-  const onSubmit = async (data: any) => {
+  // Convert promo validation to the state format expected by useReportSubmission
+  const promoValidationState = {
+    status: promoValidation?.isValid 
+      ? (promoValidation.isFree ? 'valid-free' : 'valid-discount')
+      : (promoValidation ? 'invalid' : 'none') as 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid',
+    message: promoValidation?.message || '',
+    discountPercent: promoValidation?.discountPercent || 0
+  };
+
+  const setPromoValidation = () => {
+    // This will be handled by the hook automatically
+  };
+
+  const onSubmit = async (data: ReportFormData) => {
     console.log('🚀 Mobile drawer form submission started');
     console.log('📝 Form data:', data);
 
@@ -60,34 +70,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       email: data.email
     });
 
-    // Map drawer form data to the expected ReportFormData format
-    const mappedData: ReportFormData = {
-      reportType: mapCategoryToReportType(data.reportCategory, data.reportSubCategory),
-      ...mapCategoryToSubType(data.reportCategory, data.reportSubCategory),
-      name: data.name,
-      email: data.email,
-      birthDate: data.birthDate,
-      birthTime: data.birthTime,
-      birthLocation: data.birthLocation,
-      birthLatitude: data.birthLatitude,
-      birthLongitude: data.birthLongitude,
-      birthPlaceId: data.birthPlaceId,
-      // Include second person data for compatibility reports
-      secondPersonName: data.secondPersonName,
-      secondPersonBirthDate: data.secondPersonBirthDate,
-      secondPersonBirthTime: data.secondPersonBirthTime,
-      secondPersonBirthLocation: data.secondPersonBirthLocation,
-      secondPersonLatitude: data.secondPersonLatitude,
-      secondPersonLongitude: data.secondPersonLongitude,
-      secondPersonPlaceId: data.secondPersonPlaceId,
-      promoCode: data.promoCode,
-      notes: data.notes,
-    };
-
-    console.log('🔄 Mapped data for submission:', mappedData);
-
-    // Use the same submission logic as desktop
-    await submitReport(mappedData, promoValidation, setPromoValidation);
+    // Use the exact same submission logic as desktop
+    await submitReport(data, promoValidationState, setPromoValidation);
     
     // Show success screen for free reports, paid reports will redirect to Stripe
     if (reportCreated) {
@@ -148,6 +132,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               <Step1ReportType
                 key="step1"
                 control={control}
+                setValue={setValue}
                 onNext={nextStep}
                 selectedCategory={reportCategory}
               />
@@ -157,6 +142,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               <Step1_5SubCategory
                 key="step1_5"
                 control={control}
+                setValue={setValue}
                 onNext={nextStep}
                 onPrev={prevStep}
                 selectedCategory={reportCategory}
@@ -185,6 +171,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 onPrev={prevStep}
                 onSubmit={handleFormSubmit}
                 isProcessing={isProcessing}
+                promoValidation={promoValidationState}
+                isValidatingPromo={isValidatingPromo}
               />
             )}
           </AnimatePresence>
