@@ -48,6 +48,11 @@ const InlineDateTimeSelector = ({
     onCancel();
   };
 
+  const handleTriggerClick = () => {
+    // This will be handled by the parent component's state management
+    // The parent should set isOpen to true when this button is clicked
+  };
+
   const formatDisplayValue = (val: string) => {
     if (!val) return placeholder;
     
@@ -74,6 +79,7 @@ const InlineDateTimeSelector = ({
       <Button
         type="button"
         variant="outline"
+        onClick={handleTriggerClick}
         className={`flex w-full items-center gap-2 px-3 h-12 justify-start font-normal ${
           hasError ? 'border-red-500 bg-red-50' : 'hover:bg-gray-50'
         } ${isOpen ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
