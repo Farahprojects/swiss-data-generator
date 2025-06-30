@@ -10,7 +10,7 @@ import { ReportFormData } from '@/types/public-report';
 import MobilePickerModal from '@/components/ui/mobile-pickers/MobilePickerModal';
 import MobileDatePicker from '@/components/ui/mobile-pickers/MobileDatePicker';
 import MobileTimePicker from '@/components/ui/mobile-pickers/MobileTimePicker';
-import PlaceAutocomplete from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 
 interface PersonCardProps {
   personNumber: 1 | 2;
@@ -72,6 +72,10 @@ const PersonCard = ({
     }
   };
 
+  const handlePlaceChange = (value: string) => {
+    setValue(birthLocationField, value);
+  };
+
   const formatDisplayDate = (dateString: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -99,9 +103,9 @@ const PersonCard = ({
         <CardContent className="space-y-4">
           {/* Name Field */}
           <div className="space-y-2">
-            <Label htmlFor={nameField}>Full Name</Label>
+            <Label htmlFor={nameField as string}>Full Name</Label>
             <Input
-              id={nameField}
+              id={nameField as string}
               {...register(nameField)}
               placeholder="Enter full name"
               className={errors[nameField] && hasTriedToSubmit ? 'border-red-500' : ''}
@@ -140,7 +144,7 @@ const PersonCard = ({
               onClick={() => setDatePickerOpen(true)}
             >
               <Calendar className="mr-2 h-4 w-4" />
-              {birthDate ? formatDisplayDate(birthDate) : 'Select birth date'}
+              {birthDate ? formatDisplayDate(birthDate as string) : 'Select birth date'}
             </Button>
             {errors[birthDateField] && hasTriedToSubmit && (
               <p className="text-sm text-red-500">{errors[birthDateField]?.message}</p>
@@ -159,7 +163,7 @@ const PersonCard = ({
               onClick={() => setTimePickerOpen(true)}
             >
               <Clock className="mr-2 h-4 w-4" />
-              {birthTime ? formatDisplayTime(birthTime) : 'Select birth time'}
+              {birthTime ? formatDisplayTime(birthTime as string) : 'Select birth time'}
             </Button>
             {errors[birthTimeField] && hasTriedToSubmit && (
               <p className="text-sm text-red-500">{errors[birthTimeField]?.message}</p>
@@ -168,19 +172,15 @@ const PersonCard = ({
 
           {/* Birth Location Field */}
           <div className="space-y-2">
-            <Label>Birth Location</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <PlaceAutocomplete
-                value={birthLocation || ''}
-                onPlaceSelect={handlePlaceSelect}
-                placeholder="Enter birth city"
-                className={`pl-10 ${errors[birthLocationField] && hasTriedToSubmit ? 'border-red-500' : ''}`}
-              />
-            </div>
-            {errors[birthLocationField] && hasTriedToSubmit && (
-              <p className="text-sm text-red-500">{errors[birthLocationField]?.message}</p>
-            )}
+            <PlaceAutocomplete
+              label="Birth Location"
+              value={birthLocation as string || ''}
+              onChange={handlePlaceChange}
+              onPlaceSelect={handlePlaceSelect}
+              placeholder="Enter birth city"
+              className={errors[birthLocationField] && hasTriedToSubmit ? 'border-red-500' : ''}
+              error={errors[birthLocationField] && hasTriedToSubmit ? errors[birthLocationField]?.message as string : undefined}
+            />
           </div>
         </CardContent>
       </Card>
@@ -193,7 +193,7 @@ const PersonCard = ({
         title="Select Birth Date"
       >
         <MobileDatePicker
-          value={birthDate || ''}
+          value={birthDate as string || ''}
           onChange={(date) => setValue(birthDateField, date)}
         />
       </MobilePickerModal>
@@ -206,7 +206,7 @@ const PersonCard = ({
         title="Select Birth Time"
       >
         <MobileTimePicker
-          value={birthTime || ''}
+          value={birthTime as string || ''}
           onChange={(time) => setValue(birthTimeField, time)}
         />
       </MobilePickerModal>
