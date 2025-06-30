@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Check, X } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
 import InlineDateWheel from './InlineDateWheel';
 import InlineTimeWheel from './InlineTimeWheel';
 
@@ -38,6 +38,7 @@ const InlineDateTimeSelector = ({
   };
 
   const handleConfirm = () => {
+    // Update the parent component's value immediately
     onChange(localValue);
     onConfirm();
   };
@@ -126,7 +127,6 @@ const InlineDateTimeSelector = ({
                     onClick={handleCancel}
                     className="text-gray-600 hover:text-gray-800"
                   >
-                    <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
                   <Button
@@ -134,7 +134,6 @@ const InlineDateTimeSelector = ({
                     onClick={handleConfirm}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    <Check className="h-4 w-4 mr-2" />
                     Done
                   </Button>
                 </div>

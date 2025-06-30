@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import {
   UseFormRegister,
@@ -92,11 +93,13 @@ const PersonCard = ({
   };
 
   const handleDateChange = (date: string) => {
-    setValue(getFieldName('birthDate'), date);
+    const fieldName = getFieldName('birthDate');
+    setValue(fieldName, date);
   };
 
   const handleTimeChange = (time: string) => {
-    setValue(getFieldName('birthTime'), time);
+    const fieldName = getFieldName('birthTime');
+    setValue(fieldName, time);
   };
 
   const handlePlaceSelect = (placeData: PlaceData) => {
@@ -129,9 +132,10 @@ const PersonCard = ({
   }, []);
 
   const handleDateCancel = useCallback(() => {
-    setValue(getFieldName('birthDate'), originalValues.birthDate);
+    const fieldName = getFieldName('birthDate');
+    setValue(fieldName, originalValues.birthDate);
     setActiveSelector(null);
-  }, [originalValues.birthDate, setValue, getFieldName]);
+  }, [originalValues.birthDate, setValue]);
 
   // Time selector handlers
   const handleTimeSelectorOpen = useCallback(() => {
@@ -145,9 +149,10 @@ const PersonCard = ({
   }, []);
 
   const handleTimeCancel = useCallback(() => {
-    setValue(getFieldName('birthTime'), originalValues.birthTime);
+    const fieldName = getFieldName('birthTime');
+    setValue(fieldName, originalValues.birthTime);
     setActiveSelector(null);
-  }, [originalValues.birthTime, setValue, getFieldName]);
+  }, [originalValues.birthTime, setValue]);
 
   // Enhanced error message component
   const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
