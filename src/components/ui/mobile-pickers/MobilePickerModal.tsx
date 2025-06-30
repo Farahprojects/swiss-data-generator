@@ -23,14 +23,13 @@ const MobilePickerModal = ({
     <AnimatePresence mode="wait">
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop - disabled click to prevent accidental dismissal */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="fixed inset-0 bg-black/50 z-50"
-            onClick={onClose}
           />
           
           {/* Modal - Reduced animation duration for faster response */}
@@ -45,14 +44,15 @@ const MobilePickerModal = ({
               duration: 0.2
             }}
             className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-xl shadow-xl"
+            style={{ touchAction: 'pan-y' }}
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={onClose}
-                className="text-gray-600 hover:text-gray-800"
+                className="h-10 w-16 bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700 font-medium"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -62,17 +62,17 @@ const MobilePickerModal = ({
               </h3>
               
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={onConfirm}
-                className="text-primary hover:text-primary/80"
+                className="h-10 w-16 bg-green-50 border-green-200 text-green-600 hover:bg-green-100 hover:text-green-700 font-medium"
               >
                 <Check className="h-5 w-5" />
               </Button>
             </div>
             
             {/* Content */}
-            <div className="p-4 pb-8">
+            <div className="p-4 pb-8" style={{ touchAction: 'pan-y' }}>
               {children}
             </div>
           </motion.div>

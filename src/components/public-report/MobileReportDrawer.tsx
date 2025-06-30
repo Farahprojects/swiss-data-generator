@@ -24,6 +24,7 @@ interface MobileReportDrawerProps {
 const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
+  const [hasActivePicker, setHasActivePicker] = useState(false);
 
   const {
     form,
@@ -135,7 +136,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   }
 
   return (
-    <Drawer open={isOpen} onOpenChange={handleClose}>
+    <Drawer 
+      open={isOpen} 
+      onOpenChange={handleClose}
+      shouldScaleBackground={!hasActivePicker}
+      dismissible={!hasActivePicker}
+    >
       <DrawerContent className="h-[90vh] flex flex-col">
         <DrawerHeader className="flex-shrink-0">
           <ProgressDots />

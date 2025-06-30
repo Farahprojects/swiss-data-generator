@@ -1,11 +1,17 @@
 
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, User, Calendar, Clock, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { DateTimePicker } from "@/components/calendar/DateTimePicker";
+import PlaceAutocomplete from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import MobileDatePicker from '@/components/ui/mobile-pickers/MobileDatePicker';
+import MobileTimePicker from '@/components/ui/mobile-pickers/MobileTimePicker';
+import MobilePickerModal from '@/components/ui/mobile-pickers/MobilePickerModal';
 import { DrawerFormData } from '@/hooks/useMobileDrawerForm';
-import PersonCard from './PersonCard';
 
 interface Step2BirthDetailsProps {
   register: UseFormRegister<DrawerFormData>;
@@ -16,175 +22,202 @@ interface Step2BirthDetailsProps {
   onPrev: () => void;
 }
 
-const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }: Step2BirthDetailsProps) => {
-  const [showSecondPerson, setShowSecondPerson] = useState(false);
-  const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
+const Step2BirthDetails = ({ 
+  register, 
+  setValue, 
+  watch, 
+  errors, 
+  onNext, 
+  onPrev 
+}: Step2BirthDetailsProps) => {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const reportCategory = watch('reportCategory');
-  const isCompatibilityReport = reportCategory === 'compatibility';
-
-  // Watch first person fields
+  const reportSubCategory = watch('reportSubCategory');
   const name = watch('name');
   const email = watch('email');
   const birthDate = watch('birthDate');
   const birthTime = watch('birthTime');
   const birthLocation = watch('birthLocation');
 
-  // Watch second person fields
-  const secondPersonName = watch('secondPersonName');
-  const secondPersonBirthDate = watch('secondPersonBirthDate');
-  const secondPersonBirthTime = watch('secondPersonBirthTime');
-  const secondPersonBirthLocation = watch('secondPersonBirthLocation');
+  const isCompatibilityReport = reportCategory === 'compatibility';
+  const isFormValid = name && email && birthDate && birthTime && birthLocation;
 
-  const isFirstPersonComplete = name && email && birthDate && birthTime && birthLocation;
-  const isSecondPersonComplete = secondPersonName && secondPersonBirthDate && secondPersonBirthTime && secondPersonBirthLocation;
-
-  const canProceed = isCompatibilityReport 
-    ? (isFirstPersonComplete && isSecondPersonComplete)
-    : isFirstPersonComplete;
-
-  const handleAddSecondPerson = () => {
-    setShowSecondPerson(true);
-  };
-
-  const scrollToFirstError = () => {
-    // Find the first error field and scroll to it
-    const errorFields = [
-      { field: 'name', element: document.querySelector('#name') },
-      { field: 'email', element: document.querySelector('#email') },
-      { field: 'birthDate', element: document.querySelector('#birthDate') },
-      { field: 'birthTime', element: document.querySelector('#birthTime') },
-      { field: 'birthLocation', element: document.querySelector('#birthLocation') },
-      { field: 'secondPersonName', element: document.querySelector('#secondPersonName') },
-      { field: 'secondPersonBirthDate', element: document.querySelector('#secondPersonBirthDate') },
-      { field: 'secondPersonBirthTime', element: document.querySelector('#secondPersonBirthTime') },
-      { field: 'secondPersonBirthLocation', element: document.querySelector('#secondPersonBirthLocation') },
-    ];
-
-    for (const { field, element } of errorFields) {
-      if (errors[field as keyof FieldErrors<DrawerFormData>] && element) {
-        element.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'nearest'
-        });
-        break;
-      }
-    }
-  };
-
-  const handleReviewAndPay = () => {
-    setHasTriedToSubmit(true);
-    
-    // Check if form is valid before proceeding
-    if (canProceed) {
+  const handleContinue = () => {
+    if (isFormValid) {
       onNext();
-    } else {
-      // Scroll to first error after a brief delay to allow error states to update
-      setTimeout(() => {
-        scrollToFirstError();
-      }, 100);
     }
+  };
+
+  const handleDateConfirm = () => {
+    setShowDatePicker(false);
+  };
+
+  const handleTimeConfirm = () => {
+    setShowTimePicker(false);
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
-      transition={{ duration: 0.3 }}
-      className="space-y-6"
-    >
-      <div className="flex items-center space-x-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onPrev}
-          className="p-2"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="text-center flex-1">
-          <h2 className="text-2xl font-bold text-gray-900">Birth Details</h2>
-          <p className="text-gray-600">
-            {isCompatibilityReport 
-              ? "We need both people's details for your compatibility report" 
-              : "We need these to create your personalized report"
-            }
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        {/* First Person Card */}
-        <PersonCard
-          personNumber={1}
-          title={isCompatibilityReport ? "Your Details" : "Your Birth Details"}
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          errors={errors}
-          hasTriedToSubmit={hasTriedToSubmit}
-        />
-
-        {/* Add Second Person Button */}
-        {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Button
-              onClick={handleAddSecondPerson}
-              variant="outline"
-              className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-              size="lg"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Partner's Details
-            </Button>
-          </motion.div>
-        )}
-
-        {/* Second Person Card */}
-        <AnimatePresence>
-          {isCompatibilityReport && showSecondPerson && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <PersonCard
-                personNumber={2}
-                title="Partner's Details"
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                hasTriedToSubmit={hasTriedToSubmit}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Review & Pay Button */}
+    <>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -50 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6"
       >
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onPrev}
+            className="p-2"
+            type="button"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="text-center flex-1">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {isCompatibilityReport ? 'Your Details' : 'Birth Details'}
+            </h2>
+            <p className="text-gray-600">Tell us about yourself</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {/* Name */}
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Full Name
+            </Label>
+            <Input
+              id="name"
+              {...register('name')}
+              placeholder="Enter your full name"
+              className="h-12"
+            />
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name.message}</p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+              Email Address
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              {...register('email')}
+              placeholder="Enter your email"
+              className="h-12"
+            />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email.message}</p>
+            )}
+          </div>
+
+          {/* Birth Date */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Birth Date
+            </Label>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDatePicker(true)}
+              className="w-full h-12 justify-start text-left font-normal"
+            >
+              {birthDate ? new Date(birthDate).toLocaleDateString() : 'Select birth date'}
+            </Button>
+            {errors.birthDate && (
+              <p className="text-sm text-red-500">{errors.birthDate.message}</p>
+            )}
+          </div>
+
+          {/* Birth Time */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Birth Time
+            </Label>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowTimePicker(true)}
+              className="w-full h-12 justify-start text-left font-normal"
+            >
+              {birthTime ? birthTime : 'Select birth time'}
+            </Button>
+            {errors.birthTime && (
+              <p className="text-sm text-red-500">{errors.birthTime.message}</p>
+            )}
+          </div>
+
+          {/* Birth Location */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Birth Location
+            </Label>
+            <PlaceAutocomplete
+              value={birthLocation}
+              onChange={(location, lat, lng, placeId) => {
+                setValue('birthLocation', location);
+                setValue('birthLatitude', lat);
+                setValue('birthLongitude', lng);
+                setValue('birthPlaceId', placeId);
+              }}
+              placeholder="Enter birth city/location"
+              className="h-12"
+            />
+            {errors.birthLocation && (
+              <p className="text-sm text-red-500">{errors.birthLocation.message}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Continue Button */}
         <Button
-          onClick={handleReviewAndPay}
-          variant="outline"
-          className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+          onClick={handleContinue}
+          disabled={!isFormValid}
+          className="w-full h-12 text-lg font-semibold bg-primary hover:bg-primary/90 disabled:opacity-50"
           size="lg"
         >
-          Review & Pay
+          Continue
         </Button>
       </motion.div>
-    </motion.div>
+
+      {/* Date Picker Modal */}
+      <MobilePickerModal
+        isOpen={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onConfirm={handleDateConfirm}
+        title="Select Birth Date"
+      >
+        <MobileDatePicker
+          value={birthDate || ''}
+          onChange={(date) => setValue('birthDate', date)}
+        />
+      </MobilePickerModal>
+
+      {/* Time Picker Modal */}
+      <MobilePickerModal
+        isOpen={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onConfirm={handleTimeConfirm}
+        title="Select Birth Time"
+      >
+        <MobileTimePicker
+          value={birthTime || ''}
+          onChange={(time) => setValue('birthTime', time)}
+        />
+      </MobilePickerModal>
+    </>
   );
 };
 
