@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -215,7 +216,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // Progress dots for form steps
   const ProgressDots = () => (
-    <div className="flex justify-center space-x-2 mb-6">
+    <div className="flex justify-center space-x-2 mb-3">
       {[1, 2, 3, 4].map((step) => (
         <div
           key={step}
@@ -254,7 +255,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         {/* Close button - positioned absolutely in top-right */}
         <button
           onClick={handleClose}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
+          className="absolute right-4 top-3 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
           style={{ 
             touchAction: 'manipulation',
             WebkitTapHighlightColor: 'transparent',
@@ -267,7 +268,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
         {currentView === 'form' && (
           <div className="flex flex-col h-full">
-            <DrawerHeader className="flex-shrink-0 pt-12 pb-4 px-4">
+            <DrawerHeader className="flex-shrink-0 pt-6 pb-2 px-4">
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
@@ -355,3 +356,4 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 };
 
 export default MobileReportDrawer;
+
