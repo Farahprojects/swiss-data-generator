@@ -1,10 +1,10 @@
-
 import React, { useEffect } from 'react';
 import { CheckCircle, Clock, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
+import { useViewportHeight } from '@/hooks/useViewportHeight';
 
 interface SuccessScreenProps {
   name: string;
@@ -16,6 +16,9 @@ interface SuccessScreenProps {
 const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: SuccessScreenProps) => {
   const { report, isLoading, isPolling, startPolling, stopPolling } = useGuestReportStatus();
   const firstName = name.split(' ')[0];
+
+  // Initialize viewport height management
+  useViewportHeight();
 
   // Auto-start polling when component mounts
   useEffect(() => {
@@ -100,7 +103,14 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   };
 
   return (
-    <div className="flex-1 bg-gradient-to-b from-background to-muted/20 flex items-start justify-center pt-8 px-4 overflow-y-auto">
+    <div 
+      className="min-h-[calc(var(--vh,1vh)*100)] bg-gradient-to-b from-background to-muted/20 flex items-start justify-center pt-8 px-4 overflow-y-auto"
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'none',
+        touchAction: 'manipulation'
+      }}
+    >
       <div className="w-full max-w-md">
         <Card className="border-2 border-primary/20 shadow-lg">
           <CardContent className="p-6 text-center space-y-6">
