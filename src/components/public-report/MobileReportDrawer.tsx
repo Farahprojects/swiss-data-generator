@@ -31,6 +31,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const [currentView, setCurrentView] = useState<DrawerView>('form');
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
   const [reportData, setReportData] = useState<{ content: string; pdfData?: string | null } | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   // Initialize viewport height management
   useViewportHeight();
@@ -48,6 +49,55 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
+
+  // Keyboard detection and auto-scroll prevention
+  useEffect(() => {
+    let initialViewportHeight = window.innerHeight;
+
+    const preventBrowserAutoScroll = (event: Event) => {
+      // Prevent browser's default auto-scroll behavior on input focus
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const handleViewportChange = () => {
+      const currentHeight = window.innerHeight;
+      const heightDifference = initialViewportHeight - currentHeight;
+      
+      // Keyboard is likely visible if viewport shrunk significantly
+      setKeyboardVisible(heightDifference > 150);
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        // Prevent browser auto-scroll
+        preventBrowserAutoScroll(event);
+        
+        // Custom scroll management
+        setTimeout(() => {
+          target.scrollIntoView({ 
+            block: 'nearest', 
+            behavior: 'smooth' 
+          });
+        }, 100);
+      }
+    };
+
+    if (isOpen) {
+      // Add capture-phase event listeners
+      document.addEventListener('focusin', handleFocusIn, { capture: true });
+      window.addEventListener('resize', handleViewportChange);
+      
+      // Store initial height
+      initialViewportHeight = window.innerHeight;
+    }
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn, { capture: true });
+      window.removeEventListener('resize', handleViewportChange);
+    };
+  }, [isOpen]);
 
   // Check for Stripe return URL parameters
   useEffect(() => {
@@ -79,6 +129,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     setCurrentView('form');
     setSubmittedData(null);
     setReportData(null);
+    setKeyboardVisible(false);
   };
 
   // Convert promo validation to the state format expected by useReportSubmission
@@ -150,11 +201,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   return (
     <Drawer open={isOpen} onOpenChange={handleClose} dismissible={false}>
       <DrawerContent 
-        className="flex flex-col rounded-none [&>div:first-child]:hidden"
+        className={`flex flex-col rounded-none [&>div:first-child]:hidden ${
+          keyboardVisible ? 'keyboard-visible' : ''
+        }`}
         style={{ 
-          minHeight: 'calc(var(--vh, 1vh) * 100)',
-          maxHeight: 'none',
-          height: 'auto'
+          height: 'auto',
+          maxHeight: 'none'
         }}
       >
         {/* Close button - positioned absolutely in top-right */}
@@ -172,13 +224,13 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         </button>
 
         {currentView === 'form' && (
-          <div className="flex flex-col min-h-full">
-            <DrawerHeader className="flex-shrink-0 pt-12 pb-4">
+          <div className="w-full">
+            <DrawerHeader className="pt-12 pb-4 px-4">
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
             
-            <div className="flex-1 px-6 pb-6">
+            <div className="px-6 pb-6 w-full">
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (
                   <Step1ReportType
@@ -233,7 +285,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {currentView === 'success' && submittedData && (
-          <div className="flex-1 pt-12">
+          <div className="pt-12 w-full">
             <SuccessScreen 
               name={submittedData.name} 
               email={submittedData.email}
@@ -243,7 +295,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {currentView === 'report-viewer' && reportData && submittedData && (
-          <div className="flex-1 pt-12">
+          <div className="pt-12 w-full">
             <MobileReportViewer
               reportContent={reportData.content}
               reportPdfData={reportData.pdfData}

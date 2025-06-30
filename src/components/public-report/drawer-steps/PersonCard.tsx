@@ -50,7 +50,6 @@ const PersonCard = ({
   });
 
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
 
   const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
@@ -89,22 +88,22 @@ const PersonCard = ({
     return errors[fieldName];
   };
 
-  // Custom input focus handler to prevent browser auto-scroll
+  // Enhanced input focus handler with proper scroll management
   const handleInputFocus = useCallback((event: React.FocusEvent<HTMLInputElement>) => {
     if (isMobile) {
-      // Prevent browser's default scroll behavior
+      const target = event.target;
+      
+      // Prevent any browser interference
       event.preventDefault();
       
-      // Custom scroll behavior with smooth animation
+      // Custom controlled scroll behavior
       setTimeout(() => {
-        if (cardRef.current) {
-          cardRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'nearest'
-          });
-        }
-      }, 100);
+        target.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'nearest',
+          inline: 'nearest'
+        });
+      }, 50);
     }
   }, [isMobile]);
 
@@ -177,7 +176,7 @@ const PersonCard = ({
   /* -------------------------------------------------------------------- */
 
   return (
-    <Card ref={cardRef} className="border-2 border-primary/20 w-full max-w-none mb-4">
+    <Card className="border-2 border-primary/20 w-full mb-4">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold text-gray-900">
           {title}
@@ -197,6 +196,8 @@ const PersonCard = ({
               handleInputFocus(e);
             }}
             onBlur={() => handleFieldInteraction('name')}
+            inputMode="text"
+            style={{ fontSize: '16px' }} // Prevent zoom on iOS
           />
           {shouldShowError('name', getError('name')) && (
             <ErrorMessage message={getError('name')?.message as string} />
@@ -218,6 +219,8 @@ const PersonCard = ({
                 handleInputFocus(e);
               }}
               onBlur={() => handleFieldInteraction('email')}
+              inputMode="email"
+              style={{ fontSize: '16px' }} // Prevent zoom on iOS
             />
             {shouldShowError('email', errors.email) && (
               <ErrorMessage message={errors.email?.message as string} />
@@ -253,6 +256,7 @@ const PersonCard = ({
                   handleInputFocus(e);
                 }}
                 onBlur={() => handleFieldInteraction('birthDate')}
+                style={{ fontSize: '16px' }} // Prevent zoom on iOS
               />
             )}
             {shouldShowError('birthDate', getError('birthDate')) && (
@@ -287,6 +291,7 @@ const PersonCard = ({
                   handleInputFocus(e);
                 }}
                 onBlur={() => handleFieldInteraction('birthTime')}
+                style={{ fontSize: '16px' }} // Prevent zoom on iOS
               />
             )}
             {shouldShowError('birthTime', getError('birthTime')) && (

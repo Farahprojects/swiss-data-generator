@@ -65,7 +65,7 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
       if (errors[field as keyof FieldErrors<ReportFormData>] && element) {
         element.scrollIntoView({ 
           behavior: 'smooth', 
-          block: 'center',
+          block: 'nearest',
           inline: 'nearest'
         });
         break;
@@ -88,13 +88,13 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
   };
 
   return (
-    <div className="min-h-full">
+    <div className="w-full">
       <motion.div
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -50 }}
         transition={{ duration: 0.3 }}
-        className="space-y-6"
+        className="space-y-6 w-full"
       >
         <div className="flex items-center space-x-4">
           <Button
@@ -116,7 +116,7 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 w-full">
           {/* First Person Card */}
           <PersonCard
             personNumber={1}
@@ -176,7 +176,7 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="pb-6"
+          className="pb-6 w-full"
         >
           <Button
             onClick={handleReviewAndPay}

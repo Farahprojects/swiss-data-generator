@@ -84,3 +84,47 @@
 .max-h-screen-safe {
   max-height: calc(var(--vh, 1vh) * 100);
 }
+
+/* Mobile keyboard and scroll fixes */
+.keyboard-visible {
+  /* Adjust layout when keyboard is visible */
+  padding-bottom: env(keyboard-inset-height, 0px);
+}
+
+/* Prevent zoom on input focus for iOS */
+input[type="text"],
+input[type="email"],
+input[type="date"],
+input[type="time"],
+textarea,
+select {
+  font-size: 16px !important;
+  transform-origin: left top;
+  transition: none;
+}
+
+/* Ensure smooth scrolling without browser interference */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Mobile input focus improvements */
+@media (max-width: 768px) {
+  /* Prevent layout shifts on focus */
+  input:focus,
+  textarea:focus {
+    transform: none;
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--ring));
+  }
+  
+  /* Ensure natural document flow */
+  .mobile-form-container {
+    position: relative;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+}
