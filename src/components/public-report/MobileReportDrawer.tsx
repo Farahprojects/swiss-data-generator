@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -230,6 +231,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     </div>
   );
 
+  // Determine if current step needs scrolling
+  const needsScrolling = currentStep === 3 || currentStep === 4;
+
   return (
     <Drawer open={isOpen} onOpenChange={handleClose} dismissible={false}>
       <DrawerContent 
@@ -239,7 +243,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         style={{
           height: 'calc(var(--vh, 1vh) * 100)',
           maxHeight: 'calc(var(--vh, 1vh) * 100)',
-          overflowY: 'auto',
+          overflowY: 'hidden',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'none',
           touchAction: 'manipulation',
@@ -268,7 +272,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
             
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div 
+              className={`flex-1 px-6 pb-6 ${needsScrolling ? 'overflow-y-auto' : 'flex items-center justify-center'}`}
+              style={needsScrolling ? {} : { overflowY: 'hidden' }}
+            >
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (
                   <Step1ReportType
