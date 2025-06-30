@@ -49,6 +49,22 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     };
   }, []);
 
+  // Context-specific scroll management - only apply when drawer is open
+  useEffect(() => {
+    if (isOpen) {
+      // Add scroll lock class to body when drawer opens
+      document.body.classList.add('drawer-scroll-lock');
+    } else {
+      // Remove scroll lock class when drawer closes
+      document.body.classList.remove('drawer-scroll-lock');
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('drawer-scroll-lock');
+    };
+  }, [isOpen]);
+
   const {
     form,
     currentStep,
