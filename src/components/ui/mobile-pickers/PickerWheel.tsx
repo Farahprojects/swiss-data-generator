@@ -199,11 +199,6 @@ function PickerWheel<T extends string | number = string>({
       const logicalIndex = currentIndex % options.length;
       const distanceFromCenter = currentIndex - (centerRepetitionStart + logicalIndex);
 
-      // Silently reset scroll to center clone if far away
-      if (Math.abs(distanceFromCenter) > options.length * 1.5) {
-        const newVirtualIndex = centerRepetitionStart + logicalIndex;
-        const newY = centerTop - newVirtualIndex * itemHeight;
-        rawY.set(newY); // reset with no animation
       }
 
       const projected = rawY.get() + info.velocity.y * 0.2;
