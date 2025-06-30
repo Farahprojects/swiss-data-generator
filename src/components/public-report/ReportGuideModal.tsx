@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
 interface ReportGuideModalProps {
   isOpen: boolean;
   onClose: () => void;
+  targetReportType?: string | null;
 }
 
 const reportGuides = [
@@ -89,7 +90,31 @@ const reportGuides = [
   }
 ];
 
-const ReportGuideModal = ({ isOpen, onClose }: ReportGuideModalProps) => {
+// Reorder reportGuides to match TestsSection order
+const reorderedReportGuides = [
+  reportGuides.find(guide => guide.type === 'Essence')!,
+  reportGuides.find(guide => guide.type === 'Sync')!,
+  reportGuides.find(guide => guide.type === 'Monthly')!,
+  reportGuides.find(guide => guide.type === 'Mindset')!,
+  reportGuides.find(guide => guide.type === 'Focus')!,
+  reportGuides.find(guide => guide.type === 'Flow')!,
+];
+
+const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModalProps) => {
+  const targetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && targetReportType && targetRef.current) {
+      // Wait for the modal to fully render before scrolling
+      setTimeout(() => {
+        targetRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }, 100);
+    }
+  }, [isOpen, targetReportType]);
+
   const formatSubType = (subType: string) => {
     const parts = subType.split(' – ');
     if (parts.length === 2) {
@@ -101,6 +126,19 @@ const ReportGuideModal = ({ isOpen, onClose }: ReportGuideModalProps) => {
       );
     }
     return subType;
+  };
+
+  const getReportType = (reportName: string) => {
+    // Map display names to report types
+    const nameToType: { [key: string]: string } = {
+      'The Self': 'Essence',
+      'Compatibility': 'Sync',
+      'Energy Month': 'Monthly',
+      'Mindset': 'Mindset',
+      'Focus': 'Focus',
+      'Flow': 'Flow'
+    };
+    return nameToType[reportName] || reportName;
   };
 
   return (
@@ -118,46 +156,58 @@ const ReportGuideModal = ({ isOpen, onClose }: ReportGuideModalProps) => {
         </DialogHeader>
 
         <div className="grid md:grid-cols-2 gap-4">
-          {reportGuides.map((report) => (
-            <Card key={report.type} className="border border-muted">
-              <CardContent className="p-6 space-y-3">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-bold text-lg text-primary flex items-center">
-                    {report.icon}
-                    {report.title}
-                  </h3>
-                  <span className="font-bold text-lg text-primary bg-primary/10 px-2 py-1 rounded">
-                    {report.price}
-                  </span>
-                </div>
-
-                <span className="text-xs text-white bg-primary px-2 py-0.5 rounded-full inline-block w-fit">
-                  Best for {report.bestFor}
-                </span>
-
-                <p className="text-sm text-muted-foreground italic">
-                  "{report.description}"
-                </p>
-
-                <p className="text-sm text-foreground">
-                  {report.details}
-                </p>
-
-                {report.subTypes && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground mt-2 mb-1">
-                      Included Report Styles
-                    </h4>
-                    <ul className="space-y-1 pl-4 list-disc text-sm">
-                      {report.subTypes.map((subType, index) => (
-                        <li key={index}>{formatSubType(subType)}</li>
-                      ))}
-                    </ul>
+          {reorderedReportGuides.map((report) => {
+            const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
+            
+            return (
+              <Card 
+                key={report.type} 
+                className={`border transition-all duration-300 ${
+                  isTargeted 
+                    ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20' 
+                    : 'border-muted'
+                }`}
+                ref={isTargeted ? targetRef : null}
+              >
+                <CardContent className="p-6 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-lg text-primary flex items-center">
+                      {report.icon}
+                      {report.title}
+                    </h3>
+                    <span className="font-bold text-lg text-primary bg-primary/10 px-2 py-1 rounded">
+                      {report.price}
+                    </span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+
+                  <span className="text-xs text-white bg-primary px-2 py-0.5 rounded-full inline-block w-fit">
+                    Best for {report.bestFor}
+                  </span>
+
+                  <p className="text-sm text-muted-foreground italic">
+                    "{report.description}"
+                  </p>
+
+                  <p className="text-sm text-foreground">
+                    {report.details}
+                  </p>
+
+                  {report.subTypes && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-muted-foreground mt-2 mb-1">
+                        Included Report Styles
+                      </h4>
+                      <ul className="space-y-1 pl-4 list-disc text-sm">
+                        {report.subTypes.map((subType, index) => (
+                          <li key={index}>{formatSubType(subType)}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         <div className="mt-6 text-center">

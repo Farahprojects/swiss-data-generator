@@ -43,15 +43,6 @@ const testData: Test[] = [
     imageSrc: "/lovable-uploads/71cede7b-0de9-4397-897f-29009a07c012.png"
   },
   {
-    id: "Flow",
-    name: "Flow",
-    description: "Align your career with your cosmic blueprint",
-    slug: "Flow",
-    time: "15 min",
-    color: "bg-green-500",
-    imageSrc: "/lovable-uploads/c245dba6-7af4-444f-a486-44594e57c9fd.png"
-  },
-  {
     id: "Monthly",
     name: "Energy Month",
     description: "Discover your natural professional approach",
@@ -77,6 +68,15 @@ const testData: Test[] = [
     time: "10 min",
     color: "bg-purple-500",
     imageSrc: "/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png"
+  },
+  {
+    id: "Flow",
+    name: "Flow",
+    description: "Align your career with your cosmic blueprint",
+    slug: "Flow",
+    time: "15 min",
+    color: "bg-green-500",
+    imageSrc: "/lovable-uploads/c245dba6-7af4-444f-a486-44594e57c9fd.png"
   },
 ];
 
@@ -109,15 +109,6 @@ const reportGuides = [
     ]
   },
   {
-    type: 'Flow',
-    icon: <Repeat className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Flow Report',
-    price: '$3',
-    bestFor: 'Emotional rhythm',
-    description: 'Creative/emotional openness over 7 days',
-    details: 'Track your creative and emotional rhythms throughout the week to optimize your creative output and emotional well-being.'
-  },
-  {
     type: 'Monthly',
     icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'Energy Month Report',
@@ -143,15 +134,35 @@ const reportGuides = [
     bestFor: 'Productivity',
     description: 'Best hours today for deep work or rest',
     details: 'Identify your optimal times for concentration, productivity, and rest based on your personal energy cycles.'
+  },
+  {
+    type: 'Flow',
+    icon: <Repeat className="h-5 w-5 text-primary inline-block mr-1" />,
+    title: 'Flow Report',
+    price: '$3',
+    bestFor: 'Emotional rhythm',
+    description: 'Creative/emotional openness over 7 days',
+    details: 'Track your creative and emotional rhythms throughout the week to optimize your creative output and emotional well-being.'
   }
 ];
 
 export default function TestsSection() {
   const [selectedTest, setSelectedTest] = useState(testData[0]);
   const [showReportGuide, setShowReportGuide] = useState(false);
+  const [targetReportType, setTargetReportType] = useState<string | null>(null);
   
   const getReportGuide = (testId: string) => {
     return reportGuides.find(guide => guide.type === testId) || reportGuides[0];
+  };
+
+  const handleExploreClick = (testName: string) => {
+    setTargetReportType(testName);
+    setShowReportGuide(true);
+  };
+
+  const handleCloseReportGuide = () => {
+    setShowReportGuide(false);
+    setTargetReportType(null);
   };
   
   return (
@@ -177,7 +188,7 @@ export default function TestsSection() {
                     path={test.slug}
                     isActive={selectedTest.id === test.id}
                     onHover={() => setSelectedTest(test)}
-                    onExplore={() => setShowReportGuide(true)}
+                    onExplore={() => handleExploreClick(test.name)}
                     icon={LucideIcons.Sparkles}
                   />
                 ))}
@@ -270,7 +281,7 @@ export default function TestsSection() {
                   path={test.slug}
                   isActive={selectedTest.id === test.id}
                   onHover={() => setSelectedTest(test)}
-                  onExplore={() => setShowReportGuide(true)}
+                  onExplore={() => handleExploreClick(test.name)}
                   icon={LucideIcons.Sparkles}
                 />
               ))}
@@ -358,7 +369,8 @@ export default function TestsSection() {
       
       <ReportGuideModal 
         isOpen={showReportGuide} 
-        onClose={() => setShowReportGuide(false)} 
+        onClose={handleCloseReportGuide}
+        targetReportType={targetReportType}
       />
     </div>
   );
