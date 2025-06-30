@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CreditCard, Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -261,14 +260,11 @@ const Step3Payment = ({
           size="lg"
           type="button"
         >
-          <CreditCard className="h-5 w-5 mr-2" />
           {isProcessing 
             ? 'Processing...' 
             : isValidatingPromo
             ? 'Validating...'
-            : pricing.isFree 
-            ? 'Get My Free Insights'
-            : `Get My Insights - $${pricing.finalPrice.toFixed(2)}`
+            : 'Get My Insights'
           }
         </Button>
         
