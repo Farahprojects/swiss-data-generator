@@ -142,20 +142,25 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
   };
 
   return (
-    <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="max-h-[85vh]">
-        <DrawerClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-10">
+    <Drawer open={isOpen} onOpenChange={onClose} dismissible={false}>
+      <DrawerContent className="h-[100dvh] max-h-[100dvh] flex flex-col rounded-none [&>div:first-child]:hidden">
+        {/* Close button - positioned absolutely in top-right */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
+          style={{ touchAction: 'manipulation' }}
+        >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
-        </DrawerClose>
+        </button>
 
-        <DrawerHeader className="pb-4">
+        <DrawerHeader className="flex-shrink-0 pt-12 pb-4">
           <DrawerTitle className="text-xl font-bold text-center">
             Report Guide – What Each Report Gives You
           </DrawerTitle>
         </DrawerHeader>
 
-        <div className="px-4 pb-6 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-4 pb-6" style={{ touchAction: 'pan-y' }}>
           <div className="space-y-4">
             {reorderedReportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
