@@ -7,6 +7,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { X } from 'lucide-react';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
@@ -144,10 +145,19 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   return (
     <Drawer open={isOpen} onOpenChange={handleClose} dismissible={false}>
-      <DrawerContent className="h-[90vh] flex flex-col">
+      <DrawerContent className="h-[90vh] flex flex-col [&>[data-vaul-drawer-handle]]:hidden">
+        {/* Close button - positioned absolutely in top-right */}
+        <button
+          onClick={handleClose}
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </button>
+
         {currentView === 'form' && (
           <>
-            <DrawerHeader className="flex-shrink-0">
+            <DrawerHeader className="flex-shrink-0 pt-12">
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
@@ -207,7 +217,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {currentView === 'success' && submittedData && (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pt-12">
             <SuccessScreen 
               name={submittedData.name} 
               email={submittedData.email}
@@ -217,7 +227,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {currentView === 'report-viewer' && reportData && submittedData && (
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden pt-12">
             <MobileReportViewer
               reportContent={reportData.content}
               reportPdfData={reportData.pdfData}
