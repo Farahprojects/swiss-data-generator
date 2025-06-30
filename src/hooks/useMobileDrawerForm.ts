@@ -64,15 +64,14 @@ export const useMobileDrawerForm = () => {
     },
   });
 
-  // Use the same promo validation hook as desktop
-  const promoCode = form.watch('promoCode') || '';
-  const { promoValidation, isValidatingPromo } = usePromoValidation(promoCode);
+  // Use the updated promo validation hook without arguments
+  const { promoValidation, isValidatingPromo } = usePromoValidation();
 
   // Convert to the state format expected by useReportSubmission
   const promoValidationState: PromoValidationState = {
     status: promoValidation?.isValid 
       ? (promoValidation.isFree ? 'valid-free' : 'valid-discount')
-      : (promoCode ? 'invalid' : 'none'),
+      : (promoValidation ? 'invalid' : 'none'),
     message: promoValidation?.message || '',
     discountPercent: promoValidation?.discountPercent || 0
   };

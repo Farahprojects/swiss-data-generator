@@ -149,8 +149,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 handleSubmit={handleSubmit}
                 onSubmit={onSubmit}
                 isProcessing={isProcessing}
-                promoValidation={promoValidation}
-                isValidatingPromo={isValidatingPromo}
               />
             )}
           </AnimatePresence>
