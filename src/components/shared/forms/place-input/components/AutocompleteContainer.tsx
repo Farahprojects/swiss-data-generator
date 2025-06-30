@@ -58,10 +58,32 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
     }
   }, [isError, onShowFallback]);
 
+  // Timeout fallback for loading state
+  useEffect(() => {
+    if (!isLoaded && !isError) {
+      console.log('[DEBUG] Setting up timeout for Google Maps loading...');
+      const timeout = setTimeout(() => {
+        console.warn('Google Maps load timeout after 6 seconds. Showing fallback.');
+        onShowFallback();
+      }, 6000); // 6 seconds timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isLoaded, isError, onShowFallback]);
+
   // Main setup effect
   useEffect(() => {
+    // Debug logging
+    console.log('[DEBUG] Setup effect triggered:', { 
+      isLoaded, 
+      google: !!window?.google, 
+      disabled,
+      windowExists: typeof window !== 'undefined'
+    });
+
     // Early returns for invalid states
-    if (!isLoaded || !window.google || disabled) {
+    if (!isLoaded || typeof window === 'undefined' || !window.google || disabled) {
+      console.warn('[SKIP INIT]', { isLoaded, google: !!window?.google, disabled });
       return;
     }
     
@@ -119,6 +141,8 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
         }
       });
       
+      console.log('✅ Google Place Autocomplete element successfully created');
+      
     } catch (error) {
       console.error('Error setting up place autocomplete:', error);
       onShowFallback();
@@ -147,7 +171,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
           overflow: 'hidden'
         }}
       >
-        {!isLoaded && (
+        {!isLoaded && !isError && (
           <div className="flex items-center gap-2 text-muted-foreground h-full">
             <Loader2 className="h-4 w-4 animate-spin" /> 
             Loading location services...
