@@ -87,13 +87,13 @@ const InlineDateTimeSelector = ({
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: 320, opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-lg mt-1"
           >
-            <div className="p-3">
-              <div className="mb-3">
+            <div className="p-4">
+              <div className="mb-4">
                 <h3 className="text-sm font-medium text-gray-900 text-center">
                   Select {type === 'date' ? 'Date' : 'Time'}
                 </h3>
@@ -111,7 +111,7 @@ const InlineDateTimeSelector = ({
                 />
               )}
               
-              <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
+              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
                 <Button
                   type="button"
                   variant="ghost"

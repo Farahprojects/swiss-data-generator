@@ -61,34 +61,37 @@ const InlineTimeWheel = ({ value, onChange }: InlineTimeWheelProps) => {
   }, []);
 
   return (
-    <div className="flex items-center justify-center space-x-2 py-2">
-      <div className="flex-1 min-w-0">
+    <div className="flex items-center justify-center gap-4 px-4 py-2">
+      <div className="flex-1 min-w-[60px]">
+        <div className="text-xs font-medium text-gray-600 text-center mb-2">Hour</div>
         <PickerWheel
           options={hours}
           value={selectedHour}
           onChange={handleHourChange}
-          height={120}
-          itemHeight={30}
+          height={200}
+          itemHeight={40}
         />
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-[80px]">
+        <div className="text-xs font-medium text-gray-600 text-center mb-2">Minute</div>
         <PickerWheel
           options={minutes.map(m => m.toString().padStart(2, '0'))}
           value={selectedMinute.toString().padStart(2, '0')}
           onChange={handleMinuteChange}
-          height={120}
-          itemHeight={30}
+          height={200}
+          itemHeight={40}
         />
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-[60px]">
+        <div className="text-xs font-medium text-gray-600 text-center mb-2">Period</div>
         <PickerWheel
           options={periods}
           value={selectedPeriod}
           onChange={handlePeriodChange}
-          height={120}
-          itemHeight={30}
+          height={200}
+          itemHeight={40}
         />
       </div>
     </div>

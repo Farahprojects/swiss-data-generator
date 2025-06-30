@@ -88,34 +88,37 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
   }, []);
 
   return (
-    <div className="flex items-center justify-center space-x-2 py-2">
-      <div className="flex-1 min-w-0">
+    <div className="flex items-center justify-center gap-4 px-4 py-2">
+      <div className="flex-1 min-w-[80px]">
+        <div className="text-xs font-medium text-gray-600 text-center mb-2">Month</div>
         <PickerWheel
           options={months}
           value={months[selectedMonth - 1]}
           onChange={handleMonthChange}
-          height={120}
-          itemHeight={30}
+          height={200}
+          itemHeight={40}
         />
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-[60px]">
+        <div className="text-xs font-medium text-gray-600 text-center mb-2">Day</div>
         <PickerWheel
           options={days}
           value={selectedDay}
           onChange={handleDayChange}
-          height={120}
-          itemHeight={30}
+          height={200}
+          itemHeight={40}
         />
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-[80px]">
+        <div className="text-xs font-medium text-gray-600 text-center mb-2">Year</div>
         <PickerWheel
           options={years}
           value={selectedYear}
           onChange={handleYearChange}
-          height={120}
-          itemHeight={30}
+          height={200}
+          itemHeight={40}
         />
       </div>
     </div>
