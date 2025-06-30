@@ -106,23 +106,21 @@ select {
   transition: none;
 }
 
-/* Google Maps autocomplete mobile fixes - Enhanced isolation */
-.mobile-autocomplete-container {
-  position: relative;
-  isolation: isolate;
-  contain: layout style;
-}
-
-/* New isolated mobile autocomplete for complete containment */
+/* Google Maps autocomplete fixes - Unified approach */
+.mobile-autocomplete-container,
 .mobile-autocomplete-isolated {
   position: relative;
   isolation: isolate;
-  contain: layout style size;
-  transform: translateZ(0); /* Force new stacking context */
-  will-change: auto;
+  contain: layout style;
+  overflow: visible !important; /* ✅ Allow popup visibility */
 }
 
-/* Ensure Google autocomplete popup doesn't interfere with drawer */
+/* Force Google's dropdown z-index higher */
+gmp-place-autocomplete::part(results-container) {
+  z-index: 9999 !important;
+}
+
+/* Ensure Google autocomplete popup doesn't interfere with layout */
 @media (max-width: 768px) {
   /* Enhanced Google Maps autocomplete popup styling */
   gmp-place-autocomplete {
@@ -134,28 +132,13 @@ select {
     z-index: 1 !important;
   }
   
-  /* Prevent Google popup from causing layout shifts - Enhanced */
-  .mobile-autocomplete-container::after,
-  .mobile-autocomplete-isolated::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    z-index: -1;
-    background: transparent;
-  }
-  
-  /* Stabilize autocomplete container with strict containment */
+  /* Stabilize autocomplete container */
   .mobile-autocomplete-container,
   .mobile-autocomplete-isolated {
     height: 48px !important;
     min-height: 48px !important;
-    max-height: 48px !important;
-    overflow: hidden !important;
     transform: translateZ(0);
+    overflow: visible !important; /* ✅ Critical for popup visibility */
   }
   
   /* Isolate Google Maps popup from drawer context */
@@ -168,12 +151,6 @@ select {
   .mobile-autocomplete-isolated {
     overscroll-behavior: contain;
     scroll-behavior: auto;
-  }
-  
-  /* Force Google autocomplete to respect container boundaries */
-  .mobile-autocomplete-isolated * {
-    max-width: 100% !important;
-    overflow: hidden !important;
   }
 }
 

@@ -55,7 +55,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
     }
   }, [isLoaded, isError, onShowFallback]);
 
-  // Unified setup effect - single implementation for all devices
+  // Unified setup effect
   useEffect(() => {
     console.log('[DEBUG] Setup effect triggered:', { 
       isLoaded, 
@@ -73,6 +73,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
     try {
       if (autocompleteRef.current) {
         autocompleteRef.current.value = value;
+        console.log('[DEBUG] Autocomplete element already exists, updating value');
         return;
       }
       
@@ -88,13 +89,13 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
         container.removeChild(container.firstChild);
       }
 
-      // Create unified autocomplete element
+      // Create autocomplete element
       const autocompleteElement = document.createElement('gmp-place-autocomplete') as HTMLGmpPlaceAutocompleteElement;
       autocompleteElement.id = `${id}-autocomplete`;
       autocompleteElement.setAttribute('placeholder', placeholder);
       autocompleteElement.value = value;
       
-      // Unified styling - responsive by default
+      // Unified responsive styling
       autocompleteElement.style.width = '100%';
       autocompleteElement.style.height = '40px';
       autocompleteElement.style.fontSize = '16px';
@@ -105,7 +106,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       container.appendChild(autocompleteElement);
       autocompleteRef.current = autocompleteElement;
       
-      // Unified event handling
+      // Event handling
       autocompleteElement.addEventListener('gmp-select', async (event: Event) => {
         setIsProcessingSelection(true);
         await handlePlaceSelect(event);
@@ -113,6 +114,11 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       });
       
       console.log('✅ Google Place Autocomplete element successfully created');
+      console.log('[DEBUG] Element dimensions:', {
+        width: autocompleteElement.offsetWidth,
+        height: autocompleteElement.offsetHeight,
+        visible: autocompleteElement.offsetParent !== null
+      });
       
     } catch (error) {
       console.error('Error setting up place autocomplete:', error);
@@ -132,10 +138,11 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       <div 
         ref={containerRef}
         id={`${id}-container`} 
-        className="relative h-12 min-h-12 max-h-12 border rounded-md bg-background px-3 py-2"
+        className="relative h-12 min-h-12 border rounded-md bg-background px-3 py-2"
         style={{
           fontSize: '16px',
-          overflow: 'hidden'
+          overflow: 'visible', // ✅ Allow Google popup to be visible
+          position: 'relative' // ✅ Positioning context for Google popup
         }}
       >
         {!isLoaded && !isError && (
