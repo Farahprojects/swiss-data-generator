@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Control, Controller, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -245,7 +244,7 @@ const ReportTypeSelector = ({
                   control={control}
                   name="essenceType"
                   render={({ field }) => (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
                       {detailedEssenceTypes.map((type) => {
                         const IconComponent = type.icon;
                         const isSelected = field.value === type.value;
