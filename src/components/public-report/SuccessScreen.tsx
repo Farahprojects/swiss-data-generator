@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { CheckCircle, Clock, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -99,10 +100,7 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   };
 
   return (
-    <div 
-      className="bg-gradient-to-b from-background to-muted/20 flex items-start justify-center pt-8 px-4"
-      style={{ minHeight: 'calc(var(--vh, 1vh) * 100 - 48px)' }}
-    >
+    <div className="flex-1 bg-gradient-to-b from-background to-muted/20 flex items-start justify-center pt-8 px-4 overflow-y-auto">
       <div className="w-full max-w-md">
         <Card className="border-2 border-primary/20 shadow-lg">
           <CardContent className="p-6 text-center space-y-6">

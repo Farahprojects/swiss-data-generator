@@ -86,10 +86,10 @@ const MobileReportViewer = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="h-full flex flex-col"
+      className="flex flex-col h-full"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b bg-white sticky top-0 z-10">
+      <div className="flex items-center gap-3 p-4 border-b bg-white sticky top-0 z-10 flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
@@ -126,70 +126,72 @@ const MobileReportViewer = ({
         </div>
       </div>
 
-      {/* Report Content */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="h-5 w-5 text-primary" />
-              Report Content
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ReportRenderer content={reportContent} />
-          </CardContent>
-        </Card>
+      {/* Report Content - Scrollable */}
+      <div className="flex-1 overflow-y-auto bg-gray-50" style={{ height: 'calc(100vh - 80px)' }}>
+        <div className="p-4">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5 text-primary" />
+                Report Content
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ReportRenderer content={reportContent} />
+            </CardContent>
+          </Card>
 
-        {/* Copy to Clipboard Section */}
-        <Card className="mt-4 border-0 shadow-sm">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                <Copy className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Copy Report Text</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Copy your report content to paste into notes, messages, or any app
-                </p>
-              </div>
-              <Button 
-                onClick={handleCopyToClipboard}
-                variant="outline"
-                className="w-full"
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                Copy Report to Clipboard
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Download Section */}
-        {reportPdfData && (
+          {/* Copy to Clipboard Section */}
           <Card className="mt-4 border-0 shadow-sm">
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Download className="h-6 w-6 text-primary" />
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                  <Copy className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Download PDF</h3>
+                  <h3 className="font-semibold text-gray-900">Copy Report Text</h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    Save your report as a PDF for offline reading
+                    Copy your report content to paste into notes, messages, or any app
                   </p>
                 </div>
                 <Button 
-                  onClick={handleDownloadPdf}
+                  onClick={handleCopyToClipboard}
+                  variant="outline"
                   className="w-full"
                 >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF Report
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Report to Clipboard
                 </Button>
               </div>
             </CardContent>
           </Card>
-        )}
+
+          {/* Download Section */}
+          {reportPdfData && (
+            <Card className="mt-4 border-0 shadow-sm">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <Download className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Download PDF</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Save your report as a PDF for offline reading
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleDownloadPdf}
+                    className="w-full"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF Report
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </motion.div>
   );

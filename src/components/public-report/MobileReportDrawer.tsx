@@ -205,8 +205,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           keyboardVisible ? 'keyboard-visible' : ''
         }`}
         style={{ 
-          height: 'auto',
-          maxHeight: 'none'
+          height: 'calc(100vh - env(keyboard-inset-height, 0px))',
+          maxHeight: 'calc(100vh - env(keyboard-inset-height, 0px))'
         }}
       >
         {/* Close button - positioned absolutely in top-right */}
@@ -224,13 +224,13 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         </button>
 
         {currentView === 'form' && (
-          <div className="w-full">
-            <DrawerHeader className="pt-12 pb-4 px-4">
+          <div className="flex flex-col h-full">
+            <DrawerHeader className="flex-shrink-0 pt-12 pb-4 px-4">
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
             
-            <div className="px-6 pb-6 w-full">
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (
                   <Step1ReportType
@@ -285,7 +285,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {currentView === 'success' && submittedData && (
-          <div className="pt-12 w-full">
+          <div className="flex flex-col h-full pt-12">
             <SuccessScreen 
               name={submittedData.name} 
               email={submittedData.email}
@@ -295,7 +295,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {currentView === 'report-viewer' && reportData && submittedData && (
-          <div className="pt-12 w-full">
+          <div className="flex flex-col h-full">
             <MobileReportViewer
               reportContent={reportData.content}
               reportPdfData={reportData.pdfData}
