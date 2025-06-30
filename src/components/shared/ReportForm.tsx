@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -116,6 +115,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             selectedReportType={selectedReportType}
             showReportGuide={false}
             setShowReportGuide={() => {}}
+            setValue={setValue}
           />
 
           {selectedReportType && (

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Control, Controller, FieldErrors } from 'react-hook-form';
+import { Control, Controller, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { User, Heart, Target, Calendar, Brain } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,7 @@ interface ReportTypeSelectorProps {
   selectedReportType: string;
   showReportGuide: boolean;
   setShowReportGuide: (show: boolean) => void;
+  setValue?: UseFormSetValue<ReportFormData>;
 }
 
 const reportCategories = [
@@ -72,7 +73,8 @@ const ReportTypeSelector = ({
   errors, 
   selectedReportType,
   showReportGuide,
-  setShowReportGuide 
+  setShowReportGuide,
+  setValue
 }: ReportTypeSelectorProps) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
@@ -117,11 +119,8 @@ const ReportTypeSelector = ({
                             field.onChange(category.value);
                             
                             // If not snapshot, set the report type directly
-                            if (category.value !== 'snapshot') {
-                              const reportTypeField = control._formValues.reportType;
-                              control._defaultValues.reportType = category.reportType;
-                              const setValue = control._subjects.values.next;
-                              setValue({ ...control._formValues, reportType: category.reportType });
+                            if (category.value !== 'snapshot' && setValue) {
+                              setValue('reportType', category.reportType);
                             }
                           }}
                           className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
@@ -170,8 +169,9 @@ const ReportTypeSelector = ({
                               field.onChange(subCategory.value);
                               
                               // Set the specific report type
-                              const setValue = control._subjects.values.next;
-                              setValue({ ...control._formValues, reportType: subCategory.reportType });
+                              if (setValue) {
+                                setValue('reportType', subCategory.reportType);
+                              }
                             }}
                             className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                               isSelected 
