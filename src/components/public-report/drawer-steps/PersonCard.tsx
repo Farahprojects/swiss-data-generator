@@ -1,213 +1,377 @@
-
-import React, { useState } from 'react';
-import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import React, { useState, useCallback } from 'react';
+import {
+  UseFormRegister,
+  UseFormSetValue,
+  UseFormWatch,
+  FieldErrors,
+} from 'react-hook-form';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin } from 'lucide-react';
-import { ReportFormData } from '@/types/public-report';
-import MobilePickerModal from '@/components/ui/mobile-pickers/MobilePickerModal';
-import MobileDatePicker from '@/components/ui/mobile-pickers/MobileDatePicker';
-import MobileTimePicker from '@/components/ui/mobile-pickers/MobileTimePicker';
+import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
+import {
+  MobilePickerModal,
+  MobileDatePicker,
+  MobileTimePicker,
+} from '@/components/ui/mobile-pickers';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { DrawerFormData } from '@/hooks/useMobileDrawerForm';
 
 interface PersonCardProps {
   personNumber: 1 | 2;
   title: string;
-  register: UseFormRegister<ReportFormData>;
-  setValue: UseFormSetValue<ReportFormData>;
-  watch: UseFormWatch<ReportFormData>;
-  errors: FieldErrors<ReportFormData>;
+  register: UseFormRegister<DrawerFormData>;
+  setValue: UseFormSetValue<DrawerFormData>;
+  watch: UseFormWatch<DrawerFormData>;
+  errors: FieldErrors<DrawerFormData>;
   hasTriedToSubmit: boolean;
 }
 
-const PersonCard = ({ 
-  personNumber, 
-  title, 
-  register, 
-  setValue, 
-  watch, 
-  errors, 
-  hasTriedToSubmit 
+/**
+ * Mobile picker buttons were previously using `truncate`, which added an
+ * ellipsis when the date string overflowed.  For short strings like
+ * "Jan 28, 2025" we *never* want that – show the whole year.  We now:
+ *   • Drop `truncate` & allow natural text sizing.
+ *   • Use `text-sm` so the full date fits comfortably on small phones.
+ *   • Keep flex‑layout so icon + label stay centred.
+ */
+const PersonCard = ({
+  personNumber,
+  title,
+  register,
+  setValue,
+  watch,
+  errors,
+  hasTriedToSubmit,
 }: PersonCardProps) => {
+  const [hasInteracted, setHasInteracted] = useState({
+    name: false,
+    email: false,
+    birthDate: false,
+    birthTime: false,
+    birthLocation: false,
+  });
+
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
 
+  const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
   const prefix = isSecondPerson ? 'secondPerson' : '';
 
-  // Field names based on person number
-  const nameField = isSecondPerson ? 'secondPersonName' : 'name' as keyof ReportFormData;
-  const emailField = isSecondPerson ? 'secondPersonEmail' : 'email' as keyof ReportFormData;
-  const birthDateField = isSecondPerson ? 'secondPersonBirthDate' : 'birthDate' as keyof ReportFormData;
-  const birthTimeField = isSecondPerson ? 'secondPersonBirthTime' : 'birthTime' as keyof ReportFormData;
-  const birthLocationField = isSecondPerson ? 'secondPersonBirthLocation' : 'birthLocation' as keyof ReportFormData;
+  /* -------------------------------------------------------------------- */
+  /* Helpers                                                              */
+  /* -------------------------------------------------------------------- */
 
-  // Watch values
-  const name = watch(nameField);
-  const email = !isSecondPerson ? watch('email') : '';
-  const birthDate = watch(birthDateField);
-  const birthTime = watch(birthTimeField);
-  const birthLocation = watch(birthLocationField);
+  const name = watch(isSecondPerson ? 'secondPersonName' : 'name') || '';
+  const email = watch('email') || '';
+  const birthDate =
+    watch(isSecondPerson ? 'secondPersonBirthDate' : 'birthDate') || '';
+  const birthTime =
+    watch(isSecondPerson ? 'secondPersonBirthTime' : 'birthTime') || '';
+  const birthLocation =
+    watch(isSecondPerson ? 'secondPersonBirthLocation' : 'birthLocation') || '';
 
-  const handleDateConfirm = () => {
-    setDatePickerOpen(false);
+  const handleFieldInteraction = (fieldName: string) =>
+    setHasInteracted((prev) => ({ ...prev, [fieldName]: true }));
+
+  // Updated error display logic - show errors if user tried to submit OR has interacted with field
+  const shouldShowError = (
+    fieldName: keyof typeof hasInteracted,
+    error: any,
+  ) => (hasTriedToSubmit || hasInteracted[fieldName]) && error;
+
+  const getFieldName = (field: string) =>
+    (isSecondPerson
+      ? `secondPerson${field.charAt(0).toUpperCase()}${field.slice(1)}`
+      : field) as keyof DrawerFormData;
+
+  const getError = (field: string) => {
+    const fieldName = getFieldName(field);
+    return errors[fieldName];
   };
 
-  const handleTimeConfirm = () => {
-    setTimePickerOpen(false);
-  };
-
-  const handlePlaceSelect = (placeData: any) => {
-    setValue(birthLocationField, placeData.name);
-    if (isSecondPerson) {
-      setValue('secondPersonLatitude', placeData.latitude);
-      setValue('secondPersonLongitude', placeData.longitude);
-      setValue('secondPersonPlaceId', placeData.placeId);
-    } else {
-      setValue('birthLatitude', placeData.latitude);
-      setValue('birthLongitude', placeData.longitude);
-      setValue('birthPlaceId', placeData.placeId);
-    }
-  };
-
-  const handlePlaceChange = (value: string) => {
-    setValue(birthLocationField, value);
-  };
-
-  const formatDisplayDate = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+  const formatDateForDisplay = (dateStr: string) => {
+    if (!dateStr) return 'Select date';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
   };
 
-  const formatDisplayTime = (timeString: string) => {
-    if (!timeString) return '';
-    const [hours, minutes] = timeString.split(':').map(Number);
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  const formatTimeForDisplay = (timeStr: string) => {
+    if (!timeStr) return 'Select time';
+    const [hours, minutes] = timeStr.split(':');
+    const hour24 = parseInt(hours, 10);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const period = hour24 >= 12 ? 'PM' : 'AM';
+    return `${hour12}:${minutes} ${period}`;
   };
+
+  const handleDateChange = (date: string) => {
+    setValue(getFieldName('birthDate'), date);
+    setHasInteracted((prev) => ({ ...prev, birthDate: true }));
+  };
+
+  const handleTimeChange = (time: string) => {
+    setValue(getFieldName('birthTime'), time);
+    setHasInteracted((prev) => ({ ...prev, birthTime: true }));
+  };
+
+  const handlePlaceSelect = (placeData: PlaceData) => {
+    const locationField = `${prefix}${prefix ? 'B' : 'b'}irthLocation` as keyof DrawerFormData;
+    const latField = `${prefix}${prefix ? 'L' : 'birthL'}atitude` as keyof DrawerFormData;
+    const lngField = `${prefix}${prefix ? 'L' : 'birthL'}ongitude` as keyof DrawerFormData;
+    const placeIdField = `${prefix}${prefix ? 'P' : 'birthP'}laceId` as keyof DrawerFormData;
+
+    setValue(locationField, placeData.name);
+    setHasInteracted((prev) => ({ ...prev, birthLocation: true }));
+
+    if (placeData.latitude && placeData.longitude) {
+      setValue(latField, placeData.latitude);
+      setValue(lngField, placeData.longitude);
+    }
+    if (placeData.placeId) {
+      setValue(placeIdField, placeData.placeId);
+    }
+  };
+
+  /* -------------------------------------------------------------------- */
+  /* Render helpers                                                       */
+  /* -------------------------------------------------------------------- */
+
+  // Enhanced PickerButton with error styling
+  const PickerButton: React.FC<{
+    label: string;
+    icon: typeof Calendar | typeof Clock;
+    onMouseDown: (e: React.MouseEvent) => void;
+    aria: string;
+    hasError?: boolean;
+  }> = ({ label, icon: Icon, onMouseDown, aria, hasError }) => (
+    <Button
+      type="button"
+      variant="outline"
+      aria-label={aria}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onMouseDown(e);
+      }}
+      className={`flex w-full items-center gap-2 px-3 h-12 ${
+        hasError ? 'border-red-500 ring-1 ring-red-500' : ''
+      }`}
+    >
+      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <span className="grow text-left font-normal text-sm whitespace-nowrap">
+        {label}
+      </span>
+      {hasError && <AlertCircle className="h-4 w-4 text-red-500" />}
+    </Button>
+  );
+
+  // Click handlers using mousedown for instant response
+  const handleDatePickerClick = useCallback((e: React.MouseEvent) => {
+    console.log('Date picker mousedown triggered');
+    
+    // Close time picker if open to prevent conflicts
+    if (timePickerOpen) {
+      setTimePickerOpen(false);
+    }
+    
+    // Toggle date picker state
+    setDatePickerOpen(prev => !prev);
+  }, [timePickerOpen]);
+
+  const handleTimePickerClick = useCallback((e: React.MouseEvent) => {
+    console.log('Time picker mousedown triggered');
+    
+    // Close date picker if open to prevent conflicts
+    if (datePickerOpen) {
+      setDatePickerOpen(false);
+    }
+    
+    // Toggle time picker state
+    setTimePickerOpen(prev => !prev);
+  }, [datePickerOpen]);
+
+  // Simple modal close handlers
+  const handleDatePickerClose = useCallback(() => {
+    console.log('Closing date picker');
+    setDatePickerOpen(false);
+  }, []);
+
+  const handleTimePickerClose = useCallback(() => {
+    console.log('Closing time picker');
+    setTimePickerOpen(false);
+  }, []);
+
+  // Enhanced error message component
+  const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
+    <div className="flex items-center gap-2 text-sm text-red-500 mt-1">
+      <AlertCircle className="h-4 w-4 shrink-0" />
+      <span>{message}</span>
+    </div>
+  );
+
+  /* -------------------------------------------------------------------- */
+  /* JSX                                                                  */
+  /* -------------------------------------------------------------------- */
 
   return (
     <>
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-lg">{title}</CardTitle>
+      <Card className="border-2 border-primary/20 w-full max-w-none">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            {title}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Name Field */}
+        <CardContent className="space-y-4 px-6">
+          {/* NAME ------------------------------------------------------- */}
           <div className="space-y-2">
-            <Label htmlFor={nameField as string}>Full Name</Label>
+            <Label htmlFor={`${prefix}name`}>Full Name *</Label>
             <Input
-              id={nameField as string}
-              {...register(nameField)}
+              id={`${prefix}name`}
+              {...register(getFieldName('name'))}
               placeholder="Enter full name"
-              className={errors[nameField] && hasTriedToSubmit ? 'border-red-500' : ''}
+              className={`h-12 ${shouldShowError('name', getError('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+              onFocus={() => handleFieldInteraction('name')}
+              onBlur={() => handleFieldInteraction('name')}
             />
-            {errors[nameField] && hasTriedToSubmit && (
-              <p className="text-sm text-red-500">{errors[nameField]?.message}</p>
+            {shouldShowError('name', getError('name')) && (
+              <ErrorMessage message={getError('name')?.message as string} />
             )}
           </div>
 
-          {/* Email Field - Only for first person */}
+          {/* EMAIL (only first person) ----------------------------------- */}
           {!isSecondPerson && (
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email Address *</Label>
               <Input
                 id="email"
                 type="email"
                 {...register('email')}
-                placeholder="Enter email address"
-                className={errors.email && hasTriedToSubmit ? 'border-red-500' : ''}
+                placeholder="your@email.com"
+                className={`h-12 ${shouldShowError('email', errors.email) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                onFocus={() => handleFieldInteraction('email')}
+                onBlur={() => handleFieldInteraction('email')}
               />
-              {errors.email && hasTriedToSubmit && (
-                <p className="text-sm text-red-500">{errors.email?.message}</p>
+              {shouldShowError('email', errors.email) && (
+                <ErrorMessage message={errors.email?.message as string} />
               )}
             </div>
           )}
 
-          {/* Birth Date Field */}
-          <div className="space-y-2">
-            <Label>Birth Date</Label>
-            <Button
-              type="button"
-              variant="outline"
-              className={`w-full justify-start text-left font-normal ${
-                !birthDate ? 'text-muted-foreground' : ''
-              } ${errors[birthDateField] && hasTriedToSubmit ? 'border-red-500' : ''}`}
-              onClick={() => setDatePickerOpen(true)}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              {birthDate ? formatDisplayDate(birthDate as string) : 'Select birth date'}
-            </Button>
-            {errors[birthDateField] && hasTriedToSubmit && (
-              <p className="text-sm text-red-500">{errors[birthDateField]?.message}</p>
-            )}
+          {/* DATE & TIME ------------------------------------------------- */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* DATE */}
+            <div className="space-y-2">
+              <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
+              {isMobile ? (
+                <PickerButton
+                  label={formatDateForDisplay(birthDate)}
+                  icon={Calendar}
+                  onMouseDown={handleDatePickerClick}
+                  aria="Open date picker"
+                  hasError={shouldShowError('birthDate', getError('birthDate'))}
+                />
+              ) : (
+                <Input
+                  id={`${prefix}birthDate`}
+                  type="date"
+                  {...register(getFieldName('birthDate'))}
+                  className={`h-12 ${shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                  onFocus={() => handleFieldInteraction('birthDate')}
+                  onBlur={() => handleFieldInteraction('birthDate')}
+                />
+              )}
+              {shouldShowError('birthDate', getError('birthDate')) && (
+                <ErrorMessage message={getError('birthDate')?.message as string} />
+              )}
+            </div>
+
+            {/* TIME */}
+            <div className="space-y-2">
+              <Label htmlFor={`${prefix}birthTime`}>Birth Time *</Label>
+              {isMobile ? (
+                <PickerButton
+                  label={formatTimeForDisplay(birthTime)}
+                  icon={Clock}
+                  onMouseDown={handleTimePickerClick}
+                  aria="Open time picker"
+                  hasError={shouldShowError('birthTime', getError('birthTime'))}
+                />
+              ) : (
+                <Input
+                  id={`${prefix}birthTime`}
+                  type="time"
+                  step="60"
+                  {...register(getFieldName('birthTime'))}
+                  className={`h-12 ${shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                  onFocus={() => handleFieldInteraction('birthTime')}
+                  onBlur={() => handleFieldInteraction('birthTime')}
+                />
+              )}
+              {shouldShowError('birthTime', getError('birthTime')) && (
+                <ErrorMessage message={getError('birthTime')?.message as string} />
+              )}
+            </div>
           </div>
 
-          {/* Birth Time Field */}
-          <div className="space-y-2">
-            <Label>Birth Time</Label>
-            <Button
-              type="button"
-              variant="outline"
-              className={`w-full justify-start text-left font-normal ${
-                !birthTime ? 'text-muted-foreground' : ''
-              } ${errors[birthTimeField] && hasTriedToSubmit ? 'border-red-500' : ''}`}
-              onClick={() => setTimePickerOpen(true)}
-            >
-              <Clock className="mr-2 h-4 w-4" />
-              {birthTime ? formatDisplayTime(birthTime as string) : 'Select birth time'}
-            </Button>
-            {errors[birthTimeField] && hasTriedToSubmit && (
-              <p className="text-sm text-red-500">{errors[birthTimeField]?.message}</p>
-            )}
-          </div>
-
-          {/* Birth Location Field */}
+          {/* LOCATION ---------------------------------------------------- */}
           <div className="space-y-2">
             <PlaceAutocomplete
-              label="Birth Location"
-              value={birthLocation as string || ''}
-              onChange={handlePlaceChange}
+              label="Birth Location *"
+              value={birthLocation}
+              onChange={(value) => {
+                const locationField = `${prefix}${prefix ? 'B' : 'b'}irthLocation` as keyof DrawerFormData;
+                setValue(locationField, value);
+                if (!hasInteracted.birthLocation && value) {
+                  handleFieldInteraction('birthLocation');
+                }
+              }}
               onPlaceSelect={handlePlaceSelect}
-              placeholder="Enter birth city"
-              className={errors[birthLocationField] && hasTriedToSubmit ? 'border-red-500' : ''}
-              error={errors[birthLocationField] && hasTriedToSubmit ? errors[birthLocationField]?.message as string : undefined}
+              placeholder="Enter birth city, state, country"
+              id={`${prefix}birthLocation`}
+              error={shouldShowError('birthLocation', getError('birthLocation'))
+                ? (getError('birthLocation')?.message as string)
+                : undefined}
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Date Picker Modal */}
+      {/* MOBILE PICKER MODALS ------------------------------------------ */}
       <MobilePickerModal
         isOpen={datePickerOpen}
-        onClose={() => setDatePickerOpen(false)}
-        onConfirm={handleDateConfirm}
+        onClose={handleDatePickerClose}
+        onConfirm={handleDatePickerClose}
         title="Select Birth Date"
       >
-        <MobileDatePicker
-          value={birthDate as string || ''}
-          onChange={(date) => setValue(birthDateField, date)}
+        <MobileDatePicker 
+          value={birthDate} 
+          onChange={handleDateChange} 
         />
       </MobilePickerModal>
 
-      {/* Time Picker Modal */}
       <MobilePickerModal
         isOpen={timePickerOpen}
-        onClose={() => setTimePickerOpen(false)}
-        onConfirm={handleTimeConfirm}
+        onClose={handleTimePickerClose}
+        onConfirm={handleTimePickerClose}
         title="Select Birth Time"
       >
-        <MobileTimePicker
-          value={birthTime as string || ''}
-          onChange={(time) => setValue(birthTimeField, time)}
+        <MobileTimePicker 
+          value={birthTime} 
+          onChange={handleTimeChange} 
         />
       </MobilePickerModal>
     </>
