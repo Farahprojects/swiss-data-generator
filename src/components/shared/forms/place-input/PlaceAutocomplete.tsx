@@ -44,6 +44,8 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     const [retryCount, setRetryCount] = useState(0);
     const [isProcessingSelection, setIsProcessingSelection] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [isInitializing, setIsInitializing] = useState(false);
+    const initTimeoutRef = useRef<NodeJS.Timeout>();
 
     // Detect mobile environment
     useEffect(() => {
@@ -64,6 +66,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     const handleRetry = () => {
       setRetryCount(prev => prev + 1);
       setShowFallback(false);
+      setIsInitializing(false);
       const container = document.getElementById(`${id}-container`);
       if (container) {
         while (container.firstChild) {
@@ -114,38 +117,110 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       }, 300); // Increased timeout for complete Google cleanup
     };
 
-    // Portal-based autocomplete for mobile
-    const createPortalAutocomplete = () => {
-      if (!containerRef.current || !window.google) return null;
-      
-      const autocompleteElement = document.createElement('gmp-place-autocomplete') as HTMLGmpPlaceAutocompleteElement;
-      autocompleteElement.id = `${id}-autocomplete`;
-      autocompleteElement.setAttribute('placeholder', placeholder);
-      autocompleteElement.value = localValue;
-      
-      // Mobile-specific styling for portal
-      autocompleteElement.style.width = containerRef.current.offsetWidth + 'px';
-      autocompleteElement.style.height = '40px';
-      autocompleteElement.style.fontSize = '16px';
-      autocompleteElement.style.border = 'none';
-      autocompleteElement.style.outline = 'none';
-      autocompleteElement.style.background = 'transparent';
-      autocompleteElement.style.position = 'absolute';
-      autocompleteElement.style.top = '0';
-      autocompleteElement.style.left = '0';
-      autocompleteElement.style.zIndex = '9999';
-      
-      return autocompleteElement;
+    // Wait for Google Maps custom elements to be ready
+    const waitForGoogleCustomElements = async (): Promise<boolean> => {
+      try {
+        if (!window.customElements || !window.google) {
+          return false;
+        }
+        
+        // Wait for the custom element to be defined
+        await customElements.whenDefined('gmp-place-autocomplete');
+        
+        // Additional check to ensure Google Maps is fully ready
+        return new Promise((resolve) => {
+          const checkReady = () => {
+            if (window.google?.maps?.places) {
+              resolve(true);
+            } else {
+              setTimeout(checkReady, 100);
+            }
+          };
+          checkReady();
+        });
+      } catch (error) {
+        console.error('Error waiting for Google custom elements:', error);
+        return false;
+      }
     };
 
-    useEffect(() => {
-      if (!isLoaded || showFallback || !window.google || disabled) {
+    // Create autocomplete element with proper error handling
+    const createAutocompleteElement = async (): Promise<HTMLGmpPlaceAutocompleteElement | null> => {
+      try {
+        const autocompleteElement = document.createElement('gmp-place-autocomplete') as HTMLGmpPlaceAutocompleteElement;
+        
+        // Set basic attributes
+        autocompleteElement.id = `${id}-autocomplete`;
+        autocompleteElement.setAttribute('placeholder', placeholder);
+        autocompleteElement.value = localValue;
+        
+        // Apply styling
+        if (isMobile) {
+          autocompleteElement.style.width = containerRef.current?.offsetWidth + 'px' || '100%';
+          autocompleteElement.style.height = '40px';
+          autocompleteElement.style.fontSize = '16px';
+          autocompleteElement.style.border = 'none';
+          autocompleteElement.style.outline = 'none';
+          autocompleteElement.style.background = 'transparent';
+          autocompleteElement.style.position = 'absolute';
+          autocompleteElement.style.top = '0';
+          autocompleteElement.style.left = '0';
+          autocompleteElement.style.zIndex = '9999';
+        } else {
+          autocompleteElement.style.width = '100%';
+          autocompleteElement.style.height = '40px';
+          autocompleteElement.style.fontSize = '16px';
+          autocompleteElement.style.border = 'none';
+          autocompleteElement.style.outline = 'none';
+          autocompleteElement.style.background = 'transparent';
+        }
+        
+        return autocompleteElement;
+      } catch (error) {
+        console.error('Error creating autocomplete element:', error);
+        return null;
+      }
+    };
+
+    // Enhanced initialization with proper error handling and timeouts
+    const initializeAutocomplete = async () => {
+      if (!isLoaded || showFallback || !window.google || disabled || isInitializing) {
         return;
       }
+
+      setIsInitializing(true);
       
+      // Clear any existing timeout
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
+
+      // Set a timeout to detect hanging initialization
+      initTimeoutRef.current = setTimeout(() => {
+        console.error('Google Maps initialization timeout - falling back to manual input');
+        setShowFallback(true);
+        setIsInitializing(false);
+      }, 10000); // 10 second timeout
+
       try {
+        // Wait for Google custom elements to be ready
+        const isReady = await waitForGoogleCustomElements();
+        
+        if (!isReady) {
+          console.error('Google Maps custom elements not ready - falling back');
+          setShowFallback(true);
+          setIsInitializing(false);
+          return;
+        }
+
+        // Clear timeout if we get this far
+        if (initTimeoutRef.current) {
+          clearTimeout(initTimeoutRef.current);
+        }
+
         if (autocompleteRef.current) {
           autocompleteRef.current.value = localValue;
+          setIsInitializing(false);
           return;
         }
         
@@ -153,22 +228,29 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
         if (!container) {
           console.error('Container not found, falling back to manual input');
           setShowFallback(true);
+          setIsInitializing(false);
           return;
         }
 
-        // Clear container
-        while (container.firstChild) {
-          container.removeChild(container.firstChild);
+        // Only clear container if we're actually reinitializing
+        if (!autocompleteRef.current) {
+          while (container.firstChild) {
+            container.removeChild(container.firstChild);
+          }
         }
 
-        let autocompleteElement: HTMLGmpPlaceAutocompleteElement;
+        // Create the autocomplete element
+        const autocompleteElement = await createAutocompleteElement();
+        
+        if (!autocompleteElement) {
+          console.error('Failed to create autocomplete element');
+          setShowFallback(true);
+          setIsInitializing(false);
+          return;
+        }
 
         if (isMobile) {
-          // Create portal-based autocomplete for mobile
-          autocompleteElement = createPortalAutocomplete();
-          if (!autocompleteElement) return;
-          
-          // Create a backdrop to contain the autocomplete
+          // Create a backdrop to contain the autocomplete for mobile
           const backdrop = document.createElement('div');
           backdrop.style.position = 'absolute';
           backdrop.style.top = '0';
@@ -181,24 +263,9 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           backdrop.style.zIndex = '1';
           
           container.appendChild(backdrop);
-          container.appendChild(autocompleteElement);
-        } else {
-          // Standard desktop implementation
-          autocompleteElement = document.createElement('gmp-place-autocomplete') as HTMLGmpPlaceAutocompleteElement;
-          autocompleteElement.id = `${id}-autocomplete`;
-          autocompleteElement.setAttribute('placeholder', placeholder);
-          autocompleteElement.value = localValue;
-          
-          autocompleteElement.style.width = '100%';
-          autocompleteElement.style.height = '40px';
-          autocompleteElement.style.fontSize = '16px';
-          autocompleteElement.style.border = 'none';
-          autocompleteElement.style.outline = 'none';
-          autocompleteElement.style.background = 'transparent';
-          
-          container.appendChild(autocompleteElement);
         }
         
+        container.appendChild(autocompleteElement);
         autocompleteRef.current = autocompleteElement;
         
         // Enhanced event handling with proper cleanup
@@ -257,10 +324,24 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           }
         });
         
+        setIsInitializing(false);
+        
       } catch (error) {
         console.error('Error setting up place autocomplete:', error);
         setShowFallback(true);
+        setIsInitializing(false);
       }
+    };
+
+    useEffect(() => {
+      initializeAutocomplete();
+      
+      // Cleanup timeout on unmount
+      return () => {
+        if (initTimeoutRef.current) {
+          clearTimeout(initTimeoutRef.current);
+        }
+      };
     }, [isLoaded, localValue, id, placeholder, onChange, onPlaceSelect, showFallback, disabled, retryCount, isMobile]);
 
     useEffect(() => {
@@ -337,10 +418,10 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
                 overflow: 'hidden'
               }}
             >
-              {!isLoaded && (
+              {(!isLoaded || isInitializing) && (
                 <div className="flex items-center gap-2 text-muted-foreground h-full">
                   <Loader2 className="h-4 w-4 animate-spin" /> 
-                  Loading location services...
+                  {isInitializing ? 'Initializing autocomplete...' : 'Loading location services...'}
                 </div>
               )}
             </div>
