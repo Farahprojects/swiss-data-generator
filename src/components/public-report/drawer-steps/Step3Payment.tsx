@@ -8,12 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DrawerFormData } from '@/hooks/useMobileDrawerForm';
-
-interface PromoValidationState {
-  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
-  message: string;
-  discountPercent: number;
-}
+import { usePromoValidation } from '@/hooks/usePromoValidation';
 
 interface Step3PaymentProps {
   register: UseFormRegister<DrawerFormData>;
@@ -23,8 +18,6 @@ interface Step3PaymentProps {
   handleSubmit: UseFormHandleSubmit<DrawerFormData>;
   onSubmit: (data: DrawerFormData) => void;
   isProcessing: boolean;
-  promoValidation: PromoValidationState;
-  isValidatingPromo: boolean;
 }
 
 const Step3Payment = ({ 
@@ -34,11 +27,10 @@ const Step3Payment = ({
   onPrev, 
   handleSubmit,
   onSubmit,
-  isProcessing,
-  promoValidation,
-  isValidatingPromo 
+  isProcessing
 }: Step3PaymentProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
+  const { promoValidation, isValidatingPromo, validatePromoManually } = usePromoValidation();
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -73,14 +65,13 @@ const Step3Payment = ({
   };
 
   const getBasePrice = () => {
-    // Base pricing logic - this should ideally come from a pricing service
     return 10.00;
   };
 
   const calculatePricing = () => {
     const basePrice = getBasePrice();
     
-    if (!promoCode || promoValidation.status !== 'valid-free' && promoValidation.status !== 'valid-discount') {
+    if (!promoValidation || !promoValidation.isValid) {
       return {
         basePrice,
         discount: 0,
@@ -110,10 +101,10 @@ const Step3Payment = ({
     if (isValidatingPromo) {
       return <Loader2 className="h-4 w-4 animate-spin text-gray-400" />;
     }
-    if (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount') {
+    if (promoValidation?.isValid) {
       return <CheckCircle className="h-4 w-4 text-green-500" />;
     }
-    if (promoCode && promoValidation.status === 'invalid') {
+    if (promoCode && promoValidation && !promoValidation.isValid) {
       return <AlertCircle className="h-4 w-4 text-red-500" />;
     }
     return null;
@@ -123,27 +114,27 @@ const Step3Payment = ({
     if (isValidatingPromo) {
       return 'Validating promo code...';
     }
-    return promoValidation.message || '';
+    return promoValidation?.message || '';
   };
 
-  const canProceed = !isValidatingPromo;
-
-  // Use the exact same pattern as desktop
-  const handleButtonClick = (e: React.MouseEvent) => {
-    console.log('🖱️ Mobile button clicked!', e);
+  const handleButtonClick = async (e: React.MouseEvent) => {
+    console.log('🖱️ Get my Insights button clicked!', e);
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('💰 Payment button clicked');
-    console.log('🎫 Current promo validation:', promoValidation);
-    console.log('⏳ Is validating:', isValidatingPromo);
-    console.log('✅ Can proceed:', canProceed);
+    console.log('💰 Starting validation and payment flow');
     
-    if (!canProceed) {
-      console.log('❌ Cannot proceed - validation in progress');
-      return;
+    // First validate promo code if present
+    if (promoCode && promoCode.trim() !== '') {
+      console.log('🎫 Validating promo code:', promoCode);
+      const validation = await validatePromoManually(promoCode);
+      console.log('✅ Promo validation result:', validation);
+      
+      // Give user time to see the validation result
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
+    // Then proceed with form submission
     handleSubmit(
       (data) => {
         console.log('✅ Mobile form validation passed, submitting:', data);
@@ -239,12 +230,12 @@ const Step3Payment = ({
               )}
             </div>
             
-            {/* Promo validation feedback */}
-            {(promoCode || isValidatingPromo) && (
+            {/* Promo validation feedback - only show after validation */}
+            {promoValidation && (
               <div className={`text-sm p-3 rounded-lg ${
                 isValidatingPromo 
                   ? 'bg-gray-50 text-gray-600'
-                  : promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount'
+                  : promoValidation.isValid
                   ? 'bg-green-50 text-green-700 border border-green-200'
                   : 'bg-red-50 text-red-700 border border-red-200'
               }`}>
@@ -264,7 +255,7 @@ const Step3Payment = ({
       >
         <Button
           onClick={handleButtonClick}
-          disabled={isProcessing || !canProceed}
+          disabled={isProcessing || isValidatingPromo}
           variant="outline"
           className="w-full h-14 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent disabled:opacity-50"
           size="lg"
@@ -273,9 +264,11 @@ const Step3Payment = ({
           <CreditCard className="h-5 w-5 mr-2" />
           {isProcessing 
             ? 'Processing...' 
+            : isValidatingPromo
+            ? 'Validating...'
             : pricing.isFree 
-            ? 'Get My Free Report'
-            : `Get My Report - $${pricing.finalPrice.toFixed(2)}`
+            ? 'Get My Free Insights'
+            : `Get My Insights - $${pricing.finalPrice.toFixed(2)}`
           }
         </Button>
         
