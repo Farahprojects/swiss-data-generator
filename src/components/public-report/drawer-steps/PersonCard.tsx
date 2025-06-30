@@ -17,11 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
-import {
-  MobilePickerModal,
-  MobileDatePicker,
-  MobileTimePicker,
-} from '@/components/ui/mobile-pickers';
+import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportFormData } from '@/types/public-report';
 
@@ -35,14 +31,6 @@ interface PersonCardProps {
   hasTriedToSubmit: boolean;
 }
 
-/**
- * Mobile picker buttons were previously using `truncate`, which added an
- * ellipsis when the date string overflowed.  For short strings like
- * "Jan 28, 2025" we *never* want that – show the whole year.  We now:
- *   • Drop `truncate` & allow natural text sizing.
- *   • Use `text-sm` so the full date fits comfortably on small phones.
- *   • Keep flex‑layout so icon + label stay centred.
- */
 const PersonCard = ({
   personNumber,
   title,
@@ -60,10 +48,7 @@ const PersonCard = ({
     birthLocation: false,
   });
 
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [timePickerOpen, setTimePickerOpen] = useState(false);
-  
-  // Store original values when pickers open
+  const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
   const [originalValues, setOriginalValues] = useState({
     birthDate: '',
     birthTime: ''
@@ -89,7 +74,6 @@ const PersonCard = ({
   const handleFieldInteraction = (fieldName: string) =>
     setHasInteracted((prev) => ({ ...prev, [fieldName]: true }));
 
-  // Updated error display logic - show errors if user tried to submit OR has interacted with field
   const shouldShowError = (
     fieldName: keyof typeof hasInteracted,
     error: any,
@@ -107,33 +91,12 @@ const PersonCard = ({
     return errors[fieldName];
   };
 
-  const formatDateForDisplay = (dateStr: string) => {
-    if (!dateStr) return 'Select date';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const formatTimeForDisplay = (timeStr: string) => {
-    if (!timeStr) return 'Select time';
-    const [hours, minutes] = timeStr.split(':');
-    const hour24 = parseInt(hours, 10);
-    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
-    const period = hour24 >= 12 ? 'PM' : 'AM';
-    return `${hour12}:${minutes} ${period}`;
-  };
-
   const handleDateChange = (date: string) => {
     setValue(getFieldName('birthDate'), date);
-    setHasInteracted((prev) => ({ ...prev, birthDate: true }));
   };
 
   const handleTimeChange = (time: string) => {
     setValue(getFieldName('birthTime'), time);
-    setHasInteracted((prev) => ({ ...prev, birthTime: true }));
   };
 
   const handlePlaceSelect = (placeData: PlaceData) => {
@@ -154,108 +117,37 @@ const PersonCard = ({
     }
   };
 
-  /* -------------------------------------------------------------------- */
-  /* Render helpers                                                       */
-  /* -------------------------------------------------------------------- */
+  // Date selector handlers
+  const handleDateSelectorOpen = useCallback(() => {
+    setOriginalValues(prev => ({ ...prev, birthDate: birthDate }));
+    setActiveSelector('date');
+  }, [birthDate]);
 
-  // Enhanced PickerButton with error styling
-  const PickerButton: React.FC<{
-    label: string;
-    icon: typeof Calendar | typeof Clock;
-    onMouseDown: (e: React.MouseEvent) => void;
-    aria: string;
-    hasError?: boolean;
-  }> = ({ label, icon: Icon, onMouseDown, aria, hasError }) => (
-    <Button
-      type="button"
-      variant="outline"
-      aria-label={aria}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onMouseDown(e);
-      }}
-      className={`flex w-full items-center gap-2 px-3 h-12 ${
-        hasError ? 'border-red-500 ring-1 ring-red-500' : ''
-      }`}
-      style={{ 
-        touchAction: 'manipulation',
-        WebkitTapHighlightColor: 'transparent'
-      }}
-    >
-      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <span className="grow text-left font-normal text-sm whitespace-nowrap">
-        {label}
-      </span>
-      {hasError && <AlertCircle className="h-4 w-4 text-red-500" />}
-    </Button>
-  );
-
-  // Date picker handlers with original value tracking
-  const handleDatePickerClick = useCallback((e: React.MouseEvent) => {
-    console.log('Date picker mousedown triggered');
-    
-    // Store original value before opening
-    setOriginalValues(prev => ({
-      ...prev,
-      birthDate: birthDate
-    }));
-    
-    if (timePickerOpen) {
-      setTimePickerOpen(false);
-    }
-    
-    setDatePickerOpen(true);
-  }, [timePickerOpen, birthDate]);
-
-  const handleDatePickerClose = useCallback(() => {
-    console.log('Closing date picker (cancel)');
-    // Revert to original value
-    if (originalValues.birthDate !== birthDate) {
-      setValue(getFieldName('birthDate'), originalValues.birthDate);
-    }
-    setDatePickerOpen(false);
-  }, [originalValues.birthDate, birthDate, setValue, getFieldName]);
-
-  const handleDatePickerConfirm = useCallback(() => {
-    console.log('Confirming date picker (done)');
-    // Keep current value and mark as interacted
+  const handleDateConfirm = useCallback(() => {
     setHasInteracted((prev) => ({ ...prev, birthDate: true }));
-    setDatePickerOpen(false);
+    setActiveSelector(null);
   }, []);
 
-  // Time picker handlers with original value tracking
-  const handleTimePickerClick = useCallback((e: React.MouseEvent) => {
-    console.log('Time picker mousedown triggered');
-    
-    // Store original value before opening
-    setOriginalValues(prev => ({
-      ...prev,
-      birthTime: birthTime
-    }));
-    
-    if (datePickerOpen) {
-      setDatePickerOpen(false);
-    }
-    
-    setTimePickerOpen(true);
-  }, [datePickerOpen, birthTime]);
+  const handleDateCancel = useCallback(() => {
+    setValue(getFieldName('birthDate'), originalValues.birthDate);
+    setActiveSelector(null);
+  }, [originalValues.birthDate, setValue, getFieldName]);
 
-  const handleTimePickerClose = useCallback(() => {
-    console.log('Closing time picker (cancel)');
-    // Revert to original value
-    if (originalValues.birthTime !== birthTime) {
-      setValue(getFieldName('birthTime'), originalValues.birthTime);
-    }
-    setTimePickerOpen(false);
-  }, [originalValues.birthTime, birthTime, setValue, getFieldName]);
+  // Time selector handlers
+  const handleTimeSelectorOpen = useCallback(() => {
+    setOriginalValues(prev => ({ ...prev, birthTime: birthTime }));
+    setActiveSelector('time');
+  }, [birthTime]);
 
-  const handleTimePickerConfirm = useCallback(() => {
-    console.log('Confirming time picker (done)');
-    // Keep current value and mark as interacted
+  const handleTimeConfirm = useCallback(() => {
     setHasInteracted((prev) => ({ ...prev, birthTime: true }));
-    setTimePickerOpen(false);
+    setActiveSelector(null);
   }, []);
+
+  const handleTimeCancel = useCallback(() => {
+    setValue(getFieldName('birthTime'), originalValues.birthTime);
+    setActiveSelector(null);
+  }, [originalValues.birthTime, setValue, getFieldName]);
 
   // Enhanced error message component
   const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
@@ -270,153 +162,136 @@ const PersonCard = ({
   /* -------------------------------------------------------------------- */
 
   return (
-    <>
-      <Card className="border-2 border-primary/20 w-full max-w-none">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-semibold text-gray-900">
-            {title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 px-6">
-          {/* NAME ------------------------------------------------------- */}
+    <Card className="border-2 border-primary/20 w-full max-w-none">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-semibold text-gray-900">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 px-6">
+        {/* NAME ------------------------------------------------------- */}
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}name`}>Full Name *</Label>
+          <Input
+            id={`${prefix}name`}
+            {...register(getFieldName('name') as any)}
+            placeholder="Enter full name"
+            className={`h-12 ${shouldShowError('name', getError('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+            onFocus={() => handleFieldInteraction('name')}
+            onBlur={() => handleFieldInteraction('name')}
+          />
+          {shouldShowError('name', getError('name')) && (
+            <ErrorMessage message={getError('name')?.message as string} />
+          )}
+        </div>
+
+        {/* EMAIL (only first person) ----------------------------------- */}
+        {!isSecondPerson && (
           <div className="space-y-2">
-            <Label htmlFor={`${prefix}name`}>Full Name *</Label>
+            <Label htmlFor="email">Email Address *</Label>
             <Input
-              id={`${prefix}name`}
-              {...register(getFieldName('name') as any)}
-              placeholder="Enter full name"
-              className={`h-12 ${shouldShowError('name', getError('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-              onFocus={() => handleFieldInteraction('name')}
-              onBlur={() => handleFieldInteraction('name')}
+              id="email"
+              type="email"
+              {...register('email' as any)}
+              placeholder="your@email.com"
+              className={`h-12 ${shouldShowError('email', errors.email) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+              onFocus={() => handleFieldInteraction('email')}
+              onBlur={() => handleFieldInteraction('email')}
             />
-            {shouldShowError('name', getError('name')) && (
-              <ErrorMessage message={getError('name')?.message as string} />
+            {shouldShowError('email', errors.email) && (
+              <ErrorMessage message={errors.email?.message as string} />
+            )}
+          </div>
+        )}
+
+        {/* DATE & TIME ------------------------------------------------- */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* DATE */}
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
+            {isMobile ? (
+              <div onClick={handleDateSelectorOpen}>
+                <InlineDateTimeSelector
+                  type="date"
+                  value={birthDate}
+                  onChange={handleDateChange}
+                  onConfirm={handleDateConfirm}
+                  onCancel={handleDateCancel}
+                  isOpen={activeSelector === 'date'}
+                  placeholder="Select date"
+                  hasError={shouldShowError('birthDate', getError('birthDate'))}
+                />
+              </div>
+            ) : (
+              <Input
+                id={`${prefix}birthDate`}
+                type="date"
+                {...register(getFieldName('birthDate') as any)}
+                className={`h-12 ${shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                onFocus={() => handleFieldInteraction('birthDate')}
+                onBlur={() => handleFieldInteraction('birthDate')}
+              />
+            )}
+            {shouldShowError('birthDate', getError('birthDate')) && (
+              <ErrorMessage message={getError('birthDate')?.message as string} />
             )}
           </div>
 
-          {/* EMAIL (only first person) ----------------------------------- */}
-          {!isSecondPerson && (
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...register('email' as any)}
-                placeholder="your@email.com"
-                className={`h-12 ${shouldShowError('email', errors.email) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                onFocus={() => handleFieldInteraction('email')}
-                onBlur={() => handleFieldInteraction('email')}
-              />
-              {shouldShowError('email', errors.email) && (
-                <ErrorMessage message={errors.email?.message as string} />
-              )}
-            </div>
-          )}
-
-          {/* DATE & TIME ------------------------------------------------- */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* DATE */}
-            <div className="space-y-2">
-              <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
-              {isMobile ? (
-                <PickerButton
-                  label={formatDateForDisplay(birthDate)}
-                  icon={Calendar}
-                  onMouseDown={handleDatePickerClick}
-                  aria="Open date picker"
-                  hasError={shouldShowError('birthDate', getError('birthDate'))}
-                />
-              ) : (
-                <Input
-                  id={`${prefix}birthDate`}
-                  type="date"
-                  {...register(getFieldName('birthDate') as any)}
-                  className={`h-12 ${shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                  onFocus={() => handleFieldInteraction('birthDate')}
-                  onBlur={() => handleFieldInteraction('birthDate')}
-                />
-              )}
-              {shouldShowError('birthDate', getError('birthDate')) && (
-                <ErrorMessage message={getError('birthDate')?.message as string} />
-              )}
-            </div>
-
-            {/* TIME */}
-            <div className="space-y-2">
-              <Label htmlFor={`${prefix}birthTime`}>Birth Time *</Label>
-              {isMobile ? (
-                <PickerButton
-                  label={formatTimeForDisplay(birthTime)}
-                  icon={Clock}
-                  onMouseDown={handleTimePickerClick}
-                  aria="Open time picker"
+          {/* TIME */}
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}birthTime`}>Birth Time *</Label>
+            {isMobile ? (
+              <div onClick={handleTimeSelectorOpen}>
+                <InlineDateTimeSelector
+                  type="time"
+                  value={birthTime}
+                  onChange={handleTimeChange}
+                  onConfirm={handleTimeConfirm}
+                  onCancel={handleTimeCancel}
+                  isOpen={activeSelector === 'time'}
+                  placeholder="Select time"
                   hasError={shouldShowError('birthTime', getError('birthTime'))}
                 />
-              ) : (
-                <Input
-                  id={`${prefix}birthTime`}
-                  type="time"
-                  step="60"
-                  {...register(getFieldName('birthTime') as any)}
-                  className={`h-12 ${shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                  onFocus={() => handleFieldInteraction('birthTime')}
-                  onBlur={() => handleFieldInteraction('birthTime')}
-                />
-              )}
-              {shouldShowError('birthTime', getError('birthTime')) && (
-                <ErrorMessage message={getError('birthTime')?.message as string} />
-              )}
-            </div>
+              </div>
+            ) : (
+              <Input
+                id={`${prefix}birthTime`}
+                type="time"
+                step="60"
+                {...register(getFieldName('birthTime') as any)}
+                className={`h-12 ${shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                onFocus={() => handleFieldInteraction('birthTime')}
+                onBlur={() => handleFieldInteraction('birthTime')}
+              />
+            )}
+            {shouldShowError('birthTime', getError('birthTime')) && (
+              <ErrorMessage message={getError('birthTime')?.message as string} />
+            )}
           </div>
+        </div>
 
-          {/* LOCATION ---------------------------------------------------- */}
-          <div className="space-y-2">
-            <PlaceAutocomplete
-              label="Birth Location *"
-              value={birthLocation}
-              onChange={(value) => {
-                const locationField = getFieldName('birthLocation');
-                setValue(locationField, value);
-                if (!hasInteracted.birthLocation && value) {
-                  handleFieldInteraction('birthLocation');
-                }
-              }}
-              onPlaceSelect={handlePlaceSelect}
-              placeholder="Enter birth city, state, country"
-              id={`${prefix}birthLocation`}
-              error={shouldShowError('birthLocation', getError('birthLocation'))
-                ? (getError('birthLocation')?.message as string)
-                : undefined}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* MOBILE PICKER MODALS with separate confirm/cancel handlers */}
-      <MobilePickerModal
-        isOpen={datePickerOpen}
-        onClose={handleDatePickerClose}
-        onConfirm={handleDatePickerConfirm}
-        title="Select Birth Date"
-      >
-        <MobileDatePicker 
-          value={birthDate} 
-          onChange={handleDateChange} 
-        />
-      </MobilePickerModal>
-
-      <MobilePickerModal
-        isOpen={timePickerOpen}
-        onClose={handleTimePickerClose}
-        onConfirm={handleTimePickerConfirm}
-        title="Select Birth Time"
-      >
-        <MobileTimePicker 
-          value={birthTime} 
-          onChange={handleTimeChange} 
-        />
-      </MobilePickerModal>
-    </>
+        {/* LOCATION ---------------------------------------------------- */}
+        <div className="space-y-2">
+          <PlaceAutocomplete
+            label="Birth Location *"
+            value={birthLocation}
+            onChange={(value) => {
+              const locationField = getFieldName('birthLocation');
+              setValue(locationField, value);
+              if (!hasInteracted.birthLocation && value) {
+                handleFieldInteraction('birthLocation');
+              }
+            }}
+            onPlaceSelect={handlePlaceSelect}
+            placeholder="Enter birth city, state, country"
+            id={`${prefix}birthLocation`}
+            error={shouldShowError('birthLocation', getError('birthLocation'))
+              ? (getError('birthLocation')?.message as string)
+              : undefined}
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
