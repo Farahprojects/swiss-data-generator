@@ -199,8 +199,6 @@ function PickerWheel<T extends string | number = string>({
       const logicalIndex = currentIndex % options.length;
       const distanceFromCenter = currentIndex - (centerRepetitionStart + logicalIndex);
 
-      }
-
       const projected = rawY.get() + info.velocity.y * 0.2;
       snapTo(projected, info.velocity.y);
     } else {
