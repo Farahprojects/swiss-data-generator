@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Control, Controller, FieldErrors } from 'react-hook-form';
+import { motion } from 'framer-motion';
+import { User, Heart, Target, Calendar, Brain } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { reportTypes, relationshipTypes, essenceTypes } from '@/constants/report-types';
+import { relationshipTypes, essenceTypes } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
 import ReportGuideModal from './ReportGuideModal';
@@ -18,6 +19,54 @@ interface ReportTypeSelectorProps {
   setShowReportGuide: (show: boolean) => void;
 }
 
+const reportCategories = [
+  {
+    value: 'the-self',
+    title: 'The Self',
+    description: 'Unlock your authentic self and discover your hidden potential',
+    icon: User,
+    reportType: 'essence',
+  },
+  {
+    value: 'compatibility',
+    title: 'Compatibility',
+    description: 'Discover relationship dynamics and unlock deeper connections',
+    icon: Heart,
+    reportType: 'sync',
+  },
+  {
+    value: 'snapshot',
+    title: 'Snapshot',
+    description: 'Perfect timing insights for your current life chapter',
+    icon: Target,
+    reportType: 'focus',
+  },
+];
+
+const snapshotSubCategories = [
+  {
+    value: 'focus',
+    title: 'Focus',
+    description: 'Optimal timing insights for peak productivity and clarity',
+    icon: Target,
+    reportType: 'focus',
+  },
+  {
+    value: 'monthly',
+    title: 'Monthly Energy',
+    description: 'Your personal energy forecast and monthly momentum guide',
+    icon: Calendar,
+    reportType: 'monthly',
+  },
+  {
+    value: 'mindset',
+    title: 'Mindset',
+    description: 'Mental clarity insights and unlock your cognitive patterns',
+    icon: Brain,
+    reportType: 'mindset',
+  },
+];
+
 const ReportTypeSelector = ({ 
   control, 
   errors, 
@@ -25,9 +74,13 @@ const ReportTypeSelector = ({
   showReportGuide,
   setShowReportGuide 
 }: ReportTypeSelectorProps) => {
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+
   const requiresEssenceType = selectedReportType === 'essence';
   const requiresReturnYear = selectedReportType === 'return';
   const requiresRelationshipType = selectedReportType === 'sync' || selectedReportType === 'compatibility';
+  const showSnapshotSubCategories = selectedCategory === 'snapshot';
 
   const getCurrentYear = () => new Date().getFullYear();
 
@@ -43,32 +96,109 @@ const ReportTypeSelector = ({
             Not sure which report to choose? Click here.
           </button>
           
-          <div className="space-y-4 max-w-2xl mx-auto">
-            <div className="space-y-2">
-              <Label htmlFor="reportType">Report Type *</Label>
+          <div className="space-y-6 max-w-2xl mx-auto">
+            {/* Main Category Selection */}
+            <div className="space-y-4">
               <Controller
                 control={control}
-                name="reportType"
+                name="reportCategory"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Select a report type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {reportTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-4">
+                    {reportCategories.map((category) => {
+                      const IconComponent = category.icon;
+                      const isSelected = selectedCategory === category.value;
+                      
+                      return (
+                        <motion.button
+                          key={category.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategory(category.value);
+                            field.onChange(category.value);
+                            
+                            // If not snapshot, set the report type directly
+                            if (category.value !== 'snapshot') {
+                              const reportTypeField = control._formValues.reportType;
+                              control._defaultValues.reportType = category.reportType;
+                              const setValue = control._subjects.values.next;
+                              setValue({ ...control._formValues, reportType: category.reportType });
+                            }
+                          }}
+                          className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
+                            isSelected 
+                              ? 'border-primary shadow-lg' 
+                              : 'border-neutral-200 hover:border-neutral-300'
+                          }`}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div className="flex gap-4 items-center">
+                            <div className="bg-white shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
+                              <IconComponent className="h-6 w-6 text-gray-700" />
+                            </div>
+                            <div className="flex-1 text-left">
+                              <h3 className="text-lg font-semibold text-gray-900">{category.title}</h3>
+                              <p className="text-sm text-muted-foreground">{category.description}</p>
+                            </div>
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
                 )}
               />
-              {errors.reportType && (
-                <p className="text-sm text-destructive">{errors.reportType.message}</p>
-              )}
             </div>
 
+            {/* Snapshot Subcategory Selection */}
+            {showSnapshotSubCategories && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold text-primary text-center">Choose your snapshot type</h3>
+                <Controller
+                  control={control}
+                  name="reportSubCategory"
+                  render={({ field }) => (
+                    <div className="space-y-4">
+                      {snapshotSubCategories.map((subCategory) => {
+                        const IconComponent = subCategory.icon;
+                        const isSelected = selectedSubCategory === subCategory.value;
+                        
+                        return (
+                          <motion.button
+                            key={subCategory.value}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSubCategory(subCategory.value);
+                              field.onChange(subCategory.value);
+                              
+                              // Set the specific report type
+                              const setValue = control._subjects.values.next;
+                              setValue({ ...control._formValues, reportType: subCategory.reportType });
+                            }}
+                            className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
+                              isSelected 
+                                ? 'border-primary shadow-lg' 
+                                : 'border-neutral-200 hover:border-neutral-300'
+                            }`}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="flex gap-4 items-center">
+                              <div className="bg-white shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
+                                <IconComponent className="h-6 w-6 text-gray-700" />
+                              </div>
+                              <div className="flex-1 text-left">
+                                <h3 className="text-lg font-semibold text-gray-900">{subCategory.title}</h3>
+                                <p className="text-sm text-muted-foreground">{subCategory.description}</p>
+                              </div>
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Essence Type Selection */}
             {requiresEssenceType && (
               <div className="space-y-2">
                 <div className="text-xl font-bold text-primary text-center">Choose your report style *</div>
@@ -100,6 +230,7 @@ const ReportTypeSelector = ({
               </div>
             )}
 
+            {/* Return Year */}
             {requiresReturnYear && (
               <div className="space-y-2">
                 <Label htmlFor="returnYear">Return Year *</Label>
@@ -120,6 +251,7 @@ const ReportTypeSelector = ({
               </div>
             )}
 
+            {/* Relationship Type Selection */}
             {requiresRelationshipType && (
               <div className="space-y-2">
                 <div className="text-xl font-bold text-primary text-center">Choose your report style *</div>
