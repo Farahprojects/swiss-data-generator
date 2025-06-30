@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import {
   UseFormRegister,
@@ -23,15 +24,15 @@ import {
   MobileTimePicker,
 } from '@/components/ui/mobile-pickers';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { DrawerFormData } from '@/hooks/useMobileDrawerForm';
+import { ReportFormData } from '@/types/public-report';
 
 interface PersonCardProps {
   personNumber: 1 | 2;
   title: string;
-  register: UseFormRegister<DrawerFormData>;
-  setValue: UseFormSetValue<DrawerFormData>;
-  watch: UseFormWatch<DrawerFormData>;
-  errors: FieldErrors<DrawerFormData>;
+  register: UseFormRegister<ReportFormData>;
+  setValue: UseFormSetValue<ReportFormData>;
+  watch: UseFormWatch<ReportFormData>;
+  errors: FieldErrors<ReportFormData>;
   hasTriedToSubmit: boolean;
 }
 
@@ -89,10 +90,12 @@ const PersonCard = ({
     error: any,
   ) => (hasTriedToSubmit || hasInteracted[fieldName]) && error;
 
-  const getFieldName = (field: string) =>
-    (isSecondPerson
-      ? `secondPerson${field.charAt(0).toUpperCase()}${field.slice(1)}`
-      : field) as keyof DrawerFormData;
+  const getFieldName = (field: string): keyof ReportFormData => {
+    if (isSecondPerson) {
+      return `secondPerson${field.charAt(0).toUpperCase()}${field.slice(1)}` as keyof ReportFormData;
+    }
+    return field as keyof ReportFormData;
+  };
 
   const getError = (field: string) => {
     const fieldName = getFieldName(field);
@@ -129,10 +132,10 @@ const PersonCard = ({
   };
 
   const handlePlaceSelect = (placeData: PlaceData) => {
-    const locationField = `${prefix}${prefix ? 'B' : 'b'}irthLocation` as keyof DrawerFormData;
-    const latField = `${prefix}${prefix ? 'L' : 'birthL'}atitude` as keyof DrawerFormData;
-    const lngField = `${prefix}${prefix ? 'L' : 'birthL'}ongitude` as keyof DrawerFormData;
-    const placeIdField = `${prefix}${prefix ? 'P' : 'birthP'}laceId` as keyof DrawerFormData;
+    const locationField = getFieldName('birthLocation');
+    const latField = getFieldName('birthLatitude');
+    const lngField = getFieldName('birthLongitude');
+    const placeIdField = getFieldName('birthPlaceId');
 
     setValue(locationField, placeData.name);
     setHasInteracted((prev) => ({ ...prev, birthLocation: true }));
@@ -241,7 +244,7 @@ const PersonCard = ({
             <Label htmlFor={`${prefix}name`}>Full Name *</Label>
             <Input
               id={`${prefix}name`}
-              {...register(getFieldName('name'))}
+              {...register(getFieldName('name') as any)}
               placeholder="Enter full name"
               className={`h-12 ${shouldShowError('name', getError('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
               onFocus={() => handleFieldInteraction('name')}
@@ -259,7 +262,7 @@ const PersonCard = ({
               <Input
                 id="email"
                 type="email"
-                {...register('email')}
+                {...register('email' as any)}
                 placeholder="your@email.com"
                 className={`h-12 ${shouldShowError('email', errors.email) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
                 onFocus={() => handleFieldInteraction('email')}
@@ -288,7 +291,7 @@ const PersonCard = ({
                 <Input
                   id={`${prefix}birthDate`}
                   type="date"
-                  {...register(getFieldName('birthDate'))}
+                  {...register(getFieldName('birthDate') as any)}
                   className={`h-12 ${shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
                   onFocus={() => handleFieldInteraction('birthDate')}
                   onBlur={() => handleFieldInteraction('birthDate')}
@@ -315,7 +318,7 @@ const PersonCard = ({
                   id={`${prefix}birthTime`}
                   type="time"
                   step="60"
-                  {...register(getFieldName('birthTime'))}
+                  {...register(getFieldName('birthTime') as any)}
                   className={`h-12 ${shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
                   onFocus={() => handleFieldInteraction('birthTime')}
                   onBlur={() => handleFieldInteraction('birthTime')}
@@ -333,7 +336,7 @@ const PersonCard = ({
               label="Birth Location *"
               value={birthLocation}
               onChange={(value) => {
-                const locationField = `${prefix}${prefix ? 'B' : 'b'}irthLocation` as keyof DrawerFormData;
+                const locationField = getFieldName('birthLocation');
                 setValue(locationField, value);
                 if (!hasInteracted.birthLocation && value) {
                   handleFieldInteraction('birthLocation');
