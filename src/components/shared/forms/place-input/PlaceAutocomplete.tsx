@@ -67,12 +67,24 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       setRetryCount(prev => prev + 1);
       setShowFallback(false);
       setIsInitializing(false);
-      const container = document.getElementById(`${id}-container`);
+      
+      // Safe container cleanup
+      const container = containerRef.current;
       if (container) {
-        while (container.firstChild) {
-          container.removeChild(container.firstChild);
+        // Clear the container safely
+        while (container.firstChild && container.contains(container.firstChild)) {
+          try {
+            container.removeChild(container.firstChild);
+          } catch (error) {
+            console.warn('Error removing child node:', error);
+            break;
+          }
         }
       }
+      
+      // Reset autocomplete ref
+      autocompleteRef.current = null;
+      
       window.location.reload();
     };
 
@@ -182,6 +194,30 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       }
     };
 
+    // Safe container clearing function
+    const clearContainerSafely = (container: HTMLElement) => {
+      try {
+        // Only clear if container actually has children
+        while (container.firstChild) {
+          // Double-check the child still exists and is attached
+          if (container.contains(container.firstChild)) {
+            container.removeChild(container.firstChild);
+          } else {
+            // If the child is not actually a child, break to prevent infinite loop
+            break;
+          }
+        }
+      } catch (error) {
+        console.warn('Error clearing container:', error);
+        // If there's an error, try alternative method
+        try {
+          container.innerHTML = '';
+        } catch (innerError) {
+          console.warn('Error clearing container with innerHTML:', innerError);
+        }
+      }
+    };
+
     // Enhanced initialization with proper error handling and timeouts
     const initializeAutocomplete = async () => {
       if (!isLoaded || showFallback || !window.google || disabled || isInitializing) {
@@ -232,11 +268,9 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           return;
         }
 
-        // Only clear container if we're actually reinitializing
-        if (!autocompleteRef.current) {
-          while (container.firstChild) {
-            container.removeChild(container.firstChild);
-          }
+        // Only clear container if we're actually reinitializing and it's safe to do so
+        if (!autocompleteRef.current && container.children.length > 0) {
+          clearContainerSafely(container);
         }
 
         // Create the autocomplete element
