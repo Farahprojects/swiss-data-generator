@@ -36,7 +36,9 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     disabled = false,
     error
   }, ref) => {
+    // Hook MUST be called unconditionally at the top level
     const { isLoaded, isError, apiKey, errorMessage } = useGoogleMapsScript();
+    
     const autocompleteRef = useRef<HTMLGmpPlaceAutocompleteElement | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [localValue, setLocalValue] = useState(value);
@@ -44,20 +46,28 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     const [retryCount, setRetryCount] = useState(0);
     const [isProcessingSelection, setIsProcessingSelection] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [isClient, setIsClient] = useState(false);
+
+    // Client-side hydration check
+    useEffect(() => {
+      setIsClient(true);
+    }, []);
 
     // Detect mobile environment
     useEffect(() => {
+      if (!isClient) return;
+      
       const checkMobile = () => {
         setIsMobile(window.innerWidth <= 768);
       };
       checkMobile();
       window.addEventListener('resize', checkMobile);
       return () => window.removeEventListener('resize', checkMobile);
-    }, []);
+    }, [isClient]);
 
     // Wait for Google's custom element to be defined
     const waitForGmpAutocomplete = async (timeout = 5000): Promise<boolean> => {
-      if (!('customElements' in window)) return false;
+      if (!isClient || !('customElements' in window)) return false;
 
       try {
         await Promise.race([
@@ -156,7 +166,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     };
 
     useEffect(() => {
-      if (!isLoaded || showFallback || !window.google || disabled) {
+      if (!isClient || !isLoaded || showFallback || !window.google || disabled) {
         return;
       }
       
@@ -287,7 +297,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       };
 
       initialize();
-    }, [isLoaded, localValue, id, placeholder, onChange, onPlaceSelect, showFallback, disabled, retryCount, isMobile]);
+    }, [isClient, isLoaded, localValue, id, placeholder, onChange, onPlaceSelect, showFallback, disabled, retryCount, isMobile]);
 
     useEffect(() => {
       if (isError) {
@@ -304,6 +314,11 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
         }
       }
     }, [value]);
+
+    // Skip rendering on server-side
+    if (!isClient) {
+      return null;
+    }
 
     const shouldShowFallback = showFallback || isError || disabled;
 
