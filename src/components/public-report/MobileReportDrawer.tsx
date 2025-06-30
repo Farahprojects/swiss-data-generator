@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -244,6 +243,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'none',
           touchAction: 'manipulation',
+          paddingTop: '0',
+          marginTop: '0',
         }}
       >
         {/* Close button - positioned absolutely in top-right */}
