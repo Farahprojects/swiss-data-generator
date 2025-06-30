@@ -93,10 +93,11 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
         <div className="text-sm font-medium text-gray-600 text-center mb-3">Month</div>
         <PickerWheel
           options={months}
-          value={months[selectedMonth - 1]}
+          value={months[selectedMonth - 1] ?? months[0]}
           onChange={handleMonthChange}
           height={200}
           itemHeight={40}
+          infinite={true}
         />
       </div>
 
@@ -108,6 +109,7 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
           onChange={handleDayChange}
           height={200}
           itemHeight={40}
+          infinite={true}
         />
       </div>
 
@@ -119,6 +121,7 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
           onChange={handleYearChange}
           height={200}
           itemHeight={40}
+          infinite={true}
         />
       </div>
     </div>

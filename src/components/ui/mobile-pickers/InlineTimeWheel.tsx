@@ -70,6 +70,7 @@ const InlineTimeWheel = ({ value, onChange }: InlineTimeWheelProps) => {
           onChange={handleHourChange}
           height={200}
           itemHeight={40}
+          infinite={true}
         />
       </div>
 
@@ -81,6 +82,7 @@ const InlineTimeWheel = ({ value, onChange }: InlineTimeWheelProps) => {
           onChange={handleMinuteChange}
           height={200}
           itemHeight={40}
+          infinite={true}
         />
       </div>
 
@@ -92,6 +94,7 @@ const InlineTimeWheel = ({ value, onChange }: InlineTimeWheelProps) => {
           onChange={handlePeriodChange}
           height={200}
           itemHeight={40}
+          infinite={false}
         />
       </div>
     </div>
