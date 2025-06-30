@@ -73,14 +73,12 @@ const InlineDateTimeSelector = ({
       <Button
         type="button"
         variant="outline"
-        className={`flex w-full items-center gap-3 px-4 h-12 justify-start font-normal text-left ${
-          hasError 
-            ? 'border-red-500 bg-red-50 text-red-700 hover:bg-red-50' 
-            : 'hover:bg-gray-50 text-gray-900'
-        } ${isOpen ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-gray-300'}`}
+        className={`flex w-full items-center gap-2 px-3 h-12 justify-start font-normal ${
+          hasError ? 'border-red-500 bg-red-50' : 'hover:bg-gray-50'
+        } ${isOpen ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
       >
-        <Icon className={`h-5 w-5 shrink-0 ${hasError ? 'text-red-500' : 'text-gray-500'}`} />
-        <span className="text-sm font-medium">
+        <Icon className="h-4 w-4 shrink-0 text-gray-500" />
+        <span className="text-left text-sm text-gray-900">
           {formatDisplayValue(localValue)}
         </span>
       </Button>
@@ -88,62 +86,50 @@ const InlineDateTimeSelector = ({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ height: 0, opacity: 0, scale: 0.95 }}
-            animate={{ height: 380, opacity: 1, scale: 1 }}
-            exit={{ height: 0, opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.25, ease: [0.4, 0.0, 0.2, 1] }}
-            className="overflow-hidden bg-white border border-gray-200 rounded-xl shadow-xl mt-2 z-50"
-            style={{ 
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' 
-            }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 320, opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-lg mt-1"
           >
-            <div className="p-6">
-              {/* Header */}
-              <div className="mb-6 text-center">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Icon className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Select {type === 'date' ? 'Date' : 'Time'}
-                  </h3>
-                </div>
-                <p className="text-sm text-gray-500">
-                  {type === 'date' ? 'Choose your birth date' : 'Choose your birth time'}
-                </p>
+            <div className="p-4">
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-gray-900 text-center">
+                  Select {type === 'date' ? 'Date' : 'Time'}
+                </h3>
               </div>
               
-              {/* Picker Content */}
-              <div className="mb-6">
-                {type === 'date' ? (
-                  <InlineDateWheel 
-                    value={localValue} 
-                    onChange={handleLocalChange} 
-                  />
-                ) : (
-                  <InlineTimeWheel 
-                    value={localValue} 
-                    onChange={handleLocalChange} 
-                  />
-                )}
-              </div>
+              {type === 'date' ? (
+                <InlineDateWheel 
+                  value={localValue} 
+                  onChange={handleLocalChange} 
+                />
+              ) : (
+                <InlineTimeWheel 
+                  value={localValue} 
+                  onChange={handleLocalChange} 
+                />
+              )}
               
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-100">
+              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
                   onClick={handleCancel}
-                  className="flex-1 h-11 text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                  className="text-gray-600 hover:text-gray-800"
                 >
-                  <X className="h-4 w-4 mr-2" />
+                  <X className="h-3 w-3 mr-1" />
                   Cancel
                 </Button>
                 <Button
                   type="button"
+                  size="sm"
                   onClick={handleConfirm}
-                  className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-medium"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  <Check className="h-4 w-4 mr-2" />
-                  Confirm
+                  <Check className="h-3 w-3 mr-1" />
+                  Done
                 </Button>
               </div>
             </div>

@@ -88,55 +88,38 @@ const InlineDateWheel = ({ value, onChange }: InlineDateWheelProps) => {
   }, []);
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="flex items-stretch justify-center gap-6">
-        {/* Month Picker */}
-        <div className="flex-1 max-w-[100px]">
-          <div className="text-center mb-3">
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Month</div>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <PickerWheel
-              options={months}
-              value={months[selectedMonth - 1]}
-              onChange={handleMonthChange}
-              height={240}
-              itemHeight={48}
-            />
-          </div>
-        </div>
+    <div className="flex items-center justify-center gap-4 px-4 py-2">
+      <div className="flex-1 min-w-[80px]">
+        <div className="text-xs font-medium text-gray-600 text-center mb-2">Month</div>
+        <PickerWheel
+          options={months}
+          value={months[selectedMonth - 1]}
+          onChange={handleMonthChange}
+          height={200}
+          itemHeight={40}
+        />
+      </div>
 
-        {/* Day Picker */}
-        <div className="flex-1 max-w-[80px]">
-          <div className="text-center mb-3">
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Day</div>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <PickerWheel
-              options={days}
-              value={selectedDay}
-              onChange={handleDayChange}
-              height={240}
-              itemHeight={48}
-            />
-          </div>
-        </div>
+      <div className="flex-1 min-w-[60px]">
+        <div className="text-xs font-medium text-gray-600 text-center mb-2">Day</div>
+        <PickerWheel
+          options={days}
+          value={selectedDay}
+          onChange={handleDayChange}
+          height={200}
+          itemHeight={40}
+        />
+      </div>
 
-        {/* Year Picker */}
-        <div className="flex-1 max-w-[100px]">
-          <div className="text-center mb-3">
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Year</div>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <PickerWheel
-              options={years}
-              value={selectedYear}
-              onChange={handleYearChange}
-              height={240}
-              itemHeight={48}
-            />
-          </div>
-        </div>
+      <div className="flex-1 min-w-[80px]">
+        <div className="text-xs font-medium text-gray-600 text-center mb-2">Year</div>
+        <PickerWheel
+          options={years}
+          value={selectedYear}
+          onChange={handleYearChange}
+          height={200}
+          itemHeight={40}
+        />
       </div>
     </div>
   );
