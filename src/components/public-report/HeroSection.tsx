@@ -37,7 +37,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
             variant="outline"
             className="h-16 px-12 text-lg font-medium rounded-2xl border-2 border-primary bg-white text-primary hover:bg-primary/5 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
           >
-            Unlock Insight
+            Begin
           </Button>
         </div>
         
