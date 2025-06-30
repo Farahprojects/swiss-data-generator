@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -144,7 +145,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   return (
     <Drawer open={isOpen} onOpenChange={handleClose} dismissible={false}>
-      <DrawerContent className="h-[100dvh] max-h-[100dvh] flex flex-col [&_[data-vaul-drawer-handle]]:!hidden [&>[data-vaul-drawer-handle]]:!hidden">
+      <DrawerContent className="h-[100dvh] max-h-[100dvh] flex flex-col rounded-none [&>div:first-child]:hidden">
         {/* Close button - positioned absolutely in top-right */}
         <button
           onClick={handleClose}
