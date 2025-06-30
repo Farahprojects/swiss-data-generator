@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -145,11 +144,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   return (
     <Drawer open={isOpen} onOpenChange={handleClose} dismissible={false}>
-      <DrawerContent className="h-[90vh] flex flex-col [&>[data-vaul-drawer-handle]]:hidden">
+      <DrawerContent className="h-[100dvh] max-h-[100dvh] flex flex-col [&_[data-vaul-drawer-handle]]:!hidden [&>[data-vaul-drawer-handle]]:!hidden">
         {/* Close button - positioned absolutely in top-right */}
         <button
           onClick={handleClose}
           className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
+          style={{ touchAction: 'manipulation' }}
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
@@ -157,12 +157,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
         {currentView === 'form' && (
           <>
-            <DrawerHeader className="flex-shrink-0 pt-12">
+            <DrawerHeader className="flex-shrink-0 pt-12 pb-4">
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
             
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ touchAction: 'pan-y' }}>
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (
                   <Step1ReportType
@@ -217,7 +217,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {currentView === 'success' && submittedData && (
-          <div className="flex-1 overflow-y-auto pt-12">
+          <div className="flex-1 overflow-y-auto pt-12" style={{ touchAction: 'pan-y' }}>
             <SuccessScreen 
               name={submittedData.name} 
               email={submittedData.email}
