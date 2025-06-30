@@ -46,15 +46,15 @@ const MobilePickerModal = ({
             className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-xl shadow-xl"
             style={{ touchAction: 'pan-y' }}
           >
-            {/* Header */}
+            {/* Header with iOS-style buttons */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className="h-10 w-16 bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700 font-medium"
+                className="h-10 px-4 text-blue-600 hover:bg-blue-50 font-medium text-base bg-transparent border-0 shadow-none"
               >
-                <X className="h-5 w-5" />
+                Cancel
               </Button>
               
               <h3 className="text-lg font-semibold text-gray-900">
@@ -62,12 +62,12 @@ const MobilePickerModal = ({
               </h3>
               
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={onConfirm}
-                className="h-10 w-16 bg-green-50 border-green-200 text-green-600 hover:bg-green-100 hover:text-green-700 font-medium"
+                className="h-10 px-4 text-blue-600 hover:bg-blue-50 font-semibold text-base bg-transparent border-0 shadow-none"
               >
-                <Check className="h-5 w-5" />
+                Done
               </Button>
             </div>
             

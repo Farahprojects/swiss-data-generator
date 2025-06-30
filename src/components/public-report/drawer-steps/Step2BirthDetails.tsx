@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DateTimePicker } from "@/components/calendar/DateTimePicker";
-import PlaceAutocomplete from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import MobileDatePicker from '@/components/ui/mobile-pickers/MobileDatePicker';
 import MobileTimePicker from '@/components/ui/mobile-pickers/MobileTimePicker';
 import MobilePickerModal from '@/components/ui/mobile-pickers/MobilePickerModal';
@@ -97,6 +96,8 @@ const Step2BirthDetails = ({
               {...register('name')}
               placeholder="Enter your full name"
               className="h-12"
+              autoComplete="name"
+              inputMode="text"
             />
             {errors.name && (
               <p className="text-sm text-red-500">{errors.name.message}</p>
@@ -114,6 +115,8 @@ const Step2BirthDetails = ({
               {...register('email')}
               placeholder="Enter your email"
               className="h-12"
+              autoComplete="email"
+              inputMode="email"
             />
             {errors.email && (
               <p className="text-sm text-red-500">{errors.email.message}</p>
