@@ -55,6 +55,23 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    // Wait for Google's custom element to be defined
+    const waitForGmpAutocomplete = async (timeout = 5000): Promise<boolean> => {
+      if (!('customElements' in window)) return false;
+
+      try {
+        await Promise.race([
+          customElements.whenDefined('gmp-place-autocomplete'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+        ]);
+        console.log('✅ gmp-place-autocomplete element is ready');
+        return true;
+      } catch (err) {
+        console.error('❌ gmp-place-autocomplete not ready in time:', err);
+        return false;
+      }
+    };
+
     const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
       setLocalValue(newValue);
@@ -143,7 +160,10 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
         return;
       }
       
-      try {
+      const initialize = async () => {
+        console.log('📦 Google Maps script loaded:', isLoaded);
+        console.log('💡 Attempting to create autocomplete component');
+        
         if (autocompleteRef.current) {
           autocompleteRef.current.value = localValue;
           return;
@@ -156,7 +176,15 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           return;
         }
 
-        // Clear container
+        // Wait for the custom element to be defined
+        const ready = await waitForGmpAutocomplete();
+        if (!ready) {
+          console.log('🔄 Custom element not ready, falling back to manual input');
+          setShowFallback(true);
+          return;
+        }
+
+        // Clear container only once after confirmed ready
         while (container.firstChild) {
           container.removeChild(container.firstChild);
         }
@@ -256,11 +284,9 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
             }
           }
         });
-        
-      } catch (error) {
-        console.error('Error setting up place autocomplete:', error);
-        setShowFallback(true);
-      }
+      };
+
+      initialize();
     }, [isLoaded, localValue, id, placeholder, onChange, onPlaceSelect, showFallback, disabled, retryCount, isMobile]);
 
     useEffect(() => {
