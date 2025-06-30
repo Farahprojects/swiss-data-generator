@@ -152,7 +152,6 @@ const Step3Payment = ({
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
       className="space-y-6"
-      style={{ touchAction: 'pan-y' }}
     >
       <div className="flex items-center space-x-4">
         <Button
@@ -161,10 +160,6 @@ const Step3Payment = ({
           onClick={onPrev}
           className="p-2"
           type="button"
-          style={{ 
-            touchAction: 'manipulation',
-            WebkitTapHighlightColor: 'transparent'
-          }}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -209,11 +204,6 @@ const Step3Payment = ({
             variant="outline"
             className="w-full h-12 justify-start border-2 border-primary text-primary bg-white hover:bg-accent"
             type="button"
-            style={{ 
-              touchAction: 'manipulation',
-              WebkitTapHighlightColor: 'transparent',
-              WebkitAppearance: 'none'
-            }}
           >
             <Tag className="h-4 w-4 mr-2" />
             Have a promo code?
@@ -229,10 +219,6 @@ const Step3Payment = ({
                   {...register('promoCode')}
                   placeholder="Enter promo code"
                   className="h-12 pr-10"
-                  style={{ 
-                    WebkitAppearance: 'none',
-                    touchAction: 'manipulation'
-                  }}
                 />
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                   {getPromoValidationIcon()}
@@ -273,12 +259,6 @@ const Step3Payment = ({
           className="w-full h-14 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent disabled:opacity-50"
           size="lg"
           type="button"
-          style={{ 
-            touchAction: 'manipulation',
-            WebkitTapHighlightColor: 'transparent',
-            WebkitAppearance: 'none',
-            userSelect: 'none'
-          }}
         >
           {isProcessing 
             ? 'Processing...' 

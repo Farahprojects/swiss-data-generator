@@ -52,16 +52,8 @@ export const initiateGuestCheckout = async ({
 
     console.log("✅ Guest checkout session created successfully");
 
-    // Fixed redirect method for Chrome mobile compatibility
-    try {
-      // First try opening in same tab (preferred for mobile)
-      window.open(data.url, '_self');
-    } catch (redirectError) {
-      console.warn("Failed to redirect with window.open, falling back to location.href");
-      // Fallback to location.href if window.open fails
-      window.location.href = data.url;
-    }
-    
+    // Redirect to the Stripe checkout URL
+    window.location.href = data.url;
     return { success: true };
   } catch (err) {
     console.error("❌ Failed to initiate guest checkout:", err);
