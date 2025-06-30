@@ -100,14 +100,14 @@ const ReportTypeSelector = ({
             Not sure which report to choose? Click here.
           </button>
           
-          <div className="space-y-6 max-w-2xl mx-auto">
+          <div className="space-y-6 max-w-5xl mx-auto">
             {/* Main Category Selection */}
             <div className="space-y-4">
               <Controller
                 control={control}
                 name="reportCategory"
                 render={({ field }) => (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {reportCategories.map((category) => {
                       const IconComponent = category.icon;
                       const isSelected = selectedCategory === category.value;
@@ -157,7 +157,7 @@ const ReportTypeSelector = ({
                   control={control}
                   name="reportSubCategory"
                   render={({ field }) => (
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {snapshotSubCategories.map((subCategory) => {
                         const IconComponent = subCategory.icon;
                         const isSelected = selectedSubCategory === subCategory.value;
