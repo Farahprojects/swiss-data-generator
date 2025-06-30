@@ -1,56 +1,104 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
+import { reportSchema } from '@/schemas/report-form-schema';
+import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
+import { usePromoValidation } from '@/hooks/usePromoValidation';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
 import Step3Payment from './drawer-steps/Step3Payment';
 import SuccessScreen from './SuccessScreen';
-import { ReportFormData } from '@/types/public-report';
 
 interface MobileReportDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface PromoValidationState {
+  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
+  message: string;
+  discountPercent: number;
+}
+
 const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
+  const [currentStep, setCurrentStep] = useState(1);
   const [showSuccess, setShowSuccess] = useState(false);
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
+  
+  // Use the same promo validation as desktop
+  const { promoValidation: rawPromoValidation } = usePromoValidation();
+  
+  // Convert to the state format expected by useReportSubmission
+  const [promoValidation, setPromoValidation] = useState<PromoValidationState>({
+    status: 'none',
+    message: '',
+    discountPercent: 0
+  });
 
-  const {
-    form,
-    currentStep,
-    nextStep,
-    prevStep,
-    mapCategoryToReportType,
-    mapCategoryToSubType,
-    promoValidation,
-    isValidatingPromo,
-    setPromoValidation,
-  } = useMobileDrawerForm();
+  const form = useForm<ReportFormData>({
+    resolver: zodResolver(reportSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      reportType: '',
+      relationshipType: '',
+      essenceType: '',
+      name: '',
+      email: '',
+      birthDate: '',
+      birthTime: '',
+      birthLocation: '',
+      birthLatitude: undefined,
+      birthLongitude: undefined,
+      birthPlaceId: '',
+      secondPersonName: '',
+      secondPersonBirthDate: '',
+      secondPersonBirthTime: '',
+      secondPersonBirthLocation: '',
+      secondPersonLatitude: undefined,
+      secondPersonLongitude: undefined,
+      secondPersonPlaceId: '',
+      returnYear: '',
+      notes: '',
+      promoCode: '',
+    },
+  });
 
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
   const { isProcessing, submitReport, reportCreated } = useReportSubmission();
 
-  const reportCategory = watch('reportCategory');
-  const reportSubCategory = watch('reportSubCategory');
+  const reportType = watch('reportType');
+
+  const nextStep = () => {
+    if (currentStep < 4) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
 
   const handleClose = () => {
     onClose();
     form.reset();
     setShowSuccess(false);
     setSubmittedData(null);
+    setCurrentStep(1);
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: ReportFormData) => {
     console.log('🚀 Mobile drawer form submission started');
     console.log('📝 Form data:', data);
 
@@ -60,34 +108,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       email: data.email
     });
 
-    // Map drawer form data to the expected ReportFormData format
-    const mappedData: ReportFormData = {
-      reportType: mapCategoryToReportType(data.reportCategory, data.reportSubCategory),
-      ...mapCategoryToSubType(data.reportCategory, data.reportSubCategory),
-      name: data.name,
-      email: data.email,
-      birthDate: data.birthDate,
-      birthTime: data.birthTime,
-      birthLocation: data.birthLocation,
-      birthLatitude: data.birthLatitude,
-      birthLongitude: data.birthLongitude,
-      birthPlaceId: data.birthPlaceId,
-      // Include second person data for compatibility reports
-      secondPersonName: data.secondPersonName,
-      secondPersonBirthDate: data.secondPersonBirthDate,
-      secondPersonBirthTime: data.secondPersonBirthTime,
-      secondPersonBirthLocation: data.secondPersonBirthLocation,
-      secondPersonLatitude: data.secondPersonLatitude,
-      secondPersonLongitude: data.secondPersonLongitude,
-      secondPersonPlaceId: data.secondPersonPlaceId,
-      promoCode: data.promoCode,
-      notes: data.notes,
-    };
-
-    console.log('🔄 Mapped data for submission:', mappedData);
-
     // Use the same submission logic as desktop
-    await submitReport(mappedData, promoValidation, setPromoValidation);
+    await submitReport(data, promoValidation, setPromoValidation);
     
     // Show success screen for free reports, paid reports will redirect to Stripe
     if (reportCreated) {
@@ -149,7 +171,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 key="step1"
                 control={control}
                 onNext={nextStep}
-                selectedCategory={reportCategory}
+                selectedReportType={reportType}
               />
             )}
             
@@ -159,8 +181,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 control={control}
                 onNext={nextStep}
                 onPrev={prevStep}
-                selectedCategory={reportCategory}
-                selectedSubCategory={reportSubCategory}
+                selectedReportType={reportType}
               />
             )}
             

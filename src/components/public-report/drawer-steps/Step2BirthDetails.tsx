@@ -4,14 +4,14 @@ import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'rea
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DrawerFormData } from '@/hooks/useMobileDrawerForm';
+import { ReportFormData } from '@/types/public-report';
 import PersonCard from './PersonCard';
 
 interface Step2BirthDetailsProps {
-  register: UseFormRegister<DrawerFormData>;
-  setValue: UseFormSetValue<DrawerFormData>;
-  watch: UseFormWatch<DrawerFormData>;
-  errors: FieldErrors<DrawerFormData>;
+  register: UseFormRegister<ReportFormData>;
+  setValue: UseFormSetValue<ReportFormData>;
+  watch: UseFormWatch<ReportFormData>;
+  errors: FieldErrors<ReportFormData>;
   onNext: () => void;
   onPrev: () => void;
 }
@@ -20,8 +20,8 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
   const [showSecondPerson, setShowSecondPerson] = useState(false);
   const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
 
-  const reportCategory = watch('reportCategory');
-  const isCompatibilityReport = reportCategory === 'compatibility';
+  const reportType = watch('reportType');
+  const isCompatibilityReport = reportType === 'sync';
 
   // Watch first person fields
   const name = watch('name');
@@ -62,7 +62,7 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
     ];
 
     for (const { field, element } of errorFields) {
-      if (errors[field as keyof FieldErrors<DrawerFormData>] && element) {
+      if (errors[field as keyof FieldErrors<ReportFormData>] && element) {
         element.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'center',
