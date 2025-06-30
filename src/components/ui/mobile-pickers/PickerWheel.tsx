@@ -164,32 +164,28 @@ function PickerWheel<T extends string | number = string>({
   const onDrag = (_: PointerEvent, info: PanInfo) => {
     const currentY = rawY.get() + info.delta.y;
     rawY.set(currentY);
-
-    if (infinite) {
-      const centerTop = (height - itemHeight) / 2;
-      const currentOffset = centerTop - currentY;
-      const currentIndex = Math.round(currentOffset / itemHeight);
-
-      // Logical index in original options
-      const logicalIndex = currentIndex % options.length;
-
-      // Actual scroll index offset from center
-      const distanceFromCenter = currentIndex - (centerRepetitionStart + logicalIndex);
-
-      // If scrolled too far away from center, silently reset to center
-      if (Math.abs(distanceFromCenter) > options.length * 1.5) {
-        const newVirtualIndex = centerRepetitionStart + logicalIndex;
-        const newY = centerTop - newVirtualIndex * itemHeight;
-        rawY.set(newY); // <-- no animation, instant reposition
-      }
-    }
+    // Removed the reset logic from here - it was causing the visual glitch
   };
 
   const onDragEnd = (_: PointerEvent, info: PanInfo) => {
     setDrag({ isDragging: false });
 
     if (infinite) {
-      // For infinite mode, just snap to nearest without rubber band constraints
+      const centerTop = (height - itemHeight) / 2;
+      const currentY = rawY.get();
+      const currentOffset = centerTop - currentY;
+      const currentIndex = Math.round(currentOffset / itemHeight);
+
+      const logicalIndex = currentIndex % options.length;
+      const distanceFromCenter = currentIndex - (centerRepetitionStart + logicalIndex);
+
+      // Silently reset scroll to center clone if far away
+      if (Math.abs(distanceFromCenter) > options.length * 1.5) {
+        const newVirtualIndex = centerRepetitionStart + logicalIndex;
+        const newY = centerTop - newVirtualIndex * itemHeight;
+        rawY.set(newY); // reset with no animation
+      }
+
       const projected = rawY.get() + info.velocity.y * 0.2;
       snapTo(projected, info.velocity.y);
     } else {
