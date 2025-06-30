@@ -61,38 +61,55 @@ const InlineTimeWheel = ({ value, onChange }: InlineTimeWheelProps) => {
   }, []);
 
   return (
-    <div className="flex items-center justify-center gap-4 px-4 py-2">
-      <div className="flex-1 min-w-[60px]">
-        <div className="text-xs font-medium text-gray-600 text-center mb-2">Hour</div>
-        <PickerWheel
-          options={hours}
-          value={selectedHour}
-          onChange={handleHourChange}
-          height={200}
-          itemHeight={40}
-        />
-      </div>
+    <div className="bg-gray-50 rounded-lg p-4">
+      <div className="flex items-stretch justify-center gap-6">
+        {/* Hour Picker */}
+        <div className="flex-1 max-w-[80px]">
+          <div className="text-center mb-3">
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Hour</div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <PickerWheel
+              options={hours}
+              value={selectedHour}
+              onChange={handleHourChange}
+              height={240}
+              itemHeight={48}
+            />
+          </div>
+        </div>
 
-      <div className="flex-1 min-w-[80px]">
-        <div className="text-xs font-medium text-gray-600 text-center mb-2">Minute</div>
-        <PickerWheel
-          options={minutes.map(m => m.toString().padStart(2, '0'))}
-          value={selectedMinute.toString().padStart(2, '0')}
-          onChange={handleMinuteChange}
-          height={200}
-          itemHeight={40}
-        />
-      </div>
+        {/* Minute Picker */}
+        <div className="flex-1 max-w-[100px]">
+          <div className="text-center mb-3">
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Minute</div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <PickerWheel
+              options={minutes.map(m => m.toString().padStart(2, '0'))}
+              value={selectedMinute.toString().padStart(2, '0')}
+              onChange={handleMinuteChange}
+              height={240}
+              itemHeight={48}
+            />
+          </div>
+        </div>
 
-      <div className="flex-1 min-w-[60px]">
-        <div className="text-xs font-medium text-gray-600 text-center mb-2">Period</div>
-        <PickerWheel
-          options={periods}
-          value={selectedPeriod}
-          onChange={handlePeriodChange}
-          height={200}
-          itemHeight={40}
-        />
+        {/* Period Picker */}
+        <div className="flex-1 max-w-[80px]">
+          <div className="text-center mb-3">
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Period</div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <PickerWheel
+              options={periods}
+              value={selectedPeriod}
+              onChange={handlePeriodChange}
+              height={240}
+              itemHeight={48}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
