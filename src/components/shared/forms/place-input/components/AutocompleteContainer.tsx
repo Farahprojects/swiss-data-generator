@@ -29,6 +29,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
   onShowFallback,
   retryCount
 }) => {
+  // All hooks MUST be called unconditionally at the top level
   const { isLoaded, isError } = useGoogleMapsScript();
   const autocompleteRef = useRef<HTMLGmpPlaceAutocompleteElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,7 +50,17 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Handle error state
   useEffect(() => {
+    if (isError) {
+      console.error('Google Maps failed to load, using fallback input');
+      onShowFallback();
+    }
+  }, [isError, onShowFallback]);
+
+  // Main setup effect
+  useEffect(() => {
+    // Early returns for invalid states
     if (!isLoaded || !window.google || disabled) {
       return;
     }
@@ -114,13 +125,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
     }
   }, [isLoaded, value, id, placeholder, onChange, onPlaceSelect, disabled, retryCount, isMobile, handlePlaceSelect, stabilizeLayout, createAutocompleteElement, createMobileBackdrop, onShowFallback]);
 
-  useEffect(() => {
-    if (isError) {
-      console.error('Google Maps failed to load, using fallback input');
-      onShowFallback();
-    }
-  }, [isError, onShowFallback]);
-
+  // Sync value with autocomplete element
   useEffect(() => {
     if (autocompleteRef.current && value !== autocompleteRef.current.value) {
       autocompleteRef.current.value = value;
