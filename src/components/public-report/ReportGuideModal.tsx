@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import {
   Dialog,
@@ -142,19 +143,19 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl md:max-w-4xl max-w-[95vw] max-h-[90vh] md:max-h-[80vh] overflow-y-auto mx-4 md:mx-auto">
-        <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-10">
-          <X className="h-5 w-5 md:h-4 md:w-4" />
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogClose>
 
-        <DialogHeader className="pb-4 md:pb-6">
-          <DialogTitle className="text-xl md:text-2xl font-bold text-center mb-4 md:mb-6 pr-8">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-center mb-6">
             Report Guide – What Each Report Gives You
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           {reorderedReportGuides.map((report) => {
             const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
             
@@ -168,13 +169,13 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                 }`}
                 ref={isTargeted ? targetRef : null}
               >
-                <CardContent className="p-4 md:p-6 space-y-2 md:space-y-3">
+                <CardContent className="p-6 space-y-3">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-base md:text-lg text-primary flex items-center">
+                    <h3 className="font-bold text-lg text-primary flex items-center">
                       {report.icon}
                       {report.title}
                     </h3>
-                    <span className="font-bold text-base md:text-lg text-primary bg-primary/10 px-2 py-1 rounded text-sm md:text-base">
+                    <span className="font-bold text-lg text-primary bg-primary/10 px-2 py-1 rounded">
                       {report.price}
                     </span>
                   </div>
@@ -187,18 +188,18 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                     "{report.description}"
                   </p>
 
-                  <p className="text-sm text-foreground leading-relaxed">
+                  <p className="text-sm text-foreground">
                     {report.details}
                   </p>
 
                   {report.subTypes && (
-                    <div className="pt-1">
+                    <div>
                       <h4 className="text-sm font-semibold text-muted-foreground mt-2 mb-1">
                         Included Report Styles
                       </h4>
                       <ul className="space-y-1 pl-4 list-disc text-sm">
                         {report.subTypes.map((subType, index) => (
-                          <li key={index} className="leading-relaxed">{formatSubType(subType)}</li>
+                          <li key={index}>{formatSubType(subType)}</li>
                         ))}
                       </ul>
                     </div>
@@ -209,8 +210,8 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
           })}
         </div>
 
-        <div className="mt-4 md:mt-6 text-center">
-          <p className="text-sm text-muted-foreground px-2">
+        <div className="mt-6 text-center">
+          <p className="text-sm text-muted-foreground">
             Still not sure? All reports provide valuable insights – choose the one that resonates most with your current needs.
           </p>
         </div>
