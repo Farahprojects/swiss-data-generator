@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import {
   UseFormRegister,
@@ -49,10 +50,6 @@ const PersonCard = ({
   });
 
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
-  const [originalValues, setOriginalValues] = useState({
-    birthDate: '',
-    birthTime: ''
-  });
 
   const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
@@ -121,9 +118,8 @@ const PersonCard = ({
 
   // Date selector handlers
   const handleDateSelectorOpen = useCallback(() => {
-    setOriginalValues(prev => ({ ...prev, birthDate: birthDate }));
     setActiveSelector('date');
-  }, [birthDate]);
+  }, []);
 
   const handleDateConfirm = useCallback(() => {
     setHasInteracted((prev) => ({ ...prev, birthDate: true }));
@@ -131,16 +127,13 @@ const PersonCard = ({
   }, []);
 
   const handleDateCancel = useCallback(() => {
-    const fieldName = getFieldName('birthDate');
-    setValue(fieldName, originalValues.birthDate);
     setActiveSelector(null);
-  }, [originalValues.birthDate, setValue]);
+  }, []);
 
   // Time selector handlers
   const handleTimeSelectorOpen = useCallback(() => {
-    setOriginalValues(prev => ({ ...prev, birthTime: birthTime }));
     setActiveSelector('time');
-  }, [birthTime]);
+  }, []);
 
   const handleTimeConfirm = useCallback(() => {
     setHasInteracted((prev) => ({ ...prev, birthTime: true }));
@@ -148,10 +141,8 @@ const PersonCard = ({
   }, []);
 
   const handleTimeCancel = useCallback(() => {
-    const fieldName = getFieldName('birthTime');
-    setValue(fieldName, originalValues.birthTime);
     setActiveSelector(null);
-  }, [originalValues.birthTime, setValue]);
+  }, []);
 
   // Enhanced error message component
   const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
@@ -214,18 +205,17 @@ const PersonCard = ({
           <div className="space-y-2">
             <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
             {isMobile ? (
-              <div onClick={handleDateSelectorOpen}>
-                <InlineDateTimeSelector
-                  type="date"
-                  value={birthDate}
-                  onChange={handleDateChange}
-                  onConfirm={handleDateConfirm}
-                  onCancel={handleDateCancel}
-                  isOpen={activeSelector === 'date'}
-                  placeholder="Select date"
-                  hasError={shouldShowError('birthDate', getError('birthDate'))}
-                />
-              </div>
+              <InlineDateTimeSelector
+                type="date"
+                value={birthDate}
+                onChange={handleDateChange}
+                onConfirm={handleDateConfirm}
+                onCancel={handleDateCancel}
+                isOpen={activeSelector === 'date'}
+                placeholder="Select date"
+                hasError={shouldShowError('birthDate', getError('birthDate'))}
+                onOpen={handleDateSelectorOpen}
+              />
             ) : (
               <Input
                 id={`${prefix}birthDate`}
@@ -245,18 +235,17 @@ const PersonCard = ({
           <div className="space-y-2">
             <Label htmlFor={`${prefix}birthTime`}>Birth Time *</Label>
             {isMobile ? (
-              <div onClick={handleTimeSelectorOpen}>
-                <InlineDateTimeSelector
-                  type="time"
-                  value={birthTime}
-                  onChange={handleTimeChange}
-                  onConfirm={handleTimeConfirm}
-                  onCancel={handleTimeCancel}
-                  isOpen={activeSelector === 'time'}
-                  placeholder="Select time"
-                  hasError={shouldShowError('birthTime', getError('birthTime'))}
-                />
-              </div>
+              <InlineDateTimeSelector
+                type="time"
+                value={birthTime}
+                onChange={handleTimeChange}
+                onConfirm={handleTimeConfirm}
+                onCancel={handleTimeCancel}
+                isOpen={activeSelector === 'time'}
+                placeholder="Select time"
+                hasError={shouldShowError('birthTime', getError('birthTime'))}
+                onOpen={handleTimeSelectorOpen}
+              />
             ) : (
               <Input
                 id={`${prefix}birthTime`}

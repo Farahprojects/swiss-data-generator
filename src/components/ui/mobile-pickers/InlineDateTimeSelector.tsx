@@ -15,6 +15,7 @@ interface InlineDateTimeSelectorProps {
   isOpen: boolean;
   placeholder: string;
   hasError?: boolean;
+  onOpen?: () => void;
 }
 
 const InlineDateTimeSelector = ({
@@ -25,7 +26,8 @@ const InlineDateTimeSelector = ({
   onCancel,
   isOpen,
   placeholder,
-  hasError = false
+  hasError = false,
+  onOpen
 }: InlineDateTimeSelectorProps) => {
   const [localValue, setLocalValue] = useState(value);
 
@@ -37,20 +39,20 @@ const InlineDateTimeSelector = ({
     setLocalValue(newValue);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     // Update the parent component's value immediately
     onChange(localValue);
     onConfirm();
   };
 
-  const handleCancel = () => {
-    setLocalValue(value);
-    onCancel();
-  };
-
-  const handleTriggerClick = () => {
-    // This will be handled by the parent component's state management
-    // The parent should set isOpen to true when this button is clicked
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onOpen) {
+      onOpen();
+    }
   };
 
   const formatDisplayValue = (val: string) => {
@@ -92,59 +94,43 @@ const InlineDateTimeSelector = ({
 
       <AnimatePresence>
         {isOpen && (
-          <>
-            {/* Backdrop */}
-            <div 
-              className="fixed inset-0 bg-black/20 z-40" 
-              onClick={handleCancel}
-            />
-            
-            {/* Full width picker */}
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="fixed left-4 right-4 top-1/2 -translate-y-1/2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 text-center">
-                    Select {type === 'date' ? 'Date' : 'Time'}
-                  </h3>
-                </div>
-                
-                {type === 'date' ? (
-                  <InlineDateWheel 
-                    value={localValue} 
-                    onChange={handleLocalChange} 
-                  />
-                ) : (
-                  <InlineTimeWheel 
-                    value={localValue} 
-                    onChange={handleLocalChange} 
-                  />
-                )}
-                
-                <div className="flex justify-end gap-8 mt-6 pt-4 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="text-blue-600 text-lg font-normal hover:text-blue-800 transition-colors bg-transparent border-none p-0 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleConfirm}
-                    className="text-blue-600 text-lg font-semibold hover:text-blue-800 transition-colors bg-transparent border-none p-0 cursor-pointer"
-                  >
-                    Done
-                  </button>
-                </div>
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="fixed left-4 right-4 top-1/2 -translate-y-1/2 z-50 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
+          >
+            <div className="p-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 text-center">
+                  Select {type === 'date' ? 'Date' : 'Time'}
+                </h3>
               </div>
-            </motion.div>
-          </>
+              
+              {type === 'date' ? (
+                <InlineDateWheel 
+                  value={localValue} 
+                  onChange={handleLocalChange} 
+                />
+              ) : (
+                <InlineTimeWheel 
+                  value={localValue} 
+                  onChange={handleLocalChange} 
+                />
+              )}
+              
+              <div className="flex justify-center mt-6 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  className="text-blue-600 text-lg font-semibold hover:text-blue-800 transition-colors bg-transparent border-none p-0 cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
