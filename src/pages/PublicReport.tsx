@@ -38,9 +38,11 @@ const PublicReport = () => {
       <HeroSection onGetReportClick={handleGetReportClick} />
       <FeaturesSection />
       <TestsSection />
-      <div id="report-form">
-        <ReportForm />
-      </div>
+      {!isMobile && (
+        <div id="report-form">
+          <ReportForm />
+        </div>
+      )}
       <MobileReportTrigger 
         isDrawerOpen={isDrawerOpen}
         onOpenDrawer={handleOpenDrawer}
