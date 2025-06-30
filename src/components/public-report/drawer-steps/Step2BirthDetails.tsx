@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -169,11 +170,12 @@ const Step2BirthDetails = ({
             </Label>
             <PlaceAutocomplete
               value={birthLocation}
-              onChange={(location, lat, lng, placeId) => {
-                setValue('birthLocation', location);
-                setValue('birthLatitude', lat);
-                setValue('birthLongitude', lng);
-                setValue('birthPlaceId', placeId);
+              onChange={(location) => setValue('birthLocation', location)}
+              onPlaceSelect={(placeData) => {
+                setValue('birthLocation', placeData.name);
+                setValue('birthLatitude', placeData.latitude);
+                setValue('birthLongitude', placeData.longitude);
+                setValue('birthPlaceId', placeData.placeId);
               }}
               placeholder="Enter birth city/location"
               className="h-12"
