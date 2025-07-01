@@ -10,18 +10,26 @@ interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
   message: string;
   discountPercent: number;
+  errorType?: string;
 }
 
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPricingLoading, setIsPricingLoading] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
+  const [showPromoConfirmation, setShowPromoConfirmation] = useState(false);
+  const [pendingSubmissionData, setPendingSubmissionData] = useState<{
+    data: ReportFormData;
+    basePrice: number;
+    description: string;
+  } | null>(null);
   const { toast } = useToast();
 
   const submitReport = async (
     data: ReportFormData, 
     promoValidation: PromoValidationState,
-    setPromoValidation: (state: PromoValidationState) => void
+    setPromoValidation: (state: PromoValidationState) => void,
+    skipPromoValidation: boolean = false
   ) => {
     console.log('🚀 Form submission started');
     console.log('📝 Form data:', data);
@@ -30,9 +38,9 @@ export const useReportSubmission = () => {
     setIsPricingLoading(true);
     
     try {
-      // Validate promo code if present
+      // Validate promo code if present and not skipping validation
       let validatedPromo = null;
-      if (data.promoCode && data.promoCode.trim() !== '') {
+      if (data.promoCode && data.promoCode.trim() !== '' && !skipPromoValidation) {
         console.log('🎫 Validating promo code:', data.promoCode);
         setPromoValidation({
           status: 'validating',
@@ -52,8 +60,23 @@ export const useReportSubmission = () => {
           setPromoValidation({
             status: 'invalid',
             message: validatedPromo.message,
-            discountPercent: 0
+            discountPercent: 0,
+            errorType: validatedPromo.errorType
           });
+
+          // Get pricing for confirmation dialog
+          const { amount, description } = await getReportPriceAndDescription(
+            data.reportType, 
+            data.relationshipType, 
+            data.essenceType
+          );
+
+          // Store submission data and show confirmation dialog
+          setPendingSubmissionData({ data, basePrice: amount, description });
+          setShowPromoConfirmation(true);
+          setIsPricingLoading(false);
+          setIsProcessing(false);
+          return; // Don't continue with submission
         }
       }
 
@@ -171,10 +194,40 @@ export const useReportSubmission = () => {
     }
   };
 
+  const handlePromoConfirmationTryAgain = () => {
+    setShowPromoConfirmation(false);
+    setPendingSubmissionData(null);
+  };
+
+  const handlePromoConfirmationContinue = async (setPromoValidation: (state: PromoValidationState) => void) => {
+    if (!pendingSubmissionData) return;
+    
+    setShowPromoConfirmation(false);
+    
+    // Clear the promo code and continue with full payment
+    const dataWithoutPromo = { ...pendingSubmissionData.data, promoCode: '' };
+    
+    // Reset promo validation state
+    setPromoValidation({
+      status: 'none',
+      message: '',
+      discountPercent: 0
+    });
+    
+    // Submit without promo validation
+    await submitReport(dataWithoutPromo, { status: 'none', message: '', discountPercent: 0 }, setPromoValidation, true);
+    
+    setPendingSubmissionData(null);
+  };
+
   return {
     isProcessing,
     isPricingLoading,
     reportCreated,
-    submitReport
+    submitReport,
+    showPromoConfirmation,
+    pendingSubmissionData,
+    handlePromoConfirmationTryAgain,
+    handlePromoConfirmationContinue
   };
 };

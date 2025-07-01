@@ -69,7 +69,16 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     onFormStateChange?.(isValid, !!selectedReportType);
   }, [isValid, selectedReportType, onFormStateChange]);
 
-  const { isProcessing, isPricingLoading, reportCreated, submitReport } = useReportSubmission();
+  const { 
+    isProcessing, 
+    isPricingLoading, 
+    reportCreated, 
+    submitReport,
+    showPromoConfirmation,
+    pendingSubmissionData,
+    handlePromoConfirmationTryAgain,
+    handlePromoConfirmationContinue
+  } = useReportSubmission();
 
   const requiresSecondPerson = selectedReportType === 'sync' || selectedReportType === 'compatibility';
 
@@ -98,7 +107,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) : 
         'invalid' as const,
       message: promoValidation.message,
-      discountPercent: promoValidation.discountPercent
+      discountPercent: promoValidation.discountPercent,
+      errorType: promoValidation.errorType
     } : {
       status: 'none' as const,
       message: '',
@@ -187,13 +197,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                   (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) : 
                   'invalid' as const,
                 message: promoValidation.message,
-                discountPercent: promoValidation.discountPercent
+                discountPercent: promoValidation.discountPercent,
+                errorType: promoValidation.errorType
               } : {
                 status: 'none' as const,
                 message: '',
                 discountPercent: 0
               }}
               isValidatingPromo={isValidatingPromo}
+              showPromoConfirmation={showPromoConfirmation}
+              pendingSubmissionData={pendingSubmissionData}
+              onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
+              onPromoConfirmationContinue={() => handlePromoConfirmationContinue(() => {})}
             />
           )}
         </div>

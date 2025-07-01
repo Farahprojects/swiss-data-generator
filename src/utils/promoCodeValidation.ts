@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PromoCodeValidation {
@@ -6,6 +5,7 @@ export interface PromoCodeValidation {
   discountPercent: number;
   message: string;
   isFree: boolean;
+  errorType?: 'invalid' | 'expired' | 'usage_limit' | 'network_error' | 'empty';
 }
 
 export const validatePromoCode = async (code: string): Promise<PromoCodeValidation> => {
@@ -14,7 +14,8 @@ export const validatePromoCode = async (code: string): Promise<PromoCodeValidati
       isValid: false,
       discountPercent: 0,
       message: 'Please enter a promo code',
-      isFree: false
+      isFree: false,
+      errorType: 'empty'
     };
   }
 
@@ -30,8 +31,20 @@ export const validatePromoCode = async (code: string): Promise<PromoCodeValidati
       return {
         isValid: false,
         discountPercent: 0,
-        message: 'Invalid promo code',
-        isFree: false
+        message: 'This promo code is not valid. Please check the spelling and try again.',
+        isFree: false,
+        errorType: 'invalid'
+      };
+    }
+
+    // Check if expired
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      return {
+        isValid: false,
+        discountPercent: 0,
+        message: 'This promo code has expired and is no longer valid.',
+        isFree: false,
+        errorType: 'expired'
       };
     }
 
@@ -40,8 +53,9 @@ export const validatePromoCode = async (code: string): Promise<PromoCodeValidati
       return {
         isValid: false,
         discountPercent: 0,
-        message: 'This promo code has reached its usage limit',
-        isFree: false
+        message: 'This promo code has reached its usage limit and is no longer available.',
+        isFree: false,
+        errorType: 'usage_limit'
       };
     }
 
@@ -61,8 +75,9 @@ export const validatePromoCode = async (code: string): Promise<PromoCodeValidati
     return {
       isValid: false,
       discountPercent: 0,
-      message: 'Error validating promo code',
-      isFree: false
+      message: 'Unable to validate promo code. Please check your connection and try again.',
+      isFree: false,
+      errorType: 'network_error'
     };
   }
 };
