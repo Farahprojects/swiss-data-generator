@@ -54,7 +54,7 @@ const ReportTypeSelector = ({
         isSelectionComplete = true;
       }
 
-      if (isSelectionComplete) {
+      if (isSelectionComplete && typeof window !== 'undefined') {
         // Small delay to ensure the DOM is updated
         setTimeout(() => {
           const nextStep = document.querySelector('[data-step="2"]');

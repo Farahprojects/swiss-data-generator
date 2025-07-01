@@ -37,7 +37,7 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
 
   // Scroll into view on desktop to ensure visibility
   useEffect(() => {
-    if (!isMobile) {
+    if (!isMobile && typeof window !== 'undefined') {
       // Small delay to ensure component is rendered
       setTimeout(() => {
         const successScreen = document.querySelector('[data-success-screen]');
@@ -114,7 +114,9 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   };
 
   const handleCreateAnother = () => {
-    window.location.reload();
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
   };
 
   const handleRetryPolling = () => {
