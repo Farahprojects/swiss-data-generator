@@ -1,12 +1,13 @@
 
 import React from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { UseFormRegister, FieldErrors } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
 import PromoCodeSection from './PromoCodeSection';
-import { UseFormRegister, FieldErrors } from 'react-hook-form';
-import { ReportFormData } from '@/types/public-report';
+import OrderSummary from './OrderSummary';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -24,67 +25,67 @@ interface SubmissionSectionProps {
 }
 
 const SubmissionSection = ({ 
-  register,
-  errors,
+  register, 
+  errors, 
   isProcessing, 
-  isPricingLoading,
-  promoValidation,
+  isPricingLoading, 
+  promoValidation, 
   onButtonClick 
 }: SubmissionSectionProps) => {
-  // Check if there are any validation errors
-  const hasErrors = Object.keys(errors).length > 0;
-  
-  // Debug: log current errors
-  React.useEffect(() => {
-    if (hasErrors) {
-      console.log('🚨 Form validation errors:', errors);
-    }
-  }, [hasErrors, errors]);
-
   return (
-    <FormStep stepNumber={4} title="Ready to Generate Your Report?" className="bg-background">
-      <div className="space-y-8 text-center">
-        {/* Show validation errors if any */}
-        {hasErrors && (
-          <Alert variant="destructive" className="max-w-2xl mx-auto">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Please fix the following errors before submitting:
-              <ul className="list-disc list-inside mt-2 text-left">
-                {Object.entries(errors).map(([field, error]) => (
-                  <li key={field} className="text-sm">
-                    <strong>{field}:</strong> {error?.message}
-                  </li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
+    <FormStep stepNumber={3} title="Additional Notes & Payment" className="bg-background">
+      <div className="max-w-2xl mx-auto space-y-8">
+        {/* Additional Notes Section */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="notes">Additional Notes or Questions (Optional)</Label>
+            <Textarea
+              id="notes"
+              {...register('notes')}
+              placeholder="Share any specific areas you'd like us to focus on in your report..."
+              className="min-h-[100px] resize-none"
+            />
+            {errors.notes && (
+              <p className="text-sm text-destructive">{errors.notes.message}</p>
+            )}
+          </div>
+        </div>
 
-        <Button 
-          type="button"
-          size="lg" 
-          className="px-12 py-6 text-lg relative z-10"
-          disabled={isProcessing || isPricingLoading || hasErrors}
-          onClick={onButtonClick}
-          style={{ pointerEvents: 'auto' }}
-        >
-          {isProcessing || isPricingLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : hasErrors ? (
-            'Fix Errors Above'
-          ) : (
-            'Generate my Report'
-          )}
-        </Button>
-        
-        <PromoCodeSection
-          register={register}
-          promoValidation={promoValidation}
-        />
+        {/* Promo Code Section */}
+        <PromoCodeSection register={register} errors={errors} />
+
+        {/* Order Summary */}
+        <OrderSummary promoValidation={promoValidation} />
+
+        {/* Submit Button */}
+        <div className="pt-4">
+          <Button
+            type="button"
+            onClick={onButtonClick}
+            disabled={isProcessing || isPricingLoading}
+            className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-white"
+            size="lg"
+          >
+            {isProcessing ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Processing...
+              </div>
+            ) : isPricingLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Loading...
+              </div>
+            ) : (
+              'Generate My Report'
+            )}
+          </Button>
+        </div>
+
+        <div className="text-center text-sm text-muted-foreground">
+          <p>Secure checkout powered by Stripe</p>
+          <p className="mt-1">Your report will be delivered to your email within minutes</p>
+        </div>
       </div>
     </FormStep>
   );

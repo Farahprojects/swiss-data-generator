@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -5,8 +6,7 @@ import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
-import ContactForm from '@/components/public-report/ContactForm';
-import BirthDetailsForm from '@/components/public-report/BirthDetailsForm';
+import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import SubmissionSection from '@/components/public-report/SubmissionSection';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
@@ -119,14 +119,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           />
 
           {selectedReportType && (
-            <ContactForm
-              register={register}
-              errors={errors}
-            />
-          )}
-
-          {selectedReportType && (
-            <BirthDetailsForm
+            <CombinedPersonalDetailsForm
               register={register}
               setValue={setValue}
               watch={watch}

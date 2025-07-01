@@ -1,0 +1,147 @@
+
+import React, { useState } from 'react';
+import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
+import { ReportFormData } from '@/types/public-report';
+import FormStep from './FormStep';
+
+interface CombinedPersonalDetailsFormProps {
+  register: UseFormRegister<ReportFormData>;
+  setValue: UseFormSetValue<ReportFormData>;
+  watch: UseFormWatch<ReportFormData>;
+  errors: FieldErrors<ReportFormData>;
+}
+
+const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: CombinedPersonalDetailsFormProps) => {
+  const [hasInteracted, setHasInteracted] = useState({
+    name: false,
+    email: false,
+    birthDate: false,
+    birthTime: false,
+    birthLocation: false,
+  });
+
+  const birthLocation = watch('birthLocation') || '';
+
+  const handlePlaceSelect = (placeData: PlaceData) => {
+    setValue('birthLocation', placeData.name);
+    setHasInteracted(prev => ({ ...prev, birthLocation: true }));
+    
+    if (placeData.latitude && placeData.longitude) {
+      setValue('birthLatitude', placeData.latitude);
+      setValue('birthLongitude', placeData.longitude);
+      console.log(`📍 Coordinates saved: ${placeData.latitude}, ${placeData.longitude}`);
+    }
+    
+    if (placeData.placeId) {
+      setValue('birthPlaceId', placeData.placeId);
+    }
+  };
+
+  const handleFieldInteraction = (fieldName: string) => {
+    setHasInteracted(prev => ({ ...prev, [fieldName]: true }));
+  };
+
+  const shouldShowError = (fieldName: keyof typeof hasInteracted, error: any) => {
+    return hasInteracted[fieldName] && error;
+  };
+
+  return (
+    <FormStep stepNumber={2} title="Personal & Birth Details" className="bg-muted/20">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Contact Information Section */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold text-gray-900">Contact Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name *</Label>
+              <Input
+                id="name"
+                {...register('name')}
+                placeholder="Enter your full name"
+                className="h-12"
+                onFocus={() => handleFieldInteraction('name')}
+                onBlur={() => handleFieldInteraction('name')}
+              />
+              {shouldShowError('name', errors.name) && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...register('email')}
+                placeholder="your@email.com"
+                className="h-12"
+                onFocus={() => handleFieldInteraction('email')}
+                onBlur={() => handleFieldInteraction('email')}
+              />
+              {shouldShowError('email', errors.email) && (
+                <p className="text-sm text-destructive">{errors.email.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Birth Details Section */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold text-gray-900">Birth Details</h3>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="space-y-2">
+              <Label htmlFor="birthDate">Birth Date *</Label>
+              <Input
+                id="birthDate"
+                type="date"
+                {...register('birthDate')}
+                className="h-12"
+                onFocus={() => handleFieldInteraction('birthDate')}
+                onBlur={() => handleFieldInteraction('birthDate')}
+              />
+              {shouldShowError('birthDate', errors.birthDate) && (
+                <p className="text-sm text-destructive">{errors.birthDate.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="birthTime">Birth Time *</Label>
+              <Input
+                id="birthTime"
+                type="time"
+                {...register('birthTime')}
+                step="60"
+                className="h-12"
+                onFocus={() => handleFieldInteraction('birthTime')}
+                onBlur={() => handleFieldInteraction('birthTime')}
+              />
+              {shouldShowError('birthTime', errors.birthTime) && (
+                <p className="text-sm text-destructive">{errors.birthTime.message}</p>
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <PlaceAutocomplete
+              label="Birth Location *"
+              value={birthLocation}
+              onChange={(value) => {
+                setValue('birthLocation', value);
+                if (!hasInteracted.birthLocation && value) {
+                  handleFieldInteraction('birthLocation');
+                }
+              }}
+              onPlaceSelect={handlePlaceSelect}
+              placeholder="Enter birth city, state, country"
+              id="birthLocation"
+              error={shouldShowError('birthLocation', errors.birthLocation) ? errors.birthLocation?.message : undefined}
+            />
+          </div>
+        </div>
+      </div>
+    </FormStep>
+  );
+};
+
+export default CombinedPersonalDetailsForm;
