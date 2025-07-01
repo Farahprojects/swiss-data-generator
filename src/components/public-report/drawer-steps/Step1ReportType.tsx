@@ -2,7 +2,7 @@
 import React from 'react';
 import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { User, Heart, Target } from 'lucide-react';
+import { reportCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 
 interface Step1ReportTypeProps {
@@ -11,30 +11,6 @@ interface Step1ReportTypeProps {
   onNext: () => void;
   selectedCategory: string;
 }
-
-const reportCategories = [
-  {
-    value: 'the-self',
-    title: 'The Self',
-    description: 'Unlock your authentic self and discover your hidden potential',
-    icon: User,
-    reportType: 'essence',
-  },
-  {
-    value: 'compatibility',
-    title: 'Compatibility',
-    description: 'Discover relationship dynamics and unlock deeper connections',
-    icon: Heart,
-    reportType: 'sync',
-  },
-  {
-    value: 'snapshot',
-    title: 'Snapshot',
-    description: 'Perfect timing insights for your current life chapter',
-    icon: Target,
-    reportType: 'focus',
-  },
-];
 
 const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1ReportTypeProps) => {
   return (

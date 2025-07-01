@@ -1,10 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { Control, Controller, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { User, Heart, Target, Calendar, Brain, Briefcase } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { relationshipTypes, essenceTypes } from '@/constants/report-types';
+import { 
+  reportCategories, 
+  snapshotSubCategories, 
+  detailedEssenceTypes, 
+  detailedRelationshipTypes 
+} from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
 import ReportGuideModal from './ReportGuideModal';
@@ -17,92 +22,6 @@ interface ReportTypeSelectorProps {
   setShowReportGuide: (show: boolean) => void;
   setValue?: UseFormSetValue<ReportFormData>;
 }
-
-const reportCategories = [
-  {
-    value: 'the-self',
-    title: 'The Self',
-    description: 'Unlock your authentic self and discover your hidden potential',
-    icon: User,
-    reportType: 'essence',
-  },
-  {
-    value: 'compatibility',
-    title: 'Compatibility',
-    description: 'Discover relationship dynamics and unlock deeper connections',
-    icon: Heart,
-    reportType: 'sync',
-  },
-  {
-    value: 'snapshot',
-    title: 'Snapshot',
-    description: 'Perfect timing insights for your current life chapter',
-    icon: Target,
-    reportType: 'focus',
-  },
-];
-
-const snapshotSubCategories = [
-  {
-    value: 'focus',
-    title: 'Focus',
-    description: 'Optimal timing insights for peak productivity and clarity',
-    icon: Target,
-    reportType: 'focus',
-  },
-  {
-    value: 'monthly',
-    title: 'Monthly Energy',
-    description: 'Your personal energy forecast and monthly momentum guide',
-    icon: Calendar,
-    reportType: 'monthly',
-  },
-  {
-    value: 'mindset',
-    title: 'Mindset',
-    description: 'Mental clarity insights and unlock your cognitive patterns',
-    icon: Brain,
-    reportType: 'mindset',
-  },
-];
-
-// Detailed essence types with icons and descriptions
-const detailedEssenceTypes = [
-  {
-    value: 'personal',
-    title: 'Personal',
-    description: 'Deep self-awareness and unlock your authentic potential',
-    icon: User,
-  },
-  {
-    value: 'professional',
-    title: 'Professional',
-    description: 'Career mastery and unlock your professional strengths',
-    icon: Briefcase,
-  },
-  {
-    value: 'relational',
-    title: 'Relational',
-    description: 'Master connections and deepen your relationship',
-    icon: Heart,
-  },
-];
-
-// Detailed relationship types with icons and descriptions
-const detailedRelationshipTypes = [
-  {
-    value: 'personal',
-    title: 'Personal',
-    description: 'Romantic chemistry and build deeper personal bonds',
-    icon: Heart,
-  },
-  {
-    value: 'professional',
-    title: 'Professional',
-    description: 'Unlock powerful collaboration dynamics with a team',
-    icon: Briefcase,
-  },
-];
 
 const ReportTypeSelector = ({ 
   control, 
