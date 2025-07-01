@@ -1,10 +1,10 @@
-
 import React, {
   useEffect,
   useState,
   useRef,
   useCallback,
   useMemo,
+  useLayoutEffect,
 } from 'react';
 import {
   motion,
@@ -61,6 +61,9 @@ function PickerWheel<T extends string | number = string>({
   // Track if value change came from internal picker interaction
   const isInternalUpdate = useRef(false);
   const lastExternalValue = useRef(value);
+  
+  // Lock out snapping until first render completes + touch begins
+  const hasMounted = useRef(false);
 
   // Create infinite options array if infinite mode is enabled
   // Filter out any blank/empty entries for clean Apple-style behavior
@@ -79,8 +82,31 @@ function PickerWheel<T extends string | number = string>({
   }, [infinite, infiniteOptions.length, options.length]);
 
   /* --------------------------------------------------------------------- */
+  // Smooth preload position - fires only once, avoids motion snap
+  useLayoutEffect(() => {
+    const idx = options.indexOf(value);
+    if (idx !== -1) {
+      const centerTop = (height - itemHeight) / 2;
+      let targetIndex = infinite
+        ? centerRepetitionStart + idx
+        : idx;
+
+      const initialY = centerTop - targetIndex * itemHeight;
+      rawY.set(initialY);
+      y.set(initialY);
+      lastExternalValue.current = value;
+    }
+  }, []); // 🚀 fires only once, avoids motion snap
+
+  // Enable syncing after first mount
+  useEffect(() => {
+    hasMounted.current = true;
+  }, []);
+
   // Keep wheel in sync with external value - only when not dragging and truly external
   useEffect(() => {
+    if (!hasMounted.current) return; // 🚫 don't sync yet
+
     // Don't sync during drag or if this is an internal update
     if (isDragging || isInternalUpdate.current) {
       isInternalUpdate.current = false; // Reset flag
