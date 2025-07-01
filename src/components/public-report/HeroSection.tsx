@@ -11,7 +11,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
   const handleClick = () => {
     if (onGetReportClick) {
       onGetReportClick();
-    } else {
+    } else if (typeof window !== 'undefined') {
       // Fallback: scroll to Step 1 if no click handler provided
       const step1 = document.querySelector('[data-step="1"]');
       if (step1) {
