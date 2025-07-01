@@ -7,13 +7,19 @@ import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import Footer from '@/components/Footer';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 
 const PublicReport = () => {
   try {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const isMobile = useIsMobile();
+    const [isClientMobile, setIsClientMobile] = useState(false);
+
+    // Safe mobile detection on client side only
+    useEffect(() => {
+      if (typeof window !== 'undefined') {
+        setIsClientMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+      }
+    }, []);
 
     // Diagnostic useEffect to catch runtime errors
     useEffect(() => {
@@ -40,7 +46,7 @@ const PublicReport = () => {
     }, []);
 
     const handleGetReportClick = () => {
-      if (isMobile) {
+      if (isClientMobile) {
         setIsDrawerOpen(true);
       } else {
         // For desktop, scroll to form
@@ -63,7 +69,7 @@ const PublicReport = () => {
       <div className="min-h-screen bg-background">
         <HeroSection onGetReportClick={handleGetReportClick} />
         <TestsSection />
-        {!isMobile && (
+        {!isClientMobile && (
           <div id="report-form">
             <ReportForm />
           </div>
