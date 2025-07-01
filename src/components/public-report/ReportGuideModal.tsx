@@ -17,6 +17,7 @@ import {
   Target,
   CalendarDays,
 } from 'lucide-react';
+import { useReportGuidePricing } from '@/hooks/useReportGuidePricing';
 
 interface ReportGuideModalProps {
   isOpen: boolean;
@@ -24,84 +25,75 @@ interface ReportGuideModalProps {
   targetReportType?: string | null;
 }
 
-const reportGuides = [
-  {
-    type: 'Essence',
-    icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'The Self Report',
-    price: '$10',
-    bestFor: 'Self-understanding',
-    description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
-    details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
-    subTypes: [
-      'Personal – Self-awareness, emotional behavior, inner wiring',
-      'Professional – How you operate at work: decision-making, productivity, and team dynamics. Useful for hiring, coaching, or leadership insight.', 
-      'Relational – How you show up in relationships (patterns, openness, tension)'
-    ]
-  },
-  {
-    type: 'Sync',
-    icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Compatibility Report',
-    price: '$10',
-    bestFor: 'Compatibility',
-    description: 'How your energy aligns with someone - connection, tension, and flow.',
-    details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
-    subTypes: [
-      'Personal Sync – Romantic, emotional, or close social connection',
-      'Professional Sync – Team dynamics, leadership compatibility, working styles'
-    ]
-  },
-  {
-    type: 'Mindset',
-    icon: <Brain className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Mindset Report',
-    price: '$2',
-    bestFor: 'Mental clarity',
-    description: 'Mood + mental clarity snapshot',
-    details: 'Get insights into your current mental state, thought patterns, and cognitive strengths for better decision-making.'
-  },
-  {
-    type: 'Flow',
-    icon: <Repeat className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Flow Report',
-    price: '$2',
-    bestFor: 'Emotional rhythm',
-    description: 'Creative/emotional openness over 7 days',
-    details: 'Track your creative and emotional rhythms throughout the week to optimize your creative output and emotional well-being.'
-  },
-  {
-    type: 'Focus',
-    icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Focus Report',
-    price: '$2',
-    bestFor: 'Productivity',
-    description: 'Best hours today for deep work or rest',
-    details: 'Identify your optimal times for concentration, productivity, and rest based on your personal energy cycles.'
-  },
-  {
-    type: 'Monthly',
-    icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Energy Month Report',
-    price: '$2',
-    bestFor: 'Monthly planning',
-    description: 'Your personalized forecast for the current month',
-    details: 'Get monthly themes, key opportunities, and timing guidance for important decisions and activities.'
-  }
-];
-
-// Reorder reportGuides to match TestsSection order
-const reorderedReportGuides = [
-  reportGuides.find(guide => guide.type === 'Essence')!,
-  reportGuides.find(guide => guide.type === 'Sync')!,
-  reportGuides.find(guide => guide.type === 'Monthly')!,
-  reportGuides.find(guide => guide.type === 'Mindset')!,
-  reportGuides.find(guide => guide.type === 'Focus')!,
-  reportGuides.find(guide => guide.type === 'Flow')!,
-];
-
 const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModalProps) => {
   const targetRef = useRef<HTMLDivElement>(null);
+  const { pricing, isLoading, formatPrice } = useReportGuidePricing();
+
+  const reportGuides = [
+    {
+      type: 'Essence',
+      icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'The Self Report',
+      priceKey: 'essence',
+      bestFor: 'Self-understanding',
+      description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
+      details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
+      subTypes: [
+        'Personal – Self-awareness, emotional behavior, inner wiring',
+        'Professional – How you operate at work: decision-making, productivity, and team dynamics. Useful for hiring, coaching, or leadership insight.', 
+        'Relational – How you show up in relationships (patterns, openness, tension)'
+      ]
+    },
+    {
+      type: 'Sync',
+      icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'Compatibility Report',
+      priceKey: 'sync',
+      bestFor: 'Compatibility',
+      description: 'How your energy aligns with someone - connection, tension, and flow.',
+      details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
+      subTypes: [
+        'Personal Sync – Romantic, emotional, or close social connection',
+        'Professional Sync – Team dynamics, leadership compatibility, working styles'
+      ]
+    },
+    {
+      type: 'Monthly',
+      icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'Energy Month Report',
+      priceKey: 'monthly',
+      bestFor: 'Monthly planning',
+      description: 'Your personalized forecast for the current month',
+      details: 'Get monthly themes, key opportunities, and timing guidance for important decisions and activities.'
+    },
+    {
+      type: 'Mindset',
+      icon: <Brain className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'Mindset Report',
+      priceKey: 'mindset',
+      bestFor: 'Mental clarity',
+      description: 'Mood + mental clarity snapshot',
+      details: 'Get insights into your current mental state, thought patterns, and cognitive strengths for better decision-making.'
+    },
+    {
+      type: 'Focus',
+      icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'Focus Report',
+      priceKey: 'focus',
+      bestFor: 'Productivity',
+      description: 'Best hours today for deep work or rest',
+      details: 'Identify your optimal times for concentration, productivity, and rest based on your personal energy cycles.'
+    },
+    {
+      type: 'Flow',
+      icon: <Repeat className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'Flow Report',
+      priceKey: 'flow',
+      bestFor: 'Emotional rhythm',
+      description: 'Creative/emotional openness over 7 days',
+      details: 'Track your creative and emotional rhythms throughout the week to optimize your creative output and emotional well-being.'
+    },
+  ];
 
   useEffect(() => {
     if (isOpen && targetReportType && targetRef.current) {
@@ -157,8 +149,9 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
           </DialogHeader>
 
           <div className="grid md:grid-cols-2 gap-4">
-            {reorderedReportGuides.map((report) => {
+            {reportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
+              const price = pricing[report.priceKey];
               
               return (
                 <Card 
@@ -177,7 +170,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                         {report.title}
                       </h3>
                       <span className="font-bold text-lg text-primary bg-primary/10 px-2 py-1 rounded">
-                        {report.price}
+                        {isLoading ? '...' : formatPrice(price)}
                       </span>
                     </div>
 
