@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { CheckCircle, Clock, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,15 +15,15 @@ interface SuccessScreenProps {
 }
 
 const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: SuccessScreenProps) => {
-  const { report, isLoading, isPolling, startPolling, stopPolling } = useGuestReportStatus();
+  const { report, isLoading, isPolling, error, startPolling, stopPolling } = useGuestReportStatus();
   const firstName = name.split(' ')[0];
 
   // Initialize viewport height management
   useViewportHeight();
 
-  // Auto-start polling when component mounts
+  // Auto-start polling when component mounts - simplified dependencies
   useEffect(() => {
-    if (autoStartPolling && email) {
+    if (autoStartPolling && email && !isPolling) {
       console.log('🚀 Auto-starting report polling for:', email);
       startPolling(email);
     }
@@ -31,7 +32,7 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
     return () => {
       stopPolling();
     };
-  }, [email, autoStartPolling, startPolling, stopPolling]);
+  }, [email, autoStartPolling]); // Removed function dependencies to prevent loops
 
   const getStatusInfo = () => {
     if (!report) {
@@ -102,6 +103,12 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
     window.location.reload();
   };
 
+  const handleRetryPolling = () => {
+    if (email && !isPolling) {
+      startPolling(email);
+    }
+  };
+
   return (
     <div 
       className="min-h-[calc(var(--vh,1vh)*100)] bg-gradient-to-b from-background to-muted/20 flex items-start justify-center pt-8 px-4 overflow-y-auto"
@@ -155,6 +162,21 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                 )}
               </p>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-600 mb-2">{error}</p>
+                <Button 
+                  onClick={handleRetryPolling}
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="space-y-3">

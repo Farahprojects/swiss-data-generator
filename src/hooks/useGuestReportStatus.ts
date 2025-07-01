@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface GuestReport {
@@ -27,8 +27,12 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
-  const [pollingEmail, setPollingEmail] = useState<string>('');
+  
+  // Use refs for stable references that don't trigger re-renders
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingEmailRef = useRef<string>('');
+  const retryCountRef = useRef<number>(0);
+  const maxRetriesRef = useRef<number>(10);
 
   const fetchReportStatus = useCallback(async (email: string) => {
     try {
@@ -55,6 +59,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         });
         setReport(data);
         setError(null);
+        retryCountRef.current = 0; // Reset retry count on success
         
         // Stop polling if report is ready
         if (data.has_report && data.report_content) {
@@ -67,58 +72,82 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       }
     } catch (err) {
       console.error('❌ Error fetching report status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch report status');
+      retryCountRef.current += 1;
+      
+      if (retryCountRef.current >= maxRetriesRef.current) {
+        console.error('❌ Max retries reached, stopping polling');
+        setError('Unable to check report status. Please refresh the page.');
+        stopPolling();
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to fetch report status');
+      }
     }
   }, []);
 
+  const stopPolling = useCallback(() => {
+    console.log('⏹️ Stopping polling');
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    setIsPolling(false);
+    setIsLoading(false);
+    pollingEmailRef.current = '';
+    retryCountRef.current = 0;
+  }, []);
+
   const startPolling = useCallback((email: string) => {
+    // Guard against multiple polling instances for the same email
+    if (isPolling && pollingEmailRef.current === email) {
+      console.log('📍 Already polling for this email, skipping');
+      return;
+    }
+
     console.log('▶️ Starting polling for email:', email);
-    setPollingEmail(email);
+    
+    // Stop any existing polling first
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+
+    pollingEmailRef.current = email;
     setIsPolling(true);
     setIsLoading(true);
     setError(null);
-
-    // Clear any existing interval
-    if (pollInterval) {
-      clearInterval(pollInterval);
-    }
+    retryCountRef.current = 0;
 
     // Initial fetch
     fetchReportStatus(email);
 
-    // Start polling every 5 seconds
+    // Start polling every 5 seconds with exponential backoff on errors
     const interval = setInterval(() => {
-      fetchReportStatus(email);
+      const delay = Math.min(5000 * Math.pow(1.5, retryCountRef.current), 30000); // Max 30 seconds
+      setTimeout(() => {
+        if (pollingEmailRef.current === email) { // Only fetch if still polling same email
+          fetchReportStatus(email);
+        }
+      }, retryCountRef.current > 0 ? delay - 5000 : 0);
     }, 5000);
 
-    setPollInterval(interval);
+    pollIntervalRef.current = interval;
 
     // Auto-stop polling after 10 minutes (timeout)
     setTimeout(() => {
-      console.log('⏰ Polling timeout reached, stopping polling');
-      stopPolling();
+      if (pollingEmailRef.current === email) {
+        console.log('⏰ Polling timeout reached, stopping polling');
+        stopPolling();
+      }
     }, 10 * 60 * 1000);
-  }, [fetchReportStatus, pollInterval]);
-
-  const stopPolling = useCallback(() => {
-    console.log('⏹️ Stopping polling');
-    if (pollInterval) {
-      clearInterval(pollInterval);
-      setPollInterval(null);
-    }
-    setIsPolling(false);
-    setIsLoading(false);
-    setPollingEmail('');
-  }, [pollInterval]);
+  }, [isPolling, fetchReportStatus, stopPolling]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
       }
     };
-  }, [pollInterval]);
+  }, []);
 
   return {
     report,
