@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -132,7 +133,8 @@ const PaymentStep = ({
   return (
     <FormStep stepNumber={3} title="Payment" className="bg-background">
       <div className="max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Main Layout - Order Summary and Payment Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Left Column - Order Summary & Benefits */}
           <Card className="h-fit">
             <CardHeader>
@@ -193,59 +195,8 @@ const PaymentStep = ({
             </CardContent>
           </Card>
 
-          {/* Right Column - Actions */}
-          <div className="max-w-sm w-full space-y-6">
-            {/* Promo Code Section */}
-            <div className="space-y-4">
-              <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 justify-center border-2 border-primary text-primary bg-transparent hover:bg-primary/5"
-                    type="button"
-                  >
-                    <Tag className="h-4 w-4 mr-2" />
-                    Have a promo code?
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-4">
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="promoCode" className="font-medium">Promo Code</Label>
-                      <div className="relative">
-                        <Input
-                          id="promoCode"
-                          {...register('promoCode')}
-                          placeholder="Enter promo code"
-                          className="h-12 pr-10"
-                        />
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          {getPromoValidationIcon()}
-                        </div>
-                      </div>
-                      {errors.promoCode && (
-                        <p className="text-sm text-red-500">{errors.promoCode.message}</p>
-                      )}
-                    </div>
-                    
-                    {/* Promo validation feedback */}
-                    {promoValidation.message && (
-                      <div className={`text-sm p-3 rounded-lg ${
-                        isValidatingPromo 
-                          ? 'bg-gray-50 text-gray-600'
-                          : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
-                          ? 'bg-green-50 text-green-700 border border-green-200'
-                          : 'bg-red-50 text-red-700 border border-red-200'
-                      }`}>
-                        {getPromoValidationMessage()}
-                      </div>
-                    )}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-
-            {/* Payment Section */}
+          {/* Right Column - Payment Actions (Fixed Position) */}
+          <div className="max-w-sm w-full">
             <div className="bg-muted/30 rounded-2xl p-6 shadow-sm border border-muted space-y-4">
               <Button
                 onClick={handleButtonClick}
@@ -292,8 +243,60 @@ const PaymentStep = ({
           </div>
         </div>
 
-        {/* Trust & Security Messages - Centered at bottom */}
-        <div className="text-center text-sm text-muted-foreground space-y-1 mt-8 pt-6 border-t border-muted/50">
+        {/* Independent Promo Code Card */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 justify-center border-2 border-primary text-primary bg-transparent hover:bg-primary/5"
+                  type="button"
+                >
+                  <Tag className="h-4 w-4 mr-2" />
+                  Have a promo code?
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="promoCode" className="font-medium">Promo Code</Label>
+                    <div className="relative">
+                      <Input
+                        id="promoCode"
+                        {...register('promoCode')}
+                        placeholder="Enter promo code"
+                        className="h-12 pr-10"
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        {getPromoValidationIcon()}
+                      </div>
+                    </div>
+                    {errors.promoCode && (
+                      <p className="text-sm text-red-500">{errors.promoCode.message}</p>
+                    )}
+                  </div>
+                  
+                  {/* Promo validation feedback */}
+                  {promoValidation.message && (
+                    <div className={`text-sm p-3 rounded-lg ${
+                      isValidatingPromo 
+                        ? 'bg-gray-50 text-gray-600'
+                        : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {getPromoValidationMessage()}
+                    </div>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </CardContent>
+        </Card>
+
+        {/* Trust & Security Messages - Fixed at bottom */}
+        <div className="text-center text-sm text-muted-foreground space-y-1 pt-6 border-t border-muted/50">
           <p>Your payment is secure and encrypted.</p>
           <p>Secure checkout powered by Stripe</p>
           <p>Your report will be delivered to your email within minutes</p>
@@ -304,3 +307,4 @@ const PaymentStep = ({
 };
 
 export default PaymentStep;
+
