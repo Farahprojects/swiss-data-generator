@@ -116,21 +116,45 @@ const ReportTypeSelector = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
 
-  // Auto-scroll to next step when report type is selected
+  // Auto-scroll logic - now watches for complete selection
   useEffect(() => {
-    if (selectedReportType) {
-      // Small delay to ensure the DOM is updated
-      setTimeout(() => {
-        const nextStep = document.querySelector('[data-step="2"]');
-        if (nextStep) {
-          nextStep.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-          });
-        }
-      }, 300);
-    }
-  }, [selectedReportType]);
+    const checkCompleteSelection = () => {
+      // Get current form values through the control
+      const currentValues = control._formValues;
+      const reportCategory = currentValues?.reportCategory;
+      const essenceType = currentValues?.essenceType;
+      const relationshipType = currentValues?.relationshipType;
+      const reportType = currentValues?.reportType;
+
+      // Check if selection is complete based on category
+      let isSelectionComplete = false;
+
+      if (reportCategory === 'the-self' && essenceType) {
+        isSelectionComplete = true;
+      } else if (reportCategory === 'compatibility' && relationshipType) {
+        isSelectionComplete = true;
+      } else if (reportCategory === 'snapshot' && reportType) {
+        isSelectionComplete = true;
+      }
+
+      if (isSelectionComplete) {
+        console.log('🎯 Complete selection detected, auto-scrolling to Step 2');
+        // Small delay to ensure the DOM is updated
+        setTimeout(() => {
+          const nextStep = document.querySelector('[data-step="2"]');
+          if (nextStep) {
+            nextStep.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start' 
+            });
+          }
+        }, 300);
+      }
+    };
+
+    // Check whenever any relevant field changes
+    checkCompleteSelection();
+  }, [selectedReportType, selectedCategory, selectedSubCategory, control]);
 
   // Only show options after user has actually selected a category
   const showSnapshotSubCategories = selectedCategory === 'snapshot';
