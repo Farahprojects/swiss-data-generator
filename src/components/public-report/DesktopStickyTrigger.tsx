@@ -29,10 +29,10 @@ const DesktopStickyTrigger = ({ onGetReportClick }: DesktopStickyTriggerProps) =
     if (onGetReportClick) {
       onGetReportClick();
     } else {
-      // Fallback: scroll to the report form
-      const reportSection = document.querySelector('#report-form');
-      if (reportSection) {
-        reportSection.scrollIntoView({ behavior: 'smooth' });
+      // Fallback: scroll to Step 1
+      const step1 = document.querySelector('[data-step="1"]');
+      if (step1) {
+        step1.scrollIntoView({ behavior: 'smooth' });
       }
     }
   };

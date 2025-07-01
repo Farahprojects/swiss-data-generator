@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Control, Controller, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -167,7 +166,7 @@ const ReportTypeSelector = ({
 
   return (
     <>
-      <FormStep stepNumber={1} title="Choose Your Report Type" className="bg-background">
+      <FormStep stepNumber={1} title="Choose Your Report Type" className="bg-background" data-step="1">
         <div className="space-y-6">
           <button
             type="button"

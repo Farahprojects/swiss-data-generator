@@ -1,11 +1,9 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
@@ -162,24 +160,8 @@ const PaymentStep = ({
   };
 
   return (
-    <FormStep stepNumber={3} title="Additional Notes & Payment" className="bg-background">
+    <FormStep stepNumber={3} title="Payment" className="bg-background">
       <div className="max-w-2xl mx-auto space-y-8">
-        {/* Additional Notes Section */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes or Questions (Optional)</Label>
-            <Textarea
-              id="notes"
-              {...register('notes')}
-              placeholder="Share any specific areas you'd like us to focus on in your report..."
-              className="min-h-[100px] resize-none"
-            />
-            {errors.notes && (
-              <p className="text-sm text-destructive">{errors.notes.message}</p>
-            )}
-          </div>
-        </div>
-
         {/* Order Summary */}
         <div className="bg-gray-50 rounded-lg p-6 space-y-4">
           <h3 className="font-semibold text-gray-900 text-lg">Order Summary</h3>
@@ -211,10 +193,6 @@ const PaymentStep = ({
           <div className="space-y-3 pt-4 border-t">
             <h4 className="font-medium">What You'll Receive:</h4>
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>Comprehensive PDF report (15-25 pages)</span>
-              </div>
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 <span>Instant email delivery</span>
