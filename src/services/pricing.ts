@@ -143,9 +143,9 @@ export const getReportTitle = (formData: ReportTypeMapping): string => {
   return reportTitles[reportType] || 'Personal Report';
 };
 
-// Simplified pricing calculation hook
+// Hook for pricing with caching
 export const usePricing = () => {
-  const calculatePricing = (basePrice: number, promoValidation: { status: string; discountPercent?: number }) => {
+  const calculatePricing = (basePrice: number, promoValidation: any) => {
     if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
       return {
         basePrice,
@@ -156,7 +156,7 @@ export const usePricing = () => {
       };
     }
 
-    const discountPercent = promoValidation.discountPercent || 0;
+    const discountPercent = promoValidation.discountPercent;
     const discount = basePrice * (discountPercent / 100);
     const finalPrice = basePrice - discount;
     
