@@ -111,7 +111,9 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
 
   // Create a proper PromoValidationState from PromoCodeValidation
   const promoValidationState = promoValidation ? {
-    status: (promoValidation.isValid ? (promoValidation.isFree ? 'valid-free' : 'valid-discount') : 'invalid') as const,
+    status: promoValidation.isValid 
+      ? (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) 
+      : 'invalid' as const,
     message: promoValidation.message,
     discountPercent: promoValidation.discountPercent
   } : {

@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import HeroSection from '@/components/public-report/HeroSection';
-import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
 import WhyChooseSection from '@/components/public-report/WhyChooseSection';
 import { ReportForm } from '@/components/shared/ReportForm';
@@ -39,7 +38,6 @@ const PublicReport = () => {
   return (
     <div className="min-h-screen bg-background">
       <HeroSection onGetReportClick={handleGetReportClick} />
-      <FeaturesSection />
       <TestsSection />
       {!isMobile && (
         <div id="report-form">
