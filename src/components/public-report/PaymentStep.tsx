@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -277,15 +276,6 @@ const PaymentStep = ({
                   : 'Generate My Report'
                 }
               </Button>
-              
-              <p className="text-xs text-muted-foreground text-center">
-                Your payment is secure and encrypted.
-              </p>
-              
-              <div className="text-center text-sm text-muted-foreground space-y-1">
-                <p>Secure checkout powered by Stripe</p>
-                <p>Your report will be delivered to your email within minutes</p>
-              </div>
 
               {/* Guarantee */}
               <div className="pt-4 border-t border-muted/50">
@@ -299,6 +289,13 @@ const PaymentStep = ({
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Trust & Security Messages - Centered at bottom */}
+        <div className="text-center text-sm text-muted-foreground space-y-1 mt-8 pt-6 border-t border-muted/50">
+          <p>Your payment is secure and encrypted.</p>
+          <p>Secure checkout powered by Stripe</p>
+          <p>Your report will be delivered to your email within minutes</p>
         </div>
       </div>
     </FormStep>
