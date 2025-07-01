@@ -35,34 +35,38 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // Enhanced viewport height management with --vh custom property
   useEffect(() => {
-    const updateVH = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
-    };
-    
-    updateVH();
-    window.addEventListener('resize', updateVH);
-    window.addEventListener('orientationchange', updateVH);
-    
-    return () => {
-      window.removeEventListener('resize', updateVH);
-      window.removeEventListener('orientationchange', updateVH);
-    };
+    if (typeof window !== 'undefined') {
+      const updateVH = () => {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      };
+      
+      updateVH();
+      window.addEventListener('resize', updateVH);
+      window.addEventListener('orientationchange', updateVH);
+      
+      return () => {
+        window.removeEventListener('resize', updateVH);
+        window.removeEventListener('orientationchange', updateVH);
+      };
+    }
   }, []);
 
   // Context-specific scroll management - only apply when drawer is open
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && typeof window !== 'undefined') {
       // Add scroll lock class to body when drawer opens
       document.body.classList.add('drawer-scroll-lock');
-    } else {
+    } else if (typeof window !== 'undefined') {
       // Remove scroll lock class when drawer closes
       document.body.classList.remove('drawer-scroll-lock');
     }
 
     // Cleanup on unmount
     return () => {
-      document.body.classList.remove('drawer-scroll-lock');
+      if (typeof window !== 'undefined') {
+        document.body.classList.remove('drawer-scroll-lock');
+      }
     };
   }, [isOpen]);
 
@@ -82,60 +86,60 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // Enhanced keyboard detection and auto-scroll prevention
   useEffect(() => {
-    let initialViewportHeight = window.innerHeight;
+    if (typeof window !== 'undefined' && isOpen) {
+      let initialViewportHeight = window.innerHeight;
 
-    const preventBrowserAutoScroll = (event: Event) => {
-      // Prevent browser's default auto-scroll behavior on input focus
-      event.preventDefault();
-      event.stopPropagation();
-    };
+      const preventBrowserAutoScroll = (event: Event) => {
+        // Prevent browser's default auto-scroll behavior on input focus
+        event.preventDefault();
+        event.stopPropagation();
+      };
 
-    const handleViewportChange = () => {
-      const currentHeight = window.innerHeight;
-      const heightDifference = initialViewportHeight - currentHeight;
-      
-      // Keyboard is likely visible if viewport shrunk significantly
-      setKeyboardVisible(heightDifference > 150);
-      
-      // Update --vh when viewport changes
-      const vh = currentHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
-    };
-
-    const handleFocusIn = (event: FocusEvent) => {
-      const target = event.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        // Prevent browser auto-scroll
-        preventBrowserAutoScroll(event);
+      const handleViewportChange = () => {
+        const currentHeight = window.innerHeight;
+        const heightDifference = initialViewportHeight - currentHeight;
         
-        // Custom scroll management
-        setTimeout(() => {
-          target.scrollIntoView({ 
-            block: 'nearest', 
-            behavior: 'smooth' 
-          });
-        }, 100);
-      }
-    };
+        // Keyboard is likely visible if viewport shrunk significantly
+        setKeyboardVisible(heightDifference > 150);
+        
+        // Update --vh when viewport changes
+        const vh = currentHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      };
 
-    if (isOpen) {
+      const handleFocusIn = (event: FocusEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          // Prevent browser auto-scroll
+          preventBrowserAutoScroll(event);
+          
+          // Custom scroll management
+          setTimeout(() => {
+            target.scrollIntoView({ 
+              block: 'nearest', 
+              behavior: 'smooth' 
+            });
+          }, 100);
+        }
+      };
+
       // Add capture-phase event listeners
       document.addEventListener('focusin', handleFocusIn, { capture: true });
       window.addEventListener('resize', handleViewportChange);
       
       // Store initial height
       initialViewportHeight = window.innerHeight;
-    }
 
-    return () => {
-      document.removeEventListener('focusin', handleFocusIn, { capture: true });
-      window.removeEventListener('resize', handleViewportChange);
-    };
+      return () => {
+        document.removeEventListener('focusin', handleFocusIn, { capture: true });
+        window.removeEventListener('resize', handleViewportChange);
+      };
+    }
   }, [isOpen]);
 
   // Check for Stripe return URL parameters
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const sessionId = urlParams.get('session_id');
       const status = urlParams.get('status');
@@ -187,8 +191,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       email: data.email
     });
 
-    // Store email for potential Stripe return
-    localStorage.setItem('pending_report_email', data.email);
+    // Store email for potential Stripe return (only on client)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pending_report_email', data.email);
+    }
 
     // Submit the report
     await submitReport(data, promoValidationState, setPromoValidation);
@@ -352,4 +358,3 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 };
 
 export default MobileReportDrawer;
-
