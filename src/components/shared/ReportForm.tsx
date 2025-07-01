@@ -1,13 +1,22 @@
 
 import React from 'react';
-import { PublicReportForm } from '@/components/public-report/PublicReportForm';
+import PublicReportForm from '@/components/public-report/PublicReportForm';
 
 interface ReportFormProps {
   showReportGuide?: boolean;
   setShowReportGuide?: (show: boolean) => void;
+  coachSlug?: string;
+  themeColor?: string;
+  fontFamily?: string;
 }
 
-export const ReportForm = ({ showReportGuide, setShowReportGuide }: ReportFormProps) => {
+export const ReportForm = ({ 
+  showReportGuide, 
+  setShowReportGuide, 
+  coachSlug, 
+  themeColor, 
+  fontFamily 
+}: ReportFormProps) => {
   return (
     <section className="py-16 bg-background">
       <div className="container mx-auto px-4">

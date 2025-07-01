@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Drawer,
@@ -6,7 +7,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
-import { PublicReportForm } from './PublicReportForm';
+import PublicReportForm from './PublicReportForm';
 
 interface MobileReportDrawerProps {
   isOpen: boolean;

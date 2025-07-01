@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form";
@@ -5,13 +6,11 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { DatePicker } from "@/components/ui/date-picker"
 import { CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { addYears, format } from 'date-fns';
-import { useReport } from '@/contexts/ReportContext';
 import { essenceTypes, relationshipTypes } from '@/constants/report-types';
 import { ReportTypeOption, ReportFormData } from '@/types/public-report';
 import ReportTypeSelector from './ReportTypeSelector';
@@ -65,8 +64,8 @@ interface PublicReportFormProps {
 const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: PublicReportFormProps) => {
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
-  const { setReportData } = useReport();
-  const { validatePromo, promoValidation, isValidatingPromo } = usePromoValidation();
+  const [reportData, setReportData] = useState<ReportFormData | null>(null);
+  const { validatePromoManually, promoValidation, isValidatingPromo } = usePromoValidation();
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportFormSchema),
@@ -80,7 +79,7 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
     },
   });
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = form;
+  const { control, handleSubmit, watch, setValue, formState } = form;
 
   const onSubmit = async (data: ReportFormData) => {
     console.log('Form Data Submitted:', data);
@@ -89,7 +88,7 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
     // Validate promo code if present
     if (data.promoCode && data.promoCode.trim() !== '') {
       console.log('Validating promo code:', data.promoCode);
-      await validatePromo(data.promoCode);
+      await validatePromoManually(data.promoCode);
     }
 
     // Simulate report generation (replace with actual API call)
@@ -110,11 +109,22 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
   const showSecondPersonFields = reportType === 'sync' || reportType === 'compatibility';
   const requiresNotes = reportType === 'transit' || reportType === 'progression' || reportType === 'return';
 
+  // Create a proper PromoValidationState from PromoCodeValidation
+  const promoValidationState = promoValidation ? {
+    status: promoValidation.isValid ? (promoValidation.isFree ? 'valid-free' : 'valid-discount') : 'invalid' as const,
+    message: promoValidation.message,
+    discountPercent: promoValidation.discountPercent
+  } : {
+    status: 'none' as const,
+    message: '',
+    discountPercent: 0
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       <ReportTypeSelector
         control={control}
-        errors={errors}
+        errors={formState.errors}
         selectedReportType={watch('reportType')}
         showReportGuide={showReportGuide}
         setShowReportGuide={setShowReportGuide || (() => {})}
@@ -125,10 +135,10 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
         <PaymentStep 
           register={form.register}
           watch={form.watch}
-          errors={form.errors}
+          errors={formState.errors}
           onSubmit={handleSubmit(onSubmit)}
           isProcessing={isProcessing}
-          promoValidation={promoValidation}
+          promoValidation={promoValidationState}
           isValidatingPromo={isValidatingPromo}
         />
       )}
