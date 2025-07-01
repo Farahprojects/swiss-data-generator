@@ -1,11 +1,9 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
@@ -195,57 +193,58 @@ const PaymentStep = ({
 
           {/* Right Column - Actions */}
           <div className="max-w-sm w-full space-y-6">
-            {/* Promo Code Section */}
+            {/* Promo Code Section - Fixed Height Container */}
             <div className="space-y-4">
-              <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 justify-center border-2 border-primary text-primary bg-transparent hover:bg-primary/5"
-                    type="button"
-                  >
-                    <Tag className="h-4 w-4 mr-2" />
-                    Have a promo code?
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-4">
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="promoCode" className="font-medium">Promo Code</Label>
-                      <div className="relative">
-                        <Input
-                          id="promoCode"
-                          {...register('promoCode')}
-                          placeholder="Enter promo code"
-                          className="h-12 pr-10"
-                        />
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          {getPromoValidationIcon()}
-                        </div>
+              <Button
+                variant="outline"
+                className="w-full h-12 justify-center border-2 border-primary text-primary bg-transparent hover:bg-primary/5"
+                type="button"
+                onClick={() => setShowPromoCode(!showPromoCode)}
+              >
+                <Tag className="h-4 w-4 mr-2" />
+                Have a promo code?
+              </Button>
+              
+              {/* Fixed height container to prevent layout shifts */}
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                showPromoCode ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+              }`}>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="promoCode" className="font-medium">Promo Code</Label>
+                    <div className="relative">
+                      <Input
+                        id="promoCode"
+                        {...register('promoCode')}
+                        placeholder="Enter promo code"
+                        className="h-12 pr-10"
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        {getPromoValidationIcon()}
                       </div>
-                      {errors.promoCode && (
-                        <p className="text-sm text-red-500">{errors.promoCode.message}</p>
-                      )}
                     </div>
-                    
-                    {/* Promo validation feedback */}
-                    {promoValidation.message && (
-                      <div className={`text-sm p-3 rounded-lg ${
-                        isValidatingPromo 
-                          ? 'bg-gray-50 text-gray-600'
-                          : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
-                          ? 'bg-green-50 text-green-700 border border-green-200'
-                          : 'bg-red-50 text-red-700 border border-red-200'
-                      }`}>
-                        {getPromoValidationMessage()}
-                      </div>
+                    {errors.promoCode && (
+                      <p className="text-sm text-red-500">{errors.promoCode.message}</p>
                     )}
                   </div>
-                </CollapsibleContent>
-              </Collapsible>
+                  
+                  {/* Promo validation feedback */}
+                  {promoValidation.message && (
+                    <div className={`text-sm p-3 rounded-lg ${
+                      isValidatingPromo 
+                        ? 'bg-gray-50 text-gray-600'
+                        : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {getPromoValidationMessage()}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Payment Section */}
+            {/* Payment Section - Fixed Position */}
             <div className="bg-muted/30 rounded-2xl p-6 shadow-sm border border-muted space-y-4">
               <Button
                 onClick={handleButtonClick}
@@ -292,7 +291,7 @@ const PaymentStep = ({
           </div>
         </div>
 
-        {/* Trust & Security Messages - Centered at bottom */}
+        {/* Trust & Security Messages - Centered at bottom - Fixed Position */}
         <div className="text-center text-sm text-muted-foreground space-y-1 mt-8 pt-6 border-t border-muted/50">
           <p>Your payment is secure and encrypted.</p>
           <p>Secure checkout powered by Stripe</p>
