@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import HeroSection from '@/components/public-report/HeroSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
-import WhyChooseSection from '@/components/public-report/WhyChooseSection';
 import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
@@ -59,7 +58,6 @@ const PublicReport = () => {
         showReportGuide={showReportGuide}
         setShowReportGuide={setShowReportGuide}
       />
-      <WhyChooseSection />
       <ReportGuideResponsive 
         isOpen={showReportGuide} 
         onClose={() => setShowReportGuide(false)} 
