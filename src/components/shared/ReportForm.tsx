@@ -143,6 +143,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
               isProcessing={isProcessing}
               isPricingLoading={isPricingLoading}
               promoValidation={promoValidation}
+              reportType={selectedReportType}
               onButtonClick={handleButtonClick}
             />
           )}

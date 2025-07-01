@@ -21,6 +21,7 @@ interface SubmissionSectionProps {
   isProcessing: boolean;
   isPricingLoading: boolean;
   promoValidation: PromoValidationState;
+  reportType: string;
   onButtonClick: (e: React.MouseEvent) => void;
 }
 
@@ -29,7 +30,8 @@ const SubmissionSection = ({
   errors, 
   isProcessing, 
   isPricingLoading, 
-  promoValidation, 
+  promoValidation,
+  reportType,
   onButtonClick 
 }: SubmissionSectionProps) => {
   return (
@@ -52,10 +54,10 @@ const SubmissionSection = ({
         </div>
 
         {/* Promo Code Section */}
-        <PromoCodeSection register={register} errors={errors} />
+        <PromoCodeSection register={register} promoValidation={promoValidation} />
 
         {/* Order Summary */}
-        <OrderSummary promoValidation={promoValidation} />
+        <OrderSummary reportType={reportType} />
 
         {/* Submit Button */}
         <div className="pt-4">
