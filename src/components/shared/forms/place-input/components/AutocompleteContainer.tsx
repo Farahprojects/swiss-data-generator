@@ -30,28 +30,9 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
   const { isLoaded, isError } = useGoogleMapsScript();
   const autocompleteRef = useRef<HTMLGmpPlaceAutocompleteElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const overlayInputRef = useRef<HTMLInputElement>(null);
   const [isProcessingSelection, setIsProcessingSelection] = useState(false);
-  const [overlayValue, setOverlayValue] = useState(value);
 
   const handlePlaceSelect = usePlaceSelection(onChange, onPlaceSelect);
-
-  // Sync overlay value with prop value
-  useEffect(() => {
-    setOverlayValue(value);
-  }, [value]);
-
-  // Handle overlay input changes - this ensures we ALWAYS capture typed text
-  const handleOverlayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setOverlayValue(newValue);
-    onChange(newValue);
-
-    // Also sync to the Google Maps element if it exists
-    if (autocompleteRef.current) {
-      autocompleteRef.current.value = newValue;
-    }
-  };
 
   // Handle error state
   useEffect(() => {
@@ -145,6 +126,13 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
     }
   }, [isLoaded, value, id, placeholder, onChange, onPlaceSelect, disabled, retryCount, handlePlaceSelect, onShowFallback]);
 
+  // Sync value with autocomplete element
+  useEffect(() => {
+    if (autocompleteRef.current && value !== autocompleteRef.current.value) {
+      autocompleteRef.current.value = value;
+    }
+  }, [value]);
+
   return (
     <div className="relative">
       <div 
@@ -153,8 +141,8 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
         className="relative h-12 min-h-12 border rounded-md bg-background px-3 py-2"
         style={{
           fontSize: '16px',
-          overflow: 'visible',
-          position: 'relative'
+          overflow: 'visible', // ✅ Allow Google popup to be visible
+          position: 'relative' // ✅ Positioning context for Google popup
         }}
       >
         {!isLoaded && !isError && (
@@ -164,28 +152,10 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
           </div>
         )}
       </div>
-
-      {/* Transparent overlay input - this is our iOS Safari safeguard */}
-      {isLoaded && !isError && (
-        <input
-          ref={overlayInputRef}
-          type="text"
-          value={overlayValue}
-          onChange={handleOverlayChange}
-          placeholder={placeholder}
-          className="absolute inset-0 w-full h-full bg-transparent border-none outline-none px-3 py-2 text-transparent caret-black z-10"
-          style={{
-            fontSize: '16px',
-            color: 'transparent', // Hide the text since Google Maps shows it
-            caretColor: 'black' // But keep the cursor visible
-          }}
-          disabled={disabled}
-        />
-      )}
       
       {/* Processing overlay */}
       {isProcessingSelection && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-20 rounded-md">
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10 rounded-md">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
         </div>
       )}
