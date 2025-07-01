@@ -144,7 +144,7 @@ const PersonCard = ({
     }
 
     // Enhanced layout stabilization for mobile with proper timing
-    if (isMobile) {
+    if (isMobile && typeof window !== 'undefined') {
       // Prevent scroll interference during Google's cleanup
       document.body.style.pointerEvents = 'none';
       

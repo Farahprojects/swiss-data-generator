@@ -144,7 +144,7 @@ const PaymentStep = ({
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-red-800 mb-2">Pricing Error</h3>
             <p className="text-red-600 mb-4">Unable to load pricing information for this report type.</p>
-            <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">Retry</Button>
+            <Button onClick={() => typeof window !== 'undefined' && window.location.reload()} variant="outline" className="mt-4">Retry</Button>
           </CardContent>
         </Card>
       </div>

@@ -48,6 +48,9 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
   };
 
   const scrollToFirstError = () => {
+    // Only run in browser environment
+    if (typeof window === 'undefined') return;
+    
     // Find the first error field and scroll to it
     const errorFields = [
       { field: 'name', element: document.querySelector('#name') },
