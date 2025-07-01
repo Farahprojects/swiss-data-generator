@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowLeft, Copy, Download, X, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Copy, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ReportHeaderProps {
@@ -67,19 +67,18 @@ export const ReportHeader = ({
               size="sm"
               onClick={onChatGPTClick}
               disabled={!isCopyCompleted}
-              className={`flex items-center gap-2 ${
+              className={`flex items-center gap-2 transition-all duration-200 ${
                 !isCopyCompleted 
                   ? 'opacity-50 cursor-not-allowed' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-[#10A37F] hover:bg-[#0D8A6B] text-white border-[#10A37F] shadow-sm hover:shadow-md'
               }`}
             >
               <img 
-                src="/lovable-uploads/97523ce9-e477-4fb9-9a9c-f8cf223342c6.png" 
+                src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
                 alt="ChatGPT" 
                 className="h-4 w-4"
               />
               ChatGPT
-              <ExternalLink className="h-3 w-3" />
             </Button>
             <Button
               variant="ghost"

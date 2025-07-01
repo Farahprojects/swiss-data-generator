@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Copy, Download, ExternalLink } from 'lucide-react';
+import { Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -73,17 +73,17 @@ export const ReportActions = ({
       <Card>
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto ${
-              isCopyCompleted ? 'bg-green-100' : 'bg-gray-100'
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto transition-all duration-200 ${
+              isCopyCompleted ? 'bg-[#10A37F]/10' : 'bg-gray-100'
             }`}>
               <img 
-                src="/lovable-uploads/97523ce9-e477-4fb9-9a9c-f8cf223342c6.png" 
+                src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
                 alt="ChatGPT" 
-                className={`h-6 w-6 ${!isCopyCompleted ? 'opacity-50' : ''}`}
+                className={`h-6 w-6 transition-opacity duration-200 ${!isCopyCompleted ? 'opacity-50' : ''}`}
               />
             </div>
             <div>
-              <h3 className={`font-semibold ${isCopyCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <h3 className={`font-semibold transition-colors duration-200 ${isCopyCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
                 Analyze with ChatGPT
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
@@ -96,20 +96,18 @@ export const ReportActions = ({
             <Button 
               onClick={onChatGPTClick}
               disabled={!isCopyCompleted}
-              variant={isCopyCompleted ? "default" : "outline"}
-              className={`w-full ${
+              className={`w-full transition-all duration-200 ${
                 isCopyCompleted 
-                  ? 'bg-green-600 hover:bg-green-700 text-white' 
-                  : 'opacity-50 cursor-not-allowed'
+                  ? 'bg-[#10A37F] hover:bg-[#0D8A6B] text-white border-[#10A37F] shadow-sm hover:shadow-md' 
+                  : 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400'
               }`}
             >
               <img 
-                src="/lovable-uploads/97523ce9-e477-4fb9-9a9c-f8cf223342c6.png" 
+                src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
                 alt="ChatGPT" 
                 className="h-4 w-4 mr-2"
               />
-              Open ChatGPT
-              <ExternalLink className="h-3 w-3 ml-1" />
+              ChatGPT
             </Button>
           </div>
         </CardContent>
