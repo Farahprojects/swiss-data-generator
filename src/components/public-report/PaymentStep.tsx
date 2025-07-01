@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -284,7 +285,7 @@ const PaymentStep = ({
                   <h4 className="font-medium text-sm">100% Satisfaction Guarantee</h4>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  You're covered by our 100% Satisfaction Guarantee. Not happy with your report? We'll refund you within 7 days — no questions asked.
+                  Not happy with your report? We'll refund you within 7 days — no questions asked.
                 </p>
               </div>
             </div>
