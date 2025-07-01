@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { initiateGuestCheckout } from '@/utils/guest-checkout';
 import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation';
-import { getReportPriceAndDescription, buildCompleteReportType } from '@/services/report-pricing';
+import { buildCompleteReportType } from '@/services/report-pricing';
+import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
 
 interface PromoValidationState {
@@ -15,7 +16,6 @@ interface PromoValidationState {
 
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isPricingLoading, setIsPricingLoading] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
   const [showPromoConfirmation, setShowPromoConfirmation] = useState(false);
   const [pendingSubmissionData, setPendingSubmissionData] = useState<{
@@ -24,6 +24,7 @@ export const useReportSubmission = () => {
     description: string;
   } | null>(null);
   const { toast } = useToast();
+  const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = usePriceFetch();
 
   const submitReport = async (
     data: ReportFormData, 
@@ -35,7 +36,6 @@ export const useReportSubmission = () => {
     console.log('📝 Form data:', data);
     
     setIsProcessing(true);
-    setIsPricingLoading(true);
     
     try {
       // Validate promo code if present and not skipping validation
@@ -65,16 +65,25 @@ export const useReportSubmission = () => {
           });
 
           // Get pricing for confirmation dialog
-          const { amount, description } = await getReportPriceAndDescription(
-            data.reportType, 
-            data.relationshipType, 
-            data.essenceType
-          );
+          const amount = getReportPrice({
+            reportType: data.reportType,
+            essenceType: data.essenceType,
+            relationshipType: data.relationshipType,
+            reportCategory: data.reportCategory,
+            reportSubCategory: data.reportSubCategory
+          });
+          
+          const description = getReportTitle({
+            reportType: data.reportType,
+            essenceType: data.essenceType,
+            relationshipType: data.relationshipType,
+            reportCategory: data.reportCategory,
+            reportSubCategory: data.reportSubCategory
+          });
 
           // Store submission data and show confirmation dialog
           setPendingSubmissionData({ data, basePrice: amount, description });
           setShowPromoConfirmation(true);
-          setIsPricingLoading(false);
           setIsProcessing(false);
           return; // Don't continue with submission
         }
@@ -121,18 +130,25 @@ export const useReportSubmission = () => {
           description: "Your report has been generated and will be sent to your email shortly.",
         });
         
-        setIsPricingLoading(false);
         return;
       }
       
       // Regular paid flow
-      const { amount, description } = await getReportPriceAndDescription(
-        data.reportType, 
-        data.relationshipType, 
-        data.essenceType
-      );
+      const amount = getReportPrice({
+        reportType: data.reportType,
+        essenceType: data.essenceType,
+        relationshipType: data.relationshipType,
+        reportCategory: data.reportCategory,
+        reportSubCategory: data.reportSubCategory
+      });
       
-      setIsPricingLoading(false);
+      const description = getReportTitle({
+        reportType: data.reportType,
+        essenceType: data.essenceType,
+        relationshipType: data.relationshipType,
+        reportCategory: data.reportCategory,
+        reportSubCategory: data.reportSubCategory
+      });
 
       // Apply promo code discount if valid (but not free)
       let finalAmount = amount;
@@ -190,7 +206,6 @@ export const useReportSubmission = () => {
     } finally {
       console.log('🏁 Form submission completed');
       setIsProcessing(false);
-      setIsPricingLoading(false);
     }
   };
 

@@ -1,36 +1,10 @@
 
-import { fetchReportPrice } from './pricing';
+// This service is now deprecated - use usePriceFetch hook instead
+// Keeping for backward compatibility but will throw error to encourage migration
 
 export const getReportPriceAndDescription = async (reportType: string, relationshipType?: string, essenceType?: string) => {
-  // Use the shared pricing service
-  const amount = await fetchReportPrice({
-    reportType,
-    relationshipType,
-    essenceType
-  });
-
-  const baseDescriptions = {
-    'sync': 'Sync Compatibility Report',
-    'essence': 'Personal Essence Report',
-    'flow': 'Life Flow Analysis Report',
-    'mindset': 'Mindset Transformation Report',
-    'monthly': 'Monthly Astrology Forecast',
-    'focus': 'Life Focus Guidance Report',
-  };
-
-  let description = baseDescriptions[reportType as keyof typeof baseDescriptions] || 'Astrology Report';
-  
-  if (relationshipType) {
-    description += ` (${relationshipType.charAt(0).toUpperCase() + relationshipType.slice(1)} Focus)`;
-  }
-  if (essenceType) {
-    description += ` - ${essenceType.charAt(0).toUpperCase() + essenceType.slice(1)} Analysis`;
-  }
-
-  return { 
-    amount, 
-    description 
-  };
+  console.warn('⚠️ getReportPriceAndDescription is deprecated. Please use usePriceFetch hook from PricingContext instead.');
+  throw new Error('getReportPriceAndDescription is deprecated. Please use usePriceFetch hook from PricingContext instead.');
 };
 
 export const buildCompleteReportType = (reportType: string, essenceType?: string, relationshipType?: string) => {
