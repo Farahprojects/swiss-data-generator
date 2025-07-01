@@ -50,27 +50,14 @@ const Step3Payment = ({
   const [showPromoCode, setShowPromoCode] = useState(false);
   const { validatePromoManually } = usePromoValidation();
   
-  // Add error handling for usePriceFetch with SSR guard
-  let pricingHook;
-  try {
-    // Only initialize pricing hook on client side
-    if (typeof window !== 'undefined') {
-      pricingHook = usePriceFetch();
-    } else {
-      throw new Error('SSR - pricing not available during server render');
-    }
-  } catch (error) {
-    console.error('Error initializing pricing:', error);
-    pricingHook = {
-      getReportPrice: () => { throw new Error('Pricing not available'); },
-      getReportTitle: () => 'Report',
-      calculatePricing: () => ({ basePrice: 0, discount: 0, discountPercent: 0, finalPrice: 0, isFree: false }),
-      isLoading: false,
-      error: 'Pricing service unavailable'
-    };
-  }
-  
-  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = pricingHook;
+  // SSR-safe pricing hook initialization
+  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = typeof window !== 'undefined' ? usePriceFetch() : {
+    getReportPrice: () => { throw new Error('Pricing not available during SSR'); },
+    getReportTitle: () => 'Report',
+    calculatePricing: () => ({ basePrice: 0, discount: 0, discountPercent: 0, finalPrice: 0, isFree: false }),
+    isLoading: false,
+    error: 'Pricing service unavailable during SSR'
+  };
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');

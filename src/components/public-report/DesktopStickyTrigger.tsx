@@ -2,25 +2,32 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
-
 interface DesktopStickyTriggerProps {
   onGetReportClick?: () => void;
 }
 
 const DesktopStickyTrigger = ({ onGetReportClick }: DesktopStickyTriggerProps) => {
   const [isVisible, setIsVisible] = useState(false);
-  const isMobile = useIsMobile();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Safe mobile detection on client side only
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    }
+  }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const shouldShow = scrollY > 600; // Show after scrolling past hero section
-      setIsVisible(shouldShow);
-    };
+    if (typeof window !== 'undefined') {
+      const handleScroll = () => {
+        const scrollY = window.scrollY;
+        const shouldShow = scrollY > 600; // Show after scrolling past hero section
+        setIsVisible(shouldShow);
+      };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
   }, []);
 
   if (isMobile) return null;
@@ -28,7 +35,7 @@ const DesktopStickyTrigger = ({ onGetReportClick }: DesktopStickyTriggerProps) =
   const handleClick = () => {
     if (onGetReportClick) {
       onGetReportClick();
-    } else {
+    } else if (typeof window !== 'undefined') {
       // Fallback: scroll to Step 1
       const step1 = document.querySelector('[data-step="1"]');
       if (step1) {
