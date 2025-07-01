@@ -36,7 +36,6 @@ const PublicReport = () => {
   return (
     <div className="min-h-screen bg-background">
       <HeroSection onGetReportClick={handleGetReportClick} />
-      <FeaturesSection />
       <TestsSection />
       {!isMobile && (
         <div id="report-form">
@@ -52,6 +51,7 @@ const PublicReport = () => {
         isOpen={isDrawerOpen} 
         onClose={handleCloseDrawer} 
       />
+      <FeaturesSection onGetReportClick={handleGetReportClick} />
       <Footer />
     </div>
   );
