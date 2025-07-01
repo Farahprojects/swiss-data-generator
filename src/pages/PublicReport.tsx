@@ -42,28 +42,29 @@ const PublicReport = () => {
       }
     }, []);
 
-    // Diagnostic useEffect to catch runtime errors
-    useEffect(() => {
-      const runDiagnostics = async () => {
-        try {
-          console.log('[DIAG] Starting diagnostics...');
+  // Diagnostic useEffect to catch runtime errors
+  useEffect(() => {
+    // Only run diagnostics in browser environment
+    if (typeof window === 'undefined') return;
+    
+    const runDiagnostics = async () => {
+      try {
+        console.log('[DIAG] Starting diagnostics...');
 
-          // Try a basic Supabase ping to price_list table
-          const { data, error } = await supabase.from('price_list').select('*').limit(1);
-          console.log('[DIAG] Supabase response:', data, error);
+        // Try a basic Supabase ping to price_list table
+        const { data, error } = await supabase.from('price_list').select('*').limit(1);
+        console.log('[DIAG] Supabase response:', data, error);
 
-          if (error) throw error;
-          
-          console.log('[DIAG] All checks passed successfully');
-        } catch (err: any) {
-          console.error('[DIAG ERROR] Report page crashed with:', err?.message || err);
-          console.error('[DIAG ERROR] Full error object:', err);
-        }
-      };
-
-      if (typeof window !== 'undefined') {
-        runDiagnostics();
+        if (error) throw error;
+        
+        console.log('[DIAG] All checks passed successfully');
+      } catch (err: any) {
+        console.error('[DIAG ERROR] Report page crashed with:', err?.message || err);
+        console.error('[DIAG ERROR] Full error object:', err);
       }
+    };
+
+    runDiagnostics();
     }, []);
 
     const handleGetReportClick = () => {
