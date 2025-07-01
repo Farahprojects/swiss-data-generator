@@ -77,6 +77,11 @@ const PersonCard = ({
 
   const getFieldName = (field: string): keyof ReportFormData => {
     if (isSecondPerson) {
+      // Fix the coordinate field mapping for second person
+      if (field === 'birthLatitude') return 'secondPersonLatitude' as keyof ReportFormData;
+      if (field === 'birthLongitude') return 'secondPersonLongitude' as keyof ReportFormData;
+      if (field === 'birthPlaceId') return 'secondPersonPlaceId' as keyof ReportFormData;
+      
       return `secondPerson${field.charAt(0).toUpperCase()}${field.slice(1)}` as keyof ReportFormData;
     }
     return field as keyof ReportFormData;
@@ -131,12 +136,20 @@ const PersonCard = ({
     setHasInteracted((prev) => ({ ...prev, birthLocation: true }));
 
     if (placeData.latitude && placeData.longitude) {
+      console.log(`📍 Person ${personNumber} - Field mapping:`, {
+        latField,
+        lngField,
+        placeIdField,
+        coordinates: { lat: placeData.latitude, lng: placeData.longitude }
+      });
+      
       setValue(latField, placeData.latitude);
       setValue(lngField, placeData.longitude);
       console.log(`✅ Person ${personNumber} - Coordinates saved:`, {
         latitude: placeData.latitude,
         longitude: placeData.longitude,
-        location: fullLocation
+        location: fullLocation,
+        savedToFields: { latField, lngField }
       });
     } else {
       console.warn(`⚠️ Person ${personNumber} - No coordinates available for location:`, fullLocation);

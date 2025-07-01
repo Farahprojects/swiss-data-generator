@@ -37,15 +37,18 @@ export const validatePromoCode = async (code: string): Promise<PromoCodeValidati
       };
     }
 
-    // Check if expired (only if expires_at field exists)
-    if ('expires_at' in data && data.expires_at && new Date(data.expires_at) < new Date()) {
-      return {
-        isValid: false,
-        discountPercent: 0,
-        message: 'This promo code has expired and is no longer valid.',
-        isFree: false,
-        errorType: 'expired'
-      };
+    // Check if expired (only if expires_at field exists and has a value)
+    if (data.expires_at && typeof data.expires_at === 'string') {
+      const expiryDate = new Date(data.expires_at);
+      if (expiryDate < new Date()) {
+        return {
+          isValid: false,
+          discountPercent: 0,
+          message: 'This promo code has expired and is no longer valid.',
+          isFree: false,
+          errorType: 'expired'
+        };
+      }
     }
 
     // Check usage limits
