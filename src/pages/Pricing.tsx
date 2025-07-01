@@ -278,7 +278,7 @@ const Pricing = () => {
         setPricesLoading(true);
         const { data, error } = await supabase
           .from('price_list')
-          .select('*')
+          .select('id, name, description, report_tier, endpoint, unit_price_usd')
           .not('report_tier', 'is', null)
           .order('unit_price_usd', { ascending: true });
 

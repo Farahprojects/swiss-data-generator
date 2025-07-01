@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
@@ -25,7 +25,7 @@ export const PricingPage = () => {
         setLoading(true);
         const { data, error } = await supabase
           .from('price_list')
-          .select('*')
+          .select('id, name, description, report_tier, endpoint, unit_price_usd')
           .order('unit_price_usd', { ascending: true });
 
         if (error) {
