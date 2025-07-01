@@ -12,7 +12,7 @@ export const reportSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   birthDate: z.string().min(1, 'Birth date is required'),
   birthTime: z.string().min(1, 'Birth time is required'),
-  birthLocation: z.string().min(1, 'Birth location is required'),
+  birthLocation: z.string().min(3, 'Birth location must be at least 3 characters'),
   birthLatitude: z.number().optional(),
   birthLongitude: z.number().optional(),
   birthPlaceId: z.string().optional(),
@@ -67,12 +67,12 @@ export const reportSchema = z.object({
   message: "Second person's birth time is required for sync reports",
   path: ["secondPersonBirthTime"]
 }).refine((data) => {
-  if (data.reportType === 'sync' && (!data.secondPersonBirthLocation || data.secondPersonBirthLocation.trim() === '')) {
+  if (data.reportType === 'sync' && (!data.secondPersonBirthLocation || data.secondPersonBirthLocation.trim().length < 3)) {
     return false;
   }
   return true;
 }, {
-  message: "Second person's birth location is required for sync reports",
+  message: "Second person's birth location must be at least 3 characters",
   path: ["secondPersonBirthLocation"]
 });
 

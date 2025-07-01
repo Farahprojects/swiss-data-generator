@@ -127,12 +127,21 @@ serve(async (req) => {
       guest_email: email,
       amount: amount.toString(),
       description: description,
-      stripe_session_id: session.id, // Add session ID for better tracking
+      stripe_session_id: session.id,
       // Include all report data in metadata for later retrieval
       ...(reportData || {}),
+      // Ensure location fields are always included for the translator fallback
+      location: reportData?.birthLocation || reportData?.location || '',
+      birthLocation: reportData?.birthLocation || '',
+      secondPersonLocation: reportData?.secondPersonBirthLocation || '',
     };
 
     console.log("📋 Session metadata prepared with keys:", Object.keys(metadata));
+    console.log("🌍 Location fields in metadata:", {
+      location: metadata.location,
+      birthLocation: metadata.birthLocation,
+      secondPersonLocation: metadata.secondPersonLocation
+    });
 
     // Update the session with metadata (Stripe doesn't allow metadata in create for checkout sessions)
     // We'll add it to the payment intent instead when it's created
@@ -156,7 +165,8 @@ serve(async (req) => {
           successUrl: finalSuccessUrl,
           metadata: Object.keys(metadata),
           amount_cents: Math.round(amount * 100),
-          isServicePurchase: reportData?.purchase_type === 'service'
+          isServicePurchase: reportData?.purchase_type === 'service',
+          hasLocationFields: !!(metadata.location || metadata.birthLocation)
         }
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
