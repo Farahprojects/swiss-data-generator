@@ -80,6 +80,7 @@ const cleanupPasswordResetURLs = () => {
 const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ children }) => {
   // Initialize from localStorage with error handling
   const [lastRoute, setLastRoute] = useState<string>(() => {
+    if (typeof window === 'undefined') return '/';
     try {
       const storedRoute = localStorage.getItem('last_route');
       return storedRoute && typeof storedRoute === 'string' ? storedRoute : '/';
@@ -90,6 +91,7 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   });
   
   const [lastRouteParams, setLastRouteParams] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
     try {
       const storedParams = localStorage.getItem('last_route_params');
       return storedParams && typeof storedParams === 'string' ? storedParams : '';
@@ -114,14 +116,20 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
     // Check if the current path is restricted
     if (!isDashboardPath(currentPath) && !isPasswordResetUrl(currentPath, currentParams)) {
       try {
-        localStorage.setItem('last_route', currentPath);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('last_route', currentPath);
+        }
         setLastRoute(currentPath);
         
         if (currentParams) {
-          localStorage.setItem('last_route_params', currentParams);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('last_route_params', currentParams);
+          }
           setLastRouteParams(currentParams);
         } else {
-          localStorage.removeItem('last_route_params');
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('last_route_params');
+          }
           setLastRouteParams('');
         }
       } catch (e) {
@@ -133,8 +141,10 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
   // Clear navigation state (used on signout)
   const clearNavigationState = () => {
     try {
-      localStorage.removeItem('last_route');
-      localStorage.removeItem('last_route_params');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('last_route');
+        localStorage.removeItem('last_route_params');
+      }
       setLastRoute('/');
       setLastRouteParams('');
     } catch (e) {
@@ -154,12 +164,14 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
         storedParams = lastRouteParams;
       } else {
         // Fall back to localStorage if state is restricted
-        const localPath = localStorage.getItem('last_route');
-        if (localPath && typeof localPath === 'string' && !isDashboardPath(localPath)) {
-          storedPath = localPath;
-          const localParams = localStorage.getItem('last_route_params');
-          if (localParams && typeof localParams === 'string') {
-            storedParams = localParams;
+        if (typeof window !== 'undefined') {
+          const localPath = localStorage.getItem('last_route');
+          if (localPath && typeof localPath === 'string' && !isDashboardPath(localPath)) {
+            storedPath = localPath;
+            const localParams = localStorage.getItem('last_route_params');
+            if (localParams && typeof localParams === 'string') {
+              storedParams = localParams;
+            }
           }
         }
       }

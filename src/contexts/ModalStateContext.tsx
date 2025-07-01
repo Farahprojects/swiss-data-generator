@@ -38,13 +38,15 @@ export const ModalStateProvider = ({ children }: ModalStateProviderProps) => {
 
   // Restore modal state from session storage on mount
   useEffect(() => {
-    const savedState = sessionStorage.getItem('modalState');
-    if (savedState) {
-      try {
-        const parsedState = JSON.parse(savedState);
-        setModalStateInternal(prevState => ({ ...prevState, ...parsedState }));
-      } catch (error) {
-        console.error('Failed to restore modal state:', error);
+    if (typeof window !== 'undefined') {
+      const savedState = sessionStorage.getItem('modalState');
+      if (savedState) {
+        try {
+          const parsedState = JSON.parse(savedState);
+          setModalStateInternal(prevState => ({ ...prevState, ...parsedState }));
+        } catch (error) {
+          console.error('Failed to restore modal state:', error);
+        }
       }
     }
   }, []);
@@ -53,28 +55,36 @@ export const ModalStateProvider = ({ children }: ModalStateProviderProps) => {
     setModalStateInternal(prevState => {
       const newState = { ...prevState, [key]: value };
       // Save to session storage for persistence
-      sessionStorage.setItem('modalState', JSON.stringify(newState));
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('modalState', JSON.stringify(newState));
+      }
       return newState;
     });
   }, []);
 
   const resetModalState = useCallback(() => {
     setModalStateInternal(defaultModalState);
-    sessionStorage.removeItem('modalState');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('modalState');
+    }
   }, []);
 
   const preserveModalState = useCallback(() => {
-    sessionStorage.setItem('modalState', JSON.stringify(modalState));
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('modalState', JSON.stringify(modalState));
+    }
   }, [modalState]);
 
   const restoreModalState = useCallback(() => {
-    const savedState = sessionStorage.getItem('modalState');
-    if (savedState) {
-      try {
-        const parsedState = JSON.parse(savedState);
-        setModalStateInternal(prevState => ({ ...prevState, ...parsedState }));
-      } catch (error) {
-        console.error('Failed to restore modal state:', error);
+    if (typeof window !== 'undefined') {
+      const savedState = sessionStorage.getItem('modalState');
+      if (savedState) {
+        try {
+          const parsedState = JSON.parse(savedState);
+          setModalStateInternal(prevState => ({ ...prevState, ...parsedState }));
+        } catch (error) {
+          console.error('Failed to restore modal state:', error);
+        }
       }
     }
   }, []);
