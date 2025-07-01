@@ -1,3 +1,4 @@
+
 import React, {
   useEffect,
   useState,
@@ -28,11 +29,13 @@ interface PickerWheelProps<T extends string | number> {
 }
 
 /**
- * PickerWheel – polished iOS‑style scroll wheel with optional infinite scrolling.
+ * PickerWheel – polished iOS‑style scroll wheel with Apple-like feel.
  *
  * Features
- * • true spring snapping + momentum
- * • rubber‑band overscroll
+ * • Apple-style spring snapping + momentum
+ * • no blank entries, clean value alignment
+ * • subtle dimming for off-center items
+ * • buttery smooth scrolling with proper damping
  * • fade masks top/bottom
  * • clean selection lane with thin divider lines (iOS style)
  * • a11y listbox semantics
@@ -60,16 +63,13 @@ function PickerWheel<T extends string | number = string>({
   const lastExternalValue = useRef(value);
 
   // Create infinite options array if infinite mode is enabled
+  // Filter out any blank/empty entries for clean Apple-style behavior
   const infiniteOptions = useMemo(() => {
     if (!infinite) return options;
     
-    // Create 5 repetitions for smooth infinite scrolling
     const repetitions = 5;
-    const repeated = [];
-    for (let i = 0; i < repetitions; i++) {
-      repeated.push(...options);
-    }
-    return repeated;
+    const filtered = options.filter((opt) => opt !== '' && opt != null); // drop blanks
+    return Array(repetitions).fill(filtered).flat();
   }, [options, infinite]);
 
   // Calculate the center repetition index for infinite mode
@@ -160,7 +160,7 @@ function PickerWheel<T extends string | number = string>({
       const controls = animate(rawY, targetY, {
         type: 'spring',
         stiffness: 420,
-        damping: 50,
+        damping: 55, // slightly higher to reduce bounce
         velocity,
       });
 
@@ -184,7 +184,6 @@ function PickerWheel<T extends string | number = string>({
   const onDrag = (_: PointerEvent, info: PanInfo) => {
     const currentY = rawY.get() + info.delta.y;
     rawY.set(currentY);
-    // Removed the reset logic from here - it was causing the visual glitch
   };
 
   const onDragEnd = (_: PointerEvent, info: PanInfo) => {
@@ -199,7 +198,8 @@ function PickerWheel<T extends string | number = string>({
       const logicalIndex = currentIndex % options.length;
       const distanceFromCenter = currentIndex - (centerRepetitionStart + logicalIndex);
 
-      const projected = rawY.get() + info.velocity.y * 0.2;
+      // Reduce momentum multiplier for Apple-like feel
+      const projected = rawY.get() + info.velocity.y * 0.12;
       snapTo(projected, info.velocity.y);
     } else {
       // Original finite scrolling with rubber band
@@ -209,7 +209,8 @@ function PickerWheel<T extends string | number = string>({
       const rubber = 0.4 * itemHeight;
       const clamped = clamp(rawY.get(), minY - rubber, maxY + rubber);
 
-      const projected = clamped + info.velocity.y * 0.2;
+      // Reduce momentum multiplier for Apple-like feel
+      const projected = clamped + info.velocity.y * 0.12;
       snapTo(projected, info.velocity.y);
     }
   };
@@ -299,7 +300,7 @@ function PickerWheel<T extends string | number = string>({
 }
 
 /* --------------------------------------------------------------------- */
-// Individual row - enhanced for better alignment and selection visibility
+// Individual row - enhanced for Apple-style visibility
 interface ItemProps {
   value: string | number;
   index: number;
@@ -312,11 +313,13 @@ const PickerItem = React.memo<ItemProps>(({ value, index, itemHeight, y, centerT
   // Distance from centre (0 = centred) - adjusted for new positioning
   const d = useTransform(y, (latest) => Math.abs((centerTop - latest) / itemHeight - index));
 
-  const opacity = useTransform(d, [0, 1, 2], [1, 0.4, 0.1]);
+  // Apple-style subtle dimming - not full fade out
+  const opacity = useTransform(d, [0, 1, 2], [1, 0.75, 0.5]);
   const scale = useTransform(d, [0, 1], [1, 0.85]);
   const weight = useTransform(d, (dist) => (dist < 0.5 ? 700 : 400));
+  // Better off-center visibility with neutral-600 instead of neutral-400
   const color = useTransform(d, (dist) =>
-    dist < 0.5 ? '#111827' : '#9CA3AF' // Tailwind: neutral-900 vs neutral-400
+    dist < 0.5 ? '#111827' : '#6B7280' // neutral-900 center, neutral-600 off-center
   );
 
   return (
