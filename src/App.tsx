@@ -46,6 +46,11 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  // Guard against SSR - only render full app in browser
+  if (typeof window === 'undefined') {
+    return <div>Loading...</div>;
+  }
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

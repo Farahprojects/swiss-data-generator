@@ -83,6 +83,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Register Supabase auth listener and get initial session
    * ────────────────────────────────────────────────────────────*/
   useEffect(() => {
+    // Skip auth initialization during SSR
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     if (initializedRef.current) return;
     initializedRef.current = true;
 
@@ -256,7 +262,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { 
+          emailRedirectTo: typeof window !== 'undefined' 
+            ? `${window.location.origin}/dashboard` 
+            : '/dashboard'
+        },
       });
       
       if (error) {
@@ -297,7 +307,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const baseUrl = window.location.origin;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -311,7 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithApple = async () => {
-    const baseUrl = window.location.origin;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     try {
       logToSupabase('Apple sign in attempt from context', {
@@ -384,7 +394,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,
-        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+        options: { 
+          emailRedirectTo: typeof window !== 'undefined' 
+            ? `${window.location.origin}/dashboard` 
+            : '/dashboard'
+        },
       });
       return { error };
     } catch (err: unknown) {

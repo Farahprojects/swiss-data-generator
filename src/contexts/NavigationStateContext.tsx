@@ -105,20 +105,23 @@ const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ child
 
   // Clean up any password reset URLs on initial load
   useEffect(() => {
+    // Skip cleanup during SSR
+    if (typeof window === 'undefined') return;
     cleanupPasswordResetURLs();
   }, []);
 
   // Automatically track and save the current route when it changes
   useEffect(() => {
+    // Skip route tracking during SSR
+    if (typeof window === 'undefined') return;
+    
     const currentPath = location.pathname;
     const currentParams = location.search;
     
     // Check if the current path is restricted
     if (!isDashboardPath(currentPath) && !isPasswordResetUrl(currentPath, currentParams)) {
       try {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('last_route', currentPath);
-        }
+        localStorage.setItem('last_route', currentPath);
         setLastRoute(currentPath);
         
         if (currentParams) {
