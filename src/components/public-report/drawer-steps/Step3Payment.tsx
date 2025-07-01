@@ -10,7 +10,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
-import { getReportTitle, usePricing } from '@/services/pricing';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
 
 interface PromoValidationState {
@@ -51,7 +50,7 @@ const Step3Payment = ({
 }: Step3PaymentProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const { validatePromoManually } = usePromoValidation();
-  const { calculatePricing } = usePricing();
+  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -61,25 +60,33 @@ const Step3Payment = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
+  // Get price and title using context
+  let basePrice: number | null = null;
+  let reportTitle = 'Personal Report';
+  let priceError: string | null = null;
 
-  // Fetch price from database
-  const { price: basePrice, isLoading: isPriceLoading, error: priceError } = usePriceFetch({
-    reportType,
-    essenceType,
-    relationshipType,
-    reportCategory,
-    reportSubCategory
-  });
-
-  
-
-  const reportTitle = getReportTitle({
-    reportType,
-    essenceType,
-    relationshipType,
-    reportCategory,
-    reportSubCategory
-  });
+  try {
+    if (reportType) {
+      basePrice = getReportPrice({
+        reportType,
+        essenceType,
+        relationshipType,
+        reportCategory,
+        reportSubCategory
+      });
+      
+      reportTitle = getReportTitle({
+        reportType,
+        essenceType,
+        relationshipType,
+        reportCategory,
+        reportSubCategory
+      });
+    }
+  } catch (error) {
+    priceError = error instanceof Error ? error.message : 'Failed to get price';
+    console.error('Price fetch error:', error);
+  }
 
   // Only calculate pricing if we have a valid base price
   const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : null;
@@ -123,7 +130,7 @@ const Step3Payment = ({
   };
 
   // Show loading state
-  if (isPriceLoading) {
+  if (isPricingLoading) {
     return (
       <motion.div
         initial={{ opacity: 0, x: 50 }}
@@ -344,7 +351,7 @@ const Step3Payment = ({
         >
           <Button
             onClick={handleButtonClick}
-            disabled={isProcessing || isValidatingPromo || isPriceLoading}
+            disabled={isProcessing || isValidatingPromo || isPricingLoading}
             variant="outline"
             className="w-full h-14 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent disabled:opacity-50"
             size="lg"
@@ -360,7 +367,7 @@ const Step3Payment = ({
               ? 'Processing...' 
               : isValidatingPromo
               ? 'Validating...'
-              : isPriceLoading
+              : isPricingLoading
               ? 'Loading...'
               : 'Get My Insights'
             }

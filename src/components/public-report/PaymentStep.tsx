@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
-import { getReportTitle, usePricing } from '@/services/pricing';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
 import FormStep from './FormStep';
 
@@ -49,7 +48,7 @@ const PaymentStep = ({
 }: PaymentStepProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const { validatePromoManually } = usePromoValidation();
-  const { calculatePricing } = usePricing();
+  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -59,25 +58,33 @@ const PaymentStep = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
+  // Get price and title using context
+  let basePrice: number | null = null;
+  let reportTitle = 'Personal Report';
+  let priceError: string | null = null;
 
-  // Fetch price from database
-  const { price: basePrice, isLoading: isPriceLoading, error: priceError } = usePriceFetch({
-    reportType,
-    essenceType,
-    relationshipType,
-    reportCategory,
-    reportSubCategory
-  });
-
-  
-
-  const reportTitle = getReportTitle({
-    reportType,
-    essenceType,
-    relationshipType,
-    reportCategory,
-    reportSubCategory
-  });
+  try {
+    if (reportType) {
+      basePrice = getReportPrice({
+        reportType,
+        essenceType,
+        relationshipType,
+        reportCategory,
+        reportSubCategory
+      });
+      
+      reportTitle = getReportTitle({
+        reportType,
+        essenceType,
+        relationshipType,
+        reportCategory,
+        reportSubCategory
+      });
+    }
+  } catch (error) {
+    priceError = error instanceof Error ? error.message : 'Failed to get price';
+    console.error('Price fetch error:', error);
+  }
 
   // Only calculate pricing if we have a valid base price
   const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : null;
@@ -121,7 +128,7 @@ const PaymentStep = ({
   };
 
   // Show loading state while fetching price
-  if (isPriceLoading) {
+  if (isPricingLoading) {
     return (
       <FormStep stepNumber={3} title="Payment" className="bg-background">
         <div className="max-w-4xl mx-auto flex items-center justify-center py-8">

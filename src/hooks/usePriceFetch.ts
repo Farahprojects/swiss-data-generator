@@ -1,47 +1,153 @@
+import { z } from 'zod';
+import { usePricing } from '@/contexts/PricingContext';
 
-import { useState, useEffect } from 'react';
-import { fetchReportPrice } from '@/services/pricing';
-import { ReportFormData } from '@/types/public-report';
+// Zod schema for report type mapping
+const ReportTypeMappingSchema = z.object({
+  reportType: z.string(),
+  essenceType: z.string().optional(),
+  relationshipType: z.string().optional(),
+  reportCategory: z.string().optional(),
+  reportSubCategory: z.string().optional(),
+});
 
-interface UsePriceFetchProps {
-  reportType: string;
-  essenceType?: string;
-  relationshipType?: string;
-  reportCategory?: string;
-  reportSubCategory?: string;
-}
+export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 
-export const usePriceFetch = (formData: UsePriceFetchProps) => {
-  const [price, setPrice] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+// Map form data to price_list identifiers
+const mapReportTypeToId = (data: ReportTypeMapping): string => {
+  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory } = data;
+  
+  // Handle essence reports
+  if (reportType === 'essence' && essenceType) {
+    const mappedId = `essence_${essenceType}`;
+    return mappedId;
+  }
+  
+  // Handle sync/compatibility reports
+  if ((reportType === 'sync' || reportType === 'compatibility') && relationshipType) {
+    const mappedId = `sync_${relationshipType}`;
+    return mappedId;
+  }
+  
+  // Handle snapshot reports - map subcategory to actual report type
+  if (reportCategory === 'snapshot' && reportSubCategory) {
+    return reportSubCategory; // focus, monthly, mindset
+  }
+  
+  // Handle direct report types
+  if (['focus', 'monthly', 'mindset', 'flow'].includes(reportType)) {
+    return reportType;
+  }
+  
+  // Fallback to reportType
+  return reportType;
+};
 
-  useEffect(() => {
-    const fetchPrice = async () => {
-      if (!formData.reportType) return;
+// Custom hook for getting report price using context
+export const usePriceFetch = () => {
+  const { getPriceById, getPriceByReportType, isLoading, error } = usePricing();
+
+  const getReportPrice = (formData: ReportTypeMapping): number => {
+    try {
+      // Validate input data
+      const validatedData = ReportTypeMappingSchema.parse(formData);
       
-      setIsLoading(true);
-      setError(null);
+      // Map to price_list identifier
+      const priceId = mapReportTypeToId(validatedData);
       
-      try {
-        const fetchedPrice = await fetchReportPrice(formData);
-        setPrice(fetchedPrice);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch price');
-        console.error('Error fetching price:', err);
-      } finally {
-        setIsLoading(false);
+      // Try to get price by ID first
+      let priceData = getPriceById(priceId);
+      
+      // Fallback: try by report_type
+      if (!priceData) {
+        priceData = getPriceByReportType(priceId);
       }
+      
+      if (!priceData) {
+        console.error('❌ Price not found for:', priceId);
+        throw new Error(`Price not found for report type: ${priceId}`);
+      }
+      
+      return Number(priceData.unit_price_usd);
+      
+    } catch (error) {
+      console.error('❌ Error in getReportPrice:', error);
+      throw error;
+    }
+  };
+
+  const getReportTitle = (formData: ReportTypeMapping): string => {
+    const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory } = formData;
+    
+    if (reportType === 'essence') {
+      switch (essenceType) {
+        case 'professional': return 'Professional Essence Report';
+        case 'relational': return 'Relational Essence Report';
+        case 'personal': return 'Personal Essence Report';
+        default: return 'Personal Essence Report';
+      }
+    }
+    
+    if (reportType === 'sync' || reportType === 'compatibility') {
+      switch (relationshipType) {
+        case 'professional': return 'Professional Compatibility Report';
+        case 'personal': return 'Personal Compatibility Report';
+        default: return 'Personal Compatibility Report';
+      }
+    }
+    
+    if (reportCategory === 'snapshot') {
+      switch (reportSubCategory) {
+        case 'focus': return 'Focus Snapshot Report';
+        case 'monthly': return 'Monthly Energy Report';
+        case 'mindset': return 'Mindset Report';
+        default: return 'Focus Snapshot Report';
+      }
+    }
+    
+    // Fallback based on report type
+    const reportTitles: Record<string, string> = {
+      natal: 'Natal Report',
+      compatibility: 'Compatibility Report',
+      essence: 'Essence Report',
+      flow: 'Flow Report',
+      mindset: 'Mindset Report',
+      monthly: 'Monthly Forecast',
+      focus: 'Focus Report',
+      sync: 'Sync Report'
     };
+    
+    return reportTitles[reportType] || 'Personal Report';
+  };
 
-    fetchPrice();
-  }, [
-    formData.reportType,
-    formData.essenceType,
-    formData.relationshipType,
-    formData.reportCategory,
-    formData.reportSubCategory
-  ]);
+  const calculatePricing = (basePrice: number, promoValidation: any) => {
+    if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
+      return {
+        basePrice,
+        discount: 0,
+        discountPercent: 0,
+        finalPrice: basePrice,
+        isFree: false
+      };
+    }
 
-  return { price, isLoading, error };
+    const discountPercent = promoValidation.discountPercent;
+    const discount = basePrice * (discountPercent / 100);
+    const finalPrice = basePrice - discount;
+    
+    return {
+      basePrice,
+      discount,
+      discountPercent,
+      finalPrice: Math.max(0, finalPrice),
+      isFree: discountPercent === 100
+    };
+  };
+
+  return { 
+    getReportPrice, 
+    getReportTitle, 
+    calculatePricing, 
+    isLoading, 
+    error 
+  };
 };

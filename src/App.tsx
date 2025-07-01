@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import { ModalStateProvider } from './contexts/ModalStateProvider';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
+import { PricingProvider } from './contexts/PricingContext';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import { Toaster } from "@/components/ui/toaster";
 import "./App.css";
@@ -51,8 +52,9 @@ function App() {
         <Router>
           <NavigationStateProvider>
             <AuthProvider>
-              <ModalStateProvider>
-                <SettingsModalProvider>
+              <PricingProvider>
+                <ModalStateProvider>
+                  <SettingsModalProvider>
                   <div className="min-h-screen bg-background">
                     <Routes>
                       <Route path="/" element={<Index />} />
@@ -91,9 +93,10 @@ function App() {
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </div>
-                  <Toaster />
-                </SettingsModalProvider>
-              </ModalStateProvider>
+                    <Toaster />
+                  </SettingsModalProvider>
+                </ModalStateProvider>
+              </PricingProvider>
             </AuthProvider>
           </NavigationStateProvider>
         </Router>
