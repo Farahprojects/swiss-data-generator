@@ -1,55 +1,28 @@
 
-import { useState, useEffect } from 'react';
-import { fetchReportPrice } from '@/services/pricing';
+import { useMemo } from 'react';
+import { usePricing } from '@/contexts/PricingContext';
 
 interface ReportGuidePricing {
   [key: string]: number | null;
 }
 
 export const useReportGuidePricing = () => {
-  const [pricing, setPricing] = useState<ReportGuidePricing>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { prices, isLoading, error, getPriceById } = usePricing();
 
-  useEffect(() => {
-    const fetchAllPrices = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+  const pricing = useMemo(() => {
+    if (isLoading || prices.length === 0) {
+      return {};
+    }
 
-        // Fetch prices for all report types used in the guide
-        const pricePromises = [
-          // Essence reports (all subtypes have same price, so we fetch one)
-          fetchReportPrice({ reportType: 'essence', essenceType: 'personal' }),
-          // Sync reports (all subtypes have same price, so we fetch one)
-          fetchReportPrice({ reportType: 'sync', relationshipType: 'personal' }),
-          // Individual snapshot reports
-          fetchReportPrice({ reportType: 'focus' }),
-          fetchReportPrice({ reportType: 'monthly' }),
-          fetchReportPrice({ reportType: 'mindset' }),
-          fetchReportPrice({ reportType: 'flow' }),
-        ];
-
-        const [essencePrice, syncPrice, focusPrice, monthlyPrice, mindsetPrice, flowPrice] = await Promise.all(pricePromises);
-
-        setPricing({
-          essence: essencePrice,
-          sync: syncPrice,
-          focus: focusPrice,
-          monthly: monthlyPrice,
-          mindset: mindsetPrice,
-          flow: flowPrice,
-        });
-      } catch (err) {
-        console.error('Error fetching report guide pricing:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch pricing');
-      } finally {
-        setIsLoading(false);
-      }
+    return {
+      essence: getPriceById('essence_personal')?.unit_price_usd || null,
+      sync: getPriceById('sync_personal')?.unit_price_usd || null,
+      focus: getPriceById('focus')?.unit_price_usd || null,
+      monthly: getPriceById('monthly')?.unit_price_usd || null,
+      mindset: getPriceById('mindset')?.unit_price_usd || null,
+      flow: getPriceById('flow')?.unit_price_usd || null,
     };
-
-    fetchAllPrices();
-  }, []);
+  }, [prices, isLoading, getPriceById]);
 
   const formatPrice = (price: number | null): string => {
     if (price === null) return 'Contact us';
