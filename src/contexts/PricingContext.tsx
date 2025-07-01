@@ -68,9 +68,7 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
 
   const getPriceById = (id: string): PriceData | null => {
     const price = prices.find(p => p.id === id);
-    if (price) {
-      console.log('💰 Found price by ID:', id, '→', price.unit_price_usd);
-    } else {
+    if (!price) {
       console.warn('❌ Price not found for ID:', id);
     }
     return price || null;
@@ -78,9 +76,7 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
 
   const getPriceByReportType = (reportType: string): PriceData | null => {
     const price = prices.find(p => p.report_type === reportType);
-    if (price) {
-      console.log('💰 Found price by report_type:', reportType, '→', price.unit_price_usd);
-    } else {
+    if (!price) {
       console.warn('❌ Price not found for report_type:', reportType);
     }
     return price || null;

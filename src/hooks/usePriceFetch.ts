@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { useMemo, useCallback } from 'react';
 import { usePricing } from '@/contexts/PricingContext';
 
 // Zod schema for report type mapping
@@ -46,7 +47,7 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
 export const usePriceFetch = () => {
   const { getPriceById, getPriceByReportType, isLoading, error } = usePricing();
 
-  const getReportPrice = (formData: ReportTypeMapping): number => {
+  const getReportPrice = useCallback((formData: ReportTypeMapping): number => {
     try {
       // Validate input data
       const validatedData = ReportTypeMappingSchema.parse(formData);
@@ -73,9 +74,9 @@ export const usePriceFetch = () => {
       console.error('❌ Error in getReportPrice:', error);
       throw error;
     }
-  };
+  }, [getPriceById, getPriceByReportType]);
 
-  const getReportTitle = (formData: ReportTypeMapping): string => {
+  const getReportTitle = useCallback((formData: ReportTypeMapping): string => {
     const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory } = formData;
     
     if (reportType === 'essence') {
@@ -117,9 +118,9 @@ export const usePriceFetch = () => {
     };
     
     return reportTitles[reportType] || 'Personal Report';
-  };
+  }, []);
 
-  const calculatePricing = (basePrice: number, promoValidation: any) => {
+  const calculatePricing = useCallback((basePrice: number, promoValidation: any) => {
     if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
       return {
         basePrice,
@@ -141,13 +142,13 @@ export const usePriceFetch = () => {
       finalPrice: Math.max(0, finalPrice),
       isFree: discountPercent === 100
     };
-  };
+  }, []);
 
-  return { 
+  return useMemo(() => ({ 
     getReportPrice, 
     getReportTitle, 
     calculatePricing, 
     isLoading, 
     error 
-  };
+  }), [getReportPrice, getReportTitle, calculatePricing, isLoading, error]);
 };
