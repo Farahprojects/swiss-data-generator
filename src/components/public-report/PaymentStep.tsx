@@ -194,110 +194,110 @@ const PaymentStep = ({
           </Card>
 
           {/* Right Column - Actions */}
-          <div className="space-y-6">
+          <div className="max-w-sm w-full space-y-6">
             {/* Promo Code Section */}
-            <Card>
-              <CardContent className="pt-6">
-                <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full h-12 justify-center border-2 border-primary text-primary bg-white hover:bg-accent"
-                      type="button"
-                    >
-                      <Tag className="h-4 w-4 mr-2" />
-                      Have a promo code?
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-4">
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="promoCode">Promo Code</Label>
-                        <div className="relative">
-                          <Input
-                            id="promoCode"
-                            {...register('promoCode')}
-                            placeholder="Enter promo code"
-                            className="h-12 pr-10"
-                          />
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            {getPromoValidationIcon()}
-                          </div>
+            <div className="space-y-4">
+              <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 justify-center border-2 border-primary text-primary bg-transparent hover:bg-primary/5"
+                    type="button"
+                  >
+                    <Tag className="h-4 w-4 mr-2" />
+                    Have a promo code?
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="promoCode" className="font-medium">Promo Code</Label>
+                      <div className="relative">
+                        <Input
+                          id="promoCode"
+                          {...register('promoCode')}
+                          placeholder="Enter promo code"
+                          className="h-12 pr-10"
+                        />
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          {getPromoValidationIcon()}
                         </div>
-                        {errors.promoCode && (
-                          <p className="text-sm text-red-500">{errors.promoCode.message}</p>
-                        )}
                       </div>
-                      
-                      {/* Promo validation feedback */}
-                      {promoValidation.message && (
-                        <div className={`text-sm p-3 rounded-lg ${
-                          isValidatingPromo 
-                            ? 'bg-gray-50 text-gray-600'
-                            : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
-                            ? 'bg-green-50 text-green-700 border border-green-200'
-                            : 'bg-red-50 text-red-700 border border-red-200'
-                        }`}>
-                          {getPromoValidationMessage()}
-                        </div>
+                      {errors.promoCode && (
+                        <p className="text-sm text-red-500">{errors.promoCode.message}</p>
                       )}
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </CardContent>
-            </Card>
+                    
+                    {/* Promo validation feedback */}
+                    {promoValidation.message && (
+                      <div className={`text-sm p-3 rounded-lg ${
+                        isValidatingPromo 
+                          ? 'bg-gray-50 text-gray-600'
+                          : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-red-50 text-red-700 border border-red-200'
+                      }`}>
+                        {getPromoValidationMessage()}
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
 
-            {/* Submit Button */}
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <Button
-                  onClick={handleButtonClick}
-                  disabled={isProcessing || isValidatingPromo || isPriceLoading}
-                  className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-white"
-                  size="lg"
-                  type="button"
-                >
-                  {isProcessing 
-                    ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Processing...
-                      </div>
-                    )
-                    : isValidatingPromo
-                    ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Validating...
-                      </div>
-                    )
-                    : isPriceLoading
-                    ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Loading...
-                      </div>
-                    )
-                    : 'Generate My Report'
-                  }
-                </Button>
-                
-                <div className="text-center text-sm text-muted-foreground">
-                  <p>Secure checkout powered by Stripe</p>
-                  <p className="mt-1">Your report will be delivered to your email within minutes</p>
+            {/* Payment Section */}
+            <div className="bg-muted/30 rounded-2xl p-6 shadow-sm border border-muted space-y-4">
+              <Button
+                onClick={handleButtonClick}
+                disabled={isProcessing || isValidatingPromo || isPriceLoading}
+                className="w-full h-14 text-base py-3 rounded-xl font-semibold bg-primary hover:bg-primary/90 text-white"
+                type="button"
+              >
+                {isProcessing 
+                  ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </div>
+                  )
+                  : isValidatingPromo
+                  ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Validating...
+                    </div>
+                  )
+                  : isPriceLoading
+                  ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Loading...
+                    </div>
+                  )
+                  : 'Generate My Report'
+                }
+              </Button>
+              
+              <p className="text-xs text-muted-foreground text-center">
+                Your payment is secure and encrypted.
+              </p>
+              
+              <div className="text-center text-sm text-muted-foreground space-y-1">
+                <p>Secure checkout powered by Stripe</p>
+                <p>Your report will be delivered to your email within minutes</p>
+              </div>
+
+              {/* Guarantee */}
+              <div className="pt-4 border-t border-muted/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <h4 className="font-medium text-sm">100% Satisfaction Guarantee</h4>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Guarantee */}
-            <Card className="bg-muted/30">
-              <CardContent className="pt-6">
-                <h4 className="font-medium text-sm mb-2">100% Satisfaction Guarantee</h4>
                 <p className="text-xs text-muted-foreground">
-                  Not satisfied with your report? Contact us within 7 days for a full refund.
+                  You're covered by our 100% Satisfaction Guarantee. Not happy with your report? We'll refund you within 7 days — no questions asked.
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       </div>
