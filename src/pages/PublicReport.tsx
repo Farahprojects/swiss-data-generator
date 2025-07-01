@@ -57,7 +57,7 @@ const PublicReport = () => {
         showReportGuide={showReportGuide}
         setShowReportGuide={setShowReportGuide}
       />
-      <WhyChooseSection />
+      <WhyChooseSection onGetReportClick={handleGetReportClick} />
       <ReportGuideResponsive 
         isOpen={showReportGuide} 
         onClose={() => setShowReportGuide(false)} 

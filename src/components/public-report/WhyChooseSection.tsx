@@ -1,8 +1,13 @@
 
 import React from 'react';
 import { CheckCircle, Clock, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-const WhyChooseSection = () => {
+interface WhyChooseSectionProps {
+  onGetReportClick?: () => void;
+}
+
+const WhyChooseSection = ({ onGetReportClick }: WhyChooseSectionProps) => {
   return (
     <section className="py-16 bg-white">
       <div className="container mx-auto px-4">
@@ -29,6 +34,15 @@ const WhyChooseSection = () => {
             <h3 className="font-semibold mb-2">Professional Quality</h3>
             <p className="text-muted-foreground">Detailed, professional-grade reports trusted by astrology enthusiasts.</p>
           </div>
+        </div>
+        <div className="text-center mt-12">
+          <Button 
+            size="lg"
+            onClick={onGetReportClick}
+            className="px-8 py-3 text-lg"
+          >
+            Begin
+          </Button>
         </div>
       </div>
     </section>
