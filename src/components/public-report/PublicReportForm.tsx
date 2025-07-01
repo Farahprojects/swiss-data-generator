@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form";
@@ -16,7 +15,9 @@ import { ReportTypeOption, ReportFormData } from '@/types/public-report';
 import ReportTypeSelector from './ReportTypeSelector';
 import BirthDetailsStep from './BirthDetailsStep';
 import PaymentStep from './PaymentStep';
+import SuccessScreen from './SuccessScreen';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { useReportSubmission } from '@/hooks/useReportSubmission';
 
 const reportFormSchema = z.object({
   reportType: z.string().min(1, {
@@ -64,9 +65,11 @@ interface PublicReportFormProps {
 
 const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: PublicReportFormProps) => {
   const [step, setStep] = useState(1);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [reportData, setReportData] = useState<ReportFormData | null>(null);
+  const [reportContent, setReportContent] = useState<string | null>(null);
+  const [showReportViewer, setShowReportViewer] = useState(false);
   const { validatePromoManually, promoValidation, isValidatingPromo } = usePromoValidation();
+  const { isProcessing, isPricingLoading, reportCreated, submitReport } = useReportSubmission();
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportFormSchema),
@@ -107,26 +110,40 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
 
   const onSubmit = async (data: ReportFormData) => {
     console.log('Form Data Submitted:', data);
-    setIsProcessing(true);
-
-    // Validate promo code if present
-    if (data.promoCode && data.promoCode.trim() !== '') {
-      console.log('Validating promo code:', data.promoCode);
-      await validatePromoManually(data.promoCode);
-    }
-
-    // Simulate report generation (replace with actual API call)
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Store form data in context
     setReportData(data);
 
-    setIsProcessing(false);
-    setStep(4); // Proceed to confirmation step
+    // Create a proper PromoValidationState from PromoCodeValidation
+    const promoValidationState = promoValidation ? {
+      status: promoValidation.isValid 
+        ? (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) 
+        : 'invalid' as const,
+      message: promoValidation.message,
+      discountPercent: promoValidation.discountPercent
+    } : {
+      status: 'none' as const,
+      message: '',
+      discountPercent: 0
+    };
+
+    const setPromoValidation = (state: any) => {
+      // This function would update the promo validation state
+      // For now, we'll use the existing validation state
+    };
+
+    // Use the real report submission logic
+    await submitReport(data, promoValidationState, setPromoValidation);
+    
+    // Advance to success screen
+    setStep(4);
   };
 
   const handleNextStep = () => {
     setStep(prev => prev + 1);
+  };
+
+  const handleViewReport = (content: string, pdfData?: string | null) => {
+    setReportContent(content);
+    setShowReportViewer(true);
   };
 
   // Create a proper PromoValidationState from PromoCodeValidation
@@ -141,6 +158,18 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
     message: '',
     discountPercent: 0
   };
+
+  // Show success screen when step is 4 or report is created
+  if (step === 4 || reportCreated) {
+    return (
+      <SuccessScreen
+        name={reportData?.name || ''}
+        email={reportData?.email || ''}
+        onViewReport={handleViewReport}
+        autoStartPolling={true}
+      />
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -172,7 +201,7 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
           watch={form.watch}
           errors={formState.errors}
           onSubmit={handleSubmit(onSubmit)}
-          isProcessing={isProcessing}
+          isProcessing={isProcessing || isPricingLoading}
           promoValidation={promoValidationState}
           isValidatingPromo={isValidatingPromo}
         />
