@@ -864,7 +864,7 @@ export type Database = {
           endpoint: string | null
           id: string
           name: string
-          report_tier: string | null
+          report_type: string | null
           unit_price_usd: number
         }
         Insert: {
@@ -873,7 +873,7 @@ export type Database = {
           endpoint?: string | null
           id: string
           name: string
-          report_tier?: string | null
+          report_type?: string | null
           unit_price_usd: number
         }
         Update: {
@@ -882,7 +882,7 @@ export type Database = {
           endpoint?: string | null
           id?: string
           name?: string
-          report_tier?: string | null
+          report_type?: string | null
           unit_price_usd?: number
         }
         Relationships: []

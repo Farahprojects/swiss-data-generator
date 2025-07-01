@@ -1,7 +1,7 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Download, FileText, ArrowLeft, Copy, X } from 'lucide-react';
+import { Download, FileText, ArrowLeft, Copy, X, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
@@ -21,6 +21,7 @@ const DesktopReportViewer = ({
   onBack 
 }: DesktopReportViewerProps) => {
   const { toast } = useToast();
+  const [isCopyCompleted, setIsCopyCompleted] = useState(false);
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
@@ -63,6 +64,9 @@ const DesktopReportViewer = ({
       
       await navigator.clipboard.writeText(cleanText);
       
+      // Enable ChatGPT button after successful copy
+      setIsCopyCompleted(true);
+      
       toast({
         title: "Copied to clipboard!",
         description: "Your report has been copied and is ready to paste anywhere.",
@@ -76,6 +80,12 @@ const DesktopReportViewer = ({
         description: "Unable to copy to clipboard. Please try selecting and copying the text manually.",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleChatGPTClick = () => {
+    if (isCopyCompleted) {
+      window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
     }
   };
 
@@ -128,6 +138,25 @@ const DesktopReportViewer = ({
                 </Button>
               )}
               <Button
+                variant={isCopyCompleted ? "default" : "outline"}
+                size="sm"
+                onClick={handleChatGPTClick}
+                disabled={!isCopyCompleted}
+                className={`flex items-center gap-2 ${
+                  !isCopyCompleted 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                <img 
+                  src="/lovable-uploads/97523ce9-e477-4fb9-9a9c-f8cf223342c6.png" 
+                  alt="ChatGPT" 
+                  className="h-4 w-4"
+                />
+                ChatGPT
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+              <Button
                 variant="ghost"
                 size="sm"
                 onClick={onBack}
@@ -150,14 +179,14 @@ const DesktopReportViewer = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-lg max-w-none">
+            <div className="prose prose-lg max-w-none text-left">
               <ReportRenderer content={reportContent} />
             </div>
           </CardContent>
         </Card>
 
         {/* Actions Section */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
@@ -206,6 +235,51 @@ const DesktopReportViewer = ({
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto ${
+                  isCopyCompleted ? 'bg-green-100' : 'bg-gray-100'
+                }`}>
+                  <img 
+                    src="/lovable-uploads/97523ce9-e477-4fb9-9a9c-f8cf223342c6.png" 
+                    alt="ChatGPT" 
+                    className={`h-6 w-6 ${!isCopyCompleted ? 'opacity-50' : ''}`}
+                  />
+                </div>
+                <div>
+                  <h3 className={`font-semibold ${isCopyCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    Analyze with ChatGPT
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {isCopyCompleted 
+                      ? 'Paste your copied report into our specialized ChatGPT for deeper insights'
+                      : 'Copy your report first to unlock ChatGPT analysis'
+                    }
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleChatGPTClick}
+                  disabled={!isCopyCompleted}
+                  variant={isCopyCompleted ? "default" : "outline"}
+                  className={`w-full ${
+                    isCopyCompleted 
+                      ? 'bg-green-600 hover:bg-green-700 text-white' 
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
+                >
+                  <img 
+                    src="/lovable-uploads/97523ce9-e477-4fb9-9a9c-f8cf223342c6.png" 
+                    alt="ChatGPT" 
+                    className="h-4 w-4 mr-2"
+                  />
+                  Open ChatGPT
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </motion.div>
