@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
-import { Tag, CheckCircle, AlertCircle, Loader2, ExclamationTriangle } from 'lucide-react';
+import { Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -143,7 +144,7 @@ const PaymentStep = ({
         <div className="max-w-4xl mx-auto">
           <Card className="border-red-200 bg-red-50">
             <CardContent className="p-6 text-center">
-              <ExclamationTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-red-800 mb-2">
                 Pricing Error
               </h3>
@@ -174,7 +175,7 @@ const PaymentStep = ({
         <div className="max-w-4xl mx-auto">
           <Card className="border-yellow-200 bg-yellow-50">
             <CardContent className="p-6 text-center">
-              <ExclamationTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-yellow-800 mb-2">
                 No Pricing Available
               </h3>

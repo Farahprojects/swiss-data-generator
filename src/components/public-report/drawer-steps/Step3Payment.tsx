@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Tag, CheckCircle, AlertCircle, Loader2, ExclamationTriangle } from 'lucide-react';
+import { ArrowLeft, Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -169,7 +170,7 @@ const Step3Payment = ({
         </div>
 
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-          <ExclamationTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
           <p className="text-red-700 mb-2">Unable to load pricing information</p>
           <p className="text-sm text-red-600">{priceError}</p>
           <Button 
@@ -212,7 +213,7 @@ const Step3Payment = ({
         </div>
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-          <ExclamationTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+          <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
           <p className="text-yellow-700">No pricing available for this report configuration</p>
         </div>
       </motion.div>
