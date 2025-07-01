@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -132,11 +133,11 @@ const PaymentStep = ({
       <div className="max-w-4xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column - Order Summary & Benefits */}
-          <Card className="h-fit">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="text-xl">Order Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="flex flex-col justify-between h-full space-y-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">{reportTitle}</span>
