@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -7,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { usePriceFetch } from '@/hooks/usePriceFetch';
+import { getReportTitle, usePricing } from '@/services/pricing';
 import FormStep from './FormStep';
 
 interface PromoValidationState {
@@ -36,87 +39,34 @@ const PaymentStep = ({
 }: PaymentStepProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const { validatePromoManually } = usePromoValidation();
+  const { calculatePricing } = usePricing();
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
   const reportType = watch('reportType');
+  const essenceType = watch('essenceType');
+  const relationshipType = watch('relationshipType');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  const getReportTitle = (category: string, subCategory: string, type: string) => {
-    if (type === 'essence') {
-      switch (subCategory) {
-        case 'professional': return 'Professional Essence Report';
-        case 'relational': return 'Relational Essence Report';
-        case 'personal': return 'Personal Essence Report';
-        default: return 'Personal Essence Report';
-      }
-    }
-    
-    if (type === 'sync' || type === 'compatibility') {
-      switch (subCategory) {
-        case 'professional': return 'Professional Compatibility Report';
-        case 'personal': return 'Personal Compatibility Report';
-        default: return 'Personal Compatibility Report';
-      }
-    }
-    
-    if (category === 'snapshot') {
-      switch (subCategory) {
-        case 'focus': return 'Focus Snapshot Report';
-        case 'monthly': return 'Monthly Energy Report';
-        case 'mindset': return 'Mindset Report';
-        default: return 'Focus Snapshot Report';
-      }
-    }
-    
-    // Fallback based on report type
-    const reportTitles: Record<string, string> = {
-      natal: 'Natal Report',
-      compatibility: 'Compatibility Report',
-      essence: 'Essence Report',
-      flow: 'Flow Report',
-      mindset: 'Mindset Report',
-      monthly: 'Monthly Forecast',
-      focus: 'Focus Report',
-      sync: 'Sync Report'
-    };
-    
-    return reportTitles[type] || 'Personal Report';
-  };
+  // Fetch price from database
+  const { price: basePrice, isLoading: isPriceLoading, error: priceError } = usePriceFetch({
+    reportType,
+    essenceType,
+    relationshipType,
+    reportCategory,
+    reportSubCategory
+  });
 
-  const getBasePrice = () => {
-    return 29.00;
-  };
+  const reportTitle = getReportTitle({
+    reportType,
+    essenceType,
+    relationshipType,
+    reportCategory,
+    reportSubCategory
+  });
 
-  const calculatePricing = () => {
-    const basePrice = getBasePrice();
-    
-    if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
-      return {
-        basePrice,
-        discount: 0,
-        discountPercent: 0,
-        finalPrice: basePrice,
-        isFree: false
-      };
-    }
-
-    const discountPercent = promoValidation.discountPercent;
-    const discount = basePrice * (discountPercent / 100);
-    const finalPrice = basePrice - discount;
-    
-    return {
-      basePrice,
-      discount,
-      discountPercent,
-      finalPrice: Math.max(0, finalPrice),
-      isFree: discountPercent === 100
-    };
-  };
-
-  const pricing = calculatePricing();
-  const reportTitle = getReportTitle(reportCategory, reportSubCategory, reportType);
+  const pricing = calculatePricing(basePrice || 15.00, promoValidation);
 
   const getPromoValidationIcon = () => {
     if (isValidatingPromo) {
@@ -159,6 +109,25 @@ const PaymentStep = ({
     onSubmit();
   };
 
+  // Show loading state while fetching price
+  if (isPriceLoading) {
+    return (
+      <FormStep stepNumber={3} title="Payment" className="bg-background">
+        <div className="max-w-2xl mx-auto flex items-center justify-center py-8">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading pricing information...</span>
+          </div>
+        </div>
+      </FormStep>
+    );
+  }
+
+  // Show error state if price fetch failed
+  if (priceError) {
+    console.error('Price fetch error:', priceError);
+  }
+
   return (
     <FormStep stepNumber={3} title="Payment" className="bg-background">
       <div className="max-w-2xl mx-auto space-y-8">
@@ -169,7 +138,13 @@ const PaymentStep = ({
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-gray-700">{reportTitle}</span>
-              <span className="font-medium">${pricing.basePrice.toFixed(2)}</span>
+              <span className="font-medium">
+                {isPriceLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  `$${pricing.basePrice.toFixed(2)}`
+                )}
+              </span>
             </div>
             
             {pricing.discount > 0 && (
@@ -261,7 +236,7 @@ const PaymentStep = ({
         <div className="space-y-4">
           <Button
             onClick={handleButtonClick}
-            disabled={isProcessing || isValidatingPromo}
+            disabled={isProcessing || isValidatingPromo || isPriceLoading}
             className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-white"
             size="lg"
             type="button"
@@ -278,6 +253,13 @@ const PaymentStep = ({
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   Validating...
+                </div>
+              )
+              : isPriceLoading
+              ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Loading...
                 </div>
               )
               : 'Generate My Report'

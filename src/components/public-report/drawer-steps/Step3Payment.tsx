@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -8,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { usePriceFetch } from '@/hooks/usePriceFetch';
+import { getReportTitle, usePricing } from '@/services/pricing';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -38,71 +41,34 @@ const Step3Payment = ({
 }: Step3PaymentProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const { validatePromoManually } = usePromoValidation();
+  const { calculatePricing } = usePricing();
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
+  const reportType = watch('reportType');
+  const essenceType = watch('essenceType');
+  const relationshipType = watch('relationshipType');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  const getReportTitle = (category: string, subCategory: string) => {
-    switch (category) {
-      case 'the-self':
-        switch (subCategory) {
-          case 'professional': return 'Professional Essence Report';
-          case 'relational': return 'Relational Essence Report';
-          case 'personal': return 'Personal Essence Report';
-          default: return 'Personal Essence Report';
-        }
-      case 'compatibility':
-        switch (subCategory) {
-          case 'professional': return 'Professional Compatibility Report';
-          case 'personal': return 'Personal Compatibility Report';
-          default: return 'Personal Compatibility Report';
-        }
-      case 'snapshot':
-        switch (subCategory) {
-          case 'focus': return 'Focus Snapshot Report';
-          case 'monthly': return 'Monthly Energy Report';
-          case 'mindset': return 'Mindset Report';
-          default: return 'Focus Snapshot Report';
-        }
-      default:
-        return 'Personal Report';
-    }
-  };
+  // Fetch price from database
+  const { price: basePrice, isLoading: isPriceLoading, error: priceError } = usePriceFetch({
+    reportType,
+    essenceType,
+    relationshipType,
+    reportCategory,
+    reportSubCategory
+  });
 
-  const getBasePrice = () => {
-    return 10.00;
-  };
+  const reportTitle = getReportTitle({
+    reportType,
+    essenceType,
+    relationshipType,
+    reportCategory,
+    reportSubCategory
+  });
 
-  const calculatePricing = () => {
-    const basePrice = getBasePrice();
-    
-    if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
-      return {
-        basePrice,
-        discount: 0,
-        discountPercent: 0,
-        finalPrice: basePrice,
-        isFree: false
-      };
-    }
-
-    const discountPercent = promoValidation.discountPercent;
-    const discount = basePrice * (discountPercent / 100);
-    const finalPrice = basePrice - discount;
-    
-    return {
-      basePrice,
-      discount,
-      discountPercent,
-      finalPrice: Math.max(0, finalPrice),
-      isFree: discountPercent === 100
-    };
-  };
-
-  const pricing = calculatePricing();
-  const reportTitle = getReportTitle(reportCategory, reportSubCategory);
+  const pricing = calculatePricing(basePrice || 10.00, promoValidation);
 
   const getPromoValidationIcon = () => {
     if (isValidatingPromo) {
@@ -181,7 +147,13 @@ const Step3Payment = ({
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-700">{reportTitle}</span>
-            <span className="font-medium">${pricing.basePrice.toFixed(2)}</span>
+            <span className="font-medium">
+              {isPriceLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                `$${pricing.basePrice.toFixed(2)}`
+              )}
+            </span>
           </div>
           
           {pricing.discount > 0 && (
@@ -268,7 +240,7 @@ const Step3Payment = ({
       >
         <Button
           onClick={handleButtonClick}
-          disabled={isProcessing || isValidatingPromo}
+          disabled={isProcessing || isValidatingPromo || isPriceLoading}
           variant="outline"
           className="w-full h-14 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent disabled:opacity-50"
           size="lg"
@@ -284,6 +256,8 @@ const Step3Payment = ({
             ? 'Processing...' 
             : isValidatingPromo
             ? 'Validating...'
+            : isPriceLoading
+            ? 'Loading...'
             : 'Get My Insights'
           }
         </Button>

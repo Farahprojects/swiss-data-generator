@@ -1,7 +1,14 @@
 
-import { getProductByName } from '@/utils/stripe-products';
+import { fetchReportPrice } from './pricing';
 
 export const getReportPriceAndDescription = async (reportType: string, relationshipType?: string, essenceType?: string) => {
+  // Use the shared pricing service
+  const amount = await fetchReportPrice({
+    reportType,
+    relationshipType,
+    essenceType
+  });
+
   const baseDescriptions = {
     'sync': 'Sync Compatibility Report',
     'essence': 'Personal Essence Report',
@@ -20,29 +27,9 @@ export const getReportPriceAndDescription = async (reportType: string, relations
     description += ` - ${essenceType.charAt(0).toUpperCase() + essenceType.slice(1)} Analysis`;
   }
 
-  const reportTypeToProductName = {
-    'sync': 'Sync',
-    'essence': 'Essence',
-    'flow': 'Flow',
-    'mindset': 'Mindset',
-    'monthly': 'Monthly',
-    'focus': 'Focus',
-  };
-
-  const productName = reportTypeToProductName[reportType as keyof typeof reportTypeToProductName];
-  
-  if (!productName) {
-    throw new Error(`Unknown report type: ${reportType}`);
-  }
-
-  const product = await getProductByName(productName);
-  if (!product) {
-    throw new Error(`Product not found in database: ${productName}`);
-  }
-
   return { 
-    amount: product.amount_usd, 
-    description: product.description || description 
+    amount, 
+    description 
   };
 };
 
