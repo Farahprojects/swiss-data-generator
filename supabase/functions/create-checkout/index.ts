@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 /*  pin Stripe & Supabase imports to the same std version  */
@@ -144,7 +145,7 @@ serve(async (req) => {
       finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=${cancelStatus}`;
     }
 
-    /* -------- Prepare metadata -------- */
+    /* -------- Prepare metadata with proper location field mapping -------- */
     const metadata = isGuest
       ? {
           guest_checkout: "true",
@@ -153,6 +154,10 @@ serve(async (req) => {
           description: description || "Guest report",
           // Include all report data in metadata for later retrieval
           ...(reportData || {}),
+          // CRITICAL: Map location fields that the translator expects
+          location: reportData?.birthLocation || reportData?.location || '',
+          birthLocation: reportData?.birthLocation || '',
+          secondPersonLocation: reportData?.secondPersonBirthLocation || '',
         }
       : {
           user_id: user.id,
@@ -162,7 +167,14 @@ serve(async (req) => {
     console.log("📋 Session metadata prepared:", {
       isGuest: !!isGuest,
       metadataKeys: Object.keys(metadata),
-      customerId
+      customerId,
+      hasLocationFields: !!(metadata.location || metadata.birthLocation)
+    });
+
+    console.log("🌍 Location fields in metadata:", {
+      location: metadata.location,
+      birthLocation: metadata.birthLocation,
+      secondPersonLocation: metadata.secondPersonLocation
     });
 
     /* -------- Create checkout session -------- */
@@ -241,7 +253,8 @@ serve(async (req) => {
           isGuest: !!isGuest,
           successUrl: finalSuccessUrl,
           metadata: Object.keys(metadata),
-          amount_cents: amount ? Math.round(amount * 100) : undefined
+          amount_cents: amount ? Math.round(amount * 100) : undefined,
+          hasLocationFields: !!(metadata.location || metadata.birthLocation)
         }
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
