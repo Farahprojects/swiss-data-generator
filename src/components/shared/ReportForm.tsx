@@ -11,6 +11,7 @@ import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPers
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
+import DesktopReportViewer from '@/components/public-report/DesktopReportViewer';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -26,6 +27,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   onFormStateChange
 }) => {
   const { promoValidation, isValidatingPromo } = usePromoValidation();
+  const [viewingReport, setViewingReport] = useState(false);
+  const [reportContent, setReportContent] = useState<string>('');
+  const [reportPdfData, setReportPdfData] = useState<string | null>(null);
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -69,6 +73,20 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const requiresSecondPerson = selectedReportType === 'sync' || selectedReportType === 'compatibility';
 
+  const handleViewReport = (content: string, pdfData?: string | null) => {
+    console.log('📄 Opening report viewer with content:', content ? 'Content loaded' : 'No content');
+    setReportContent(content);
+    setReportPdfData(pdfData || null);
+    setViewingReport(true);
+  };
+
+  const handleCloseReportViewer = () => {
+    console.log('❌ Closing report viewer');
+    setViewingReport(false);
+    setReportContent('');
+    setReportPdfData(null);
+  };
+
   const onSubmit = async (data: ReportFormData) => {
     console.log('✅ Form submission successful, data:', data);
     // Add coach attribution if provided
@@ -104,8 +122,26 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     )();
   };
 
+  // Show report viewer if user is viewing a report
+  if (viewingReport && reportContent && userName) {
+    return (
+      <DesktopReportViewer
+        reportContent={reportContent}
+        reportPdfData={reportPdfData}
+        customerName={userName}
+        onBack={handleCloseReportViewer}
+      />
+    );
+  }
+
   if (reportCreated && userName && userEmail) {
-    return <SuccessScreen name={userName} email={userEmail} />;
+    return (
+      <SuccessScreen 
+        name={userName} 
+        email={userEmail} 
+        onViewReport={handleViewReport}
+      />
+    );
   }
 
   return (
