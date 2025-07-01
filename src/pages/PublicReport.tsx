@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import HeroSection from '@/components/public-report/HeroSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
@@ -8,10 +8,35 @@ import MobileReportTrigger from '@/components/public-report/MobileReportTrigger'
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 
 const PublicReport = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  // Diagnostic useEffect to catch runtime errors
+  useEffect(() => {
+    const runDiagnostics = async () => {
+      try {
+        console.log('[DIAG] Starting diagnostics...');
+
+        // Try a basic Supabase ping to price_list table
+        const { data, error } = await supabase.from('price_list').select('*').limit(1);
+        console.log('[DIAG] Supabase response:', data, error);
+
+        if (error) throw error;
+        
+        console.log('[DIAG] All checks passed successfully');
+      } catch (err: any) {
+        console.error('[DIAG ERROR] Report page crashed with:', err?.message || err);
+        console.error('[DIAG ERROR] Full error object:', err);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      runDiagnostics();
+    }
+  }, []);
 
   const handleGetReportClick = () => {
     if (isMobile) {
