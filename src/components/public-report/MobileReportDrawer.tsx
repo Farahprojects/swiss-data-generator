@@ -141,7 +141,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       const status = urlParams.get('status');
       
       if (sessionId && status === 'success') {
-        console.log('🔄 Detected Stripe return with session:', sessionId);
+        
         
         // Extract email from URL or storage if available
         const email = urlParams.get('email') || localStorage.getItem('pending_report_email');
@@ -180,8 +180,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   };
 
   const onSubmit = async (data: ReportFormData) => {
-    console.log('🚀 Mobile drawer form submission started');
-    console.log('📝 Form data:', data);
 
     // Store submitted data for success screen
     setSubmittedData({
@@ -200,12 +198,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   };
 
   const handleFormSubmit = () => {
-    console.log('📋 Form submit triggered from Step3Payment');
     handleSubmit(onSubmit)();
   };
 
   const handleViewReport = (reportContent: string, reportPdfData?: string | null) => {
-    console.log('📖 Opening report viewer');
     setReportData({ content: reportContent, pdfData: reportPdfData });
     setCurrentView('report-viewer');
   };

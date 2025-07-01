@@ -59,13 +59,6 @@ const PaymentStep = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  console.log('💳 PaymentStep render with form data:', {
-    reportType,
-    essenceType, 
-    relationshipType,
-    reportCategory,
-    reportSubCategory
-  });
 
   // Fetch price from database
   const { price: basePrice, isLoading: isPriceLoading, error: priceError } = usePriceFetch({
@@ -76,7 +69,7 @@ const PaymentStep = ({
     reportSubCategory
   });
 
-  console.log('💰 Price fetch result:', { basePrice, isPriceLoading, priceError });
+  
 
   const reportTitle = getReportTitle({
     reportType,
@@ -89,7 +82,7 @@ const PaymentStep = ({
   // Only calculate pricing if we have a valid base price
   const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : null;
 
-  console.log('🧮 Calculated pricing:', pricing);
+  
 
   const getPromoValidationIcon = () => {
     if (isValidatingPromo) {
@@ -112,17 +105,12 @@ const PaymentStep = ({
   };
 
   const handleButtonClick = async (e: React.MouseEvent) => {
-    console.log('🖱️ Generate My Report button clicked!', e);
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('💰 Starting validation and payment flow');
-    
     // First validate promo code if present
     if (promoCode && promoCode.trim() !== '') {
-      console.log('🎫 Validating promo code:', promoCode);
       const validation = await validatePromoManually(promoCode);
-      console.log('✅ Promo validation result:', validation);
       
       // Give user time to see the validation result
       await new Promise(resolve => setTimeout(resolve, 1000));

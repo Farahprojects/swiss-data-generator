@@ -31,7 +31,6 @@ const BirthDetailsForm = ({ register, setValue, watch, errors }: BirthDetailsFor
     if (placeData.latitude && placeData.longitude) {
       setValue('birthLatitude', placeData.latitude);
       setValue('birthLongitude', placeData.longitude);
-      console.log(`📍 Coordinates saved: ${placeData.latitude}, ${placeData.longitude}`);
     }
     
     if (placeData.placeId) {

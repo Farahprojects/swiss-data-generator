@@ -26,7 +26,6 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   // Auto-start polling when component mounts - simplified dependencies
   useEffect(() => {
     if (autoStartPolling && email && !isPolling) {
-      console.log('🚀 Auto-starting report polling for:', email);
       startPolling(email);
     }
 

@@ -48,7 +48,7 @@ const MobileReportViewer = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      console.log('📥 PDF download initiated');
+      
     } catch (error) {
       console.error('❌ Error downloading PDF:', error);
     }
@@ -69,7 +69,7 @@ const MobileReportViewer = ({
         variant: "success"
       });
       
-      console.log('📋 Report copied to clipboard');
+      
     } catch (error) {
       console.error('❌ Error copying to clipboard:', error);
       toast({

@@ -55,7 +55,6 @@ const ReportTypeSelector = ({
       }
 
       if (isSelectionComplete) {
-        console.log('🎯 Complete selection detected, auto-scrolling to Step 2');
         // Small delay to ensure the DOM is updated
         setTimeout(() => {
           const nextStep = document.querySelector('[data-step="2"]');
