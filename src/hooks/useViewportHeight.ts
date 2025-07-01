@@ -3,6 +3,9 @@ import { useEffect } from 'react';
 
 export const useViewportHeight = () => {
   useEffect(() => {
+    // Only run in browser environment
+    if (typeof window === 'undefined') return;
+    
     const updateViewportHeight = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
