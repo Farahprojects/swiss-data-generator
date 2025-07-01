@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
@@ -113,7 +114,7 @@ const PaymentStep = ({
   if (isPriceLoading) {
     return (
       <FormStep stepNumber={3} title="Payment" className="bg-background">
-        <div className="max-w-2xl mx-auto flex items-center justify-center py-8">
+        <div className="max-w-4xl mx-auto flex items-center justify-center py-8">
           <div className="flex items-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
             <span>Loading pricing information...</span>
@@ -130,154 +131,174 @@ const PaymentStep = ({
 
   return (
     <FormStep stepNumber={3} title="Payment" className="bg-background">
-      <div className="max-w-2xl mx-auto space-y-8">
-        {/* Order Summary */}
-        <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-          <h3 className="font-semibold text-gray-900 text-lg">Order Summary</h3>
-          
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">{reportTitle}</span>
-              <span className="font-medium">
-                {isPriceLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  `$${pricing.basePrice.toFixed(2)}`
+      <div className="max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Column - Order Summary & Benefits */}
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="text-xl">Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">{reportTitle}</span>
+                  <span className="font-medium">
+                    {isPriceLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      `$${pricing.basePrice.toFixed(2)}`
+                    )}
+                  </span>
+                </div>
+                
+                {pricing.discount > 0 && (
+                  <div className="flex justify-between items-center text-green-600">
+                    <span>Discount ({pricing.discountPercent}%)</span>
+                    <span>-${pricing.discount.toFixed(2)}</span>
+                  </div>
                 )}
-              </span>
-            </div>
-            
-            {pricing.discount > 0 && (
-              <div className="flex justify-between items-center text-green-600">
-                <span>Discount ({pricing.discountPercent}%)</span>
-                <span>-${pricing.discount.toFixed(2)}</span>
-              </div>
-            )}
-            
-            <div className="border-t pt-3">
-              <div className="flex justify-between items-center font-semibold text-lg">
-                <span>Total</span>
-                <span className={pricing.isFree ? 'text-green-600' : 'text-primary'}>
-                  {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* What You Get */}
-          <div className="space-y-3 pt-4 border-t">
-            <h4 className="font-medium">What You'll Receive:</h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>Instant email delivery</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>Downloadable for your records</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>Professional astrology insights</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Promo Code Section */}
-        <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full h-12 justify-center border-2 border-primary text-primary bg-white hover:bg-accent"
-              type="button"
-            >
-              <Tag className="h-4 w-4 mr-2" />
-              Have a promo code?
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4">
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="promoCode">Promo Code</Label>
-                <div className="relative">
-                  <Input
-                    id="promoCode"
-                    {...register('promoCode')}
-                    placeholder="Enter promo code"
-                    className="h-12 pr-10"
-                  />
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    {getPromoValidationIcon()}
+                
+                <div className="border-t pt-3">
+                  <div className="flex justify-between items-center font-semibold text-lg">
+                    <span>Total</span>
+                    <span className={pricing.isFree ? 'text-green-600' : 'text-primary'}>
+                      {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
+                    </span>
                   </div>
                 </div>
-                {errors.promoCode && (
-                  <p className="text-sm text-red-500">{errors.promoCode.message}</p>
-                )}
               </div>
-              
-              {/* Promo validation feedback */}
-              {promoValidation.message && (
-                <div className={`text-sm p-3 rounded-lg ${
-                  isValidatingPromo 
-                    ? 'bg-gray-50 text-gray-600'
-                    : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                }`}>
-                  {getPromoValidationMessage()}
-                </div>
-              )}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
 
-        {/* Submit Button */}
-        <div className="space-y-4">
-          <Button
-            onClick={handleButtonClick}
-            disabled={isProcessing || isValidatingPromo || isPriceLoading}
-            className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-white"
-            size="lg"
-            type="button"
-          >
-            {isProcessing 
-              ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Processing...
+              {/* What You Get */}
+              <div className="space-y-3 pt-4 border-t">
+                <h4 className="font-medium text-gray-900">What You'll Receive:</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <span>Instant email delivery</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <span>Downloadable PDF for your records</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <span>Professional astrology insights</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <span>Personalized recommendations</span>
+                  </div>
                 </div>
-              )
-              : isValidatingPromo
-              ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Validating...
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Right Column - Actions */}
+          <div className="space-y-6">
+            {/* Promo Code Section */}
+            <Card>
+              <CardContent className="pt-6">
+                <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full h-12 justify-center border-2 border-primary text-primary bg-white hover:bg-accent"
+                      type="button"
+                    >
+                      <Tag className="h-4 w-4 mr-2" />
+                      Have a promo code?
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4">
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="promoCode">Promo Code</Label>
+                        <div className="relative">
+                          <Input
+                            id="promoCode"
+                            {...register('promoCode')}
+                            placeholder="Enter promo code"
+                            className="h-12 pr-10"
+                          />
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            {getPromoValidationIcon()}
+                          </div>
+                        </div>
+                        {errors.promoCode && (
+                          <p className="text-sm text-red-500">{errors.promoCode.message}</p>
+                        )}
+                      </div>
+                      
+                      {/* Promo validation feedback */}
+                      {promoValidation.message && (
+                        <div className={`text-sm p-3 rounded-lg ${
+                          isValidatingPromo 
+                            ? 'bg-gray-50 text-gray-600'
+                            : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
+                          {getPromoValidationMessage()}
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </CardContent>
+            </Card>
+
+            {/* Submit Button */}
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <Button
+                  onClick={handleButtonClick}
+                  disabled={isProcessing || isValidatingPromo || isPriceLoading}
+                  className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-white"
+                  size="lg"
+                  type="button"
+                >
+                  {isProcessing 
+                    ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Processing...
+                      </div>
+                    )
+                    : isValidatingPromo
+                    ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Validating...
+                      </div>
+                    )
+                    : isPriceLoading
+                    ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Loading...
+                      </div>
+                    )
+                    : 'Generate My Report'
+                  }
+                </Button>
+                
+                <div className="text-center text-sm text-muted-foreground">
+                  <p>Secure checkout powered by Stripe</p>
+                  <p className="mt-1">Your report will be delivered to your email within minutes</p>
                 </div>
-              )
-              : isPriceLoading
-              ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Loading...
-                </div>
-              )
-              : 'Generate My Report'
-            }
-          </Button>
-          
-          <div className="text-center text-sm text-muted-foreground">
-            <p>Secure checkout powered by Stripe</p>
-            <p className="mt-1">Your report will be delivered to your email within minutes</p>
+              </CardContent>
+            </Card>
+
+            {/* Guarantee */}
+            <Card className="bg-muted/30">
+              <CardContent className="pt-6">
+                <h4 className="font-medium text-sm mb-2">100% Satisfaction Guarantee</h4>
+                <p className="text-xs text-muted-foreground">
+                  Not satisfied with your report? Contact us within 7 days for a full refund.
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-
-        {/* Guarantee */}
-        <div className="bg-muted/50 p-4 rounded-lg">
-          <h4 className="font-medium text-sm mb-2">100% Satisfaction Guarantee</h4>
-          <p className="text-xs text-muted-foreground">
-            Not satisfied with your report? Contact us within 7 days for a full refund.
-          </p>
         </div>
       </div>
     </FormStep>
