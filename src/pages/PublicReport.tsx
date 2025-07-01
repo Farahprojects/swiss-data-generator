@@ -21,6 +21,27 @@ const PublicReport = () => {
       }
     }, []);
 
+    // Global error handlers to catch client-side errors
+    useEffect(() => {
+      if (typeof window !== 'undefined') {
+        const handleError = (event: ErrorEvent) => {
+          console.error('[CLIENT ERROR]', event?.error || event?.message || event);
+        };
+
+        const handleRejection = (event: PromiseRejectionEvent) => {
+          console.error('[CLIENT PROMISE ERROR]', event?.reason || event);
+        };
+
+        window.addEventListener('error', handleError);
+        window.addEventListener('unhandledrejection', handleRejection);
+
+        return () => {
+          window.removeEventListener('error', handleError);
+          window.removeEventListener('unhandledrejection', handleRejection);
+        };
+      }
+    }, []);
+
     // Diagnostic useEffect to catch runtime errors
     useEffect(() => {
       const runDiagnostics = async () => {
@@ -65,28 +86,33 @@ const PublicReport = () => {
       setIsDrawerOpen(true);
     };
 
-    return (
-      <div className="min-h-screen bg-background">
-        <HeroSection onGetReportClick={handleGetReportClick} />
-        <TestsSection />
-        {!isClientMobile && (
-          <div id="report-form">
-            <ReportForm />
-          </div>
-        )}
-        <MobileReportTrigger 
-          isDrawerOpen={isDrawerOpen}
-          onOpenDrawer={handleOpenDrawer}
-        />
-        {/* Desktop sticky CTA removed - form is inline on desktop */}
-        <MobileReportDrawer 
-          isOpen={isDrawerOpen} 
-          onClose={handleCloseDrawer} 
-        />
-        <FeaturesSection onGetReportClick={handleGetReportClick} />
-        <Footer />
-      </div>
-    );
+    try {
+      return (
+        <div className="min-h-screen bg-background">
+          <HeroSection onGetReportClick={handleGetReportClick} />
+          <TestsSection />
+          {!isClientMobile && (
+            <div id="report-form">
+              <ReportForm />
+            </div>
+          )}
+          <MobileReportTrigger 
+            isDrawerOpen={isDrawerOpen}
+            onOpenDrawer={handleOpenDrawer}
+          />
+          {/* Desktop sticky CTA removed - form is inline on desktop */}
+          <MobileReportDrawer 
+            isOpen={isDrawerOpen} 
+            onClose={handleCloseDrawer} 
+          />
+          <FeaturesSection onGetReportClick={handleGetReportClick} />
+          <Footer />
+        </div>
+      );
+    } catch (err: any) {
+      console.error('[REPORT RUNTIME ERROR]', err);
+      return <div>Sorry, something went wrong.</div>;
+    }
   } catch (err: any) {
     console.error('[REPORT SSR ERROR]', err?.message || err);
     return <div>Sorry, something went wrong.</div>;
