@@ -1,161 +1,138 @@
-
-import React from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
+import { CalendarIcon } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
-import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
+import { addYears, format } from 'date-fns';
+import { useReport } from '@/contexts/ReportContext';
+import { essenceTypes, relationshipTypes } from '@/constants/report-types';
+import { ReportTypeOption, ReportFormData } from '@/types/public-report';
+import ReportTypeSelector from './ReportTypeSelector';
+import PaymentStep from './PaymentStep';
+import { usePromoValidation } from '@/hooks/usePromoValidation';
+
+const reportFormSchema = z.object({
+  reportType: z.string().min(1, {
+    message: "Please select a report type.",
+  }),
+  relationshipType: z.string().optional(),
+  essenceType: z.string().optional(),
+  name: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
+  }),
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  birthDate: z.string().min(1, {
+    message: "Please select your birth date.",
+  }),
+  birthTime: z.string().min(1, {
+    message: "Please select your birth time.",
+  }),
+  birthLocation: z.string().min(2, {
+    message: "Please enter your birth location.",
+  }),
+  birthLatitude: z.number().optional(),
+  birthLongitude: z.number().optional(),
+  birthPlaceId: z.string().optional(),
+  secondPersonName: z.string().optional(),
+  secondPersonBirthDate: z.string().optional(),
+  secondPersonBirthTime: z.string().optional(),
+  secondPersonBirthLocation: z.string().optional(),
+  secondPersonLatitude: z.number().optional(),
+  secondPersonLongitude: z.number().optional(),
+  secondPersonPlaceId: z.string().optional(),
+  returnYear: z.string().optional(),
+  notes: z.string().optional(),
+  promoCode: z.string().optional(),
+  // Mobile-specific fields
+  reportCategory: z.string().optional(),
+  reportSubCategory: z.string().optional(),
+});
 
 interface PublicReportFormProps {
-  form: UseFormReturn<any>;
-  reportType: string;
+  showReportGuide?: boolean;
+  setShowReportGuide?: (show: boolean) => void;
 }
 
-const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
-  const { register, setValue, formState: { errors }, watch } = form;
-  
-  const isCompatibilityReport = reportType === 'compatibility';
+const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: PublicReportFormProps) => {
+  const [step, setStep] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { setReportData } = useReport();
+  const { validatePromo, promoValidation, isValidatingPromo } = usePromoValidation();
 
-  const handlePlaceSelect = (placeData: PlaceData, fieldPrefix = '') => {
-    const locationField = fieldPrefix ? `${fieldPrefix}Location` : 'birthLocation';
-    setValue(locationField, placeData.name);
+  const form = useForm<ReportFormData>({
+    resolver: zodResolver(reportFormSchema),
+    defaultValues: {
+      reportType: '',
+      name: '',
+      email: '',
+      birthDate: '',
+      birthTime: '',
+      birthLocation: '',
+    },
+  });
+
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = form;
+
+  const onSubmit = async (data: ReportFormData) => {
+    console.log('Form Data Submitted:', data);
+    setIsProcessing(true);
+
+    // Validate promo code if present
+    if (data.promoCode && data.promoCode.trim() !== '') {
+      console.log('Validating promo code:', data.promoCode);
+      await validatePromo(data.promoCode);
+    }
+
+    // Simulate report generation (replace with actual API call)
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Store form data in context
+    setReportData(data);
+
+    setIsProcessing(false);
+    setStep(4); // Proceed to confirmation step
   };
 
+  const reportType = watch('reportType');
+  const reportCategory = watch('reportCategory');
+  const relationshipType = watch('relationshipType');
+  const essenceType = watch('essenceType');
+
+  const showSecondPersonFields = reportType === 'sync' || reportType === 'compatibility';
+  const requiresNotes = reportType === 'transit' || reportType === 'progression' || reportType === 'return';
+
   return (
-    <div className="space-y-6">
-      {/* Contact Information */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Full Name *</Label>
-          <Input
-            id="name"
-            {...register('name')}
-            placeholder="Enter your full name"
-          />
-          {errors.name && (
-            <p className="text-sm text-destructive">{errors.name.message as string}</p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email Address *</Label>
-          <Input
-            id="email"
-            type="email"
-            {...register('email')}
-            placeholder="your@email.com"
-          />
-          {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message as string}</p>
-          )}
-        </div>
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <ReportTypeSelector
+        control={control}
+        errors={errors}
+        selectedReportType={watch('reportType')}
+        showReportGuide={showReportGuide}
+        setShowReportGuide={setShowReportGuide || (() => {})}
+        setValue={setValue}
+      />
 
-      {/* Primary Person Birth Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {isCompatibilityReport ? 'Your Birth Details' : 'Birth Details'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="birthDate">Birth Date *</Label>
-              <Input
-                id="birthDate"
-                type="date"
-                {...register('birthDate')}
-              />
-              {errors.birthDate && (
-                <p className="text-sm text-destructive">{errors.birthDate.message as string}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="birthTime">Birth Time *</Label>
-              <Input
-                id="birthTime"
-                type="time"
-                {...register('birthTime')}
-                step="60"
-              />
-              {errors.birthTime && (
-                <p className="text-sm text-destructive">{errors.birthTime.message as string}</p>
-              )}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <PlaceAutocomplete
-              label="Birth Location *"
-              value={watch('birthLocation') || ''}
-              onChange={(value) => setValue('birthLocation', value)}
-              onPlaceSelect={(placeData) => handlePlaceSelect(placeData)}
-              placeholder="Enter birth city, state, country"
-              id="birthLocation"
-              error={errors.birthLocation?.message as string}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Second Person Birth Details (for compatibility reports) */}
-      {isCompatibilityReport && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Partner's Birth Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name2">Partner's Full Name *</Label>
-              <Input
-                id="name2"
-                {...register('name2')}
-                placeholder="Enter partner's full name"
-              />
-              {errors.name2 && (
-                <p className="text-sm text-destructive">{errors.name2.message as string}</p>
-              )}
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="birthDate2">Partner's Birth Date *</Label>
-                <Input
-                  id="birthDate2"
-                  type="date"
-                  {...register('birthDate2')}
-                />
-                {errors.birthDate2 && (
-                  <p className="text-sm text-destructive">{errors.birthDate2.message as string}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="birthTime2">Partner's Birth Time *</Label>
-                <Input
-                  id="birthTime2"
-                  type="time"
-                  {...register('birthTime2')}
-                  step="60"
-                />
-                {errors.birthTime2 && (
-                  <p className="text-sm text-destructive">{errors.birthTime2.message as string}</p>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <PlaceAutocomplete
-                label="Partner's Birth Location *"
-                value={watch('birthLocation2') || ''}
-                onChange={(value) => setValue('birthLocation2', value)}
-                onPlaceSelect={(placeData) => handlePlaceSelect(placeData, 'birth2')}
-                placeholder="Enter partner's birth city, state, country"
-                id="birthLocation2"
-                error={errors.birthLocation2?.message as string}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      {step >= 2 && (
+        <PaymentStep 
+          register={form.register}
+          watch={form.watch}
+          errors={form.errors}
+          onSubmit={handleSubmit(onSubmit)}
+          isProcessing={isProcessing}
+          promoValidation={promoValidation}
+          isValidatingPromo={isValidatingPromo}
+        />
       )}
-    </div>
+    </form>
   );
 };
 
