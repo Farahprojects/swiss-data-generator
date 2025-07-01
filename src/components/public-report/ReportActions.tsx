@@ -74,7 +74,7 @@ export const ReportActions = ({
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto transition-all duration-200 ${
-              isCopyCompleted ? 'bg-[#10A37F]/10' : 'bg-gray-100'
+              isCopyCompleted ? 'bg-gray-100' : 'bg-gray-50'
             }`}>
               <img 
                 src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
@@ -96,10 +96,10 @@ export const ReportActions = ({
             <Button 
               onClick={onChatGPTClick}
               disabled={!isCopyCompleted}
-              className={`w-full transition-all duration-200 ${
+              className={`w-full font-inter transition-all duration-200 ${
                 isCopyCompleted 
-                  ? 'bg-[#10A37F] hover:bg-[#0D8A6B] text-white border-[#10A37F] shadow-sm hover:shadow-md' 
-                  : 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400'
+                  ? 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md' 
+                  : 'bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60'
               }`}
             >
               <img 
@@ -107,7 +107,7 @@ export const ReportActions = ({
                 alt="ChatGPT" 
                 className="h-4 w-4 mr-2"
               />
-              ChatGPT
+              <span className="font-medium">ChatGPT</span>
             </Button>
           </div>
         </CardContent>
