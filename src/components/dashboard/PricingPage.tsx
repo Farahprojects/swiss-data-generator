@@ -9,7 +9,7 @@ type PriceItem = {
   id: string;
   name: string;
   description: string | null;
-  report_tier: string | null;
+  report_type: string | null;
   endpoint: string | null;
   unit_price_usd: number;
 };
@@ -66,11 +66,11 @@ export const PricingPage = () => {
     return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  // Group prices by report_tier only - removing the API Endpoints category
+  // Group prices by report_type only - removing the API Endpoints category
   const groupedPrices = prices.reduce((acc, price) => {
     let category;
     
-    if (price.report_tier) {
+    if (price.report_type) {
       category = 'Reports';
     } else {
       category = 'Other Services'; // All other items go here

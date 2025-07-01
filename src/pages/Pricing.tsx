@@ -18,7 +18,7 @@ type PriceItem = {
   id: string;
   name: string;
   description: string | null;
-  report_tier: string | null;
+  report_type: string | null;
   endpoint: string | null;
   unit_price_usd: number;
 };
@@ -279,7 +279,7 @@ const Pricing = () => {
         const { data, error } = await supabase
           .from('price_list')
           .select('*')
-          .not('report_tier', 'is', null)
+          .not('report_type', 'is', null)
           .order('unit_price_usd', { ascending: true });
 
         if (error) {

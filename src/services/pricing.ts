@@ -71,21 +71,21 @@ export const fetchReportPrice = async (formData: ReportTypeMapping): Promise<num
     if (error) {
       console.error('❌ Error fetching price by ID:', error);
       
-      // Fallback: try by report_tier
-      console.log('🔄 Trying fallback query by report_tier:', priceId);
-      const { data: tierData, error: tierError } = await supabase
+      // Fallback: try by report_type
+      console.log('🔄 Trying fallback query by report_type:', priceId);
+      const { data: typeData, error: typeError } = await supabase
         .from('price_list')
         .select('unit_price_usd, name, description')
-        .eq('report_tier', priceId)
+        .eq('report_type', priceId)
         .single();
       
-      if (tierError) {
-        console.error('❌ Error fetching price by tier:', tierError);
+      if (typeError) {
+        console.error('❌ Error fetching price by type:', typeError);
         throw new Error(`Price not found for report type: ${priceId}. Please check the price_list table configuration.`);
       }
       
-      console.log('✅ Found price by tier:', tierData);
-      return Number(tierData.unit_price_usd);
+      console.log('✅ Found price by type:', typeData);
+      return Number(typeData.unit_price_usd);
     }
     
     console.log('✅ Found price by ID:', data);
