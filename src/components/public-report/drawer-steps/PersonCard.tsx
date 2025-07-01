@@ -123,13 +123,25 @@ const PersonCard = ({
     const lngField = getFieldName('birthLongitude');
     const placeIdField = getFieldName('birthPlaceId');
 
-    setValue(locationField, placeData.name);
+    // Use the full formatted address (which is now in placeData.name) or fallback to address field
+    const fullLocation = placeData.address || placeData.name;
+    console.log(`📍 Person ${personNumber} - Setting location to:`, fullLocation);
+    
+    setValue(locationField, fullLocation);
     setHasInteracted((prev) => ({ ...prev, birthLocation: true }));
 
     if (placeData.latitude && placeData.longitude) {
       setValue(latField, placeData.latitude);
       setValue(lngField, placeData.longitude);
+      console.log(`✅ Person ${personNumber} - Coordinates saved:`, {
+        latitude: placeData.latitude,
+        longitude: placeData.longitude,
+        location: fullLocation
+      });
+    } else {
+      console.warn(`⚠️ Person ${personNumber} - No coordinates available for location:`, fullLocation);
     }
+    
     if (placeData.placeId) {
       setValue(placeIdField, placeData.placeId);
     }

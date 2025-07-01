@@ -37,8 +37,8 @@ export const validatePromoCode = async (code: string): Promise<PromoCodeValidati
       };
     }
 
-    // Check if expired
-    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    // Check if expired (only if expires_at field exists)
+    if ('expires_at' in data && data.expires_at && new Date(data.expires_at) < new Date()) {
       return {
         isValid: false,
         discountPercent: 0,

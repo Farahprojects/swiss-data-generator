@@ -33,13 +33,23 @@ const SecondPersonForm = ({ register, setValue, watch, errors }: SecondPersonFor
   const debouncedName = useDebounced(secondPersonName, 500);
 
   const handlePlaceSelect = (placeData: PlaceData) => {
-    setValue('secondPersonBirthLocation', placeData.name);
+    // Use the full formatted address (which is now in placeData.name) or fallback to address field
+    const fullLocation = placeData.address || placeData.name;
+    console.log('📍 Second person - Setting location to:', fullLocation);
+    
+    setValue('secondPersonBirthLocation', fullLocation);
     setHasInteracted(prev => ({ ...prev, birthLocation: true }));
     
     if (placeData.latitude && placeData.longitude) {
       setValue('secondPersonLatitude', placeData.latitude);
       setValue('secondPersonLongitude', placeData.longitude);
-      console.log(`📍 Second person coordinates saved: ${placeData.latitude}, ${placeData.longitude}`);
+      console.log('✅ Second person - Coordinates saved:', {
+        latitude: placeData.latitude,
+        longitude: placeData.longitude,
+        location: fullLocation
+      });
+    } else {
+      console.warn('⚠️ Second person - No coordinates available for location:', fullLocation);
     }
     
     if (placeData.placeId) {

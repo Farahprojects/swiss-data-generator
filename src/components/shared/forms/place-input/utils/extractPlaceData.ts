@@ -13,14 +13,23 @@ export const extractPlaceData = (place: any): PlaceData => {
   };
 
   try {
-    // Extract display name
-    if (place.displayName) {
-      placeData.name = place.displayName;
-    } else if (place.formattedAddress) {
+    console.log('🗺️ Google Place object received:', {
+      displayName: place.displayName,
+      formattedAddress: place.formattedAddress,
+      location: place.location ? 'present' : 'missing',
+      place_id: place.place_id
+    });
+
+    // Extract display name - prioritize formattedAddress for complete location context
+    if (place.formattedAddress) {
       placeData.name = place.formattedAddress;
+      console.log('✅ Using formattedAddress as name:', place.formattedAddress);
+    } else if (place.displayName) {
+      placeData.name = place.displayName;
+      console.log('⚠️ Fallback to displayName as name:', place.displayName);
     }
 
-    // Extract formatted address
+    // Extract formatted address (for fallback purposes)
     if (place.formattedAddress) {
       placeData.address = place.formattedAddress;
     }
@@ -29,6 +38,12 @@ export const extractPlaceData = (place: any): PlaceData => {
     if (place.location) {
       placeData.latitude = place.location.lat();
       placeData.longitude = place.location.lng();
+      console.log('📍 Coordinates extracted:', {
+        latitude: placeData.latitude,
+        longitude: placeData.longitude
+      });
+    } else {
+      console.warn('⚠️ No coordinates available from Google Place');
     }
 
     // Extract place ID
@@ -36,9 +51,9 @@ export const extractPlaceData = (place: any): PlaceData => {
       placeData.placeId = place.place_id;
     }
 
-    console.log('📊 Extracted place data:', placeData);
+    console.log('📊 Final extracted place data:', placeData);
   } catch (error) {
-    console.error('Error extracting place data:', error);
+    console.error('❌ Error extracting place data:', error);
   }
 
   return placeData;

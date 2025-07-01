@@ -27,13 +27,23 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: Comb
   const birthLocation = watch('birthLocation') || '';
 
   const handlePlaceSelect = (placeData: PlaceData) => {
-    setValue('birthLocation', placeData.name);
+    // Use the full formatted address (which is now in placeData.name) or fallback to address field
+    const fullLocation = placeData.address || placeData.name;
+    console.log('📍 Primary person - Setting location to:', fullLocation);
+    
+    setValue('birthLocation', fullLocation);
     setHasInteracted(prev => ({ ...prev, birthLocation: true }));
     
     if (placeData.latitude && placeData.longitude) {
       setValue('birthLatitude', placeData.latitude);
       setValue('birthLongitude', placeData.longitude);
-      console.log(`📍 Coordinates saved: ${placeData.latitude}, ${placeData.longitude}`);
+      console.log('✅ Primary person - Coordinates saved:', {
+        latitude: placeData.latitude,
+        longitude: placeData.longitude,
+        location: fullLocation
+      });
+    } else {
+      console.warn('⚠️ Primary person - No coordinates available for location:', fullLocation);
     }
     
     if (placeData.placeId) {
