@@ -5,17 +5,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
+import { usePromoValidation } from '@/hooks/usePromoValidation';
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
-import SubmissionSection from '@/components/public-report/SubmissionSection';
+import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
-
-interface PromoValidationState {
-  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
-  message: string;
-  discountPercent: number;
-}
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -30,11 +25,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   fontFamily = 'Inter',
   onFormStateChange
 }) => {
-  const [promoValidation, setPromoValidation] = useState<PromoValidationState>({
-    status: 'none',
-    message: '',
-    discountPercent: 0
-  });
+  const { promoValidation, isValidatingPromo } = usePromoValidation();
   
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -82,13 +73,25 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     console.log('✅ Form submission successful, data:', data);
     // Add coach attribution if provided
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
-    await submitReport(submissionData, promoValidation, setPromoValidation);
+    
+    // Convert promoValidation to the expected format
+    const promoValidationState = promoValidation ? {
+      status: promoValidation.isValid ? 
+        (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) : 
+        'invalid' as const,
+      message: promoValidation.message,
+      discountPercent: promoValidation.discountPercent
+    } : {
+      status: 'none' as const,
+      message: '',
+      discountPercent: 0
+    };
+    
+    await submitReport(submissionData, promoValidationState, () => {});
   };
 
-  const handleButtonClick = (e: React.MouseEvent) => {
-    console.log('🖱️ Button clicked!', e);
-    e.preventDefault();
-    e.stopPropagation();
+  const handleButtonClick = () => {
+    console.log('🖱️ Button clicked!');
     
     handleSubmit(
       (data) => {
@@ -98,7 +101,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       (errors) => {
         console.log('❌ Form validation failed:', errors);
       }
-    )(e);
+    )();
   };
 
   if (reportCreated && userName && userEmail) {
@@ -137,14 +140,24 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           )}
 
           {selectedReportType && (
-            <SubmissionSection
+            <PaymentStep
               register={register}
+              watch={watch}
               errors={errors}
-              isProcessing={isProcessing}
-              isPricingLoading={isPricingLoading}
-              promoValidation={promoValidation}
-              reportType={selectedReportType}
-              onButtonClick={handleButtonClick}
+              onSubmit={handleButtonClick}
+              isProcessing={isProcessing || isPricingLoading}
+              promoValidation={promoValidation ? {
+                status: promoValidation.isValid ? 
+                  (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) : 
+                  'invalid' as const,
+                message: promoValidation.message,
+                discountPercent: promoValidation.discountPercent
+              } : {
+                status: 'none' as const,
+                message: '',
+                discountPercent: 0
+              }}
+              isValidatingPromo={isValidatingPromo}
             />
           )}
         </div>
