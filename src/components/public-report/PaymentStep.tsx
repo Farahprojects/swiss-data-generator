@@ -133,41 +133,43 @@ const PaymentStep = ({
       <div className="max-w-4xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column - Order Summary & Benefits */}
-          <Card className="h-fit">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="text-xl">Order Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">{reportTitle}</span>
-                  <span className="font-medium">
-                    {isPriceLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      `$${pricing.basePrice.toFixed(2)}`
-                    )}
-                  </span>
-                </div>
-                
-                {pricing.discount > 0 && (
-                  <div className="flex justify-between items-center text-green-600">
-                    <span>Discount ({pricing.discountPercent}%)</span>
-                    <span>-${pricing.discount.toFixed(2)}</span>
-                  </div>
-                )}
-                
-                <div className="border-t pt-3">
-                  <div className="flex justify-between items-center font-semibold text-lg">
-                    <span>Total</span>
-                    <span className={pricing.isFree ? 'text-green-600' : 'text-primary'}>
-                      {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
+            <CardContent className="flex flex-col justify-between h-full">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700">{reportTitle}</span>
+                    <span className="font-medium">
+                      {isPriceLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        `$${pricing.basePrice.toFixed(2)}`
+                      )}
                     </span>
+                  </div>
+                  
+                  {pricing.discount > 0 && (
+                    <div className="flex justify-between items-center text-green-600">
+                      <span>Discount ({pricing.discountPercent}%)</span>
+                      <span>-${pricing.discount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between items-center font-semibold text-lg">
+                      <span>Total</span>
+                      <span className={pricing.isFree ? 'text-green-600' : 'text-primary'}>
+                        {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* What You Get */}
+              {/* What You Get - Now at bottom */}
               <div className="space-y-3 pt-4 border-t">
                 <h4 className="font-medium text-gray-900">What You'll Receive:</h4>
                 <div className="space-y-2">
