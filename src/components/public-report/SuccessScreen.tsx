@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SuccessScreenProps {
   name: string;
@@ -17,6 +18,7 @@ interface SuccessScreenProps {
 const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: SuccessScreenProps) => {
   const { report, isLoading, isPolling, error, startPolling, stopPolling } = useGuestReportStatus();
   const firstName = name.split(' ')[0];
+  const isMobile = useIsMobile();
 
   // Initialize viewport height management
   useViewportHeight();
@@ -33,6 +35,19 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
       stopPolling();
     };
   }, [email, autoStartPolling]); // Removed function dependencies to prevent loops
+
+  // Scroll into view on desktop to ensure visibility
+  useEffect(() => {
+    if (!isMobile) {
+      // Small delay to ensure component is rendered
+      setTimeout(() => {
+        const successScreen = document.querySelector('[data-success-screen]');
+        if (successScreen) {
+          successScreen.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [isMobile]);
 
   const getStatusInfo = () => {
     if (!report) {
@@ -109,7 +124,124 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
     }
   };
 
-  return (
+  // Desktop layout - constrained within report section
+  const desktopLayout = (
+    <div 
+      className="w-full max-w-4xl mx-auto py-8 px-4"
+      data-success-screen
+    >
+      <Card className="border-2 border-primary/20 shadow-lg">
+        <CardContent className="p-8 text-center space-y-6">
+          {/* Status Icon */}
+          <div className="flex items-center justify-center">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+              isReportReady ? 'bg-green-100' : 'bg-blue-100'
+            }`}>
+              <StatusIcon className={`h-8 w-8 ${statusInfo.color}`} />
+            </div>
+          </div>
+          
+          {/* Status Title */}
+          <div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              {statusInfo.title}
+            </h2>
+            <p className="text-muted-foreground">
+              {statusInfo.description}
+            </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <Progress value={statusInfo.progress} className="h-2" />
+            <p className="text-sm text-muted-foreground">
+              Step {statusInfo.step} of 3
+            </p>
+          </div>
+          
+          {/* Personal Message */}
+          <div className="bg-muted/50 rounded-lg p-4">
+            <p className="text-sm text-foreground">
+              Hi {firstName}! {isReportReady 
+                ? "Your report is ready to view. We've also sent it to your email." 
+                : isPolling 
+                  ? "We're working on your report and will notify you when it's ready."
+                  : "We'll send your report to"
+              } 
+              {!isReportReady && (
+                <span className="font-medium"> {email}</span>
+              )}
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-600 mb-2">{error}</p>
+              <Button 
+                onClick={handleRetryPolling}
+                variant="outline"
+                size="sm"
+                className="text-red-600 border-red-300 hover:bg-red-50"
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            {isReportReady ? (
+              <>
+                <Button 
+                  onClick={handleViewReport}
+                  className="w-full flex items-center gap-2"
+                  size="lg"
+                >
+                  <FileText className="h-4 w-4" />
+                  View Your Report
+                </Button>
+                <Button 
+                  onClick={handleCreateAnother}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Create Another Report
+                </Button>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4 animate-pulse" />
+                  <span>Estimated time: 2-3 minutes</span>
+                </div>
+                <Button 
+                  onClick={handleCreateAnother}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Create Another Report
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Polling Status */}
+          {isPolling && !isReportReady && (
+            <div className="text-xs text-muted-foreground border-t pt-4">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                <span>Checking for updates...</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // Mobile layout - full viewport height
+  const mobileLayout = (
     <div 
       className="min-h-[calc(var(--vh,1vh)*100)] bg-gradient-to-b from-background to-muted/20 flex items-start justify-center pt-8 px-4 overflow-y-auto"
       style={{
@@ -117,6 +249,7 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
         overscrollBehavior: 'none',
         touchAction: 'manipulation'
       }}
+      data-success-screen
     >
       <div className="w-full max-w-md">
         <Card className="border-2 border-primary/20 shadow-lg">
@@ -229,6 +362,8 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
       </div>
     </div>
   );
+
+  return isMobile ? mobileLayout : desktopLayout;
 };
 
 export default SuccessScreen;
