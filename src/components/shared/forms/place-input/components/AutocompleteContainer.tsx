@@ -95,13 +95,14 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       autocompleteElement.setAttribute('placeholder', placeholder);
       autocompleteElement.value = value;
       
-      // Unified responsive styling
+      // Unified responsive styling with iOS fixes
       autocompleteElement.style.width = '100%';
       autocompleteElement.style.height = '40px';
       autocompleteElement.style.fontSize = '16px';
       autocompleteElement.style.border = 'none';
       autocompleteElement.style.outline = 'none';
       autocompleteElement.style.background = 'transparent';
+      autocompleteElement.style.backgroundColor = 'transparent';
       
       container.appendChild(autocompleteElement);
       autocompleteRef.current = autocompleteElement;
@@ -141,8 +142,9 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
         className="relative h-12 min-h-12 border rounded-md bg-background px-3 py-2"
         style={{
           fontSize: '16px',
-          overflow: 'visible', // ✅ Allow Google popup to be visible
-          position: 'relative' // ✅ Positioning context for Google popup
+          overflow: 'visible',
+          position: 'relative',
+          backgroundColor: 'transparent'
         }}
       >
         {!isLoaded && !isError && (
@@ -153,10 +155,12 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
         )}
       </div>
       
-      {/* Processing overlay */}
+      {/* Improved processing overlay - minimal interference */}
       {isProcessingSelection && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10 rounded-md">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-white/90 rounded-full p-2 shadow-sm">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          </div>
         </div>
       )}
     </div>
