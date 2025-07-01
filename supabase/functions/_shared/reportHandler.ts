@@ -1,5 +1,5 @@
 
-// Shared report generation handler
+// Shared report generation handler for reports
 // Ensures consistent report generation across all endpoints
 
 import { processReportRequest } from "./reportOrchestrator.ts";
