@@ -144,14 +144,20 @@ serve(async (req) => {
       finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=${cancelStatus}`;
     }
 
-    /* -------- Prepare metadata -------- */
+    /* -------- Prepare metadata with location field mapping -------- */
     const metadata = isGuest
       ? {
           guest_checkout: "true",
           guest_email: email,
           amount: amount?.toString() || "",
           description: description || "Guest report",
-          // Include all report data in metadata for later retrieval
+          // Map location fields for translator compatibility
+          location: reportData?.birthLocation || reportData?.location || "",
+          secondPersonLocation: reportData?.secondPersonBirthLocation || "",
+          // Keep original fields for completeness
+          birthLocation: reportData?.birthLocation || "",
+          secondPersonBirthLocation: reportData?.secondPersonBirthLocation || "",
+          // Include all other report data
           ...(reportData || {}),
         }
       : {
@@ -162,7 +168,9 @@ serve(async (req) => {
     console.log("📋 Session metadata prepared:", {
       isGuest: !!isGuest,
       metadataKeys: Object.keys(metadata),
-      customerId
+      customerId,
+      locationMapped: !!metadata.location,
+      secondPersonLocationMapped: !!metadata.secondPersonLocation
     });
 
     /* -------- Create checkout session -------- */
@@ -241,7 +249,11 @@ serve(async (req) => {
           isGuest: !!isGuest,
           successUrl: finalSuccessUrl,
           metadata: Object.keys(metadata),
-          amount_cents: amount ? Math.round(amount * 100) : undefined
+          amount_cents: amount ? Math.round(amount * 100) : undefined,
+          locationFieldsMapped: {
+            location: !!metadata.location,
+            secondPersonLocation: !!metadata.secondPersonLocation
+          }
         }
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
