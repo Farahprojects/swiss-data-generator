@@ -17,27 +17,36 @@ type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 const mapReportTypeToId = (data: ReportTypeMapping): string => {
   const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory } = data;
   
+  console.log('🔍 Mapping report type to ID:', { reportType, essenceType, relationshipType, reportCategory, reportSubCategory });
+  
   // Handle essence reports
   if (reportType === 'essence' && essenceType) {
-    return `essence_${essenceType}`;
+    const mappedId = `essence_${essenceType}`;
+    console.log('🎯 Mapped essence report to:', mappedId);
+    return mappedId;
   }
   
   // Handle sync/compatibility reports
   if ((reportType === 'sync' || reportType === 'compatibility') && relationshipType) {
-    return `sync_${relationshipType}`;
+    const mappedId = `sync_${relationshipType}`;
+    console.log('🎯 Mapped sync/compatibility report to:', mappedId);
+    return mappedId;
   }
   
   // Handle snapshot reports - map subcategory to actual report type
   if (reportCategory === 'snapshot' && reportSubCategory) {
+    console.log('🎯 Mapped snapshot report to:', reportSubCategory);
     return reportSubCategory; // focus, monthly, mindset
   }
   
   // Handle direct report types
   if (['focus', 'monthly', 'mindset', 'flow'].includes(reportType)) {
+    console.log('🎯 Mapped direct report type to:', reportType);
     return reportType;
   }
   
   // Fallback to reportType
+  console.log('🎯 Using fallback mapping to:', reportType);
   return reportType;
 };
 
@@ -46,11 +55,11 @@ export const fetchReportPrice = async (formData: ReportTypeMapping): Promise<num
   try {
     // Validate input data
     const validatedData = ReportTypeMappingSchema.parse(formData);
+    console.log('✅ Validated form data:', validatedData);
     
     // Map to price_list identifier
     const priceId = mapReportTypeToId(validatedData);
-    
-    console.log('🔍 Fetching price for:', priceId, 'from form data:', validatedData);
+    console.log('🔍 Fetching price for ID:', priceId);
     
     // Query price_list table
     const { data, error } = await supabase
@@ -60,9 +69,10 @@ export const fetchReportPrice = async (formData: ReportTypeMapping): Promise<num
       .single();
     
     if (error) {
-      console.error('❌ Error fetching price:', error);
+      console.error('❌ Error fetching price by ID:', error);
       
       // Fallback: try by report_tier
+      console.log('🔄 Trying fallback query by report_tier:', priceId);
       const { data: tierData, error: tierError } = await supabase
         .from('price_list')
         .select('unit_price_usd, name, description')
@@ -71,23 +81,20 @@ export const fetchReportPrice = async (formData: ReportTypeMapping): Promise<num
       
       if (tierError) {
         console.error('❌ Error fetching price by tier:', tierError);
-        throw new Error(`Price not found for report type: ${priceId}`);
+        throw new Error(`Price not found for report type: ${priceId}. Please check the price_list table configuration.`);
       }
       
       console.log('✅ Found price by tier:', tierData);
       return Number(tierData.unit_price_usd);
     }
     
-    console.log('✅ Found price:', data);
+    console.log('✅ Found price by ID:', data);
+    console.log('💰 Final price:', Number(data.unit_price_usd));
     return Number(data.unit_price_usd);
     
   } catch (error) {
     console.error('❌ Error in fetchReportPrice:', error);
-    
-    // Fallback to default price
-    const fallbackPrice = 15.00;
-    console.log('🔄 Using fallback price:', fallbackPrice);
-    return fallbackPrice;
+    throw error; // Don't use fallback, let the error propagate
   }
 };
 

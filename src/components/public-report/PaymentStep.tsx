@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
-import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Tag, CheckCircle, AlertCircle, Loader2, ExclamationTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,6 +48,14 @@ const PaymentStep = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
+  console.log('💳 PaymentStep render with form data:', {
+    reportType,
+    essenceType, 
+    relationshipType,
+    reportCategory,
+    reportSubCategory
+  });
+
   // Fetch price from database
   const { price: basePrice, isLoading: isPriceLoading, error: priceError } = usePriceFetch({
     reportType,
@@ -58,6 +65,8 @@ const PaymentStep = ({
     reportSubCategory
   });
 
+  console.log('💰 Price fetch result:', { basePrice, isPriceLoading, priceError });
+
   const reportTitle = getReportTitle({
     reportType,
     essenceType,
@@ -66,7 +75,10 @@ const PaymentStep = ({
     reportSubCategory
   });
 
-  const pricing = calculatePricing(basePrice || 15.00, promoValidation);
+  // Only calculate pricing if we have a valid base price
+  const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : null;
+
+  console.log('🧮 Calculated pricing:', pricing);
 
   const getPromoValidationIcon = () => {
     if (isValidatingPromo) {
@@ -125,7 +137,55 @@ const PaymentStep = ({
 
   // Show error state if price fetch failed
   if (priceError) {
-    console.error('Price fetch error:', priceError);
+    console.error('💥 Price fetch error:', priceError);
+    return (
+      <FormStep stepNumber={3} title="Payment" className="bg-background">
+        <div className="max-w-4xl mx-auto">
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-6 text-center">
+              <ExclamationTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-red-800 mb-2">
+                Pricing Error
+              </h3>
+              <p className="text-red-600 mb-4">
+                Unable to load pricing information for this report type.
+              </p>
+              <p className="text-sm text-red-500">
+                Error: {priceError}
+              </p>
+              <Button 
+                onClick={() => window.location.reload()}
+                variant="outline"
+                className="mt-4"
+              >
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </FormStep>
+    );
+  }
+
+  // Show error if no pricing data available
+  if (!pricing) {
+    return (
+      <FormStep stepNumber={3} title="Payment" className="bg-background">
+        <div className="max-w-4xl mx-auto">
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardContent className="p-6 text-center">
+              <ExclamationTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                No Pricing Available
+              </h3>
+              <p className="text-yellow-600">
+                Pricing information is not available for this report configuration.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </FormStep>
+    );
   }
 
   return (
@@ -142,11 +202,7 @@ const PaymentStep = ({
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">{reportTitle}</span>
                   <span className="font-medium">
-                    {isPriceLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      `$${pricing.basePrice.toFixed(2)}`
-                    )}
+                    ${pricing.basePrice.toFixed(2)}
                   </span>
                 </div>
                 
@@ -249,7 +305,7 @@ const PaymentStep = ({
             <div className="bg-muted/30 rounded-2xl p-6 shadow-sm border border-muted space-y-4">
               <Button
                 onClick={handleButtonClick}
-                disabled={isProcessing || isValidatingPromo || isPriceLoading}
+                disabled={isProcessing || isValidatingPromo}
                 className="w-full h-14 text-base py-3 rounded-xl font-semibold bg-primary hover:bg-primary/90 text-white"
                 type="button"
               >
@@ -265,13 +321,6 @@ const PaymentStep = ({
                     <div className="flex items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                       Validating...
-                    </div>
-                  )
-                  : isPriceLoading
-                  ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Loading...
                     </div>
                   )
                   : 'Generate My Report'

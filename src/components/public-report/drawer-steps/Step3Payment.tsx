@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Tag, CheckCircle, AlertCircle, Loader2, ExclamationTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -51,6 +50,14 @@ const Step3Payment = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
+  console.log('📱 Step3Payment render with form data:', {
+    reportType,
+    essenceType, 
+    relationshipType,
+    reportCategory,
+    reportSubCategory
+  });
+
   // Fetch price from database
   const { price: basePrice, isLoading: isPriceLoading, error: priceError } = usePriceFetch({
     reportType,
@@ -60,6 +67,8 @@ const Step3Payment = ({
     reportSubCategory
   });
 
+  console.log('💰 Mobile price fetch result:', { basePrice, isPriceLoading, priceError });
+
   const reportTitle = getReportTitle({
     reportType,
     essenceType,
@@ -68,7 +77,10 @@ const Step3Payment = ({
     reportSubCategory
   });
 
-  const pricing = calculatePricing(basePrice || 10.00, promoValidation);
+  // Only calculate pricing if we have a valid base price
+  const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : null;
+
+  console.log('🧮 Mobile calculated pricing:', pricing);
 
   const getPromoValidationIcon = () => {
     if (isValidatingPromo) {
@@ -111,6 +123,102 @@ const Step3Payment = ({
     onSubmit();
   };
 
+  // Show loading state
+  if (isPriceLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -50 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6 flex items-center justify-center py-8"
+        style={{ touchAction: 'pan-y' }}
+      >
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span>Loading pricing...</span>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Show error state
+  if (priceError) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -50 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6"
+        style={{ touchAction: 'pan-y' }}
+      >
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onPrev}
+            className="p-2"
+            type="button"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="text-center flex-1">
+            <h2 className="text-2xl font-bold text-gray-900">Pricing Error</h2>
+          </div>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+          <ExclamationTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-700 mb-2">Unable to load pricing information</p>
+          <p className="text-sm text-red-600">{priceError}</p>
+          <Button 
+            onClick={() => window.location.reload()}
+            variant="outline"
+            size="sm"
+            className="mt-3"
+          >
+            Retry
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Show error if no pricing available
+  if (!pricing) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -50 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6"
+        style={{ touchAction: 'pan-y' }}
+      >
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onPrev}
+            className="p-2"
+            type="button"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="text-center flex-1">
+            <h2 className="text-2xl font-bold text-gray-900">Pricing Unavailable</h2>
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+          <ExclamationTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+          <p className="text-yellow-700">No pricing available for this report configuration</p>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
@@ -148,11 +256,7 @@ const Step3Payment = ({
           <div className="flex justify-between items-center">
             <span className="text-gray-700">{reportTitle}</span>
             <span className="font-medium">
-              {isPriceLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                `$${pricing.basePrice.toFixed(2)}`
-              )}
+              ${pricing.basePrice.toFixed(2)}
             </span>
           </div>
           
