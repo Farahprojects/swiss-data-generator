@@ -30,6 +30,13 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
 
   useEffect(() => {
     const fetchAllPrices = async () => {
+      // Skip Supabase calls during SSR
+      if (typeof window === 'undefined') {
+        console.log('🏷️ Skipping price fetch during SSR');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setError(null);
