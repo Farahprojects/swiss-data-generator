@@ -69,7 +69,7 @@ const PublicReport = () => {
     const handleGetReportClick = () => {
       if (isClientMobile) {
         setIsDrawerOpen(true);
-      } else {
+      } else if (typeof window !== 'undefined') {
         // For desktop, scroll to form
         const reportSection = document.querySelector('#report-form');
         if (reportSection) {

@@ -54,6 +54,11 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
   }, []);
 
   const loadGoogleWebComponents = useCallback(() => {
+    // Only run in browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined' || typeof customElements === 'undefined') {
+      return Promise.reject(new Error('Browser environment required for Google Web Components'));
+    }
+
     return new Promise<void>((resolve, reject) => {
       // Check if web components are already loaded
       if (customElements.get('gmp-place-autocomplete')) {
