@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Control, Controller, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { User, Heart, Target, Calendar, Brain, Briefcase } from 'lucide-react';
@@ -114,6 +115,22 @@ const ReportTypeSelector = ({
 }: ReportTypeSelectorProps) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+
+  // Auto-scroll to next step when report type is selected
+  useEffect(() => {
+    if (selectedReportType) {
+      // Small delay to ensure the DOM is updated
+      setTimeout(() => {
+        const nextStep = document.querySelector('[data-step="2"]');
+        if (nextStep) {
+          nextStep.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 300);
+    }
+  }, [selectedReportType]);
 
   // Only show options after user has actually selected a category
   const showSnapshotSubCategories = selectedCategory === 'snapshot';

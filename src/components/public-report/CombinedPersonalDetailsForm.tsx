@@ -50,7 +50,7 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: Comb
   };
 
   return (
-    <FormStep stepNumber={2} title="Personal & Birth Details" className="bg-muted/20">
+    <FormStep stepNumber={2} title="Personal & Birth Details" className="bg-muted/20" data-step="2">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Contact Information Section */}
         <div className="space-y-4">
