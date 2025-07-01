@@ -49,7 +49,23 @@ const Step3Payment = ({
 }: Step3PaymentProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const { validatePromoManually } = usePromoValidation();
-  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
+  
+  // Add error handling for usePriceFetch
+  let pricingHook;
+  try {
+    pricingHook = usePriceFetch();
+  } catch (error) {
+    console.error('Error initializing pricing:', error);
+    pricingHook = {
+      getReportPrice: () => { throw new Error('Pricing not available'); },
+      getReportTitle: () => 'Report',
+      calculatePricing: () => ({ basePrice: 0, discount: 0, discountPercent: 0, finalPrice: 0, isFree: false }),
+      isLoading: false,
+      error: 'Pricing service unavailable'
+    };
+  }
+  
+  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = pricingHook;
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
