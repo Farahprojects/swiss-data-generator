@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -169,8 +170,8 @@ const PaymentStep = ({
                 </div>
               </div>
 
-              {/* What You Get - Now at bottom */}
-              <div className="space-y-3 pt-4 border-t">
+              {/* What You Get - Anchored to bottom */}
+              <div className="space-y-3 border-t">
                 <h4 className="font-medium text-gray-900">What You'll Receive:</h4>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
