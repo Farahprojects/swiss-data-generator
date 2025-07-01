@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -91,8 +90,6 @@ const Step3Payment = ({
   // Only calculate pricing if we have a valid base price
   const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : null;
 
-  
-
   const getPromoValidationIcon = () => {
     if (isValidatingPromo) {
       return <Loader2 className="h-4 w-4 animate-spin text-gray-400" />;
@@ -129,36 +126,21 @@ const Step3Payment = ({
     onSubmit();
   };
 
-  // Show loading state
+  // Render content based on state - no early returns that bypass hooks
+  let content;
+
   if (isPricingLoading) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -50 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6 flex items-center justify-center py-8"
-        style={{ touchAction: 'pan-y' }}
-      >
+    content = (
+      <div className="space-y-6 flex items-center justify-center py-8">
         <div className="flex items-center gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span>Loading pricing...</span>
         </div>
-      </motion.div>
+      </div>
     );
-  }
-
-  // Show error state
-  if (priceError) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -50 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6"
-        style={{ touchAction: 'pan-y' }}
-      >
+  } else if (priceError) {
+    content = (
+      <div className="space-y-6">
         <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
@@ -187,21 +169,11 @@ const Step3Payment = ({
             Retry
           </Button>
         </div>
-      </motion.div>
+      </div>
     );
-  }
-
-  // Show error if no pricing available
-  if (!pricing) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -50 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6"
-        style={{ touchAction: 'pan-y' }}
-      >
+  } else if (!pricing) {
+    content = (
+      <div className="space-y-6">
         <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
@@ -221,20 +193,11 @@ const Step3Payment = ({
           <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
           <p className="text-yellow-700">No pricing available for this report configuration</p>
         </div>
-      </motion.div>
+      </div>
     );
-  }
-
-  return (
-    <>
-      <motion.div
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -50 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6"
-        style={{ touchAction: 'pan-y' }}
-      >
+  } else {
+    content = (
+      <div className="space-y-6">
         <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
@@ -378,6 +341,21 @@ const Step3Payment = ({
             {!pricing.isFree && 'Secure payment processed by Stripe.'}
           </p>
         </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -50 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6"
+        style={{ touchAction: 'pan-y' }}
+      >
+        {content}
       </motion.div>
 
       {/* Promo Confirmation Dialog */}
