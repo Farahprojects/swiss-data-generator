@@ -24,7 +24,7 @@ export const useReportSubmission = () => {
     description: string;
   } | null>(null);
   const { toast } = useToast();
-  const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = usePriceFetch();
+  const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
 
   const submitReport = async (
     data: ReportFormData, 

@@ -50,10 +50,15 @@ const Step3Payment = ({
   const [showPromoCode, setShowPromoCode] = useState(false);
   const { validatePromoManually } = usePromoValidation();
   
-  // Add error handling for usePriceFetch
+  // Add error handling for usePriceFetch with SSR guard
   let pricingHook;
   try {
-    pricingHook = usePriceFetch();
+    // Only initialize pricing hook on client side
+    if (typeof window !== 'undefined') {
+      pricingHook = usePriceFetch();
+    } else {
+      throw new Error('SSR - pricing not available during server render');
+    }
   } catch (error) {
     console.error('Error initializing pricing:', error);
     pricingHook = {
