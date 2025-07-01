@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -14,6 +14,7 @@ import { addYears, format } from 'date-fns';
 import { essenceTypes, relationshipTypes } from '@/constants/report-types';
 import { ReportTypeOption, ReportFormData } from '@/types/public-report';
 import ReportTypeSelector from './ReportTypeSelector';
+import BirthDetailsStep from './BirthDetailsStep';
 import PaymentStep from './PaymentStep';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 
@@ -79,7 +80,30 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
     },
   });
 
-  const { control, handleSubmit, watch, setValue, formState } = form;
+  const { control, handleSubmit, watch, setValue, formState, register } = form;
+
+  // Watch for report type completion to advance to step 2
+  const reportType = watch('reportType');
+  const reportCategory = watch('reportCategory');
+  const essenceType = watch('essenceType');
+  const relationshipType = watch('relationshipType');
+
+  // Auto-advance to step 2 when report type selection is complete
+  useEffect(() => {
+    const isReportTypeComplete = () => {
+      if (reportCategory === 'the-self' && essenceType) return true;
+      if (reportCategory === 'compatibility' && relationshipType) return true;
+      if (reportCategory === 'snapshot' && reportType) return true;
+      return false;
+    };
+
+    if (step === 1 && isReportTypeComplete()) {
+      console.log('🎯 Report type selection complete, advancing to step 2');
+      setTimeout(() => {
+        setStep(2);
+      }, 500);
+    }
+  }, [step, reportType, reportCategory, essenceType, relationshipType]);
 
   const onSubmit = async (data: ReportFormData) => {
     console.log('Form Data Submitted:', data);
@@ -101,13 +125,9 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
     setStep(4); // Proceed to confirmation step
   };
 
-  const reportType = watch('reportType');
-  const reportCategory = watch('reportCategory');
-  const relationshipType = watch('relationshipType');
-  const essenceType = watch('essenceType');
-
-  const showSecondPersonFields = reportType === 'sync' || reportType === 'compatibility';
-  const requiresNotes = reportType === 'transit' || reportType === 'progression' || reportType === 'return';
+  const handleNextStep = () => {
+    setStep(prev => prev + 1);
+  };
 
   // Create a proper PromoValidationState from PromoCodeValidation
   const promoValidationState = promoValidation ? {
@@ -124,6 +144,7 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      {/* Step 1: Report Type Selection */}
       <ReportTypeSelector
         control={control}
         errors={formState.errors}
@@ -133,7 +154,19 @@ const PublicReportForm = ({ showReportGuide = false, setShowReportGuide }: Publi
         setValue={setValue}
       />
 
+      {/* Step 2: Birth Details */}
       {step >= 2 && (
+        <BirthDetailsStep
+          register={register}
+          setValue={setValue}
+          watch={watch}
+          errors={formState.errors}
+          onNext={handleNextStep}
+        />
+      )}
+
+      {/* Step 3: Payment */}
+      {step >= 3 && (
         <PaymentStep 
           register={form.register}
           watch={form.watch}
