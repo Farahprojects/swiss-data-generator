@@ -52,4 +52,5 @@ export interface FormStepProps {
   title: string;
   children: React.ReactNode;
   className?: string;
+  'data-step'?: string;
 }

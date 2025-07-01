@@ -2,9 +2,9 @@
 import React from 'react';
 import { FormStepProps } from '@/types/public-report';
 
-const FormStep = ({ stepNumber, title, children, className = '' }: FormStepProps) => {
+const FormStep = ({ stepNumber, title, children, className = '', 'data-step': dataStep }: FormStepProps) => {
   return (
-    <section className={`min-h-screen py-12 ${className}`}>
+    <section className={`min-h-screen py-12 ${className}`} data-step={dataStep}>
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="space-y-8">
           <div className="flex items-center justify-center gap-4">
