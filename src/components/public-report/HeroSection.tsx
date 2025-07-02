@@ -39,7 +39,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
   };
 
   return (
-    <section className="relative h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20 overflow-hidden">
+    <section className="relative h-screen-safe flex items-center justify-center bg-gradient-to-b from-background to-muted/20 overflow-hidden">
       {/* Animated Banner Images */}
       <div className="absolute inset-0">
         <AnimatePresence mode="wait">
