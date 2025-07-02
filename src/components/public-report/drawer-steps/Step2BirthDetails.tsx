@@ -4,6 +4,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   UseFormRegister,
   UseFormSetValue,
@@ -140,176 +141,180 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   /*                               RENDER                               */
   /* ------------------------------------------------------------------ */
   return (
-    <div className="w-full">
-      <motion.div
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -50 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6 w-full"
-      >
-        {/* Header */}
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" onClick={onPrev} className="p-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="text-center flex-1">
-            <h2 className="text-2xl font-bold text-gray-900">Your Info</h2>
-            <p className="text-gray-600">
-              {isCompatibilityReport
-                ? "We need both people's details for your compatibility report"
-                : 'We need these to create your personalised report'}
-            </p>
+    <>
+      <div className="w-full">
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-6 w-full"
+        >
+          {/* Header */}
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="icon" onClick={onPrev} className="p-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="text-center flex-1">
+              <h2 className="text-2xl font-bold text-gray-900">Your Info</h2>
+              <p className="text-gray-600">
+                {isCompatibilityReport
+                  ? "We need both people's details for your compatibility report"
+                  : 'We need these to create your personalised report'}
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Person‑1 */}
-        <PersonCard
-          personNumber={1}
-          title={isCompatibilityReport ? 'Your Details' : 'Your Details'}
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          errors={errors}
-          hasTriedToSubmit={hasTriedSubmit}
-        />
+          {/* Person‑1 */}
+          <PersonCard
+            personNumber={1}
+            title={isCompatibilityReport ? 'Your Details' : 'Your Details'}
+            register={register}
+            setValue={setValue}
+            watch={watch}
+            errors={errors}
+            hasTriedToSubmit={hasTriedSubmit}
+          />
 
-        {/* Add partner */}
-        {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
+          {/* Add partner */}
+          {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Button
+                onClick={() => setShowSecondPerson(true)}
+                variant="outline"
+                className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Add Partner's Details
+              </Button>
+            </motion.div>
+          )}
+
+          {/* Person‑2 */}
+          <AnimatePresence>
+            {isCompatibilityReport && showSecondPerson && (
+              <motion.div
+                key="partner"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <PersonCard
+                  personNumber={2}
+                  title="Partner's Details"
+                  register={register}
+                  setValue={setValue}
+                  watch={watch}
+                  errors={errors}
+                  hasTriedToSubmit={hasTriedSubmit}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Spacer for sticky FAB */}
+          <div className="h-28" />
+
+          {/* Review & Pay */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+            className="pb-6 w-full"
           >
             <Button
-              onClick={() => setShowSecondPerson(true)}
+              onClick={handleReviewAndPay}
               variant="outline"
               className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
             >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Partner's Details
+              Review & Pay
             </Button>
           </motion.div>
-        )}
+        </motion.div>
 
-        {/* Person‑2 */}
+        {/* Transcript overlay (appears when voiceText exists) */}
         <AnimatePresence>
-          {isCompatibilityReport && showSecondPerson && (
+          {voiceText && (
             <motion.div
-              key="partner"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'tween', duration: 0.25 }}
+              className="fixed z-40 bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 p-4 space-y-2 shadow-xl"
             >
-              <PersonCard
-                personNumber={2}
-                title="Partner's Details"
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                hasTriedToSubmit={hasTriedSubmit}
+              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <Mic className="h-4 w-4 text-primary" /> Recorded Details
+              </h3>
+              <Textarea
+                value={voiceText}
+                onChange={(e) => setVoiceText(e.target.value)}
+                rows={3}
+                className="resize-none"
               />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setVoiceText('');
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    /* Ideally map transcript to inputs via AI/NLP */
+                    toast({
+                      title: 'Coming soon',
+                      description: 'Auto‑populate from transcript is under development.',
+                    });
+                  }}
+                >
+                  Auto‑fill (BETA)
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Spacer for sticky FAB */}
-        <div className="h-28" />
-
-        {/* Review & Pay */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="pb-6 w-full"
-        >
-          <Button
-            onClick={handleReviewAndPay}
-            variant="outline"
-            className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-          >
-            Review & Pay
-          </Button>
-        </motion.div>
-      </motion.div>
-
-      {/* -------------------------------------------------------------- */}
-      {/*  Sticky Mic Floating‑Action Button – always visible on Step‑2 */}
-      {/* -------------------------------------------------------------- */}
-      <button
-        type="button"
-        onClick={toggleRecording}
-        disabled={isSTTProcessing || isProcessingVoice}
-        aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-        title={isRecording ? 'Stop recording' : 'Record your details by voice'}
-        className={clsx(
-          'fixed z-50 left-1/2 -translate-x-1/2 bottom-8 flex items-center justify-center rounded-full border-2 shadow-lg transition-transform duration-200',
-          isRecording
-            ? 'bg-red-500 text-white animate-pulse shadow-red-300 border-red-400'
-            : 'bg-primary text-white hover:bg-primary/90 border-primary/20',
-          (isSTTProcessing || isProcessingVoice) && 'opacity-50 cursor-not-allowed'
+        {/* Processing overlay */}
+        {(isSTTProcessing || isProcessingVoice) && (
+          <ProcessingIndicator
+            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50"
+            message="Processing speech..."
+          />
         )}
-        style={{ width: 64, height: 64 }}
-      >
-        <Mic className="w-6 h-6" />
-      </button>
+      </div>
 
-      {/* Transcript overlay (appears when voiceText exists) */}
-      <AnimatePresence>
-        {voiceText && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'tween', duration: 0.25 }}
-            className="fixed z-40 bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 p-4 space-y-2 shadow-xl"
+      {/* Mic FAB portaled to document.body to bypass all drawer transforms/overflow */}
+      {typeof window !== 'undefined' &&
+        createPortal(
+          <button
+            type="button"
+            onClick={toggleRecording}
+            disabled={isSTTProcessing || isProcessingVoice}
+            aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+            title={isRecording ? 'Stop recording' : 'Record your details by voice'}
+            className={clsx(
+              'fixed bottom-8 left-1/2 -translate-x-1/2 z-[11000] rounded-full border-2 shadow-lg flex items-center justify-center transition-transform duration-200',
+              isRecording
+                ? 'bg-red-500 text-white animate-pulse border-red-400 shadow-red-400/50'
+                : 'bg-primary text-white hover:bg-primary/90 border-primary/20',
+              (isSTTProcessing || isProcessingVoice) && 'opacity-50 cursor-not-allowed'
+            )}
+            style={{ width: 64, height: 64 }}
           >
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <Mic className="h-4 w-4 text-primary" /> Recorded Details
-            </h3>
-            <Textarea
-              value={voiceText}
-              onChange={(e) => setVoiceText(e.target.value)}
-              rows={3}
-              className="resize-none"
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setVoiceText('');
-                }}
-              >
-                Clear
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  /* Ideally map transcript to inputs via AI/NLP */
-                  toast({
-                    title: 'Coming soon',
-                    description: 'Auto‑populate from transcript is under development.',
-                  });
-                }}
-              >
-                Auto‑fill (BETA)
-              </Button>
-            </div>
-          </motion.div>
+            <Mic className="w-6 h-6" />
+          </button>,
+          document.body
         )}
-      </AnimatePresence>
-
-      {/* Processing overlay */}
-      {(isSTTProcessing || isProcessingVoice) && (
-        <ProcessingIndicator
-          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50"
-          message="Processing speech..."
-        />
-      )}
-    </div>
+    </>
   );
 });
 
