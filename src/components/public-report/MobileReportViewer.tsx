@@ -80,6 +80,35 @@ const MobileReportViewer = ({
     }
   };
 
+  const handleChatGPT = async () => {
+    try {
+      // Clean the HTML content to get plain text
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = reportContent;
+      const cleanText = tempDiv.textContent || tempDiv.innerText || '';
+      
+      // Create ChatGPT prompt
+      const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological report and provide additional insights or answer any questions I might have:\n\n${cleanText}`)}`;
+      
+      // Open in new tab
+      window.open(chatGPTUrl, '_blank');
+      
+      toast({
+        title: "Opening ChatGPT",
+        description: "Your report has been prepared for AI analysis.",
+        variant: "success"
+      });
+      
+    } catch (error) {
+      console.error('❌ Error opening ChatGPT:', error);
+      toast({
+        title: "Error",
+        description: "Unable to open ChatGPT. Please try manually copying the text.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -126,9 +155,9 @@ const MobileReportViewer = ({
         </div>
       </div>
 
-      {/* Report Content - Scrollable */}
-      <div className="flex-1 overflow-y-auto bg-gray-50" style={{ height: 'calc(100vh - 80px)' }}>
-        <div className="p-4">
+      {/* Report Content - Scrollable with bottom padding for buttons */}
+      <div className="flex-1 overflow-y-auto bg-gray-50" style={{ height: 'calc(100vh - 160px)' }}>
+        <div className="p-4 pb-20">
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -140,58 +169,26 @@ const MobileReportViewer = ({
               <ReportRenderer content={reportContent} />
             </CardContent>
           </Card>
-
-          {/* Copy to Clipboard Section */}
-          <Card className="mt-4 border-0 shadow-sm">
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                  <Copy className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Copy Report Text</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Copy your report content to paste into notes, messages, or any app
-                  </p>
-                </div>
-                <Button 
-                  onClick={handleCopyToClipboard}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy Report to Clipboard
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Download Section */}
-          {reportPdfData && (
-            <Card className="mt-4 border-0 shadow-sm">
-              <CardContent className="pt-6">
-                <div className="text-center space-y-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                    <Download className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Download PDF</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Save your report as a PDF for offline reading
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={handleDownloadPdf}
-                    className="w-full"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download PDF Report
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
+      </div>
+
+      {/* Bottom Action Bar - Thumb-friendly positioning */}
+      <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3 z-20">
+        <Button 
+          onClick={handleCopyToClipboard}
+          variant="outline"
+          className="flex-1 h-12 text-base font-medium border-2 border-primary/20 hover:border-primary/40"
+        >
+          <Copy className="h-5 w-5 mr-2" />
+          Copy
+        </Button>
+        <Button 
+          onClick={handleChatGPT}
+          className="flex-1 h-12 text-base font-medium bg-primary hover:bg-primary/90"
+        >
+          <span className="mr-2 text-lg">🤖</span>
+          ChatGPT
+        </Button>
       </div>
     </motion.div>
   );
