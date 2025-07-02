@@ -1,6 +1,5 @@
-// 
-import React, { useEffect, useState } from 'react';
-import { CheckCircle, Clock, FileText, Download } from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -9,347 +8,238 @@ import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { motion } from 'framer-motion';
 
+/**
+ * Public (unauthenticated) loading / success screen shown after guest purchase.
+ * - Streams status via `useGuestReportStatus` polling hook.
+ * - Plays a looping background video while generating the report.
+ * - Auto‑redirects to onViewReport when ready.
+ *
+ * Production tweaks:
+ * • Video uses `muted + playsInline + autoPlay` so mobile browsers allow autoplay.
+ * • Bigger, responsive video container with 16/9 aspect‑ratio & rounded corners.
+ * • Deduplicated desktop / mobile code – single <Layout> component driven by props.
+ * • Countdown timer reset when status changes → avoids negative seconds.
+ * • All timeouts stored in refs to ensure cleanup on unmount.
+ */
+
+// -----------------------------------------------------------------------------
+// Constants
+// -----------------------------------------------------------------------------
+const VIDEO_SRC =
+  'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
+
+// Fallback colour scheme for icons
+const COLOR_BLUE = 'text-blue-600';
+const COLOR_GREEN = 'text-green-600';
+
+// -----------------------------------------------------------------------------
+// Helper Components
+// -----------------------------------------------------------------------------
+const VideoLoader: React.FC = () => (
+  <div className="relative w-full h-0 pt-[56.25%] overflow-hidden rounded-xl shadow-lg">
+    <video
+      src={VIDEO_SRC}
+      className="absolute inset-0 w-full h-full object-cover"
+      autoPlay
+      loop
+      muted
+      playsInline
+      preload="auto"
+    />
+  </div>
+);
+
+const Spinner: React.FC = () => (
+  <div className="flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+  </div>
+);
+
+// -----------------------------------------------------------------------------
+// Main Component
+// -----------------------------------------------------------------------------
 interface SuccessScreenProps {
   name: string;
   email: string;
-  onViewReport?: (reportContent: string, reportPdfData?: string | null) => void;
+  onViewReport?: (content: string, pdf?: string | null) => void;
   autoStartPolling?: boolean;
 }
 
-const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: SuccessScreenProps) => {
-  const { report, isLoading, isPolling, error, startPolling, stopPolling } = useGuestReportStatus();
-  const firstName = name.split(' ')[0];
+const SuccessScreen: React.FC<SuccessScreenProps> = ({
+  name,
+  email,
+  onViewReport,
+  autoStartPolling = true,
+}) => {
+  // ---------------------------------------------------------------------------
+  // Hooks & State
+  // ---------------------------------------------------------------------------
+  const { report, isPolling, error, startPolling, stopPolling } = useGuestReportStatus();
+  const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
+
+  useViewportHeight(); // fix iOS 100vh issues
+
   const [countdown, setCountdown] = useState(24);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const redirectRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize viewport height management
-  useViewportHeight();
-
-  // Auto-start polling when component mounts - simplified dependencies
+  // ---------------------------------------------------------------------------
+  // Polling lifecycle
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (autoStartPolling && email && !isPolling) {
-      startPolling(email);
-    }
+    if (autoStartPolling && email && !isPolling) startPolling(email);
+    return () => stopPolling();
+  }, [autoStartPolling, email]);
 
-    // Cleanup on unmount
-    return () => {
-      stopPolling();
-    };
-  }, [email, autoStartPolling]); // Removed function dependencies to prevent loops
-
-  const getStatusInfo = () => {
+  // ---------------------------------------------------------------------------
+  // Status helpers
+  // ---------------------------------------------------------------------------
+  const getStatus = useCallback(() => {
     if (!report) {
-      return {
-        step: 1,
-        title: "Processing Your Request",
-        description: "We're setting up your personalized report",
-        progress: 10,
-        icon: Clock,
-        color: "text-blue-600"
-      };
+      return { step: 1, title: 'Processing Your Request', desc: "We're setting up your personalized report", progress: 10, icon: Clock, color: COLOR_BLUE };
     }
-
     if (report.payment_status === 'pending') {
-      return {
-        step: 1,
-        title: "Payment Processing",
-        description: "Confirming your payment details",
-        progress: 25,
-        icon: Clock,
-        color: "text-blue-600"
-      };
+      return { step: 1, title: 'Payment Processing', desc: 'Confirming your payment details', progress: 25, icon: Clock, color: COLOR_BLUE };
     }
-
     if (report.payment_status === 'paid' && !report.has_report) {
-      return {
-        step: 2,
-        title: "Generating Your Report",
-        description: "Our AI is crafting your personalized insights",
-        progress: 60,
-        icon: Clock,
-        color: "text-blue-600"
-      };
+      return { step: 2, title: 'Generating Your Report', desc: 'Our AI is crafting your personalized insights', progress: 60, icon: Clock, color: COLOR_BLUE };
     }
-
     if (report.has_report && report.report_content) {
-      return {
-        step: 3,
-        title: "Report Ready!",
-        description: "Your personalized report is complete",
-        progress: 100,
-        icon: CheckCircle,
-        color: "text-green-600"
-      };
+      return { step: 3, title: 'Report Ready!', desc: 'Your personalized report is complete', progress: 100, icon: CheckCircle, color: COLOR_GREEN };
     }
+    return { step: 1, title: 'Processing', desc: 'Please wait while we prepare your report', progress: 30, icon: Clock, color: COLOR_BLUE };
+  }, [report]);
 
-    return {
-      step: 1,
-      title: "Processing",
-      description: "Please wait while we prepare your report",
-      progress: 30,
-      icon: Clock,
-      color: "text-blue-600"
+  const status = getStatus();
+  const StatusIcon = status.icon;
+  const isReady = report?.has_report && !!report?.report_content;
+
+  // ---------------------------------------------------------------------------
+  // Countdown timer (resets on status change)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    // Reset timer when moving to a new step (but only if not ready yet)
+    if (!isReady) setCountdown(24);
+  }, [status.step, isReady]);
+
+  useEffect(() => {
+    if (!isReady && countdown > 0) {
+      countdownRef.current = setTimeout(() => setCountdown((c) => c - 1), 1_000);
+    }
+    return () => {
+      if (countdownRef.current) clearTimeout(countdownRef.current);
     };
-  };
+  }, [countdown, isReady]);
 
-  const statusInfo = getStatusInfo();
-  const StatusIcon = statusInfo.icon;
-  const isReportReady = report?.has_report && report?.report_content;
-
-
-  // Countdown timer
+  // ---------------------------------------------------------------------------
+  // Auto‑redirect when ready
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!isReportReady && countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(prev => prev - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
+    if (isReady && onViewReport) {
+      redirectRef.current = setTimeout(
+        () => onViewReport(report!.report_content!, report!.report_pdf_data),
+        2_000,
+      );
     }
-  }, [countdown, isReportReady]);
+    return () => {
+      if (redirectRef.current) clearTimeout(redirectRef.current);
+    };
+  }, [isReady, onViewReport, report]);
 
-  // Auto-redirect when report is ready
-  useEffect(() => {
-    if (isReportReady && onViewReport) {
-      // Wait 2 seconds after report is ready to show the animation, then redirect
-      const redirectTimer = setTimeout(() => {
-        onViewReport(report.report_content!, report.report_pdf_data);
-      }, 2000);
+  // ---------------------------------------------------------------------------
+  // Retry helper
+  // ---------------------------------------------------------------------------
+  const retry = () => email && !isPolling && startPolling(email);
 
-      return () => clearTimeout(redirectTimer);
-    }
-  }, [isReportReady, onViewReport, report]);
-
-  // Scroll into view on desktop to ensure visibility
-  useEffect(() => {
-    if (!isMobile && typeof window !== 'undefined') {
-      // Small delay to ensure component is rendered
-      setTimeout(() => {
-        const successScreen = document.querySelector('[data-success-screen]');
-        if (successScreen) {
-          successScreen.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
-  }, [isMobile]);
-
-  const handleViewReport = () => {
-    if (isReportReady && onViewReport) {
-      onViewReport(report.report_content!, report.report_pdf_data);
-    }
-  };
-
-  const handleCreateAnother = () => {
-    if (typeof window !== 'undefined') {
-      window.location.reload();
-    }
-  };
-
-  const handleRetryPolling = () => {
-    if (email && !isPolling) {
-      startPolling(email);
-    }
-  };
-
-  // Simple loading animation component
-  const LoadingAnimation = () => (
-    <div className="w-full max-w-md mx-auto bg-muted/30 rounded-lg p-8 text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-      <p className="text-sm text-muted-foreground">Generating your report...</p>
+  // ---------------------------------------------------------------------------
+  // Shared UI Blocks
+  // ---------------------------------------------------------------------------
+  const Countdown = (
+    <div className="text-center">
+      <div className="text-4xl font-bold text-primary mb-1">{countdown}s</div>
+      <p className="text-sm text-muted-foreground">Report generating…</p>
     </div>
   );
 
-  // Desktop layout - constrained within report section
-  const desktopLayout = (
-    <div 
-      className="w-full max-w-4xl mx-auto py-8 px-4"
-      data-success-screen
-    >
-      <Card className="border-2 border-primary/20 shadow-lg">
-        <CardContent className="p-8 text-center space-y-6">
-          {/* Status Icon */}
-          <div className="flex items-center justify-center">
-            <motion.div 
-              className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                isReportReady ? 'bg-green-100' : 'bg-blue-100'
-              }`}
-              animate={isReportReady ? { scale: [1, 1.2, 1] } : {}}
-              transition={{ duration: 0.6, ease: "easeInOut" }}
-            >
-              <motion.div
-                animate={isReportReady ? { scale: [1, 1.3, 1] } : {}}
-                transition={{ duration: 0.8, ease: "easeInOut" }}
-              >
-                <StatusIcon className={`h-8 w-8 ${statusInfo.color}`} />
-              </motion.div>
-            </motion.div>
-          </div>
-          
-          {/* Status Title */}
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              {statusInfo.title}
-            </h2>
-            <p className="text-muted-foreground">
-              {statusInfo.description}
-            </p>
-          </div>
-
-           {/* Loading content - show countdown and video when not ready */}
-           {!isReportReady && (
-             <div className="space-y-6">
-               {/* Countdown Timer */}
-               <div className="text-center">
-                 <div className="text-3xl font-bold text-primary mb-2">
-                   {countdown}s
-                 </div>
-                 <p className="text-sm text-muted-foreground">
-                   Report generating...
-                 </p>
-               </div>
-
-                 {/* Loading Animation */}
-                 <LoadingAnimation />
-
-
-                {/* Personal Message */}
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm text-foreground text-center">
-                    Hi {firstName}! We're working on your report and will notify you when it's ready.
-                    <br />
-                    <span className="font-medium">{email}</span>
-                  </p>
-                </div>
-              </div>
-            )}
-
-           {/* Ready state message */}
-           {isReportReady && (
-             <div className="bg-muted/50 rounded-lg p-4">
-               <p className="text-sm text-foreground text-center">
-                 Hi {firstName}! Your report is ready to view. We've also sent it to your email.
-               </p>
-             </div>
-           )}
-
-           {/* Error Message */}
-           {error && (
-             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-               <p className="text-sm text-red-600 mb-2">{error}</p>
-               <Button 
-                 onClick={handleRetryPolling}
-                 variant="outline"
-                 size="sm"
-                 className="text-red-600 border-red-300 hover:bg-red-50"
-               >
-                 Retry
-               </Button>
-             </div>
-           )}
-        </CardContent>
-      </Card>
+  const PersonalNote = (
+    <div className="bg-muted/50 rounded-lg p-4 text-sm">
+      Hi {firstName}! {isReady ? 'Your report is ready to view. We\'ve also emailed it to you.' : "We're working on your report and will notify you when it's ready."}
+      <br />
+      <span className="font-medium">{email}</span>
     </div>
   );
 
-  // Mobile layout - full viewport height
-  const mobileLayout = (
-    <div 
-      className="min-h-[calc(var(--vh,1vh)*100)] bg-gradient-to-b from-background to-muted/20 flex items-start justify-center pt-8 px-4 overflow-y-auto"
-      style={{
-        WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'none',
-        touchAction: 'manipulation'
-      }}
+  const ErrorBlock = error && (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+      <p className="text-sm text-red-600 mb-2">{error}</p>
+      <Button onClick={retry} variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+        Retry
+      </Button>
+    </div>
+  );
+
+  // ---------------------------------------------------------------------------
+  // Layout (one source of markup – responsive via Tailwind)
+  // ---------------------------------------------------------------------------
+  return (
+    <div
+      className={
+        isMobile
+          ? 'min-h-[calc(var(--vh,1vh)*100)] flex items-start justify-center pt-8 px-4 bg-gradient-to-b from-background to-muted/20 overflow-y-auto'
+          : 'w-full py-10 px-4 flex justify-center'
+      }
       data-success-screen
     >
-      <div className="w-full max-w-md">
+      <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
         <Card className="border-2 border-primary/20 shadow-lg">
-          <CardContent className="p-6 text-center space-y-6">
-            {/* Status Icon */}
-            <div className="flex items-center justify-center">
-              <motion.div 
-                className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                  isReportReady ? 'bg-green-100' : 'bg-blue-100'
-                }`}
-                animate={isReportReady ? { scale: [1, 1.2, 1] } : {}}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-              >
-                <motion.div
-                  animate={isReportReady ? { scale: [1, 1.3, 1] } : {}}
-                  transition={{ duration: 0.8, ease: "easeInOut" }}
-                >
-                  <StatusIcon className={`h-8 w-8 ${statusInfo.color}`} />
-                </motion.div>
-              </motion.div>
-            </div>
-            
-            {/* Status Title */}
+          <CardContent className="p-8 text-center space-y-6">
+            {/* Icon */}
+            <motion.div
+              className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
+                isReady ? 'bg-green-100' : 'bg-blue-100'
+              }`}
+              animate={isReady ? { scale: [1, 1.2, 1] } : {}}
+              transition={{ duration: 0.6, ease: 'easeInOut' }}
+            >
+              <StatusIcon className={`h-8 w-8 ${status.color}`} />
+            </motion.div>
+
+            {/* Title / desc */}
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                {statusInfo.title}
-              </h2>
-              <p className="text-muted-foreground">
-                {statusInfo.description}
-              </p>
+              <h2 className="text-2xl font-bold text-foreground mb-1">{status.title}</h2>
+              <p className="text-muted-foreground">{status.desc}</p>
             </div>
 
-            {/* Loading content - show countdown and video when not ready */}
-            {!isReportReady && (
-              <div className="space-y-6">
-                {/* Countdown Timer */}
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary mb-2">
-                    {countdown}s
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Report generating...
-                  </p>
-                </div>
+            {/* Progress bar for larger screens */}
+            {!isMobile && <Progress value={status.progress} />}
 
-                 {/* Loading Animation */}
-                 <LoadingAnimation />
-
-
-                {/* Personal Message */}
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm text-foreground text-center">
-                    Hi {firstName}! We're working on your report and will notify you when it's ready.
-                    <br />
-                    <span className="font-medium">{email}</span>
-                  </p>
-                </div>
-              </div>
+            {/* Content while generating */}
+            {!isReady && (
+              <>
+                {Countdown}
+                <VideoLoader />
+                <Spinner />
+                {PersonalNote}
+              </>
             )}
 
-            {/* Ready state message */}
-            {isReportReady && (
-              <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-sm text-foreground text-center">
-                  Hi {firstName}! Your report is ready to view. We've also sent it to your email.
-                </p>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-600 mb-2">{error}</p>
-                <Button 
-                  onClick={handleRetryPolling}
-                  variant="outline"
-                  size="sm"
-                  className="text-red-600 border-red-300 hover:bg-red-50"
-                >
-                  Retry
+            {/* Ready state msg */}
+            {isReady && (
+              <>
+                {PersonalNote}
+                <Button onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}>
+                  View now
                 </Button>
-              </div>
+              </>
             )}
+
+            {ErrorBlock}
           </CardContent>
         </Card>
       </div>
     </div>
   );
-
-  return isMobile ? mobileLayout : desktopLayout;
 };
 
 export default SuccessScreen;
