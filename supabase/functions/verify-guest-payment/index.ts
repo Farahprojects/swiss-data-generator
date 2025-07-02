@@ -51,50 +51,26 @@ function assertPresent(obj: Record<string, any>, keys: string[]) {
 }
 
 function buildTranslatorPayload(rd: ReportData) {
-  // Check if this is astro data only mode
-  const isAstroDataOnly = rd.astroDataOnly === true;
-  
-  // For astro data only, determine request type from astroDataType
-  let request: string;
-  if (isAstroDataOnly) {
-    if (rd.astroDataType === 'essence') {
-      request = 'essence';
-    } else if (rd.astroDataType === 'sync') {
-      request = 'sync';
-    } else {
-      throw new Error(`Invalid astroDataType '${rd.astroDataType}' for astro data only mode`);
-    }
-  } else {
-    request = mapReportTypeToRequest(rd.reportType);
-    if (request === "unknown") {
-      throw new Error(`Unsupported reportType '${rd.reportType}'`);
-    }
+  const request = mapReportTypeToRequest(rd.reportType);
+
+  if (request === "unknown") {
+    throw new Error(`Unsupported reportType '${rd.reportType}'`);
   }
 
-  // Single-person endpoints (essence, flow, mindset, monthly, focus)
+  // Single-person endpoints
   if (["essence","flow","mindset","monthly","focus"].includes(request)) {
     assertPresent(rd, [
       "birthDate", "birthTime", "birthLatitude", "birthLongitude",
     ]);
 
-    const basePayload = {
+    return {
       request,
       birth_date:  rd.birthDate,
       birth_time: rd.birthTime,                       // must be HH:MM[:SS]
       latitude:   parseFloat(rd.birthLatitude),
       longitude:  parseFloat(rd.birthLongitude),
       name:       rd.name ?? "Guest",
-    };
-
-    // For astro data only, don't include report field (only Swiss data)
-    if (isAstroDataOnly) {
-      return basePayload;
-    }
-
-    // For AI reports, include report field
-    return {
-      ...basePayload,
-      report: rd.reportType,
+      report:     rd.reportType,                      // Use actual reportType instead of hardcoded "standard"
     };
   }
 
@@ -106,7 +82,7 @@ function buildTranslatorPayload(rd: ReportData) {
       "secondPersonLatitude", "secondPersonLongitude",
     ]);
 
-    const basePayload = {
+    return {
       request,
       person_a: {
         birth_date:  rd.birthDate,
@@ -123,17 +99,7 @@ function buildTranslatorPayload(rd: ReportData) {
         name:       rd.secondPersonName ?? "B",
       },
       relationship_type: rd.relationshipType ?? "general",
-    };
-
-    // For astro data only, don't include report field (only Swiss data)
-    if (isAstroDataOnly) {
-      return basePayload;
-    }
-
-    // For AI reports, include report field  
-    return {
-      ...basePayload,
-      report: rd.reportType,
+      report:           rd.reportType,                // Use actual reportType instead of hardcoded "compatibility"
     };
   }
 
@@ -315,12 +281,10 @@ serve(async (req) => {
       notes:                     md.notes,
       promoCode:                 md.promoCode,
       name:                      md.guest_name || "Guest",
-      astroDataOnly:             md.astroDataOnly === 'true',
-      astroDataType:             md.astroDataType,
     };
 
-    // Validate translator payload for both AI reports and astro data only
-    if (reportData.reportType || reportData.astroDataOnly) {
+    // Only validate translator payload if we have a reportType (for actual reports)
+    if (reportData.reportType) {
       try {
         buildTranslatorPayload(reportData);                 // throws if invalid
       } catch (err: any) {
@@ -366,8 +330,8 @@ serve(async (req) => {
 
     if (insertErr) throw new Error(`DB insert failed: ${insertErr.message}`);
 
-    // Process Swiss data for both AI reports and astro data only
-    if (reportData.reportType || reportData.astroDataOnly) {
+    // Only process Swiss data if this is an actual report with reportType
+    if (reportData.reportType) {
       EdgeRuntime.waitUntil(
         processSwissDataInBackground(guestRec.id, reportData, supabase),
       );
@@ -384,8 +348,7 @@ serve(async (req) => {
         isCoachReport:  !!md.coach_slug,
         coach_slug:     md.coach_slug || null,
         coach_name:     md.coach_name || null,
-        message:        reportData.astroDataOnly ? "Astro data processing started" : 
-                       (md.coach_slug ? "Coach report verified; Swiss processing started" : "Payment verified; Swiss processing started"),
+        message:        md.coach_slug ? "Coach report verified; Swiss processing started" : "Payment verified; Swiss processing started",
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     } else {
       // Coach purchase without report type - just track the purchase

@@ -139,9 +139,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
     (value: string, reportType: ReportFormData['reportType'], onChange: (v: any) => void) => {
       setSelectedSubCategory(value);
       onChange(value);
-      // For astro data only, set astroDataOnly to true and leave reportType empty
-      setValue?.('astroDataOnly', true, { shouldValidate: true });
-      setValue?.('reportType', '', { shouldValidate: true });
+      setValue?.('reportType', reportType, { shouldValidate: true });
     },
     [setValue],
   );
