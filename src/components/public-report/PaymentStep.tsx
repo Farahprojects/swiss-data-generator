@@ -303,14 +303,14 @@ const PaymentStep = ({
                 You're covered by our 100% Satisfaction Guarantee. Not happy with your report? We'll refund you within 7 days — no questions asked.
               </p>
             </div>
-
-            {/* Security Info */}
-            <div className="text-center space-y-2 text-sm text-muted-foreground">
-              <p>Your payment is secure and encrypted.</p>
-              <p>Secure checkout powered by Stripe</p>
-              <p>Your report will be delivered to your email within minutes</p>
-            </div>
           </div>
+        </div>
+
+        {/* Security Info - Centered below the section */}
+        <div className="text-center space-y-2 text-sm text-muted-foreground mt-8">
+          <p>Your payment is secure and encrypted.</p>
+          <p>Secure checkout powered by Stripe</p>
+          <p>Your report will be delivered to your email within minutes</p>
         </div>
       </div>
     );
