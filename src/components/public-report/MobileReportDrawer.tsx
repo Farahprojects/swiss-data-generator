@@ -1,6 +1,4 @@
-
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Drawer,
@@ -27,48 +25,55 @@ interface MobileReportDrawerProps {
 
 type DrawerView = 'form' | 'success' | 'report-viewer';
 
+// --- Utility helpers -------------------------------------------------------
+const isBrowser = typeof window !== 'undefined';
+const getViewportHeight = () =>
+  isBrowser && window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+/**
+ * Ensure smooth‑scroll behaviour on legacy Safari / Android browsers.
+ * Loaded once on mount – dynamic import keeps bundle size low for modern browsers.
+ */
+const useSmoothScrollPolyfill = () => {
+  useEffect(() => {
+    if (!isBrowser) return;
+    (async () => {
+      try {
+        const { polyfill } = await import('smoothscroll-polyfill');
+        polyfill();
+      } catch (_) {
+        /* no‑op – polyfill failed, continue without smooth scroll */
+      }
+    })();
+  }, []);
+};
+
+/**
+ * Locks <body> scroll to prevent background interaction while the drawer is open.
+ */
+const useBodyScrollLock = (active: boolean) => {
+  useEffect(() => {
+    if (!isBrowser) return;
+    if (active) {
+      document.body.classList.add('drawer-scroll-lock');
+    } else {
+      document.body.classList.remove('drawer-scroll-lock');
+    }
+    return () => document.body.classList.remove('drawer-scroll-lock');
+  }, [active]);
+};
+
+// ---------------------------------------------------------------------------
 const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
+  // ---------------------------------- State --------------------------------
   const [currentView, setCurrentView] = useState<DrawerView>('form');
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
   const [reportData, setReportData] = useState<{ content: string; pdfData?: string | null } | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-  // Enhanced viewport height management with --vh custom property
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const updateVH = () => {
-        const vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-      };
-      
-      updateVH();
-      window.addEventListener('resize', updateVH);
-      window.addEventListener('orientationchange', updateVH);
-      
-      return () => {
-        window.removeEventListener('resize', updateVH);
-        window.removeEventListener('orientationchange', updateVH);
-      };
-    }
-  }, []);
-
-  // Context-specific scroll management - only apply when drawer is open
-  useEffect(() => {
-    if (isOpen && typeof window !== 'undefined') {
-      // Add scroll lock class to body when drawer opens
-      document.body.classList.add('drawer-scroll-lock');
-    } else if (typeof window !== 'undefined') {
-      // Remove scroll lock class when drawer closes
-      document.body.classList.remove('drawer-scroll-lock');
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (typeof window !== 'undefined') {
-        document.body.classList.remove('drawer-scroll-lock');
-      }
-    };
-  }, [isOpen]);
+  // -------------------------------- Hooks ----------------------------------
+  useSmoothScrollPolyfill();
+  useBodyScrollLock(isOpen);
 
   const {
     form,
@@ -78,90 +83,85 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   } = useMobileDrawerForm();
 
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
-  const { isProcessing, submitReport, reportCreated } = useReportSubmission();
+  const { isProcessing, submitReport } = useReportSubmission();
   const { promoValidation, isValidatingPromo } = usePromoValidation();
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
 
-  // Enhanced keyboard detection and auto-scroll prevention
+  // Viewport height CSS custom prop – updates on resize & orientation change
   useEffect(() => {
-    if (typeof window !== 'undefined' && isOpen) {
-      let initialViewportHeight = window.innerHeight;
+    if (!isBrowser) return;
 
-      const preventBrowserAutoScroll = (event: Event) => {
-        // Prevent browser's default auto-scroll behavior on input focus
-        event.preventDefault();
-        event.stopPropagation();
-      };
+    const updateVH = () => {
+      const vh = getViewportHeight() * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
 
-      const handleViewportChange = () => {
-        const currentHeight = window.innerHeight;
-        const heightDifference = initialViewportHeight - currentHeight;
-        
-        // Keyboard is likely visible if viewport shrunk significantly
-        setKeyboardVisible(heightDifference > 150);
-        
-        // Update --vh when viewport changes
-        const vh = currentHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-      };
+    updateVH();
+    window.addEventListener('resize', updateVH, { passive: true });
+    window.visualViewport?.addEventListener('resize', updateVH, { passive: true });
 
-      const handleFocusIn = (event: FocusEvent) => {
-        const target = event.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-          // Prevent browser auto-scroll
-          preventBrowserAutoScroll(event);
-          
-          // Custom scroll management
-          setTimeout(() => {
-            target.scrollIntoView({ 
-              block: 'nearest', 
-              behavior: 'smooth' 
-            });
-          }, 100);
-        }
-      };
+    return () => {
+      window.removeEventListener('resize', updateVH);
+      window.visualViewport?.removeEventListener('resize', updateVH);
+    };
+  }, []);
 
-      // Add capture-phase event listeners
-      document.addEventListener('focusin', handleFocusIn, { capture: true });
-      window.addEventListener('resize', handleViewportChange);
-      
-      // Store initial height
-      initialViewportHeight = window.innerHeight;
+  // ----------------------------- Auto‑scroll logic -------------------------
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-      return () => {
-        document.removeEventListener('focusin', handleFocusIn, { capture: true });
-        window.removeEventListener('resize', handleViewportChange);
-      };
-    }
+  // Scroll to top whenever the step changes (after animation completes)
+  useEffect(() => {
+    if (!isBrowser) return;
+    const timeout = window.setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 350); // delay must exceed <AnimatePresence> exit duration
+
+    return () => window.clearTimeout(timeout);
+  }, [currentStep]);
+
+  // --------------------------- Keyboard detection --------------------------
+  useEffect(() => {
+    if (!isBrowser || !isOpen) return;
+
+    const initialHeight = getViewportHeight();
+
+    const onVisualViewportResize = () => {
+      const heightDiff = initialHeight - getViewportHeight();
+      setKeyboardVisible(heightDiff > 150); // heuristic
+    };
+
+    window.visualViewport?.addEventListener('resize', onVisualViewportResize, { passive: true });
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', onVisualViewportResize);
+    };
   }, [isOpen]);
 
-  // Check for Stripe return URL parameters
+  // -------------------------- Stripe return handler ------------------------
   useEffect(() => {
-    if (isOpen && typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionId = urlParams.get('session_id');
-      const status = urlParams.get('status');
-      
-      if (sessionId && status === 'success') {
-        
-        
-        // Extract email from URL or storage if available
-        const email = urlParams.get('email') || localStorage.getItem('pending_report_email');
-        if (email) {
-          setSubmittedData({ name: 'Customer', email });
-          setCurrentView('success');
-          
-          // Clean up URL parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
-          localStorage.removeItem('pending_report_email');
-        }
+    if (!isOpen || !isBrowser) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const status = urlParams.get('status');
+
+    if (sessionId && status === 'success') {
+      const email = urlParams.get('email') || localStorage.getItem('pending_report_email');
+      if (email) {
+        setSubmittedData({ name: 'Customer', email });
+        setCurrentView('success');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        localStorage.removeItem('pending_report_email');
       }
     }
   }, [isOpen]);
 
-  const handleClose = () => {
+  // ------------------------------ Helpers ----------------------------------
+  const resetDrawer = () => {
     onClose();
     form.reset();
     setCurrentView('form');
@@ -170,55 +170,33 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     setKeyboardVisible(false);
   };
 
-  // Convert promo validation to the state format expected by useReportSubmission
-  const promoValidationState = {
-    status: promoValidation?.isValid 
+  const promoValidationState = useMemo(() => ({
+    status: promoValidation?.isValid
       ? (promoValidation.isFree ? 'valid-free' : 'valid-discount')
       : (promoValidation ? 'invalid' : 'none') as 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid',
     message: promoValidation?.message || '',
-    discountPercent: promoValidation?.discountPercent || 0
-  };
-
-  const setPromoValidation = () => {
-    // This will be handled by the hook automatically
-  };
+    discountPercent: promoValidation?.discountPercent || 0,
+  }), [promoValidation]);
 
   const onSubmit = async (data: ReportFormData) => {
-
-    // Store submitted data for success screen
-    setSubmittedData({
-      name: data.name,
-      email: data.email
-    });
-
-    // Store email for potential Stripe return (only on client)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('pending_report_email', data.email);
-    }
-
-    // Submit the report
-    await submitReport(data, promoValidationState, setPromoValidation);
-    
-    // Show success screen for all submissions (free reports and before Stripe redirect)
+    setSubmittedData({ name: data.name, email: data.email });
+    localStorage.setItem('pending_report_email', data.email);
+    await submitReport(data, promoValidationState, () => {});
     setCurrentView('success');
   };
 
-  const handleFormSubmit = () => {
-    handleSubmit(onSubmit)();
-  };
+  const handleFormSubmit = () => handleSubmit(onSubmit)();
 
   const handleViewReport = (reportContent: string, reportPdfData?: string | null) => {
     setReportData({ content: reportContent, pdfData: reportPdfData });
     setCurrentView('report-viewer');
   };
 
-  const handleBackFromReport = () => {
-    setCurrentView('success');
-  };
+  const handleBackFromReport = () => setCurrentView('success');
 
-  // Progress dots for form steps
+  // ---------------------------- Render helpers ----------------------------
   const ProgressDots = () => (
-    <div className="flex justify-center space-x-2 mb-3">
+    <div className="flex justify-center space-x-2 mb-3" aria-hidden="true">
       {[1, 2, 3, 4].map((step) => (
         <div
           key={step}
@@ -234,15 +212,13 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     </div>
   );
 
-  // Determine if current step needs scrolling
-  const needsScrolling = currentStep === 3 || currentStep === 4;
+  const needsScrolling = currentStep >= 3; // steps that typically overflow
 
+  // -------------------------------------------------------------------------
   return (
-    <Drawer open={isOpen} onOpenChange={handleClose} dismissible={false}>
-      <DrawerContent 
-        className={`flex flex-col rounded-none [&>div:first-child]:hidden ${
-          keyboardVisible ? 'keyboard-visible' : ''
-        }`}
+    <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false} role="dialog" aria-label="Report request drawer">
+      <DrawerContent
+        className={`flex flex-col rounded-none [&>div:first-child]:hidden ${keyboardVisible ? 'keyboard-visible' : ''}`}
         style={{
           height: 'calc(var(--vh, 1vh) * 100)',
           maxHeight: 'calc(var(--vh, 1vh) * 100)',
@@ -250,34 +226,32 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'none',
           touchAction: 'manipulation',
-          paddingTop: '0',
-          marginTop: '0',
+          paddingTop: 0,
+          marginTop: 0,
         }}
       >
-        {/* Close button - positioned absolutely in top-right */}
+        {/* Close button */}
         <button
-          onClick={handleClose}
+          type="button"
+          onClick={resetDrawer}
+          aria-label="Close report drawer"
           className="absolute right-4 top-3 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
-          style={{ 
-            touchAction: 'manipulation',
-            WebkitTapHighlightColor: 'transparent',
-            WebkitAppearance: 'none'
-          }}
+          style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
         >
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
         </button>
 
+        {/* ------------------------------ FORM VIEW ------------------------- */}
         {currentView === 'form' && (
           <div className="flex flex-col h-full">
             <DrawerHeader className="flex-shrink-0 pt-6 pb-2 px-4">
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
-            
-            <div 
+
+            <div
+              ref={scrollContainerRef}
               className={`flex-1 px-6 pb-6 ${needsScrolling ? 'overflow-y-auto' : 'flex items-center justify-center'}`}
-              style={needsScrolling ? {} : { overflowY: 'hidden' }}
             >
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (
@@ -289,7 +263,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     selectedCategory={reportCategory}
                   />
                 )}
-                
+
                 {currentStep === 2 && (
                   <Step1_5SubCategory
                     key="step1_5"
@@ -301,7 +275,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     selectedSubCategory={reportSubCategory}
                   />
                 )}
-                
+
                 {currentStep === 3 && (
                   <Step2BirthDetails
                     key="step2"
@@ -313,7 +287,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     onPrev={prevStep}
                   />
                 )}
-                
+
                 {currentStep === 4 && (
                   <Step3Payment
                     key="step3"
@@ -332,16 +306,14 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           </div>
         )}
 
+        {/* --------------------------- SUCCESS VIEW ------------------------- */}
         {currentView === 'success' && submittedData && (
           <div className="flex flex-col h-full pt-12">
-            <SuccessScreen 
-              name={submittedData.name} 
-              email={submittedData.email}
-              onViewReport={handleViewReport}
-            />
+            <SuccessScreen name={submittedData.name} email={submittedData.email} onViewReport={handleViewReport} />
           </div>
         )}
 
+        {/* ------------------------ REPORT VIEWER -------------------------- */}
         {currentView === 'report-viewer' && reportData && submittedData && (
           <div className="flex flex-col h-full">
             <MobileReportViewer
