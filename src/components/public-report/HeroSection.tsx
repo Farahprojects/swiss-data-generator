@@ -79,18 +79,18 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           </Button>
         </div>
         
-        <div className="flex justify-center items-center gap-8 text-sm text-muted-foreground">
+        <div className="flex justify-center items-center gap-8 text-sm text-foreground font-medium">
           <div className="flex items-center gap-2">
-            <Star className="h-4 w-4" />
-            <span>AI-Analyzed Psychology</span>
+            <Star className="h-4 w-4" style={{ filter: 'drop-shadow(1px 1px 1px rgba(255, 255, 255, 0.8))' }} />
+            <span style={{ textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8)' }}>AI-Analyzed Psychology</span>
           </div>
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            <span>Instant Delivery</span>
+            <Clock className="h-4 w-4" style={{ filter: 'drop-shadow(1px 1px 1px rgba(255, 255, 255, 0.8))' }} />
+            <span style={{ textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8)' }}>Instant Delivery</span>
           </div>
           <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            <span>Fast, Focused Results</span>
+            <Shield className="h-4 w-4" style={{ filter: 'drop-shadow(1px 1px 1px rgba(255, 255, 255, 0.8))' }} />
+            <span style={{ textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8)' }}>Fast, Focused Results</span>
           </div>
         </div>
       </div>
