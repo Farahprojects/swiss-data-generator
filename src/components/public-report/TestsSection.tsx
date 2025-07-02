@@ -169,7 +169,7 @@ export default function TestsSection() {
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
           <div className="mb-10 text-center">
-            <h2 className="text-4xl font-bold text-neutral-800 mb-4">Where Do You Want Insight Right Now?</h2>
+            <h2 className="text-4xl font-bold text-neutral-800 mb-4">AI insights into your mind generated in 2 min</h2>
             <p className="text-lg text-neutral-600 max-w-3xl mx-auto">
               Unlock the deeper patterns behind how you think, lead, and evolve
             </p>
