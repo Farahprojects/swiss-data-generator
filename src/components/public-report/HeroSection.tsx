@@ -57,7 +57,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           />
         </AnimatePresence>
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px]" />
       </div>
 
       <div className="relative z-10 container mx-auto px-4 text-center">
