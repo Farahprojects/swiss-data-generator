@@ -2,8 +2,13 @@
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
+import { TypingCursor } from '@/components/ui/TypingCursor';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useToast } from '@/hooks/use-toast';
 import { ReportFormData } from '@/types/public-report';
 import PersonCard from './PersonCard';
 
@@ -19,6 +24,9 @@ interface Step2BirthDetailsProps {
 const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }: Step2BirthDetailsProps) => {
   const [showSecondPerson, setShowSecondPerson] = useState(false);
   const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
+  const [voiceText, setVoiceText] = useState('');
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const { toast } = useToast();
 
   const reportCategory = watch('reportCategory');
   const isCompatibilityReport = reportCategory === 'compatibility';
@@ -46,6 +54,24 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
   const handleAddSecondPerson = () => {
     setShowSecondPerson(true);
   };
+
+  const handleVoiceTranscript = (transcript: string) => {
+    setVoiceText(transcript);
+    setIsProcessingVoice(false);
+    toast({
+      title: "Voice recorded",
+      description: "You can now edit the details and submit when ready",
+    });
+  };
+
+  const handleSilenceDetected = () => {
+    setIsProcessingVoice(false);
+  };
+
+  const { isRecording, isProcessing, toggleRecording } = useSpeechToText(
+    handleVoiceTranscript,
+    handleSilenceDetected
+  );
 
   const scrollToFirstError = () => {
     // Only run in browser environment
@@ -109,7 +135,7 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="text-center flex-1">
-            <h2 className="text-2xl font-bold text-gray-900">Birth Details</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Your Info</h2>
             <p className="text-gray-600">
               {isCompatibilityReport 
                 ? "We need both people's details for your compatibility report" 
@@ -120,10 +146,56 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
         </div>
 
         <div className="space-y-6 w-full">
+          {/* Voice Recording Section */}
+          <div className="bg-white rounded-lg border p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Quick Voice Entry</h3>
+              <button
+                type="button"
+                onClick={toggleRecording}
+                disabled={isProcessing || isProcessingVoice}
+                className={`p-3 rounded-full transition-colors ${
+                  isRecording 
+                    ? 'bg-primary/20 text-primary' 
+                    : 'text-gray-500 hover:bg-gray-100'
+                } ${(isProcessing || isProcessingVoice) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+                title={isRecording ? 'Stop recording' : 'Record your details'}
+              >
+                <Mic className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {(isProcessing || isProcessingVoice) && (
+              <ProcessingIndicator 
+                message="Processing speech..." 
+                className="py-2"
+              />
+            )}
+            
+            {voiceText && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Recorded Details</label>
+                <Textarea
+                  value={voiceText}
+                  onChange={(e) => setVoiceText(e.target.value)}
+                  placeholder="Your voice recording will appear here..."
+                  rows={4}
+                  className="resize-none"
+                />
+                <p className="text-xs text-gray-500">You can edit the details above and then submit when ready</p>
+              </div>
+            )}
+            
+            {!voiceText && !isRecording && !isProcessing && (
+              <p className="text-sm text-gray-500">Tap the mic to quickly record all your details at once</p>
+            )}
+          </div>
+
           {/* First Person Card */}
           <PersonCard
             personNumber={1}
-            title={isCompatibilityReport ? "Your Details" : "Your Birth Details"}
+            title={isCompatibilityReport ? "Your Details" : "Your Details"}
             register={register}
             setValue={setValue}
             watch={watch}
