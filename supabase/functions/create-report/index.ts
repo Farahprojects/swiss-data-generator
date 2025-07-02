@@ -147,6 +147,12 @@ function transformToSwissFormat(data: CreateReportRequest): any {
     delete basePayload.location;
   }
 
+  // Handle astro data types (no AI report generation)
+  if (data.reportType === 'essence-bundle' || data.reportType === 'sync-rich') {
+    // Don't add report field for raw data requests
+    return basePayload;
+  }
+
   // Handle report generation with specific report types
   if (data.reportType === 'sync' && data.relationshipType) {
     basePayload.report = `sync_${data.relationshipType}`;

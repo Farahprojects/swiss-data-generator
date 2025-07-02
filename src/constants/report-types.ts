@@ -39,6 +39,13 @@ export const reportCategories = [
     reportType: 'sync',
   },
   {
+    value: 'astro-data',
+    title: 'Astro Data',
+    description: 'Raw astrological data - instant ephemeris calculations',
+    icon: Target,
+    reportType: 'astro-data',
+  },
+  {
     value: 'snapshot',
     title: 'Snapshot',
     description: 'Perfect timing insights for your current life chapter',
@@ -107,5 +114,23 @@ export const detailedRelationshipTypes = [
     title: 'Professional',
     description: 'Unlock powerful collaboration dynamics with a team',
     icon: Briefcase,
+  },
+];
+
+// Astro Data subcategories - raw ephemeris data only
+export const astroDataSubCategories = [
+  {
+    value: 'essence-bundle',
+    title: 'The Self',
+    description: 'Your birth chart + current transits (raw astrological data)',
+    icon: User,
+    reportType: 'essence-bundle',
+  },
+  {
+    value: 'sync-rich',
+    title: 'Compatibility',
+    description: 'Synastry + composite + transits (raw astrological data)',
+    icon: Heart,
+    reportType: 'sync-rich',
   },
 ];

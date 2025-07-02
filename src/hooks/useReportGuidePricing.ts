@@ -21,6 +21,8 @@ export const useReportGuidePricing = () => {
       monthly: getPriceById('monthly')?.unit_price_usd || null,
       mindset: getPriceById('mindset')?.unit_price_usd || null,
       flow: getPriceById('flow')?.unit_price_usd || null,
+      'essence-bundle': getPriceById('essence-bundle')?.unit_price_usd || null,
+      'sync-rich': getPriceById('sync-rich')?.unit_price_usd || null,
     };
   }, [prices, isLoading, getPriceById]);
 

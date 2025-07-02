@@ -12,6 +12,7 @@ import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
+import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
 import Step3Payment from './drawer-steps/Step3Payment';
 import SuccessScreen from './SuccessScreen';
@@ -88,6 +89,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
+  const astroDataType = watch('astroDataType');
 
   // Viewport height CSS custom prop – updates on resize & orientation change
   useEffect(() => {
@@ -276,7 +278,17 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                   />
                 )}
 
-                {currentStep === 2 && (
+                {currentStep === 2 && reportCategory === 'astro-data' && (
+                  <Step1_5AstroData
+                    key="step1_5_astro"
+                    control={control}
+                    setValue={setValue}
+                    onNext={nextStep}
+                    selectedSubCategory={astroDataType}
+                  />
+                )}
+
+                {currentStep === 2 && reportCategory !== 'astro-data' && (
                   <Step1_5SubCategory
                     key="step1_5"
                     control={control}
