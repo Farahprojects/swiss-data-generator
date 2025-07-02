@@ -39,7 +39,8 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   
 
   const reportCategory = watch('reportCategory');
-  const isCompatibilityReport = reportCategory === 'compatibility';
+  const astroDataType = watch('astroDataType');
+  const isCompatibilityReport = reportCategory === 'compatibility' || astroDataType === 'sync-rich';
 
   // Person‑1
   const isFirstPersonComplete = useMemo(() => {
