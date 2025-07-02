@@ -9,9 +9,6 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
-  // Words to rotate through - easily customizable
-  const rotatingWords = ['Yourself', 'Your Mind', 'Your Partner', 'Your Friend', 'Your Team'];
-  
   // Banner images for smooth transitions - from explore more section
   const bannerImages = [
     '/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png', // Focus
@@ -20,7 +17,6 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
   ];
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -29,15 +25,6 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
 
     return () => clearInterval(interval);
   }, [bannerImages.length]);
-
-  // Word rotation effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentWordIndex((prev) => (prev + 1) % rotatingWords.length);
-    }, 3000); // Change word every 3 seconds
-
-    return () => clearInterval(interval);
-  }, [rotatingWords.length]);
 
   const handleClick = () => {
     if (onGetReportClick) {
@@ -70,20 +57,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           <h1 className="text-6xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
-            <span className="italic font-medium relative inline-block h-[1.2em]">
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={currentWordIndex}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5, ease: "easeInOut" }}
-                  className="absolute inset-0"
-                >
-                  {rotatingWords[currentWordIndex]}
-                </motion.span>
-              </AnimatePresence>
-            </span>
+            <span className="italic font-medium">Yourself</span>
           </h1>
         </motion.div>
         
