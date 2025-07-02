@@ -46,25 +46,24 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           <motion.div
             key={currentImageIndex}
             initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: 0.3, scale: 1 }}
+            animate={{ opacity: 0.6, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
             className="absolute inset-0 bg-cover bg-center bg-no-repeat"
             style={{
               backgroundImage: `url(${bannerImages[currentImageIndex]})`,
-              filter: 'blur(1px)',
             }}
           />
         </AnimatePresence>
-        {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px]" />
+        {/* Subtle gradient overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/10 to-background/30" />
       </div>
 
       <div className="relative z-10 container mx-auto px-4 text-center">
         <h1 className="text-4xl md:text-6xl font-bold mb-6">
           <span className="text-primary block">Your Subconscious, Unlocked</span>
         </h1>
-        <p className="text-xl text-foreground max-w-2xl mx-auto mb-12 font-medium" style={{ textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8)' }}>
+        <p className="text-xl text-foreground max-w-2xl mx-auto mb-12 font-medium" style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
           Reveal the subconscious patterns shaping your life — your drive, your resistance, your rhythm. Mapped at birth. Reflected back now.
         </p>
         
@@ -81,16 +80,16 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
         
         <div className="flex justify-center items-center gap-8 text-sm text-foreground font-medium">
           <div className="flex items-center gap-2">
-            <Star className="h-4 w-4" style={{ filter: 'drop-shadow(1px 1px 1px rgba(255, 255, 255, 0.8))' }} />
-            <span style={{ textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8)' }}>AI-Analyzed Psychology</span>
+            <Star className="h-4 w-4" style={{ filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3))' }} />
+            <span style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>AI-Analyzed Psychology</span>
           </div>
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4" style={{ filter: 'drop-shadow(1px 1px 1px rgba(255, 255, 255, 0.8))' }} />
-            <span style={{ textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8)' }}>Instant Delivery</span>
+            <Clock className="h-4 w-4" style={{ filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3))' }} />
+            <span style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>Instant Delivery</span>
           </div>
           <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4" style={{ filter: 'drop-shadow(1px 1px 1px rgba(255, 255, 255, 0.8))' }} />
-            <span style={{ textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8)' }}>Fast, Focused Results</span>
+            <Shield className="h-4 w-4" style={{ filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3))' }} />
+            <span style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>Fast, Focused Results</span>
           </div>
         </div>
       </div>
