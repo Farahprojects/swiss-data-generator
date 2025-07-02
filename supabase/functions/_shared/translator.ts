@@ -35,8 +35,6 @@ const CANON: Record<string, string> = {
   return:        "return",
   synastry:      "synastry",
   compatibility: "synastry",
-  essence_bundle: "essence",   // raw essence data
-  sync_rich:   "sync",      // raw sync data
   positions:     "positions",
   moonphases:    "moonphases",
   body:          "body_matrix",
