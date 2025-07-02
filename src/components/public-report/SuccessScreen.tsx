@@ -21,9 +21,6 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   const firstName = name.split(' ')[0];
   const isMobile = useIsMobile();
   const [countdown, setCountdown] = useState(24);
-  const [videoError, setVideoError] = useState<string | null>(null);
-  const [videoLoading, setVideoLoading] = useState(true);
-  const [videoCanPlay, setVideoCanPlay] = useState(false);
 
   // Initialize viewport height management
   useViewportHeight();
@@ -99,56 +96,6 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   const StatusIcon = statusInfo.icon;
   const isReportReady = report?.has_report && report?.report_content;
 
-  // Video event handlers for debugging
-  const handleVideoError = (event: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    const videoElement = event.currentTarget;
-    const error = videoElement.error;
-    console.error('🎥 Video loading error:', {
-      error: error,
-      code: error?.code,
-      message: error?.message,
-      networkState: videoElement.networkState,
-      readyState: videoElement.readyState,
-      src: videoElement.src
-    });
-    setVideoError(`Video failed to load: ${error?.message || 'Unknown error'}`);
-    setVideoLoading(false);
-  };
-
-  const handleVideoLoadStart = () => {
-    console.log('🎥 Video load started');
-    setVideoLoading(true);
-    setVideoError(null);
-  };
-
-  const handleVideoCanPlay = () => {
-    console.log('🎥 Video can play');
-    setVideoLoading(false);
-    setVideoCanPlay(true);
-  };
-
-  const handleVideoLoadedData = () => {
-    console.log('🎥 Video data loaded');
-  };
-
-  // Check video URL accessibility
-  useEffect(() => {
-    const videoUrl = "https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4";
-    console.log('🎥 Attempting to access video URL:', videoUrl);
-    
-    // Test if URL is accessible
-    fetch(videoUrl, { method: 'HEAD' })
-      .then(response => {
-        console.log('🎥 Video URL accessibility check:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries())
-        });
-      })
-      .catch(error => {
-        console.error('🎥 Video URL accessibility failed:', error);
-      });
-  }, []);
 
   // Countdown timer
   useEffect(() => {
@@ -263,12 +210,6 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                  {/* Loading Animation */}
                  <LoadingAnimation />
 
-                {/* Debug information */}
-                {videoError && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-sm text-red-600">Video Error: {videoError}</p>
-                  </div>
-                )}
 
                 {/* Personal Message */}
                 <div className="bg-muted/50 rounded-lg p-4">
@@ -367,12 +308,6 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                  {/* Loading Animation */}
                  <LoadingAnimation />
 
-                {/* Debug information */}
-                {videoError && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-sm text-red-600">Video Error: {videoError}</p>
-                  </div>
-                )}
 
                 {/* Personal Message */}
                 <div className="bg-muted/50 rounded-lg p-4">
