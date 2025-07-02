@@ -34,7 +34,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
       type: 'Essence',
       icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
       title: 'The Self Report',
-      priceKey: 'essence',
+      priceKey: 'essence_personal',
       bestFor: 'Self-understanding',
       description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
       details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
