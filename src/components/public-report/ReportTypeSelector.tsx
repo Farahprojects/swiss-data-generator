@@ -210,22 +210,26 @@ const ReportTypeSelector = ({
                            <motion.button
                              key={type.value}
                              type="button"
-                             onClick={() => {
-                               field.onChange(type.value);
-                               
-                               // Auto-scroll to step 2 if this is the second card (Professional)
-                               if (type.value === 'professional') {
-                                 setTimeout(() => {
-                                   const nextStep = document.querySelector('[data-step="2"]');
-                                   if (nextStep) {
-                                     nextStep.scrollIntoView({ 
-                                       behavior: 'smooth', 
-                                       block: 'start' 
-                                     });
-                                   }
-                                 }, 300);
-                               }
-                             }}
+                              onClick={() => {
+                                field.onChange(type.value);
+                                
+                                // Auto-scroll to step 2 if this is the Professional card
+                                if (type.value === 'professional') {
+                                  console.log('Professional card clicked, attempting scroll...');
+                                  setTimeout(() => {
+                                    const nextStep = document.querySelector('[data-step="2"]');
+                                    console.log('Step 2 element found:', nextStep);
+                                    if (nextStep) {
+                                      nextStep.scrollIntoView({ 
+                                        behavior: 'smooth', 
+                                        block: 'start' 
+                                      });
+                                    } else {
+                                      console.log('Step 2 element not found');
+                                    }
+                                  }, 500); // Increased delay to ensure DOM updates
+                                }
+                              }}
                              className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                                isSelected 
                                  ? 'border-primary shadow-lg bg-primary/5' 
