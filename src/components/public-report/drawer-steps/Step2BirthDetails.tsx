@@ -292,28 +292,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
         )}
       </div>
 
-      {/* Mic FAB portaled to document.body to bypass all drawer transforms/overflow */}
-      {typeof window !== 'undefined' &&
-        createPortal(
-          <button
-            type="button"
-            onClick={toggleRecording}
-            disabled={isSTTProcessing || isProcessingVoice}
-            aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-            title={isRecording ? 'Stop recording' : 'Record your details by voice'}
-            className={clsx(
-              'fixed bottom-8 left-1/2 -translate-x-1/2 z-[11000] rounded-full border-2 shadow-lg flex items-center justify-center transition-transform duration-200',
-              isRecording
-                ? 'bg-red-500 text-white animate-pulse border-red-400 shadow-red-400/50'
-                : 'bg-primary text-white hover:bg-primary/90 border-primary/20',
-              (isSTTProcessing || isProcessingVoice) && 'opacity-50 cursor-not-allowed'
-            )}
-            style={{ width: 64, height: 64 }}
-          >
-            <Mic className="w-6 h-6" />
-          </button>,
-          document.body
-        )}
     </>
   );
 });

@@ -6,7 +6,9 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { X } from 'lucide-react';
+import { X, Mic } from 'lucide-react';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useToast } from '@/hooks/use-toast';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
@@ -70,6 +72,28 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
   const [reportData, setReportData] = useState<{ content: string; pdfData?: string | null } | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  
+  // Voice functionality
+  const { toast } = useToast();
+  const {
+    isRecording,
+    isProcessing: isSTTProcessing,
+    toggleRecording,
+  } = useSpeechToText(
+    (transcript) => {
+      toast({
+        title: 'Voice recorded',
+        description: 'Speech converted to text successfully.',
+      });
+    },
+    () => {
+      toast({
+        title: 'Voice recording failed',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    }
+  );
 
   // -------------------------------- Hooks ----------------------------------
   useSmoothScrollPolyfill();
@@ -239,24 +263,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           marginTop: 0,
         }}
       >
-        {/* Close button */}
-        <button
-          type="button"
-          onClick={resetDrawer}
-          aria-label="Close report drawer"
-          className="absolute right-4 top-3 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
-          style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
-        >
-          <X className="h-4 w-4" />
-        </button>
-
         {/* ------------------------------ FORM VIEW ------------------------- */}
         {currentView === 'form' && (
           <div className="flex flex-col h-full">
-            <DrawerHeader className="flex-shrink-0 pt-6 pb-2 px-4">
+            <div className="flex-shrink-0 pt-6 pb-2 px-4">
               <ProgressDots />
-              <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
-            </DrawerHeader>
+            </div>
 
             <div
               ref={scrollContainerRef}
@@ -314,6 +326,37 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                   />
                 )}
               </AnimatePresence>
+            </div>
+            
+            {/* Footer with close and mic buttons */}
+            <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-t border-border bg-background">
+              <button
+                type="button"
+                onClick={resetDrawer}
+                aria-label="Close report drawer"
+                className="flex items-center justify-center w-12 h-12 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              
+              <div className="text-center">
+                <h2 className="text-lg font-semibold text-foreground">Report Request</h2>
+                <p className="text-sm text-muted-foreground">Step {currentStep} of 4</p>
+              </div>
+              
+              <button
+                type="button"
+                onClick={toggleRecording}
+                disabled={isSTTProcessing}
+                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+                className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${
+                  isRecording
+                    ? 'bg-red-500 text-white animate-pulse'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                } ${isSTTProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Mic className="h-5 w-5" />
+              </button>
             </div>
           </div>
         )}
