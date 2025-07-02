@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import HeroSection from '@/components/public-report/HeroSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
+import TestimonialsSection from '@/components/public-report/TestimonialsSection';
 import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
@@ -104,6 +105,7 @@ const PublicReport = () => {
         <div className="min-h-screen bg-background">
           <HeroSection onGetReportClick={handleGetReportClick} />
           <TestsSection />
+          <TestimonialsSection />
           {!isClientMobile && (
             <div id="report-form">
               <ReportForm />
