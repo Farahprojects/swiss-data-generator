@@ -2,12 +2,14 @@
 import * as z from 'zod';
 
 export const reportSchema = z.object({
-  reportType: z.string().min(1, 'Please select a report type'),
+  reportType: z.string().optional(),
   relationshipType: z.string().optional(),
   essenceType: z.string().optional(),
   // Mobile-specific fields that help populate the above
   reportCategory: z.string().optional(),
   reportSubCategory: z.string().optional(),
+  // Astro data only mode
+  astroDataOnly: z.boolean().optional(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   birthDate: z.string().min(1, 'Birth date is required'),
@@ -27,6 +29,21 @@ export const reportSchema = z.object({
   notes: z.string().optional(),
   promoCode: z.string().optional(),
 }).refine((data) => {
+  // Skip report type validation if astro data only mode
+  if (data.astroDataOnly) return true;
+  
+  // Require report type for AI reports
+  if (!data.reportType || data.reportType === '') {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please select a report type",
+  path: ["reportType"]
+}).refine((data) => {
+  // Skip essence validation if astro data only mode
+  if (data.astroDataOnly) return true;
+  
   if (data.reportType === 'essence' && (!data.essenceType || data.essenceType === '')) {
     return false;
   }
@@ -35,6 +52,9 @@ export const reportSchema = z.object({
   message: "Please select an essence focus type",
   path: ["essenceType"]
 }).refine((data) => {
+  // Skip sync validation if astro data only mode  
+  if (data.astroDataOnly) return true;
+  
   if (data.reportType === 'sync' && (!data.relationshipType || data.relationshipType === '')) {
     return false;
   }
@@ -43,6 +63,9 @@ export const reportSchema = z.object({
   message: "Please select a relationship type",
   path: ["relationshipType"]
 }).refine((data) => {
+  // Skip sync validation if astro data only mode
+  if (data.astroDataOnly) return true;
+  
   if (data.reportType === 'sync' && (!data.secondPersonName || data.secondPersonName.trim() === '')) {
     return false;
   }
@@ -51,6 +74,9 @@ export const reportSchema = z.object({
   message: "Second person's name is required for sync reports",
   path: ["secondPersonName"]
 }).refine((data) => {
+  // Skip sync validation if astro data only mode
+  if (data.astroDataOnly) return true;
+  
   if (data.reportType === 'sync' && (!data.secondPersonBirthDate || data.secondPersonBirthDate === '')) {
     return false;
   }
@@ -59,6 +85,9 @@ export const reportSchema = z.object({
   message: "Second person's birth date is required for sync reports",
   path: ["secondPersonBirthDate"]
 }).refine((data) => {
+  // Skip sync validation if astro data only mode
+  if (data.astroDataOnly) return true;
+  
   if (data.reportType === 'sync' && (!data.secondPersonBirthTime || data.secondPersonBirthTime === '')) {
     return false;
   }
@@ -67,6 +96,9 @@ export const reportSchema = z.object({
   message: "Second person's birth time is required for sync reports",
   path: ["secondPersonBirthTime"]
 }).refine((data) => {
+  // Skip sync validation if astro data only mode
+  if (data.astroDataOnly) return true;
+  
   if (data.reportType === 'sync' && (!data.secondPersonBirthLocation || data.secondPersonBirthLocation.trim() === '')) {
     return false;
   }

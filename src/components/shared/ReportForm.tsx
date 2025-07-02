@@ -38,6 +38,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       reportType: '',
       relationshipType: '',
       essenceType: '',
+      astroDataOnly: false,
       name: '',
       email: '',
       birthDate: '',

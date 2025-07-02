@@ -16,13 +16,14 @@ export interface PromoCodeValidation {
 }
 
 export interface ReportFormData {
-  reportType: string;
+  reportType?: string;
   relationshipType?: string;
   essenceType?: string;
   // Mobile-specific fields
   reportCategory?: string;
   reportSubCategory?: string;
   astroDataType?: string;
+  astroDataOnly?: boolean;
   name: string;
   email: string;
   birthDate: string;
