@@ -46,7 +46,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           <motion.div
             key={currentImageIndex}
             initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: 0.6, scale: 1 }}
+            animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
             className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -93,12 +93,6 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           </div>
         </div>
 
-        {/* Quote at the bottom */}
-        <div className="text-center">
-          <p className="text-lg italic text-foreground/80 font-medium" style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
-            "Who looks outside, dreams; who looks inside, awakes"
-          </p>
-        </div>
       </div>
     </section>
   );
