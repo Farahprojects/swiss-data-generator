@@ -21,7 +21,9 @@ const COLOR_GREEN = 'text-green-600';
 // -----------------------------------------------------------------------------
 const VideoLoader: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isMuted, setIsMuted] = useState<boolean>(true);
+  const [isMuted, setIsMuted] = useState<boolean>(false); // Start unmuted for audio
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasError, setHasError] = useState<boolean>(false);
 
   const toggleMute = () => {
     const vid = videoRef.current;
@@ -32,23 +34,43 @@ const VideoLoader: React.FC = () => {
     setIsMuted(!isMuted);
   };
 
+  const handleVideoLoad = () => {
+    setIsLoading(false);
+    setHasError(false);
+  };
+
+  const handleVideoError = () => {
+    setIsLoading(false);
+    setHasError(true);
+  };
+
   return (
     <div className="relative w-full h-0 pt-[56.25%] overflow-hidden rounded-xl shadow-lg">
+      {/* Loading spinner - behind video, only shown when loading or error */}
+      {(isLoading || hasError) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/20 z-0">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      )}
+      
       <video
         ref={videoRef}
         src={VIDEO_SRC}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover z-10"
         autoPlay
         loop
         muted={isMuted}
         playsInline
         preload="auto"
         controls={false}
+        onLoadedData={handleVideoLoad}
+        onError={handleVideoError}
       />
+      
       {/* Mute / Un‑mute toggle */}
       <button
         onClick={toggleMute}
-        className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full p-2 backdrop-blur-sm hover:bg-black/70 transition"
+        className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full p-2 backdrop-blur-sm hover:bg-black/70 transition z-20"
         aria-label={isMuted ? 'Unmute video' : 'Mute video'}
       >
         {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
