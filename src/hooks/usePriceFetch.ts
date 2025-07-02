@@ -18,9 +18,14 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
   const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory } = data;
   
   // Handle essence reports
-  if (reportType === 'essence' && essenceType) {
-    const mappedId = `essence_${essenceType}`;
-    return mappedId;
+  if (reportType === 'essence') {
+    if (essenceType) {
+      const mappedId = `essence_${essenceType}`;
+      return mappedId;
+    } else {
+      // Default to personal essence if no essenceType specified
+      return 'essence_personal';
+    }
   }
   
   // Handle sync/compatibility reports
