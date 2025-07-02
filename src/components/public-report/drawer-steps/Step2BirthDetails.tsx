@@ -1,7 +1,6 @@
 import React, {
   useCallback,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 import {
@@ -11,16 +10,12 @@ import {
   FieldErrors,
 } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, Mic } from 'lucide-react';
-import clsx from 'clsx';
+import { ArrowLeft, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
-import { useSpeechToText } from '@/hooks/useSpeechToText';
-import { useToast } from '@/hooks/use-toast';
 import { ReportFormData } from '@/types/public-report';
 import PersonCard from './PersonCard';
+import SpeechOrchestrator from '@/components/speech/SpeechOrchestrator';
 
 interface Step2BirthDetailsProps {
   register: UseFormRegister<ReportFormData>;
@@ -31,11 +26,6 @@ interface Step2BirthDetailsProps {
   onPrev: () => void;
 }
 
-/**
- * Sticky mic FAB offset below the Google‑Maps autocomplete element.
- * – Keeps voice‑entry always visible
- * – Turns into a recorder with live progress + transcript preview
- */
 const Step2BirthDetails = React.memo(function Step2BirthDetails({
   register,
   setValue,
@@ -44,13 +34,8 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   onNext,
   onPrev,
 }: Step2BirthDetailsProps) {
-  /* ------------------------------------------------------------------ */
-  /*                             FORM LOGIC                              */
-  /* ------------------------------------------------------------------ */
   const [showSecondPerson, setShowSecondPerson] = useState(false);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
-  const [voiceText, setVoiceText] = useState('');
-  const { toast } = useToast();
 
   const reportCategory = watch('reportCategory');
   const isCompatibilityReport = reportCategory === 'compatibility';
@@ -79,29 +64,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
     ? isFirstPersonComplete && isSecondPersonComplete
     : isFirstPersonComplete;
 
-  /* ------------------------------------------------------------------ */
-  /*                           VOICE RECORDING                           */
-  /* ------------------------------------------------------------------ */
-  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
-  const {
-    isRecording,
-    isProcessing: isSTTProcessing,
-    toggleRecording,
-  } = useSpeechToText(
-    (transcript) => {
-      setVoiceText(transcript);
-      setIsProcessingVoice(false);
-      toast({
-        title: 'Voice recorded',
-        description: 'You can now edit the details before submitting.',
-      });
-    },
-    () => setIsProcessingVoice(false)
-  );
-
-  /* ------------------------------------------------------------------ */
-  /*                            ERROR SCROLLING                          */
-  /* ------------------------------------------------------------------ */
   const ERROR_FIELDS: (keyof ReportFormData)[] = useMemo(
     () => [
       'name',
@@ -136,9 +98,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
     setTimeout(scrollToFirstError, 100); // allow error states to paint first
   }, [canProceed, onNext, scrollToFirstError]);
 
-  /* ------------------------------------------------------------------ */
-  /*                               RENDER                               */
-  /* ------------------------------------------------------------------ */
   return (
     <div className="w-full">
       <motion.div
@@ -215,9 +174,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
           )}
         </AnimatePresence>
 
-        {/* Spacer for sticky FAB */}
-        <div className="h-28" />
-
         {/* Review & Pay */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -235,80 +191,8 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
         </motion.div>
       </motion.div>
 
-      {/* -------------------------------------------------------------- */}
-      {/*  Sticky Mic Floating‑Action Button – always visible on Step‑2 */}
-      {/* -------------------------------------------------------------- */}
-      <button
-        type="button"
-        onClick={toggleRecording}
-        disabled={isSTTProcessing || isProcessingVoice}
-        aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-        title={isRecording ? 'Stop recording' : 'Record your details by voice'}
-        className={clsx(
-          'fixed z-50 left-1/2 -translate-x-1/2 bottom-8 flex items-center justify-center rounded-full border-2 shadow-lg transition-transform duration-200',
-          isRecording
-            ? 'bg-red-500 text-white animate-pulse shadow-red-300 border-red-400'
-            : 'bg-primary text-white hover:bg-primary/90 border-primary/20',
-          (isSTTProcessing || isProcessingVoice) && 'opacity-50 cursor-not-allowed'
-        )}
-        style={{ width: 64, height: 64 }}
-      >
-        <Mic className="w-6 h-6" />
-      </button>
-
-      {/* Transcript overlay (appears when voiceText exists) */}
-      <AnimatePresence>
-        {voiceText && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'tween', duration: 0.25 }}
-            className="fixed z-40 bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 p-4 space-y-2 shadow-xl"
-          >
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <Mic className="h-4 w-4 text-primary" /> Recorded Details
-            </h3>
-            <Textarea
-              value={voiceText}
-              onChange={(e) => setVoiceText(e.target.value)}
-              rows={3}
-              className="resize-none"
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setVoiceText('');
-                }}
-              >
-                Clear
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  /* Ideally map transcript to inputs via AI/NLP */
-                  toast({
-                    title: 'Coming soon',
-                    description: 'Auto‑populate from transcript is under development.',
-                  });
-                }}
-              >
-                Auto‑fill (BETA)
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Processing overlay */}
-      {(isSTTProcessing || isProcessingVoice) && (
-        <ProcessingIndicator
-          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50"
-          message="Processing speech..."
-        />
-      )}
+      {/* Speech Orchestrator - Smart voice input with field mapping */}
+      <SpeechOrchestrator setValue={setValue} />
     </div>
   );
 });
