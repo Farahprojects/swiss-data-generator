@@ -15,7 +15,7 @@ export const useReportGuidePricing = () => {
     }
 
     return {
-      essence: getPriceById('essence_personal')?.unit_price_usd || null,
+      essence_personal: getPriceById('essence_personal')?.unit_price_usd || null,
       sync: getPriceById('sync_personal')?.unit_price_usd || null,
       focus: getPriceById('focus')?.unit_price_usd || null,
       monthly: getPriceById('monthly')?.unit_price_usd || null,
