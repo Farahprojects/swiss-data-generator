@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Copy, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReportHeaderProps {
   customerName: string;
@@ -22,6 +23,31 @@ export const ReportHeader = ({
   reportPdfData,
   isCopyCompleted
 }: ReportHeaderProps) => {
+  const [showCopyMessage, setShowCopyMessage] = useState(false);
+  const { toast } = useToast();
+
+  const handleChatGPTClick = async () => {
+    if (isCopyCompleted) {
+      // User has already copied the report, proceed to ChatGPT
+      window.open('https://chatgpt.com/', '_blank');
+    } else {
+      // User hasn't copied yet, copy the report first
+      onCopyToClipboard();
+      
+      // Show success message for 2 seconds
+      toast({
+        title: "Report copied!",
+        description: "Your report has been copied to clipboard. Redirecting to ChatGPT...",
+        duration: 2000,
+      });
+
+      // Wait 2 seconds then redirect to ChatGPT
+      setTimeout(() => {
+        window.open('https://chatgpt.com/', '_blank');
+      }, 2000);
+    }
+  };
+
   return (
     <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-4">
@@ -64,13 +90,8 @@ export const ReportHeader = ({
             )}
             <Button
               size="sm"
-              onClick={onChatGPTClick}
-              disabled={!isCopyCompleted}
-              className={`flex items-center gap-2 font-inter transition-all duration-200 ${
-                isCopyCompleted 
-                  ? 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md' 
-                  : 'bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60'
-              }`}
+              onClick={handleChatGPTClick}
+              className="flex items-center gap-2 font-inter transition-all duration-200 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md"
             >
               <img 
                 src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
