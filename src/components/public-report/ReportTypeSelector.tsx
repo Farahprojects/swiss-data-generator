@@ -88,7 +88,7 @@ const ReportTypeSelector = ({
           <button
             type="button"
             onClick={() => setShowReportGuide(true)}
-            className="text-foreground hover:text-primary font-bold underline mx-auto block"
+            className="text-primary hover:text-primary/80 font-bold mx-auto block transition-colors"
           >
             Not sure which report to choose? Click here.
           </button>
