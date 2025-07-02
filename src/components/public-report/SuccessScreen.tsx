@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { CheckCircle, Clock } from 'lucide-react';
+import { CheckCircle, Clock, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -8,52 +8,54 @@ import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { motion } from 'framer-motion';
 
-/**
- * Public (unauthenticated) loading / success screen shown after guest purchase.
- * - Streams status via `useGuestReportStatus` polling hook.
- * - Plays a looping background video while generating the report.
- * - Auto‑redirects to onViewReport when ready.
- *
- * Production tweaks:
- * • Video uses `muted + playsInline + autoPlay` so mobile browsers allow autoplay.
- * • Bigger, responsive video container with 16/9 aspect‑ratio & rounded corners.
- * • Deduplicated desktop / mobile code – single <Layout> component driven by props.
- * • Countdown timer reset when status changes → avoids negative seconds.
- * • All timeouts stored in refs to ensure cleanup on unmount.
- */
-
 // -----------------------------------------------------------------------------
 // Constants
 // -----------------------------------------------------------------------------
 const VIDEO_SRC =
   'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
-
-// Fallback colour scheme for icons
 const COLOR_BLUE = 'text-blue-600';
 const COLOR_GREEN = 'text-green-600';
 
 // -----------------------------------------------------------------------------
 // Helper Components
 // -----------------------------------------------------------------------------
-const VideoLoader: React.FC = () => (
-  <div className="relative w-full h-0 pt-[56.25%] overflow-hidden rounded-xl shadow-lg">
-    <video
-      src={VIDEO_SRC}
-      className="absolute inset-0 w-full h-full object-cover"
-      autoPlay
-      loop
-      muted
-      playsInline
-      preload="auto"
-    />
-  </div>
-);
+const VideoLoader: React.FC = () => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [isMuted, setIsMuted] = useState<boolean>(true);
 
-const Spinner: React.FC = () => (
-  <div className="flex items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-  </div>
-);
+  const toggleMute = () => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    vid.muted = !isMuted;
+    // On some browsers, volume resets when muted flips – make sure it’s audible
+    if (!vid.muted) vid.volume = 1;
+    setIsMuted(!isMuted);
+  };
+
+  return (
+    <div className="relative w-full h-0 pt-[56.25%] overflow-hidden rounded-xl shadow-lg">
+      <video
+        ref={videoRef}
+        src={VIDEO_SRC}
+        className="absolute inset-0 w-full h-full object-cover"
+        autoPlay
+        loop
+        muted={isMuted}
+        playsInline
+        preload="auto"
+        controls={false}
+      />
+      {/* Mute / Un‑mute toggle */}
+      <button
+        onClick={toggleMute}
+        className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full p-2 backdrop-blur-sm hover:bg-black/70 transition"
+        aria-label={isMuted ? 'Unmute video' : 'Mute video'}
+      >
+        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+      </button>
+    </div>
+  );
+};
 
 // -----------------------------------------------------------------------------
 // Main Component
@@ -78,7 +80,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
 
-  useViewportHeight(); // fix iOS 100vh issues
+  useViewportHeight();
 
   const [countdown, setCountdown] = useState(24);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
@@ -116,10 +118,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const isReady = report?.has_report && !!report?.report_content;
 
   // ---------------------------------------------------------------------------
-  // Countdown timer (resets on status change)
+  // Countdown logic
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    // Reset timer when moving to a new step (but only if not ready yet)
     if (!isReady) setCountdown(24);
   }, [status.step, isReady]);
 
@@ -127,13 +128,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     if (!isReady && countdown > 0) {
       countdownRef.current = setTimeout(() => setCountdown((c) => c - 1), 1_000);
     }
-    return () => {
-      if (countdownRef.current) clearTimeout(countdownRef.current);
-    };
+    return () => countdownRef.current && clearTimeout(countdownRef.current);
   }, [countdown, isReady]);
 
   // ---------------------------------------------------------------------------
-  // Auto‑redirect when ready
+  // Auto redirect when ready
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (isReady && onViewReport) {
@@ -142,9 +141,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         2_000,
       );
     }
-    return () => {
-      if (redirectRef.current) clearTimeout(redirectRef.current);
-    };
+    return () => redirectRef.current && clearTimeout(redirectRef.current);
   }, [isReady, onViewReport, report]);
 
   // ---------------------------------------------------------------------------
@@ -153,7 +150,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const retry = () => email && !isPolling && startPolling(email);
 
   // ---------------------------------------------------------------------------
-  // Shared UI Blocks
+  // Shared blocks
   // ---------------------------------------------------------------------------
   const Countdown = (
     <div className="text-center">
@@ -180,7 +177,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   );
 
   // ---------------------------------------------------------------------------
-  // Layout (one source of markup – responsive via Tailwind)
+  // Layout
   // ---------------------------------------------------------------------------
   return (
     <div
@@ -194,7 +191,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
         <Card className="border-2 border-primary/20 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            {/* Icon */}
+            {/* Status Icon */}
             <motion.div
               className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
                 isReady ? 'bg-green-100' : 'bg-blue-100'
@@ -211,7 +208,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
               <p className="text-muted-foreground">{status.desc}</p>
             </div>
 
-            {/* Progress bar for larger screens */}
             {!isMobile && <Progress value={status.progress} />}
 
             {/* Content while generating */}
@@ -219,12 +215,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
               <>
                 {Countdown}
                 <VideoLoader />
-                <Spinner />
                 {PersonalNote}
               </>
             )}
 
-            {/* Ready state msg */}
+            {/* Ready state */}
             {isReady && (
               <>
                 {PersonalNote}
