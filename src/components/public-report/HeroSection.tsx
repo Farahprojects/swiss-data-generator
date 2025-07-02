@@ -9,6 +9,9 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
+  // Rotating words for the "Your..." animation - easily customizable
+  const rotatingWords = ['self', 'mind', 'partner', 'friend', 'soul'];
+  
   // Banner images for smooth transitions - from explore more section
   const bannerImages = [
     '/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png', // Focus
@@ -17,6 +20,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
   ];
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -25,6 +29,15 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
 
     return () => clearInterval(interval);
   }, [bannerImages.length]);
+
+  // Word rotation effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentWordIndex((prev) => (prev + 1) % rotatingWords.length);
+    }, 3000); // Change word every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [rotatingWords.length]);
 
   const handleClick = () => {
     if (onGetReportClick) {
@@ -57,7 +70,21 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           <h1 className="text-6xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
-            <span className="italic font-medium">Yourself</span>
+            <span className="italic font-medium">
+              Your
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={currentWordIndex}
+                  initial={{ opacity: 0, rotateX: 90 }}
+                  animate={{ opacity: 1, rotateX: 0 }}
+                  exit={{ opacity: 0, rotateX: -90 }}
+                  transition={{ duration: 0.3 }}
+                  className="inline-block ml-2"
+                >
+                  {rotatingWords[currentWordIndex]}
+                </motion.span>
+              </AnimatePresence>
+            </span>
           </h1>
         </motion.div>
         
