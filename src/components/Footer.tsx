@@ -11,8 +11,8 @@ const Footer = () => {
     return (
       <footer className="bg-white text-gray-600 py-6 border-t border-gray-200">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center justify-center">
-            <p className="text-sm text-center">&copy; {new Date().getFullYear()} Therai Astro. All rights reserved.</p>
+          <div className="flex flex-col items-start justify-start">
+            <p className="text-sm text-left">&copy; {new Date().getFullYear()} Therai Astro. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -79,7 +79,7 @@ const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-gray-200 mt-12 pt-8 text-sm text-center">
+        <div className="border-t border-gray-200 mt-12 pt-8 text-sm text-left">
           <p>&copy; {new Date().getFullYear()} Therai Astro. All rights reserved.</p>
         </div>
       </div>
