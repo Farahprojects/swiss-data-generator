@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { motion } from 'framer-motion';
 
 interface SuccessScreenProps {
   name: string;
@@ -34,19 +35,6 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
       stopPolling();
     };
   }, [email, autoStartPolling]); // Removed function dependencies to prevent loops
-
-  // Scroll into view on desktop to ensure visibility
-  useEffect(() => {
-    if (!isMobile && typeof window !== 'undefined') {
-      // Small delay to ensure component is rendered
-      setTimeout(() => {
-        const successScreen = document.querySelector('[data-success-screen]');
-        if (successScreen) {
-          successScreen.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
-  }, [isMobile]);
 
   const getStatusInfo = () => {
     if (!report) {
@@ -107,6 +95,31 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   const StatusIcon = statusInfo.icon;
   const isReportReady = report?.has_report && report?.report_content;
 
+  // Auto-redirect when report is ready
+  useEffect(() => {
+    if (isReportReady && onViewReport) {
+      // Wait 2 seconds after report is ready to show the animation, then redirect
+      const redirectTimer = setTimeout(() => {
+        onViewReport(report.report_content!, report.report_pdf_data);
+      }, 2000);
+
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [isReportReady, onViewReport, report]);
+
+  // Scroll into view on desktop to ensure visibility
+  useEffect(() => {
+    if (!isMobile && typeof window !== 'undefined') {
+      // Small delay to ensure component is rendered
+      setTimeout(() => {
+        const successScreen = document.querySelector('[data-success-screen]');
+        if (successScreen) {
+          successScreen.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [isMobile]);
+
   const handleViewReport = () => {
     if (isReportReady && onViewReport) {
       onViewReport(report.report_content!, report.report_pdf_data);
@@ -135,11 +148,20 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
         <CardContent className="p-8 text-center space-y-6">
           {/* Status Icon */}
           <div className="flex items-center justify-center">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-              isReportReady ? 'bg-green-100' : 'bg-blue-100'
-            }`}>
-              <StatusIcon className={`h-8 w-8 ${statusInfo.color}`} />
-            </div>
+            <motion.div 
+              className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                isReportReady ? 'bg-green-100' : 'bg-blue-100'
+              }`}
+              animate={isReportReady ? { scale: [1, 1.2, 1] } : {}}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+            >
+              <motion.div
+                animate={isReportReady ? { scale: [1, 1.3, 1] } : {}}
+                transition={{ duration: 0.8, ease: "easeInOut" }}
+              >
+                <StatusIcon className={`h-8 w-8 ${statusInfo.color}`} />
+              </motion.div>
+            </motion.div>
           </div>
           
           {/* Status Title */}
@@ -190,27 +212,9 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            {isReportReady ? (
-              <>
-                <Button 
-                  onClick={handleViewReport}
-                  className="w-full flex items-center gap-2"
-                  size="lg"
-                >
-                  <FileText className="h-4 w-4" />
-                  View Your Report
-                </Button>
-                <Button 
-                  onClick={handleCreateAnother}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Create Another Report
-                </Button>
-              </>
-            ) : (
+          {/* Action Buttons - Only show when report is NOT ready */}
+          {!isReportReady && (
+            <div className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4 animate-pulse" />
@@ -224,8 +228,8 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                   Create Another Report
                 </Button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Polling Status */}
           {isPolling && !isReportReady && (
@@ -257,11 +261,20 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
           <CardContent className="p-6 text-center space-y-6">
             {/* Status Icon */}
             <div className="flex items-center justify-center">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                isReportReady ? 'bg-green-100' : 'bg-blue-100'
-              }`}>
-                <StatusIcon className={`h-8 w-8 ${statusInfo.color}`} />
-              </div>
+              <motion.div 
+                className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                  isReportReady ? 'bg-green-100' : 'bg-blue-100'
+                }`}
+                animate={isReportReady ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.6, ease: "easeInOut" }}
+              >
+                <motion.div
+                  animate={isReportReady ? { scale: [1, 1.3, 1] } : {}}
+                  transition={{ duration: 0.8, ease: "easeInOut" }}
+                >
+                  <StatusIcon className={`h-8 w-8 ${statusInfo.color}`} />
+                </motion.div>
+              </motion.div>
             </div>
             
             {/* Status Title */}
@@ -312,27 +325,9 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              {isReportReady ? (
-                <>
-                  <Button 
-                    onClick={handleViewReport}
-                    className="w-full flex items-center gap-2"
-                    size="lg"
-                  >
-                    <FileText className="h-4 w-4" />
-                    View Your Report
-                  </Button>
-                  <Button 
-                    onClick={handleCreateAnother}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    Create Another Report
-                  </Button>
-                </>
-              ) : (
+            {/* Action Buttons - Only show when report is NOT ready */}
+            {!isReportReady && (
+              <div className="space-y-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4 animate-pulse" />
@@ -346,8 +341,8 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                     Create Another Report
                   </Button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Polling Status */}
             {isPolling && !isReportReady && (
