@@ -10,12 +10,12 @@ import {
   FieldErrors,
 } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, Mic } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ReportFormData } from '@/types/public-report';
 import PersonCard from './PersonCard';
-import VoiceDrawer from '@/components/speech/VoiceDrawer';
+
 
 interface Step2BirthDetailsProps {
   register: UseFormRegister<ReportFormData>;
@@ -36,7 +36,7 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
 }: Step2BirthDetailsProps) {
   const [showSecondPerson, setShowSecondPerson] = useState(false);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
-  const [isVoiceDrawerOpen, setIsVoiceDrawerOpen] = useState(false);
+  
 
   const reportCategory = watch('reportCategory');
   const isCompatibilityReport = reportCategory === 'compatibility';
@@ -121,14 +121,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
                 : 'We need these to create your personalised report'}
             </p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setIsVoiceDrawerOpen(true)}
-            className="p-2 text-primary hover:bg-primary/10"
-          >
-            <Mic className="h-5 w-5" />
-          </Button>
         </div>
 
         {/* Person‑1 */}
@@ -200,19 +192,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
         </motion.div>
       </motion.div>
 
-      {/* Voice Input Drawer */}
-      <VoiceDrawer
-        isOpen={isVoiceDrawerOpen}
-        onClose={() => setIsVoiceDrawerOpen(false)}
-        setValue={setValue}
-        onComplete={() => {
-          setIsVoiceDrawerOpen(false);
-          // Auto-advance if all required fields are filled
-          if (canProceed) {
-            setTimeout(() => onNext(), 500);
-          }
-        }}
-      />
     </div>
   );
 });
