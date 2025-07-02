@@ -1,6 +1,8 @@
 
 import { useState, useEffect, forwardRef } from 'react';
 import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
+import { useMobileAutocomplete } from '@/hooks/useMobileAutocomplete';
+import { autocompleteMonitor } from '@/utils/autocompleteMonitoring';
 import { PlaceData } from './utils/extractPlaceData';
 import { Label } from '@/components/ui/label';
 import { AutocompleteContainer } from './components/AutocompleteContainer';
@@ -33,10 +35,12 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     error
   }, ref) => {
     const { isError, errorMessage } = useGoogleMapsScript();
+    const { isMobile, shouldUseFallback } = useMobileAutocomplete();
     const [localValue, setLocalValue] = useState(value);
     const [showFallback, setShowFallback] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
     const [isClient, setIsClient] = useState(false);
+    const [forceAutocomplete, setForceAutocomplete] = useState(false);
 
     // Handle client-side hydration
     useEffect(() => {
@@ -68,6 +72,9 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
 
     const handleShowFallback = () => {
       setShowFallback(true);
+      autocompleteMonitor.log('fallback_used', { 
+        error: 'Manual fallback triggered'
+      });
     };
 
     useEffect(() => {
@@ -81,7 +88,8 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       return null;
     }
 
-    const shouldShowFallback = showFallback || isError || disabled;
+    // Enhanced fallback logic for production
+    const shouldShowFallback = (showFallback || isError || disabled || shouldUseFallback) && !forceAutocomplete;
 
     return (
       <div ref={ref} className={`space-y-2 ${className}`}>
@@ -115,6 +123,21 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
             onShowFallback={handleShowFallback}
             retryCount={retryCount}
           />
+        )}
+        
+        {/* Debug info for development - only show if there are issues */}
+        {(isError || shouldUseFallback || showFallback) && process.env.NODE_ENV === 'development' && (
+          <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded border">
+            Debug: Mobile={isMobile.toString()}, Error={isError.toString()}, 
+            ShouldFallback={shouldUseFallback.toString()}, ShowFallback={showFallback.toString()}
+            {isError && errorMessage && <div>Error: {errorMessage}</div>}
+            <button 
+              onClick={() => setForceAutocomplete(!forceAutocomplete)}
+              className="ml-2 text-blue-600 underline"
+            >
+              {forceAutocomplete ? 'Use Smart Fallback' : 'Force Autocomplete'}
+            </button>
+          </div>
         )}
         
         {error && <p className="text-sm text-red-500 mt-1">{error}</p>}

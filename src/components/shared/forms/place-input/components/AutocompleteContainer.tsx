@@ -42,14 +42,18 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
     }
   }, [isError, onShowFallback]);
 
-  // Timeout fallback for loading state
+  // Enhanced timeout fallback for loading state - more aggressive on mobile
   useEffect(() => {
     if (!isLoaded && !isError) {
       console.log('[DEBUG] Setting up timeout for Google Maps loading...');
+      // Shorter timeout on mobile due to network conditions
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const timeoutDuration = isMobile ? 8000 : 6000;
+      
       const timeout = setTimeout(() => {
-        console.warn('Google Maps load timeout after 6 seconds. Showing fallback.');
+        console.warn(`Google Maps load timeout after ${timeoutDuration/1000} seconds. Showing fallback.`);
         onShowFallback();
-      }, 6000);
+      }, timeoutDuration);
 
       return () => clearTimeout(timeout);
     }

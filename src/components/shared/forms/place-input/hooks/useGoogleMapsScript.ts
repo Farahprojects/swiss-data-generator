@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { autocompleteMonitor } from '@/utils/autocompleteMonitoring';
 
 interface UseGoogleMapsScriptResult {
   isLoaded: boolean;
@@ -18,6 +19,7 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
   const fetchApiKey = useCallback(async () => {
     try {
       console.log('🔍 Fetching Google Maps API key from edge function...');
+      autocompleteMonitor.log('load_start');
       
       const { data, error } = await supabase.functions.invoke('get-google-maps-key', {
         method: 'GET',
@@ -25,6 +27,7 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       
       if (error) {
         console.error('❌ Supabase function error:', error);
+        autocompleteMonitor.log('load_error', { error: error.message });
         setIsError(true);
         setErrorMessage(`Function error: ${error.message}`);
         return;
@@ -34,6 +37,7 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       
       if (!data?.apiKey) {
         console.error('❌ No API key returned from edge function');
+        autocompleteMonitor.log('load_error', { error: 'No API key in response' });
         setIsError(true);
         setErrorMessage('No API key in response');
         return;
@@ -48,8 +52,10 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       }
     } catch (error) {
       console.error('❌ Error fetching API key:', error);
+      const errorMsg = `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      autocompleteMonitor.log('load_error', { error: errorMsg });
       setIsError(true);
-      setErrorMessage(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setErrorMessage(errorMsg);
     }
   }, []);
 
@@ -77,6 +83,7 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
         // Wait for the custom element to be defined
         customElements.whenDefined('gmp-place-autocomplete').then(() => {
           console.log('✅ gmp-place-autocomplete element ready');
+          autocompleteMonitor.log('load_success');
           resolve();
         }).catch(reject);
       };
@@ -149,9 +156,14 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       // Only run in browser environment
       if (typeof window === 'undefined') return;
       
+      // Add mobile-specific timeout handling
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
       if (!apiKey) {
+        console.log(`🔄 Fetching API key... (Mobile: ${isMobile})`);
         await fetchApiKey();
       } else if (!isLoaded && !isError) {
+        console.log(`🔄 Loading Google Maps script... (Mobile: ${isMobile})`);
         await loadGoogleMapsScript(apiKey);
       }
     };
