@@ -82,9 +82,37 @@ const DesktopReportViewer = ({
     }
   };
 
-  const handleChatGPTClick = () => {
+  const handleChatGPTClick = async () => {
     if (isCopyCompleted) {
       window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
+    } else {
+      // Copy the report first
+      try {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = reportContent;
+        const cleanText = tempDiv.textContent || tempDiv.innerText || '';
+        
+        await navigator.clipboard.writeText(cleanText);
+        setIsCopyCompleted(true);
+        
+        toast({
+          title: "Report copied to clipboard!",
+          description: "Redirecting to ChatGPT..."
+        });
+        
+        // Wait 2 seconds then redirect to ChatGPT
+        setTimeout(() => {
+          window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
+        }, 2000);
+        
+      } catch (error) {
+        console.error('❌ Error copying to clipboard:', error);
+        toast({
+          title: "Copy failed",
+          description: "Unable to copy to clipboard. Please try copying manually first.",
+          variant: "destructive"
+        });
+      }
     }
   };
 

@@ -89,17 +89,16 @@ export const ReportActions = ({
               <p className="text-sm text-muted-foreground mt-1">
                 {isCopyCompleted 
                   ? 'Paste your copied report into our specialized ChatGPT for deeper insights'
-                  : 'Copy your report first to unlock ChatGPT analysis'
+                  : 'Click to copy your report and open ChatGPT for analysis'
                 }
               </p>
             </div>
             <Button 
               onClick={onChatGPTClick}
-              disabled={!isCopyCompleted}
               className={`w-full font-inter transition-all duration-200 ${
                 isCopyCompleted 
                   ? 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md' 
-                  : 'bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 shadow-sm hover:shadow-md'
               }`}
             >
               <img 
