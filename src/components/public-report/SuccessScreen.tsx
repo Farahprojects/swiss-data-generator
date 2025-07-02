@@ -1,5 +1,5 @@
-// 
 import React, { useEffect, useState } from 'react';
+import loadingAnimation from '@/assets/loading-animation.jpg';
 import { CheckCircle, Clock, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -150,11 +150,20 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
     }
   };
 
-  // Simple loading animation component
+  // Enhanced loading animation component with image
   const LoadingAnimation = () => (
-    <div className="w-full max-w-md mx-auto bg-muted/30 rounded-lg p-8 text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-      <p className="text-sm text-muted-foreground">Generating your report...</p>
+    <div className="w-full max-w-md mx-auto relative overflow-hidden rounded-lg">
+      <img 
+        src={loadingAnimation} 
+        alt="Loading animation" 
+        className="w-full h-48 object-cover rounded-lg"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/30 border-t-white"></div>
+      </div>
+      <div className="absolute bottom-4 left-0 right-0 text-center">
+        <p className="text-white font-medium text-lg drop-shadow-lg">Generating your report...</p>
+      </div>
     </div>
   );
 
