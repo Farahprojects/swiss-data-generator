@@ -279,16 +279,13 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 )}
 
                 {currentStep === 2 && reportCategory === 'astro-data' && (
-                  <>
-                    {console.log('Rendering Step1_5AstroData, reportCategory:', reportCategory, 'astroDataType:', astroDataType)}
-                    <Step1_5AstroData
-                      key="step1_5_astro"
-                      control={control}
-                      setValue={setValue}
-                      onNext={nextStep}
-                      selectedSubCategory={astroDataType}
-                    />
-                  </>
+                  <Step1_5AstroData
+                    key="step1_5_astro"
+                    control={control}
+                    setValue={setValue}
+                    onNext={nextStep}
+                    selectedSubCategory={astroDataType}
+                  />
                 )}
 
                 {currentStep === 2 && reportCategory !== 'astro-data' && (

@@ -39,7 +39,6 @@ const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1R
                   key={category.value}
                   type="button"
                   onClick={() => {
-                    console.log('Selected category:', category.value, 'reportType:', category.reportType);
                     field.onChange(category.value);
                     // Also set the reportType for desktop compatibility
                     setValue('reportType', category.reportType);

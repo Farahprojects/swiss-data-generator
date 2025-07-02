@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import {
   reportCategories,
   snapshotSubCategories,
+  astroDataSubCategories,
   detailedEssenceTypes,
   detailedRelationshipTypes,
 } from '@/constants/report-types';
@@ -51,6 +52,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   const watchedEssence = useWatch({ control, name: 'essenceType' });
   const watchedRelationship = useWatch({ control, name: 'relationshipType' });
   const watchedSnapshot = useWatch({ control, name: 'reportType' });
+  const watchedAstroData = useWatch({ control, name: 'astroDataType' });
 
   /* ──────────────────────────
    * Local UI state
@@ -80,7 +82,8 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
     const categoryComplete =
       (watchedCategory === 'the-self' && !!watchedEssence) ||
       (watchedCategory === 'compatibility' && !!watchedRelationship) ||
-      (watchedCategory === 'snapshot' && !!watchedSnapshot);
+      (watchedCategory === 'snapshot' && !!watchedSnapshot) ||
+      (watchedCategory === 'astro-data' && !!watchedAstroData);
 
     if (categoryComplete && !hasScrolledRef.current && stepTwoRef.current) {
       // Use rAF for smoother timing than setTimeout & to wait for layout flush
@@ -89,12 +92,13 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
         hasScrolledRef.current = true;
       });
     }
-  }, [watchedCategory, watchedEssence, watchedRelationship, watchedSnapshot]);
+  }, [watchedCategory, watchedEssence, watchedRelationship, watchedSnapshot, watchedAstroData]);
 
   /* ──────────────────────────
    * Derived booleans for conditional renders
    * ────────────────────────── */
   const showSnapshotSubCategories = watchedCategory === 'snapshot';
+  const showAstroDataSubCategories = watchedCategory === 'astro-data';
   const showEssenceOptions = watchedCategory === 'the-self' && selectedReportType === 'essence';
   const showRelationshipOptions =
     watchedCategory === 'compatibility' &&
@@ -114,8 +118,8 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
       setSelectedCategory(value);
       onChange(value);
 
-      // If not a snapshot, propagate reportType immediately
-      if (value !== 'snapshot' && setValue) {
+      // If not a snapshot or astro-data, propagate reportType immediately
+      if (value !== 'snapshot' && value !== 'astro-data' && setValue) {
         setValue('reportType', reportType, { shouldValidate: true });
       }
     },
@@ -123,6 +127,15 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   );
 
   const handleSubCategoryClick = useCallback(
+    (value: string, reportType: ReportFormData['reportType'], onChange: (v: any) => void) => {
+      setSelectedSubCategory(value);
+      onChange(value);
+      setValue?.('reportType', reportType, { shouldValidate: true });
+    },
+    [setValue],
+  );
+
+  const handleAstroDataClick = useCallback(
     (value: string, reportType: ReportFormData['reportType'], onChange: (v: any) => void) => {
       setSelectedSubCategory(value);
       onChange(value);
@@ -241,6 +254,61 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                               <div className="flex-1 text-left">
                                 <h3 className="text-lg font-semibold text-gray-900">{sub.title}</h3>
                                 <p className="text-sm text-muted-foreground">{sub.description}</p>
+                              </div>
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Astro Data sub‑categories (only visible when astro-data selected) */}
+            {showAstroDataSubCategories && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold text-primary text-center">
+                  Choose your astro data type
+                </h3>
+                <Controller
+                  control={control}
+                  name="astroDataType"
+                  render={({ field }) => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {astroDataSubCategories.map((sub) => {
+                        const IconComponent = sub.icon;
+                        const isSelected = watchedAstroData === sub.value;
+                        return (
+                          <motion.button
+                            key={sub.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            onClick={() =>
+                              handleAstroDataClick(sub.value, sub.reportType, field.onChange)
+                            }
+                            className={
+                              [
+                                'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
+                                'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
+                                isSelected
+                                  ? 'border-primary shadow-lg'
+                                  : 'border-neutral-200 hover:border-neutral-300',
+                              ].join(' ')
+                            }
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="flex gap-4 items-center">
+                              <div className="bg-white shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
+                                <IconComponent className="h-6 w-6 text-gray-700" />
+                              </div>
+                              <div className="flex-1 text-left">
+                                <h3 className="text-lg font-semibold text-gray-900">{sub.title}</h3>
+                                <p className="text-sm text-muted-foreground">{sub.description}</p>
+                                <div className="mt-2 text-xs text-green-600 font-medium">
+                                  ⚡ Instant delivery (~5 seconds)
+                                </div>
                               </div>
                             </div>
                           </motion.button>
