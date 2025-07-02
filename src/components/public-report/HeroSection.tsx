@@ -64,7 +64,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
         <h1 className="text-4xl md:text-6xl font-bold mb-6">
           <span className="text-primary block">Your Subconscious, Unlocked</span>
         </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-12 drop-shadow-lg text-shadow-sm bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+        <p className="text-xl text-foreground max-w-2xl mx-auto mb-12 font-medium" style={{ textShadow: '1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8)' }}>
           Reveal the subconscious patterns shaping your life — your drive, your resistance, your rhythm. Mapped at birth. Reflected back now.
         </p>
         
