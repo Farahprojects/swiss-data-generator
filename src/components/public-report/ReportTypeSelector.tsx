@@ -210,7 +210,21 @@ const ReportTypeSelector = ({
                           <motion.button
                             key={type.value}
                             type="button"
-                            onClick={() => field.onChange(type.value)}
+                            onClick={() => {
+                              field.onChange(type.value);
+                              // Auto-scroll to birth form if this is the second card (Professional)
+                              if (type.value === 'professional') {
+                                setTimeout(() => {
+                                  const step2 = document.querySelector('[data-step="2"]');
+                                  if (step2) {
+                                    step2.scrollIntoView({ 
+                                      behavior: 'smooth', 
+                                      block: 'start' 
+                                    });
+                                  }
+                                }, 300);
+                              }
+                            }}
                             className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                               isSelected 
                                 ? 'border-primary shadow-lg bg-primary/5' 
