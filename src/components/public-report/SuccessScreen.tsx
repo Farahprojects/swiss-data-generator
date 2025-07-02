@@ -21,6 +21,9 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   const firstName = name.split(' ')[0];
   const isMobile = useIsMobile();
   const [countdown, setCountdown] = useState(24);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [videoLoading, setVideoLoading] = useState(true);
+  const [videoCanPlay, setVideoCanPlay] = useState(false);
 
   // Initialize viewport height management
   useViewportHeight();
@@ -96,6 +99,57 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   const StatusIcon = statusInfo.icon;
   const isReportReady = report?.has_report && report?.report_content;
 
+  // Video event handlers for debugging
+  const handleVideoError = (event: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const videoElement = event.currentTarget;
+    const error = videoElement.error;
+    console.error('🎥 Video loading error:', {
+      error: error,
+      code: error?.code,
+      message: error?.message,
+      networkState: videoElement.networkState,
+      readyState: videoElement.readyState,
+      src: videoElement.src
+    });
+    setVideoError(`Video failed to load: ${error?.message || 'Unknown error'}`);
+    setVideoLoading(false);
+  };
+
+  const handleVideoLoadStart = () => {
+    console.log('🎥 Video load started');
+    setVideoLoading(true);
+    setVideoError(null);
+  };
+
+  const handleVideoCanPlay = () => {
+    console.log('🎥 Video can play');
+    setVideoLoading(false);
+    setVideoCanPlay(true);
+  };
+
+  const handleVideoLoadedData = () => {
+    console.log('🎥 Video data loaded');
+  };
+
+  // Check video URL accessibility
+  useEffect(() => {
+    const videoUrl = "https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4";
+    console.log('🎥 Attempting to access video URL:', videoUrl);
+    
+    // Test if URL is accessible
+    fetch(videoUrl, { method: 'HEAD' })
+      .then(response => {
+        console.log('🎥 Video URL accessibility check:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+      })
+      .catch(error => {
+        console.error('🎥 Video URL accessibility failed:', error);
+      });
+  }, []);
+
   // Countdown timer
   useEffect(() => {
     if (!isReportReady && countdown > 0) {
@@ -149,6 +203,44 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
     }
   };
 
+  // Video component with enhanced error handling and loading states
+  const VideoPlayer = () => {
+    const videoUrl = "https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4";
+    
+    if (videoError) {
+      return (
+        <div className="w-full max-w-md mx-auto bg-gray-100 rounded-lg p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-gray-600">Loading animation...</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full max-w-md mx-auto relative">
+        {videoLoading && (
+          <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        )}
+        <video 
+          className="w-full rounded-lg shadow-md" 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          onError={handleVideoError}
+          onLoadStart={handleVideoLoadStart}
+          onCanPlay={handleVideoCanPlay}
+          onLoadedData={handleVideoLoadedData}
+        >
+          <source src={videoUrl} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    );
+  };
+
   // Desktop layout - constrained within report section
   const desktopLayout = (
     <div 
@@ -198,19 +290,15 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                  </p>
                </div>
 
-                {/* Video Player */}
-                <div className="w-full max-w-md mx-auto">
-                  <video 
-                    className="w-full rounded-lg shadow-md" 
-                    autoPlay 
-                    loop 
-                    muted 
-                    playsInline
-                  >
-                    <source src="https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
+                {/* Video Player with debugging */}
+                <VideoPlayer />
+
+                {/* Debug information */}
+                {videoError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-600">Video Error: {videoError}</p>
+                  </div>
+                )}
 
                 {/* Personal Message */}
                 <div className="bg-muted/50 rounded-lg p-4">
@@ -306,19 +394,15 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                   </p>
                 </div>
 
-                {/* Video Player */}
-                <div className="w-full max-w-sm mx-auto">
-                  <video 
-                    className="w-full rounded-lg shadow-md" 
-                    autoPlay 
-                    loop 
-                    muted 
-                    playsInline
-                  >
-                    <source src="https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
+                {/* Video Player with debugging */}
+                <VideoPlayer />
+
+                {/* Debug information */}
+                {videoError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-600">Video Error: {videoError}</p>
+                  </div>
+                )}
 
                 {/* Personal Message */}
                 <div className="bg-muted/50 rounded-lg p-4">
