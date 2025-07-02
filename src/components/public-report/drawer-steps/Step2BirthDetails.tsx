@@ -17,7 +17,6 @@ import clsx from 'clsx';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
-import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useToast } from '@/hooks/use-toast';
 import { ReportFormData } from '@/types/public-report';
 import PersonCard from './PersonCard';
@@ -49,7 +48,7 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   /* ------------------------------------------------------------------ */
   const [showSecondPerson, setShowSecondPerson] = useState(false);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
-  const [voiceText, setVoiceText] = useState('');
+  
   const { toast } = useToast();
 
   const reportCategory = watch('reportCategory');
@@ -82,22 +81,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   /* ------------------------------------------------------------------ */
   /*                           VOICE RECORDING                           */
   /* ------------------------------------------------------------------ */
-  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
-  const {
-    isRecording,
-    isProcessing: isSTTProcessing,
-    toggleRecording,
-  } = useSpeechToText(
-    (transcript) => {
-      setVoiceText(transcript);
-      setIsProcessingVoice(false);
-      toast({
-        title: 'Voice recorded',
-        description: 'You can now edit the details before submitting.',
-      });
-    },
-    () => setIsProcessingVoice(false)
-  );
 
   /* ------------------------------------------------------------------ */
   /*                            ERROR SCROLLING                          */
@@ -235,80 +218,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
         </motion.div>
       </motion.div>
 
-      {/* -------------------------------------------------------------- */}
-      {/*  Sticky Mic Floating‑Action Button – always visible on Step‑2 */}
-      {/* -------------------------------------------------------------- */}
-      <button
-        type="button"
-        onClick={toggleRecording}
-        disabled={isSTTProcessing || isProcessingVoice}
-        aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-        title={isRecording ? 'Stop recording' : 'Record your details by voice'}
-        className={clsx(
-          'fixed z-50 left-1/2 -translate-x-1/2 bottom-8 flex items-center justify-center rounded-full border-2 shadow-lg transition-transform duration-200',
-          isRecording
-            ? 'bg-red-500 text-white animate-pulse shadow-red-300 border-red-400'
-            : 'bg-primary text-white hover:bg-primary/90 border-primary/20',
-          (isSTTProcessing || isProcessingVoice) && 'opacity-50 cursor-not-allowed'
-        )}
-        style={{ width: 64, height: 64 }}
-      >
-        <Mic className="w-6 h-6" />
-      </button>
-
-      {/* Transcript overlay (appears when voiceText exists) */}
-      <AnimatePresence>
-        {voiceText && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'tween', duration: 0.25 }}
-            className="fixed z-40 bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 p-4 space-y-2 shadow-xl"
-          >
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <Mic className="h-4 w-4 text-primary" /> Recorded Details
-            </h3>
-            <Textarea
-              value={voiceText}
-              onChange={(e) => setVoiceText(e.target.value)}
-              rows={3}
-              className="resize-none"
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setVoiceText('');
-                }}
-              >
-                Clear
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  /* Ideally map transcript to inputs via AI/NLP */
-                  toast({
-                    title: 'Coming soon',
-                    description: 'Auto‑populate from transcript is under development.',
-                  });
-                }}
-              >
-                Auto‑fill (BETA)
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Processing overlay */}
-      {(isSTTProcessing || isProcessingVoice) && (
-        <ProcessingIndicator
-          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50"
-          message="Processing speech..."
-        />
-      )}
     </div>
   );
 });
