@@ -78,7 +78,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           </Button>
         </div>
         
-        <div className="flex justify-center items-center gap-8 text-sm text-foreground font-medium">
+        <div className="flex justify-center items-center gap-8 text-sm text-foreground font-medium mb-8">
           <div className="flex items-center gap-2">
             <Star className="h-4 w-4" style={{ filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3))' }} />
             <span style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>AI-Analyzed Psychology</span>
@@ -91,6 +91,13 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
             <Shield className="h-4 w-4" style={{ filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3))' }} />
             <span style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>Fast, Focused Results</span>
           </div>
+        </div>
+
+        {/* Quote at the bottom */}
+        <div className="text-center">
+          <p className="text-lg italic text-foreground/80 font-medium" style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
+            "Who looks outside, dreams; who looks inside, awakes"
+          </p>
         </div>
       </div>
     </section>
