@@ -39,60 +39,74 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
   };
 
   return (
-    <section className="relative h-screen-safe flex items-center justify-center bg-gradient-to-b from-background to-muted/20 overflow-hidden">
-      {/* Animated Banner Images */}
+    <section className="relative h-screen flex items-center justify-center bg-white overflow-hidden">
+      {/* Subtle animated background with floating elements */}
       <div className="absolute inset-0">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentImageIndex}
-            initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 1.5, ease: "easeInOut" }}
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `url(${bannerImages[currentImageIndex]})`,
-            }}
-          />
-        </AnimatePresence>
-        {/* Subtle gradient overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/10 to-background/30" />
+        <div className="absolute top-1/4 left-8 w-2 h-2 bg-primary/20 rounded-full animate-pulse"></div>
+        <div className="absolute top-1/3 right-12 w-1 h-1 bg-primary/30 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-1/4 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
+        <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-primary/15 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 text-center">
-        <h1 className="text-4xl md:text-6xl font-bold mb-6">
-          <span className="text-primary block">Your Subconscious, Unlocked</span>
-        </h1>
-        <p className="text-xl text-foreground max-w-2xl mx-auto mb-12 font-medium" style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>
-          Reveal the subconscious patterns shaping your life — your drive, your resistance, your rhythm. Mapped at birth. Reflected back now.
-        </p>
+      <div className="relative z-10 container mx-auto px-4 text-center max-w-4xl">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        >
+          <h1 className="text-6xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
+            Know
+            <br />
+            <span className="italic font-medium">Yourself</span>
+          </h1>
+        </motion.div>
         
-        <div className="mb-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.8 }}
+          className="mb-16"
+        >
+          <p className="text-xl text-gray-500 max-w-xl mx-auto leading-relaxed">
+            Psychological insights that create momentum
+          </p>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1.0, duration: 0.6 }}
+          className="mb-20"
+        >
           <Button 
             onClick={handleClick}
             size="lg"
             variant="outline"
-            className="h-16 px-12 text-lg font-medium rounded-2xl border-2 border-primary bg-white text-primary hover:bg-primary/5 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            className="h-16 px-12 text-lg font-normal border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white transition-all duration-300 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105"
           >
             Begin
           </Button>
-        </div>
+        </motion.div>
         
-        <div className="flex justify-center items-center gap-8 text-sm text-foreground font-medium mb-8">
-          <div className="flex items-center gap-2">
-            <Star className="h-4 w-4" style={{ filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3))' }} />
-            <span style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>AI-Analyzed Psychology</span>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.4, duration: 0.6 }}
+          className="flex justify-center items-center gap-8 text-sm text-gray-500 font-medium"
+        >
+          <div className="flex items-center gap-2 group">
+            <Star className="h-4 w-4 transition-transform group-hover:scale-110" />
+            <span>AI-Analyzed</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4" style={{ filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3))' }} />
-            <span style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>Instant Delivery</span>
+          <div className="flex items-center gap-2 group">
+            <Clock className="h-4 w-4 transition-transform group-hover:scale-110" />
+            <span>Instant</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4" style={{ filter: 'drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.3))' }} />
-            <span style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)' }}>Fast, Focused Results</span>
+          <div className="flex items-center gap-2 group">
+            <Shield className="h-4 w-4 transition-transform group-hover:scale-110" />
+            <span>Private</span>
           </div>
-        </div>
-
+        </motion.div>
       </div>
     </section>
   );
