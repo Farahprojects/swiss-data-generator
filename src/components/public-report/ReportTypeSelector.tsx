@@ -11,7 +11,7 @@ import {
 } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
-import ReportGuideModal from './ReportGuideModal';
+import ReportGuideResponsive from './ReportGuideResponsive';
 
 interface ReportTypeSelectorProps {
   control: Control<ReportFormData>;
@@ -324,7 +324,7 @@ const ReportTypeSelector = ({
         </div>
       </FormStep>
 
-      <ReportGuideModal 
+      <ReportGuideResponsive 
         isOpen={showReportGuide} 
         onClose={() => setShowReportGuide(false)} 
       />
