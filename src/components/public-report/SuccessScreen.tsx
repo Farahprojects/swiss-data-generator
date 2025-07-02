@@ -203,43 +203,13 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
     }
   };
 
-  // Video component with enhanced error handling and loading states
-  const VideoPlayer = () => {
-    const videoUrl = "https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4";
-    
-    if (videoError) {
-      return (
-        <div className="w-full max-w-md mx-auto bg-gray-100 rounded-lg p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-sm text-gray-600">Loading animation...</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="w-full max-w-md mx-auto relative">
-        {videoLoading && (
-          <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        )}
-        <video 
-          className="w-full rounded-lg shadow-md" 
-          autoPlay 
-          loop 
-          muted 
-          playsInline
-          onError={handleVideoError}
-          onLoadStart={handleVideoLoadStart}
-          onCanPlay={handleVideoCanPlay}
-          onLoadedData={handleVideoLoadedData}
-        >
-          <source src={videoUrl} type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-      </div>
-    );
-  };
+  // Simple loading animation component
+  const LoadingAnimation = () => (
+    <div className="w-full max-w-md mx-auto bg-muted/30 rounded-lg p-8 text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+      <p className="text-sm text-muted-foreground">Generating your report...</p>
+    </div>
+  );
 
   // Desktop layout - constrained within report section
   const desktopLayout = (
@@ -290,8 +260,8 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                  </p>
                </div>
 
-                {/* Video Player with debugging */}
-                <VideoPlayer />
+                 {/* Loading Animation */}
+                 <LoadingAnimation />
 
                 {/* Debug information */}
                 {videoError && (
@@ -394,8 +364,8 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                   </p>
                 </div>
 
-                {/* Video Player with debugging */}
-                <VideoPlayer />
+                 {/* Loading Animation */}
+                 <LoadingAnimation />
 
                 {/* Debug information */}
                 {videoError && (
