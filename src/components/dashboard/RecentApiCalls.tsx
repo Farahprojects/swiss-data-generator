@@ -49,7 +49,7 @@ export const RecentApiCalls = () => {
   
   // Function to load logs from the database - simplified version for recent calls
   const loadLogs = async () => {
-    if (!user) return;
+    if (!user || typeof window === 'undefined') return;
     
     setLoading(true);
     

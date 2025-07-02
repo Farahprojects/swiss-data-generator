@@ -26,7 +26,7 @@ export const QuickStats = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!user?.id) return;
+      if (!user?.id || typeof window === 'undefined') return;
       
       try {
         setLoading(true);
