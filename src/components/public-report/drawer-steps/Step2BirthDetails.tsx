@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
-import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
+import React, {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  UseFormRegister,
+  UseFormSetValue,
+  UseFormWatch,
+  FieldErrors,
+} from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, Mic } from 'lucide-react';
+import clsx from 'clsx';
+
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
-import { TypingCursor } from '@/components/ui/TypingCursor';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useToast } from '@/hooks/use-toast';
 import { ReportFormData } from '@/types/public-report';
@@ -20,101 +31,115 @@ interface Step2BirthDetailsProps {
   onPrev: () => void;
 }
 
-const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }: Step2BirthDetailsProps) => {
+/**
+ * Sticky mic FAB offset below the Google‑Maps autocomplete element.
+ * – Keeps voice‑entry always visible
+ * – Turns into a recorder with live progress + transcript preview
+ */
+const Step2BirthDetails = React.memo(function Step2BirthDetails({
+  register,
+  setValue,
+  watch,
+  errors,
+  onNext,
+  onPrev,
+}: Step2BirthDetailsProps) {
+  /* ------------------------------------------------------------------ */
+  /*                             FORM LOGIC                              */
+  /* ------------------------------------------------------------------ */
   const [showSecondPerson, setShowSecondPerson] = useState(false);
-  const [hasTriedToSubmit, setHasTriedToSubmit] = useState(false);
+  const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
   const [voiceText, setVoiceText] = useState('');
-  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const { toast } = useToast();
 
   const reportCategory = watch('reportCategory');
   const isCompatibilityReport = reportCategory === 'compatibility';
 
-  // Watch first person fields
-  const name = watch('name');
-  const email = watch('email');
-  const birthDate = watch('birthDate');
-  const birthTime = watch('birthTime');
-  const birthLocation = watch('birthLocation');
+  // Person‑1
+  const isFirstPersonComplete = useMemo(() => {
+    const name = watch('name');
+    const email = watch('email');
+    const birthDate = watch('birthDate');
+    const birthTime = watch('birthTime');
+    const birthLocation = watch('birthLocation');
+    return !!(name && email && birthDate && birthTime && birthLocation);
+  }, [watch]);
 
-  // Watch second person fields
-  const secondPersonName = watch('secondPersonName');
-  const secondPersonBirthDate = watch('secondPersonBirthDate');
-  const secondPersonBirthTime = watch('secondPersonBirthTime');
-  const secondPersonBirthLocation = watch('secondPersonBirthLocation');
+  // Person‑2 (compatibility only)
+  const isSecondPersonComplete = useMemo(() => {
+    if (!isCompatibilityReport) return true; // not required
+    const n = watch('secondPersonName');
+    const d = watch('secondPersonBirthDate');
+    const t = watch('secondPersonBirthTime');
+    const l = watch('secondPersonBirthLocation');
+    return !!(n && d && t && l);
+  }, [watch, isCompatibilityReport]);
 
-  const isFirstPersonComplete = name && email && birthDate && birthTime && birthLocation;
-  const isSecondPersonComplete = secondPersonName && secondPersonBirthDate && secondPersonBirthTime && secondPersonBirthLocation;
-
-  const canProceed = isCompatibilityReport 
-    ? (isFirstPersonComplete && isSecondPersonComplete)
+  const canProceed = isCompatibilityReport
+    ? isFirstPersonComplete && isSecondPersonComplete
     : isFirstPersonComplete;
 
-  const handleAddSecondPerson = () => {
-    setShowSecondPerson(true);
-  };
-
-  const handleVoiceTranscript = (transcript: string) => {
-    setVoiceText(transcript);
-    setIsProcessingVoice(false);
-    toast({
-      title: "Voice recorded",
-      description: "You can now edit the details and submit when ready",
-    });
-  };
-
-  const handleSilenceDetected = () => {
-    setIsProcessingVoice(false);
-  };
-
-  const { isRecording, isProcessing, toggleRecording } = useSpeechToText(
-    handleVoiceTranscript,
-    handleSilenceDetected
+  /* ------------------------------------------------------------------ */
+  /*                           VOICE RECORDING                           */
+  /* ------------------------------------------------------------------ */
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const {
+    isRecording,
+    isProcessing: isSTTProcessing,
+    toggleRecording,
+    reset,
+  } = useSpeechToText(
+    (transcript) => {
+      setVoiceText(transcript);
+      setIsProcessingVoice(false);
+      toast({
+        title: 'Voice recorded',
+        description: 'You can now edit the details before submitting.',
+      });
+    },
+    () => setIsProcessingVoice(false)
   );
 
-  const scrollToFirstError = () => {
-    // Only run in browser environment
-    if (typeof window === 'undefined') return;
-    
-    // Find the first error field and scroll to it
-    const errorFields = [
-      { field: 'name', element: document.querySelector('#name') },
-      { field: 'email', element: document.querySelector('#email') },
-      { field: 'birthDate', element: document.querySelector('#birthDate') },
-      { field: 'birthTime', element: document.querySelector('#birthTime') },
-      { field: 'birthLocation', element: document.querySelector('#birthLocation') },
-      { field: 'secondPersonName', element: document.querySelector('#secondPersonName') },
-      { field: 'secondPersonBirthDate', element: document.querySelector('#secondPersonBirthDate') },
-      { field: 'secondPersonBirthTime', element: document.querySelector('#secondPersonBirthTime') },
-      { field: 'secondPersonBirthLocation', element: document.querySelector('#secondPersonBirthLocation') },
-    ];
+  /* ------------------------------------------------------------------ */
+  /*                            ERROR SCROLLING                          */
+  /* ------------------------------------------------------------------ */
+  const ERROR_FIELDS: (keyof ReportFormData)[] = useMemo(
+    () => [
+      'name',
+      'email',
+      'birthDate',
+      'birthTime',
+      'birthLocation',
+      'secondPersonName',
+      'secondPersonBirthDate',
+      'secondPersonBirthTime',
+      'secondPersonBirthLocation',
+    ],
+    []
+  );
 
-    for (const { field, element } of errorFields) {
-      if (errors[field as keyof FieldErrors<ReportFormData>] && element) {
-        element.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'nearest',
-          inline: 'nearest'
-        });
-        break;
+  const scrollToFirstError = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    for (const field of ERROR_FIELDS) {
+      if (errors[field]) {
+        const el = document.querySelector(`#${field}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          break;
+        }
       }
     }
-  };
+  }, [ERROR_FIELDS, errors]);
 
-  const handleReviewAndPay = () => {
-    setHasTriedToSubmit(true);
-    
-    // Check if form is valid before proceeding
-    if (canProceed) {
-      onNext();
-    } else {
-      // Scroll to first error after a brief delay to allow error states to update
-      setTimeout(() => {
-        scrollToFirstError();
-      }, 100);
-    }
-  };
+  const handleReviewAndPay = useCallback(() => {
+    setHasTriedSubmit(true);
+    if (canProceed) return onNext();
+    setTimeout(scrollToFirstError, 100); // allow error states to paint first
+  }, [canProceed, onNext, scrollToFirstError]);
 
+  /* ------------------------------------------------------------------ */
+  /*                               RENDER                               */
+  /* ------------------------------------------------------------------ */
   return (
     <div className="w-full">
       <motion.div
@@ -124,133 +149,77 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
         transition={{ duration: 0.3 }}
         className="space-y-6 w-full"
       >
+        {/* Header */}
         <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onPrev}
-            className="p-2"
-          >
+          <Button variant="ghost" size="icon" onClick={onPrev} className="p-2">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="text-center flex-1">
             <h2 className="text-2xl font-bold text-gray-900">Your Info</h2>
             <p className="text-gray-600">
-              {isCompatibilityReport 
-                ? "We need both people's details for your compatibility report" 
-                : "We need these to create your personalized report"
-              }
+              {isCompatibilityReport
+                ? "We need both people's details for your compatibility report"
+                : 'We need these to create your personalised report'}
             </p>
           </div>
         </div>
 
-        <div className="space-y-6 w-full">
-          {/* Voice Recording Section - Enhanced visibility */}
-          <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border-2 border-primary/30 p-6 space-y-4 sticky top-4 z-30 backdrop-blur-md shadow-lg bg-white/95">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Mic className="w-5 h-5 text-primary" />
-                Quick Voice Entry
-              </h3>
-              <button
-                type="button"
-                onClick={toggleRecording}
-                disabled={isProcessing || isProcessingVoice}
-                className={`p-4 rounded-full transition-all duration-200 shadow-lg border-2 ${
-                  isRecording 
-                    ? 'bg-red-500 text-white animate-pulse shadow-red-300 border-red-300' 
-                    : 'bg-primary text-white hover:bg-primary/90 hover:scale-105 border-primary/20'
-                } ${(isProcessing || isProcessingVoice) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-                title={isRecording ? 'Stop recording' : 'Record your details'}
-              >
-                <Mic className="w-6 h-6" />
-              </button>
-            </div>
-            
-            {(isProcessing || isProcessingVoice) && (
-              <ProcessingIndicator 
-                message="Processing speech..." 
-                className="py-2"
-              />
-            )}
-            
-            {voiceText && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Recorded Details</label>
-                <Textarea
-                  value={voiceText}
-                  onChange={(e) => setVoiceText(e.target.value)}
-                  placeholder="Your voice recording will appear here..."
-                  rows={4}
-                  className="resize-none"
-                />
-                <p className="text-xs text-gray-500">You can edit the details above and then submit when ready</p>
-              </div>
-            )}
-            
-            {!voiceText && !isRecording && !isProcessing && (
-              <p className="text-sm text-gray-600 text-center">
-                <span className="font-medium">Tap the mic</span> to quickly record all your details at once
-              </p>
-            )}
-          </div>
+        {/* Person‑1 */}
+        <PersonCard
+          personNumber={1}
+          title={isCompatibilityReport ? 'Your Details' : 'Your Details'}
+          register={register}
+          setValue={setValue}
+          watch={watch}
+          errors={errors}
+          hasTriedToSubmit={hasTriedSubmit}
+        />
 
-          {/* First Person Card */}
-          <PersonCard
-            personNumber={1}
-            title={isCompatibilityReport ? "Your Details" : "Your Details"}
-            register={register}
-            setValue={setValue}
-            watch={watch}
-            errors={errors}
-            hasTriedToSubmit={hasTriedToSubmit}
-          />
+        {/* Add partner */}
+        {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Button
+              onClick={() => setShowSecondPerson(true)}
+              variant="outline"
+              className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Partner's Details
+            </Button>
+          </motion.div>
+        )}
 
-          {/* Add Second Person Button */}
-          {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
+        {/* Person‑2 */}
+        <AnimatePresence>
+          {isCompatibilityReport && showSecondPerson && (
             <motion.div
+              key="partner"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="mb-6"
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
             >
-              <Button
-                onClick={handleAddSecondPerson}
-                variant="outline"
-                className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-                size="lg"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Add Partner's Details
-              </Button>
+              <PersonCard
+                personNumber={2}
+                title="Partner's Details"
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+                hasTriedToSubmit={hasTriedSubmit}
+              />
             </motion.div>
           )}
+        </AnimatePresence>
 
-          {/* Second Person Card */}
-          <AnimatePresence>
-            {isCompatibilityReport && showSecondPerson && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <PersonCard
-                  personNumber={2}
-                  title="Partner's Details"
-                  register={register}
-                  setValue={setValue}
-                  watch={watch}
-                  errors={errors}
-                  hasTriedToSubmit={hasTriedToSubmit}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        {/* Spacer for sticky FAB */}
+        <div className="h-28" />
 
-        {/* Review & Pay Button */}
+        {/* Review & Pay */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -261,14 +230,89 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
             onClick={handleReviewAndPay}
             variant="outline"
             className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
-            size="lg"
           >
             Review & Pay
           </Button>
         </motion.div>
       </motion.div>
+
+      {/* -------------------------------------------------------------- */}
+      {/*  Sticky Mic Floating‑Action Button – always visible on Step‑2 */}
+      {/* -------------------------------------------------------------- */}
+      <button
+        type="button"
+        onClick={toggleRecording}
+        disabled={isSTTProcessing || isProcessingVoice}
+        aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+        title={isRecording ? 'Stop recording' : 'Record your details by voice'}
+        className={clsx(
+          'fixed z-50 left-1/2 -translate-x-1/2 bottom-8 flex items-center justify-center rounded-full border-2 shadow-lg transition-transform duration-200',
+          isRecording
+            ? 'bg-red-500 text-white animate-pulse shadow-red-300 border-red-400'
+            : 'bg-primary text-white hover:bg-primary/90 border-primary/20',
+          (isSTTProcessing || isProcessingVoice) && 'opacity-50 cursor-not-allowed'
+        )}
+        style={{ width: 64, height: 64 }}
+      >
+        <Mic className="w-6 h-6" />
+      </button>
+
+      {/* Transcript overlay (appears when voiceText exists) */}
+      <AnimatePresence>
+        {voiceText && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'tween', duration: 0.25 }}
+            className="fixed z-40 bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 p-4 space-y-2 shadow-xl"
+          >
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <Mic className="h-4 w-4 text-primary" /> Recorded Details
+            </h3>
+            <Textarea
+              value={voiceText}
+              onChange={(e) => setVoiceText(e.target.value)}
+              rows={3}
+              className="resize-none"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  reset();
+                  setVoiceText('');
+                }}
+              >
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  /* Ideally map transcript to inputs via AI/NLP */
+                  toast({
+                    title: 'Coming soon',
+                    description: 'Auto‑populate from transcript is under development.',
+                  });
+                }}
+              >
+                Auto‑fill (BETA)
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Processing overlay */}
+      {(isSTTProcessing || isProcessingVoice) && (
+        <ProcessingIndicator
+          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50"
+          message="Processing speech..."
+        />
+      )}
     </div>
   );
-};
+});
 
 export default Step2BirthDetails;
