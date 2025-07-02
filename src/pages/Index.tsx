@@ -78,79 +78,49 @@ const Index = () => {
       <UnifiedNavigation />
 
       <main className="flex-grow overflow-hidden">
-        {/* Hero */}
-        <section className="relative h-[90vh] w-full overflow-hidden bg-white pt-20">
-          <div className="container relative z-10 mx-auto flex h-full flex-col items-center justify-center px-4 text-center">
-            <div className="mx-auto max-w-4xl">
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="text-5xl font-bold text-gray-900 md:text-6xl lg:text-7xl mb-2"
-              >
-                Turn Self-Insight
-              </motion.h1>
-
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
-                className="bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-5xl font-bold text-transparent md:text-6xl lg:text-7xl mb-6"
-              >
-                into Relentless Momentum
-              </motion.h2>
-
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-                className="text-lg text-gray-600 leading-relaxed max-w-3xl mx-auto mb-8"
-              >
-                Therai merges deep psychological mapping by analyzing journal entries and overlaying subtle psychological and energetic patterns. Whether you're guiding clients, building teams, or deepening relationships, get clarity that sticks.
-              </motion.p>
-            </div>
-
+        {/* Ultra Minimalist Hero */}
+        <section className="relative h-screen w-full flex items-center justify-center bg-white">
+          <div className="container mx-auto px-4 text-center">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-              className="flex flex-row items-center justify-center gap-4"
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="max-w-4xl mx-auto"
             >
-              <Link to="/signup">
-                <Button 
-                  size="lg" 
-                  className="px-8 py-4 text-lg"
-                >
-                  Get Started
-                </Button>
-              </Link>
+              <h1 className="text-6xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-12">
+                Know
+                <br />
+                <span className="italic font-medium">Yourself</span>
+              </h1>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8, duration: 0.8 }}
+                className="mb-16"
+              >
+                <p className="text-xl text-gray-500 max-w-xl mx-auto leading-relaxed">
+                  Psychological insights that create momentum
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 1.2, duration: 0.6 }}
+              >
+                <Link to="/report">
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="px-12 py-6 text-lg font-normal border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white transition-all duration-300"
+                  >
+                    Begin
+                  </Button>
+                </Link>
+              </motion.div>
             </motion.div>
           </div>
-        </section>
-
-        {/* Stats */}
-        <section className="bg-white py-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.6, ease: "easeOut" }}
-            className="container mx-auto px-4"
-          >
-            <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 md:flex-row md:justify-between">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-primary">95%+</p>
-                <p className="text-gray-600">Client breakthrough rate</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-primary">15 min</p>
-                <p className="text-gray-600">Average session time</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-primary">7 days</p>
-                <p className="text-gray-600">To see real momentum</p>
-              </div>
-            </div>
-          </motion.div>
         </section>
 
         {/* App Features Showcase */}
