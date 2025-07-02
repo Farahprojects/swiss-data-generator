@@ -9,13 +9,14 @@ const ReportTypeMappingSchema = z.object({
   relationshipType: z.string().optional(),
   reportCategory: z.string().optional(),
   reportSubCategory: z.string().optional(),
+  astroDataType: z.string().optional(),
 });
 
 export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 
 // Map form data to price_list identifiers
 const mapReportTypeToId = (data: ReportTypeMapping): string => {
-  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory } = data;
+  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType } = data;
   
   // Handle essence reports
   if (reportType === 'essence') {
@@ -33,6 +34,11 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
     const relationship = relationshipType || 'personal'; // Default to personal if not specified
     const mappedId = `sync_${relationship}`;
     return mappedId;
+  }
+  
+  // Handle astro data reports - use the specific astro data type
+  if (reportCategory === 'astro-data' && astroDataType) {
+    return astroDataType; // essence-bundle, sync-rich
   }
   
   // Handle snapshot reports - map subcategory to actual report type
@@ -83,7 +89,7 @@ export const usePriceFetch = () => {
   }, [getPriceById, getPriceByReportType]);
 
   const getReportTitle = useCallback((formData: ReportTypeMapping): string => {
-    const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory } = formData;
+    const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType } = formData;
     
     if (reportType === 'essence') {
       switch (essenceType) {
@@ -99,6 +105,14 @@ export const usePriceFetch = () => {
         case 'professional': return 'Professional Compatibility Report';
         case 'personal': return 'Personal Compatibility Report';
         default: return 'Personal Compatibility Report';
+      }
+    }
+    
+    if (reportCategory === 'astro-data') {
+      switch (astroDataType) {
+        case 'essence-bundle': return 'The Self - Astro Data';
+        case 'sync-rich': return 'Compatibility - Astro Data';
+        default: return 'Astro Data Report';
       }
     }
     

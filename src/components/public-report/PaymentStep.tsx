@@ -54,6 +54,7 @@ const PaymentStep = ({
   const reportType = watch('reportType');
   const essenceType = watch('essenceType');
   const relationshipType = watch('relationshipType');
+  const astroDataType = watch('astroDataType');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
@@ -69,7 +70,8 @@ const PaymentStep = ({
         essenceType,
         relationshipType,
         reportCategory,
-        reportSubCategory
+        reportSubCategory,
+        astroDataType
       });
       
       reportTitle = getReportTitle({
@@ -77,7 +79,8 @@ const PaymentStep = ({
         essenceType,
         relationshipType,
         reportCategory,
-        reportSubCategory
+        reportSubCategory,
+        astroDataType
       });
     }
   } catch (error) {
