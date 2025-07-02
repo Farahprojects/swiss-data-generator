@@ -9,10 +9,10 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
-  // Banner images for smooth transitions
+  // Banner images for smooth transitions - from explore more section
   const bannerImages = [
-    '/lovable-uploads/2863844c-4cd8-4c50-baec-7935ff281e9c.png', // Focus
-    '/lovable-uploads/6bc21b6a-0aef-4761-a2d7-39a265a7839d.png', // Flow
+    '/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png', // Focus
+    '/lovable-uploads/c245dba6-7af4-444f-a486-44594e57c9fd.png', // Flow
     '/lovable-uploads/71cede7b-0de9-4397-897f-29009a07c012.png', // Compatibility
   ];
 
