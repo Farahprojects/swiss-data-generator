@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Download, FileText, ArrowLeft, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,6 +22,8 @@ const MobileReportViewer = ({
   onBack 
 }: MobileReportViewerProps) => {
   const { toast } = useToast();
+  const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
+  const [isCopping, setIsCopping] = useState(false);
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
@@ -80,30 +83,41 @@ const MobileReportViewer = ({
     }
   };
 
-  const handleChatGPT = async () => {
+  const handleChatGPT = () => {
+    setShowChatGPTConfirm(true);
+  };
+
+  const handleChatGPTCopyAndGo = async () => {
+    setIsCopping(true);
+    
     try {
       // Clean the HTML content to get plain text
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = reportContent;
       const cleanText = tempDiv.textContent || tempDiv.innerText || '';
       
-      // Create ChatGPT prompt
-      const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological report and provide additional insights or answer any questions I might have:\n\n${cleanText}`)}`;
+      await navigator.clipboard.writeText(cleanText);
       
-      // Open in new tab
-      window.open(chatGPTUrl, '_blank');
-      
+      // Show "Copied" for 2 seconds
       toast({
-        title: "Opening ChatGPT",
-        description: "Your report has been prepared for AI analysis.",
-        variant: "success"
+        title: "Copied!",
+        description: "Report copied to clipboard",
       });
       
+      // Wait 2 seconds then redirect
+      setTimeout(() => {
+        const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological report and provide additional insights or answer any questions I might have:\n\n${cleanText}`)}`;
+        window.open(chatGPTUrl, '_blank');
+        setShowChatGPTConfirm(false);
+        setIsCopping(false);
+      }, 2000);
+      
     } catch (error) {
-      console.error('❌ Error opening ChatGPT:', error);
+      console.error('❌ Error copying to clipboard:', error);
+      setIsCopping(false);
       toast({
-        title: "Error",
-        description: "Unable to open ChatGPT. Please try manually copying the text.",
+        title: "Copy failed",
+        description: "Unable to copy. Please try manually.",
         variant: "destructive"
       });
     }
@@ -190,6 +204,35 @@ const MobileReportViewer = ({
           ChatGPT
         </Button>
       </div>
+
+      {/* ChatGPT Confirmation Dialog */}
+      <Dialog open={showChatGPTConfirm} onOpenChange={setShowChatGPTConfirm}>
+        <DialogContent className="mx-4">
+          <DialogHeader>
+            <DialogTitle>Analyze with ChatGPT</DialogTitle>
+            <DialogDescription>
+              Ready to get AI insights on your report? We'll copy your report to clipboard and open ChatGPT for analysis.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowChatGPTConfirm(false)}
+              className="flex-1"
+              disabled={isCopping}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleChatGPTCopyAndGo}
+              className="flex-1"
+              disabled={isCopping}
+            >
+              {isCopping ? "Copied!" : "Copy & Go"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };
