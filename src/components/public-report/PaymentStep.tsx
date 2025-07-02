@@ -163,8 +163,9 @@ const PaymentStep = ({
     );
   } else {
     content = (
-      <div className="max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left side - Order Summary */}
           <Card className="h-fit">
             <CardHeader>
               <CardTitle className="text-xl">Order Summary</CardTitle>
@@ -190,10 +191,50 @@ const PaymentStep = ({
                   </div>
                 </div>
               </div>
+
+              {/* What You'll Receive Section */}
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="font-semibold text-lg">What You'll Receive:</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-gray-700">Instant email delivery</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-gray-700">Downloadable PDF for your records</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-gray-700">Professional astrology insights</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-gray-700">Personalized recommendations</span>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          <div className="max-w-sm w-full space-y-6">
+          {/* Right side - Payment Form */}
+          <div className="space-y-6">
             <div className="space-y-4">
               <Button
                 variant="outline"
@@ -239,15 +280,35 @@ const PaymentStep = ({
               )}
             </div>
 
-            <div className="bg-muted/30 rounded-2xl p-6 shadow-sm border border-muted space-y-4">
-              <Button
-                onClick={handleButtonClick}
-                disabled={isProcessing || isValidatingPromo}
-                className="w-full h-14 text-base py-3 rounded-xl font-semibold bg-primary hover:bg-primary/90 text-white"
-                type="button"
-              >
-                {isProcessing ? 'Processing...' : isValidatingPromo ? 'Validating...' : 'Generate My Report'}
-              </Button>
+            <Button
+              onClick={handleButtonClick}
+              disabled={isProcessing || isValidatingPromo}
+              className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-white"
+              type="button"
+            >
+              {isProcessing ? 'Processing...' : isValidatingPromo ? 'Validating...' : 'Generate My Report'}
+            </Button>
+
+            {/* Satisfaction Guarantee */}
+            <div className="bg-muted/30 rounded-lg p-6 text-center space-y-3">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold">100% Satisfaction Guarantee</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                You're covered by our 100% Satisfaction Guarantee. Not happy with your report? We'll refund you within 7 days — no questions asked.
+              </p>
+            </div>
+
+            {/* Security Info */}
+            <div className="text-center space-y-2 text-sm text-muted-foreground">
+              <p>Your payment is secure and encrypted.</p>
+              <p>Secure checkout powered by Stripe</p>
+              <p>Your report will be delivered to your email within minutes</p>
             </div>
           </div>
         </div>
