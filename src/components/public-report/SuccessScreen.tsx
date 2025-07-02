@@ -79,7 +79,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // ---------------------------------------------------------------------------
   // Hooks & State
   // ---------------------------------------------------------------------------
-  const { report, isPolling, error, caseNumber, startPolling, stopPolling } = useGuestReportStatus();
+  const { report, isPolling, error, caseNumber, startPolling, stopPolling, triggerErrorHandling } = useGuestReportStatus();
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
 
@@ -130,9 +130,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   useEffect(() => {
     if (!isReady && countdown > 0) {
       countdownRef.current = setTimeout(() => setCountdown((c) => c - 1), 1_000);
+    } else if (!isReady && countdown === 0 && !caseNumber && email) {
+      // Only trigger error handling when countdown reaches 0 and no case number yet
+      console.log('🚨 Countdown finished, no report found, triggering error handling');
+      triggerErrorHandling(email);
     }
     return () => countdownRef.current && clearTimeout(countdownRef.current);
-  }, [countdown, isReady]);
+  }, [countdown, isReady, caseNumber]);
 
   // ---------------------------------------------------------------------------
   // Auto redirect when ready

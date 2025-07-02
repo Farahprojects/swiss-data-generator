@@ -21,6 +21,7 @@ interface UseGuestReportStatusReturn {
   caseNumber: string | null;
   startPolling: (email: string) => void;
   stopPolling: () => void;
+  triggerErrorHandling: (email: string) => Promise<void>;
 }
 
 export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
@@ -129,6 +130,23 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
+  const triggerErrorHandling = useCallback(async (email: string) => {
+    console.log('🚨 Triggering error handling for countdown completion');
+    
+    // Log the countdown completion error and get case number
+    const case_number = await logUserError(
+      email, 
+      'countdown_completed_no_report', 
+      'Report not found after countdown completion'
+    );
+    
+    if (case_number) {
+      setCaseNumber(case_number);
+    }
+    
+    setError('We are looking into this issue. Please reference your case number if you contact support.');
+  }, [logUserError]);
+
   const stopPolling = useCallback(() => {
     console.log('⏹️ Stopping polling');
     if (pollIntervalRef.current) {
@@ -219,5 +237,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     caseNumber,
     startPolling,
     stopPolling,
+    triggerErrorHandling,
   };
 };
