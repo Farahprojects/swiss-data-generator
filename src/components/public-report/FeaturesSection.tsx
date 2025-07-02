@@ -2,6 +2,7 @@
 import React from 'react';
 import { CheckCircle, Clock, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 
 interface FeaturesSectionProps {
   onGetReportClick?: () => void;
@@ -21,43 +22,78 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
   };
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-24 bg-gradient-to-b from-white to-gray-50/50">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold text-center mb-12">Why Choose Our Reports?</h2>
-        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto mb-12">
-          <div className="text-center">
-            <div className="bg-primary/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-4">
+            Why Choose Our Reports?
+          </h2>
+        </motion.div>
+
+        <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto mb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            viewport={{ once: true }}
+            className="text-center group"
+          >
+            <div className="bg-primary/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/10 transition-colors duration-300">
               <CheckCircle className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="font-semibold mb-2">AI-Powered Accuracy</h3>
-            <p className="text-muted-foreground">Advanced algorithms ensure precise calculations and personalized insights.</p>
-          </div>
-          <div className="text-center">
-            <div className="bg-primary/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <h3 className="text-xl font-semibold mb-3 text-gray-900">AI-Powered Accuracy</h3>
+            <p className="text-gray-600 leading-relaxed">Advanced algorithms ensure precise calculations and personalized insights.</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: true }}
+            className="text-center group"
+          >
+            <div className="bg-primary/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/10 transition-colors duration-300">
               <Clock className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="font-semibold mb-2">Instant Delivery</h3>
-            <p className="text-muted-foreground">Get your comprehensive report delivered to your email within minutes.</p>
-          </div>
-          <div className="text-center">
-            <div className="bg-primary/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <h3 className="text-xl font-semibold mb-3 text-gray-900">Instant Delivery</h3>
+            <p className="text-gray-600 leading-relaxed">Get your comprehensive report delivered to your email within minutes.</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            viewport={{ once: true }}
+            className="text-center group"
+          >
+            <div className="bg-primary/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/10 transition-colors duration-300">
               <Star className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="font-semibold mb-2">Professional Quality</h3>
-            <p className="text-muted-foreground">Detailed, professional-grade reports trusted by astrology enthusiasts.</p>
-          </div>
+            <h3 className="text-xl font-semibold mb-3 text-gray-900">Professional Quality</h3>
+            <p className="text-gray-600 leading-relaxed">Detailed, professional-grade reports trusted by astrology enthusiasts.</p>
+          </motion.div>
         </div>
         
-        <div className="text-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          viewport={{ once: true }}
+          className="text-center"
+        >
           <Button 
             onClick={handleClick}
-            size="lg"
-            variant="outline"
-            className="h-16 px-12 text-lg font-medium rounded-2xl border-2 border-primary bg-white text-primary hover:bg-primary/5 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            className="bg-primary text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary-hover transition-colors duration-200 shadow-lg"
           >
             Begin
           </Button>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
