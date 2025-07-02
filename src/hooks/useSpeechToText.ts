@@ -162,10 +162,15 @@ export const useSpeechToText = (
 
   const startRecording = useCallback(async () => {
     try {
+      // Skip in SSR environment
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+        throw new Error('Speech recognition not available in this environment');
+      }
+      
       log('debug', 'Starting recording');
       
       // Enhanced audio constraints for better quality
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,

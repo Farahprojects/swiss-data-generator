@@ -145,7 +145,9 @@ export function usePasswordManagement() {
       });
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/dashboard/settings`,
+        redirectTo: typeof window !== 'undefined' 
+          ? `${window.location.origin}/dashboard/settings`
+          : '/dashboard/settings',
       });
       
       if (error) {

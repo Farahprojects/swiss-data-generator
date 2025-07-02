@@ -18,7 +18,7 @@ export function useBatchedLogging() {
       const meta = { 
         route: currentPath,
         search: location.search,
-        referrer: previousPath.current || document.referrer || 'direct'
+        referrer: typeof document !== 'undefined' ? (previousPath.current || document.referrer || 'direct') : 'direct'
       };
       
       // Initialize a new batch for this page

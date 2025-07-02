@@ -71,7 +71,7 @@ const Login = () => {
     !showVerificationModal &&
     !pendingEmailAddress &&
     !isPendingEmailCheck &&
-    !window.location.pathname.includes('/auth/password')
+    (typeof window === 'undefined' || !window.location.pathname.includes('/auth/password'))
   ) {
     const from = (location.state as any)?.from?.pathname || '/dashboard';
     return <Navigate to={from} replace />;

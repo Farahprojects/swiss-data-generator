@@ -2,10 +2,13 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export const useTabVisibility = () => {
-  const [isVisible, setIsVisible] = useState(!document.hidden);
+  const [isVisible, setIsVisible] = useState(() => 
+    typeof document !== 'undefined' ? !document.hidden : true
+  );
   const [wasHidden, setWasHidden] = useState(false);
 
   const handleVisibilityChange = useCallback(() => {
+    if (typeof document === 'undefined') return;
     const isCurrentlyVisible = !document.hidden;
     
     if (!isCurrentlyVisible && isVisible) {
@@ -20,6 +23,9 @@ export const useTabVisibility = () => {
   }, [isVisible]);
 
   useEffect(() => {
+    // Skip in SSR environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     // Also listen for focus/blur events as backup
