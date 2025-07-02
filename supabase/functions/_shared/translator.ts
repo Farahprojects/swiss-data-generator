@@ -47,6 +47,9 @@ const CANON: Record<string, string> = {
   mindset:       "mindset",
   monthly:       "monthly",
   focus:         "focus",
+  /* ========= ASTRO DATA ENDPOINTS (raw Swiss data) ===== */
+  "essence-bundle": "essence",   // raw essence data
+  "sync-rich":      "sync",      // raw sync data
 };
 
 /*──────────────── misc maps */
