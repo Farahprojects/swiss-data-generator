@@ -16,7 +16,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
   const { register, setValue, formState: { errors }, watch } = form;
   
   const astroDataType = watch('astroDataType');
-  const isCompatibilityReport = reportType === 'compatibility' || reportType === 'sync' || astroDataType === 'sync_rich';
+  const isCompatibilityReport = reportType === 'compatibility' || reportType === 'sync' || astroDataType === 'sync';
 
   const handlePlaceSelect = (placeData: PlaceData, fieldPrefix = '') => {
     const locationField = fieldPrefix ? `${fieldPrefix}Location` : 'birthLocation';
