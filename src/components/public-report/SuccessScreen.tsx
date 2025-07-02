@@ -198,30 +198,30 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                  </p>
                </div>
 
-               {/* Video Player */}
-               <div className="w-full max-w-md mx-auto">
-                 <video 
-                   className="w-full rounded-lg shadow-md" 
-                   autoPlay 
-                   loop 
-                   muted 
-                   playsInline
-                 >
-                   <source src="https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4" type="video/mp4" />
-                   Your browser does not support the video tag.
-                 </video>
-               </div>
+                {/* Video Player */}
+                <div className="w-full max-w-md mx-auto">
+                  <video 
+                    className="w-full rounded-lg shadow-md" 
+                    autoPlay 
+                    loop 
+                    muted 
+                    playsInline
+                  >
+                    <source src="https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
 
-               {/* Personal Message */}
-               <div className="bg-muted/50 rounded-lg p-4">
-                 <p className="text-sm text-foreground text-center">
-                   Hi {firstName}! We're working on your report and will notify you when it's ready.
-                   <br />
-                   <span className="font-medium">{email}</span>
-                 </p>
-               </div>
-             </div>
-           )}
+                {/* Personal Message */}
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm text-foreground text-center">
+                    Hi {firstName}! We're working on your report and will notify you when it's ready.
+                    <br />
+                    <span className="font-medium">{email}</span>
+                  </p>
+                </div>
+              </div>
+            )}
 
            {/* Ready state message */}
            {isReportReady && (

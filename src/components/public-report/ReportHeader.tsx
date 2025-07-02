@@ -65,11 +65,7 @@ export const ReportHeader = ({
             <Button
               size="sm"
               onClick={onChatGPTClick}
-              className={`flex items-center gap-2 font-inter transition-all duration-200 ${
-                isCopyCompleted 
-                  ? 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md' 
-                  : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 shadow-sm hover:shadow-md'
-              }`}
+              className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200"
             >
               <img 
                 src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
