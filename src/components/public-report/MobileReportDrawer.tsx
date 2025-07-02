@@ -111,16 +111,25 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   // ----------------------------- Auto‑scroll logic -------------------------
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to top whenever the step changes (after animation completes)
+  // Auto-scroll to top + center first focusable element on every step change
   useEffect(() => {
-    if (!isBrowser) return;
-    const timeout = window.setTimeout(() => {
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }, 350); // delay must exceed <AnimatePresence> exit duration
+    if (typeof window === 'undefined') return;
 
-    return () => window.clearTimeout(timeout);
+    const timer = window.setTimeout(() => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      // 1️⃣ Reset to top so the next step never starts halfway down
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // 2️⃣ Nudge the first focusable (input/select/button…) into view
+      const firstFocusable = container.querySelector<HTMLElement>(
+        'input, select, textarea, button:not([disabled]):not(.sr-only)'
+      );
+      firstFocusable?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 350); // delay must exceed your <AnimatePresence> exit duration
+
+    return () => window.clearTimeout(timer);
   }, [currentStep]);
 
   // --------------------------- Keyboard detection --------------------------
