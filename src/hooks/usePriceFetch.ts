@@ -38,7 +38,7 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
   
   // Handle astro data reports - use the specific astro data type
   if (reportCategory === 'astro-data' && astroDataType) {
-    return astroDataType; // essence-bundle, sync-rich
+    return astroDataType; // essence_bundle, sync_rich
   }
   
   // Handle snapshot reports - map subcategory to actual report type
@@ -110,8 +110,8 @@ export const usePriceFetch = () => {
     
     if (reportCategory === 'astro-data') {
       switch (astroDataType) {
-        case 'essence-bundle': return 'The Self - Astro Data';
-        case 'sync-rich': return 'Compatibility - Astro Data';
+        case 'essence_bundle': return 'The Self - Astro Data';
+        case 'sync_rich': return 'Compatibility - Astro Data';
         default: return 'Astro Data Report';
       }
     }

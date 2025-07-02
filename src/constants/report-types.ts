@@ -120,17 +120,17 @@ export const detailedRelationshipTypes = [
 // Astro Data subcategories - raw ephemeris data only
 export const astroDataSubCategories = [
   {
-    value: 'essence-bundle',
+    value: 'essence_bundle',
     title: 'The Self',
     description: 'Your birth chart + current transits (raw astrological data)',
     icon: User,
-    reportType: 'essence-bundle',
+    reportType: 'essence_bundle',
   },
   {
-    value: 'sync-rich',
+    value: 'sync_rich',
     title: 'Compatibility',
     description: 'Synastry + composite + transits (raw astrological data)',
     icon: Heart,
-    reportType: 'sync-rich',
+    reportType: 'sync_rich',
   },
 ];
