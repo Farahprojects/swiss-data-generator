@@ -221,7 +221,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     </div>
   );
 
-  const needsScrolling = currentStep >= 3; // steps that typically overflow
+  const needsScrolling = currentStep >= 2; // Changed from 3 to 2 to include Step2BirthDetails
 
   // -------------------------------------------------------------------------
   return (
@@ -261,6 +261,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             <div
               ref={scrollContainerRef}
               className={`flex-1 px-6 pb-6 ${needsScrolling ? 'overflow-y-auto' : 'flex items-center justify-center'}`}
+              style={{ 
+                paddingTop: currentStep === 3 ? '1rem' : undefined // Extra padding for Step2BirthDetails
+              }}
             >
               <AnimatePresence mode="wait">
                 {currentStep === 1 && (

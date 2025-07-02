@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -146,19 +145,22 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
         </div>
 
         <div className="space-y-6 w-full">
-          {/* Voice Recording Section */}
-          <div className="bg-white rounded-lg border p-4 space-y-4">
+          {/* Voice Recording Section - Made more prominent */}
+          <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border-2 border-primary/20 p-4 space-y-4 sticky top-0 z-10 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Quick Voice Entry</h3>
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Mic className="w-5 h-5 text-primary" />
+                Quick Voice Entry
+              </h3>
               <button
                 type="button"
                 onClick={toggleRecording}
                 disabled={isProcessing || isProcessingVoice}
-                className={`p-3 rounded-full transition-colors ${
+                className={`p-4 rounded-full transition-all duration-200 shadow-lg ${
                   isRecording 
-                    ? 'bg-primary/20 text-primary' 
-                    : 'text-gray-500 hover:bg-gray-100'
-                } ${(isProcessing || isProcessingVoice) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    ? 'bg-red-500 text-white animate-pulse shadow-red-200' 
+                    : 'bg-primary text-white hover:bg-primary/90 hover:scale-105'
+                } ${(isProcessing || isProcessingVoice) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 aria-label={isRecording ? 'Stop recording' : 'Start recording'}
                 title={isRecording ? 'Stop recording' : 'Record your details'}
               >
@@ -188,7 +190,9 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
             )}
             
             {!voiceText && !isRecording && !isProcessing && (
-              <p className="text-sm text-gray-500">Tap the mic to quickly record all your details at once</p>
+              <p className="text-sm text-gray-600 text-center">
+                <span className="font-medium">Tap the mic</span> to quickly record all your details at once
+              </p>
             )}
           </div>
 
