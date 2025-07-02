@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle, Clock, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +20,7 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   const { report, isLoading, isPolling, error, startPolling, stopPolling } = useGuestReportStatus();
   const firstName = name.split(' ')[0];
   const isMobile = useIsMobile();
+  const [countdown, setCountdown] = useState(24);
 
   // Initialize viewport height management
   useViewportHeight();
@@ -94,6 +95,16 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
   const statusInfo = getStatusInfo();
   const StatusIcon = statusInfo.icon;
   const isReportReady = report?.has_report && report?.report_content;
+
+  // Countdown timer
+  useEffect(() => {
+    if (!isReportReady && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown, isReportReady]);
 
   // Auto-redirect when report is ready
   useEffect(() => {
@@ -174,72 +185,67 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
             </p>
           </div>
 
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <Progress value={statusInfo.progress} className="h-2" />
-            <p className="text-sm text-muted-foreground">
-              Step {statusInfo.step} of 3
-            </p>
-          </div>
-          
-          {/* Personal Message */}
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm text-foreground">
-              Hi {firstName}! {isReportReady 
-                ? "Your report is ready to view. We've also sent it to your email." 
-                : isPolling 
-                  ? "We're working on your report and will notify you when it's ready."
-                  : "We'll send your report to"
-              } 
-              {!isReportReady && (
-                <span className="font-medium"> {email}</span>
-              )}
-            </p>
-          </div>
+           {/* Loading content - show countdown and video when not ready */}
+           {!isReportReady && (
+             <div className="space-y-6">
+               {/* Countdown Timer */}
+               <div className="text-center">
+                 <div className="text-3xl font-bold text-primary mb-2">
+                   {countdown}s
+                 </div>
+                 <p className="text-sm text-muted-foreground">
+                   Report generating...
+                 </p>
+               </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-600 mb-2">{error}</p>
-              <Button 
-                onClick={handleRetryPolling}
-                variant="outline"
-                size="sm"
-                className="text-red-600 border-red-300 hover:bg-red-50"
-              >
-                Retry
-              </Button>
-            </div>
-          )}
+               {/* Video Player */}
+               <div className="w-full max-w-md mx-auto">
+                 <video 
+                   className="w-full rounded-lg shadow-md" 
+                   autoPlay 
+                   loop 
+                   muted 
+                   playsInline
+                 >
+                   <source src="https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4" type="video/mp4" />
+                   Your browser does not support the video tag.
+                 </video>
+               </div>
 
-          {/* Action Buttons - Only show when report is NOT ready */}
-          {!isReportReady && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4 animate-pulse" />
-                  <span>Estimated time: 2-3 minutes</span>
-                </div>
-                <Button 
-                  onClick={handleCreateAnother}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Create Another Report
-                </Button>
-              </div>
-            </div>
-          )}
+               {/* Personal Message */}
+               <div className="bg-muted/50 rounded-lg p-4">
+                 <p className="text-sm text-foreground text-center">
+                   Hi {firstName}! We're working on your report and will notify you when it's ready.
+                   <br />
+                   <span className="font-medium">{email}</span>
+                 </p>
+               </div>
+             </div>
+           )}
 
-          {/* Polling Status */}
-          {isPolling && !isReportReady && (
-            <div className="text-xs text-muted-foreground border-t pt-4">
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                <span>Checking for updates...</span>
-              </div>
-            </div>
-          )}
+           {/* Ready state message */}
+           {isReportReady && (
+             <div className="bg-muted/50 rounded-lg p-4">
+               <p className="text-sm text-foreground text-center">
+                 Hi {firstName}! Your report is ready to view. We've also sent it to your email.
+               </p>
+             </div>
+           )}
+
+           {/* Error Message */}
+           {error && (
+             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+               <p className="text-sm text-red-600 mb-2">{error}</p>
+               <Button 
+                 onClick={handleRetryPolling}
+                 variant="outline"
+                 size="sm"
+                 className="text-red-600 border-red-300 hover:bg-red-50"
+               >
+                 Retry
+               </Button>
+             </div>
+           )}
         </CardContent>
       </Card>
     </div>
@@ -287,28 +293,52 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
               </p>
             </div>
 
-            {/* Progress Bar */}
-            <div className="space-y-2">
-              <Progress value={statusInfo.progress} className="h-2" />
-              <p className="text-sm text-muted-foreground">
-                Step {statusInfo.step} of 3
-              </p>
-            </div>
-            
-            {/* Personal Message */}
-            <div className="bg-muted/50 rounded-lg p-4">
-              <p className="text-sm text-foreground">
-                Hi {firstName}! {isReportReady 
-                  ? "Your report is ready to view. We've also sent it to your email." 
-                  : isPolling 
-                    ? "We're working on your report and will notify you when it's ready."
-                    : "We'll send your report to"
-                } 
-                {!isReportReady && (
-                  <span className="font-medium"> {email}</span>
-                )}
-              </p>
-            </div>
+            {/* Loading content - show countdown and video when not ready */}
+            {!isReportReady && (
+              <div className="space-y-6">
+                {/* Countdown Timer */}
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-primary mb-2">
+                    {countdown}s
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Report generating...
+                  </p>
+                </div>
+
+                {/* Video Player */}
+                <div className="w-full max-w-sm mx-auto">
+                  <video 
+                    className="w-full rounded-lg shadow-md" 
+                    autoPlay 
+                    loop 
+                    muted 
+                    playsInline
+                  >
+                    <source src="https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+
+                {/* Personal Message */}
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm text-foreground text-center">
+                    Hi {firstName}! We're working on your report and will notify you when it's ready.
+                    <br />
+                    <span className="font-medium">{email}</span>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Ready state message */}
+            {isReportReady && (
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-sm text-foreground text-center">
+                  Hi {firstName}! Your report is ready to view. We've also sent it to your email.
+                </p>
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (
@@ -322,35 +352,6 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                 >
                   Retry
                 </Button>
-              </div>
-            )}
-
-            {/* Action Buttons - Only show when report is NOT ready */}
-            {!isReportReady && (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4 animate-pulse" />
-                    <span>Estimated time: 2-3 minutes</span>
-                  </div>
-                  <Button 
-                    onClick={handleCreateAnother}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    Create Another Report
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Polling Status */}
-            {isPolling && !isReportReady && (
-              <div className="text-xs text-muted-foreground border-t pt-4">
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                  <span>Checking for updates...</span>
-                </div>
               </div>
             )}
           </CardContent>
