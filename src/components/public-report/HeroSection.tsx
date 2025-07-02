@@ -80,11 +80,9 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
         >
           <Button 
             onClick={handleClick}
-            size="lg"
-            variant="outline"
-            className="h-16 px-12 text-lg font-normal border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white transition-all duration-300 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105"
+            className="bg-primary text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary-hover transition-colors duration-200 shadow-lg"
           >
-            Begin
+            Unlock
           </Button>
         </motion.div>
         
