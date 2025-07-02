@@ -28,6 +28,7 @@ import About from './pages/About';
 import Legal from './pages/Legal';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
+import SSRErrorBoundary from './components/SSRErrorBoundary';
 import Features from './pages/Features';
 import WebsiteBuilder from './pages/dashboard/WebsiteBuilder';
 import CalendarPage from './pages/dashboard/CalendarPage';
@@ -46,13 +47,22 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  // SSR Environment Detection
+  if (typeof window === 'undefined') {
+    console.log('[🧠 SSR ENVIRONMENT DETECTED]');
+    console.log('[🧠 SSR] App.tsx is rendering on server');
+  } else {
+    console.log('[🌐 CLIENT ENVIRONMENT DETECTED]');
+  }
+
   // Guard against SSR - only render full app in browser
   if (typeof window === 'undefined') {
     return <div>Loading...</div>;
   }
 
   return (
-    <ErrorBoundary>
+    <SSRErrorBoundary>
+      <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <Router>
           <NavigationStateProvider>
@@ -106,7 +116,8 @@ function App() {
           </NavigationStateProvider>
         </Router>
       </QueryClientProvider>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </SSRErrorBoundary>
   );
 }
 

@@ -10,6 +10,18 @@ import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 
 const PublicReport = () => {
+  // SSR Debug Logging
+  if (typeof window === 'undefined') {
+    console.log('[🧠 SSR] PublicReport.tsx is rendering on server');
+  } else {
+    console.log('[🌐 CLIENT] PublicReport.tsx is rendering on client');
+  }
+
+  // Hard fail test for SSR debugging (uncomment to test error boundary)
+  // if (typeof window === 'undefined') {
+  //   throw new Error('🔥 Force fail on SSR to test error boundary');
+  // }
+
   try {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isClientMobile, setIsClientMobile] = useState(false);
