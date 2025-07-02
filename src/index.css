@@ -1,10 +1,20 @@
+/* -------------------------------------------------------------------------- */
+/*  GLOBAL STYLES – Tailwind entry point                                       */
+/*  ------------------------------------------------------------------------- */
+/*  This file is consumed by PostCSS (with autoprefixer + cssnano in prod).    */
+/*  All custom utilities are namespaced to avoid collisions with Tailwind.     */
+/* -------------------------------------------------------------------------- */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* -------------------------------------------------------------------------- */
+/*  CSS CUSTOM PROPERTIES                                                     */
+/*  ------------------------------------------------------------------------- */
 @layer base {
   :root {
+    /* Theme palette (HSL) */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -25,13 +35,15 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+
+    /* Data‑viz palette */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    
-    /* Dynamic viewport height - initialized by JS */
+
+    /* Dynamic viewport unit – updated via JS to fix mobile 100vh bugs */
     --vh: 1vh;
   }
 
@@ -55,201 +67,108 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
   }
-}
 
-@layer base {
-  * {
+  /* Apply base colours */
+  *,
+  ::before,
+  ::after {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased; /* ensure font smoothing */
   }
 }
 
-/* Enhanced mobile viewport height utilities using --vh custom property */
-.h-screen-safe {
-  height: calc(var(--vh, 1vh) * 100);
+/* -------------------------------------------------------------------------- */
+/*  MOBILE VIEWPORT UTILS (Fix for iOS Safari 100vh)                           */
+/* -------------------------------------------------------------------------- */
+@layer utilities {
+  .h-screen-safe       { height: calc(var(--vh, 1vh) * 100); }
+  .min-h-screen-safe   { min-height: calc(var(--vh, 1vh) * 100); }
+  .max-h-screen-safe   { max-height: calc(var(--vh, 1vh) * 100); }
 }
 
-.min-h-screen-safe {
-  min-height: calc(var(--vh, 1vh) * 100);
-}
-
-.max-h-screen-safe {
-  max-height: calc(var(--vh, 1vh) * 100);
-}
-
-/* iOS Safari fixes - prevent auto-zoom and improve touch behavior */
+/* -------------------------------------------------------------------------- */
+/*  GLOBAL RESET / QUALITY‑OF‑LIFE FIXES                                      */
+/* -------------------------------------------------------------------------- */
 html, body {
-  touch-action: manipulation;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: none;
+  touch-action: manipulation;            /* Remove double‑tap zoom delay */
+  overscroll-behavior: contain;          /* Disable pull‑to‑refresh */
+  -webkit-overflow-scrolling: touch;     /* Momentum scroll iOS */
 }
 
-/* Universal iOS auto-zoom prevention - comprehensive input targeting */
+/* Prevent iOS from auto‑zooming form fields */
 input,
-input[type="text"],
-input[type="email"],
-input[type="date"],
-input[type="time"],
-input[type="search"],
-input[type="tel"],
-input[type="url"],
-input[type="password"],
-textarea,
-select {
-  font-size: 16px !important;
-  transform-origin: left top;
-  transition: none;
+select,
+textarea {
+  font-size: 16px;                       /* Min font‑size to avoid zoom */
 }
 
-/* Google Maps autocomplete comprehensive iOS fixes */
-gmp-place-autocomplete,
-#gmp-autocomplete-container {
-  background-color: transparent !important;
-  background: transparent !important;
+/* Scroll lock helper applied via JS while drawer is open */
+.drawer-scroll-lock {
+  position: fixed !important;
+  inset: 0 !important;
+  overflow: hidden !important;
 }
 
-/* Target Google's shadow DOM parts for iOS */
+/* Ensure React root also freezes */
+.drawer-scroll-lock #root {
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* -------------------------------- KEYBOARD FIX --------------------------- */
+@supports (height: env(keyboard-inset-height)) {
+  .keyboard-visible {
+    padding-bottom: env(keyboard-inset-height);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  GOOGLE MAPS AUTOCOMPLETE PATCHES (mobile)                                 */
+/* -------------------------------------------------------------------------- */
+/* Style shadow‑DOM parts consistently across themes */
 gmp-place-autocomplete::part(input) {
-  background-color: transparent !important;
   background: transparent !important;
   font-size: 16px !important;
 }
 
 gmp-place-autocomplete::part(results-container) {
-  z-index: 9999 !important;
-  background-color: white !important;
+  z-index: 9999 !important;              /* Ensure above Drawer */
+  background: hsl(var(--background)) !important;
 }
 
 gmp-place-autocomplete::part(result-item) {
-  background-color: white !important;
+  background: hsl(var(--background)) !important;
 }
 
-/* Mobile keyboard and scroll fixes with keyboard inset support */
-.keyboard-visible {
-  /* Enhanced keyboard handling - prevent content shifts */
-  overscroll-behavior: none;
-  touch-action: manipulation;
-  /* Support for keyboard inset height on supporting browsers */
-  padding-bottom: env(keyboard-inset-height, 0px);
-}
-
-/* Google Maps autocomplete fixes - Unified approach */
+/* Container helpers for layouts embedding Maps autocomplete */
 .mobile-autocomplete-container,
 .mobile-autocomplete-isolated {
   position: relative;
   isolation: isolate;
-  contain: layout style;
-  overflow: visible !important; /* ✅ Allow popup visibility */
+  overflow: visible !important;          /* Allow dropdown */
 }
 
-/* Force Google's dropdown z-index higher */
-gmp-place-autocomplete::part(results-container) {
-  z-index: 9999 !important;
-}
-
-/* Ensure Google autocomplete popup doesn't interfere with layout */
-@media (max-width: 768px) {
-  /* Enhanced Google Maps autocomplete popup styling */
-  gmp-place-autocomplete {
-    font-size: 16px !important;
-    border: none !important;
-    outline: none !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    position: relative !important;
-    z-index: 1 !important;
-  }
-  
-  /* Stabilize autocomplete container */
-  .mobile-autocomplete-container,
-  .mobile-autocomplete-isolated {
-    height: 48px !important;
-    min-height: 48px !important;
-    transform: translateZ(0);
-    overflow: visible !important; /* ✅ Critical for popup visibility */
-  }
-  
-  /* Isolate Google Maps popup from drawer context */
-  .mobile-autocomplete-isolated gmp-place-autocomplete {
-    contain: layout style;
-    transform: translateZ(0);
-  }
-  
-  /* Prevent Google popup from affecting drawer scroll */
-  .mobile-autocomplete-isolated {
-    overscroll-behavior: contain;
-    scroll-behavior: auto;
-  }
-  
-  /* Mobile input focus improvements */
-  input:focus,
-  textarea:focus {
-    transform: none;
-    outline: none;
-    box-shadow: 0 0 0 2px hsl(var(--ring));
-  }
-  
-  /* Ensure natural document flow */
-  .mobile-form-container {
-    position: relative;
-    width: 100%;
-    height: auto;
-    overflow: visible;
-  }
-  
-  /* Enhanced drawer stability during autocomplete with --vh support */
-  [data-vaul-drawer-wrapper] {
-    transform: translateZ(0);
-    contain: layout;
-    height: calc(var(--vh, 1vh) * 100);
-  }
-  
-  /* Prevent Google Maps from interfering with drawer positioning */
-  [data-vaul-drawer] {
-    isolation: isolate;
-    contain: layout style;
-    height: calc(var(--vh, 1vh) * 100);
-    max-height: calc(var(--vh, 1vh) * 100);
+/* -------------------------------------------------------------------------- */
+/*  ACCESSIBILITY & MOTION PREFERENCES                                        */
+/* -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* Enhanced mobile layout stability using --vh */
-html {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  /* Prevent elastic scrolling on iOS */
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: none;
-}
-
-/* Context-specific scroll management for drawer states only */
-.drawer-scroll-lock {
-  position: fixed !important;
-  width: 100% !important;
-  height: calc(var(--vh, 1vh) * 100) !important;
-  overflow: hidden !important;
-}
-
-.drawer-scroll-lock #root {
-  height: calc(var(--vh, 1vh) * 100) !important;
-  max-height: calc(var(--vh, 1vh) * 100) !important;
-  overflow: hidden !important;
-}
-
-/* Additional keyboard inset height support for modern browsers */
-@supports (height: env(keyboard-inset-height)) {
-  .keyboard-visible {
-    height: calc(calc(var(--vh, 1vh) * 100) - env(keyboard-inset-height, 0px));
-    max-height: calc(calc(var(--vh, 1vh) * 100) - env(keyboard-inset-height, 0px));
-  }
-}
+/* -------------------------------------------------------------------------- */
+/*  END                                                                      */
+/* -------------------------------------------------------------------------- */
