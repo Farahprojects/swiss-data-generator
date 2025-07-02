@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Control, Controller, FieldErrors, UseFormSetValue } from 'react-hook-form';
+import { Control, Controller, FieldErrors, UseFormSetValue, useWatch } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -33,44 +33,28 @@ const ReportTypeSelector = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
 
-  // Auto-scroll logic - disabled to prevent conflicts with specific card clicks
-  // useEffect(() => {
-  //   const checkCompleteSelection = () => {
-  //     // Get current form values through the control
-  //     const currentValues = control._formValues;
-  //     const reportCategory = currentValues?.reportCategory;
-  //     const essenceType = currentValues?.essenceType;
-  //     const relationshipType = currentValues?.relationshipType;
-  //     const reportType = currentValues?.reportType;
+  // Watch form values reactively
+  const watchedCategory = useWatch({ control, name: 'reportCategory' });
+  const watchedEssence = useWatch({ control, name: 'essenceType' });
+  const watchedRelationship = useWatch({ control, name: 'relationshipType' });
+  const watchedSnapshot = useWatch({ control, name: 'reportType' });
 
-  //     // Check if selection is complete based on category
-  //     let isSelectionComplete = false;
+  // Reliable auto-scroll using watched form values
+  useEffect(() => {
+    const shouldScroll =
+      (watchedCategory === 'the-self' && watchedEssence) ||
+      (watchedCategory === 'compatibility' && watchedRelationship) ||
+      (watchedCategory === 'snapshot' && watchedSnapshot);
 
-  //     if (reportCategory === 'the-self' && essenceType) {
-  //       isSelectionComplete = true;
-  //     } else if (reportCategory === 'compatibility' && relationshipType) {
-  //       isSelectionComplete = true;
-  //     } else if (reportCategory === 'snapshot' && reportType) {
-  //       isSelectionComplete = true;
-  //     }
-
-  //     if (isSelectionComplete && typeof window !== 'undefined') {
-  //       // Small delay to ensure the DOM is updated
-  //       setTimeout(() => {
-  //         const nextStep = document.querySelector('[data-step="2"]');
-  //         if (nextStep) {
-  //           nextStep.scrollIntoView({ 
-  //             behavior: 'smooth', 
-  //             block: 'start' 
-  //           });
-  //         }
-  //       }, 300);
-  //     }
-  //   };
-
-  //   // Check whenever any relevant field changes
-  //   checkCompleteSelection();
-  // }, [selectedReportType, selectedCategory, selectedSubCategory, control]);
+    if (shouldScroll) {
+      const el = document.querySelector('[data-step="2"]');
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100); // small delay to allow DOM to fully render
+      }
+    }
+  }, [watchedCategory, watchedEssence, watchedRelationship, watchedSnapshot]);
 
   // Only show options after user has actually selected a category
   const showSnapshotSubCategories = selectedCategory === 'snapshot';
@@ -212,19 +196,6 @@ const ReportTypeSelector = ({
                              type="button"
                               onClick={() => {
                                 field.onChange(type.value);
-                                
-                                // Immediate scroll for Professional card
-                                if (type.value === 'professional') {
-                                  setTimeout(() => {
-                                    const nextStep = document.querySelector('[data-step="2"]');
-                                    if (nextStep) {
-                                      nextStep.scrollIntoView({ 
-                                        behavior: 'smooth', 
-                                        block: 'center' 
-                                      });
-                                    }
-                                  }, 100);
-                                }
                               }}
                              className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                                isSelected 
