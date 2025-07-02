@@ -81,16 +81,16 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
         
         <div className="flex justify-center items-center gap-8 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
+            <Star className="h-4 w-4" />
+            <span>AI-Analyzed Psychology</span>
+          </div>
+          <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span>Instant Delivery</span>
           </div>
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            <span>Secure Payment</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Star className="h-4 w-4" />
-            <span>Professional Quality</span>
+            <span>Fast, Focused Results</span>
           </div>
         </div>
       </div>
