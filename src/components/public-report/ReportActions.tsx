@@ -1,9 +1,8 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
 
 interface ReportActionsProps {
   onCopyToClipboard: () => void;
@@ -20,30 +19,6 @@ export const ReportActions = ({
   reportPdfData,
   isCopyCompleted
 }: ReportActionsProps) => {
-  const { toast } = useToast();
-
-  const handleChatGPTClick = async () => {
-    if (isCopyCompleted) {
-      // User has already copied the report, proceed to ChatGPT
-      window.open('https://chatgpt.com/', '_blank');
-    } else {
-      // User hasn't copied yet, copy the report first
-      onCopyToClipboard();
-      
-      // Show success message for 2 seconds
-      toast({
-        title: "Report copied!",
-        description: "Your report has been copied to clipboard. Redirecting to ChatGPT...",
-        duration: 2000,
-      });
-
-      // Wait 2 seconds then redirect to ChatGPT
-      setTimeout(() => {
-        window.open('https://chatgpt.com/', '_blank');
-      }, 2000);
-    }
-  };
-
   return (
     <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
       <Card>
@@ -98,25 +73,34 @@ export const ReportActions = ({
       <Card>
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto transition-all duration-200 bg-gray-100">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto transition-all duration-200 ${
+              isCopyCompleted ? 'bg-gray-100' : 'bg-gray-50'
+            }`}>
               <img 
                 src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
                 alt="ChatGPT" 
-                className="h-6 w-6"
+                className={`h-6 w-6 transition-opacity duration-200 ${!isCopyCompleted ? 'opacity-50' : ''}`}
               />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Analyze with ChatGPT</h3>
+              <h3 className={`font-semibold transition-colors duration-200 ${isCopyCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
+                Analyze with ChatGPT
+              </h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {isCopyCompleted 
-                  ? 'Open ChatGPT to analyze your copied report'
-                  : 'Copy your report and open ChatGPT for deeper insights'
+                  ? 'Paste your copied report into our specialized ChatGPT for deeper insights'
+                  : 'Copy your report first to unlock ChatGPT analysis'
                 }
               </p>
             </div>
             <Button 
-              onClick={handleChatGPTClick}
-              className="w-full font-inter transition-all duration-200 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md"
+              onClick={onChatGPTClick}
+              disabled={!isCopyCompleted}
+              className={`w-full font-inter transition-all duration-200 ${
+                isCopyCompleted 
+                  ? 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md' 
+                  : 'bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60'
+              }`}
             >
               <img 
                 src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
