@@ -145,8 +145,8 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
         </div>
 
         <div className="space-y-6 w-full">
-          {/* Voice Recording Section - Made more prominent */}
-          <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border-2 border-primary/20 p-4 space-y-4 sticky top-0 z-10 backdrop-blur-sm">
+          {/* Voice Recording Section - Enhanced visibility */}
+          <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border-2 border-primary/30 p-6 space-y-4 sticky top-4 z-30 backdrop-blur-md shadow-lg bg-white/95">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Mic className="w-5 h-5 text-primary" />
@@ -156,10 +156,10 @@ const Step2BirthDetails = ({ register, setValue, watch, errors, onNext, onPrev }
                 type="button"
                 onClick={toggleRecording}
                 disabled={isProcessing || isProcessingVoice}
-                className={`p-4 rounded-full transition-all duration-200 shadow-lg ${
+                className={`p-4 rounded-full transition-all duration-200 shadow-lg border-2 ${
                   isRecording 
-                    ? 'bg-red-500 text-white animate-pulse shadow-red-200' 
-                    : 'bg-primary text-white hover:bg-primary/90 hover:scale-105'
+                    ? 'bg-red-500 text-white animate-pulse shadow-red-300 border-red-300' 
+                    : 'bg-primary text-white hover:bg-primary/90 hover:scale-105 border-primary/20'
                 } ${(isProcessing || isProcessingVoice) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 aria-label={isRecording ? 'Stop recording' : 'Start recording'}
                 title={isRecording ? 'Stop recording' : 'Record your details'}
