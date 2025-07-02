@@ -33,66 +33,40 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
     {
       type: 'Essence',
       icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
-      title: 'The Self Report',
+      title: 'Personal Insights',
       priceKey: 'essence_personal',
       bestFor: 'Self-understanding',
-      description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
-      details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
+      isRecommended: true,
+      description: 'Discover who you are and what drives you',
+      details: 'Understand your core personality, decision-making style, and natural strengths. Perfect for personal growth and self-awareness.',
       subTypes: [
-        'Personal – Self-awareness, emotional behavior, inner wiring',
-        'Professional – How you operate at work: decision-making, productivity, and team dynamics. Useful for hiring, coaching, or leadership insight.', 
-        'Relational – How you show up in relationships (patterns, openness, tension)'
+        'Personal – Your authentic self and emotional patterns',
+        'Professional – How you work best and lead others', 
+        'Relational – Your relationship style and communication needs'
       ]
     },
     {
       type: 'Sync',
       icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
-      title: 'Compatibility Report',
+      title: 'Compatibility Analysis',
       priceKey: 'sync',
-      bestFor: 'Compatibility',
-      description: 'How your energy aligns with someone - connection, tension, and flow.',
-      details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
+      bestFor: 'Relationships',
+      description: 'See how you connect with someone else',
+      details: 'Analyze relationship dynamics, compatibility, and areas of harmony or challenge with another person.',
       subTypes: [
-        'Personal Sync – Romantic, emotional, or close social connection',
-        'Professional Sync – Team dynamics, leadership compatibility, working styles'
+        'Personal Sync – Romantic and close relationships',
+        'Professional Sync – Work partnerships and team dynamics'
       ]
     },
     {
       type: 'Monthly',
       icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
-      title: 'Energy Month Report',
+      title: 'Monthly Forecast',
       priceKey: 'monthly',
-      bestFor: 'Monthly planning',
-      description: 'Your personalized forecast for the current month',
-      details: 'Get monthly themes, key opportunities, and timing guidance for important decisions and activities.'
-    },
-    {
-      type: 'Mindset',
-      icon: <Brain className="h-5 w-5 text-primary inline-block mr-1" />,
-      title: 'Mindset Report',
-      priceKey: 'mindset',
-      bestFor: 'Mental clarity',
-      description: 'Mood + mental clarity snapshot',
-      details: 'Get insights into your current mental state, thought patterns, and cognitive strengths for better decision-making.'
-    },
-    {
-      type: 'Focus',
-      icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
-      title: 'Focus Report',
-      priceKey: 'focus',
-      bestFor: 'Productivity',
-      description: 'Best hours today for deep work or rest',
-      details: 'Identify your optimal times for concentration, productivity, and rest based on your personal energy cycles.'
-    },
-    {
-      type: 'Flow',
-      icon: <Repeat className="h-5 w-5 text-primary inline-block mr-1" />,
-      title: 'Flow Report',
-      priceKey: 'flow',
-      bestFor: 'Emotional rhythm',
-      description: 'Creative/emotional openness over 7 days',
-      details: 'Track your creative and emotional rhythms throughout the week to optimize your creative output and emotional well-being.'
-    },
+      bestFor: 'Planning ahead',
+      description: 'Know the best times to act this month',
+      details: 'Get personalized timing for important decisions, key opportunities, and monthly themes.'
+    }
   ];
 
   useEffect(() => {
@@ -143,12 +117,13 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
           </DialogClose>
 
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center mb-6">
-              Report Guide – What Each Report Gives You
+            <DialogTitle className="text-3xl font-light text-center mb-2">
+              Choose Your Report
             </DialogTitle>
+            <p className="text-gray-600 text-center">Select the insights that matter most to you right now</p>
           </DialogHeader>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-6">
             {reportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
               const price = pricing[report.priceKey];
@@ -156,44 +131,58 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
               return (
                 <Card 
                   key={report.type} 
-                  className={`border transition-all duration-300 ${
+                  className={`border transition-all duration-300 relative ${
                     isTargeted 
                       ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20' 
-                      : 'border-muted'
+                      : report.isRecommended 
+                      ? 'border-primary bg-primary/5 shadow-md' 
+                      : 'border-muted hover:border-primary/50'
                   }`}
                   ref={isTargeted ? targetRef : null}
                 >
-                  <CardContent className="p-6 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-lg text-primary flex items-center">
-                        {report.icon}
-                        {report.title}
-                      </h3>
-                      <span className="font-bold text-lg text-primary bg-primary/10 px-2 py-1 rounded">
+                  {report.isRecommended && (
+                    <div className="absolute -top-3 left-6">
+                      <span className="bg-primary text-white text-xs px-3 py-1 rounded-full font-medium">
+                        Most Popular
+                      </span>
+                    </div>
+                  )}
+                  
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-bold text-xl text-primary flex items-center mb-1">
+                          {report.icon}
+                          {report.title}
+                        </h3>
+                        <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                          Best for {report.bestFor}
+                        </span>
+                      </div>
+                      <span className="font-bold text-2xl text-primary">
                         {isLoading ? '...' : formatPrice(price)}
                       </span>
                     </div>
 
-                    <span className="text-xs text-white bg-primary px-2 py-0.5 rounded-full inline-block w-fit">
-                      Best for {report.bestFor}
-                    </span>
-
-                    <p className="text-sm text-muted-foreground italic">
-                      "{report.description}"
+                    <p className="text-lg text-gray-700 mb-3 font-medium">
+                      {report.description}
                     </p>
 
-                    <p className="text-sm text-foreground">
+                    <p className="text-sm text-gray-600 mb-4">
                       {report.details}
                     </p>
 
                     {report.subTypes && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-muted-foreground mt-2 mb-1">
-                          Included Report Styles
+                      <div className="border-t pt-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                          Report Types Included:
                         </h4>
-                        <ul className="space-y-1 pl-4 list-disc text-sm">
+                        <ul className="space-y-1 text-sm">
                           {report.subTypes.map((subType, index) => (
-                            <li key={index}>{formatSubType(subType)}</li>
+                            <li key={index} className="flex items-start">
+                              <span className="text-primary mr-2">•</span>
+                              {formatSubType(subType)}
+                            </li>
                           ))}
                         </ul>
                       </div>
@@ -204,9 +193,9 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
             })}
           </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Still not sure? All reports provide valuable insights – choose the one that resonates most with your current needs.
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500">
+              Not sure which one? Start with Personal Insights – it&apos;s our most comprehensive report.
             </p>
           </div>
         </DialogContent>
