@@ -206,18 +206,33 @@ const ReportTypeSelector = ({
                         const IconComponent = type.icon;
                         const isSelected = field.value === type.value;
                         
-                        return (
-                          <motion.button
-                            key={type.value}
-                            type="button"
-                            onClick={() => field.onChange(type.value)}
-                            className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
-                              isSelected 
-                                ? 'border-primary shadow-lg bg-primary/5' 
-                                : 'border-neutral-200 hover:border-neutral-300'
-                            }`}
-                            whileTap={{ scale: 0.98 }}
-                          >
+                         return (
+                           <motion.button
+                             key={type.value}
+                             type="button"
+                             onClick={() => {
+                               field.onChange(type.value);
+                               
+                               // Auto-scroll to step 2 if this is the second card (Professional)
+                               if (type.value === 'professional') {
+                                 setTimeout(() => {
+                                   const nextStep = document.querySelector('[data-step="2"]');
+                                   if (nextStep) {
+                                     nextStep.scrollIntoView({ 
+                                       behavior: 'smooth', 
+                                       block: 'start' 
+                                     });
+                                   }
+                                 }, 300);
+                               }
+                             }}
+                             className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
+                               isSelected 
+                                 ? 'border-primary shadow-lg bg-primary/5' 
+                                 : 'border-neutral-200 hover:border-neutral-300'
+                             }`}
+                             whileTap={{ scale: 0.98 }}
+                           >
                             <div className="flex gap-4 items-center">
                               <div className="bg-white shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
                                 <IconComponent className="h-6 w-6 text-gray-700" />
