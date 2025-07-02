@@ -87,7 +87,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
     isRecording,
     isProcessing: isSTTProcessing,
     toggleRecording,
-    reset,
   } = useSpeechToText(
     (transcript) => {
       setVoiceText(transcript);
@@ -281,7 +280,6 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  reset();
                   setVoiceText('');
                 }}
               >

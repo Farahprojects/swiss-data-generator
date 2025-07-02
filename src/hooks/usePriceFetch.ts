@@ -29,8 +29,9 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
   }
   
   // Handle sync/compatibility reports
-  if ((reportType === 'sync' || reportType === 'compatibility') && relationshipType) {
-    const mappedId = `sync_${relationshipType}`;
+  if (reportType === 'sync' || reportType === 'compatibility') {
+    const relationship = relationshipType || 'personal'; // Default to personal if not specified
+    const mappedId = `sync_${relationship}`;
     return mappedId;
   }
   
