@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Star, Clock, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ interface HeroSectionProps {
   onGetReportClick?: () => void;
 }
 
+// Test comment - checking GitHub sync functionality
 const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
   // Banner images for smooth transitions - from explore more section
   const bannerImages = [
