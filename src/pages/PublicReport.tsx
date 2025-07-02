@@ -104,8 +104,8 @@ const PublicReport = () => {
       return (
         <div className="min-h-screen bg-background">
           <HeroSection onGetReportClick={handleGetReportClick} />
-          <TestsSection />
           <TestimonialsSection />
+          <TestsSection />
           {!isClientMobile && (
             <div id="report-form">
               <ReportForm />

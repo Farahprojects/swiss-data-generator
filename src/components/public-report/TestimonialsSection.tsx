@@ -6,7 +6,7 @@ const testimonials = [
     quote: "Honestly, I didn't expect it to go that deep. It didn't just tell me things — it made me feel seen.",
     name: "Jess M.",
     title: "Creative Director",
-    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b1af?w=150&h=150&fit=crop&crop=face"
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face"
   },
   {
     quote: "Way more insightful than a horoscope. It broke down patterns I've struggled with for years, in minutes.",
