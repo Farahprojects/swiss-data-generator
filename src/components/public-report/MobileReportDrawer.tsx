@@ -10,12 +10,6 @@ import { X } from 'lucide-react';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
-import { useSpeechToText } from '@/hooks/useSpeechToText';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
-import { Mic } from 'lucide-react';
-import clsx from 'clsx';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
@@ -76,8 +70,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
   const [reportData, setReportData] = useState<{ content: string; pdfData?: string | null } | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [voiceText, setVoiceText] = useState('');
-  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
 
   // -------------------------------- Hooks ----------------------------------
   useSmoothScrollPolyfill();
@@ -93,19 +85,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
   const { isProcessing, submitReport } = useReportSubmission();
   const { promoValidation, isValidatingPromo } = usePromoValidation();
-
-  // Voice recording functionality
-  const {
-    isRecording,
-    isProcessing: isSTTProcessing,
-    toggleRecording,
-  } = useSpeechToText(
-    (transcript) => {
-      setVoiceText(transcript);
-      setIsProcessingVoice(false);
-    },
-    () => setIsProcessingVoice(false)
-  );
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -270,75 +249,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         >
           <X className="h-4 w-4" />
         </button>
-
-        {/* Mic button - positioned high up */}
-        <button
-          type="button"
-          onClick={toggleRecording}
-          disabled={isSTTProcessing || isProcessingVoice}
-          aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-          title={isRecording ? 'Stop recording' : 'Record your details by voice'}
-          className={clsx(
-            'absolute left-4 top-3 flex items-center justify-center rounded-full border-2 shadow-lg transition-transform duration-200 z-10',
-            isRecording
-              ? 'bg-red-500 text-white animate-pulse shadow-red-300 border-red-400'
-              : 'bg-primary text-white hover:bg-primary/90 border-primary/20',
-            (isSTTProcessing || isProcessingVoice) && 'opacity-50 cursor-not-allowed'
-          )}
-          style={{ width: 48, height: 48, touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
-        >
-          <Mic className="w-5 h-5" />
-        </button>
-
-        {/* Processing overlay */}
-        {(isSTTProcessing || isProcessingVoice) && (
-          <ProcessingIndicator
-            className="absolute top-16 left-1/2 -translate-x-1/2 z-50"
-            message="Processing speech..."
-          />
-        )}
-
-        {/* Transcript overlay (appears when voiceText exists) */}
-        <AnimatePresence>
-          {voiceText && (
-            <motion.div
-              initial={{ y: '-100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '-100%' }}
-              transition={{ type: 'tween', duration: 0.25 }}
-              className="absolute z-40 top-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-b border-gray-200 p-4 space-y-2 shadow-xl"
-            >
-              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                <Mic className="h-4 w-4 text-primary" /> Recorded Details
-              </h3>
-              <Textarea
-                value={voiceText}
-                onChange={(e) => setVoiceText(e.target.value)}
-                rows={3}
-                className="resize-none"
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setVoiceText('');
-                  }}
-                >
-                  Clear
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    /* Coming soon functionality */
-                  }}
-                >
-                  Auto‑fill (BETA)
-                </Button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ------------------------------ FORM VIEW ------------------------- */}
         {currentView === 'form' && (
