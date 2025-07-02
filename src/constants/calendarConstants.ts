@@ -1,4 +1,4 @@
-
+//
 import { EventType } from "@/types/calendar";
 
 // Limited to 5 official color hex codes for dot selector
