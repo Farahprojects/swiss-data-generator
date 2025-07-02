@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import HeroSection from '@/components/public-report/HeroSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
-import TestimonialsSection from '@/components/public-report/TestimonialsSection';
+
 import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
@@ -114,20 +114,20 @@ const PublicReport = () => {
                   See What You'll Get
                 </h2>
                 <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                  Here's a real psychological profile generated for Peter Farrah - see the depth and actionable insights you'll receive.
+                  Here's a real psychological profile generated for Peter Farah - see the depth and actionable insights you'll receive.
                 </p>
               </div>
               
               <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
                 <div className="mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Peter Farrah's Cognitive Processing Profile</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Peter Farah's Cognitive Processing Profile</h3>
                   <p className="text-gray-600">Personal Essence Report • Generated in 2 minutes</p>
                 </div>
                 
                 <div className="prose prose-lg max-w-none">
-                  <div className="bg-blue-50 p-6 rounded-lg mb-6">
-                    <h4 className="text-lg font-semibold text-blue-900 mb-2">Primary Style: Creative Visionary (Big-Picture)</h4>
-                    <h4 className="text-lg font-semibold text-blue-900 mb-3">Secondary Style: Structured Strategist (Process)</h4>
+                  <div className="bg-gray-50 p-6 rounded-lg mb-6 border border-gray-200">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Primary Style: Creative Visionary (Big-Picture)</h4>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Secondary Style: Structured Strategist (Process)</h4>
                   </div>
                   
                   <div className="space-y-6">
@@ -153,9 +153,9 @@ const PublicReport = () => {
                     </div>
                   </div>
                   
-                  <div className="mt-8 p-6 bg-green-50 rounded-lg">
-                    <h4 className="text-lg font-semibold text-green-900 mb-2">Summary</h4>
-                    <p className="text-green-800">
+                  <div className="mt-8 p-6 bg-gray-100 rounded-lg border border-gray-200">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Summary</h4>
+                    <p className="text-gray-800">
                       Peter's cognitive processing style is a harmonious blend of creativity and structure. By embracing his natural cognitive styles, Peter can navigate challenges with agility and bring his visionary ideas to fruition.
                     </p>
                   </div>
@@ -175,7 +175,114 @@ const PublicReport = () => {
           </div>
         </section>
 
-        <TestimonialsSection />
+        {/* Sync Pro Reports Section */}
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                  Sync Pro: Relationship Compatibility
+                </h2>
+                <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                  See how two people connect, communicate, and complement each other. Our Sync Pro analysis reveals the deeper dynamics between partners.
+                </p>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Peter's Profile */}
+                <div className="bg-gray-50 rounded-2xl p-8 border border-gray-200">
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Peter Farah</h3>
+                    <p className="text-gray-600">Creative Visionary • Structured Strategist</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Communication Style</h4>
+                      <p className="text-gray-700 text-sm">Expressive and conceptual, prefers big-picture discussions with room for structured planning.</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Decision Making</h4>
+                      <p className="text-gray-700 text-sm">Balances intuitive insights with methodical analysis, values both innovation and process.</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Relationship Needs</h4>
+                      <p className="text-gray-700 text-sm">Thrives with partners who appreciate both creative freedom and collaborative planning.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Olivia's Profile */}
+                <div className="bg-gray-50 rounded-2xl p-8 border border-gray-200">
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Olivia Chen</h3>
+                    <p className="text-gray-600">Intuitive Connector • Detail Orchestrator</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Communication Style</h4>
+                      <p className="text-gray-700 text-sm">Empathetic and thorough, excels at reading between the lines and organizing details.</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Decision Making</h4>
+                      <p className="text-gray-700 text-sm">Combines emotional intelligence with systematic execution, values harmony and efficiency.</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Relationship Needs</h4>
+                      <p className="text-gray-700 text-sm">Values partners who bring vision while appreciating her attention to emotional nuances.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Compatibility Summary */}
+              <div className="mt-12 bg-primary/5 rounded-2xl p-8 border border-primary/20">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">Their Sync Dynamic</h3>
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-primary">92%</span>
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Vision Alignment</h4>
+                    <p className="text-gray-600 text-sm">Both value growth and structured progress toward shared goals.</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-primary">88%</span>
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Communication Flow</h4>
+                    <p className="text-gray-600 text-sm">Peter's big picture thinking complements Olivia's detail orientation perfectly.</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-primary">95%</span>
+                    </div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Growth Potential</h4>
+                    <p className="text-gray-600 text-sm">Their different strengths create a powerful dynamic for mutual development.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center mt-12">
+                <button 
+                  onClick={handleGetReportClick}
+                  className="bg-primary text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary-hover transition-colors duration-200 shadow-lg"
+                >
+                  Get Your Sync Pro Report
+                </button>
+                <p className="text-gray-500 mt-4">Discover your relationship dynamics • 3 minute setup</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <TestsSection />
         {!isClientMobile && (
           <div id="report-form">
