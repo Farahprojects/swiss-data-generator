@@ -18,6 +18,7 @@ interface UseGuestReportStatusReturn {
   isLoading: boolean;
   isPolling: boolean;
   error: string | null;
+  caseNumber: string | null;
   startPolling: (email: string) => void;
   stopPolling: () => void;
 }
@@ -27,12 +28,56 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [caseNumber, setCaseNumber] = useState<string | null>(null);
   
   // Use refs for stable references that don't trigger re-renders
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollingEmailRef = useRef<string>('');
   const retryCountRef = useRef<number>(0);
   const maxRetriesRef = useRef<number>(10);
+  const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const logUserError = useCallback(async (email: string, errorType: string, errorMessage?: string) => {
+    try {
+      // Get the latest guest report for additional context
+      const { data: guestReport } = await supabase
+        .from('guest_reports')
+        .select('*')
+        .eq('email', email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      const { data: errorLog, error } = await supabase
+        .from('user_errors')
+        .insert({
+          guest_report_id: guestReport?.id || null,
+          email,
+          error_type: errorType,
+          price_paid: guestReport?.amount_paid || null,
+          error_message: errorMessage,
+          metadata: {
+            payment_status: guestReport?.payment_status,
+            has_report: guestReport?.has_report,
+            stripe_session_id: guestReport?.stripe_session_id,
+            report_type: guestReport?.report_type
+          }
+        })
+        .select('case_number')
+        .single();
+
+      if (error) {
+        console.error('❌ Failed to log user error:', error);
+        return null;
+      }
+
+      console.log('📝 Logged error with case number:', errorLog.case_number);
+      return errorLog.case_number;
+    } catch (err) {
+      console.error('❌ Error logging user error:', err);
+      return null;
+    }
+  }, []);
 
   const fetchReportStatus = useCallback(async (email: string) => {
     try {
@@ -90,6 +135,10 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
     }
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
     setIsPolling(false);
     setIsLoading(false);
     pollingEmailRef.current = '';
@@ -132,9 +181,22 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     pollIntervalRef.current = interval;
 
     // Auto-stop polling after 10 minutes (timeout)
-    setTimeout(() => {
+    pollTimeoutRef.current = setTimeout(async () => {
       if (pollingEmailRef.current === email) {
-        console.log('⏰ Polling timeout reached, stopping polling');
+        console.log('⏰ Polling timeout reached, logging error and stopping polling');
+        
+        // Log the timeout error and get case number
+        const case_number = await logUserError(
+          email, 
+          'polling_timeout', 
+          'Report generation timed out after 10 minutes'
+        );
+        
+        if (case_number) {
+          setCaseNumber(case_number);
+        }
+        
+        setError('Report generation is taking longer than expected. We have logged this issue for investigation.');
         stopPolling();
       }
     }, 10 * 60 * 1000);
@@ -154,6 +216,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     isLoading,
     isPolling,
     error,
+    caseNumber,
     startPolling,
     stopPolling,
   };

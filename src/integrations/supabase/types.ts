@@ -1392,6 +1392,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_errors: {
+        Row: {
+          case_number: string
+          created_at: string
+          email: string
+          error_message: string | null
+          error_type: string
+          guest_report_id: string | null
+          id: string
+          metadata: Json | null
+          price_paid: number | null
+          resolved: boolean
+          resolved_at: string | null
+        }
+        Insert: {
+          case_number?: string
+          created_at?: string
+          email: string
+          error_message?: string | null
+          error_type?: string
+          guest_report_id?: string | null
+          id?: string
+          metadata?: Json | null
+          price_paid?: number | null
+          resolved?: boolean
+          resolved_at?: string | null
+        }
+        Update: {
+          case_number?: string
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          error_type?: string
+          guest_report_id?: string | null
+          id?: string
+          metadata?: Json | null
+          price_paid?: number | null
+          resolved?: boolean
+          resolved_at?: string | null
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           client_view_mode: string | null

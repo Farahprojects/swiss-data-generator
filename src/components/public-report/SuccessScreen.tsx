@@ -79,7 +79,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // ---------------------------------------------------------------------------
   // Hooks & State
   // ---------------------------------------------------------------------------
-  const { report, isPolling, error, startPolling, stopPolling } = useGuestReportStatus();
+  const { report, isPolling, error, caseNumber, startPolling, stopPolling } = useGuestReportStatus();
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
 
@@ -171,11 +171,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   );
 
   const ErrorBlock = error && (
-    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-      <p className="text-sm text-red-600 mb-2">{error}</p>
-      <Button onClick={retry} variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-        Retry
-      </Button>
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <h3 className="text-lg font-semibold text-red-800 mb-2">
+        We're Looking Into This
+      </h3>
+      <p className="text-sm text-red-700 mb-3">{error}</p>
+      {caseNumber && (
+        <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-3">
+          <p className="text-sm font-medium text-red-800">
+            Case Number: <span className="font-mono">{caseNumber}</span>
+          </p>
+          <p className="text-xs text-red-600 mt-1">
+            Please reference this case number if you contact support.
+          </p>
+        </div>
+      )}
+      {!caseNumber && (
+        <Button onClick={retry} variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+          Retry
+        </Button>
+      )}
     </div>
   );
 
@@ -213,7 +228,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
 
             {/* Content while generating */}
-            {!isReady && (
+            {!isReady && !caseNumber && (
               <>
                 {Countdown}
                 <VideoLoader />
