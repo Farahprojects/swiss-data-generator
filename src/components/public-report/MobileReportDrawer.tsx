@@ -216,7 +216,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // -------------------------------------------------------------------------
   return (
-    <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false} role="dialog" aria-label="Report request drawer">
+    <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false}>
       <DrawerContent
         className={`flex flex-col rounded-none [&>div:first-child]:hidden ${keyboardVisible ? 'keyboard-visible' : ''}`}
         style={{

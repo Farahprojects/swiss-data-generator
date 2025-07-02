@@ -919,49 +919,49 @@ export type Database = {
       }
       report_logs: {
         Row: {
-          api_key: string
+          api_key: string | null
           client_id: string | null
           created_at: string | null
           duration_ms: number | null
-          endpoint: string
+          endpoint: string | null
           engine_used: string | null
           error_message: string | null
           id: string
           report_text: string | null
-          report_type: string
+          report_type: string | null
           status: string | null
           swiss_payload: Json | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          api_key: string
+          api_key?: string | null
           client_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
-          endpoint: string
+          endpoint?: string | null
           engine_used?: string | null
           error_message?: string | null
           id?: string
           report_text?: string | null
-          report_type: string
+          report_type?: string | null
           status?: string | null
           swiss_payload?: Json | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          api_key?: string
+          api_key?: string | null
           client_id?: string | null
           created_at?: string | null
           duration_ms?: number | null
-          endpoint?: string
+          endpoint?: string | null
           engine_used?: string | null
           error_message?: string | null
           id?: string
           report_text?: string | null
-          report_type?: string
+          report_type?: string | null
           status?: string | null
           swiss_payload?: Json | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
