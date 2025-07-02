@@ -33,44 +33,44 @@ const ReportTypeSelector = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
 
-  // Auto-scroll logic - now watches for complete selection
-  useEffect(() => {
-    const checkCompleteSelection = () => {
-      // Get current form values through the control
-      const currentValues = control._formValues;
-      const reportCategory = currentValues?.reportCategory;
-      const essenceType = currentValues?.essenceType;
-      const relationshipType = currentValues?.relationshipType;
-      const reportType = currentValues?.reportType;
+  // Auto-scroll logic - disabled to prevent conflicts with specific card clicks
+  // useEffect(() => {
+  //   const checkCompleteSelection = () => {
+  //     // Get current form values through the control
+  //     const currentValues = control._formValues;
+  //     const reportCategory = currentValues?.reportCategory;
+  //     const essenceType = currentValues?.essenceType;
+  //     const relationshipType = currentValues?.relationshipType;
+  //     const reportType = currentValues?.reportType;
 
-      // Check if selection is complete based on category
-      let isSelectionComplete = false;
+  //     // Check if selection is complete based on category
+  //     let isSelectionComplete = false;
 
-      if (reportCategory === 'the-self' && essenceType) {
-        isSelectionComplete = true;
-      } else if (reportCategory === 'compatibility' && relationshipType) {
-        isSelectionComplete = true;
-      } else if (reportCategory === 'snapshot' && reportType) {
-        isSelectionComplete = true;
-      }
+  //     if (reportCategory === 'the-self' && essenceType) {
+  //       isSelectionComplete = true;
+  //     } else if (reportCategory === 'compatibility' && relationshipType) {
+  //       isSelectionComplete = true;
+  //     } else if (reportCategory === 'snapshot' && reportType) {
+  //       isSelectionComplete = true;
+  //     }
 
-      if (isSelectionComplete && typeof window !== 'undefined') {
-        // Small delay to ensure the DOM is updated
-        setTimeout(() => {
-          const nextStep = document.querySelector('[data-step="2"]');
-          if (nextStep) {
-            nextStep.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start' 
-            });
-          }
-        }, 300);
-      }
-    };
+  //     if (isSelectionComplete && typeof window !== 'undefined') {
+  //       // Small delay to ensure the DOM is updated
+  //       setTimeout(() => {
+  //         const nextStep = document.querySelector('[data-step="2"]');
+  //         if (nextStep) {
+  //           nextStep.scrollIntoView({ 
+  //             behavior: 'smooth', 
+  //             block: 'start' 
+  //           });
+  //         }
+  //       }, 300);
+  //     }
+  //   };
 
-    // Check whenever any relevant field changes
-    checkCompleteSelection();
-  }, [selectedReportType, selectedCategory, selectedSubCategory, control]);
+  //   // Check whenever any relevant field changes
+  //   checkCompleteSelection();
+  // }, [selectedReportType, selectedCategory, selectedSubCategory, control]);
 
   // Only show options after user has actually selected a category
   const showSnapshotSubCategories = selectedCategory === 'snapshot';
@@ -213,21 +213,17 @@ const ReportTypeSelector = ({
                               onClick={() => {
                                 field.onChange(type.value);
                                 
-                                // Auto-scroll to step 2 if this is the Professional card
+                                // Immediate scroll for Professional card
                                 if (type.value === 'professional') {
-                                  console.log('Professional card clicked, attempting scroll...');
                                   setTimeout(() => {
                                     const nextStep = document.querySelector('[data-step="2"]');
-                                    console.log('Step 2 element found:', nextStep);
                                     if (nextStep) {
                                       nextStep.scrollIntoView({ 
                                         behavior: 'smooth', 
-                                        block: 'start' 
+                                        block: 'center' 
                                       });
-                                    } else {
-                                      console.log('Step 2 element not found');
                                     }
-                                  }, 500); // Increased delay to ensure DOM updates
+                                  }, 100);
                                 }
                               }}
                              className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
