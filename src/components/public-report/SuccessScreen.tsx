@@ -207,7 +207,7 @@ const SuccessScreen = ({ name, email, onViewReport, autoStartPolling = true }: S
                    muted 
                    playsInline
                  >
-                   <source src="https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video" type="video/mp4" />
+                   <source src="https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/loading-video.mp4" type="video/mp4" />
                    Your browser does not support the video tag.
                  </video>
                </div>
