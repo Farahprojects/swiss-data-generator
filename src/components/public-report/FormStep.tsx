@@ -11,7 +11,7 @@ const FormStep = ({ stepNumber, title, children, className = '', 'data-step': da
             <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0">
               {stepNumber}
             </div>
-            <h2 className="text-2xl font-semibold">{title}</h2>
+            <h2 className="text-3xl font-semibold">{title}</h2>
           </div>
           {children}
         </div>
