@@ -14,31 +14,31 @@ export const ReportRenderer: React.FC<ReportRendererProps> = ({ content, classNa
     switch (block.type) {
       case 'heading':
         return (
-          <h3 key={index} className="font-semibold text-gray-900 mt-6 mb-3 first:mt-0">
+          <h3 key={index} className="font-light text-gray-900 text-lg mt-8 mb-4 first:mt-0 tracking-tight leading-relaxed">
             {block.text}
           </h3>
         );
       
       case 'action':
         return (
-          <div key={index} className="ml-4 mb-2 text-gray-700 leading-relaxed">
+          <div key={index} className="ml-6 mb-3 text-gray-700 font-light leading-relaxed text-sm">
             {block.text}
           </div>
         );
       
       case 'tag':
         return (
-          <div key={index} className="ml-4 mb-1 text-gray-600 text-sm">
+          <div key={index} className="ml-6 mb-2 text-gray-500 text-xs font-light tracking-wide">
             {block.text}
           </div>
         );
       
       case 'spacer':
-        return <div key={index} className="mb-4" />;
+        return <div key={index} className="mb-6" />;
       
       default: // normal paragraph
         return (
-          <p key={index} className="text-gray-700 leading-relaxed mb-3">
+          <p key={index} className="text-gray-700 font-light leading-relaxed mb-4 text-sm">
             {block.text}
           </p>
         );
@@ -46,7 +46,7 @@ export const ReportRenderer: React.FC<ReportRendererProps> = ({ content, classNa
   };
 
   return (
-    <div className={`prose prose-sm max-w-none ${className}`}>
+    <div className={`prose prose-sm max-w-none font-light ${className}`} style={{ fontFamily: 'Inter, sans-serif' }}>
       {blocks.map(renderBlock)}
     </div>
   );
