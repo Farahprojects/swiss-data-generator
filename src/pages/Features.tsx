@@ -123,6 +123,9 @@ const Features = () => {
                   {/* Content */}
                   <div className={`space-y-8 ${index % 2 === 1 ? 'lg:col-start-2' : ''} group`}>
                     <div className="flex items-center gap-6">
+                      <div className="text-sm font-light text-gray-500 tracking-widest uppercase">
+                        Step {step.step}
+                      </div>
                       {step.free && (
                         <div className="px-4 py-2 bg-emerald-50 text-emerald-700 text-sm font-light rounded-xl border border-emerald-100">
                           <div className="flex items-center gap-2">
@@ -186,9 +189,8 @@ const Features = () => {
                           className="w-full h-96 object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
-                        {/* Light grey step number overlay */}
-                        <div className="absolute bottom-8 right-8 text-6xl font-light text-white/20 select-none pointer-events-none">
-                          {step.step}
+                        <div className="absolute bottom-6 left-6 text-white/80 text-sm font-light">
+                          Step {step.step}
                         </div>
                       </div>
                     ) : (
