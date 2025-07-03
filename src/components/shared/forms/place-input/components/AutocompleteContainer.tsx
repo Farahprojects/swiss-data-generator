@@ -46,9 +46,9 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
   useEffect(() => {
     if (!isLoaded && !isError) {
       console.log('[DEBUG] Setting up timeout for Google Maps loading...');
-      // Shorter timeout on mobile due to network conditions
+      // Much shorter timeout due to Web Components being unreliable
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const timeoutDuration = isMobile ? 8000 : 6000;
+      const timeoutDuration = isMobile ? 4000 : 3000; // Reduced timeout
       
       const timeout = setTimeout(() => {
         console.warn(`Google Maps load timeout after ${timeoutDuration/1000} seconds. Showing fallback.`);

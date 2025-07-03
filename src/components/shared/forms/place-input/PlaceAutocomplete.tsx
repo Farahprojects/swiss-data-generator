@@ -43,6 +43,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     const [retryCount, setRetryCount] = useState(0);
     const [isClient, setIsClient] = useState(false);
     const [forceAutocomplete, setForceAutocomplete] = useState(false);
+    const [hasTriedWebComponents, setHasTriedWebComponents] = useState(false);
 
     // Handle client-side hydration
     useEffect(() => {
@@ -73,10 +74,12 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     };
 
     const handleShowFallback = () => {
+      console.log('🔄 Switching to server-based autocomplete due to Web Components issues');
       setShowFallback(true);
       setUseServerAutocomplete(true);
+      setHasTriedWebComponents(true);
       autocompleteMonitor.log('fallback_used', { 
-        error: 'Manual fallback triggered'
+        error: 'Web Components failed, using server autocomplete'
       });
     };
 
@@ -91,8 +94,9 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       return null;
     }
 
-    // Enhanced fallback logic for production
-    const shouldShowFallback = (showFallback || isError || disabled || shouldUseFallback) && !forceAutocomplete;
+    // Enhanced fallback logic for production - prefer server autocomplete for reliability
+    const shouldShowFallback = (showFallback || isError || disabled) && !forceAutocomplete;
+    const shouldUseServerAutocomplete = useServerAutocomplete || (isError && !forceAutocomplete);
 
     return (
       <div ref={ref} className={`space-y-2 ${className}`}>
@@ -103,7 +107,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           </Label>
         )}
         
-        {useServerAutocomplete ? (
+        {shouldUseServerAutocomplete ? (
           <ServerAutocomplete
             id={id}
             value={localValue}
