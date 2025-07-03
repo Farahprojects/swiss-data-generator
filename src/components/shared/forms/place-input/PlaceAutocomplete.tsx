@@ -7,6 +7,7 @@ import { PlaceData } from './utils/extractPlaceData';
 import { Label } from '@/components/ui/label';
 import { AutocompleteContainer } from './components/AutocompleteContainer';
 import { FallbackInput } from './components/FallbackInput';
+import { ServerAutocomplete } from './components/ServerAutocomplete';
 
 export interface PlaceAutocompleteProps {
   label?: string;
@@ -38,6 +39,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     const { isMobile, shouldUseFallback } = useMobileAutocomplete();
     const [localValue, setLocalValue] = useState(value);
     const [showFallback, setShowFallback] = useState(false);
+    const [useServerAutocomplete, setUseServerAutocomplete] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
     const [isClient, setIsClient] = useState(false);
     const [forceAutocomplete, setForceAutocomplete] = useState(false);
@@ -72,6 +74,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
 
     const handleShowFallback = () => {
       setShowFallback(true);
+      setUseServerAutocomplete(true);
       autocompleteMonitor.log('fallback_used', { 
         error: 'Manual fallback triggered'
       });
@@ -100,7 +103,16 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           </Label>
         )}
         
-        {shouldShowFallback ? (
+        {useServerAutocomplete ? (
+          <ServerAutocomplete
+            id={id}
+            value={localValue}
+            onChange={handleLocalChange}
+            onPlaceSelect={onPlaceSelect}
+            placeholder={placeholder}
+            disabled={disabled}
+          />
+        ) : shouldShowFallback ? (
           <FallbackInput
             id={id}
             value={localValue}
@@ -129,13 +141,20 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
         {(isError || shouldUseFallback || showFallback) && process.env.NODE_ENV === 'development' && (
           <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded border">
             Debug: Mobile={isMobile.toString()}, Error={isError.toString()}, 
-            ShouldFallback={shouldUseFallback.toString()}, ShowFallback={showFallback.toString()}
+            ShouldFallback={shouldUseFallback.toString()}, ShowFallback={showFallback.toString()},
+            ServerAutocomplete={useServerAutocomplete.toString()}
             {isError && errorMessage && <div>Error: {errorMessage}</div>}
             <button 
               onClick={() => setForceAutocomplete(!forceAutocomplete)}
               className="ml-2 text-blue-600 underline"
             >
               {forceAutocomplete ? 'Use Smart Fallback' : 'Force Autocomplete'}
+            </button>
+            <button 
+              onClick={() => setUseServerAutocomplete(!useServerAutocomplete)}
+              className="ml-2 text-blue-600 underline"
+            >
+              {useServerAutocomplete ? 'Use Web Components' : 'Use Server Autocomplete'}
             </button>
           </div>
         )}
