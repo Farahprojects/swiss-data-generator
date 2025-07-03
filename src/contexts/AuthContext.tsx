@@ -116,8 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       
+      // Set user and session state immediately to avoid race conditions
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
+      setLoading(false);
 
       if (event === 'SIGNED_IN' && supaSession) {
         // Check for pending email change after successful sign-in
@@ -164,8 +166,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setPendingEmailAddress(null);
         setIsPendingEmailCheck(false);
       }
-
-      setLoading(false);
     });
 
     /* ────────────────────────────

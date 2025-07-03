@@ -165,8 +165,11 @@ const Login = () => {
         page: 'Login'
       });
       
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      // Small delay to ensure auth state is properly set
+      setTimeout(() => {
+        const from = (location.state as any)?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+      }, 100);
 
     } catch (err: any) {
       toast({
