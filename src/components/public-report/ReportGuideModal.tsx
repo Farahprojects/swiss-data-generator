@@ -32,7 +32,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
   const reportGuides = [
     {
       type: 'Essence',
-      icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
+      icon: <UserCircle className="h-6 w-6 text-gray-700 inline-block mr-2" />,
       title: 'Personal Insights',
       priceKey: 'essence_personal',
       bestFor: 'Self-understanding',
@@ -47,7 +47,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
     },
     {
       type: 'Sync',
-      icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
+      icon: <Users className="h-6 w-6 text-gray-700 inline-block mr-2" />,
       title: 'Compatibility Analysis',
       priceKey: 'sync',
       bestFor: 'Relationships',
@@ -59,13 +59,31 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
       ]
     },
     {
-      type: 'Monthly',
-      icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
-      title: 'Monthly Forecast',
-      priceKey: 'monthly',
-      bestFor: 'Planning ahead',
-      description: 'Know the best times to act this month',
-      details: 'Get personalized timing for important decisions, key opportunities, and monthly themes.'
+      type: 'Snapshots',
+      icon: <CalendarDays className="h-6 w-6 text-gray-700 inline-block mr-2" />,
+      title: 'Snapshot Reports',
+      priceKey: 'snapshot',
+      bestFor: 'Quick insights',
+      description: 'Fast, focused insights for daily life',
+      details: 'Get quick snapshots of your mental state, focus times, and emotional rhythms.',
+      subTypes: [
+        'Mindset – Current mental clarity and cognitive strengths',
+        'Focus – Best hours for deep work or rest today',
+        'Flow – Creative and emotional rhythms over 7 days'
+      ]
+    },
+    {
+      type: 'AstroData',
+      icon: <Brain className="h-6 w-6 text-gray-700 inline-block mr-2" />,
+      title: 'Astro Data',
+      priceKey: 'astro_data',
+      bestFor: 'Raw astrological data',
+      description: 'Pure astrological calculations and data',
+      details: 'Access precise birth chart calculations, planetary positions, and astrological house data.',
+      subTypes: [
+        'Birth Chart Data – Complete natal chart calculations',
+        'Transit Data – Current planetary movements and influences'
+      ]
     }
   ];
 
@@ -86,8 +104,8 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
     if (parts.length === 2) {
       return (
         <>
-          <span className="text-primary font-semibold">{parts[0]}</span>
-          <span className="text-foreground"> – {parts[1]}</span>
+          <span className="text-gray-900 font-medium">{parts[0]}</span>
+          <span className="text-gray-600"> – {parts[1]}</span>
         </>
       );
     }
@@ -99,10 +117,10 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
     const nameToType: { [key: string]: string } = {
       'The Self': 'Essence',
       'Compatibility': 'Sync',
-      'Energy Month': 'Monthly',
-      'Mindset': 'Mindset',
-      'Focus': 'Focus',
-      'Flow': 'Flow'
+      'Energy Month': 'Snapshots',
+      'Mindset': 'Snapshots',
+      'Focus': 'Snapshots',
+      'Flow': 'Snapshots'
     };
     return nameToType[reportName] || reportName;
   };
@@ -110,20 +128,20 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
   return (
     <div className="hidden md:block">
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <X className="h-4 w-4" />
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto bg-white/95 backdrop-blur-sm border border-gray-200/50">
+          <DialogClose className="absolute right-6 top-6 rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-5 w-5" />
             <span className="sr-only">Close</span>
           </DialogClose>
 
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-light text-center mb-2">
+          <DialogHeader className="pb-8">
+            <DialogTitle className="text-4xl md:text-5xl font-light text-gray-900 text-center mb-4 tracking-tight">
               Choose Your Report
             </DialogTitle>
-            <p className="text-gray-600 text-center">Select the insights that matter most to you right now</p>
+            <p className="text-gray-500 text-center leading-relaxed">Select the insights that matter most to you right now</p>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {reportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
               const price = pricing[report.priceKey];
@@ -131,57 +149,57 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
               return (
                 <Card 
                   key={report.type} 
-                  className={`border transition-all duration-300 relative ${
+                  className={`border transition-all duration-300 relative overflow-hidden group hover:shadow-lg hover:border-gray-300/60 ${
                     isTargeted 
-                      ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20' 
+                      ? 'border-gray-400 bg-gray-50/50 shadow-lg ring-2 ring-gray-300/30' 
                       : report.isRecommended 
-                      ? 'border-primary bg-primary/5 shadow-md' 
-                      : 'border-muted hover:border-primary/50'
+                      ? 'border-gray-300 bg-gray-50/30 shadow-md' 
+                      : 'border-gray-200/50 bg-white/80 backdrop-blur-sm'
                   }`}
                   ref={isTargeted ? targetRef : null}
                 >
                   {report.isRecommended && (
                     <div className="absolute -top-3 left-6">
-                      <span className="bg-primary text-white text-xs px-3 py-1 rounded-full font-medium">
+                      <span className="bg-gray-900 text-white text-xs px-3 py-1.5 rounded-full font-medium tracking-wide">
                         Most Popular
                       </span>
                     </div>
                   )}
                   
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
+                  <CardContent className="p-8">
+                    <div className="flex justify-between items-start mb-6">
                       <div>
-                        <h3 className="font-bold text-xl text-primary flex items-center mb-1">
+                        <h3 className="font-medium text-2xl text-gray-900 flex items-center mb-3 tracking-tight">
                           {report.icon}
                           {report.title}
                         </h3>
-                        <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        <span className="text-sm text-gray-600 bg-gray-100/60 px-3 py-1.5 rounded-full font-light">
                           Best for {report.bestFor}
                         </span>
                       </div>
-                      <span className="font-bold text-2xl text-primary">
+                      <span className="font-light text-3xl text-gray-900">
                         {isLoading ? '...' : formatPrice(price)}
                       </span>
                     </div>
 
-                    <p className="text-lg text-gray-700 mb-3 font-medium">
+                    <p className="text-lg text-gray-700 mb-4 font-light leading-relaxed">
                       {report.description}
                     </p>
 
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-gray-600 mb-6 leading-relaxed">
                       {report.details}
                     </p>
 
                     {report.subTypes && (
-                      <div className="border-t pt-4">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                          Report Types Included:
+                      <div className="border-t border-gray-200/50 pt-6">
+                        <h4 className="text-sm font-medium text-gray-900 mb-4 tracking-wide uppercase">
+                          Included Reports:
                         </h4>
-                        <ul className="space-y-1 text-sm">
+                        <ul className="space-y-3 text-sm">
                           {report.subTypes.map((subType, index) => (
                             <li key={index} className="flex items-start">
-                              <span className="text-primary mr-2">•</span>
-                              {formatSubType(subType)}
+                              <span className="text-gray-400 mr-3 mt-1.5">•</span>
+                              <span className="leading-relaxed">{formatSubType(subType)}</span>
                             </li>
                           ))}
                         </ul>
@@ -193,9 +211,9 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
             })}
           </div>
 
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-500">
-              Not sure which one? Start with Personal Insights – it&apos;s our most comprehensive report.
+          <div className="mt-12 text-center">
+            <p className="text-sm text-gray-500 font-light">
+              Not sure which one? Start with Personal Insights – it's our most comprehensive report.
             </p>
           </div>
         </DialogContent>
