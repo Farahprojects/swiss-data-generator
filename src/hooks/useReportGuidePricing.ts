@@ -15,14 +15,24 @@ export const useReportGuidePricing = () => {
     }
 
     return {
+      // Essence pricing
       essence_personal: getPriceById('essence_personal')?.unit_price_usd || null,
-      sync: getPriceById('sync_personal')?.unit_price_usd || null,
+      essence_professional: getPriceById('essence_professional')?.unit_price_usd || null,
+      essence_relational: getPriceById('essence_relational')?.unit_price_usd || null,
+      
+      // Sync pricing
+      sync_personal: getPriceById('sync_personal')?.unit_price_usd || null,
+      sync_professional: getPriceById('sync_professional')?.unit_price_usd || null,
+      
+      // Snapshot pricing
       focus: getPriceById('focus')?.unit_price_usd || null,
       monthly: getPriceById('monthly')?.unit_price_usd || null,
       mindset: getPriceById('mindset')?.unit_price_usd || null,
       flow: getPriceById('flow')?.unit_price_usd || null,
-      'essence_bundle': getPriceById('essence_bundle')?.unit_price_usd || null,
-      'sync_rich': getPriceById('sync_rich')?.unit_price_usd || null,
+      
+      // Astro Data pricing
+      essence: getPriceById('essence')?.unit_price_usd || null,
+      sync: getPriceById('sync')?.unit_price_usd || null,
     };
   }, [prices, isLoading, getPriceById]);
 

@@ -29,6 +29,35 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
   const targetRef = useRef<HTMLDivElement>(null);
   const { pricing, isLoading, formatPrice } = useReportGuidePricing();
 
+  const getSubTypesWithPricing = (type: string) => {
+    switch (type) {
+      case 'Essence':
+        return [
+          `Personal – Your authentic self and emotional patterns (${formatPrice(pricing.essence_personal)})`,
+          `Professional – How you work best and lead others (${formatPrice(pricing.essence_professional)})`,
+          `Relational – Your relationship style and communication needs (${formatPrice(pricing.essence_relational)})`
+        ];
+      case 'Sync':
+        return [
+          `Personal Sync – Romantic and close relationships (${formatPrice(pricing.sync_personal)})`,
+          `Professional Sync – Work partnerships and team dynamics (${formatPrice(pricing.sync_professional)})`
+        ];
+      case 'Snapshots':
+        return [
+          `Focus – Best hours for deep work or rest today (${formatPrice(pricing.focus)})`,
+          `Mindset – Current mental clarity and cognitive strengths (${formatPrice(pricing.mindset)})`,
+          `Monthly – Personal forecast for the current month (${formatPrice(pricing.monthly)})`
+        ];
+      case 'AstroData':
+        return [
+          `Essence Data – Complete personality chart calculations (${formatPrice(pricing.essence)})`,
+          `Sync Data – Relationship compatibility calculations (${formatPrice(pricing.sync)})`
+        ];
+      default:
+        return [];
+    }
+  };
+
   const reportGuides = [
     {
       type: 'Essence',
@@ -39,51 +68,37 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
       isRecommended: true,
       description: 'Discover who you are and what drives you',
       details: 'Understand your core personality, decision-making style, and natural strengths. Perfect for personal growth and self-awareness.',
-      subTypes: [
-        'Personal – Your authentic self and emotional patterns',
-        'Professional – How you work best and lead others', 
-        'Relational – Your relationship style and communication needs'
-      ]
+      subTypes: getSubTypesWithPricing('Essence')
     },
     {
       type: 'Sync',
       icon: <Users className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Compatibility Analysis',
-      priceKey: 'sync',
+      priceKey: 'sync_personal',
       bestFor: 'Relationships',
       description: 'See how you connect with someone else',
       details: 'Analyze relationship dynamics, compatibility, and areas of harmony or challenge with another person.',
-      subTypes: [
-        'Personal Sync – Romantic and close relationships',
-        'Professional Sync – Work partnerships and team dynamics'
-      ]
+      subTypes: getSubTypesWithPricing('Sync')
     },
     {
       type: 'Snapshots',
       icon: <CalendarDays className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Snapshot Reports',
-      priceKey: 'focus', // Base price, will show range
+      priceKey: 'focus',
       bestFor: 'Quick insights',
       description: 'Fast, focused insights for daily life',
       details: 'Get quick snapshots of your mental state, focus times, and emotional rhythms.',
-      subTypes: [
-        'Focus – Best hours for deep work or rest today ($3)',
-        'Mindset – Current mental clarity and cognitive strengths ($3)',
-        'Monthly – Personal forecast for the current month ($5)'
-      ]
+      subTypes: getSubTypesWithPricing('Snapshots')
     },
     {
       type: 'AstroData',
       icon: <Brain className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Astro Data',
-      priceKey: 'essence', // Base price, will show range
+      priceKey: 'essence',
       bestFor: 'Raw astrological data',
       description: 'Pure astrological calculations and data',
       details: 'Access precise birth chart calculations, planetary positions, and astrological house data.',
-      subTypes: [
-        'Essence Data – Complete personality chart calculations ($15)',
-        'Sync Data – Relationship compatibility calculations ($15)'
-      ]
+      subTypes: getSubTypesWithPricing('AstroData')
     }
   ];
 
