@@ -240,13 +240,10 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
 
   const handleContactSales = () => {
     navigate('/contact');
-    // Scroll to the form section after navigation
+    // Scroll to the top of the page after navigation with a longer timeout
     setTimeout(() => {
-      const formSection = document.querySelector('form');
-      if (formSection) {
-        formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 200);
   };
 
   return (
