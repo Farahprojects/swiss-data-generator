@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Check, Loader2, Star, Users, TrendingUp } from "lucide-react";
 import { faqs } from "@/utils/pricing";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { storeStripeReturnPath } from "@/utils/stripe-links";
@@ -235,36 +235,49 @@ const coachingFaqs = [
   }
 ];
 
-const FAQSection = ({ items }: { items: { question: string; answer: string }[] }) => (
-  <section className="py-20 bg-white">
-    <div className="container mx-auto px-4">
-      <h2 className="text-3xl font-light mb-12 text-center text-gray-900 tracking-tight">
-        Professional Coaching FAQ
-      </h2>
-      <div className="max-w-3xl mx-auto">
-        <div className="space-y-6">
-          {items.map((faq, index) => (
-            <div
-              key={index}
-              className="border-b border-gray-200 pb-6"
-            >
-              <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">{faq.question}</h3>
-              <p className="text-gray-600 font-light">{faq.answer}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-12 text-center">
-          <p className="text-gray-600 mb-6 font-light">
-            Want a deeper demo or have specific questions about integration?
-          </p>
-          <Link to="/contact">
-            <Button variant="outline">Contact Sales</Button>
-          </Link>
+const FAQSection = ({ items }: { items: { question: string; answer: string }[] }) => {
+  const navigate = useNavigate();
+
+  const handleContactSales = () => {
+    navigate('/contact');
+    // Scroll to the form section after navigation
+    setTimeout(() => {
+      const formSection = document.querySelector('form');
+      if (formSection) {
+        formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
+  return (
+    <section className="py-20 bg-white">
+      <div className="container mx-auto px-4">
+        <h2 className="text-3xl font-light mb-12 text-center text-gray-900 tracking-tight">
+          Professional Coaching FAQ
+        </h2>
+        <div className="max-w-3xl mx-auto">
+          <div className="space-y-6">
+            {items.map((faq, index) => (
+              <div
+                key={index}
+                className="border-b border-gray-200 pb-6"
+              >
+                <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">{faq.question}</h3>
+                <p className="text-gray-600 font-light">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-12 text-center">
+            <p className="text-gray-600 mb-6 font-light">
+              Want a deeper demo or have specific questions about integration?
+            </p>
+            <Button variant="outline" onClick={handleContactSales}>Contact Sales</Button>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 const Pricing = () => {
   const { user } = useAuth();
