@@ -37,15 +37,18 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
     return mappedId;
   }
   
-  // Handle astro data reports - use the specific astro data type
+  // Handle astro data reports - map to correct price_list entries
   if (reportCategory === 'astro-data' && astroDataType) {
-    return astroDataType; // essence_bundle, sync_rich
+    // Map astroDataType to the correct price_list id
+    if (astroDataType.includes('essence')) return 'essence';
+    if (astroDataType.includes('sync')) return 'sync';
+    return astroDataType; // fallback to original value
   }
   
   // Handle astro data based on request field (fallback)
   if (request && !reportType) {
-    if (request === 'essence') return 'essence_bundle';
-    if (request === 'sync') return 'sync_rich';
+    if (request === 'essence') return 'essence';
+    if (request === 'sync') return 'sync';
   }
   
   // Handle snapshot reports - map subcategory to actual report type
@@ -71,8 +74,12 @@ export const usePriceFetch = () => {
       // Validate input data
       const validatedData = ReportTypeMappingSchema.parse(formData);
       
+      // Debug logging
+      console.log('🔍 Price lookup data:', validatedData);
+      
       // Map to price_list identifier
       const priceId = mapReportTypeToId(validatedData);
+      console.log('🔍 Mapped price ID:', priceId);
       
       // Try to get price by ID first
       let priceData = getPriceById(priceId);
