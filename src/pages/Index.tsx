@@ -78,16 +78,24 @@ const Index = () => {
       <UnifiedNavigation />
 
       <main className="flex-grow overflow-hidden">
-        {/* Ultra Minimalist Hero */}
-        <section className="relative h-screen w-full flex items-center justify-center bg-white">
-          <div className="container mx-auto px-4 text-center">
+        {/* Modern Hero Section */}
+        <section className="relative h-screen w-full flex items-center justify-center bg-white overflow-hidden">
+          {/* Subtle animated background */}
+          <div className="absolute inset-0">
+            <div className="absolute top-1/4 left-8 w-2 h-2 bg-primary/20 rounded-full animate-pulse"></div>
+            <div className="absolute top-1/3 right-12 w-1 h-1 bg-primary/30 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
+            <div className="absolute bottom-1/4 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
+            <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-primary/15 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
+          </div>
+
+          <div className="relative z-10 container mx-auto px-4 text-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: "easeOut" }}
-              className="max-w-4xl mx-auto"
+              className="max-w-5xl mx-auto space-y-12"
             >
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-light text-gray-900 leading-tight mb-12">
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-light text-gray-900 leading-tight">
                 Turn Self-Insight
                 <br />
                 <span className="italic font-medium">into Relentless Momentum</span>
@@ -96,10 +104,10 @@ const Index = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8, duration: 0.8 }}
+                transition={{ delay: 0.6, duration: 0.8 }}
                 className="mb-16"
               >
-                <p className="text-xl text-gray-500 max-w-xl mx-auto leading-relaxed">
+                <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
                   Deep psychological insights that create lasting clarity
                 </p>
               </motion.div>
@@ -107,82 +115,99 @@ const Index = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.2, duration: 0.6 }}
+                transition={{ delay: 1.0, duration: 0.6 }}
+                className="space-y-8"
               >
                 <Link to="/report">
                   <Button 
                     size="lg" 
-                    variant="outline"
-                    className="px-12 py-6 text-lg font-normal border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white transition-all duration-300"
+                    className="bg-primary text-white px-12 py-6 rounded-xl text-lg font-medium hover:bg-primary-hover transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                   >
-                    Begin
+                    Begin Your Journey
                   </Button>
                 </Link>
+                
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.4, duration: 0.6 }}
+                  className="flex justify-center items-center gap-8 text-sm text-gray-500 font-medium"
+                >
+                  <div className="flex items-center gap-2 group">
+                    <Zap className="h-4 w-4 transition-transform group-hover:scale-110" />
+                    <span>AI-Powered</span>
+                  </div>
+                  <div className="flex items-center gap-2 group">
+                    <Users className="h-4 w-4 transition-transform group-hover:scale-110" />
+                    <span>For Professionals</span>
+                  </div>
+                  <div className="flex items-center gap-2 group">
+                    <BarChart3 className="h-4 w-4 transition-transform group-hover:scale-110" />
+                    <span>Data-Driven</span>
+                  </div>
+                </motion.div>
               </motion.div>
             </motion.div>
           </div>
         </section>
 
-        {/* App Features Showcase */}
-        <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
+        {/* Elegant Features Showcase */}
+        <section className="py-32 bg-gradient-to-b from-white to-gray-50/30">
           <div className="container mx-auto px-4">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
-              className="mx-auto mb-20 max-w-2xl text-center"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-24 space-y-8"
             >
-              <h2 className="mb-6 text-4xl md:text-5xl font-light text-gray-900 tracking-tight">
-                See Therai in Action
+              <h2 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
+                The <span className="italic font-medium">complete</span> toolkit
               </h2>
-              <p className="text-lg text-gray-500 leading-relaxed">
-                Experience the complete toolkit that transforms how you understand and guide your clients toward breakthrough moments.
+              <p className="text-xl text-gray-600 font-light max-w-3xl mx-auto leading-relaxed">
+                Everything you need to transform insights into breakthrough moments for your clients
               </p>
             </motion.div>
 
-            <div className="space-y-32">
+            <div className="grid gap-12 lg:grid-cols-3 max-w-7xl mx-auto">
               {appFeatures.map((feature, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.0 + (i * 0.2), duration: 0.6, ease: "easeOut" }}
-                  className={`grid gap-16 items-center lg:grid-cols-2 ${
-                    i % 2 === 1 ? 'lg:grid-flow-col-dense' : ''
-                  }`}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.6, delay: i * 0.1 }}
+                  className="group bg-white rounded-3xl p-8 border border-gray-100 hover:border-gray-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-2"
                 >
-                  {/* Image */}
-                  <div className={`relative group ${i % 2 === 1 ? 'lg:col-start-2' : ''}`}>
-                    <div className="relative overflow-hidden rounded-2xl">
+                  <div className="space-y-8">
+                    <div className="relative">
                       <img 
                         src={getFeatureImage(i)} 
                         alt={feature.title}
-                        className="w-full h-[320px] lg:h-[380px] object-cover transition-all duration-500 group-hover:scale-[1.02]"
+                        className="w-full h-48 object-cover rounded-2xl transition-transform duration-300 group-hover:scale-[1.02]"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl" />
                     </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className={`space-y-8 ${i % 2 === 1 ? 'lg:col-start-1' : ''}`}>
+                    
                     <div className="space-y-6">
-                      <div className="flex items-start gap-5">
-                        <div className="rounded-2xl bg-gray-50 border border-gray-200/50 p-4 mt-1">
+                      <div className="flex items-center gap-4">
+                        <div className="rounded-2xl bg-gray-50 border border-gray-200/50 p-3">
                           <feature.Icon className="h-6 w-6 text-gray-700" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-3xl lg:text-4xl font-light text-gray-900 leading-tight tracking-tight">{feature.title}</h3>
-                          <p className="text-lg text-gray-600 leading-relaxed mt-4">{feature.description}</p>
-                        </div>
+                        <h3 className="text-2xl font-light text-gray-900">{feature.title}</h3>
                       </div>
+                      
+                      <p className="text-lg text-gray-600 leading-relaxed">
+                        {feature.description}
+                      </p>
                     </div>
                     
                     <Link 
                       to="/features" 
-                      className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors font-medium text-base group border-b border-gray-300 hover:border-gray-600 pb-1"
+                      className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors font-medium group/link"
                     >
-                      <span>Explore Feature</span>
-                      <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <span>Learn more</span>
+                      <svg className="h-4 w-4 transition-transform group-hover/link:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
                       </svg>
                     </Link>
@@ -193,45 +218,51 @@ const Index = () => {
           </div>
         </section>
 
-        {/* CTA - Minimalist & Elegant */}
-        <section className="relative py-24 overflow-hidden bg-gradient-to-b from-gray-50/50 to-white">
-          {/* Subtle decorative elements */}
+        {/* Modern CTA Section */}
+        <section className="py-32 bg-gray-900 text-white relative overflow-hidden">
           <div className="absolute inset-0">
-            <div className="absolute top-1/4 left-8 w-2 h-2 bg-primary/20 rounded-full"></div>
-            <div className="absolute top-1/3 right-12 w-1 h-1 bg-primary/30 rounded-full"></div>
-            <div className="absolute bottom-1/4 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full"></div>
-            <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-primary/15 rounded-full"></div>
+            <div className="absolute top-1/4 left-8 w-2 h-2 bg-white/10 rounded-full animate-pulse"></div>
+            <div className="absolute top-1/3 right-12 w-1 h-1 bg-white/20 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
+            <div className="absolute bottom-1/4 left-1/4 w-1.5 h-1.5 bg-white/15 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
+            <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-white/10 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
           </div>
           
           <div className="relative container mx-auto px-4 text-center">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.8, duration: 0.6, ease: "easeOut" }}
-              className="max-w-3xl mx-auto"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.8 }}
+              className="max-w-4xl mx-auto space-y-12"
             >
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-                Ready to transform your practice?
+              <h2 className="text-5xl md:text-6xl font-light leading-tight">
+                Ready to <span className="italic font-medium">transform</span> your practice?
               </h2>
               
-              <p className="text-xl text-gray-600 mb-12 leading-relaxed">
-                Join professionals creating breakthrough moments with their clients
+              <p className="text-xl text-gray-300 font-light max-w-2xl mx-auto leading-relaxed">
+                Join professionals creating breakthrough moments with their clients every day
               </p>
               
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 2.0, duration: 0.6, ease: "easeOut" }}
-              >
+              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
                 <Link to="/signup">
                   <Button 
                     size="lg" 
-                    className="text-lg px-12 py-6 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-primary/20"
+                    className="bg-white text-gray-900 hover:bg-gray-100 px-12 py-6 rounded-xl text-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                   >
-                    Start Now
+                    Start for Free
                   </Button>
                 </Link>
-              </motion.div>
+                
+                <Link to="/features">
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="border-white/20 text-white hover:bg-white/10 px-12 py-6 rounded-xl text-lg font-medium transition-all duration-300"
+                  >
+                    Explore Features
+                  </Button>
+                </Link>
+              </div>
             </motion.div>
           </div>
         </section>
