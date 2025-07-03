@@ -42,11 +42,11 @@ const Login = () => {
 
   // Navigate to dashboard when user is authenticated
   useEffect(() => {
-    if (!authLoading && user && !showVerificationModal) {
+    if (!authLoading && user && !showVerificationModal && !isPendingEmailCheck) {
       const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     }
-  }, [authLoading, user, showVerificationModal, navigate, location.state]);
+  }, [authLoading, user, showVerificationModal, isPendingEmailCheck, navigate, location.state]);
 
   // Check if we need to show verification modal based on AuthContext state
   useEffect(() => {
@@ -173,6 +173,8 @@ const Login = () => {
         level: 'info',
         page: 'Login'
       });
+
+      setLoading(false);
 
     } catch (err: any) {
       toast({
