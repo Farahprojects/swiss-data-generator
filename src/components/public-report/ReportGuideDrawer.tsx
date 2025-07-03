@@ -121,11 +121,15 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
       const priceMatch = parts[1].match(/^(.*)\s+\((\$\d+)\)$/);
       if (priceMatch) {
         return (
-          <>
-            <span className="text-gray-900 font-medium">{parts[0]}</span>
-            <span className="text-gray-600"> – {priceMatch[1]} </span>
-            <span className="text-gray-900 font-bold">{priceMatch[2]}</span>
-          </>
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <span className="text-gray-900 font-medium text-sm">{parts[0]}</span>
+              <span className="text-gray-600 text-sm"> – {priceMatch[1]}</span>
+            </div>
+            <span className="text-base font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded ml-2 flex-shrink-0">
+              {priceMatch[2]}
+            </span>
+          </div>
         );
       }
       return (
@@ -232,7 +236,7 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                           {report.subTypes.map((subType, index) => (
                             <li key={index} className="flex items-start">
                               <span className="text-gray-400 mr-2 mt-1">•</span>
-                              <span className="leading-relaxed">{formatSubType(subType)}</span>
+                              <div className="leading-relaxed flex-1">{formatSubType(subType)}</div>
                             </li>
                           ))}
                         </ul>
