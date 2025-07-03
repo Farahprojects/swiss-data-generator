@@ -130,10 +130,27 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   useEffect(() => {
     if (!isReady && countdown > 0) {
       countdownRef.current = setTimeout(() => setCountdown((c) => c - 1), 1_000);
-    } else if (!isReady && countdown === 0 && !caseNumber && email) {
-      // Only trigger error handling when countdown reaches 0 and no case number yet
-      console.log('🚨 Countdown finished, no report found, triggering error handling');
-      triggerErrorHandling(email);
+    } else if (countdown === 0) {
+      // Debug logging for when countdown hits 0
+      console.log('🚨 Countdown hit 0s - Debug Info:', {
+        isReady,
+        countdown,
+        caseNumber,
+        email,
+        hasReport: report?.has_report,
+        reportContent: !!report?.report_content
+      });
+      
+      if (!isReady && !caseNumber && email) {
+        console.log('🚨 All conditions met - triggering error handling');
+        triggerErrorHandling(email);
+      } else {
+        console.log('🚨 Conditions not met for error handling:', {
+          isReady: isReady,
+          hasCaseNumber: !!caseNumber,
+          hasEmail: !!email
+        });
+      }
     }
     return () => countdownRef.current && clearTimeout(countdownRef.current);
   }, [countdown, isReady, caseNumber, email, triggerErrorHandling]);
