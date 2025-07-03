@@ -102,9 +102,9 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
+      className="space-y-6 h-full flex flex-col"
     >
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-2 flex-shrink-0">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{getHeadingText(selectedCategory)}</h2>
       </div>
 
@@ -112,7 +112,8 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
         control={control}
         name="reportSubCategory"
         render={({ field }) => (
-          <div className="space-y-4">
+          <div className="flex-1 min-h-0">
+            <div className="space-y-4 h-full overflow-y-auto pb-20">{/* Added scroll container with bottom padding for back button */}
             {options.map((option) => {
               const IconComponent = option.icon;
               const isSelected = field.value === option.value;
@@ -155,12 +156,13 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                 </motion.button>
               );
             })}
+            </div>
           </div>
         )}
       />
 
-      {/* Compact back button with icon */}
-      <div className="flex justify-start">
+      {/* Compact back button with icon - positioned fixed at bottom */}
+      <div className="flex justify-start flex-shrink-0 bg-white pt-4 border-t border-gray-100">
         <Button
           onClick={onPrev}
           variant="outline"
