@@ -53,65 +53,6 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
 
   return (
     <section className="relative h-screen flex items-center justify-center bg-white overflow-hidden">
-      {/* Animated star constellations based on reference */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Constellation 1 - Left pattern (angular shape) */}
-        <div className="absolute top-20 left-16 animate-pulse" style={{animationDelay: '0s', animationDuration: '4s'}}>
-          <Star className="w-3 h-3 text-primary/60 absolute top-0 left-0" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-6 left-2" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-12 left-0" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-18 left-4" fill="currentColor" />
-          {/* Connection lines */}
-          <div className="absolute top-1.5 left-1.5 w-6 h-px bg-primary/30 rotate-[18deg]"></div>
-          <div className="absolute top-7.5 left-3 w-6 h-px bg-primary/30 rotate-[-18deg]"></div>
-          <div className="absolute top-13.5 left-1.5 w-8 h-px bg-primary/30 rotate-[26deg]"></div>
-        </div>
-
-        {/* Constellation 2 - Top center pattern (diamond-like) */}
-        <div className="absolute top-16 right-24 animate-pulse" style={{animationDelay: '2s', animationDuration: '5s'}}>
-          <Star className="w-3 h-3 text-primary/60 absolute top-0 left-6" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-4 left-2" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-4 left-10" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-8 left-0" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-8 left-12" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-12 left-6" fill="currentColor" />
-          {/* Connection lines forming diamond pattern */}
-          <div className="absolute top-1.5 left-7.5 w-6 h-px bg-primary/30 rotate-[-45deg]"></div>
-          <div className="absolute top-1.5 left-7.5 w-6 h-px bg-primary/30 rotate-[45deg]"></div>
-          <div className="absolute top-5.5 left-3.5 w-6 h-px bg-primary/30 rotate-[-45deg]"></div>
-          <div className="absolute top-5.5 left-9.5 w-6 h-px bg-primary/30 rotate-[45deg]"></div>
-          <div className="absolute top-9.5 left-1.5 w-6 h-px bg-primary/30 rotate-[45deg]"></div>
-          <div className="absolute top-9.5 left-11.5 w-6 h-px bg-primary/30 rotate-[-45deg]"></div>
-        </div>
-
-        {/* Constellation 3 - Right pattern (chair-like shape) */}
-        <div className="absolute top-1/2 right-12 -translate-y-1/2 animate-pulse" style={{animationDelay: '1s', animationDuration: '6s'}}>
-          <Star className="w-3 h-3 text-primary/60 absolute top-0 left-0" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-0 left-8" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-6 left-8" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-12 left-0" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-12 left-8" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-18 left-4" fill="currentColor" />
-          {/* Connection lines forming chair pattern */}
-          <div className="absolute top-1.5 left-1.5 w-8 h-px bg-primary/30"></div>
-          <div className="absolute top-7.5 left-9.5 w-px h-8 bg-primary/30"></div>
-          <div className="absolute top-13.5 left-1.5 w-8 h-px bg-primary/30"></div>
-          <div className="absolute top-13.5 left-5.5 w-6 h-px bg-primary/30 rotate-[-45deg]"></div>
-          <div className="absolute top-13.5 left-9.5 w-6 h-px bg-primary/30 rotate-[45deg]"></div>
-        </div>
-
-        {/* Constellation 4 - Bottom left (simple triangle) */}
-        <div className="absolute top-1/2 left-8 translate-y-8 animate-pulse" style={{animationDelay: '3s', animationDuration: '4.5s'}}>
-          <Star className="w-3 h-3 text-primary/60 absolute top-0 left-4" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-8 left-0" fill="currentColor" />
-          <Star className="w-3 h-3 text-primary/60 absolute top-8 left-8" fill="currentColor" />
-          {/* Connection lines forming triangle */}
-          <div className="absolute top-1.5 left-5.5 w-6 h-px bg-primary/30 rotate-[-45deg]"></div>
-          <div className="absolute top-1.5 left-5.5 w-6 h-px bg-primary/30 rotate-[45deg]"></div>
-          <div className="absolute top-9.5 left-1.5 w-8 h-px bg-primary/30"></div>
-        </div>
-      </div>
-
       <div className="relative z-10 container mx-auto px-4 text-center max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
