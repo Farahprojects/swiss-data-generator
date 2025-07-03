@@ -99,8 +99,13 @@ export const useReportSubmission = () => {
       if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
         console.log('Processing free report with promo code:', data.promoCode);
         
+        // For astro data requests, use 'request' field and leave 'reportType' empty
+        // For AI reports, use 'reportType' field and leave 'request' empty
+        const isAstroData = data.astroDataType;
+        
         const reportData = {
-          reportType: completeReportType,
+          reportType: isAstroData ? '' : completeReportType,
+          request: isAstroData ? data.astroDataType : '',
           relationshipType: data.relationshipType,
           essenceType: data.essenceType,
           name: data.name,
@@ -156,8 +161,13 @@ export const useReportSubmission = () => {
         finalAmount = amount * (1 - validatedPromo.discountPercent / 100);
       }
 
+      // For astro data requests, use 'request' field and leave 'reportType' empty
+      // For AI reports, use 'reportType' field and leave 'request' empty
+      const isAstroData = data.astroDataType;
+      
       const reportData = {
-        reportType: completeReportType,
+        reportType: isAstroData ? '' : completeReportType,
+        request: isAstroData ? data.astroDataType : '',
         relationshipType: data.relationshipType,
         essenceType: data.essenceType,
         name: data.name,
