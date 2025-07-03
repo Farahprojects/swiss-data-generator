@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
@@ -125,7 +125,7 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: Comb
             </div>
           </div>
           <div className="space-y-2">
-            <PlaceAutocomplete
+            <CleanPlaceAutocomplete
               label="Birth Location *"
               value={birthLocation}
               onChange={(value) => {
