@@ -68,114 +68,107 @@ const Features = () => {
 
       <main className="flex-grow overflow-hidden">
         {/* Hero Section */}
-        <section className="relative py-20 pt-32">
+        <section className="relative py-32 pt-40">
           <div className="container mx-auto px-4 text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="max-w-4xl mx-auto"
+              className="max-w-5xl mx-auto space-y-12"
             >
-              <h1 className="text-5xl font-bold text-gray-900 md:text-6xl mb-6">
-                How Therai Works
+              <h1 className="text-6xl md:text-7xl font-light text-gray-900 leading-tight">
+                How <span className="italic font-medium">Therai</span> transforms your practice
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto mb-8">
-                From initial setup to breakthrough insights - discover the complete journey of transforming client understanding with Therai.
+              <p className="text-2xl text-gray-600 font-light leading-relaxed max-w-4xl mx-auto">
+                A simple, elegant workflow that turns everyday client interactions into profound insights and breakthrough moments.
               </p>
             </motion.div>
           </div>
         </section>
 
         {/* Workflow Steps */}
-        <section className="py-20 bg-gray-50/50">
+        <section className="py-32">
           <div className="container mx-auto px-4">
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.6 }}
-              className="text-center mb-16"
+              className="text-center mb-24 space-y-8"
             >
-              <h2 className="text-3xl font-bold md:text-4xl mb-4">
-                Your Journey to Better Client Understanding
+              <h2 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
+                Your <span className="italic font-medium">journey</span> to deeper understanding
               </h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Follow these simple steps to unlock deeper insights and create breakthrough moments with your clients.
+              <p className="text-xl text-gray-600 font-light max-w-3xl mx-auto leading-relaxed">
+                Four elegant steps that transform everyday conversations into profound insights and lasting breakthroughs.
               </p>
             </motion.div>
 
-            <div className="grid gap-8 md:gap-12 lg:gap-16">
+            <div className="space-y-32">
               {workflowSteps.map((step, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 60 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.8, delay: index * 0.2 }}
-                  className={`grid items-center gap-8 lg:grid-cols-2 ${
+                  transition={{ duration: 0.8, delay: index * 0.1 }}
+                  className={`grid items-center gap-16 lg:grid-cols-2 ${
                     index % 2 === 1 ? 'lg:grid-flow-col-dense' : ''
                   }`}
                 >
                   {/* Content */}
-                  <div className={`space-y-6 ${index % 2 === 1 ? 'lg:col-start-2' : ''}`}>
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                        <step.icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <div className="text-sm font-semibold text-primary/70">
-                        STEP {step.step}
+                  <div className={`space-y-8 ${index % 2 === 1 ? 'lg:col-start-2' : ''}`}>
+                    <div className="flex items-center gap-6">
+                      <div className="text-sm font-light text-gray-500 tracking-widest uppercase">
+                        Step {step.step}
                       </div>
                       {step.free && (
-                        <div className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                          FREE
+                        <div className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-light rounded-xl">
+                          Always Free
                         </div>
                       )}
                       {step.premium && (
-                        <div className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
-                          PREMIUM
+                        <div className="px-4 py-2 bg-gray-900 text-white text-sm font-light rounded-xl">
+                          Premium
                         </div>
                       )}
                     </div>
                     
-                    <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">
+                    <h3 className="text-4xl lg:text-5xl font-light text-gray-900 leading-tight">
                       {step.title}
                     </h3>
                     
-                    <p className="text-lg text-gray-600 leading-relaxed">
+                    <p className="text-xl text-gray-600 font-light leading-relaxed">
                       {step.description}
                     </p>
 
-                    <ul className="space-y-3">
+                    <div className="space-y-4 pt-4">
                       {step.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-3">
-                          <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                          <span className="text-gray-700">{feature}</span>
-                        </li>
+                        <div key={i} className="flex items-start gap-4">
+                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-3 flex-shrink-0"></div>
+                          <span className="text-lg text-gray-700 font-light">{feature}</span>
+                        </div>
                       ))}
-                    </ul>
-
-                    {index < workflowSteps.length - 1 && (
-                      <div className="flex items-center gap-3 text-primary font-medium pt-4">
-                        <span>Next Step</span>
-                        <ArrowRight className="h-5 w-5" />
-                      </div>
-                    )}
+                    </div>
                   </div>
 
                   {/* Visual */}
                   <div className={`relative ${index % 2 === 1 ? 'lg:col-start-1' : ''}`}>
                     {step.imageUrl ? (
-                      <img 
-                        src={step.imageUrl} 
-                        alt={step.title}
-                        className="w-full h-80 object-cover rounded-3xl shadow-2xl"
-                      />
+                      <div className="relative">
+                        <img 
+                          src={step.imageUrl} 
+                          alt={step.title}
+                          className="w-full h-96 object-cover rounded-3xl"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-3xl"></div>
+                      </div>
                     ) : (
-                      <div className="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-br from-primary/5 to-primary/10 p-8 h-80">
+                      <div className="relative overflow-hidden rounded-3xl bg-gray-50 p-12 h-96 border border-gray-100">
                         <div className="flex items-center justify-center h-full">
-                          <step.icon className="h-24 w-24 text-primary/30" />
+                          <step.icon className="h-20 w-20 text-gray-300" />
                         </div>
-                        <div className="absolute top-4 right-4 text-6xl font-bold text-primary/10">
+                        <div className="absolute top-8 right-8 text-8xl font-light text-gray-100">
                           {step.step}
                         </div>
                       </div>
@@ -188,121 +181,121 @@ const Features = () => {
         </section>
 
         {/* Pricing Information */}
-        <section className="py-20">
+        <section className="py-32 bg-gray-50/30">
           <div className="container mx-auto px-4">
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.6 }}
-              className="text-center mb-16"
+              className="text-center mb-24 space-y-8"
             >
-              <h2 className="text-3xl font-bold md:text-4xl mb-4">
-                What's Free vs. Premium
+              <h2 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
+                <span className="italic font-medium">Free</span> forever, with premium insights
               </h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Start for free with essential client management tools. Upgrade for AI-powered insights and reports.
+              <p className="text-xl text-gray-600 font-light max-w-3xl mx-auto leading-relaxed">
+                Start with everything you need to manage clients beautifully. Add AI-powered insights when you're ready to go deeper.
               </p>
             </motion.div>
 
-            <div className="grid gap-8 lg:grid-cols-2 max-w-4xl mx-auto">
+            <div className="grid gap-12 lg:grid-cols-2 max-w-5xl mx-auto">
               {/* Free Features */}
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.6 }}
-                className="bg-white border-2 border-gray-200 rounded-2xl p-8"
+                className="bg-white border border-gray-200 rounded-3xl p-12"
               >
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Free Forever</h3>
-                  <p className="text-gray-600">Essential client management tools</p>
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <div className="text-sm font-light text-gray-500 tracking-widest uppercase">Always Free</div>
+                    <h3 className="text-3xl font-light text-gray-900">Everything you need to start</h3>
+                    <p className="text-lg text-gray-600 font-light">Essential tools for beautiful client management</p>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-3 flex-shrink-0"></div>
+                      <span className="text-lg text-gray-700 font-light">Unlimited client profiles</span>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-3 flex-shrink-0"></div>
+                      <span className="text-lg text-gray-700 font-light">Session notes & tracking</span>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-3 flex-shrink-0"></div>
+                      <span className="text-lg text-gray-700 font-light">Journal entries</span>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-3 flex-shrink-0"></div>
+                      <span className="text-lg text-gray-700 font-light">Progress monitoring</span>
+                    </div>
+                  </div>
                 </div>
-                
-                <ul className="space-y-4">
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Unlimited client profiles</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Session notes & tracking</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Basic journal entries</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span>Progress monitoring</span>
-                  </li>
-                </ul>
               </motion.div>
 
               {/* Premium Features */}
               <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.6 }}
-                className="bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20 rounded-2xl p-8 relative"
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="bg-gray-900 text-white rounded-3xl p-12 relative"
               >
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-primary text-white px-4 py-1 rounded-full text-sm font-medium">
-                    Premium
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <div className="text-sm font-light text-gray-400 tracking-widest uppercase">Premium Add-On</div>
+                    <h3 className="text-3xl font-light">AI-powered insights</h3>
+                    <p className="text-lg text-gray-300 font-light">Transform conversations into breakthroughs</p>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="flex items-start gap-4">
+                      <Zap className="h-5 w-5 text-white mt-1 flex-shrink-0" />
+                      <span className="text-lg text-gray-100 font-light">AI breakthrough detection</span>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <FileText className="h-5 w-5 text-white mt-1 flex-shrink-0" />
+                      <span className="text-lg text-gray-100 font-light">Professional report generation</span>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <BarChart3 className="h-5 w-5 text-white mt-1 flex-shrink-0" />
+                      <span className="text-lg text-gray-100 font-light">Advanced analytics</span>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <CreditCard className="h-5 w-5 text-white mt-1 flex-shrink-0" />
+                      <span className="text-lg text-gray-100 font-light">Pay only for insights you generate</span>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">AI-Powered Insights</h3>
-                  <p className="text-gray-600">Everything in Free, plus:</p>
-                </div>
-                
-                <ul className="space-y-4">
-                  <li className="flex items-center gap-3">
-                    <Zap className="h-5 w-5 text-primary" />
-                    <span>AI breakthrough detection</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <span>Professional report generation</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    <span>Advanced analytics</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CreditCard className="h-5 w-5 text-primary" />
-                    <span>Pay per insight generated</span>
-                  </li>
-                </ul>
               </motion.div>
             </div>
           </div>
         </section>
 
         {/* CTA Section */}
-        <section className="py-20">
+        <section className="py-32">
           <div className="container mx-auto px-4 text-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.8 }}
-              className="max-w-3xl mx-auto"
+              className="max-w-4xl mx-auto space-y-12"
             >
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                Ready to Get Started?
+              <h2 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
+                Ready to <span className="italic font-medium">transform</span> your practice?
               </h2>
               
-              <p className="text-xl text-gray-600 mb-12">
+              <p className="text-2xl text-gray-600 font-light leading-relaxed">
                 Join professionals creating breakthrough moments with their clients
               </p>
               
               <Link to={user ? "/dashboard" : "/login"}>
                 <Button 
                   size="lg" 
-                  className="text-lg px-12 py-6 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="bg-gray-900 text-white hover:bg-gray-800 font-light py-6 px-12 rounded-xl text-xl transition-all duration-300"
                 >
                   {user ? "Go to Dashboard" : "Start for Free"}
                 </Button>
