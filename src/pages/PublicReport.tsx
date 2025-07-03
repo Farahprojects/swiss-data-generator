@@ -123,13 +123,14 @@ const PublicReport = () => {
               <div className="mb-24">
                 <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
                   {/* Peter's Profile */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
-                    <div className="text-center mb-8">
-                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Peter Farah</h3>
-                      <p className="text-gray-600 font-normal">Creative Visionary • Structured Strategist</p>
-                    </div>
-                    
-                    <div className="space-y-6">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
+                    <div className="p-3 md:p-0">
+                      <div className="text-center mb-8">
+                        <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Peter Farah</h3>
+                        <p className="text-gray-600 font-normal">Creative Visionary • Structured Strategist</p>
+                      </div>
+                      
+                      <div className="space-y-6">
                       <div className="transform group-hover:translate-x-1 transition-transform duration-300">
                         <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
                         <p className="text-gray-600 text-sm leading-relaxed">Expressive and conceptual, prefers big-picture discussions with room for structured planning.</p>
@@ -144,17 +145,19 @@ const PublicReport = () => {
                         <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
                         <p className="text-gray-600 text-sm leading-relaxed">Thrives with partners who appreciate both creative freedom and collaborative planning.</p>
                       </div>
+                      </div>
                     </div>
                   </div>
 
                   {/* Olivia's Profile */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
-                    <div className="text-center mb-8">
-                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Olivia Patten</h3>
-                      <p className="text-gray-600 font-normal">Intuitive Connector • Detail Orchestrator</p>
-                    </div>
-                    
-                    <div className="space-y-6">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                    <div className="p-3 md:p-0">
+                      <div className="text-center mb-8">
+                        <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Olivia Patten</h3>
+                        <p className="text-gray-600 font-normal">Intuitive Connector • Detail Orchestrator</p>
+                      </div>
+                      
+                      <div className="space-y-6">
                       <div className="transform group-hover:translate-x-1 transition-transform duration-300">
                         <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
                         <p className="text-gray-600 text-sm leading-relaxed">Empathetic and thorough, excels at reading between the lines and organizing details.</p>
@@ -169,12 +172,13 @@ const PublicReport = () => {
                         <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
                         <p className="text-gray-600 text-sm leading-relaxed">Values partners who bring vision while appreciating her attention to emotional nuances.</p>
                       </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Their Sync Dynamic */}
-                <div className="relative overflow-hidden bg-white/60 backdrop-blur-sm rounded-none md:rounded-2xl p-8 md:p-12 border-0 md:border border-gray-200/50">
+                <div className="relative overflow-hidden bg-white/60 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-12 border-0 md:border border-gray-200/50">
                   {/* Subtle background elements */}
                   <div className="absolute inset-0 opacity-20">
                     <div className="absolute top-6 left-12 w-1 h-1 bg-gray-400 rounded-full animate-pulse"></div>
@@ -219,13 +223,14 @@ const PublicReport = () => {
               {/* Examples Grid */}
               <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
                 {/* Cognitive Processing Profile Card */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
-                  <div className="text-center mb-8">
-                    <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Cognitive Processing Profile</h3>
-                    <p className="text-gray-600 font-normal">Personal Essence Report • Generated in 2 minutes</p>
-                  </div>
-                  
-                  <div className="space-y-6">
+                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
+                  <div className="p-3 md:p-0">
+                    <div className="text-center mb-8">
+                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Cognitive Processing Profile</h3>
+                      <p className="text-gray-600 font-normal">Personal Essence Report • Generated in 2 minutes</p>
+                    </div>
+                    
+                    <div className="space-y-6">
                     <div className="transform group-hover:translate-x-1 transition-transform duration-300">
                       <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Primary Style</h4>
                       <p className="text-gray-600 text-sm leading-relaxed">Creative Visionary (Big-Picture) - Naturally gravitates towards seeing the grand scheme and weaving ideas into cohesive visions.</p>
@@ -240,17 +245,19 @@ const PublicReport = () => {
                       <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Key Insight</h4>
                       <p className="text-gray-600 text-sm leading-relaxed">A harmonious blend of creativity and structure that enables navigating challenges with agility while bringing visionary ideas to fruition.</p>
                     </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Astro Data Card */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
-                  <div className="text-center mb-8">
-                    <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Raw Astro Data</h3>
-                    <p className="text-gray-600 font-normal">Precise astronomical calculations • Powered by Therai Swiss</p>
-                  </div>
-                  
-                  <div className="space-y-6">
+                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                  <div className="p-3 md:p-0">
+                    <div className="text-center mb-8">
+                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Raw Astro Data</h3>
+                      <p className="text-gray-600 font-normal">Precise astronomical calculations • Powered by Therai Swiss</p>
+                    </div>
+                    
+                    <div className="space-y-6">
                     <div className="transform group-hover:translate-x-1 transition-transform duration-300">
                       <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">What This Shows</h4>
                       <p className="text-gray-600 text-sm leading-relaxed">The exact astronomical positions at your birth moment - the foundation for all astrological interpretation.</p>
@@ -265,16 +272,17 @@ const PublicReport = () => {
                       <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Why It Matters</h4>
                       <p className="text-gray-600 text-sm leading-relaxed">These precise coordinates create your unique cosmic blueprint - no two people born at different times have identical data.</p>
                     </div>
-                  </div>
-
-                  <div className="mt-6 p-4 bg-gray-50/60 rounded-xl border border-gray-200/30">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                      <span className="text-xs font-medium text-gray-700 tracking-wide uppercase">Therai Swiss</span>
                     </div>
-                    <p className="text-xs text-gray-600 text-center leading-relaxed">
-                      Swiss-precision astronomical calculations in seconds
-                    </p>
+
+                    <div className="mt-6 p-4 bg-gray-50/60 rounded-xl border border-gray-200/30">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-medium text-gray-700 tracking-wide uppercase">Therai Swiss</span>
+                      </div>
+                      <p className="text-xs text-gray-600 text-center leading-relaxed">
+                        Swiss-precision astronomical calculations in seconds
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
