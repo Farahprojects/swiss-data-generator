@@ -10,25 +10,43 @@ import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
-import { supabase } from '@/integrations/supabase/client';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { logToSupabase } from '@/utils/batchedLogManager';
 
+/**
+ * SUPABASE edge‑function constants (extracted so they are not re‑created on every render)
+ * NOTE: in production you should store these in environment variables.
+ */
+const SUPABASE_URL = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
+
+/**
+ * Login page component
+ * Handles email/password auth, password reset, and unverified‑email flows.
+ */
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { 
-    signIn, 
-    signInWithGoogle, 
-    signInWithApple, 
-    user, 
+
+  // ————————————————————————————————————————————————
+  // Auth context
+  // ————————————————————————————————————————————————
+  const {
+    signIn,
+    signInWithGoogle,
+    signInWithApple,
+    user,
     loading: authLoading,
-    pendingEmailAddress, 
+    pendingEmailAddress,
     isPendingEmailCheck,
-    clearPendingEmail 
+    clearPendingEmail,
   } = useAuth();
 
+  // ————————————————————————————————————————————————
+  // Local UI state
+  // ————————————————————————————————————————————————
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,7 +58,9 @@ const Login = () => {
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
 
-  // Navigate to dashboard when user is authenticated
+  // ————————————————————————————————————————————————
+  // Redirect to dashboard once fully authenticated
+  // ————————————————————————————————————————————————
   useEffect(() => {
     if (!authLoading && user && !showVerificationModal && !isPendingEmailCheck) {
       const from = (location.state as any)?.from?.pathname || '/dashboard';
@@ -48,32 +68,38 @@ const Login = () => {
     }
   }, [authLoading, user, showVerificationModal, isPendingEmailCheck, navigate, location.state]);
 
-  // Check if we need to show verification modal based on AuthContext state
+  // ————————————————————————————————————————————————
+  // Show verification modal automatically when flagged by AuthContext
+  // ————————————————————————————————————————————————
   useEffect(() => {
     if (pendingEmailAddress && !isPendingEmailCheck) {
       setShowVerificationModal(true);
-      logToSupabase('Showing verification modal from AuthContext state', {
+      logToSupabase('Showing verification modal (AuthContext)', {
         level: 'info',
         page: 'Login',
-        data: { pendingTo: pendingEmailAddress }
+        data: { pendingTo: pendingEmailAddress },
       });
     }
   }, [pendingEmailAddress, isPendingEmailCheck]);
 
-  // Check for state passed from AuthGuard
+  // ————————————————————————————————————————————————
+  // Show verification modal when redirected from a protected route
+  // ————————————————————————————————————————————————
   useEffect(() => {
     const state = location.state as any;
     if (state?.showVerification && state?.pendingEmail) {
       setShowVerificationModal(true);
-      logToSupabase('Showing verification modal from location state', {
+      logToSupabase('Showing verification modal (location.state)', {
         level: 'info',
         page: 'Login',
-        data: { pendingEmail: state.pendingEmail }
+        data: { pendingEmail: state.pendingEmail },
       });
     }
   }, [location.state]);
 
-  // Redirect user ONLY when arriving on /login while already authenticated and no pending verification
+  // ————————————————————————————————————————————————
+  // If the user manually navigates to /login while already signed‑in, bounce them.
+  // ————————————————————————————————————————————————
   if (
     user &&
     !loginAttempted &&
@@ -86,59 +112,59 @@ const Login = () => {
     return <Navigate to={from} replace />;
   }
 
+  // ————————————————————————————————————————————————
+  // Helpers
+  // ————————————————————————————————————————————————
   const openVerificationModal = () => {
     setShowVerificationModal(true);
     setLoading(false);
   };
 
-  // Updated resend verification function to send only user_id
-  const handleResendVerification = async (emailToVerify: string) => {
+  /** Resend verification email (edge function) */
+  const handleResendVerification = async () => {
     try {
-      logToSupabase("Resending login verification email", {
+      logToSupabase('Resending verification email', {
         level: 'info',
         page: 'Login',
-        data: { emailToVerify, userEmail: user?.email, userId: user?.id }
+        data: { userId: user?.id },
       });
-
-      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
       const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
-          user_id: user?.id || ''
-        })
+        body: JSON.stringify({ user_id: user?.id ?? '' }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
+        const { error } = await response.json();
+        throw new Error(error ?? `Failed (${response.status})`);
       }
 
-      logToSupabase("Login verification email resent successfully", {
-        level: 'info',
-        page: 'Login'
+      toast({
+        title: 'Verification email sent',
+        description: 'Please check your inbox (and spam folder).',
       });
-
-      return { error: null };
     } catch (error: any) {
-      logToSupabase("Exception resending login verification", {
+      logToSupabase('Error resending verification', {
         level: 'error',
         page: 'Login',
-        data: { error: error.message || String(error) }
+        data: { message: error.message },
       });
-      return { error: error as Error };
+      toast({
+        title: 'Error',
+        description: error.message ?? 'Unable to resend email',
+        variant: 'destructive',
+      });
     }
   };
 
-  // ──────────────────────────────────────────
-  // Submit
-  // ──────────────────────────────────────────
+  // ————————————————————————————————————————————————
+  // Form submit
+  // ————————————————————————————————————————————————
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailValid || !passwordValid || loading) return;
@@ -148,7 +174,7 @@ const Login = () => {
     setErrorMsg('');
 
     try {
-      // STEP 1: password validation
+      // Step 1: try sign‑in
       const { data, error } = await signIn(email, password);
 
       if (error) {
@@ -158,56 +184,41 @@ const Login = () => {
         } else {
           setErrorMsg('Invalid email or password');
         }
-        return setLoading(false);
+        return;
       }
 
-      const authedUser = data?.user;
-
-      // STEP 2: email not confirmed
-      if (authedUser && !authedUser.email_confirmed_at) {
+      // Step 2: check email confirmed
+      if (data?.user && !data.user.email_confirmed_at) {
         return openVerificationModal();
       }
 
-      // STEP 3: Successful login - navigation handled by useEffect
-      logToSupabase('Login successful', {
-        level: 'info',
-        page: 'Login'
-      });
-
-      setLoading(false);
-
+      // Step 3: success — redirect handled by useEffect
+      logToSupabase('Login successful', { level: 'info', page: 'Login' });
     } catch (err: any) {
       toast({
         title: 'Error',
         description: err.message ?? 'Failed to sign in',
         variant: 'destructive',
       });
-      setLoading(false);
     } finally {
+      setLoading(false);
       setLoginAttempted(false);
     }
   };
 
-  // ──────────────────────────────────────────
-  // OAuth helpers
-  // ──────────────────────────────────────────
-  const handleGoogleSignIn = async () => {
-    // Disabled for now
-    return;
-  };
+  // ————————————————————————————————————————————————
+  // OAuth helpers (disabled for now)
+  // ————————————————————————————————————————————————
+  const handleGoogleSignIn = async () => signInWithGoogle();
+  const handleAppleSignIn = async () => signInWithApple();
 
-  const handleAppleSignIn = async () => {
-    // Disabled for now
-    return;
-  };
-
+  // ————————————————————————————————————————————————
+  // Verification modal callbacks
+  // ————————————————————————————————————————————————
   const handleVerificationFinished = () => {
     setShowVerificationModal(false);
     clearPendingEmail();
-    toast({
-      title: 'Email verified!',
-      description: 'You can now continue to your dashboard.',
-    });
+    toast({ title: 'Email verified', description: 'Redirecting…' });
     const from = (location.state as any)?.from?.pathname || '/dashboard';
     navigate(from, { replace: true });
   };
@@ -217,9 +228,9 @@ const Login = () => {
     clearPendingEmail();
   };
 
-  // ──────────────────────────────────────────
-  // render
-  // ──────────────────────────────────────────
+  // ————————————————————————————————————————————————
+  // Render
+  // ————————————————————————————————————————————————
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <UnifiedNavigation />
@@ -230,25 +241,20 @@ const Login = () => {
             <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
           ) : (
             <>
+              {/* ——————————————————— Hero ——————————————————— */}
               <header className="text-center space-y-4">
                 <h1 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
                   Welcome
                   <br />
                   <span className="italic font-medium">back</span>
                 </h1>
-                <p className="text-lg text-gray-600 font-light">
-                  Sign in to continue your journey
-                </p>
+                <p className="text-lg text-gray-600 font-light">Sign in to continue your journey</p>
               </header>
 
+              {/* ——————————————————— Form ——————————————————— */}
               <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="space-y-6">
-                  <EmailInput
-                    email={email}
-                    isValid={emailValid}
-                    onChange={setEmail}
-                    onFocus={() => setErrorMsg('')}
-                  />
+                  <EmailInput email={email} isValid={emailValid} onChange={setEmail} onFocus={() => setErrorMsg('')} />
                   <PasswordInput
                     password={password}
                     isValid={passwordValid}
@@ -258,9 +264,7 @@ const Login = () => {
                   />
                 </div>
 
-                {errorMsg && (
-                  <div className="text-red-600 text-sm text-center font-light">{errorMsg}</div>
-                )}
+                {errorMsg && <div className="text-red-600 text-sm text-center font-light">{errorMsg}</div>}
 
                 <Button
                   type="submit"
@@ -268,10 +272,11 @@ const Login = () => {
                   className="w-full py-6 text-lg font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300"
                   disabled={!emailValid || !passwordValid || loading}
                 >
-                  {loading ? 'Signing in...' : 'Sign in'}
+                  {loading ? 'Signing in…' : 'Sign in'}
                 </Button>
               </form>
 
+              {/* ——————————————————— Extras ——————————————————— */}
               <div className="text-center space-y-6">
                 <button
                   type="button"
@@ -281,14 +286,14 @@ const Login = () => {
                   Forgot your password?
                 </button>
 
-                <SocialLogin
-                  onGoogleSignIn={handleGoogleSignIn}
-                  onAppleSignIn={handleAppleSignIn}
-                />
+                <SocialLogin onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
 
                 <p className="text-sm text-gray-600 font-light">
                   Don't have an account?{' '}
-                  <Link to="/signup" className="text-gray-900 hover:text-gray-700 transition-colors border-b border-gray-300 hover:border-gray-600 pb-1">
+                  <Link
+                    to="/signup"
+                    className="text-gray-900 hover:text-gray-700 transition-colors border-b border-gray-300 hover:border-gray-600 pb-1"
+                  >
                     Sign up
                   </Link>
                 </p>
