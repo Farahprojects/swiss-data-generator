@@ -213,22 +213,24 @@ const Login = () => {
   // render
   // ──────────────────────────────────────────
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md space-y-8">
+        <div className="w-full max-w-md">
           {showForgotPassword ? (
-            <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
+            <div className="bg-white rounded-2xl shadow-sm border p-8">
+              <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
+            </div>
           ) : (
-            <>
+            <div className="bg-white rounded-2xl shadow-sm border p-8 space-y-8">
               <header className="text-center">
-                <h1 className="text-3xl font-bold">Welcome back</h1>
-                <p className="mt-2 text-gray-600">Sign in to your account</p>
+                <h1 className="text-3xl font-bold text-gray-900">Welcome back</h1>
+                <p className="mt-3 text-gray-600">Sign in to your account to continue</p>
               </header>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <EmailInput
                     email={email}
                     isValid={emailValid}
@@ -241,16 +243,19 @@ const Login = () => {
                     showRequirements={false}
                     onChange={setPassword}
                     onFocus={() => setErrorMsg('')}
+                    label="Password"
                   />
                 </div>
 
                 {errorMsg && (
-                  <div className="text-red-600 text-sm text-center">{errorMsg}</div>
+                  <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">
+                    {errorMsg}
+                  </div>
                 )}
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full h-12 text-base font-medium"
                   disabled={!emailValid || !passwordValid || loading}
                 >
                   {loading ? 'Signing in...' : 'Sign in'}
@@ -261,7 +266,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-blue-600 hover:text-blue-500"
+                  className="text-sm text-primary hover:text-primary/80 font-medium"
                 >
                   Forgot your password?
                 </button>
@@ -273,12 +278,12 @@ const Login = () => {
 
                 <p className="text-sm text-gray-600">
                   Don't have an account?{' '}
-                  <Link to="/signup" className="font-medium text-primary hover:underline">
+                  <Link to="/signup" className="font-medium text-primary hover:text-primary/80">
                     Sign up
                   </Link>
                 </p>
               </div>
-            </>
+            </div>
           )}
         </div>
       </main>
