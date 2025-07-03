@@ -131,28 +131,31 @@ const ClientsPage = React.memo(() => {
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto">
-      <ClientsPageHeader {...headerProps} />
-      {/* Always grid view on mobile, otherwise respect saved preference */}
-      {effectiveViewMode === 'grid' ? (
-        <ClientsGrid {...gridProps} />
-      ) : (
-        <ClientsTable {...tableProps} />
-      )}
-      
-      {clientsData.clients.length === 0 && !clientsData.loading && (
-        <ClientsEmptyState {...emptyStateProps} />
-      )}
-      
-      <ClientsModals {...modalsProps} />
-      
-      <ActionConfirmDialog
-        open={clientsActions.confirmAction.type !== null}
-        onOpenChange={(open) => !open && clientsActions.handleCancelAction()}
-        client={clientsActions.confirmAction.client}
-        onConfirm={clientsActions.handleConfirmAction}
-        {...getConfirmDialogProps()}
-      />
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
+        <ClientsPageHeader {...headerProps} />
+        
+        {/* Always grid view on mobile, otherwise respect saved preference */}
+        {effectiveViewMode === 'grid' ? (
+          <ClientsGrid {...gridProps} />
+        ) : (
+          <ClientsTable {...tableProps} />
+        )}
+        
+        {clientsData.clients.length === 0 && !clientsData.loading && (
+          <ClientsEmptyState {...emptyStateProps} />
+        )}
+        
+        <ClientsModals {...modalsProps} />
+        
+        <ActionConfirmDialog
+          open={clientsActions.confirmAction.type !== null}
+          onOpenChange={(open) => !open && clientsActions.handleCancelAction()}
+          client={clientsActions.confirmAction.client}
+          onConfirm={clientsActions.handleConfirmAction}
+          {...getConfirmDialogProps()}
+        />
+      </div>
     </div>
   );
 });

@@ -28,66 +28,85 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
   isMobile = false,
 }) => {
   return (
-    <div className="mt-8 space-y-4">
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-foreground">Clients</h1>
-        {backgroundRefreshing && (
-          <div className="text-sm text-muted-foreground animate-pulse">
-            Updating...
-          </div>
-        )}
+    <div className="space-y-8">
+      <div className="text-center space-y-4">
+        <div className="flex items-center justify-center gap-3">
+          <h1 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
+            Your <span className="italic font-medium">clients</span>
+          </h1>
+          {backgroundRefreshing && (
+            <div className="text-sm text-gray-500 animate-pulse">
+              Updating...
+            </div>
+          )}
+        </div>
+        <p className="text-lg text-gray-600 font-light max-w-2xl mx-auto">
+          Manage your client relationships and their transformative journeys
+        </p>
       </div>
       
-      <p className="text-muted-foreground -mt-1">Manage your client relationships and their journeys</p>
-      
       {/* Controls Row */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* Search input always on the left */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+      <div className="flex items-center justify-between gap-6 flex-wrap">
+        {/* Search input */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <Input
-            placeholder="Search clients"
+            placeholder="Search clients by name or location..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 w-48"
+            className="pl-12 pr-4 py-3 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white focus:border-gray-900 transition-all duration-300 font-light"
           />
         </div>
-        {/* If not mobile, render view toggle next */}
-        {!isMobile && (
-          <div className="flex items-center border rounded-md">
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => onViewModeChange('grid')}
-              className="rounded-r-none"
-            >
-              <Grid className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => onViewModeChange('list')}
-              className="rounded-l-none"
-            >
-              <List className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
-        {/* This spacer pushes the button to the far right */}
-        <div className="flex-1 min-w-[12px]" />
-        {/* "+ Client" button always on right */}
-        <Button 
-          onClick={onNewClient}
-          className="flex items-center gap-2 flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          + Client
-        </Button>
+        
+        {/* View toggle and Add Client button */}
+        <div className="flex items-center gap-4">
+          {/* If not mobile, render view toggle */}
+          {!isMobile && (
+            <div className="flex items-center border border-gray-200 rounded-xl bg-gray-50/50">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => onViewModeChange('grid')}
+                className={`rounded-l-xl rounded-r-none px-4 py-2 font-light transition-all duration-300 ${
+                  viewMode === 'grid' 
+                    ? 'bg-gray-900 text-white hover:bg-gray-800' 
+                    : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <Grid className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => onViewModeChange('list')}
+                className={`rounded-r-xl rounded-l-none px-4 py-2 font-light transition-all duration-300 ${
+                  viewMode === 'list' 
+                    ? 'bg-gray-900 text-white hover:bg-gray-800' 
+                    : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+          
+          {/* Add Client button */}
+          <Button 
+            onClick={onNewClient}
+            size="lg"
+            className="bg-gray-900 text-white hover:bg-gray-800 font-light py-3 px-6 rounded-xl transition-all duration-300 flex items-center gap-3"
+          >
+            <Plus className="w-5 h-5" />
+            Add Client
+          </Button>
+        </div>
       </div>
       
       {searchTerm && (
-        <div className="text-sm text-muted-foreground">
-          {filteredCount} result{filteredCount !== 1 ? 's' : ''} found
+        <div className="text-center">
+          <div className="inline-block text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-xl font-light">
+            {filteredCount} result{filteredCount !== 1 ? 's' : ''} found for "{searchTerm}"
+          </div>
         </div>
       )}
     </div>
