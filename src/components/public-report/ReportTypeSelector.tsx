@@ -164,7 +164,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
           <button
             type="button"
             onClick={() => setShowReportGuide(true)}
-            className="text-primary hover:text-primary/80 font-bold mx-auto block transition-colors"
+            className="text-lg md:text-xl font-light text-gray-700 hover:text-gray-900 mx-auto block transition-colors tracking-tight"
           >
             Not sure which report to choose? Click here.
           </button>
