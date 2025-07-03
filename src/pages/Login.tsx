@@ -121,12 +121,12 @@ const Login = () => {
   };
 
   /** Resend verification email (edge function) */
-  const handleResendVerification = async () => {
+  const handleResendVerification = async (email: string) => {
     try {
       logToSupabase('Resending verification email', {
         level: 'info',
         page: 'Login',
-        data: { userId: user?.id },
+        data: { userId: user?.id, email },
       });
 
       const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
@@ -148,6 +148,8 @@ const Login = () => {
         title: 'Verification email sent',
         description: 'Please check your inbox (and spam folder).',
       });
+      
+      return { error: null };
     } catch (error: any) {
       logToSupabase('Error resending verification', {
         level: 'error',
@@ -159,6 +161,8 @@ const Login = () => {
         description: error.message ?? 'Unable to resend email',
         variant: 'destructive',
       });
+      
+      return { error: error instanceof Error ? error : new Error(error.message ?? 'Unable to resend email') };
     }
   };
 
