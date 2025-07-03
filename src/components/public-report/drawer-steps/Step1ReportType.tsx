@@ -29,7 +29,7 @@ const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1R
         control={control}
         name="reportCategory"
         render={({ field }) => (
-          <div className="space-y-4">
+          <div className="max-h-[60vh] overflow-y-auto space-y-4">
             {reportCategories.map((category) => {
               const IconComponent = category.icon;
               const isSelected = field.value === category.value;
