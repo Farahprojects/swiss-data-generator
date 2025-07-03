@@ -87,7 +87,7 @@ const Index = () => {
               transition={{ duration: 1, ease: "easeOut" }}
               className="max-w-4xl mx-auto"
             >
-              <h1 className="text-6xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-12">
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-light text-gray-900 leading-tight mb-12">
                 Turn Self-Insight
                 <br />
                 <span className="italic font-medium">into Relentless Momentum</span>
