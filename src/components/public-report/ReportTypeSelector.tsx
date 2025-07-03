@@ -458,4 +458,20 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                 )}
               </div>
             )}
-          </
+          </div>
+        </div>
+
+        {/* Step 2 reference for auto-scroll */}
+        <div ref={stepTwoRef} data-step="2" />
+      </FormStep>
+
+      {/* Report Guide */}
+      <ReportGuideResponsive
+        isOpen={showReportGuide}
+        onClose={() => setShowReportGuide(false)}
+      />
+    </>
+  );
+};
+
+export default ReportTypeSelector;
