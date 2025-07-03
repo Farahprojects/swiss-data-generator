@@ -23,6 +23,7 @@ const Login = () => {
     signInWithGoogle, 
     signInWithApple, 
     user, 
+    loading: authLoading,
     pendingEmailAddress, 
     isPendingEmailCheck,
     clearPendingEmail 
@@ -38,6 +39,14 @@ const Login = () => {
 
   const emailValid = validateEmail(email);
   const passwordValid = password.length >= 6;
+
+  // Navigate to dashboard when user is authenticated
+  useEffect(() => {
+    if (!authLoading && user && !showVerificationModal) {
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+    }
+  }, [authLoading, user, showVerificationModal, navigate, location.state]);
 
   // Check if we need to show verification modal based on AuthContext state
   useEffect(() => {
@@ -159,17 +168,11 @@ const Login = () => {
         return openVerificationModal();
       }
 
-      // STEP 3: Successful login - navigate to dashboard
-      logToSupabase('Login successful, navigating to dashboard', {
+      // STEP 3: Successful login - navigation handled by useEffect
+      logToSupabase('Login successful', {
         level: 'info',
         page: 'Login'
       });
-      
-      // Small delay to ensure auth state is properly set
-      setTimeout(() => {
-        const from = (location.state as any)?.from?.pathname || '/dashboard';
-        navigate(from, { replace: true });
-      }, 100);
 
     } catch (err: any) {
       toast({
