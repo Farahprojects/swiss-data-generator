@@ -334,7 +334,7 @@ const Pricing = () => {
 
         <FAQSection items={coachingFaqs} />
       </main>
-      <section className="bg-primary py-12 text-center text-white">
+      <section className="bg-gray-900 py-12 text-center text-white">
         <h2 className="mb-4 text-2xl font-light text-white tracking-tight">
           Ready to empower your coaching practice?
         </h2>
@@ -343,7 +343,7 @@ const Pricing = () => {
           No astrological knowledge needed.
         </p>
         <Link to={user ? "/dashboard" : "/login"}>
-          <Button className="bg-white px-8 py-6 text-lg text-primary hover:bg-gray-100">
+          <Button className="bg-white px-8 py-6 text-lg text-gray-900 hover:bg-gray-100 font-light">
             {user ? "Get API Access" : "Start Now"}
           </Button>
         </Link>
