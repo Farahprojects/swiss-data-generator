@@ -53,12 +53,49 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
 
   return (
     <section className="relative h-screen flex items-center justify-center bg-white overflow-hidden">
-      {/* Subtle animated background with floating elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-8 w-2 h-2 bg-primary/20 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/3 right-12 w-1 h-1 bg-primary/30 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
-        <div className="absolute bottom-1/4 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
-        <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-primary/15 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
+      {/* Subtle animated star constellations */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Constellation 1 - Top left */}
+        <div className="absolute top-16 left-12 animate-pulse" style={{animationDelay: '0s', animationDuration: '4s'}}>
+          <Star className="w-3 h-3 text-primary/30 absolute" />
+          <Star className="w-2 h-2 text-primary/20 absolute top-6 left-4" />
+          <Star className="w-2.5 h-2.5 text-primary/25 absolute top-3 left-8" />
+          {/* Connection lines */}
+          <div className="absolute top-1.5 left-1.5 w-8 h-px bg-primary/10 rotate-12"></div>
+          <div className="absolute top-4 left-6 w-6 h-px bg-primary/10 rotate-45"></div>
+        </div>
+
+        {/* Constellation 2 - Top right */}
+        <div className="absolute top-24 right-16 animate-pulse" style={{animationDelay: '2s', animationDuration: '5s'}}>
+          <Star className="w-2.5 h-2.5 text-primary/25 absolute" />
+          <Star className="w-2 h-2 text-primary/20 absolute top-5 left-6" />
+          <Star className="w-3 h-3 text-primary/30 absolute top-8 left-2" />
+          {/* Connection lines */}
+          <div className="absolute top-2 left-2 w-7 h-px bg-primary/10 rotate-45"></div>
+          <div className="absolute top-6 left-1 w-5 h-px bg-primary/10 rotate-12"></div>
+        </div>
+
+        {/* Constellation 3 - Bottom left */}
+        <div className="absolute bottom-32 left-20 animate-pulse" style={{animationDelay: '1s', animationDuration: '6s'}}>
+          <Star className="w-2 h-2 text-primary/20 absolute" />
+          <Star className="w-2.5 h-2.5 text-primary/25 absolute top-4 left-5" />
+          <Star className="w-2 h-2 text-primary/20 absolute top-7 left-1" />
+          {/* Connection lines */}
+          <div className="absolute top-2 left-2 w-6 h-px bg-primary/10 rotate-35"></div>
+          <div className="absolute top-5 left-2 w-4 h-px bg-primary/10 -rotate-12"></div>
+        </div>
+
+        {/* Constellation 4 - Bottom right */}
+        <div className="absolute bottom-24 right-20 animate-pulse" style={{animationDelay: '3s', animationDuration: '4.5s'}}>
+          <Star className="w-2.5 h-2.5 text-primary/25 absolute" />
+          <Star className="w-2 h-2 text-primary/20 absolute top-3 left-6" />
+          <Star className="w-2 h-2 text-primary/20 absolute top-6 left-3" />
+          <Star className="w-2.5 h-2.5 text-primary/25 absolute top-8 left-8" />
+          {/* Connection lines */}
+          <div className="absolute top-2 left-2 w-6 h-px bg-primary/10 rotate-25"></div>
+          <div className="absolute top-4 left-4 w-5 h-px bg-primary/10 rotate-45"></div>
+          <div className="absolute top-7 left-6 w-4 h-px bg-primary/10 rotate-12"></div>
+        </div>
       </div>
 
       <div className="relative z-10 container mx-auto px-4 text-center max-w-4xl">
