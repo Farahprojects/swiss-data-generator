@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Download, FileText, ArrowLeft, Copy } from 'lucide-react';
+import { Download, FileText, ArrowLeft, Copy, Paperclip } from 'lucide-react';
+import theraiChatGPTMockup from '@/assets/therai-chatgpt-mockup.jpg';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -181,21 +182,21 @@ const MobileReportViewer = ({
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-6">
-        <div className="flex gap-4 max-w-4xl mx-auto">
+      <div className="sticky bottom-0 left-0 right-0 bg-white px-6 py-6">
+        <div className="flex gap-8 max-w-4xl mx-auto justify-center">
           <button 
             onClick={handleCopyToClipboard}
-            className="flex-1 bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
+            className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
           >
-            <Copy className="h-5 w-5 mr-3" />
-            Copy Report
+            <Paperclip className="h-5 w-5 mr-2" />
+            Copy
           </button>
           <button 
             onClick={handleChatGPT}
-            className="flex-1 bg-gray-900 text-white px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center"
+            className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
           >
-            <span className="mr-3 text-xl">🤖</span>
-            ChatGPT Analysis
+            <img src={theraiChatGPTMockup} alt="ChatGPT" className="h-5 w-5 mr-2 rounded" />
+            GPT
           </button>
         </div>
       </div>
