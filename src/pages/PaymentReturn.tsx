@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { verifyGuestPayment } from "@/utils/guest-checkout";
@@ -129,7 +129,7 @@ const PaymentReturn = () => {
       case 'success':
         return <CheckCircle className="h-12 w-12 text-primary" />;
       case 'error':
-        return <AlertCircle className="h-12 w-12 text-red-500" />;
+        return <AlertTriangle className="h-12 w-12 text-red-500" />;
       default:
         return <Loader2 className="h-12 w-12 animate-spin text-primary" />;
     }
@@ -240,8 +240,8 @@ const PaymentReturn = () => {
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
         <Card className="w-full max-w-lg border-0 shadow-2xl">
           <CardContent className="p-8 text-center">
-            <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
-              <AlertCircle className="h-8 w-8 text-red-500" />
+            <div className="mx-auto w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-6">
+              <AlertTriangle className="h-8 w-8 text-amber-500" />
             </div>
             
             <h2 className="text-2xl font-light text-gray-900 mb-3 tracking-tight">
@@ -249,7 +249,7 @@ const PaymentReturn = () => {
             </h2>
             
             <p className="text-gray-600 font-light leading-relaxed mb-8">
-              {message}
+              There was an issue processing your payment. Please try again or contact support if you were charged.
             </p>
             
             <div className="space-y-3">
