@@ -213,21 +213,24 @@ const PersonCard = ({
   /* -------------------------------------------------------------------- */
 
   return (
-    <Card className="border-2 border-primary/20 w-full mb-4" data-person={personNumber}>
-      <CardHeader className="pb-4">
-        <CardTitle className="text-lg font-semibold text-gray-900">
+    <div className="bg-white w-full mb-8" data-person={personNumber}>
+      <div className="mb-8">
+        <h2 className="text-3xl font-light text-gray-900 mb-2 tracking-tight">
           {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 px-6">
+        </h2>
+      </div>
+      
+      <div className="space-y-8">
         {/* NAME ------------------------------------------------------- */}
-        <div className="space-y-2">
-          <Label htmlFor={`${prefix}name`}>Full Name *</Label>
+        <div className="space-y-3">
+          <Label htmlFor={`${prefix}name`} className="text-lg font-light text-gray-700">
+            Full Name *
+          </Label>
           <Input
             id={`${prefix}name`}
             {...register(getFieldName('name') as any)}
             placeholder="Enter full name"
-            className={`h-12 ${shouldShowError('name', getError('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+            className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${shouldShowError('name', getError('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
             onFocus={(e) => {
               handleFieldInteraction('name');
               handleInputFocus(e);
@@ -243,14 +246,16 @@ const PersonCard = ({
 
         {/* EMAIL (only first person) ----------------------------------- */}
         {!isSecondPerson && (
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address *</Label>
+          <div className="space-y-3">
+            <Label htmlFor="email" className="text-lg font-light text-gray-700">
+              Email Address *
+            </Label>
             <Input
               id="email"
               type="email"
               {...register('email' as any)}
               placeholder="your@email.com"
-              className={`h-12 ${shouldShowError('email', errors.email) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+              className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${shouldShowError('email', errors.email) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
               onFocus={(e) => {
                 handleFieldInteraction('email');
                 handleInputFocus(e);
@@ -268,8 +273,10 @@ const PersonCard = ({
         {/* DATE & TIME ------------------------------------------------- */}
         <div className="grid grid-cols-2 gap-6">
           {/* DATE */}
-          <div className="space-y-2">
-            <Label htmlFor={`${prefix}birthDate`}>Birth Date *</Label>
+          <div className="space-y-3">
+            <Label htmlFor={`${prefix}birthDate`} className="text-lg font-light text-gray-700">
+              Birth Date *
+            </Label>
             {isMobile ? (
               <InlineDateTimeSelector
                 type="date"
@@ -287,7 +294,7 @@ const PersonCard = ({
                 id={`${prefix}birthDate`}
                 type="date"
                 {...register(getFieldName('birthDate') as any)}
-                className={`h-12 ${shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
                 onFocus={(e) => {
                   handleFieldInteraction('birthDate');
                   handleInputFocus(e);
@@ -302,8 +309,10 @@ const PersonCard = ({
           </div>
 
           {/* TIME */}
-          <div className="space-y-2">
-            <Label htmlFor={`${prefix}birthTime`}>Birth Time *</Label>
+          <div className="space-y-3">
+            <Label htmlFor={`${prefix}birthTime`} className="text-lg font-light text-gray-700">
+              Birth Time *
+            </Label>
             {isMobile ? (
               <InlineDateTimeSelector
                 type="time"
@@ -322,7 +331,7 @@ const PersonCard = ({
                 type="time"
                 step="60"
                 {...register(getFieldName('birthTime') as any)}
-                className={`h-12 ${shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
                 onFocus={(e) => {
                   handleFieldInteraction('birthTime');
                   handleInputFocus(e);
@@ -338,7 +347,7 @@ const PersonCard = ({
         </div>
 
         {/* LOCATION ---------------------------------------------------- */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <PlaceAutocomplete
             label="Birth Location *"
             value={birthLocation}
@@ -357,8 +366,8 @@ const PersonCard = ({
               : undefined}
           />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

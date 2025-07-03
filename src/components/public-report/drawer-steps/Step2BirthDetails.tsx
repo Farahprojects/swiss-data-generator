@@ -101,22 +101,29 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   }, [canProceed, onNext, scrollToFirstError]);
 
   return (
-    <div className="w-full">
+    <div className="min-h-screen bg-white">
       <motion.div
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -50 }}
         transition={{ duration: 0.3 }}
-        className="space-y-6 w-full"
+        className="space-y-12"
       >
         {/* Header */}
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" onClick={onPrev} className="p-2">
-            <ArrowLeft className="h-5 w-5" />
+        <div className="flex items-center justify-center relative px-6 py-8">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onPrev} 
+            className="absolute left-6 p-2 hover:bg-gray-50"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-700" />
           </Button>
-          <div className="text-center flex-1">
-            <h2 className="text-2xl font-bold text-gray-900">Your Info</h2>
-            <p className="text-gray-600">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-4 tracking-tight">
+              Your <em className="italic font-light">Info</em>
+            </h1>
+            <p className="text-lg text-gray-500 font-light leading-relaxed max-w-md mx-auto">
               {isCompatibilityReport
                 ? "We need both people's details for your compatibility report"
                 : 'We need these to create your personalised report'}
@@ -125,15 +132,17 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
         </div>
 
         {/* Person‑1 */}
-        <PersonCard
-          personNumber={1}
-          title={isCompatibilityReport ? 'Your Details' : 'Your Details'}
-          register={register}
-          setValue={setValue}
-          watch={watch}
-          errors={errors}
-          hasTriedToSubmit={hasTriedSubmit}
-        />
+        <div className="px-6">
+          <PersonCard
+            personNumber={1}
+            title={isCompatibilityReport ? 'Your Details' : 'Your Details'}
+            register={register}
+            setValue={setValue}
+            watch={watch}
+            errors={errors}
+            hasTriedToSubmit={hasTriedSubmit}
+          />
+        </div>
 
         {/* Add partner */}
         {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
@@ -141,15 +150,15 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+            className="px-6"
           >
-            <Button
+            <button
               onClick={() => setShowSecondPerson(true)}
-              variant="outline"
-              className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+              className="w-full bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
             >
-              <Plus className="h-5 w-5 mr-2" />
+              <Plus className="h-5 w-5 mr-3 inline" />
               Add Partner's Details
-            </Button>
+            </button>
           </motion.div>
         )}
 
@@ -162,6 +171,7 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="px-6"
             >
               <PersonCard
                 personNumber={2}
@@ -181,18 +191,16 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="pb-6 w-full"
+          className="px-6 pb-12"
         >
-          <Button
+          <button
             onClick={handleReviewAndPay}
-            variant="outline"
-            className="w-full h-12 text-lg font-semibold border-2 border-primary text-primary bg-white hover:bg-accent"
+            className="w-full bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
           >
             Review & Pay
-          </Button>
+          </button>
         </motion.div>
       </motion.div>
-
     </div>
   );
 });
