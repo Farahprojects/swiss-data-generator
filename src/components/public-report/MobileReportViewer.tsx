@@ -129,107 +129,103 @@ const MobileReportViewer = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col h-full"
+      className="flex flex-col h-full min-h-screen bg-white"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b bg-white sticky top-0 z-10 flex-shrink-0">
+      <div className="flex items-center justify-center relative px-6 py-8 border-b border-gray-100">
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={onBack}
-          className="p-2"
+          className="absolute left-6 p-2 hover:bg-gray-50"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-5 w-5 text-gray-700" />
         </Button>
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold text-gray-900">Your Report</h2>
-          <p className="text-sm text-gray-600">Generated for {customerName}</p>
+        <div className="text-center">
+          <h1 className="text-3xl font-light text-gray-900 mb-2 tracking-tight">
+            Your <em className="italic font-light">Report</em>
+          </h1>
+          <p className="text-lg text-gray-500 font-light">
+            Generated for {customerName}
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="absolute right-6 flex gap-2">
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
             onClick={handleCopyToClipboard}
-            className="flex items-center gap-2"
+            className="p-2 hover:bg-gray-50"
           >
-            <Copy className="h-4 w-4" />
-            Copy
+            <Copy className="h-5 w-5 text-gray-700" />
           </Button>
           {reportPdfData && (
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={handleDownloadPdf}
-              className="flex items-center gap-2"
+              className="p-2 hover:bg-gray-50"
             >
-              <Download className="h-4 w-4" />
-              PDF
+              <Download className="h-5 w-5 text-gray-700" />
             </Button>
           )}
         </div>
       </div>
 
-      {/* Report Content - Scrollable with bottom padding for buttons */}
-      <div className="flex-1 overflow-y-auto bg-gray-50" style={{ height: 'calc(100vh - 160px)' }}>
-        <div className="p-4 pb-20">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FileText className="h-5 w-5 text-primary" />
-                Report Content
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ReportRenderer content={reportContent} />
-            </CardContent>
-          </Card>
+      {/* Report Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-6 py-8 pb-24">
+          <div className="max-w-4xl mx-auto">
+            <ReportRenderer content={reportContent} />
+          </div>
         </div>
       </div>
 
-      {/* Bottom Action Bar - Thumb-friendly positioning */}
-      <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3 z-20">
-        <Button 
-          onClick={handleCopyToClipboard}
-          variant="outline"
-          className="flex-1 h-12 text-base font-medium border-2 border-primary/20 hover:border-primary/40"
-        >
-          <Copy className="h-5 w-5 mr-2" />
-          Copy
-        </Button>
-        <Button 
-          onClick={handleChatGPT}
-          className="flex-1 h-12 text-base font-medium bg-primary hover:bg-primary/90"
-        >
-          <span className="mr-2 text-lg">🤖</span>
-          ChatGPT
-        </Button>
+      {/* Bottom Action Bar */}
+      <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-6">
+        <div className="flex gap-4 max-w-4xl mx-auto">
+          <button 
+            onClick={handleCopyToClipboard}
+            className="flex-1 bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
+          >
+            <Copy className="h-5 w-5 mr-3" />
+            Copy Report
+          </button>
+          <button 
+            onClick={handleChatGPT}
+            className="flex-1 bg-gray-900 text-white px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center"
+          >
+            <span className="mr-3 text-xl">🤖</span>
+            ChatGPT Analysis
+          </button>
+        </div>
       </div>
 
       {/* ChatGPT Confirmation Dialog */}
       <Dialog open={showChatGPTConfirm} onOpenChange={setShowChatGPTConfirm}>
-        <DialogContent className="mx-4">
-          <DialogHeader>
-            <DialogTitle>Analyze with ChatGPT</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="mx-6 rounded-xl">
+          <DialogHeader className="text-center space-y-4">
+            <DialogTitle className="text-2xl font-light text-gray-900 tracking-tight">
+              Analyze with <em className="italic font-light">ChatGPT</em>
+            </DialogTitle>
+            <DialogDescription className="text-lg text-gray-500 font-light leading-relaxed">
               Ready to get AI insights on your report? We'll copy your report to clipboard and open ChatGPT for analysis.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-3 mt-4">
-            <Button
-              variant="outline"
+          <div className="flex gap-4 mt-8">
+            <button
               onClick={() => setShowChatGPTConfirm(false)}
-              className="flex-1"
+              className="flex-1 bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300"
               disabled={isCopping}
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleChatGPTCopyAndGo}
-              className="flex-1"
+              className="flex-1 bg-gray-900 text-white px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
               disabled={isCopping}
             >
               {isCopping ? "Copied!" : "Copy & Go"}
-            </Button>
+            </button>
           </div>
         </DialogContent>
       </Dialog>
