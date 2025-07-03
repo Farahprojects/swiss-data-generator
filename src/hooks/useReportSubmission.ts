@@ -104,7 +104,7 @@ export const useReportSubmission = () => {
         const isAstroData = data.astroDataType && data.astroDataType.trim() !== '';
         
         const reportData = {
-          reportType: isAstroData ? '' : completeReportType,
+          reportType: isAstroData ? data.astroDataType : completeReportType,
           request: isAstroData ? data.astroDataType : '',
           relationshipType: data.relationshipType,
           essenceType: data.essenceType,
@@ -166,7 +166,7 @@ export const useReportSubmission = () => {
       const isAstroData = data.astroDataType && data.astroDataType.trim() !== '';
       
       const reportData = {
-        reportType: isAstroData ? '' : completeReportType,
+        reportType: isAstroData ? data.astroDataType : completeReportType,
         request: isAstroData ? data.astroDataType : '',
         relationshipType: data.relationshipType,
         essenceType: data.essenceType,
