@@ -62,27 +62,27 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
       type: 'Snapshots',
       icon: <CalendarDays className="h-6 w-6 text-gray-700 inline-block mr-2" />,
       title: 'Snapshot Reports',
-      priceKey: 'snapshot',
+      priceKey: 'focus', // Base price, will show range
       bestFor: 'Quick insights',
       description: 'Fast, focused insights for daily life',
       details: 'Get quick snapshots of your mental state, focus times, and emotional rhythms.',
       subTypes: [
-        'Mindset – Current mental clarity and cognitive strengths',
-        'Focus – Best hours for deep work or rest today',
-        'Flow – Creative and emotional rhythms over 7 days'
+        'Focus – Best hours for deep work or rest today ($3)',
+        'Mindset – Current mental clarity and cognitive strengths ($3)',
+        'Monthly – Personal forecast for the current month ($5)'
       ]
     },
     {
       type: 'AstroData',
       icon: <Brain className="h-6 w-6 text-gray-700 inline-block mr-2" />,
       title: 'Astro Data',
-      priceKey: 'astro_data',
+      priceKey: 'essence', // Base price, will show range
       bestFor: 'Raw astrological data',
       description: 'Pure astrological calculations and data',
       details: 'Access precise birth chart calculations, planetary positions, and astrological house data.',
       subTypes: [
-        'Birth Chart Data – Complete natal chart calculations',
-        'Transit Data – Current planetary movements and influences'
+        'Essence Data – Complete personality chart calculations ($15)',
+        'Sync Data – Relationship compatibility calculations ($15)'
       ]
     }
   ];
