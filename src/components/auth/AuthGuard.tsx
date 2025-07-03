@@ -59,8 +59,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   }
 
   // If user has pending email verification, redirect to login to show verification modal
-  // But wait for the email check to complete first to avoid redirect loops
-  if (pendingEmailAddress && !isPendingEmailCheck) {
+  if (pendingEmailAddress) {
     log('info', 'User has pending email verification, redirecting to login');
     return <Navigate to="/login" state={{ from: location, showVerification: true, pendingEmail: pendingEmailAddress }} replace />;
   }
