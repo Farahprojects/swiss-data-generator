@@ -212,10 +212,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // ---------------------------------------------------------------------------
   const ProcessingStatus = (
     <div className="flex items-center justify-center gap-4 py-4">
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-        isReady ? 'bg-gray-100' : 'bg-gray-100'
-      }`}>
-        <StatusIcon className={`h-6 w-6 ${isReady ? 'text-gray-600' : 'text-gray-600'}`} />
+      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+        <StatusIcon className="h-6 w-6 text-gray-600" />
       </div>
       {!isReady && (
         <>
