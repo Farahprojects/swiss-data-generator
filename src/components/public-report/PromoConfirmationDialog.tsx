@@ -63,32 +63,41 @@ export const PromoConfirmationDialog: React.FC<PromoConfirmationDialogProps> = (
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="sm:max-w-md">
-        <AlertDialogHeader>
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <AlertDialogTitle className="text-lg">{getErrorTitle()}</AlertDialogTitle>
+      <AlertDialogContent className="sm:max-w-lg border-0 shadow-2xl">
+        <AlertDialogHeader className="text-center pb-6">
+          <div className="mx-auto w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-6">
+            <AlertTriangle className="h-8 w-8 text-amber-500" />
           </div>
-          <AlertDialogDescription className="space-y-3 pt-2">
-            <p className="text-sm text-red-600">{errorMessage}</p>
-            <p className="text-sm text-gray-600">{getSuggestion()}</p>
-            <div className="bg-gray-50 rounded-lg p-3 border">
-              <p className="text-sm font-medium text-gray-900">
-                Continue with full payment: ${fullPrice.toFixed(2)}
+          <AlertDialogTitle className="text-2xl font-light text-gray-900 mb-3 tracking-tight">
+            {getErrorTitle()}
+          </AlertDialogTitle>
+          <AlertDialogDescription className="space-y-4 text-center">
+            <p className="text-gray-600 font-light leading-relaxed">
+              {getSuggestion()}
+            </p>
+            <div className="bg-gray-50/80 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50">
+              <p className="text-sm font-light text-gray-500 mb-2">
+                Continue with full payment
+              </p>
+              <p className="text-2xl font-light text-gray-900 tracking-tight">
+                ${fullPrice.toFixed(2)}
               </p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-          <AlertDialogCancel onClick={onTryAgain} className="order-2 sm:order-1">
-            Try Another Code
-          </AlertDialogCancel>
+        <AlertDialogFooter className="flex-col gap-3 pt-2">
           <AlertDialogAction 
             onClick={onContinueWithFullPayment}
-            className="order-1 sm:order-2 bg-primary hover:bg-primary/90"
+            className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-light text-base rounded-xl transition-all duration-300 hover:scale-[1.02] border-0"
           >
             Continue with Full Payment
           </AlertDialogAction>
+          <AlertDialogCancel 
+            onClick={onTryAgain} 
+            className="w-full h-12 bg-transparent hover:bg-gray-50 text-gray-600 font-light text-base rounded-xl border border-gray-200 transition-all duration-300 hover:border-gray-300"
+          >
+            Try Another Code
+          </AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
