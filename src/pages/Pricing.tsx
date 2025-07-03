@@ -109,7 +109,7 @@ const HowItWorksSection = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.6, ease: "easeOut" }}
-          className="text-3xl font-bold text-center mb-12 text-gray-900"
+          className="text-3xl font-light text-center mb-12 text-gray-900 tracking-tight"
         >
           How It Works
         </motion.h2>
@@ -125,8 +125,8 @@ const HowItWorksSection = () => {
               <div className="bg-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-md">
                 {step.icon}
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900">{step.title}</h3>
-              <p className="text-gray-600">{step.description}</p>
+              <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">{step.title}</h3>
+              <p className="text-gray-600 font-light">{step.description}</p>
             </motion.div>
           ))}
         </div>
@@ -166,7 +166,7 @@ const FAQSectionComponent = ({ items }: { items: { question: string; answer: str
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.4, duration: 0.6, ease: "easeOut" }}
-          className="text-3xl font-bold mb-12 text-center"
+          className="text-3xl font-light mb-12 text-center text-gray-900 tracking-tight"
         >
           Common Questions
         </motion.h2>
@@ -181,8 +181,8 @@ const FAQSectionComponent = ({ items }: { items: { question: string; answer: str
                 transition={{ delay: 1.6 + (index * 0.1), duration: 0.6, ease: "easeOut" }}
                 className="border-b border-gray-200 pb-6"
               >
-                <h3 className="text-xl font-semibold mb-2">{faq.question}</h3>
-                <p className="text-gray-600">{faq.answer}</p>
+                <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">{faq.question}</h3>
+                <p className="text-gray-600 font-light">{faq.answer}</p>
               </motion.div>
             ))}
           </div>
@@ -238,7 +238,7 @@ const coachingFaqs = [
 const FAQSection = ({ items }: { items: { question: string; answer: string }[] }) => (
   <section className="py-20 bg-white">
     <div className="container mx-auto px-4">
-      <h2 className="text-3xl font-bold mb-12 text-center">
+      <h2 className="text-3xl font-light mb-12 text-center text-gray-900 tracking-tight">
         Professional Coaching FAQ
       </h2>
       <div className="max-w-3xl mx-auto">
@@ -248,13 +248,13 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
               key={index}
               className="border-b border-gray-200 pb-6"
             >
-              <h3 className="text-xl font-semibold mb-2">{faq.question}</h3>
-              <p className="text-gray-600">{faq.answer}</p>
+              <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">{faq.question}</h3>
+              <p className="text-gray-600 font-light">{faq.answer}</p>
             </div>
           ))}
         </div>
         <div className="mt-12 text-center">
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 mb-6 font-light">
             Want a deeper demo or have specific questions about integration?
           </p>
           <Link to="/contact">
@@ -315,10 +315,10 @@ const Pricing = () => {
         {/* HERO SECTION */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
-            <h1 className="text-4xl font-extrabold text-primary mb-4 text-center">Professional Coaching Tools</h1>
-            <p className="max-w-2xl mx-auto text-center text-lg text-gray-700 mb-10">
-              <strong>Unlock deeper insights for every client.</strong> 
-              Our platform delivers <span className="text-primary font-semibold">advanced astrological analysis</span> to support your coaching, increase session value, and foster greater client loyalty.
+            <h1 className="text-4xl font-light text-gray-900 mb-4 text-center tracking-tight">Professional Coaching Tools</h1>
+            <p className="max-w-2xl mx-auto text-center text-lg text-gray-700 mb-10 font-light">
+              <span className="font-normal">Unlock deeper insights for every client.</span> 
+              Our platform delivers <span className="text-gray-900 font-normal">advanced astrological analysis</span> to support your coaching, increase session value, and foster greater client loyalty.
             </p>
           </div>
         </section>
@@ -335,10 +335,10 @@ const Pricing = () => {
         <FAQSection items={coachingFaqs} />
       </main>
       <section className="bg-primary py-12 text-center text-white">
-        <h2 className="mb-4 text-2xl font-bold">
+        <h2 className="mb-4 text-2xl font-light text-white tracking-tight">
           Ready to empower your coaching practice?
         </h2>
-        <p className="mx-auto mb-8 max-w-2xl text-lg">
+        <p className="mx-auto mb-8 max-w-2xl text-lg font-light text-white">
           Get started in minutes — provide world-class analysis and stand out as a modern coach. 
           No astrological knowledge needed.
         </p>
