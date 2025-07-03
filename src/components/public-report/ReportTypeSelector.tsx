@@ -139,9 +139,13 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
     (value: string, reportType: ReportFormData['reportType'], onChange: (v: any) => void) => {
       setSelectedSubCategory(value);
       onChange(value);
-      setValue?.('reportType', 'request', { shouldValidate: true }); // Set to 'request' for astro data only
+      
+      // Set request field based on the category selected
+      const requestValue = watchedCategory === 'the-self' ? 'essence' : 'sync';
+      setValue?.('request', requestValue, { shouldValidate: true });
+      setValue?.('reportType', '', { shouldValidate: true }); // Keep reportType blank for astro data
     },
-    [setValue],
+    [setValue, watchedCategory],
   );
 
   /* ──────────────────────────

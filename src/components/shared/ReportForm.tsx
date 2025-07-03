@@ -56,6 +56,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       returnYear: '',
       notes: '',
       promoCode: '',
+      request: '',
     },
   });
 

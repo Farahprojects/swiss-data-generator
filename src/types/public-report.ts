@@ -23,6 +23,7 @@ export interface ReportFormData {
   reportCategory?: string;
   reportSubCategory?: string;
   astroDataType?: string;
+  request?: string;
   name: string;
   email: string;
   birthDate: string;
