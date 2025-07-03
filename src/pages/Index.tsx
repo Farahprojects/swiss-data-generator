@@ -124,64 +124,66 @@ const Index = () => {
         </section>
 
         {/* App Features Showcase */}
-        <section className="py-20">
+        <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
           <div className="container mx-auto px-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
-              className="mx-auto mb-16 max-w-3xl text-center"
+              className="mx-auto mb-20 max-w-2xl text-center"
             >
-              <h2 className="mb-4 text-3xl font-bold md:text-4xl">
+              <h2 className="mb-6 text-4xl md:text-5xl font-light text-gray-900 tracking-tight">
                 See Therai in Action
               </h2>
-              <p className="text-lg text-gray-600">
+              <p className="text-lg text-gray-500 leading-relaxed">
                 Experience the complete toolkit that transforms how you understand and guide your clients toward breakthrough moments.
               </p>
             </motion.div>
 
-            <div className="space-y-20">
+            <div className="space-y-32">
               {appFeatures.map((feature, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.0 + (i * 0.2), duration: 0.6, ease: "easeOut" }}
-                  className={`grid gap-12 items-center lg:grid-cols-2 ${
+                  className={`grid gap-16 items-center lg:grid-cols-2 ${
                     i % 2 === 1 ? 'lg:grid-flow-col-dense' : ''
                   }`}
                 >
                   {/* Image */}
                   <div className={`relative group ${i % 2 === 1 ? 'lg:col-start-2' : ''}`}>
-                    <div className="relative overflow-hidden rounded-3xl shadow-2xl">
+                    <div className="relative overflow-hidden rounded-2xl">
                       <img 
                         src={getFeatureImage(i)} 
                         alt={feature.title}
-                        className="w-full h-[280px] lg:h-[320px] object-cover transition-transform duration-700 group-hover:scale-105"
+                        className="w-full h-[320px] lg:h-[380px] object-cover transition-all duration-500 group-hover:scale-[1.02]"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                     </div>
                   </div>
 
                   {/* Content */}
-                  <div className={`space-y-6 ${i % 2 === 1 ? 'lg:col-start-1' : ''}`}>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4">
-                        <div className="rounded-full bg-primary/10 p-3">
-                          <feature.Icon className="h-8 w-8 text-primary" />
+                  <div className={`space-y-8 ${i % 2 === 1 ? 'lg:col-start-1' : ''}`}>
+                    <div className="space-y-6">
+                      <div className="flex items-start gap-5">
+                        <div className="rounded-2xl bg-gray-50 border border-gray-200/50 p-4 mt-1">
+                          <feature.Icon className="h-6 w-6 text-gray-700" />
                         </div>
-                        <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">{feature.title}</h3>
+                        <div className="flex-1">
+                          <h3 className="text-3xl lg:text-4xl font-light text-gray-900 leading-tight tracking-tight">{feature.title}</h3>
+                          <p className="text-lg text-gray-600 leading-relaxed mt-4">{feature.description}</p>
+                        </div>
                       </div>
-                      <p className="text-lg text-gray-600 leading-relaxed">{feature.description}</p>
                     </div>
                     
                     <Link 
                       to="/features" 
-                      className="inline-flex items-center gap-3 text-primary hover:text-primary-hover transition-colors font-semibold text-lg group"
+                      className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors font-medium text-base group border-b border-gray-300 hover:border-gray-600 pb-1"
                     >
                       <span>Explore Feature</span>
-                      <svg className="h-6 w-6 transition-transform group-hover:translate-x-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
                       </svg>
                     </Link>
                   </div>
