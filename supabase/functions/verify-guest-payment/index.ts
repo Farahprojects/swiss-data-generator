@@ -51,10 +51,16 @@ function assertPresent(obj: Record<string, any>, keys: string[]) {
 }
 
 function buildTranslatorPayload(rd: ReportData) {
-  const request = mapReportTypeToRequest(rd.reportType);
+  // Check if rd.request exists first (for astro data), otherwise map reportType
+  let request;
+  if (rd.request && rd.request.trim() !== '') {
+    request = rd.request;
+  } else {
+    request = mapReportTypeToRequest(rd.reportType);
+  }
 
   if (request === "unknown") {
-    throw new Error(`Unsupported reportType '${rd.reportType}'`);
+    throw new Error(`Unsupported reportType '${rd.reportType}' and no request field provided`);
   }
 
   // Single-person endpoints
