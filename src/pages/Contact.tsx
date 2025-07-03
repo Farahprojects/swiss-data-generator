@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -206,9 +207,11 @@ const Contact = () => {
   // Thank you message component
   const ThankYouMessage = () => (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-      <CheckCircle className="h-16 w-16 text-primary mb-6 animate-bounce" />
-      <h2 className="text-3xl font-bold text-primary mb-4">Thank You for Reaching Out</h2>
-      <p className="text-lg text-gray-600 max-w-lg mb-6">
+      <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+        <CheckCircle className="h-8 w-8 text-primary" />
+      </div>
+      <h2 className="text-3xl font-light text-gray-900 mb-4 tracking-tight">Thank You for Reaching Out</h2>
+      <p className="text-lg text-gray-600 max-w-lg mb-6 font-light leading-relaxed">
         Your message has been successfully received. We appreciate your inquiry and will respond to you within 24 hours.
       </p>
     </div>
@@ -223,18 +226,18 @@ const Contact = () => {
         ) : (
           <>
             <section className="bg-white py-20 text-center">
-              <h1 className="text-4xl font-bold text-primary md:text-5xl mb-4">
+              <h1 className="text-4xl font-light text-gray-900 md:text-5xl mb-4 tracking-tight">
                 Get in Touch
               </h1>
-              <p className="text-gray-600 text-lg">
+              <p className="text-gray-600 text-lg font-light leading-relaxed">
                 Reach out about the API, partnerships, or anything else we can help with.
               </p>
             </section>
 
             <section className="py-16">
-              <div className="container mx-auto max-w-3xl px-4">
-                <div className="rounded-xl border p-8 shadow-sm">
-                  <h2 className="mb-6 text-2xl font-semibold text-primary">Send a Message</h2>
+              <div className="container mx-auto max-w-2xl px-4">
+                <div className="bg-white rounded-2xl border border-gray-200/50 p-8 shadow-lg shadow-gray-200/50 backdrop-blur-sm">
+                  <h2 className="mb-8 text-2xl font-light text-gray-900 tracking-tight text-center">Send a Message</h2>
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Honeypot field - invisible to humans but bots will fill it */}
                     <div className="absolute opacity-0 pointer-events-none">
@@ -251,8 +254,8 @@ const Contact = () => {
 
                     <div className="grid gap-6 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="name" className="flex items-center">
-                          Name <span className="text-red-500 ml-1">*</span>
+                        <Label htmlFor="name" className="text-sm font-light text-gray-700">
+                          Full Name <span className="text-red-400 ml-1">*</span>
                         </Label>
                         <Input 
                           id="name" 
@@ -260,17 +263,18 @@ const Contact = () => {
                           value={formData.name} 
                           onChange={handleChange} 
                           required 
-                          className={formErrors.name ? "border-red-500" : ""}
+                          placeholder="Enter your full name"
+                          className={`h-12 rounded-xl border-gray-200 bg-gray-50/50 font-light placeholder:text-gray-400 focus:border-primary focus:bg-white transition-all duration-300 ${formErrors.name ? "border-red-300 bg-red-50/30" : ""}`}
                         />
                         {formErrors.name && (
-                          <p className="text-xs text-red-500 flex items-center">
+                          <p className="text-xs text-red-500 flex items-center font-light">
                             <AlertCircle className="h-3 w-3 mr-1" /> Name is required
                           </p>
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="flex items-center">
-                          Email <span className="text-red-500 ml-1">*</span>
+                        <Label htmlFor="email" className="text-sm font-light text-gray-700">
+                          Email Address <span className="text-red-400 ml-1">*</span>
                         </Label>
                         <Input 
                           type="email" 
@@ -279,10 +283,11 @@ const Contact = () => {
                           value={formData.email} 
                           onChange={handleChange} 
                           required 
-                          className={formErrors.email ? "border-red-500" : ""}
+                          placeholder="your@email.com"
+                          className={`h-12 rounded-xl border-gray-200 bg-gray-50/50 font-light placeholder:text-gray-400 focus:border-primary focus:bg-white transition-all duration-300 ${formErrors.email ? "border-red-300 bg-red-50/30" : ""}`}
                         />
                         {formErrors.email && (
-                          <p className="text-xs text-red-500 flex items-center">
+                          <p className="text-xs text-red-500 flex items-center font-light">
                             <AlertCircle className="h-3 w-3 mr-1" /> Valid email address is required
                           </p>
                         )}
@@ -290,8 +295,8 @@ const Contact = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="subject" className="flex items-center">
-                        Subject <span className="text-red-500 ml-1">*</span>
+                      <Label htmlFor="subject" className="text-sm font-light text-gray-700">
+                        Subject <span className="text-red-400 ml-1">*</span>
                       </Label>
                       <select
                         id="subject"
@@ -299,24 +304,24 @@ const Contact = () => {
                         value={formData.subject}
                         onChange={handleChange}
                         required
-                        className={`w-full rounded-md border px-3 py-2 text-sm ${formErrors.subject ? "border-red-500" : ""}`}
+                        className={`w-full h-12 rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm font-light text-gray-700 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 ${formErrors.subject ? "border-red-300 bg-red-50/30" : ""}`}
                       >
-                        <option value="">Select</option>
+                        <option value="" className="text-gray-400">Select a subject</option>
                         <option value="General Inquiry">General Inquiry</option>
                         <option value="API Support">API Support</option>
                         <option value="Partnership">Partnership</option>
                         <option value="Billing">Billing</option>
                       </select>
                       {formErrors.subject && (
-                        <p className="text-xs text-red-500 flex items-center">
+                        <p className="text-xs text-red-500 flex items-center font-light">
                           <AlertCircle className="h-3 w-3 mr-1" /> Subject is required
                         </p>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="message" className="flex items-center">
-                        Message <span className="text-red-500 ml-1">*</span>
+                      <Label htmlFor="message" className="text-sm font-light text-gray-700">
+                        Message <span className="text-red-400 ml-1">*</span>
                       </Label>
                       <Textarea
                         id="message"
@@ -324,17 +329,22 @@ const Contact = () => {
                         value={formData.message}
                         onChange={handleChange}
                         required
-                        rows={5}
-                        className={formErrors.message ? "border-red-500" : ""}
+                        rows={6}
+                        placeholder="Tell us how we can help you..."
+                        className={`rounded-xl border-gray-200 bg-gray-50/50 font-light placeholder:text-gray-400 focus:border-primary focus:bg-white transition-all duration-300 resize-none ${formErrors.message ? "border-red-300 bg-red-50/30" : ""}`}
                       />
                       {formErrors.message && (
-                        <p className="text-xs text-red-500 flex items-center">
+                        <p className="text-xs text-red-500 flex items-center font-light">
                           <AlertCircle className="h-3 w-3 mr-1" /> Message is required
                         </p>
                       )}
                     </div>
 
-                    <Button type="submit" disabled={isSubmitting} className="w-full py-6">
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting} 
+                      className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-light text-base rounded-xl transition-all duration-300 hover:scale-[1.02] border-0 shadow-lg shadow-gray-900/25"
+                    >
                       {isSubmitting ? (
                         <span className="flex items-center">
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -344,8 +354,6 @@ const Contact = () => {
                     </Button>
                   </form>
                 </div>
-
-                
               </div>
             </section>
           </>
