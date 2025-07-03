@@ -121,9 +121,9 @@ const PublicReport = () => {
 
               {/* Sync Pro Compatibility Preview */}
               <div className="mb-24">
-                <div className="grid md:grid-cols-2 gap-12 mb-16">
+                <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
                   {/* Peter's Profile */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
                     <div className="text-center mb-8">
                       <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Peter Farah</h3>
                       <p className="text-gray-600 font-normal">Creative Visionary • Structured Strategist</p>
@@ -148,7 +148,7 @@ const PublicReport = () => {
                   </div>
 
                   {/* Olivia's Profile */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
                     <div className="text-center mb-8">
                       <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Olivia Patten</h3>
                       <p className="text-gray-600 font-normal">Intuitive Connector • Detail Orchestrator</p>
@@ -174,7 +174,7 @@ const PublicReport = () => {
                 </div>
 
                 {/* Their Sync Dynamic */}
-                <div className="relative overflow-hidden bg-white/60 backdrop-blur-sm rounded-2xl p-12 border border-gray-200/50">
+                <div className="relative overflow-hidden bg-white/60 backdrop-blur-sm rounded-none md:rounded-2xl p-8 md:p-12 border-0 md:border border-gray-200/50">
                   {/* Subtle background elements */}
                   <div className="absolute inset-0 opacity-20">
                     <div className="absolute top-6 left-12 w-1 h-1 bg-gray-400 rounded-full animate-pulse"></div>
@@ -217,9 +217,9 @@ const PublicReport = () => {
               </div>
 
               {/* Examples Grid */}
-              <div className="grid md:grid-cols-2 gap-12 mb-16">
+              <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
                 {/* Cognitive Processing Profile Card */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
                   <div className="text-center mb-8">
                     <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Cognitive Processing Profile</h3>
                     <p className="text-gray-600 font-normal">Personal Essence Report • Generated in 2 minutes</p>
@@ -244,7 +244,7 @@ const PublicReport = () => {
                 </div>
 
                 {/* Astro Data Card */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
                   <div className="text-center mb-8">
                     <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Raw Astro Data</h3>
                     <p className="text-gray-600 font-normal">Precise astronomical calculations • Powered by Therai Swiss</p>
