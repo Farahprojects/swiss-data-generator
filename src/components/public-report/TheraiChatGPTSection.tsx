@@ -69,7 +69,7 @@ const TheraiChatGPTSection = () => {
 
               <div className="pt-6">
                 <a 
-                  href="https://chatgpt.com/g/g-XYZ" // You can update this with the actual deep link
+                  href="https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-xl text-lg font-normal hover:bg-gray-800 transition-all duration-300 hover:scale-105 border border-gray-800/20 shadow-lg hover:shadow-xl"
