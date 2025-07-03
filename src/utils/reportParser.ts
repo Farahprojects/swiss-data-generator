@@ -13,6 +13,9 @@ export class ReportParser {
       .replace(/[_`]/g, '')
       .replace(/#{1,6}\s*/g, '')
       .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      // Remove error messages that shouldn't be displayed
+      .replace(/[",]\s*"?reporterror"?\s*:\s*"[^"]*"/gi, '')
+      .replace(/Failed to generate \w+ report: [^}]*/gi, '')
       .trim();
   }
 
