@@ -45,58 +45,60 @@ export const ClientsTable: React.FC<ClientsTableProps> = ({
   };
 
   return (
-    <div className="bg-background border rounded-lg">
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="border-gray-200 bg-gray-50/30">
             <TableHead 
-              className="font-semibold cursor-pointer hover:bg-muted/50"
+              className="font-light text-gray-600 cursor-pointer hover:bg-gray-50 py-6 px-8 text-left"
               onClick={() => onSort('full_name')}
             >
-              <div className="flex items-center gap-1">
-                Name
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Name</span>
                 {getSortIcon('full_name')}
               </div>
             </TableHead>
             {!isMobile && (
               <TableHead 
-                className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
+                className="font-light text-gray-600 cursor-pointer hover:bg-gray-50 py-6 px-8 text-left"
                 onClick={() => onSort('email')}
               >
-                <div className="flex items-center gap-1">
-                  Email
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Email</span>
                   {getSortIcon('email')}
                 </div>
               </TableHead>
             )}
             <TableHead 
-              className="font-semibold cursor-pointer hover:bg-muted/50"
+              className="font-light text-gray-600 cursor-pointer hover:bg-gray-50 py-6 px-8 text-left"
               onClick={() => onSort('latest_journal')}
             >
-              <div className="flex items-center gap-1">
-                Journal
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Journal</span>
                 {getSortIcon('latest_journal')}
               </div>
             </TableHead>
             <TableHead 
-              className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
+              className="font-light text-gray-600 cursor-pointer hover:bg-gray-50 py-6 px-8 text-left"
               onClick={() => onSort('latest_report')}
             >
-              <div className="flex items-center gap-1">
-                Reports
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Reports</span>
                 {getSortIcon('latest_report')}
               </div>
             </TableHead>
             <TableHead 
-              className="font-semibold cursor-pointer hover:bg-muted/50 text-left"
+              className="font-light text-gray-600 cursor-pointer hover:bg-gray-50 py-6 px-8 text-left"
               onClick={() => onSort('latest_insight')}
             >
-              <div className="flex items-center gap-1">
-                Insight
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Insight</span>
                 {getSortIcon('latest_insight')}
               </div>
             </TableHead>
-            <TableHead className="font-semibold">Actions</TableHead>
+            <TableHead className="font-light text-gray-600 py-6 px-8 text-center">
+              <span className="text-sm">Actions</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
