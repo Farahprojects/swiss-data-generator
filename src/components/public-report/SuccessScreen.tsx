@@ -19,7 +19,7 @@ const COLOR_GREEN = 'text-green-600';
 // -----------------------------------------------------------------------------
 // Helper Components
 // -----------------------------------------------------------------------------
-const VideoLoader: React.FC = () => {
+const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(false); // Start unmuted for audio
 
@@ -32,6 +32,9 @@ const VideoLoader: React.FC = () => {
     setIsMuted(!isMuted);
   };
 
+  const handleVideoReady = () => {
+    onVideoReady?.();
+  };
 
   return (
     <div className="relative w-full h-0 pt-[56.25%] overflow-hidden rounded-xl shadow-lg">
@@ -46,6 +49,8 @@ const VideoLoader: React.FC = () => {
         playsInline
         preload="auto"
         controls={false}
+        onCanPlay={handleVideoReady}
+        onLoadedData={handleVideoReady}
       />
       
       {/* Mute / Un‑mute toggle */}
@@ -88,19 +93,29 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   useViewportHeight();
 
   const [countdown, setCountdown] = useState(24);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const redirectRef = useRef<NodeJS.Timeout | null>(null);
 
   // ---------------------------------------------------------------------------
-  // Polling lifecycle
+  // Video ready handler
+  // ---------------------------------------------------------------------------
+  const handleVideoReady = useCallback(() => {
+    console.log('🎬 Video is ready, setting isVideoReady to true');
+    setIsVideoReady(true);
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Polling lifecycle - wait for video to be ready
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-    if (autoStartPolling && reportIdToUse && !isPolling) {
-      startPolling(reportIdToUse);
+    if (autoStartPolling && reportIdToUse && !isPolling && isVideoReady) {
+      console.log('🚀 Starting polling after video is ready');
+      setTimeout(() => startPolling(reportIdToUse), 2000); // 2 second delay after video ready
     }
     return () => stopPolling();
-  }, [autoStartPolling, guestReportId, isPolling, startPolling, stopPolling]);
+  }, [autoStartPolling, guestReportId, isPolling, isVideoReady, startPolling, stopPolling]);
 
   // ---------------------------------------------------------------------------
   // Status helpers
@@ -291,7 +306,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
             {!isReady && !error && (
               <>
                 {Countdown}
-                <VideoLoader />
+                <VideoLoader onVideoReady={handleVideoReady} />
                 {PersonalNote}
               </>
             )}
