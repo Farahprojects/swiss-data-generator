@@ -334,16 +334,16 @@ const Pricing = () => {
 
         <FAQSection items={coachingFaqs} />
       </main>
-      <section className="bg-gray-900 py-12 text-center text-white">
-        <h2 className="mb-4 text-2xl font-light text-white tracking-tight">
+      <section className="bg-gray-50 py-12 text-center border-t border-gray-200">
+        <h2 className="mb-4 text-2xl font-light text-gray-900 tracking-tight">
           Ready to empower your coaching practice?
         </h2>
-        <p className="mx-auto mb-8 max-w-2xl text-lg font-light text-white">
+        <p className="mx-auto mb-8 max-w-2xl text-lg font-light text-gray-700">
           Get started in minutes — provide world-class analysis and stand out as a modern coach. 
           No astrological knowledge needed.
         </p>
         <Link to={user ? "/dashboard" : "/login"}>
-          <Button className="bg-white px-8 py-6 text-lg text-gray-900 hover:bg-gray-100 font-light">
+          <Button className="bg-gray-900 px-8 py-6 text-lg text-white hover:bg-gray-800 font-light">
             {user ? "Get API Access" : "Start Now"}
           </Button>
         </Link>

@@ -4,10 +4,10 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const RelationshipDynamicsCard = () => (
-  <Card className="shadow-lg border-primary/80 border-2">
+  <Card className="shadow-sm border-gray-200 border bg-white">
     <CardHeader className="flex flex-row items-start gap-4">
-      <Badge className="bg-primary/90 text-white mb-2 px-3 py-1">Unlock Compatibility</Badge>
-      <Users className="w-8 h-8 text-primary ml-auto" />
+      <Badge className="bg-gray-700 text-white mb-2 px-3 py-1 font-light">Unlock Compatibility</Badge>
+      <Users className="w-8 h-8 text-gray-600 ml-auto" />
     </CardHeader>
     <CardContent>
       <CardTitle className="text-2xl mb-2 font-light text-gray-900 tracking-tight">Relationship Dynamics Suite</CardTitle>

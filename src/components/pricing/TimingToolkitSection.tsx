@@ -5,22 +5,22 @@ import { TrendingUp, Star, Focus, Brain } from "lucide-react";
 
 const timingInsights = [
   {
-    icon: <TrendingUp className="w-8 h-8 text-primary" />,
+    icon: <TrendingUp className="w-8 h-8 text-gray-600" />,
     title: "Flow",
     desc: "Daily/weekly energy forecast to optimize session timing.",
   },
   {
-    icon: <Focus className="w-8 h-8 text-primary" />,
+    icon: <Focus className="w-8 h-8 text-gray-600" />,
     title: "Focus",
     desc: "Pinpoint career and personal themes for coaching goals.",
   },
   {
-    icon: <Brain className="w-8 h-8 text-primary" />,
+    icon: <Brain className="w-8 h-8 text-gray-600" />,
     title: "Mindset",
     desc: "Cognitive patterns & client communication style.",
   },
   {
-    icon: <Star className="w-8 h-8 text-primary" />,
+    icon: <Star className="w-8 h-8 text-gray-600" />,
     title: "Monthly",
     desc: "Month-ahead game plan for growth and breakthroughs.",
   },
@@ -32,9 +32,9 @@ const TimingToolkitSection = () => (
     <p className="max-w-xl mx-auto text-center text-gray-600 mb-10 font-light">Add individual timing insights to your coaching sessions for laser-focused guidance.</p>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
       {timingInsights.map(({ icon, title, desc }) => (
-        <Card key={title} className="shadow-lg border-primary/80 border-2 flex flex-col h-full">
+        <Card key={title} className="shadow-sm border-gray-200 border flex flex-col h-full bg-white">
           <CardHeader className="flex flex-row items-start gap-4">
-            <Badge className="bg-primary/90 text-white px-3 py-1">Timing Tool</Badge>
+            <Badge className="bg-gray-700 text-white px-3 py-1 font-light">Timing Tool</Badge>
             <div className="ml-auto">{icon}</div>
           </CardHeader>
           <CardContent className="flex flex-col flex-grow pt-0">

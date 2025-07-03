@@ -4,10 +4,10 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const EssenceSuiteCard = () => (
-  <Card className="shadow-lg border-primary border-2 h-full">
+  <Card className="shadow-sm border-gray-200 border h-full bg-white">
     <CardHeader className="flex flex-row items-start gap-4">
-      <Badge className="bg-primary text-white mb-2 px-3 py-1">Most Popular for Coaches</Badge>
-      <Users className="w-8 h-8 text-primary ml-auto" />
+      <Badge className="bg-gray-900 text-white mb-2 px-3 py-1 font-light">Most Popular for Coaches</Badge>
+      <Users className="w-8 h-8 text-gray-600 ml-auto" />
     </CardHeader>
     <CardContent>
       <CardTitle className="text-2xl mb-2 font-light text-gray-900 tracking-tight">Client Essence Suite</CardTitle>
