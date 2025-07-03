@@ -88,9 +88,9 @@ const Index = () => {
               className="max-w-4xl mx-auto"
             >
               <h1 className="text-6xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-12">
-                Know
+                Turn Self-Insight
                 <br />
-                <span className="italic font-medium">Yourself</span>
+                <span className="italic font-medium">into Relentless Momentum</span>
               </h1>
               
               <motion.div
@@ -100,7 +100,7 @@ const Index = () => {
                 className="mb-16"
               >
                 <p className="text-xl text-gray-500 max-w-xl mx-auto leading-relaxed">
-                  Psychological insights that create momentum
+                  Deep psychological insights that create lasting clarity
                 </p>
               </motion.div>
 
