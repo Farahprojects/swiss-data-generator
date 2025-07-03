@@ -89,8 +89,11 @@ export const useReportSubmission = () => {
         }
       }
 
+      // Use either reportType or request field to build the complete report type
+      const effectiveReportType = data.reportType || data.request || '';
+      
       const completeReportType = buildCompleteReportType(
-        data.reportType, 
+        effectiveReportType, 
         data.essenceType, 
         data.relationshipType
       );
