@@ -27,7 +27,7 @@ const TheraiChatGPTSection = () => {
             <div className="space-y-8">
               <div>
                 <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
-                  Unlock Deeper Insights with 
+                  Insights with 
                   <span className="block text-gray-700">Therai ChatGPT</span>
                 </h2>
                 <p className="text-lg text-gray-600 leading-relaxed mb-8">
@@ -36,34 +36,19 @@ const TheraiChatGPTSection = () => {
               </div>
 
               <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full mt-3 flex-shrink-0"></div>
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Instant Deep Analysis</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      Get immediate follow-up questions, explanations, and actionable insights from your reports.
-                    </p>
-                  </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full flex-shrink-0"></div>
+                  <h3 className="text-xl font-medium text-gray-900">Instant Deep Analysis</h3>
                 </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full mt-3 flex-shrink-0"></div>
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Personalized Guidance</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      Ask specific questions about your personality traits, relationships, or timing insights.
-                    </p>
-                  </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full flex-shrink-0"></div>
+                  <h3 className="text-xl font-medium text-gray-900">Personalized Guidance</h3>
                 </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full mt-3 flex-shrink-0"></div>
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Works with All Reports</h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      Compatible with Essence, Sync, Snapshots, and raw Astro Data reports.
-                    </p>
-                  </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full flex-shrink-0"></div>
+                  <h3 className="text-xl font-medium text-gray-900">Works with All Reports</h3>
                 </div>
               </div>
 
@@ -77,9 +62,6 @@ const TheraiChatGPTSection = () => {
                   Try Therai ChatGPT
                   <ExternalLink className="h-5 w-5" />
                 </a>
-                <p className="text-gray-500 mt-3 text-sm font-light">
-                  Available in the ChatGPT store • Free to use with your reports
-                </p>
               </div>
             </div>
           </div>
