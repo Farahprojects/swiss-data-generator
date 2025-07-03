@@ -19,79 +19,47 @@ export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 const mapReportTypeToId = (data: ReportTypeMapping): string => {
   const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType, request } = data;
   
-  console.log('🔍 mapReportTypeToId input:', {
-    reportType,
-    essenceType,
-    relationshipType,
-    reportCategory,
-    reportSubCategory,
-    astroDataType,
-    request
-  });
-  
   // Handle essence reports
   if (reportType === 'essence') {
     if (essenceType) {
       const mappedId = `essence_${essenceType}`;
-      console.log('🎯 Mapped essence report:', mappedId);
       return mappedId;
     } else {
-      console.log('🎯 Default essence report: essence_personal');
+      // Default to personal essence if no essenceType specified
       return 'essence_personal';
     }
   }
   
   // Handle sync/compatibility reports
   if (reportType === 'sync' || reportType === 'compatibility') {
-    const relationship = relationshipType || 'personal';
+    const relationship = relationshipType || 'personal'; // Default to personal if not specified
     const mappedId = `sync_${relationship}`;
-    console.log('🎯 Mapped sync report:', mappedId);
     return mappedId;
   }
   
-  // Handle astro data reports - map to correct price_list entries
+  // Handle astro data reports - use the specific astro data type
   if (reportCategory === 'astro-data' && astroDataType) {
-    let mappedId;
-    if (astroDataType.includes('essence')) {
-      mappedId = 'essence';
-    } else if (astroDataType.includes('sync')) {
-      mappedId = 'sync';
-    } else {
-      mappedId = astroDataType;
-    }
-    console.log('🎯 Mapped astro data report:', mappedId);
-    return mappedId;
+    return astroDataType; // essence_bundle, sync_rich
   }
   
   // Handle astro data based on request field (fallback)
   if (request && !reportType) {
-    let mappedId;
-    if (request === 'essence') {
-      mappedId = 'essence';
-    } else if (request === 'sync') {
-      mappedId = 'sync';
-    } else {
-      mappedId = request;
-    }
-    console.log('🎯 Mapped request field:', mappedId);
-    return mappedId;
+    if (request === 'essence') return 'essence_bundle';
+    if (request === 'sync') return 'sync_rich';
   }
   
   // Handle snapshot reports - map subcategory to actual report type
   if (reportCategory === 'snapshot' && reportSubCategory) {
-    console.log('🎯 Mapped snapshot report:', reportSubCategory);
-    return reportSubCategory;
+    return reportSubCategory; // focus, monthly, mindset
   }
   
   // Handle direct report types
   if (['focus', 'monthly', 'mindset', 'flow'].includes(reportType)) {
-    console.log('🎯 Direct report type:', reportType);
     return reportType;
   }
   
-  // Fallback to reportType (could be empty)
-  console.log('🚨 Fallback to reportType:', reportType || 'EMPTY_STRING');
-  return reportType || '';
+  // Fallback to reportType
+  return reportType;
 };
 
 // Custom hook for getting report price using context
@@ -103,12 +71,8 @@ export const usePriceFetch = () => {
       // Validate input data
       const validatedData = ReportTypeMappingSchema.parse(formData);
       
-      // Debug logging
-      console.log('🔍 Price lookup data:', validatedData);
-      
       // Map to price_list identifier
       const priceId = mapReportTypeToId(validatedData);
-      console.log('🔍 Mapped price ID:', priceId);
       
       // Try to get price by ID first
       let priceData = getPriceById(priceId);
