@@ -70,8 +70,8 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           <h1 className="text-6xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
-            <span className="italic font-medium">
-              Your
+            <span className="italic font-medium flex flex-wrap items-center justify-center gap-x-2">
+              <span>Your</span>
               <AnimatePresence mode="wait">
                 <motion.span
                   key={currentWordIndex}
@@ -79,7 +79,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
                   animate={{ opacity: 1, rotateX: 0 }}
                   exit={{ opacity: 0, rotateX: -90 }}
                   transition={{ duration: 0.3 }}
-                  className="inline-block ml-2"
+                  className="inline-block"
                 >
                   {rotatingWords[currentWordIndex]}
                 </motion.span>
