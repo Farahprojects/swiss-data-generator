@@ -40,7 +40,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
   const logUserError = useCallback(async (email: string, errorType: string, errorMessage?: string) => {
     try {
-      const response = await fetch('https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/log-user-error', {
+      const response = await fetch('/functions/v1/log-user-error', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
