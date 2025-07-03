@@ -43,7 +43,7 @@ const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1R
                     // Also set the reportType for desktop compatibility
                     setValue('reportType', category.reportType);
                     // Auto-advance to next step after selection
-                    setTimeout(() => onNext(), 100);
+                    setTimeout(() => onNext(), 150);
                   }}
                   className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                     isSelected 
