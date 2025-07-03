@@ -27,7 +27,7 @@ const EmailInput: React.FC<Props> = ({
   placeholder = "Enter your email",
 }) => (
   <div className="space-y-2">
-    <Label htmlFor="email" className="text-gray-300 font-light text-sm tracking-wide">Email</Label>
+    <Label htmlFor="email" className="text-gray-700 font-light text-sm tracking-wide">Email</Label>
 
     <Input
       id="email"
@@ -37,14 +37,14 @@ const EmailInput: React.FC<Props> = ({
       onFocus={onFocus}
       disabled={disabled}
       placeholder={placeholder}
-      className={`h-12 bg-transparent border-gray-600 text-white placeholder:text-gray-500 focus:border-white font-light ${
+      className={`h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-gray-600 font-light ${
         !isValid && email ? "border-red-500 focus:border-red-500" : ""
       }`}
       required
     />
 
     {!isValid && email && (
-      <p className="text-xs text-red-400 font-light">Please enter a valid email address</p>
+      <p className="text-xs text-red-600 font-light">Please enter a valid email address</p>
     )}
   </div>
 );

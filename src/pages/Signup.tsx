@@ -254,7 +254,7 @@ const Signup = () => {
           />
           
           {passwordValid && (
-            <p className="text-sm text-green-400 font-light">✓ Password meets requirements (8+ characters)</p>
+            <p className="text-sm text-green-600 font-light">✓ Password meets requirements (8+ characters)</p>
           )}
           
           {showConfirmPassword && (
@@ -272,7 +272,7 @@ const Signup = () => {
         </div>
 
         {errorMsg && (
-          <div className="text-center text-sm text-red-400 bg-red-900/20 p-3 rounded-md border border-red-800/30 font-light">
+          <div className="text-center text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200 font-light">
             {errorMsg}
           </div>
         )}
@@ -280,8 +280,7 @@ const Signup = () => {
         <Button 
           type="submit" 
           size="lg"
-          variant="outline"
-          className="w-full py-6 text-lg font-light border-white text-white hover:bg-white hover:text-black transition-all duration-300"
+          className="w-full py-6 text-lg font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300"
           disabled={loading || !emailValid || !passwordValid || !passwordsMatch}
         >
           {loading ? 'Creating account...' : 'Begin'}
@@ -292,9 +291,9 @@ const Signup = () => {
           onAppleSignIn={handleAppleSignIn}
         />
 
-        <p className="text-center text-sm text-gray-400 font-light">
+        <p className="text-center text-sm text-gray-600 font-light">
           Already have an account?{' '}
-          <Link to="/login" className="text-white hover:text-gray-300 transition-colors border-b border-gray-600 hover:border-white pb-1">
+          <Link to="/login" className="text-gray-900 hover:text-gray-700 transition-colors border-b border-gray-300 hover:border-gray-600 pb-1">
             Sign in
           </Link>
         </p>
@@ -305,19 +304,19 @@ const Signup = () => {
   const renderSuccessMessage = () => (
     <div className="space-y-8 animate-fade-in">
       <div className="text-center space-y-4">
-        <p className="text-lg text-gray-300 font-light">
-          A verification email has been sent to <span className="text-white font-medium">{verificationEmail}</span>. 
+        <p className="text-lg text-gray-700 font-light">
+          A verification email has been sent to <span className="text-gray-900 font-medium">{verificationEmail}</span>. 
           Please check your inbox and click the link to verify your account.
         </p>
       </div>
 
       <div className="flex flex-col space-y-6 items-center">
-        <div className="rounded-full bg-white/10 p-6 border border-white/20">
-          <Mail className="h-12 w-12 text-white" />
+        <div className="rounded-full bg-gray-100 p-6 border border-gray-200">
+          <Mail className="h-12 w-12 text-gray-700" />
         </div>
         
         <div className="text-center space-y-2">
-          <p className="text-gray-400 font-light">
+          <p className="text-gray-600 font-light">
             After verification, you'll be able to sign in to your account.
           </p>
         </div>
@@ -328,7 +327,7 @@ const Signup = () => {
             variant="outline" 
             disabled={loading}
             size="lg"
-            className="w-full py-4 font-light border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white transition-all duration-300"
+            className="w-full py-4 font-light border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all duration-300"
           >
             {loading ? 'Sending...' : 'Resend verification email'}
           </Button>
@@ -336,8 +335,7 @@ const Signup = () => {
           <Link to="/login" className="w-full">
             <Button 
               size="lg"
-              variant="outline"
-              className="w-full py-4 font-light border-white text-white hover:bg-white hover:text-black transition-all duration-300"
+              className="w-full py-4 font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300"
             >
               Go to Login
             </Button>
@@ -348,13 +346,13 @@ const Signup = () => {
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-black">
+    <div className="flex flex-col min-h-screen bg-white">
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg space-y-12">
           <header className="text-center space-y-4">
-            <h1 className="text-5xl md:text-6xl font-light text-white leading-tight">
+            <h1 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
               {signupSuccess ? (
                 <>
                   Check your
@@ -369,7 +367,7 @@ const Signup = () => {
                 </>
               )}
             </h1>
-            <p className="text-lg text-gray-400 font-light">
+            <p className="text-lg text-gray-600 font-light">
               {signupSuccess 
                 ? 'One more step to complete your registration' 
                 : 'Begin your journey of self-discovery'}

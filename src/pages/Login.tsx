@@ -213,7 +213,7 @@ const Login = () => {
   // render
   // ──────────────────────────────────────────
   return (
-    <div className="flex flex-col min-h-screen bg-black">
+    <div className="flex flex-col min-h-screen bg-white">
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
@@ -223,12 +223,12 @@ const Login = () => {
           ) : (
             <>
               <header className="text-center space-y-4">
-                <h1 className="text-5xl md:text-6xl font-light text-white leading-tight">
+                <h1 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
                   Welcome
                   <br />
                   <span className="italic font-medium">back</span>
                 </h1>
-                <p className="text-lg text-gray-400 font-light">
+                <p className="text-lg text-gray-600 font-light">
                   Sign in to continue your journey
                 </p>
               </header>
@@ -251,14 +251,13 @@ const Login = () => {
                 </div>
 
                 {errorMsg && (
-                  <div className="text-red-400 text-sm text-center font-light">{errorMsg}</div>
+                  <div className="text-red-600 text-sm text-center font-light">{errorMsg}</div>
                 )}
 
                 <Button
                   type="submit"
                   size="lg"
-                  variant="outline"
-                  className="w-full py-6 text-lg font-light border-white text-white hover:bg-white hover:text-black transition-all duration-300"
+                  className="w-full py-6 text-lg font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300"
                   disabled={!emailValid || !passwordValid || loading}
                 >
                   {loading ? 'Signing in...' : 'Sign in'}
@@ -269,7 +268,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-gray-400 hover:text-white transition-colors font-light border-b border-gray-600 hover:border-white pb-1"
+                  className="text-sm text-gray-600 hover:text-gray-900 transition-colors font-light border-b border-gray-300 hover:border-gray-600 pb-1"
                 >
                   Forgot your password?
                 </button>
@@ -279,9 +278,9 @@ const Login = () => {
                   onAppleSignIn={handleAppleSignIn}
                 />
 
-                <p className="text-sm text-gray-400 font-light">
+                <p className="text-sm text-gray-600 font-light">
                   Don't have an account?{' '}
-                  <Link to="/signup" className="text-white hover:text-gray-300 transition-colors border-b border-gray-600 hover:border-white pb-1">
+                  <Link to="/signup" className="text-gray-900 hover:text-gray-700 transition-colors border-b border-gray-300 hover:border-gray-600 pb-1">
                     Sign up
                   </Link>
                 </p>

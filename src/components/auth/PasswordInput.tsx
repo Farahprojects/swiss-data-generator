@@ -47,7 +47,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
 
   return (
     <div className="space-y-2">
-      {label && <Label htmlFor={inputId} className="text-gray-300 font-light text-sm tracking-wide">{label}</Label>}
+      {label && <Label htmlFor={inputId} className="text-gray-700 font-light text-sm tracking-wide">{label}</Label>}
       <div className="relative">
         <Input
           id={inputId}
@@ -56,7 +56,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           onChange={(e) => onChange(e.target.value)}
           onFocus={onFocus}
           placeholder={placeholder}
-          className={`h-12 bg-transparent border-gray-600 text-white placeholder:text-gray-500 focus:border-white font-light pr-12 ${
+          className={`h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-gray-600 font-light pr-12 ${
             (!isValid && password) || showMatchError ? 'border-red-500 focus:border-red-500' : ''
           }`}
           required
@@ -65,7 +65,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
         <button
           type="button"
           onClick={togglePasswordVisibility}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
           tabIndex={-1}
           disabled={disabled}
         >
@@ -78,7 +78,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           {passwordRequirements.map((req) => (
             <div 
               key={req.key} 
-              className={`text-xs flex items-center font-light ${req.validate(password) ? 'text-green-400' : 'text-gray-500'}`}
+              className={`text-xs flex items-center font-light ${req.validate(password) ? 'text-green-600' : 'text-gray-500'}`}
             >
               <span className="mr-1">•</span> {req.text}
             </div>
@@ -87,7 +87,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
       )}
 
       {showMatchError && (
-        <p className="text-xs text-red-400 mt-1 font-light">Passwords do not match</p>
+        <p className="text-xs text-red-600 mt-1 font-light">Passwords do not match</p>
       )}
     </div>
   );
