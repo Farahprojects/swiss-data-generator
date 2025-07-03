@@ -150,11 +150,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   }
 
   if (reportCreated && userName && userEmail) {
+    const guestReportId = localStorage.getItem('currentGuestReportId');
     return (
       <SuccessScreen 
         name={userName} 
         email={userEmail} 
         onViewReport={handleViewReport}
+        guestReportId={guestReportId || undefined}
       />
     );
   }

@@ -333,7 +333,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         {/* --------------------------- SUCCESS VIEW ------------------------- */}
         {currentView === 'success' && submittedData && (
           <div className="flex flex-col h-full pt-12">
-            <SuccessScreen name={submittedData.name} email={submittedData.email} onViewReport={handleViewReport} />
+            <SuccessScreen 
+              name={submittedData.name} 
+              email={submittedData.email} 
+              onViewReport={handleViewReport}
+              guestReportId={localStorage.getItem('currentGuestReportId') || undefined}
+            />
           </div>
         )}
 

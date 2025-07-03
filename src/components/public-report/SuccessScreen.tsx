@@ -68,6 +68,7 @@ interface SuccessScreenProps {
   email: string;
   onViewReport?: (content: string, pdf?: string | null) => void;
   autoStartPolling?: boolean;
+  guestReportId?: string;
 }
 
 const SuccessScreen: React.FC<SuccessScreenProps> = ({
@@ -75,6 +76,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   email,
   onViewReport,
   autoStartPolling = true,
+  guestReportId,
 }) => {
   // ---------------------------------------------------------------------------
   // Hooks & State
@@ -93,9 +95,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // Polling lifecycle
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (autoStartPolling && email && !isPolling) startPolling(email);
+    const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+    if (autoStartPolling && reportIdToUse && !isPolling) {
+      startPolling(reportIdToUse);
+    }
     return () => stopPolling();
-  }, [autoStartPolling, email]);
+  }, [autoStartPolling, guestReportId, isPolling, startPolling, stopPolling]);
 
   // ---------------------------------------------------------------------------
   // Status helpers
@@ -141,14 +146,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         reportContent: !!report?.report_content
       });
       
-      if (!isReady && !caseNumber && email) {
+      const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+      if (!isReady && !caseNumber && reportIdToUse) {
         console.log('🚨 All conditions met - triggering error handling');
-        triggerErrorHandling(email);
+        triggerErrorHandling(reportIdToUse);
       } else {
         console.log('🚨 Conditions not met for error handling:', {
           isReady: isReady,
           hasCaseNumber: !!caseNumber,
-          hasEmail: !!email
+          hasReportId: !!reportIdToUse
         });
       }
     }
@@ -171,7 +177,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // ---------------------------------------------------------------------------
   // Retry helper
   // ---------------------------------------------------------------------------
-  const retry = () => email && !isPolling && startPolling(email);
+  const retry = () => {
+    const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+    if (reportIdToUse && !isPolling) {
+      startPolling(reportIdToUse);
+    }
+  };
 
   // ---------------------------------------------------------------------------
   // Shared blocks
@@ -192,26 +203,54 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   );
 
   const ErrorBlock = error && (
-    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-      <h3 className="text-lg font-semibold text-red-800 mb-2">
-        We're Looking Into This
-      </h3>
-      <p className="text-sm text-red-700 mb-3">{error}</p>
-      {caseNumber && (
-        <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-3">
-          <p className="text-sm font-medium text-red-800">
-            Case Number: <span className="font-mono">{caseNumber}</span>
+    <div className="bg-gradient-to-r from-red-50 to-red-100/50 border border-red-200 rounded-xl p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+          <Clock className="w-5 h-5 text-red-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-red-800 mb-1">
+            Report Processing Issue
+          </h3>
+          <p className="text-sm text-red-600">
+            We're working to resolve this quickly
           </p>
-          <p className="text-xs text-red-600 mt-1">
-            Please reference this case number if you contact support.
+        </div>
+      </div>
+      
+      <div className="bg-white/50 rounded-lg p-4 mb-4">
+        <p className="text-sm text-red-800 leading-relaxed">
+          We're experiencing a delay with your report generation. Our team has been automatically notified and is working to resolve this issue.
+        </p>
+      </div>
+
+      {caseNumber && (
+        <div className="bg-white rounded-lg border border-red-200 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <p className="text-sm font-medium text-red-800">
+              Reference Number
+            </p>
+          </div>
+          <p className="text-lg font-mono text-red-900 mb-2">
+            {caseNumber}
+          </p>
+          <p className="text-xs text-red-600">
+            Please save this reference number for your records. Our support team can use it to help you faster.
           </p>
         </div>
       )}
-      {!caseNumber && (
-        <Button onClick={retry} variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
-          Retry
+      
+      <div className="flex flex-col sm:flex-row gap-3">
+        {!caseNumber && (
+          <Button onClick={retry} variant="outline" size="sm" className="text-red-700 border-red-300 hover:bg-red-50 bg-white">
+            Try Again
+          </Button>
+        )}
+        <Button variant="outline" size="sm" className="text-red-700 border-red-300 hover:bg-red-50 bg-white">
+          Contact Support
         </Button>
-      )}
+      </div>
     </div>
   );
 
@@ -249,7 +288,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
 
             {/* Content while generating */}
-            {!isReady && !caseNumber && (
+            {!isReady && !error && (
               <>
                 {Countdown}
                 <VideoLoader />
