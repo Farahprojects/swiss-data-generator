@@ -5,7 +5,7 @@ import theraiChatGPTMockup from '@/assets/therai-chatgpt-mockup.jpg';
 const TheraiChatGPTSection = () => {
   return (
     <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
-      <div className="w-full px-4 md:container md:mx-auto">
+      <div className="w-full md:px-4 md:container md:mx-auto">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Image on the left */}

@@ -88,7 +88,7 @@ const Index = () => {
             <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-primary/15 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
           </div>
 
-          <div className="relative z-10 w-full px-4 md:container md:mx-auto text-center">
+          <div className="relative z-10 w-full md:px-4 md:container md:mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -153,7 +153,7 @@ const Index = () => {
 
         {/* Elegant Features Showcase */}
         <section className="py-32 bg-gradient-to-b from-white to-gray-50/30">
-          <div className="w-full px-4 md:container md:mx-auto">
+          <div className="w-full md:px-4 md:container md:mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -227,7 +227,7 @@ const Index = () => {
             <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-white/10 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
           </div>
           
-          <div className="relative w-full px-4 md:container md:mx-auto text-center">
+          <div className="relative w-full md:px-4 md:container md:mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}

@@ -108,7 +108,7 @@ const PublicReport = () => {
         
         {/* Sample Report Section */}
         <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
-          <div className="w-full px-4 md:container md:mx-auto">
+          <div className="w-full md:px-4 md:container md:mx-auto">
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-20">
                 <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">

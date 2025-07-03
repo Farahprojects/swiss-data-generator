@@ -166,7 +166,7 @@ export default function TestsSection() {
   
   return (
     <div id="tests" className="py-24 bg-gradient-to-b from-gray-50/30 to-white">
-      <div className="w-full px-4 md:container md:mx-auto">
+      <div className="w-full md:px-4 md:container md:mx-auto">
         <div className="max-w-7xl mx-auto">
           <div className="mb-16 text-center">
             <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">AI insights into your mind generated in 2 min</h2>
