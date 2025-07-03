@@ -14,7 +14,6 @@ const PaymentReturn = () => {
   const [status, setStatus] = useState<'loading' | 'verifying' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing your payment...');
   const [verificationResult, setVerificationResult] = useState<any>(null);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
   
   // Guard to prevent multiple executions
   const hasProcessed = useRef(false);
@@ -35,12 +34,6 @@ const PaymentReturn = () => {
           urlStatus, 
           sessionId,
           fullUrl: location.search,
-          allParams: Object.fromEntries(params.entries())
-        });
-        
-        setDebugInfo({
-          urlStatus,
-          sessionId,
           allParams: Object.fromEntries(params.entries())
         });
         
@@ -106,7 +99,7 @@ const PaymentReturn = () => {
         console.error("❌ Unexpected payment return state - no session ID and no cancel status");
         hasProcessed.current = true;
         setStatus('error');
-        setMessage('Payment status unclear. Please check your email for confirmation or contact support.');
+        setMessage('Something went wrong with your payment. Please try again or contact support if you were charged.');
         
       } catch (error: any) {
         console.error('❌ Error processing payment return:', {
@@ -115,7 +108,7 @@ const PaymentReturn = () => {
         });
         hasProcessed.current = true;
         setStatus('error');
-        setMessage(error instanceof Error ? error.message : 'An unexpected error occurred');
+        setMessage('We encountered an issue processing your payment. Please try again or contact support if you were charged.');
         
         toast({
           title: "Error",
@@ -139,17 +132,6 @@ const PaymentReturn = () => {
         return <AlertCircle className="h-12 w-12 text-red-500" />;
       default:
         return <Loader2 className="h-12 w-12 animate-spin text-primary" />;
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (status) {
-      case 'success':
-        return 'text-primary';
-      case 'error':
-        return 'text-red-600';
-      default:
-        return 'text-primary';
     }
   };
 
@@ -253,49 +235,56 @@ const PaymentReturn = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md text-center">
-        <CardHeader>
-          <div className="flex justify-center mb-4">
-            {getIcon()}
-          </div>
-          <CardTitle className={`text-2xl ${getStatusColor()}`}>
-            {status === 'loading' && 'Processing Payment'}
-            {status === 'verifying' && 'Verifying Payment'}
-            {status === 'success' && 'Payment Successful!'}
-            {status === 'error' && 'Payment Issue'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground">{message}</p>
-          
-          {debugInfo && status === 'error' && (
-            <div className="bg-red-50 p-4 rounded-lg text-sm">
-              <p><strong>Debug Info:</strong></p>
-              <p>Status: {debugInfo.urlStatus}</p>
-              <p>Session ID: {debugInfo.sessionId || 'Not found'}</p>
-              <p>URL Params: {JSON.stringify(debugInfo.allParams)}</p>
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg border-0 shadow-2xl">
+          <CardContent className="p-8 text-center">
+            <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
+              <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
-          )}
-          
-          {status === 'error' && (
+            
+            <h2 className="text-2xl font-light text-gray-900 mb-3 tracking-tight">
+              Payment Issue
+            </h2>
+            
+            <p className="text-gray-600 font-light leading-relaxed mb-8">
+              {message}
+            </p>
+            
             <div className="space-y-3">
               <Button 
                 onClick={() => navigate('/report')} 
-                variant="outline"
-                className="w-full"
+                className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-light text-base rounded-xl transition-all duration-300 hover:scale-[1.02] border-0"
               >
                 Return to Report Form
               </Button>
               <Button 
                 onClick={() => window.location.reload()} 
-                className="w-full"
+                variant="outline"
+                className="w-full h-12 bg-transparent hover:bg-gray-50 text-gray-600 font-light text-base rounded-xl border border-gray-200 transition-all duration-300 hover:border-gray-300"
               >
                 Try Again
               </Button>
             </div>
-          )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md text-center border-0 shadow-2xl">
+        <CardContent className="p-8">
+          <div className="flex justify-center mb-6">
+            {getIcon()}
+          </div>
+          <h2 className="text-2xl font-light text-gray-900 mb-3 tracking-tight">
+            {status === 'loading' && 'Processing Payment'}
+            {status === 'verifying' && 'Verifying Payment'}
+          </h2>
+          <p className="text-gray-600 font-light leading-relaxed">{message}</p>
         </CardContent>
       </Card>
     </div>
