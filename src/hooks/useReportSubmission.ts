@@ -101,7 +101,7 @@ export const useReportSubmission = () => {
         
         // For astro data requests, use 'request' field and leave 'reportType' empty
         // For AI reports, use 'reportType' field and leave 'request' empty
-        const isAstroData = data.astroDataType;
+        const isAstroData = data.astroDataType && data.astroDataType.trim() !== '';
         
         const reportData = {
           reportType: isAstroData ? '' : completeReportType,
@@ -163,7 +163,7 @@ export const useReportSubmission = () => {
 
       // For astro data requests, use 'request' field and leave 'reportType' empty
       // For AI reports, use 'reportType' field and leave 'request' empty
-      const isAstroData = data.astroDataType;
+      const isAstroData = data.astroDataType && data.astroDataType.trim() !== '';
       
       const reportData = {
         reportType: isAstroData ? '' : completeReportType,
