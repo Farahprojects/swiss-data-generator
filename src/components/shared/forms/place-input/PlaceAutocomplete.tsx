@@ -141,8 +141,8 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           />
         )}
         
-        {/* Debug info for development - only show if there are issues */}
-        {(isError || shouldUseFallback || showFallback) && process.env.NODE_ENV === 'development' && (
+        {/* Debug info for development - only show if there are actual issues (not working fallbacks) */}
+        {isError && !useServerAutocomplete && process.env.NODE_ENV === 'development' && (
           <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded border">
             Debug: Mobile={isMobile.toString()}, Error={isError.toString()}, 
             ShouldFallback={shouldUseFallback.toString()}, ShowFallback={showFallback.toString()},
