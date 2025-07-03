@@ -102,6 +102,17 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
   const formatSubType = (subType: string) => {
     const parts = subType.split(' – ');
     if (parts.length === 2) {
+      // Check if there's a price in parentheses
+      const priceMatch = parts[1].match(/^(.*)\s+\((\$\d+)\)$/);
+      if (priceMatch) {
+        return (
+          <>
+            <span className="text-gray-900 font-medium">{parts[0]}</span>
+            <span className="text-gray-600"> – {priceMatch[1]} </span>
+            <span className="text-gray-900 font-bold">{priceMatch[2]}</span>
+          </>
+        );
+      }
       return (
         <>
           <span className="text-gray-900 font-medium">{parts[0]}</span>
@@ -164,8 +175,8 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                   ref={isTargeted ? targetRef : null}
                 >
                   {report.isRecommended && (
-                    <div className="absolute -top-2 left-4">
-                      <span className="bg-gray-900 text-white text-xs px-2 py-1 rounded-full font-medium tracking-wide">
+                    <div className="absolute -top-2 left-6">
+                      <span className="bg-gray-900 text-white text-xs px-3 py-1 rounded-full font-medium tracking-wide">
                         Most Popular
                       </span>
                     </div>
@@ -182,9 +193,11 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                           Best for {report.bestFor}
                         </span>
                       </div>
-                      <span className="font-light text-xl text-gray-900">
-                        {isLoading ? '...' : formatPrice(price)}
-                      </span>
+                      {(report.type === 'Essence' || report.type === 'Sync') && (
+                        <span className="font-light text-xl text-gray-900">
+                          {isLoading ? '...' : formatPrice(price)}
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-base text-gray-700 mb-3 font-light leading-relaxed">

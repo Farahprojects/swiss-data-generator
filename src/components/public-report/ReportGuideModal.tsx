@@ -102,6 +102,17 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
   const formatSubType = (subType: string) => {
     const parts = subType.split(' – ');
     if (parts.length === 2) {
+      // Check if there's a price in parentheses
+      const priceMatch = parts[1].match(/^(.*)\s+\((\$\d+)\)$/);
+      if (priceMatch) {
+        return (
+          <>
+            <span className="text-gray-900 font-medium">{parts[0]}</span>
+            <span className="text-gray-600"> – {priceMatch[1]} </span>
+            <span className="text-gray-900 font-bold">{priceMatch[2]}</span>
+          </>
+        );
+      }
       return (
         <>
           <span className="text-gray-900 font-medium">{parts[0]}</span>
@@ -159,8 +170,8 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                   ref={isTargeted ? targetRef : null}
                 >
                   {report.isRecommended && (
-                    <div className="absolute -top-3 left-6">
-                      <span className="bg-gray-900 text-white text-xs px-3 py-1.5 rounded-full font-medium tracking-wide">
+                    <div className="absolute -top-3 left-8">
+                      <span className="bg-gray-900 text-white text-xs px-4 py-1.5 rounded-full font-medium tracking-wide">
                         Most Popular
                       </span>
                     </div>
@@ -177,9 +188,11 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                           Best for {report.bestFor}
                         </span>
                       </div>
-                      <span className="font-light text-3xl text-gray-900">
-                        {isLoading ? '...' : formatPrice(price)}
-                      </span>
+                      {(report.type === 'Essence' || report.type === 'Sync') && (
+                        <span className="font-light text-3xl text-gray-900">
+                          {isLoading ? '...' : formatPrice(price)}
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-lg text-gray-700 mb-4 font-light leading-relaxed">
