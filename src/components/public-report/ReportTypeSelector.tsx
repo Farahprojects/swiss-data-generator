@@ -122,6 +122,9 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
       // Immediate reportType update for simple categories
       if (value !== 'snapshot' && value !== 'astro-data' && setValue) {
         setValue('reportType', reportType, { shouldValidate: true });
+      } else {
+        // Clear reportType for categories that need sub-selection
+        setValue?.('reportType', '', { shouldValidate: true });
       }
     },
     [setValue],
