@@ -209,7 +209,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { email }
       });
 
-      // Ready to sign in
+      // Ensure we have a clean session before signing in
+      await authService.refreshSession();
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
