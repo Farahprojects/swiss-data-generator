@@ -193,7 +193,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                     {report.subTypes && (
                       <div className="border-t border-gray-200/50 pt-6">
                         <h4 className="text-sm font-medium text-gray-900 mb-4 tracking-wide uppercase">
-                          Included Reports:
+                          Choose Your Focus:
                         </h4>
                         <ul className="space-y-3 text-sm">
                           {report.subTypes.map((subType, index) => (

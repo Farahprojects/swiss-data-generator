@@ -198,7 +198,7 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                     {report.subTypes && (
                       <div className="border-t border-gray-200/50 pt-4">
                         <h4 className="text-xs font-medium text-gray-900 mb-3 tracking-wide uppercase">
-                          Included Reports:
+                          Choose Your Focus:
                         </h4>
                         <ul className="space-y-2 text-xs">
                           {report.subTypes.map((subType, index) => (
