@@ -220,7 +220,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
             {/* Snapshot sub‑categories (only visible when snapshot selected) */}
             {showSnapshotSubCategories && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold text-primary text-center">
+                <h3 className="text-2xl font-light text-gray-900 text-center tracking-tight">
                   Choose your snapshot type
                 </h3>
                 <Controller
@@ -272,7 +272,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
             {/* Astro Data sub‑categories (only visible when astro-data selected) */}
             {showAstroDataSubCategories && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold text-primary text-center">
+                <h3 className="text-2xl font-light text-gray-900 text-center tracking-tight">
                   Choose your astro data type
                 </h3>
                 <Controller
@@ -327,7 +327,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
             {/* Essence types (only when "the‑self" + essence report) */}
             {showEssenceOptions && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold text-primary text-center">
+                <h3 className="text-2xl font-light text-gray-900 text-center tracking-tight">
                   Choose your report style *
                 </h3>
                 <Controller
@@ -404,7 +404,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
             {/* Relationship types (only when compatibility report) */}
             {showRelationshipOptions && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold text-primary text-center">
+                <h3 className="text-2xl font-light text-gray-900 text-center tracking-tight">
                   Choose your report style *
                 </h3>
                 <Controller
