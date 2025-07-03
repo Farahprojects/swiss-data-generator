@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { ReportHeader } from './ReportHeader';
 import { ReportContent } from './ReportContent';
-import { ReportActions } from './ReportActions';
 
 interface DesktopReportViewerProps {
   reportContent: string;
@@ -135,16 +134,6 @@ const DesktopReportViewer = ({
       />
 
       <ReportContent reportContent={reportContent} />
-
-      <div className="max-w-4xl mx-auto px-4">
-        <ReportActions
-          onCopyToClipboard={handleCopyToClipboard}
-          onDownloadPdf={handleDownloadPdf}
-          onChatGPTClick={handleChatGPTClick}
-          reportPdfData={reportPdfData}
-          isCopyCompleted={isCopyCompleted}
-        />
-      </div>
     </motion.div>
   );
 };
