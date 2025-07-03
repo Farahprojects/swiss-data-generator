@@ -139,7 +139,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
     (value: string, reportType: ReportFormData['reportType'], onChange: (v: any) => void) => {
       setSelectedSubCategory(value);
       onChange(value);
-      setValue?.('reportType', reportType, { shouldValidate: true }); // Use the actual reportType (essence/sync) for astro data
+      setValue?.('reportType', 'request', { shouldValidate: true }); // Set to 'request' for astro data only
     },
     [setValue],
   );
