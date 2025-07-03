@@ -22,21 +22,21 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
   };
 
   return (
-    <section className="py-24 bg-gradient-to-b from-white to-gray-50/50">
+    <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-20"
         >
-          <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-4">
+          <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
             Why Choose Our Reports?
           </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto mb-16">
+        <div className="grid md:grid-cols-3 gap-16 max-w-5xl mx-auto mb-20">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -44,11 +44,11 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
             viewport={{ once: true }}
             className="text-center group"
           >
-            <div className="bg-primary/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/10 transition-colors duration-300">
-              <CheckCircle className="h-8 w-8 text-primary" />
+            <div className="bg-gray-50 border border-gray-200/50 rounded-2xl w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:border-gray-300/60 transition-all duration-300">
+              <CheckCircle className="h-6 w-6 text-gray-700" />
             </div>
-            <h3 className="text-xl font-semibold mb-3 text-gray-900">AI-Powered Accuracy</h3>
-            <p className="text-gray-600 leading-relaxed">Advanced algorithms ensure precise calculations and personalized insights.</p>
+            <h3 className="text-xl font-medium mb-4 text-gray-900 tracking-tight">AI-Powered Accuracy</h3>
+            <p className="text-gray-600 leading-relaxed text-sm">Advanced algorithms ensure precise calculations and personalized insights.</p>
           </motion.div>
 
           <motion.div
@@ -58,11 +58,11 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
             viewport={{ once: true }}
             className="text-center group"
           >
-            <div className="bg-primary/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/10 transition-colors duration-300">
-              <Clock className="h-8 w-8 text-primary" />
+            <div className="bg-gray-50 border border-gray-200/50 rounded-2xl w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:border-gray-300/60 transition-all duration-300">
+              <Clock className="h-6 w-6 text-gray-700" />
             </div>
-            <h3 className="text-xl font-semibold mb-3 text-gray-900">Instant Delivery</h3>
-            <p className="text-gray-600 leading-relaxed">Get your comprehensive report delivered to your email within minutes.</p>
+            <h3 className="text-xl font-medium mb-4 text-gray-900 tracking-tight">Instant Delivery</h3>
+            <p className="text-gray-600 leading-relaxed text-sm">Get your comprehensive report delivered to your email within minutes.</p>
           </motion.div>
 
           <motion.div
@@ -72,11 +72,11 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
             viewport={{ once: true }}
             className="text-center group"
           >
-            <div className="bg-primary/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:bg-primary/10 transition-colors duration-300">
-              <Star className="h-8 w-8 text-primary" />
+            <div className="bg-gray-50 border border-gray-200/50 rounded-2xl w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:border-gray-300/60 transition-all duration-300">
+              <Star className="h-6 w-6 text-gray-700" />
             </div>
-            <h3 className="text-xl font-semibold mb-3 text-gray-900">Professional Quality</h3>
-            <p className="text-gray-600 leading-relaxed">Detailed, professional-grade reports trusted by astrology enthusiasts.</p>
+            <h3 className="text-xl font-medium mb-4 text-gray-900 tracking-tight">Professional Quality</h3>
+            <p className="text-gray-600 leading-relaxed text-sm">Detailed, professional-grade reports trusted by astrology enthusiasts.</p>
           </motion.div>
         </div>
         
@@ -89,9 +89,9 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
         >
           <Button 
             onClick={handleClick}
-            className="bg-primary text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-primary-hover transition-colors duration-200 shadow-lg"
+            className="bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-normal hover:bg-gray-800 transition-all duration-300 hover:scale-105 border border-gray-800/20 shadow-lg hover:shadow-xl"
           >
-            Begin
+            Unlock
           </Button>
         </motion.div>
       </div>

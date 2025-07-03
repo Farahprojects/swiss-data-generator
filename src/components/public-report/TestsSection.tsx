@@ -165,12 +165,12 @@ export default function TestsSection() {
   };
   
   return (
-    <div id="tests" className="py-16 bg-white">
+    <div id="tests" className="py-24 bg-gradient-to-b from-gray-50/30 to-white">
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-10 text-center">
-            <h2 className="text-4xl font-bold text-neutral-800 mb-4">AI insights into your mind generated in 2 min</h2>
-            <p className="text-lg text-neutral-600 max-w-3xl mx-auto">
+          <div className="mb-16 text-center">
+            <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">AI insights into your mind generated in 2 min</h2>
+            <p className="text-lg text-gray-500 max-w-3xl mx-auto leading-relaxed">
               Unlock the deeper patterns behind how you think, lead, and evolve
             </p>
           </div>

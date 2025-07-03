@@ -261,7 +261,7 @@ const PublicReport = () => {
                   onClick={handleGetReportClick}
                   className="bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-normal hover:bg-gray-800 transition-all duration-300 hover:scale-105 border border-gray-800/20 shadow-lg hover:shadow-xl"
                 >
-                  Get Your Personal Report
+                  Unlock
                 </button>
                 <p className="text-gray-500 mt-4 font-light">Takes 2 minutes • Instant results</p>
               </div>
