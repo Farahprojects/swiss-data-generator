@@ -233,7 +233,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         style={{
           height: 'calc(var(--vh, 1vh) * 100)',
           maxHeight: 'calc(var(--vh, 1vh) * 100)',
-          overflowY: 'hidden',
+          overflowY: currentView === 'form' ? 'hidden' : 'auto',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'none',
           touchAction: 'manipulation',
