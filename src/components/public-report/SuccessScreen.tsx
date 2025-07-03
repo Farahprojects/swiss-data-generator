@@ -136,7 +136,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       triggerErrorHandling(email);
     }
     return () => countdownRef.current && clearTimeout(countdownRef.current);
-  }, [countdown, isReady, caseNumber]);
+  }, [countdown, isReady, caseNumber, email, triggerErrorHandling]);
 
   // ---------------------------------------------------------------------------
   // Auto redirect when ready
