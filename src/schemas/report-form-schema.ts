@@ -1,13 +1,14 @@
-
 import * as z from 'zod';
 
 export const reportSchema = z.object({
-  reportType: z.string().min(1, 'Please select a report type'),
+  reportType: z.string().optional(),
   relationshipType: z.string().optional(),
   essenceType: z.string().optional(),
   // Mobile-specific fields that help populate the above
   reportCategory: z.string().optional(),
   reportSubCategory: z.string().optional(),
+  // Astro data request field
+  request: z.string().optional(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   birthDate: z.string().min(1, 'Birth date is required'),
@@ -26,6 +27,15 @@ export const reportSchema = z.object({
   returnYear: z.string().optional(),
   notes: z.string().optional(),
   promoCode: z.string().optional(),
+}).refine((data) => {
+  // Either reportType OR request must be provided
+  if ((!data.reportType || data.reportType === '') && (!data.request || data.request === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please select a report type or specify a request",
+  path: ["reportType"]
 }).refine((data) => {
   if (data.reportType === 'essence' && (!data.essenceType || data.essenceType === '')) {
     return false;
