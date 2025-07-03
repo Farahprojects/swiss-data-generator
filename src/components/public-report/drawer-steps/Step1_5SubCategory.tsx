@@ -102,7 +102,7 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
+      className="space-y-6 overflow-y-auto max-h-[60vh]"
     >
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{getHeadingText(selectedCategory)}</h2>
