@@ -205,13 +205,10 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
             >
               <div className="text-sm">
                 <div className="font-medium">
-                  {prediction.structured_formatting?.main_text || prediction.description}
+                  {prediction.structured_formatting?.main_text && prediction.structured_formatting?.secondary_text
+                    ? `${prediction.structured_formatting.main_text}, ${prediction.structured_formatting.secondary_text}`
+                    : prediction.description}
                 </div>
-                {prediction.structured_formatting?.secondary_text && (
-                  <div className="text-muted-foreground text-xs">
-                    {prediction.structured_formatting.secondary_text}
-                  </div>
-                )}
               </div>
             </li>
           ))}
