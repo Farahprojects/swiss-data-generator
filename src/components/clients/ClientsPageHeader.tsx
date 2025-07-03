@@ -62,30 +62,33 @@ export const ClientsPageHeader: React.FC<ClientsPageHeaderProps> = ({
         <div className="flex items-center gap-4">
           {/* If not mobile, render view toggle */}
           {!isMobile && (
-            <div className="flex items-center border border-gray-200 rounded-xl bg-gray-50/50">
+            <div className="flex items-center bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                variant="ghost"
                 size="sm"
                 onClick={() => onViewModeChange('grid')}
-                className={`rounded-l-xl rounded-r-none px-4 py-2 font-light transition-all duration-300 ${
+                className={`px-6 py-3 font-light transition-all duration-300 rounded-none ${
                   viewMode === 'grid' 
-                    ? 'bg-gray-900 text-white hover:bg-gray-800' 
-                    : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-gray-900 text-white hover:bg-gray-800 shadow-sm' 
+                    : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
-                <Grid className="w-4 h-4" />
+                <Grid className="w-4 h-4 mr-2" />
+                <span className="text-sm">Grid</span>
               </Button>
+              <div className="w-px h-6 bg-gray-200"></div>
               <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                variant="ghost"
                 size="sm"
                 onClick={() => onViewModeChange('list')}
-                className={`rounded-r-xl rounded-l-none px-4 py-2 font-light transition-all duration-300 ${
+                className={`px-6 py-3 font-light transition-all duration-300 rounded-none ${
                   viewMode === 'list' 
-                    ? 'bg-gray-900 text-white hover:bg-gray-800' 
-                    : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-gray-900 text-white hover:bg-gray-800 shadow-sm' 
+                    : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
-                <List className="w-4 h-4" />
+                <List className="w-4 h-4 mr-2" />
+                <span className="text-sm">List</span>
               </Button>
             </div>
           )}
