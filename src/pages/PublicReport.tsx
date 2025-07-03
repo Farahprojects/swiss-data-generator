@@ -114,7 +114,7 @@ const PublicReport = () => {
                   See What You'll Get
                 </h2>
                 <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
-                  Here's a real psychological profile generated for Peter Farah - see the depth and actionable insights you'll receive.
+                  Real psychological profiles with actionable insights - see the depth and precision you'll receive.
                 </p>
               </div>
 
@@ -149,7 +149,7 @@ const PublicReport = () => {
                   {/* Olivia's Profile */}
                   <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
                     <div className="text-center mb-8">
-                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Olivia Chen</h3>
+                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Olivia Patten</h3>
                       <p className="text-gray-600 font-normal">Intuitive Connector • Detail Orchestrator</p>
                     </div>
                     
@@ -214,15 +214,16 @@ const PublicReport = () => {
                   </div>
                 </div>
               </div>
-              
-              {/* Individual Report Example */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-10 border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 group max-w-4xl mx-auto">
-                <div className="text-center mb-10">
-                  <h3 className="text-2xl md:text-3xl font-light text-gray-900 mb-3 tracking-tight">Peter Farah's Cognitive Processing Profile</h3>
-                  <p className="text-gray-600 font-normal">Personal Essence Report • Generated in 2 minutes</p>
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-10">
+
+              {/* Examples Grid */}
+              <div className="grid md:grid-cols-2 gap-12 mb-16">
+                {/* Cognitive Processing Profile Card */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Cognitive Processing Profile</h3>
+                    <p className="text-gray-600 font-normal">Personal Essence Report • Generated in 2 minutes</p>
+                  </div>
+                  
                   <div className="space-y-6">
                     <div className="transform group-hover:translate-x-1 transition-transform duration-300">
                       <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Primary Style</h4>
@@ -230,29 +231,50 @@ const PublicReport = () => {
                     </div>
                     
                     <div className="transform group-hover:translate-x-1 transition-transform duration-500">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Peak State</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Thrives when oscillating between creative exploration and structured planning sessions.</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-700">
                       <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Secondary Style</h4>
                       <p className="text-gray-600 text-sm leading-relaxed">Structured Strategist (Process) - Brings methodical execution to innovative ideas.</p>
                     </div>
                     
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-900">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Execution Approach</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Prefers flexible iteration, starting with broad vision and refining through cycles.</p>
+                    <div className="transform group-hover:translate-x-1 transition-transform duration-700">
+                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Key Insight</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">A harmonious blend of creativity and structure that enables navigating challenges with agility while bringing visionary ideas to fruition.</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-10 p-6 bg-gray-50/60 rounded-2xl border border-gray-200/30">
-                  <h4 className="font-medium text-gray-900 mb-3 text-center text-sm tracking-wide uppercase">Key Insight</h4>
-                  <p className="text-gray-700 text-center leading-relaxed">
-                    A harmonious blend of creativity and structure that enables navigating challenges with agility while bringing visionary ideas to fruition.
-                  </p>
+                {/* Astro Data Card */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Raw Astro Data</h3>
+                    <p className="text-gray-600 font-normal">Generated in seconds • Powered by Therai GPT</p>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="transform group-hover:translate-x-1 transition-transform duration-300">
+                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Birth Chart Data</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">Sun: Gemini 15°42' • Moon: Scorpio 28°13' • Rising: Virgo 3°51'</p>
+                    </div>
+                    
+                    <div className="transform group-hover:translate-x-1 transition-transform duration-500">
+                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Planetary Positions</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">Mercury: Gemini 22° • Venus: Cancer 8° • Mars: Leo 14°</p>
+                    </div>
+                    
+                    <div className="transform group-hover:translate-x-1 transition-transform duration-700">
+                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">House Placements</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">10th House stellium • 2nd House emphasis • 7th House focus</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-gray-50/60 rounded-xl border border-gray-200/30">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-gray-700 tracking-wide uppercase">Therai GPT</span>
+                    </div>
+                    <p className="text-xs text-gray-600 text-center leading-relaxed">
+                      Instant calculations with our branded AI engine
+                    </p>
+                  </div>
                 </div>
               </div>
               
