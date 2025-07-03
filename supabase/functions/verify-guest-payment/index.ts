@@ -57,21 +57,30 @@ function buildTranslatorPayload(rd: ReportData) {
     throw new Error(`Unsupported reportType '${rd.reportType}'`);
   }
 
+  // Check if this is astro data only (no AI report generation)
+  const isAstroDataOnly = rd.astroDataOnly === true;
+
   // Single-person endpoints
   if (["essence","flow","mindset","monthly","focus"].includes(request)) {
     assertPresent(rd, [
       "birthDate", "birthTime", "birthLatitude", "birthLongitude",
     ]);
 
-    return {
+    const payload: any = {
       request,
       birth_date:  rd.birthDate,
       birth_time: rd.birthTime,                       // must be HH:MM[:SS]
       latitude:   parseFloat(rd.birthLatitude),
       longitude:  parseFloat(rd.birthLongitude),
       name:       rd.name ?? "Guest",
-      report:     rd.reportType,                      // Use actual reportType instead of hardcoded "standard"
     };
+
+    // Only include report field if not astro data only
+    if (!isAstroDataOnly) {
+      payload.report = rd.reportType;
+    }
+
+    return payload;
   }
 
   // Synchronicity / compatibility endpoints
@@ -82,7 +91,7 @@ function buildTranslatorPayload(rd: ReportData) {
       "secondPersonLatitude", "secondPersonLongitude",
     ]);
 
-    return {
+    const payload: any = {
       request,
       person_a: {
         birth_date:  rd.birthDate,
@@ -99,8 +108,14 @@ function buildTranslatorPayload(rd: ReportData) {
         name:       rd.secondPersonName ?? "B",
       },
       relationship_type: rd.relationshipType ?? "general",
-      report:           rd.reportType,                // Use actual reportType instead of hardcoded "compatibility"
     };
+
+    // Only include report field if not astro data only
+    if (!isAstroDataOnly) {
+      payload.report = rd.reportType;
+    }
+
+    return payload;
   }
 
   throw new Error(`Unhandled request type '${request}'`);

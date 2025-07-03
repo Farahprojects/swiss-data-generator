@@ -98,8 +98,16 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const onSubmit = async (data: ReportFormData) => {
     console.log('✅ Form submission successful, data:', data);
-    // Add coach attribution if provided
-    const submissionData = coachSlug ? { ...data, coachSlug } : data;
+    
+    // Detect if this is astro data only (no AI report generation)
+    const isAstroDataOnly = data.reportCategory === 'astro-data';
+    
+    // Add coach attribution and astro data flag if provided
+    const submissionData = {
+      ...data,
+      ...(coachSlug && { coachSlug }),
+      ...(isAstroDataOnly && { astroDataOnly: true })
+    };
     
     // Convert promoValidation to the expected format
     const promoValidationState = promoValidation ? {
