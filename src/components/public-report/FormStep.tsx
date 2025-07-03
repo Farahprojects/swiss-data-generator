@@ -8,7 +8,7 @@ const FormStep = ({ stepNumber, title, children, className = '', 'data-step': da
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="space-y-8">
           <div className="flex items-center justify-center gap-4">
-            <div className="bg-gray-900 text-white rounded-full w-12 h-12 flex items-center justify-center text-lg font-light flex-shrink-0">
+            <div className="bg-gray-200 text-gray-900 rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold flex-shrink-0 border-2 border-gray-300">
               {stepNumber}
             </div>
             <h2 className="text-4xl md:text-5xl font-light text-gray-900 tracking-tight">{title}</h2>
