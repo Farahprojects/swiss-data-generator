@@ -206,7 +206,6 @@ const Login = () => {
       });
     } finally {
       setLoading(false);
-      setLoginAttempted(false);
     }
   };
 
