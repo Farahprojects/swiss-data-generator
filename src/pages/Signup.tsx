@@ -233,9 +233,9 @@ const Signup = () => {
   };
 
   const renderSignupForm = () => (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-4">
+    <div className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="space-y-6">
           <EmailInput 
             email={email}
             isValid={emailValid}
@@ -250,10 +250,11 @@ const Signup = () => {
             showRequirements={false}
             onChange={setPassword}
             onFocus={() => setErrorMsg('')}
+            placeholder="Create a password"
           />
           
           {passwordValid && (
-            <p className="text-sm text-green-600">✓ Password meets requirements (8+ characters)</p>
+            <p className="text-sm text-green-400 font-light">✓ Password meets requirements (8+ characters)</p>
           )}
           
           {showConfirmPassword && (
@@ -271,17 +272,19 @@ const Signup = () => {
         </div>
 
         {errorMsg && (
-          <div className="text-center text-sm text-red-600 bg-red-50 p-3 rounded-md">
+          <div className="text-center text-sm text-red-400 bg-red-900/20 p-3 rounded-md border border-red-800/30 font-light">
             {errorMsg}
           </div>
         )}
 
         <Button 
           type="submit" 
-          className="w-full"
+          size="lg"
+          variant="outline"
+          className="w-full py-6 text-lg font-light border-white text-white hover:bg-white hover:text-black transition-all duration-300"
           disabled={loading || !emailValid || !passwordValid || !passwordsMatch}
         >
-          {loading ? 'Creating account...' : 'Sign up'}
+          {loading ? 'Creating account...' : 'Begin'}
         </Button>
 
         <SocialLogin 
@@ -289,9 +292,9 @@ const Signup = () => {
           onAppleSignIn={handleAppleSignIn}
         />
 
-        <p className="text-center text-sm text-gray-600">
+        <p className="text-center text-sm text-gray-400 font-light">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-primary hover:underline">
+          <Link to="/login" className="text-white hover:text-gray-300 transition-colors border-b border-gray-600 hover:border-white pb-1">
             Sign in
           </Link>
         </p>
@@ -300,41 +303,41 @@ const Signup = () => {
   );
 
   const renderSuccessMessage = () => (
-    <div className="space-y-6 animate-fade-in">
-      <div className="text-center flex-1">
-        <h3 className="font-medium text-lg">Account created successfully!</h3>
-        <p className="text-gray-700">
-          A verification email has been sent to <strong>{verificationEmail}</strong>. 
-          Please check your inbox and click the link in the email to verify your account.
+    <div className="space-y-8 animate-fade-in">
+      <div className="text-center space-y-4">
+        <p className="text-lg text-gray-300 font-light">
+          A verification email has been sent to <span className="text-white font-medium">{verificationEmail}</span>. 
+          Please check your inbox and click the link to verify your account.
         </p>
       </div>
 
-      <div className="flex flex-col space-y-4 items-center">
-        <div className="rounded-full bg-primary/10 p-3">
-          <Mail className="h-12 w-12 text-primary" />
+      <div className="flex flex-col space-y-6 items-center">
+        <div className="rounded-full bg-white/10 p-6 border border-white/20">
+          <Mail className="h-12 w-12 text-white" />
         </div>
         
-        <div className="text-center">
-          <h3 className="text-lg font-medium">Check your email</h3>
-          <p className="text-sm text-gray-500 mt-1">
+        <div className="text-center space-y-2">
+          <p className="text-gray-400 font-light">
             After verification, you'll be able to sign in to your account.
           </p>
         </div>
 
-        <div className="flex flex-col space-y-3 w-full max-w-md mt-4">
+        <div className="flex flex-col space-y-4 w-full max-w-md">
           <Button 
             onClick={handleResendVerification} 
             variant="outline" 
             disabled={loading}
-            className="w-full"
+            size="lg"
+            className="w-full py-4 font-light border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white transition-all duration-300"
           >
             {loading ? 'Sending...' : 'Resend verification email'}
           </Button>
           
           <Link to="/login" className="w-full">
             <Button 
-              variant="default"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              size="lg"
+              variant="outline"
+              className="w-full py-4 font-light border-white text-white hover:bg-white hover:text-black transition-all duration-300"
             >
               Go to Login
             </Button>
@@ -345,19 +348,31 @@ const Signup = () => {
   );
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-black">
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md space-y-8">
-          <header className="text-center">
-            <h1 className="text-3xl font-bold">
-              {signupSuccess ? 'Email Verification' : 'Welcome to Astro by Therai'}
+        <div className="w-full max-w-lg space-y-12">
+          <header className="text-center space-y-4">
+            <h1 className="text-5xl md:text-6xl font-light text-white leading-tight">
+              {signupSuccess ? (
+                <>
+                  Check your
+                  <br />
+                  <span className="italic font-medium">email</span>
+                </>
+              ) : (
+                <>
+                  Join
+                  <br />
+                  <span className="italic font-medium">Therai</span>
+                </>
+              )}
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="text-lg text-gray-400 font-light">
               {signupSuccess 
                 ? 'One more step to complete your registration' 
-                : 'Create your account to get started'}
+                : 'Begin your journey of self-discovery'}
             </p>
           </header>
 

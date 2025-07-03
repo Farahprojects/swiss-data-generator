@@ -213,22 +213,28 @@ const Login = () => {
   // render
   // ──────────────────────────────────────────
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-black">
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md space-y-8">
+        <div className="w-full max-w-lg space-y-12">
           {showForgotPassword ? (
             <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
           ) : (
             <>
-              <header className="text-center">
-                <h1 className="text-3xl font-bold">Welcome back</h1>
-                <p className="mt-2 text-gray-600">Sign in to your account</p>
+              <header className="text-center space-y-4">
+                <h1 className="text-5xl md:text-6xl font-light text-white leading-tight">
+                  Welcome
+                  <br />
+                  <span className="italic font-medium">back</span>
+                </h1>
+                <p className="text-lg text-gray-400 font-light">
+                  Sign in to continue your journey
+                </p>
               </header>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="space-y-6">
                   <EmailInput
                     email={email}
                     isValid={emailValid}
@@ -245,23 +251,25 @@ const Login = () => {
                 </div>
 
                 {errorMsg && (
-                  <div className="text-red-600 text-sm text-center">{errorMsg}</div>
+                  <div className="text-red-400 text-sm text-center font-light">{errorMsg}</div>
                 )}
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  size="lg"
+                  variant="outline"
+                  className="w-full py-6 text-lg font-light border-white text-white hover:bg-white hover:text-black transition-all duration-300"
                   disabled={!emailValid || !passwordValid || loading}
                 >
                   {loading ? 'Signing in...' : 'Sign in'}
                 </Button>
               </form>
 
-              <div className="text-center space-y-4">
+              <div className="text-center space-y-6">
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-blue-600 hover:text-blue-500"
+                  className="text-sm text-gray-400 hover:text-white transition-colors font-light border-b border-gray-600 hover:border-white pb-1"
                 >
                   Forgot your password?
                 </button>
@@ -271,9 +279,9 @@ const Login = () => {
                   onAppleSignIn={handleAppleSignIn}
                 />
 
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-400 font-light">
                   Don't have an account?{' '}
-                  <Link to="/signup" className="font-medium text-primary hover:underline">
+                  <Link to="/signup" className="text-white hover:text-gray-300 transition-colors border-b border-gray-600 hover:border-white pb-1">
                     Sign up
                   </Link>
                 </p>
