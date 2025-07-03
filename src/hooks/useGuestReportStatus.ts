@@ -19,9 +19,9 @@ interface UseGuestReportStatusReturn {
   isPolling: boolean;
   error: string | null;
   caseNumber: string | null;
-  startPolling: (email: string) => void;
+  startPolling: (guestReportId: string) => void;
   stopPolling: () => void;
-  triggerErrorHandling: (email: string) => Promise<void>;
+  triggerErrorHandling: (guestReportId: string) => Promise<void>;
 }
 
 export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
@@ -33,20 +33,20 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   
   // Use refs for stable references that don't trigger re-renders
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const pollingEmailRef = useRef<string>('');
+  const pollingGuestIdRef = useRef<string>('');
   const retryCountRef = useRef<number>(0);
   const maxRetriesRef = useRef<number>(10);
   const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const logUserError = useCallback(async (email: string, errorType: string, errorMessage?: string) => {
+  const logUserError = useCallback(async (guestReportId: string, errorType: string, errorMessage?: string) => {
     try {
-      const response = await fetch('/functions/v1/log-user-error', {
+      const response = await fetch(`https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/log-user-error`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email,
+          guestReportId,
           errorType,
           errorMessage
         })
@@ -67,16 +67,14 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
-  const fetchReportStatus = useCallback(async (email: string) => {
+  const fetchReportStatus = useCallback(async (guestReportId: string) => {
     try {
-      console.log('🔍 Fetching report status for:', email);
+      console.log('🔍 Fetching report status for guest ID:', guestReportId);
       
       const { data, error } = await supabase
         .from('guest_reports')
         .select('*')
-        .eq('email', email)
-        .order('created_at', { ascending: false })
-        .limit(1)
+        .eq('id', guestReportId)
         .single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
@@ -95,12 +93,12 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         retryCountRef.current = 0; // Reset retry count on success
         
         // Stop polling if report is ready
-        if (data.has_report && data.report_content) {
+        if (data.has_report && (data.report_content || data.swiss_data)) {
           console.log('✅ Report is ready, stopping polling');
           stopPolling();
         }
       } else {
-        console.log('❌ No report found for email:', email);
+        console.log('❌ No report found for guest ID:', guestReportId);
         setReport(null);
       }
     } catch (err) {
@@ -117,12 +115,12 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
-  const triggerErrorHandling = useCallback(async (email: string) => {
+  const triggerErrorHandling = useCallback(async (guestReportId: string) => {
     console.log('🚨 Triggering error handling for countdown completion');
     
     // Log the countdown completion error and get case number
     const case_number = await logUserError(
-      email, 
+      guestReportId, 
       'countdown_completed_no_report', 
       'Report not found after countdown completion'
     );
@@ -146,39 +144,39 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
     setIsPolling(false);
     setIsLoading(false);
-    pollingEmailRef.current = '';
+    pollingGuestIdRef.current = '';
     retryCountRef.current = 0;
   }, []);
 
-  const startPolling = useCallback((email: string) => {
-    // Guard against multiple polling instances for the same email
-    if (isPolling && pollingEmailRef.current === email) {
-      console.log('📍 Already polling for this email, skipping');
+  const startPolling = useCallback((guestReportId: string) => {
+    // Guard against multiple polling instances for the same guest report
+    if (isPolling && pollingGuestIdRef.current === guestReportId) {
+      console.log('📍 Already polling for this guest report, skipping');
       return;
     }
 
-    console.log('▶️ Starting polling for email:', email);
+    console.log('▶️ Starting polling for guest report ID:', guestReportId);
     
     // Stop any existing polling first
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
     }
 
-    pollingEmailRef.current = email;
+    pollingGuestIdRef.current = guestReportId;
     setIsPolling(true);
     setIsLoading(true);
     setError(null);
     retryCountRef.current = 0;
 
     // Initial fetch
-    fetchReportStatus(email);
+    fetchReportStatus(guestReportId);
 
     // Start polling every 5 seconds with exponential backoff on errors
     const interval = setInterval(() => {
       const delay = Math.min(5000 * Math.pow(1.5, retryCountRef.current), 30000); // Max 30 seconds
       setTimeout(() => {
-        if (pollingEmailRef.current === email) { // Only fetch if still polling same email
-          fetchReportStatus(email);
+        if (pollingGuestIdRef.current === guestReportId) { // Only fetch if still polling same report
+          fetchReportStatus(guestReportId);
         }
       }, retryCountRef.current > 0 ? delay - 5000 : 0);
     }, 5000);
@@ -187,12 +185,12 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
     // Auto-stop polling after 10 minutes (timeout)
     pollTimeoutRef.current = setTimeout(async () => {
-      if (pollingEmailRef.current === email) {
+      if (pollingGuestIdRef.current === guestReportId) {
         console.log('⏰ Polling timeout reached, logging error and stopping polling');
         
         // Log the timeout error and get case number
         const case_number = await logUserError(
-          email, 
+          guestReportId, 
           'polling_timeout', 
           'Report generation timed out after 10 minutes'
         );

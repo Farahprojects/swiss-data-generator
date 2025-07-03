@@ -18,27 +18,25 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { email, errorType, errorMessage } = await req.json();
+    const { guestReportId, errorType, errorMessage } = await req.json();
 
-    if (!email || !errorType) {
-      throw new Error("Email and errorType are required");
+    if (!guestReportId || !errorType) {
+      throw new Error("guestReportId and errorType are required");
     }
 
-    // Get the latest guest report for additional context
+    // Get the guest report for context
     const { data: guestReport } = await supabase
       .from('guest_reports')
       .select('*')
-      .eq('email', email)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('id', guestReportId)
       .single();
 
     // Insert error log with service role permissions
     const { data: errorLog, error } = await supabase
       .from('user_errors')
       .insert({
-        guest_report_id: guestReport?.id || null,
-        email,
+        guest_report_id: guestReportId,
+        email: guestReport?.email || 'unknown',
         error_type: errorType,
         price_paid: guestReport?.amount_paid || null,
         error_message: errorMessage,
