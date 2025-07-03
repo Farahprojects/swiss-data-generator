@@ -33,7 +33,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, onExplor
 
   return (
     <div 
-      className={`py-1 px-4 transition-all duration-300 ${
+      className={`py-4 px-6 transition-all duration-500 group ${
         isMobile ? 'cursor-pointer' : 'cursor-pointer'
       }`}
       onMouseEnter={() => {
@@ -45,25 +45,25 @@ export const TestCard = ({ title, description, path, isActive, onHover, onExplor
     >
       <div className="flex items-center justify-between">
         <div className="flex-1 text-center md:text-left">
-          <h3 className={`text-3xl md:text-4xl font-black transition-all duration-300 whitespace-nowrap tracking-tight ${
+          <h3 className={`text-4xl md:text-5xl font-light transition-all duration-500 whitespace-nowrap tracking-tight ${
             isActive || isHovered 
-              ? 'text-primary' 
-              : 'text-gray-900'
+              ? 'text-gray-900' 
+              : 'text-gray-500'
           }`}>
             {title}
           </h3>
           {description && (
-            <p className="text-sm text-gray-600 mt-2">{description}</p>
+            <p className="text-sm text-gray-500 mt-2 font-light">{description}</p>
           )}
         </div>
         
-        <div className="ml-6 hidden md:block">
+        <div className="ml-8 hidden md:block">
           <button
             onClick={handleExploreClick}
-            className={`px-4 py-2 rounded-full font-semibold transition-all duration-300 ${
+            className={`px-8 py-3 rounded-full font-medium transition-all duration-500 transform ${
               isActive || isHovered
-                ? 'bg-primary text-white opacity-100 translate-x-0'
-                : 'bg-gray-200 text-gray-600 opacity-0 -translate-x-2'
+                ? 'bg-gray-900 text-white opacity-100 translate-x-0 scale-100 shadow-lg'
+                : 'bg-gray-100 text-gray-500 opacity-70 -translate-x-4 scale-95'
             }`}
           >
             Explore
