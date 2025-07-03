@@ -25,7 +25,7 @@ const testimonials = [
 const TestimonialsSection = () => {
   return (
     <section className="py-16 bg-gradient-to-b from-background to-muted/20">
-      <div className="container mx-auto px-4">
+      <div className="w-full px-4 md:container md:mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

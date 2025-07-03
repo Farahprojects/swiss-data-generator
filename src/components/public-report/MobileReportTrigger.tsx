@@ -53,7 +53,7 @@ const MobileReportTrigger = ({ isDrawerOpen, onOpenDrawer }: MobileReportTrigger
             variant="outline"
             className="h-14 px-8 rounded-full border-2 border-primary/80 backdrop-blur-sm bg-white/95 text-primary hover:bg-primary/5 hover:border-primary shadow-xl font-semibold text-lg whitespace-nowrap min-w-fit"
           >
-            Begin
+            Unlock
           </Button>
         </motion.div>
       )}

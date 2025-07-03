@@ -64,7 +64,7 @@ const DesktopStickyTrigger = ({ onGetReportClick }: DesktopStickyTriggerProps) =
             variant="outline"
             className="h-16 px-12 text-lg font-medium rounded-2xl border-2 border-primary/80 backdrop-blur-sm bg-white/95 text-primary hover:bg-primary/5 hover:border-primary shadow-xl hover:shadow-xl transform hover:scale-105 transition-all duration-300 whitespace-nowrap min-w-fit"
           >
-            Begin
+            Unlock
           </Button>
         </motion.div>
       )}
