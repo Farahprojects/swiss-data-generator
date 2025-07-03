@@ -75,7 +75,7 @@ const testData: Test[] = [
     slug: "Flow",
     time: "15 min",
     color: "bg-green-500",
-    imageSrc: "/lovable-uploads/c245dba6-7af4-444f-a486-44594e57c9fd.png"
+    imageSrc: "/lovable-uploads/f2552227-155d-477d-9c93-ac4eb72b5ddf.png"
   },
 ];
 
