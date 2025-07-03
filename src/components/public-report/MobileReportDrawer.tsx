@@ -124,18 +124,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       // 1️⃣ Reset to top so the next step never starts halfway down
       container.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // 2️⃣ Wait for render, then find and focus the first interactive element
-      const focusTimer = window.setTimeout(() => {
-        const firstFocusable = container.querySelector<HTMLElement>(
-          'button[type="button"]:not([disabled]), input, select, textarea, button:not([disabled]):not(.sr-only)'
-        );
-        if (firstFocusable) {
-          firstFocusable.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }
-      }, 100);
-
-      return () => window.clearTimeout(focusTimer);
-    }, 500); // increased delay to ensure animations complete
+      // 2️⃣ Nudge the first focusable (input/select/button…) into view
+      const firstFocusable = container.querySelector<HTMLElement>(
+        'input, select, textarea, button:not([disabled]):not(.sr-only)'
+      );
+      firstFocusable?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 350); // delay must exceed your <AnimatePresence> exit duration
 
     return () => window.clearTimeout(timer);
   }, [currentStep]);

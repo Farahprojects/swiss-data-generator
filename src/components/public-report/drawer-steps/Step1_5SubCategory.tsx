@@ -134,7 +134,7 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                     }
                     
                     // Auto-advance to next step after selection
-                    setTimeout(() => onNext(), 150);
+                    setTimeout(() => onNext(), 100);
                   }}
                   className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                     isSelected 
