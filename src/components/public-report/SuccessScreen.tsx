@@ -13,8 +13,6 @@ import { motion } from 'framer-motion';
 // -----------------------------------------------------------------------------
 const VIDEO_SRC =
   'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
-const COLOR_BLUE = 'text-blue-600';
-const COLOR_GREEN = 'text-green-600';
 
 // -----------------------------------------------------------------------------
 // Helper Components
@@ -106,9 +104,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Polling lifecycle - wait for video to be ready
+  // Auto-scroll and polling lifecycle - wait for video to be ready
   // ---------------------------------------------------------------------------
   useEffect(() => {
+    // Auto-scroll to the processing section when component mounts
+    const scrollToProcessing = () => {
+      const element = document.querySelector('[data-success-screen]');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    
+    scrollToProcessing();
+    
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (autoStartPolling && reportIdToUse && !isPolling && isVideoReady) {
       console.log('🚀 Starting polling after video is ready');
@@ -122,18 +130,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // ---------------------------------------------------------------------------
   const getStatus = useCallback(() => {
     if (!report) {
-      return { step: 1, title: 'Processing Your Request', desc: "We're setting up your personalized report", progress: 10, icon: Clock, color: COLOR_BLUE };
+      return { step: 1, title: 'Processing Your Request', desc: "We're setting up your personalized report", progress: 10, icon: Clock };
     }
     if (report.payment_status === 'pending') {
-      return { step: 1, title: 'Payment Processing', desc: 'Confirming your payment details', progress: 25, icon: Clock, color: COLOR_BLUE };
+      return { step: 1, title: 'Payment Processing', desc: 'Confirming your payment details', progress: 25, icon: Clock };
     }
     if (report.payment_status === 'paid' && !report.has_report) {
-      return { step: 2, title: 'Generating Your Report', desc: 'Our AI is crafting your personalized insights', progress: 60, icon: Clock, color: COLOR_BLUE };
+      return { step: 2, title: 'Generating Your Report', desc: 'Our AI is crafting your personalized insights', progress: 60, icon: Clock };
     }
     if (report.has_report && report.report_content) {
-      return { step: 3, title: 'Report Ready!', desc: 'Your personalized report is complete', progress: 100, icon: CheckCircle, color: COLOR_GREEN };
+      return { step: 3, title: 'Report Ready!', desc: 'Your personalized report is complete', progress: 100, icon: CheckCircle };
     }
-    return { step: 1, title: 'Processing', desc: 'Please wait while we prepare your report', progress: 30, icon: Clock, color: COLOR_BLUE };
+    return { step: 1, title: 'Processing', desc: 'Please wait while we prepare your report', progress: 30, icon: Clock };
   }, [report]);
 
   const status = getStatus();
@@ -202,10 +210,22 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // ---------------------------------------------------------------------------
   // Shared blocks
   // ---------------------------------------------------------------------------
-  const Countdown = (
-    <div className="text-center">
-      <div className="text-4xl font-bold text-primary mb-1">{countdown}s</div>
-      <p className="text-sm text-muted-foreground">Report generating…</p>
+  const ProcessingStatus = (
+    <div className="flex items-center justify-center gap-4 py-4">
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+        isReady ? 'bg-gray-100' : 'bg-gray-100'
+      }`}>
+        <StatusIcon className={`h-6 w-6 ${isReady ? 'text-gray-600' : 'text-gray-600'}`} />
+      </div>
+      {!isReady && (
+        <>
+          <div className="text-3xl font-light text-gray-900">{countdown}s</div>
+          <div className="text-gray-600 font-light">Report generating...</div>
+        </>
+      )}
+      {isReady && (
+        <div className="text-gray-600 font-light">Ready to view</div>
+      )}
     </div>
   );
 
@@ -282,30 +302,20 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       data-success-screen
     >
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
-        <Card className="border-2 border-primary/20 shadow-lg">
+        <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            {/* Status Icon */}
-            <motion.div
-              className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
-                isReady ? 'bg-green-100' : 'bg-blue-100'
-              }`}
-              animate={isReady ? { scale: [1, 1.2, 1] } : {}}
-              transition={{ duration: 0.6, ease: 'easeInOut' }}
-            >
-              <StatusIcon className={`h-8 w-8 ${status.color}`} />
-            </motion.div>
+            {/* Processing Status - Consolidated */}
+            {ProcessingStatus}
 
             {/* Title / desc */}
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-1">{status.title}</h2>
-              <p className="text-muted-foreground">{status.desc}</p>
+              <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
+              <p className="text-gray-600 font-light">{status.desc}</p>
             </div>
-
 
             {/* Content while generating */}
             {!isReady && !error && (
               <>
-                {Countdown}
                 <VideoLoader onVideoReady={handleVideoReady} />
                 {PersonalNote}
               </>
@@ -315,7 +325,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
             {isReady && (
               <>
                 {PersonalNote}
-                <Button onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}>
+                <Button 
+                  onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
+                  className="bg-gray-900 hover:bg-gray-800 text-white font-light"
+                >
                   View now
                 </Button>
               </>
