@@ -235,7 +235,7 @@ const Signup = () => {
   const renderSignupForm = () => (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-5">
+        <div className="space-y-4">
           <EmailInput 
             email={email}
             isValid={emailValid}
@@ -250,14 +250,10 @@ const Signup = () => {
             showRequirements={false}
             onChange={setPassword}
             onFocus={() => setErrorMsg('')}
-            label="Password"
           />
           
           {passwordValid && (
-            <p className="text-sm text-green-600 flex items-center">
-              <span className="mr-2">✓</span>
-              Password meets requirements (8+ characters)
-            </p>
+            <p className="text-sm text-green-600">✓ Password meets requirements (8+ characters)</p>
           )}
           
           {showConfirmPassword && (
@@ -275,14 +271,14 @@ const Signup = () => {
         </div>
 
         {errorMsg && (
-          <div className="text-center text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+          <div className="text-center text-sm text-red-600 bg-red-50 p-3 rounded-md">
             {errorMsg}
           </div>
         )}
 
         <Button 
           type="submit" 
-          className="w-full h-12 text-base font-medium"
+          className="w-full"
           disabled={loading || !emailValid || !passwordValid || !passwordsMatch}
         >
           {loading ? 'Creating account...' : 'Sign up'}
@@ -295,7 +291,7 @@ const Signup = () => {
 
         <p className="text-center text-sm text-gray-600">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-primary hover:text-primary/80">
+          <Link to="/login" className="font-medium text-primary hover:underline">
             Sign in
           </Link>
         </p>
@@ -349,25 +345,23 @@ const Signup = () => {
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen">
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-sm border p-8 space-y-8">
-            <header className="text-center">
-              <h1 className="text-3xl font-bold text-gray-900">
-                {signupSuccess ? 'Email Verification' : 'Welcome to Astro by Therai'}
-              </h1>
-              <p className="mt-3 text-gray-600">
-                {signupSuccess 
-                  ? 'One more step to complete your registration' 
-                  : 'Create your account to get started'}
-              </p>
-            </header>
+        <div className="w-full max-w-md space-y-8">
+          <header className="text-center">
+            <h1 className="text-3xl font-bold">
+              {signupSuccess ? 'Email Verification' : 'Welcome to Astro by Therai'}
+            </h1>
+            <p className="mt-2 text-gray-600">
+              {signupSuccess 
+                ? 'One more step to complete your registration' 
+                : 'Create your account to get started'}
+            </p>
+          </header>
 
-            {signupSuccess ? renderSuccessMessage() : renderSignupForm()}
-          </div>
+          {signupSuccess ? renderSuccessMessage() : renderSignupForm()}
         </div>
       </main>
 
