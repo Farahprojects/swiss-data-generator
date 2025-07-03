@@ -40,40 +40,27 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
   const logUserError = useCallback(async (email: string, errorType: string, errorMessage?: string) => {
     try {
-      // Get the latest guest report for additional context
-      const { data: guestReport } = await supabase
-        .from('guest_reports')
-        .select('*')
-        .eq('email', email)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      const { data: errorLog, error } = await supabase
-        .from('user_errors')
-        .insert({
-          guest_report_id: guestReport?.id || null,
+      const response = await fetch('/functions/v1/log-user-error', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email,
-          error_type: errorType,
-          price_paid: guestReport?.amount_paid || null,
-          error_message: errorMessage,
-          metadata: {
-            payment_status: guestReport?.payment_status,
-            has_report: guestReport?.has_report,
-            stripe_session_id: guestReport?.stripe_session_id,
-            report_type: guestReport?.report_type
-          }
+          errorType,
+          errorMessage
         })
-        .select('case_number')
-        .single();
+      });
 
-      if (error) {
-        console.error('❌ Failed to log user error:', error);
+      const result = await response.json();
+
+      if (!result.success) {
+        console.error('❌ Failed to log user error:', result.error);
         return null;
       }
 
-      console.log('📝 Logged error with case number:', errorLog.case_number);
-      return errorLog.case_number;
+      console.log('📝 Logged error with case number:', result.case_number);
+      return result.case_number;
     } catch (err) {
       console.error('❌ Error logging user error:', err);
       return null;
