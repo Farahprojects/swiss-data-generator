@@ -10,7 +10,7 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
   // Rotating words for the "Your..." animation - easily customizable
-  const rotatingWords = ['self', 'mind', 'partner', 'friend', 'soul'];
+  const rotatingWords = ['self', 'mind', 'bae', 'soul', 'will'];
   
   // Banner images for smooth transitions - from explore more section
   const bannerImages = [
