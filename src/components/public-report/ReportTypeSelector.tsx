@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   Control,
   Controller,
@@ -30,12 +30,14 @@ interface ReportTypeSelectorProps {
 }
 
 /**
- * ReportTypeSelector
+ * ReportTypeSelector – production‑ready
  * --------------------------------------------------
- * Production‑ready version with robust auto‑scroll behaviour.
- * ‑ Debounces scroll so it fires only once per category selection.
- * ‑ Uses refs rather than DOM queries for reliability & SSR safety.
- * ‑ Cleans up duplicated local state & re‑computes from RHF values.
+ * ✦ Smooth, single‑fire auto‑scroll:
+ *   – Step 1   → Step 1.5 (sub‑step) once a main category is picked
+ *   – Step 1.5 → Step 2     once the sub‑step is complete
+ * ✦ Flags reset automatically when the user changes category
+ * ✦ No brittle DOM queries – uses React refs so it’s SSR‑safe
+ * ✦ Removed redundant local state (fully derived from RHF values)
  */
 const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   control,
@@ -55,56 +57,56 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   const watchedAstroData = useWatch({ control, name: 'astroDataType' });
 
   /* ──────────────────────────
-   * Local UI state
+   * Scroll targets
    * ────────────────────────── */
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+  const subStepRef = useRef<HTMLDivElement>(null); // Step 1.5
+  const stepTwoRef = useRef<HTMLDivElement>(null); // Step 2
+
+  const hasScrolledToSubStep = useRef(false);
+  const hasScrolledToStepTwo = useRef(false);
 
   /* ──────────────────────────
-   * Step‑two ref for scrolling
+   * Reset scroll flags if category changes
    * ────────────────────────── */
-  const stepTwoRef = useRef<HTMLDivElement>(null);
-  const hasScrolledRef = useRef(false);
-
-  /** Resets the hasScrolled flag whenever the top‑level category changes */
   useEffect(() => {
-    hasScrolledRef.current = false;
+    hasScrolledToSubStep.current = false;
+    hasScrolledToStepTwo.current = false;
   }, [watchedCategory]);
 
-  /**
-   * Fires once when the user has made a *complete* selection for step one.
-   * We debounce with hasScrolledRef to avoid repeated scrolls when the user
-   * tweaks sub‑options (e.g. picking a different snapshot type).
-   */
+  /* ──────────────────────────
+   * Scroll: Step 1 → Step 1.5
+   * ────────────────────────── */
   useEffect(() => {
     if (typeof window === 'undefined') return; // SSR guard
+    if (!watchedCategory || hasScrolledToSubStep.current) return;
 
-    const categoryComplete =
-      (watchedCategory === 'the-self' && !!watchedEssence) ||
-      (watchedCategory === 'compatibility' && !!watchedRelationship) ||
-      (watchedCategory === 'snapshot' && !!watchedSnapshot) ||
-      (watchedCategory === 'astro-data' && !!watchedAstroData);
-
-    if (categoryComplete && !hasScrolledRef.current && stepTwoRef.current) {
-      // Use rAF for smoother timing than setTimeout & to wait for layout flush
-      window.requestAnimationFrame(() => {
-        stepTwoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        hasScrolledRef.current = true;
-      });
-    }
-  }, [watchedCategory, watchedEssence, watchedRelationship, watchedSnapshot, watchedAstroData]);
+    window.requestAnimationFrame(() => {
+      subStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      hasScrolledToSubStep.current = true;
+    });
+  }, [watchedCategory]);
 
   /* ──────────────────────────
-   * Derived booleans for conditional renders
+   * Is the sub‑step complete?
    * ────────────────────────── */
-  const showSnapshotSubCategories = watchedCategory === 'snapshot';
-  const showAstroDataSubCategories = watchedCategory === 'astro-data';
-  const showEssenceOptions = watchedCategory === 'the-self' && selectedReportType === 'essence';
-  const showRelationshipOptions =
-    watchedCategory === 'compatibility' &&
-    (selectedReportType === 'sync' || selectedReportType === 'compatibility');
-  const requiresReturnYear = selectedReportType === 'return';
-  const getCurrentYear = () => new Date().getFullYear();
+  const subStepComplete =
+    (watchedCategory === 'the-self' && !!watchedEssence) ||
+    (watchedCategory === 'compatibility' && !!watchedRelationship) ||
+    (watchedCategory === 'snapshot' && !!watchedSnapshot) ||
+    (watchedCategory === 'astro-data' && !!watchedAstroData);
+
+  /* ──────────────────────────
+   * Scroll: Step 1.5 → Step 2
+   * ────────────────────────── */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!subStepComplete || hasScrolledToStepTwo.current) return;
+
+    window.requestAnimationFrame(() => {
+      stepTwoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      hasScrolledToStepTwo.current = true;
+    });
+  }, [subStepComplete]);
 
   /* ──────────────────────────
    * Handlers
@@ -115,10 +117,9 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
       reportType: ReportFormData['reportType'],
       onChange: (v: any) => void,
     ) => {
-      setSelectedCategory(value);
       onChange(value);
 
-      // If not a snapshot or astro-data, propagate reportType immediately
+      // Immediate reportType update for simple categories
       if (value !== 'snapshot' && value !== 'astro-data' && setValue) {
         setValue('reportType', reportType, { shouldValidate: true });
       }
@@ -128,7 +129,6 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
 
   const handleSubCategoryClick = useCallback(
     (value: string, reportType: ReportFormData['reportType'], onChange: (v: any) => void) => {
-      setSelectedSubCategory(value);
       onChange(value);
       setValue?.('reportType', reportType, { shouldValidate: true });
     },
@@ -137,23 +137,36 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
 
   const handleAstroDataClick = useCallback(
     (value: string, reportType: ReportFormData['reportType'], onChange: (v: any) => void) => {
-      setSelectedSubCategory(value);
       onChange(value);
-      
-      // Set request field based on the category selected
+
+      // Set request field based on category
       const requestValue = watchedCategory === 'the-self' ? 'essence' : 'sync';
       setValue?.('request', requestValue, { shouldValidate: true });
-      setValue?.('reportType', '', { shouldValidate: true }); // Keep reportType blank for astro data
+
+      // Keep reportType blank for astro‑data
+      setValue?.('reportType', '', { shouldValidate: true });
     },
     [setValue, watchedCategory],
   );
+
+  /* ──────────────────────────
+   * Derived UI helpers
+   * ────────────────────────── */
+  const showSnapshotSubCategories = watchedCategory === 'snapshot';
+  const showAstroDataSubCategories = watchedCategory === 'astro-data';
+  const showEssenceOptions = watchedCategory === 'the-self' && selectedReportType === 'essence';
+  const showRelationshipOptions =
+    watchedCategory === 'compatibility' &&
+    (selectedReportType === 'sync' || selectedReportType === 'compatibility');
+  const requiresReturnYear = selectedReportType === 'return';
+  const currentYear = new Date().getFullYear();
 
   /* ──────────────────────────
    * Render
    * ────────────────────────── */
   return (
     <>
-      {/* STEP 1 ─────────────────────────────────────────────── */}
+      {/* STEP 1 */}
       <FormStep
         stepNumber={1}
         title="Choose Your Report Type"
@@ -170,7 +183,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
           </button>
 
           <div className="space-y-6 max-w-5xl mx-auto">
-            {/* Main Category Selection */}
+            {/* Main categories */}
             <div className="space-y-4">
               <Controller
                 control={control}
@@ -189,15 +202,13 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                           onClick={() =>
                             handleCategoryClick(category.value, category.reportType, field.onChange)
                           }
-                          className={
-                            [
-                              'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
-                              'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
-                              isSelected
-                                ? 'border-primary shadow-lg'
-                                : 'border-neutral-200 hover:border-neutral-300',
-                            ].join(' ')
-                          }
+                          className={[
+                            'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
+                            'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
+                            isSelected
+                              ? 'border-primary shadow-lg'
+                              : 'border-neutral-200 hover:border-neutral-300',
+                          ].join(' ')}
                           whileTap={{ scale: 0.98 }}
                         >
                           <div className="flex gap-4 items-center">
@@ -217,9 +228,9 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
               />
             </div>
 
-            {/* Snapshot sub‑categories (only visible when snapshot selected) */}
+            {/* Snapshot sub‑categories */}
             {showSnapshotSubCategories && (
-              <div className="space-y-4">
+              <div ref={subStepRef} className="space-y-4" data-step="1.5">
                 <h3 className="text-2xl font-light text-gray-900 text-center tracking-tight">
                   Choose your snapshot type
                 </h3>
@@ -240,15 +251,13 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                             onClick={() =>
                               handleSubCategoryClick(sub.value, sub.reportType, field.onChange)
                             }
-                            className={
-                              [
-                                'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
-                                'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
-                                isSelected
-                                  ? 'border-primary shadow-lg'
-                                  : 'border-neutral-200 hover:border-neutral-300',
-                              ].join(' ')
-                            }
+                            className={[
+                              'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
+                              'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
+                              isSelected
+                                ? 'border-primary shadow-lg'
+                                : 'border-neutral-200 hover:border-neutral-300',
+                            ].join(' ')}
                             whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex gap-4 items-center">
@@ -269,9 +278,9 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
               </div>
             )}
 
-            {/* Astro Data sub‑categories (only visible when astro-data selected) */}
+            {/* Astro‑data sub‑categories */}
             {showAstroDataSubCategories && (
-              <div className="space-y-4">
+              <div ref={subStepRef} className="space-y-4" data-step="1.5">
                 <h3 className="text-2xl font-light text-gray-900 text-center tracking-tight">
                   Choose your astro data type
                 </h3>
@@ -292,15 +301,13 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                             onClick={() =>
                               handleAstroDataClick(sub.value, sub.reportType, field.onChange)
                             }
-                            className={
-                              [
-                                'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
-                                'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
-                                isSelected
-                                  ? 'border-primary shadow-lg'
-                                  : 'border-neutral-200 hover:border-neutral-300',
-                              ].join(' ')
-                            }
+                            className={[
+                              'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
+                              'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
+                              isSelected
+                                ? 'border-primary shadow-lg'
+                                : 'border-neutral-200 hover:border-neutral-300',
+                            ].join(' ')}
                             whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex gap-4 items-center">
@@ -311,7 +318,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                                 <h3 className="text-lg font-semibold text-gray-900">{sub.title}</h3>
                                 <p className="text-sm text-muted-foreground">{sub.description}</p>
                                 <div className="mt-2 text-xs text-green-600 font-medium">
-                                  ⚡ Instant delivery (~5 seconds)
+                                  ⚡ Instant delivery (~5 seconds)
                                 </div>
                               </div>
                             </div>
@@ -324,9 +331,9 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
               </div>
             )}
 
-            {/* Essence types (only when "the‑self" + essence report) */}
+            {/* Essence types */}
             {showEssenceOptions && (
-              <div className="space-y-4">
+              <div ref={subStepRef} className="space-y-4" data-step="1.5">
                 <h3 className="text-2xl font-light text-gray-900 text-center tracking-tight">
                   Choose your report style *
                 </h3>
@@ -345,15 +352,13 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                             role="radio"
                             aria-checked={isSelected}
                             onClick={() => field.onChange(type.value)}
-                            className={
-                              [
-                                'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
-                                'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
-                                isSelected
-                                  ? 'border-primary shadow-lg bg-primary/5'
-                                  : 'border-neutral-200 hover:border-neutral-300',
-                              ].join(' ')
-                            }
+                            className={[
+                              'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
+                              'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
+                              isSelected
+                                ? 'border-primary shadow-lg bg-primary/5'
+                                : 'border-neutral-200 hover:border-neutral-300',
+                            ].join(' ')}
                             whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex gap-4 items-center">
@@ -379,9 +384,9 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
               </div>
             )}
 
-            {/* Return year (only when solar/lunar return report) */}
+            {/* Return year */}
             {requiresReturnYear && (
-              <div className="space-y-2">
+              <div ref={subStepRef} className="space-y-2" data-step="1.5">
                 <Label htmlFor="returnYear">Return Year *</Label>
                 <Controller
                   control={control}
@@ -391,7 +396,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                       {...field}
                       id="returnYear"
                       type="number"
-                      placeholder={getCurrentYear().toString()}
+                      placeholder={currentYear.toString()}
                       min="1900"
                       max="2100"
                       className="h-12"
@@ -401,9 +406,9 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
               </div>
             )}
 
-            {/* Relationship types (only when compatibility report) */}
+            {/* Relationship types */}
             {showRelationshipOptions && (
-              <div className="space-y-4">
+              <div ref={subStepRef} className="space-y-4" data-step="1.5">
                 <h3 className="text-2xl font-light text-gray-900 text-center tracking-tight">
                   Choose your report style *
                 </h3>
@@ -422,15 +427,13 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                             role="radio"
                             aria-checked={isSelected}
                             onClick={() => field.onChange(type.value)}
-                            className={
-                              [
-                                'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
-                                'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
-                                isSelected
-                                  ? 'border-primary shadow-lg bg-primary/5'
-                                  : 'border-neutral-200 hover:border-neutral-300',
-                              ].join(' ')
-                            }
+                            className={[
+                              'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
+                              'bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98]',
+                              isSelected
+                                ? 'border-primary shadow-lg bg-primary/5'
+                                : 'border-neutral-200 hover:border-neutral-300',
+                            ].join(' ')}
                             whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex gap-4 items-center">
@@ -455,16 +458,4 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                 )}
               </div>
             )}
-          </div>
-        </div>
-      </FormStep>
-
-      {/* STEP 2 (dummy wrapper for ref) */}
-      <div ref={stepTwoRef} data-step="2" />
-
-      <ReportGuideResponsive isOpen={showReportGuide} onClose={() => setShowReportGuide(false)} />
-    </>
-  );
-};
-
-export default ReportTypeSelector;
+          </
