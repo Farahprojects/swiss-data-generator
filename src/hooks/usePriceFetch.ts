@@ -10,13 +10,14 @@ const ReportTypeMappingSchema = z.object({
   reportCategory: z.string().optional(),
   reportSubCategory: z.string().optional(),
   astroDataType: z.string().optional(),
+  request: z.string().optional(),
 });
 
 export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 
 // Map form data to price_list identifiers
 const mapReportTypeToId = (data: ReportTypeMapping): string => {
-  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType } = data;
+  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType, request } = data;
   
   // Handle essence reports
   if (reportType === 'essence') {
@@ -39,6 +40,12 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
   // Handle astro data reports - use the specific astro data type
   if (reportCategory === 'astro-data' && astroDataType) {
     return astroDataType; // essence_bundle, sync_rich
+  }
+  
+  // Handle astro data based on request field (fallback)
+  if (request && !reportType) {
+    if (request === 'essence') return 'essence_bundle';
+    if (request === 'sync') return 'sync_rich';
   }
   
   // Handle snapshot reports - map subcategory to actual report type
