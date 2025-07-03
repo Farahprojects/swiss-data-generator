@@ -195,7 +195,7 @@ export default function TestsSection() {
             </div>
             
             <div className="md:col-span-6">
-              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-96">
+              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-[480px]">
                 {testData.map((test) => {
                   return (
                     <div 

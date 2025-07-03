@@ -61,9 +61,9 @@ export const TestCard = ({ title, description, path, isActive, onHover, onExplor
           <button
             onClick={handleExploreClick}
             className={`px-8 py-3 rounded-full font-medium transition-all duration-500 transform ${
-              isActive || isHovered
+              isHovered
                 ? 'bg-gray-900 text-white opacity-100 translate-x-0 scale-100 shadow-lg'
-                : 'bg-gray-100 text-gray-500 opacity-70 -translate-x-4 scale-95'
+                : 'bg-gray-100 text-gray-500 opacity-0 -translate-x-4 scale-95'
             }`}
           >
             Explore
