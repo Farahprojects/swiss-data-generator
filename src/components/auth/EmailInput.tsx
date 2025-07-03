@@ -12,12 +12,6 @@ interface Props {
   placeholder?: string;
 }
 
-/**
- * Slimmed‑down email field.
- *  – Border turns red on invalid input.
- *  – Error text appears only after the user types.
- *  – Clears parent‑level form errors through onFocus.
- */
 const EmailInput: React.FC<Props> = ({
   email,
   isValid,
@@ -26,8 +20,8 @@ const EmailInput: React.FC<Props> = ({
   disabled = false,
   placeholder = "Enter your email",
 }) => (
-  <div className="space-y-1">
-    <Label htmlFor="email">Email</Label>
+  <div className="space-y-2">
+    <Label htmlFor="email" className="text-sm font-light text-gray-700">Email Address</Label>
 
     <Input
       id="email"
@@ -37,12 +31,12 @@ const EmailInput: React.FC<Props> = ({
       onFocus={onFocus}
       disabled={disabled}
       placeholder={placeholder}
-      className={!isValid && email ? "border-red-500" : ""}
+      className={`h-12 rounded-xl border-gray-200 bg-gray-50/50 font-light placeholder:text-gray-400 focus:border-gray-900 focus:bg-white transition-all duration-300 ${!isValid && email ? "border-red-300 bg-red-50/30" : ""}`}
       required
     />
 
     {!isValid && email && (
-      <p className="text-xs text-red-600">Please enter a valid email address</p>
+      <p className="text-xs text-red-500 font-light">Please enter a valid email address</p>
     )}
   </div>
 );

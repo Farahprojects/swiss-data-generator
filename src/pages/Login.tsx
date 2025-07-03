@@ -213,70 +213,77 @@ const Login = () => {
   // render
   // ──────────────────────────────────────────
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md space-y-8">
           {showForgotPassword ? (
-            <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
+            <div className="bg-white rounded-2xl border border-gray-200/50 p-8 shadow-lg shadow-gray-200/50 backdrop-blur-sm">
+              <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
+            </div>
           ) : (
             <>
               <header className="text-center">
-                <h1 className="text-3xl font-bold">Welcome back</h1>
-                <p className="mt-2 text-gray-600">Sign in to your account</p>
+                <h1 className="text-3xl font-light text-gray-900 tracking-tight">Welcome back</h1>
+                <p className="mt-2 text-gray-600 font-light">Sign in to your account</p>
               </header>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-4">
-                  <EmailInput
-                    email={email}
-                    isValid={emailValid}
-                    onChange={setEmail}
-                    onFocus={() => setErrorMsg('')}
+              <div className="bg-white rounded-2xl border border-gray-200/50 p-8 shadow-lg shadow-gray-200/50 backdrop-blur-sm">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-4">
+                    <EmailInput
+                      email={email}
+                      isValid={emailValid}
+                      onChange={setEmail}
+                      onFocus={() => setErrorMsg('')}
+                      placeholder="Enter your email"
+                    />
+                    <PasswordInput
+                      password={password}
+                      isValid={passwordValid}
+                      showRequirements={false}
+                      onChange={setPassword}
+                      onFocus={() => setErrorMsg('')}
+                      label="Password"
+                      placeholder="Enter your password"
+                    />
+                  </div>
+
+                  {errorMsg && (
+                    <div className="text-red-600 text-sm text-center bg-red-50/30 p-3 rounded-xl font-light">{errorMsg}</div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-light text-base rounded-xl transition-all duration-300 hover:scale-[1.02] border-0 shadow-lg shadow-gray-900/25"
+                    disabled={!emailValid || !passwordValid || loading}
+                  >
+                    {loading ? 'Signing in...' : 'Sign in'}
+                  </Button>
+                </form>
+
+                <div className="text-center space-y-4 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-gray-600 hover:text-gray-900 font-light"
+                  >
+                    Forgot your password?
+                  </button>
+
+                  <SocialLogin
+                    onGoogleSignIn={handleGoogleSignIn}
+                    onAppleSignIn={handleAppleSignIn}
                   />
-                  <PasswordInput
-                    password={password}
-                    isValid={passwordValid}
-                    showRequirements={false}
-                    onChange={setPassword}
-                    onFocus={() => setErrorMsg('')}
-                  />
+
+                  <p className="text-sm text-gray-600 font-light">
+                    Don't have an account?{' '}
+                    <Link to="/signup" className="font-medium text-gray-900 hover:underline">
+                      Sign up
+                    </Link>
+                  </p>
                 </div>
-
-                {errorMsg && (
-                  <div className="text-red-600 text-sm text-center">{errorMsg}</div>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={!emailValid || !passwordValid || loading}
-                >
-                  {loading ? 'Signing in...' : 'Sign in'}
-                </Button>
-              </form>
-
-              <div className="text-center space-y-4">
-                <button
-                  type="button"
-                  onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                >
-                  Forgot your password?
-                </button>
-
-                <SocialLogin
-                  onGoogleSignIn={handleGoogleSignIn}
-                  onAppleSignIn={handleAppleSignIn}
-                />
-
-                <p className="text-sm text-gray-600">
-                  Don't have an account?{' '}
-                  <Link to="/signup" className="font-medium text-primary hover:underline">
-                    Sign up
-                  </Link>
-                </p>
               </div>
             </>
           )}

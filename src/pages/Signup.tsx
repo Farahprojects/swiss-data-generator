@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -233,7 +232,7 @@ const Signup = () => {
   };
 
   const renderSignupForm = () => (
-    <div className="space-y-6">
+    <div className="bg-white rounded-2xl border border-gray-200/50 p-8 shadow-lg shadow-gray-200/50 backdrop-blur-sm">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <EmailInput 
@@ -250,10 +249,12 @@ const Signup = () => {
             showRequirements={false}
             onChange={setPassword}
             onFocus={() => setErrorMsg('')}
+            label="Password"
+            placeholder="Create a password"
           />
           
           {passwordValid && (
-            <p className="text-sm text-green-600">✓ Password meets requirements (8+ characters)</p>
+            <p className="text-sm text-green-600 font-light">✓ Password meets requirements (8+ characters)</p>
           )}
           
           {showConfirmPassword && (
@@ -271,17 +272,17 @@ const Signup = () => {
         </div>
 
         {errorMsg && (
-          <div className="text-center text-sm text-red-600 bg-red-50 p-3 rounded-md">
+          <div className="text-center text-sm text-red-600 bg-red-50/30 p-3 rounded-xl font-light">
             {errorMsg}
           </div>
         )}
 
         <Button 
           type="submit" 
-          className="w-full"
+          className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-light text-base rounded-xl transition-all duration-300 hover:scale-[1.02] border-0 shadow-lg shadow-gray-900/25"
           disabled={loading || !emailValid || !passwordValid || !passwordsMatch}
         >
-          {loading ? 'Creating account...' : 'Sign up'}
+          {loading ? 'Creating account...' : 'Create Account'}
         </Button>
 
         <SocialLogin 
@@ -289,9 +290,9 @@ const Signup = () => {
           onAppleSignIn={handleAppleSignIn}
         />
 
-        <p className="text-center text-sm text-gray-600">
+        <p className="text-center text-sm text-gray-600 font-light">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-primary hover:underline">
+          <Link to="/login" className="font-medium text-gray-900 hover:underline">
             Sign in
           </Link>
         </p>
@@ -300,61 +301,63 @@ const Signup = () => {
   );
 
   const renderSuccessMessage = () => (
-    <div className="space-y-6 animate-fade-in">
-      <div className="text-center flex-1">
-        <h3 className="font-medium text-lg">Account created successfully!</h3>
-        <p className="text-gray-700">
-          A verification email has been sent to <strong>{verificationEmail}</strong>. 
-          Please check your inbox and click the link in the email to verify your account.
-        </p>
-      </div>
-
-      <div className="flex flex-col space-y-4 items-center">
-        <div className="rounded-full bg-primary/10 p-3">
-          <Mail className="h-12 w-12 text-primary" />
-        </div>
-        
-        <div className="text-center">
-          <h3 className="text-lg font-medium">Check your email</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            After verification, you'll be able to sign in to your account.
+    <div className="bg-white rounded-2xl border border-gray-200/50 p-8 shadow-lg shadow-gray-200/50 backdrop-blur-sm">
+      <div className="space-y-6 animate-fade-in">
+        <div className="text-center flex-1">
+          <h3 className="font-light text-xl text-gray-900 tracking-tight">Account created successfully!</h3>
+          <p className="text-gray-600 font-light mt-2">
+            A verification email has been sent to <strong>{verificationEmail}</strong>. 
+            Please check your inbox and click the link in the email to verify your account.
           </p>
         </div>
 
-        <div className="flex flex-col space-y-3 w-full max-w-md mt-4">
-          <Button 
-            onClick={handleResendVerification} 
-            variant="outline" 
-            disabled={loading}
-            className="w-full"
-          >
-            {loading ? 'Sending...' : 'Resend verification email'}
-          </Button>
+        <div className="flex flex-col space-y-4 items-center">
+          <div className="rounded-full bg-gray-100 p-4">
+            <Mail className="h-12 w-12 text-gray-600" />
+          </div>
           
-          <Link to="/login" className="w-full">
+          <div className="text-center">
+            <h3 className="text-lg font-light text-gray-900 tracking-tight">Check your email</h3>
+            <p className="text-sm text-gray-500 mt-1 font-light">
+              After verification, you'll be able to sign in to your account.
+            </p>
+          </div>
+
+          <div className="flex flex-col space-y-3 w-full max-w-md mt-4">
             <Button 
-              variant="default"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={handleResendVerification} 
+              variant="outline" 
+              disabled={loading}
+              className="w-full h-12 rounded-xl font-light border-gray-200 hover:bg-gray-50"
             >
-              Go to Login
+              {loading ? 'Sending...' : 'Resend verification email'}
             </Button>
-          </Link>
+            
+            <Link to="/login" className="w-full">
+              <Button 
+                variant="default"
+                className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white font-light rounded-xl"
+              >
+                Go to Login
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md space-y-8">
           <header className="text-center">
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-3xl font-light text-gray-900 tracking-tight">
               {signupSuccess ? 'Email Verification' : 'Welcome to Astro by Therai'}
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-gray-600 font-light">
               {signupSuccess 
                 ? 'One more step to complete your registration' 
                 : 'Create your account to get started'}
