@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 const RelationshipDynamicsCard = () => (
   <Card className="shadow-sm border-gray-200 border bg-white">
     <CardHeader className="flex flex-row items-start gap-4">
-      <Badge className="bg-gray-700 text-white mb-2 px-3 py-1 font-light">Unlock Compatibility</Badge>
+      <Badge className="bg-white text-black border border-gray-300 mb-2 px-3 py-1 font-light">Unlock Compatibility</Badge>
       <Users className="w-8 h-8 text-gray-600 ml-auto" />
     </CardHeader>
     <CardContent>
