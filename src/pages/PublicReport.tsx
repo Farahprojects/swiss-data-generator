@@ -247,33 +247,33 @@ const PublicReport = () => {
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
                   <div className="text-center mb-8">
                     <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Raw Astro Data</h3>
-                    <p className="text-gray-600 font-normal">Generated in seconds • Powered by Therai GPT</p>
+                    <p className="text-gray-600 font-normal">Precise astronomical calculations • Powered by Therai Swiss</p>
                   </div>
                   
                   <div className="space-y-6">
                     <div className="transform group-hover:translate-x-1 transition-transform duration-300">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Birth Chart Data</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Sun: Gemini 15°42' • Moon: Scorpio 28°13' • Rising: Virgo 3°51'</p>
+                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">What This Shows</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">The exact astronomical positions at your birth moment - the foundation for all astrological interpretation.</p>
                     </div>
                     
                     <div className="transform group-hover:translate-x-1 transition-transform duration-500">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Planetary Positions</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Mercury: Gemini 22° • Venus: Cancer 8° • Mars: Leo 14°</p>
+                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Sample Data</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">Sun: Gemini 15°42' • Moon: Scorpio 28°13' • Rising: Virgo 3°51'</p>
                     </div>
                     
                     <div className="transform group-hover:translate-x-1 transition-transform duration-700">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">House Placements</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">10th House stellium • 2nd House emphasis • 7th House focus</p>
+                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Why It Matters</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">These precise coordinates create your unique cosmic blueprint - no two people born at different times have identical data.</p>
                     </div>
                   </div>
 
                   <div className="mt-6 p-4 bg-gray-50/60 rounded-xl border border-gray-200/30">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                      <span className="text-xs font-medium text-gray-700 tracking-wide uppercase">Therai GPT</span>
+                      <span className="text-xs font-medium text-gray-700 tracking-wide uppercase">Therai Swiss</span>
                     </div>
                     <p className="text-xs text-gray-600 text-center leading-relaxed">
-                      Instant calculations with our branded AI engine
+                      Swiss-precision astronomical calculations in seconds
                     </p>
                   </div>
                 </div>
