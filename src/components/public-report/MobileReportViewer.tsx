@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Download, FileText, ArrowLeft, Copy, Paperclip } from 'lucide-react';
-import theraiChatGPTMockup from '@/assets/therai-chatgpt-mockup.jpg';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -195,7 +194,7 @@ const MobileReportViewer = ({
             onClick={handleChatGPT}
             className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
           >
-            <img src={theraiChatGPTMockup} alt="ChatGPT" className="h-5 w-5 mr-2 rounded" />
+            <span className="mr-2 text-xl">🤖</span>
             GPT
           </button>
         </div>
