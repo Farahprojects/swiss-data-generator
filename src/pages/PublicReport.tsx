@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import HeroSection from '@/components/public-report/HeroSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
+import TheraiChatGPTSection from '@/components/public-report/TheraiChatGPTSection';
 
 import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
@@ -293,6 +294,7 @@ const PublicReport = () => {
 
 
         <TestsSection />
+        <TheraiChatGPTSection />
         {!isClientMobile && (
           <div id="report-form">
             <ReportForm />
