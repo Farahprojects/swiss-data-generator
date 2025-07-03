@@ -83,7 +83,10 @@ export const usePriceFetch = () => {
       }
       
       if (!priceData) {
-        console.error('❌ Price not found for:', priceId);
+        // Silenced: Only log in development mode since this can be expected behavior
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('Price lookup failed for:', priceId);
+        }
         throw new Error(`Price not found for report type: ${priceId}`);
       }
       

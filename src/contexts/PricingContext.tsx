@@ -75,8 +75,9 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
 
   const getPriceById = (id: string): PriceData | null => {
     const price = prices.find(p => p.id === id);
-    if (!price) {
-      console.warn('❌ Price not found for ID:', id);
+    // Silenced: Only log in development mode and with debug level
+    if (!price && process.env.NODE_ENV === 'development') {
+      console.debug('Price lookup:', id, 'not found in current price list');
     }
     return price || null;
   };
