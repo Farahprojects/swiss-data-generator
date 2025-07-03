@@ -70,7 +70,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           <h1 className="text-5xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
-            <span className="italic font-medium flex items-center justify-start md:justify-center whitespace-nowrap gap-x-2">
+            <span className="italic font-medium flex items-center justify-start md:justify-center whitespace-nowrap gap-x-2 ml-1">
               <span>Your</span>
               <AnimatePresence mode="wait">
                 <motion.span
