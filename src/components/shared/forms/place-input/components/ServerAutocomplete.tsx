@@ -192,7 +192,8 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
       {isOpen && predictions.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto"
+          className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
+          style={{ backgroundColor: 'white', zIndex: 9999 }}
         >
           {predictions.map((prediction, index) => (
             <li
