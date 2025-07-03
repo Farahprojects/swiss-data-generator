@@ -62,13 +62,17 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   const selectedReportType = watch('reportType');
+  const selectedRequest = watch('request');
   const userName = watch('name');
   const userEmail = watch('email');
 
+  // Check if form should be unlocked (either reportType or request field filled)
+  const shouldUnlockForm = !!(selectedReportType || selectedRequest);
+
   // Notify parent of form state changes
   React.useEffect(() => {
-    onFormStateChange?.(isValid, !!selectedReportType);
-  }, [isValid, selectedReportType, onFormStateChange]);
+    onFormStateChange?.(isValid, shouldUnlockForm);
+  }, [isValid, shouldUnlockForm, onFormStateChange]);
 
   const { 
     isProcessing, 
@@ -168,7 +172,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             setValue={setValue}
           />
 
-          {selectedReportType && (
+          {shouldUnlockForm && (
             <CombinedPersonalDetailsForm
               register={register}
               setValue={setValue}
@@ -186,7 +190,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             />
           )}
 
-          {selectedReportType && (
+          {shouldUnlockForm && (
             <PaymentStep
               register={register}
               watch={watch}
