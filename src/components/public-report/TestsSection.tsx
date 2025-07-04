@@ -30,7 +30,7 @@ const testData: Test[] = [
     slug: "Essence",
     time: "5 min",
     color: "bg-blue-500",
-    imageSrc: "/lovable-uploads/aa1bc8da-b181-46c3-92ce-7058a107633f.png"
+    imageSrc: "/lovable-uploads/f2552227-155d-477d-9c93-ac4eb72b5ddf.png"
   },
   {
     id: "Sync",
@@ -43,7 +43,7 @@ const testData: Test[] = [
   },
   {
     id: "Monthly",
-    name: "Energy Month",
+    name: "SnapShot",
     description: "Discover your natural professional approach",
     slug: "Monthly ",
     time: "12 min",
@@ -51,17 +51,8 @@ const testData: Test[] = [
     imageSrc: "/lovable-uploads/62526a29-1fcb-4df9-a3fe-398ec868e224.png"
   },
   {
-    id: "Mindset",
-    name: "Mindset",
-    description: "Optimize your health and wellness approach",
-    slug: "well-being",
-    time: "8 min",
-    color: "bg-teal-500",
-    imageSrc: "/lovable-uploads/a017ee13-6392-4278-aaf0-ef361c8dfde0.png"
-  },
-  {
     id: "Focus",
-    name: "Focus",
+    name: "Astro Data",
     description: "Discover what the next 12 months may hold for you",
     slug: "life-shift",
     time: "10 min",
@@ -70,7 +61,7 @@ const testData: Test[] = [
   },
   {
     id: "Flow",
-    name: "Flow",
+    name: "",
     description: "Align your career with your cosmic blueprint",
     slug: "Flow",
     time: "15 min",
@@ -108,36 +99,27 @@ const reportGuides = [
     ]
   },
   {
-    type: 'Monthly',
+    type: 'SnapShot',
     icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Energy Month Report',
+    title: 'SnapShot Report',
     price: '$3',
     bestFor: 'Monthly planning',
     description: 'Your personalized forecast for the current month',
     details: 'Get monthly themes, key opportunities, and timing guidance for important decisions and activities.'
   },
   {
-    type: 'Mindset',
-    icon: <Brain className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Mindset Report',
-    price: '$3',
-    bestFor: 'Mental clarity',
-    description: 'Mood + mental clarity snapshot',
-    details: 'Get insights into your current mental state, thought patterns, and cognitive strengths for better decision-making.'
-  },
-  {
-    type: 'Focus',
+    type: 'Astro Data',
     icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Focus Report',
+    title: 'Astro Data Report',
     price: '$3',
     bestFor: 'Productivity',
     description: 'Best hours today for deep work or rest',
     details: 'Identify your optimal times for concentration, productivity, and rest based on your personal energy cycles.'
   },
   {
-    type: 'Flow',
+    type: '',
     icon: <Repeat className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Flow Report',
+    title: 'Report',
     price: '$3',
     bestFor: 'Emotional rhythm',
     description: 'Creative/emotional openness over 7 days',
@@ -222,7 +204,7 @@ export default function TestsSection() {
                         <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                           <img 
                             src={test.imageSrc} 
-                            alt="Flow Report" 
+                            alt="Report" 
                             className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
@@ -230,15 +212,7 @@ export default function TestsSection() {
                         <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                           <img 
                             src={test.imageSrc} 
-                            alt="Energy Month Report" 
-                            className="w-full h-full object-cover rounded-xl"
-                          />
-                        </div>
-                      ) : test.id === 'Mindset' ? (
-                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                          <img 
-                            src={test.imageSrc} 
-                            alt="Mindset Report" 
+                            alt="SnapShot Report" 
                             className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
@@ -246,7 +220,7 @@ export default function TestsSection() {
                         <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                           <img 
                             src={test.imageSrc} 
-                            alt="Focus Report" 
+                            alt="Astro Data Report" 
                             className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
@@ -321,7 +295,7 @@ export default function TestsSection() {
                     <div className="w-full h-full bg-white">
                       <img 
                         src={test.imageSrc} 
-                        alt="Flow Report" 
+                        alt="Report" 
                         className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
@@ -329,15 +303,7 @@ export default function TestsSection() {
                     <div className="w-full h-full bg-white">
                       <img 
                         src={test.imageSrc} 
-                        alt="Energy Month Report" 
-                        className="w-full h-full object-cover rounded-r-xl"
-                      />
-                    </div>
-                  ) : test.id === 'Mindset' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="Mindset Report" 
+                        alt="SnapShot Report" 
                         className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
@@ -345,7 +311,7 @@ export default function TestsSection() {
                     <div className="w-full h-full bg-white">
                       <img 
                         src={test.imageSrc} 
-                        alt="Focus Report" 
+                        alt="Astro Data Report" 
                         className="w-full h-full object-cover rounded-r-xl"
                       />
                     </div>
