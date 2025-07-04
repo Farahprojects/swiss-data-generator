@@ -6,7 +6,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-import { X } from 'lucide-react';
+import { X, ArrowLeft } from 'lucide-react';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
@@ -231,8 +231,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       <DrawerContent
         className={`flex flex-col rounded-none [&>div:first-child]:hidden ${keyboardVisible ? 'keyboard-visible' : ''}`}
         style={{
-          height: 'calc(var(--vh, 1vh) * 100)',
-          maxHeight: 'calc(var(--vh, 1vh) * 100)',
+          height: '100vh',
+          maxHeight: '100vh',
+          minHeight: '100vh',
           overflowY: currentView === 'form' ? 'hidden' : 'auto',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'none',
@@ -241,16 +242,30 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           marginTop: 0,
         }}
       >
-        {/* Close button */}
-        <button
-          type="button"
-          onClick={resetDrawer}
-          aria-label="Close report drawer"
-          className="absolute right-4 top-3 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
-          style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {/* Header buttons */}
+        <div className="absolute top-3 left-0 right-0 flex justify-between items-center px-4 z-10">
+          {currentStep === 3 && (
+            <button
+              type="button"
+              onClick={prevStep}
+              aria-label="Go back"
+              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          )}
+          <div className="flex-1"></div>
+          <button
+            type="button"
+            onClick={resetDrawer}
+            aria-label="Close report drawer"
+            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
         {/* ------------------------------ FORM VIEW ------------------------- */}
         {currentView === 'form' && (

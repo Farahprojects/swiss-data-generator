@@ -120,15 +120,7 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
         className="space-y-12"
       >
         {/* Header */}
-        <div className="flex items-center justify-center relative px-6 py-8">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onPrev} 
-            className="absolute left-6 p-2 hover:bg-gray-50"
-          >
-            <ArrowLeft className="h-5 w-5 text-gray-700" />
-          </Button>
+        <div className="flex items-center justify-center px-6 py-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-4 tracking-tight">
               Your <em className="italic font-light">Info</em>
