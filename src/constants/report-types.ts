@@ -1,6 +1,6 @@
 
 import { ReportTypeOption } from '@/types/public-report';
-import { User, Heart, Target, Calendar, Brain, Briefcase } from 'lucide-react';
+import { User, Heart, Target, Calendar, Brain, Briefcase, Camera } from 'lucide-react';
 
 export const reportTypes: ReportTypeOption[] = [
   { value: 'sync', label: 'Compatibility Report' },
@@ -49,7 +49,7 @@ export const reportCategories = [
     value: 'snapshot',
     title: 'Snapshot',
     description: 'Perfect timing insights for your current life chapter',
-    icon: Target,
+    icon: Camera,
     reportType: 'focus',
   },
 ];
