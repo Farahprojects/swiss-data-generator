@@ -63,6 +63,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   const selectedReportType = watch('reportType');
   const selectedRequest = watch('request');
+  const selectedReportCategory = watch('reportCategory');
+  const selectedAstroDataType = watch('astroDataType');
   const userName = watch('name');
   const userEmail = watch('email');
 
@@ -85,7 +87,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     handlePromoConfirmationContinue
   } = useReportSubmission();
 
-  const requiresSecondPerson = selectedReportType === 'sync' || selectedReportType === 'compatibility';
+  // Check if this is a compatibility report - handles both main report types and astro data types
+  const requiresSecondPerson = selectedReportType === 'sync' || 
+                              selectedReportType === 'compatibility' ||
+                              selectedReportCategory === 'compatibility' ||
+                              selectedAstroDataType === 'sync' ||
+                              selectedAstroDataType === 'sync_rich';
 
   const handleViewReport = (content: string, pdfData?: string | null) => {
     console.log('📄 Opening report viewer with content:', content ? 'Content loaded' : 'No content');
