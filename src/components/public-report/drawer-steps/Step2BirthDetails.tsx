@@ -1,15 +1,11 @@
-import React, {
-  useMemo,
-  useState,
-} from 'react';
+import React from 'react';
 import {
   UseFormRegister,
   UseFormSetValue,
   UseFormWatch,
   FieldErrors,
 } from 'react-hook-form';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 import { ReportFormData } from '@/types/public-report';
 import PersonCard from './PersonCard';
@@ -22,49 +18,15 @@ interface Step2BirthDetailsProps {
   errors: FieldErrors<ReportFormData>;
 }
 
-const Step2BirthDetails = React.memo(function Step2BirthDetails({
+const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
   register,
   setValue,
   watch,
   errors,
-}: Step2BirthDetailsProps) {
-  const [showSecondPerson, setShowSecondPerson] = useState(false);
-
+}) => {
   const reportCategory = watch('reportCategory');
   const request = watch('request');
   const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
-
-  // Debug logging
-  React.useEffect(() => {
-    console.log('Step2BirthDetails Debug:', {
-      reportCategory,
-      request,
-      isCompatibilityReport,
-      showSecondPerson
-    });
-  }, [reportCategory, request, isCompatibilityReport, showSecondPerson]);
-
-  // Person‑1
-  const isFirstPersonComplete = useMemo(() => {
-    const name = watch('name');
-    const email = watch('email');
-    const birthDate = watch('birthDate');
-    const birthTime = watch('birthTime');
-    const birthLocation = watch('birthLocation');
-    return !!(name && email && birthDate && birthTime && birthLocation);
-  }, [watch]);
-
-  // Person‑2 (compatibility only)
-  const isSecondPersonComplete = useMemo(() => {
-    if (!isCompatibilityReport) return true; // not required
-    const n = watch('secondPersonName');
-    const d = watch('secondPersonBirthDate');
-    const t = watch('secondPersonBirthTime');
-    const l = watch('secondPersonBirthLocation');
-    return !!(n && d && t && l);
-  }, [watch, isCompatibilityReport]);
-
-
 
   return (
     <div className="bg-white">
@@ -102,51 +64,26 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
           />
         </div>
 
-        {/* Add partner */}
-        {isCompatibilityReport && !showSecondPerson && isFirstPersonComplete && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="px-6"
-          >
-            <button
-              onClick={() => setShowSecondPerson(true)}
-              className="w-full bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
-            >
-              <Plus className="h-5 w-5 mr-3 inline" />
-              Add Partner's Details
-            </button>
-          </motion.div>
-        )}
-
         {/* Person‑2 */}
-        <AnimatePresence>
-          {isCompatibilityReport && showSecondPerson && (
-            <motion.div
-              key="partner"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="px-6"
-            >
-              <PersonCard
-                personNumber={2}
-                title="Partner's Details"
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                hasTriedToSubmit={false}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {isCompatibilityReport && (
+          <div className="px-6">
+            <PersonCard
+              personNumber={2}
+              title="Partner's Details"
+              register={register}
+              setValue={setValue}
+              watch={watch}
+              errors={errors}
+              hasTriedToSubmit={false}
+            />
+          </div>
+        )}
 
       </motion.div>
     </div>
   );
 });
+
+Step2BirthDetails.displayName = 'Step2BirthDetails';
 
 export default Step2BirthDetails;
