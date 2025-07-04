@@ -110,6 +110,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const onSubmit = async (data: ReportFormData) => {
+    console.log('📦 Submitting form with data:', data);
+    
     // STEP 3: Log entry into onSubmit function
     await logToAdmin('ReportForm', 'onSubmit_entry', 'onSubmit function called', {
       hasReportType: !!data.reportType,

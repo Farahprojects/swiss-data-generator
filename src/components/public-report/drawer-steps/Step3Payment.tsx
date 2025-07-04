@@ -126,17 +126,25 @@ const Step3Payment = ({
   const handleButtonClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // First validate promo code if present
-    if (promoCode && promoCode.trim() !== '') {
-      const validation = await validatePromoManually(promoCode);
+
+    console.log('🟢 Attempting submission...');
+
+    try {
+      // First validate promo code if present
+      if (promoCode && promoCode.trim() !== '') {
+        const validation = await validatePromoManually(promoCode);
+        
+        // Give user time to see the validation result
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
       
-      // Give user time to see the validation result
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Then proceed with form submission via parent
+      await onSubmit();
+      console.log('✅ onSubmit completed');
+    } catch (err) {
+      console.error('❌ onSubmit failed:', err);
+      // Optional: send this to your Supabase log table
     }
-    
-    // Then proceed with form submission via parent
-    onSubmit();
   };
 
   // Render content based on state - no early returns that bypass hooks
