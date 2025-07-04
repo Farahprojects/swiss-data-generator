@@ -228,7 +228,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     setReportData({ content: reportContent, pdfData: reportPdfData });
     setCurrentView('report-viewer');
   };
-  const handleBackFromReport = () => setCurrentView('success');
+  const handleBackFromReport = () => resetDrawer();
 
   // Step 3 validation and auto-scroll
   const handleStep3Continue = () => {
