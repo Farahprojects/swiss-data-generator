@@ -90,7 +90,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     selectedReportType === 'sync' || 
     selectedReportType === 'compatibility' ||
     selectedReportCategory === 'compatibility' ||
-    selectedAstroDataType === 'sync';
+    selectedAstroDataType === 'sync' ||
+    selectedRequest === 'sync';
 
   const handleViewReport = (content: string, pdfData?: string | null) => {
     console.log('📄 Opening report viewer with content:', content ? 'Content loaded' : 'No content');

@@ -5,7 +5,7 @@ import { usePricing } from '@/contexts/PricingContext';
 
 // Zod schema for report type mapping
 const ReportTypeMappingSchema = z.object({
-  reportType: z.string(),
+  reportType: z.string().optional().nullable(),
   essenceType: z.string().optional(),
   relationshipType: z.string().optional(),
   reportCategory: z.string().optional(),
@@ -18,7 +18,13 @@ export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 
 // Map form data to price_list identifiers
 const mapReportTypeToId = (data: ReportTypeMapping): string => {
-  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType } = data;
+  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType, request } = data;
+  
+  // Handle astro data based on request field (new logic)
+  if (request && !reportType) {
+    if (request === 'essence') return 'essence';
+    if (request === 'sync') return 'sync';
+  }
   
   // Handle essence reports
   if (reportType === 'essence') {
@@ -54,7 +60,7 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
   }
   
   // Fallback to reportType
-  return reportType;
+  return reportType || '';
 };
 
 // Custom hook for getting report price using context
@@ -94,7 +100,16 @@ export const usePriceFetch = () => {
   }, [getPriceById, getPriceByReportType]);
 
   const getReportTitle = useCallback((formData: ReportTypeMapping): string => {
-    const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType } = formData;
+    const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType, request } = formData;
+    
+    // Handle astro data based on request field
+    if (request && !reportType) {
+      switch (request) {
+        case 'essence': return 'The Self - Astro Data';
+        case 'sync': return 'Compatibility - Astro Data';
+        default: return 'Astro Data Report';
+      }
+    }
     
     if (reportType === 'essence') {
       switch (essenceType) {

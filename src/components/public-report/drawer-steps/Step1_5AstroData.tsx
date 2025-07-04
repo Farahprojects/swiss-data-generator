@@ -45,7 +45,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
               // Memoized price calculation to handle mobile race conditions
               const price = useMemo(() => {
                 const formData = {
-                  request: subCategory.value,
+                  request: subCategory.value === 'essence' ? 'essence' : subCategory.value === 'sync' ? 'sync' : subCategory.value,
                   reportCategory: 'astro-data',
                   astroDataType: subCategory.value
                 };
@@ -81,7 +81,19 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                 }
                 
                 field.onChange(subCategory.value);
-                setValue('reportType', subCategory.reportType);
+                
+                // NEW LOGIC: Set request field instead of reportType for astro data
+                if (subCategory.value === 'sync') {
+                  setValue('request', 'sync');
+                  setValue('reportType', null);
+                } else if (subCategory.value === 'essence') {
+                  setValue('request', 'essence');
+                  setValue('reportType', null);
+                } else {
+                  // Fallback for any future astro data types
+                  setValue('reportType', subCategory.reportType);
+                }
+                
                 setTimeout(() => onNext(), 100);
               };
               
