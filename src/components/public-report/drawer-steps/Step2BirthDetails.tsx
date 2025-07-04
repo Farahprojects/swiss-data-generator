@@ -24,6 +24,7 @@ interface Step2BirthDetailsProps {
   errors: FieldErrors<ReportFormData>;
   onNext: () => void;
   onPrev: () => void;
+  hideButton?: boolean;
 }
 
 const Step2BirthDetails = React.memo(function Step2BirthDetails({
@@ -33,6 +34,7 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   errors,
   onNext,
   onPrev,
+  hideButton = false,
 }: Step2BirthDetailsProps) {
   const [showSecondPerson, setShowSecondPerson] = useState(false);
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
@@ -188,20 +190,22 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
           )}
         </AnimatePresence>
 
-        {/* Review & Pay */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="px-6 pb-12"
-        >
-          <button
-            onClick={handleReviewAndPay}
-            className="w-full bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+        {/* Review & Pay - only show if not hidden */}
+        {!hideButton && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="px-6 pb-12"
           >
-            Review & Pay
-          </button>
-        </motion.div>
+            <button
+              onClick={handleReviewAndPay}
+              className="w-full bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+            >
+              Review & Pay
+            </button>
+          </motion.div>
+        )}
       </motion.div>
     </div>
   );
