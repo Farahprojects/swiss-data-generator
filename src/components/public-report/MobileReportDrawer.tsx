@@ -242,32 +242,30 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           marginTop: 0,
         }}
       >
-        {/* Header buttons - only show for steps 1 and 2 */}
-        {currentStep <= 2 && (
-          <div className="absolute top-3 left-0 right-0 flex justify-between items-center px-4 z-10">
-            {currentStep === 2 && (
-              <button
-                type="button"
-                onClick={prevStep}
-                aria-label="Go back"
-                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-            )}
-            <div className="flex-1"></div>
+        {/* Header buttons */}
+        <div className="absolute top-3 left-0 right-0 flex justify-between items-center px-4 z-10">
+          {(currentStep === 2 || currentStep === 3) && (
             <button
               type="button"
-              onClick={resetDrawer}
-              aria-label="Close report drawer"
+              onClick={prevStep}
+              aria-label="Go back"
               className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
             >
-              <X className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
-          </div>
-        )}
+          )}
+          <div className="flex-1"></div>
+          <button
+            type="button"
+            onClick={resetDrawer}
+            aria-label="Close report drawer"
+            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
         {/* ------------------------------ FORM VIEW ------------------------- */}
         {currentView === 'form' && (
@@ -279,7 +277,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
             <div
               ref={scrollContainerRef}
-              className={`flex-1 px-6 ${currentStep >= 3 ? 'pb-2' : 'pb-6'} ${needsScrolling ? 'overflow-y-auto scrollbar-hide' : 'flex items-center justify-center'}`}
+              className={`flex-1 px-6 pb-6 ${needsScrolling ? 'overflow-y-auto scrollbar-hide' : 'flex items-center justify-center'}`}
               style={{ 
                 paddingTop: currentStep === 3 ? '1rem' : undefined // Extra padding for Step2BirthDetails
               }}
@@ -326,7 +324,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     errors={errors}
                     onNext={nextStep}
                     onPrev={prevStep}
-                    hideButton={true}
                   />
                 )}
 
@@ -341,91 +338,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     isProcessing={isProcessing}
                     promoValidation={promoValidationState}
                     isValidatingPromo={isValidatingPromo}
-                    hideButton={true}
                   />
                 )}
               </AnimatePresence>
             </div>
-
-            {/* Footer buttons for steps 3 and 4 */}
-            {(currentStep === 3 || currentStep === 4) && (
-              <div className="flex-shrink-0 bg-white border-t border-gray-100 px-6 py-4 space-y-3">
-                {currentStep === 3 && (
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={prevStep}
-                      className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300"
-                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={() => {
-                        const isFirstPersonComplete = !!(watch('name') && watch('email') && watch('birthDate') && watch('birthTime') && watch('birthLocation'));
-                        const reportCategory = watch('reportCategory');
-                        const request = watch('request');
-                        const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
-                        const isSecondPersonComplete = !isCompatibilityReport || !!(watch('secondPersonName') && watch('secondPersonBirthDate') && watch('secondPersonBirthTime') && watch('secondPersonBirthLocation'));
-                        const canProceed = isCompatibilityReport ? isFirstPersonComplete && isSecondPersonComplete : isFirstPersonComplete;
-                        
-                        if (canProceed) {
-                          nextStep();
-                        } else {
-                          // Scroll to first error
-                          const errorFields = ['name', 'email', 'birthDate', 'birthTime', 'birthLocation', 'secondPersonName', 'secondPersonBirthDate', 'secondPersonBirthTime', 'secondPersonBirthLocation'];
-                          const errors = form.formState.errors;
-                          for (const field of errorFields) {
-                            if (errors[field as keyof typeof errors]) {
-                              const el = document.querySelector(`#${field}`);
-                              if (el) {
-                                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                break;
-                              }
-                            }
-                          }
-                        }
-                      }}
-                      className="flex-1 bg-gray-900 text-white px-6 py-3 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
-                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                    >
-                      Review & Pay
-                    </button>
-                  </div>
-                )}
-
-                {currentStep === 4 && (
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={prevStep}
-                      className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300"
-                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={handleFormSubmit}
-                      disabled={isProcessing || isValidatingPromo}
-                      className="flex-1 bg-gray-900 text-white px-6 py-3 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
-                      style={{ 
-                        touchAction: 'manipulation',
-                        WebkitTapHighlightColor: 'transparent',
-                        WebkitAppearance: 'none',
-                        userSelect: 'none'
-                      }}
-                    >
-                      {isProcessing 
-                        ? 'Processing...' 
-                        : isValidatingPromo
-                        ? 'Validating...'
-                        : 'Get My Insights'
-                      }
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
 

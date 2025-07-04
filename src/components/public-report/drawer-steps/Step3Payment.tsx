@@ -33,7 +33,6 @@ interface Step3PaymentProps {
   pendingSubmissionData?: { basePrice: number } | null;
   onPromoConfirmationTryAgain?: () => void;
   onPromoConfirmationContinue?: () => void;
-  hideButton?: boolean;
 }
 
 const Step3Payment = ({ 
@@ -48,8 +47,7 @@ const Step3Payment = ({
   showPromoConfirmation = false,
   pendingSubmissionData = null,
   onPromoConfirmationTryAgain = () => {},
-  onPromoConfirmationContinue = () => {},
-  hideButton = false
+  onPromoConfirmationContinue = () => {}
 }: Step3PaymentProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const { validatePromoManually } = usePromoValidation();
@@ -315,42 +313,40 @@ const Step3Payment = ({
             </Collapsible>
           </div>
 
-          {/* Payment Button - only show if not hidden */}
-          {!hideButton && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="px-6 pb-12"
+          {/* Payment Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="px-6 pb-12"
+          >
+            <button
+              onClick={handleButtonClick}
+              disabled={isProcessing || isValidatingPromo || isPricingLoading}
+              className="w-full bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
+              type="button"
+              style={{ 
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+                WebkitAppearance: 'none',
+                userSelect: 'none'
+              }}
             >
-              <button
-                onClick={handleButtonClick}
-                disabled={isProcessing || isValidatingPromo || isPricingLoading}
-                className="w-full bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
-                type="button"
-                style={{ 
-                  touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent',
-                  WebkitAppearance: 'none',
-                  userSelect: 'none'
-                }}
-              >
-                {isProcessing 
-                  ? 'Processing...' 
-                  : isValidatingPromo
-                  ? 'Validating...'
-                  : isPricingLoading
-                  ? 'Loading...'
-                  : 'Get My Insights'
-                }
-              </button>
-              
-              <p className="text-sm text-gray-500 text-center mt-4 font-light leading-relaxed">
-                Your report will be delivered to your email within minutes. 
-                {!pricing?.isFree && ' Secure payment processed by Stripe.'}
-              </p>
-            </motion.div>
-          )}
+              {isProcessing 
+                ? 'Processing...' 
+                : isValidatingPromo
+                ? 'Validating...'
+                : isPricingLoading
+                ? 'Loading...'
+                : 'Get My Insights'
+              }
+            </button>
+            
+            <p className="text-sm text-gray-500 text-center mt-4 font-light leading-relaxed">
+              Your report will be delivered to your email within minutes. 
+              {!pricing?.isFree && ' Secure payment processed by Stripe.'}
+            </p>
+          </motion.div>
         </div>
       </div>
     );
