@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { logToAdmin } from '@/utils/adminLogger';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -79,16 +80,23 @@ const PaymentStep = ({
         request // NEW: Include request field
       };
       
-      console.log('💰 PaymentStep - Price calculation with form data:', formData);
-      
       basePrice = getReportPrice(formData);
       reportTitle = getReportTitle(formData);
       
-      console.log('💰 PaymentStep - Calculated price:', basePrice, 'Title:', reportTitle);
+      // Log price calculation (async but non-blocking)
+      logToAdmin('PaymentStep', 'price_calculation', 'Price calculation with form data', {
+        formData: formData,
+        basePrice: basePrice,
+        reportTitle: reportTitle
+      });
     }
   } catch (error) {
     priceError = error instanceof Error ? error.message : 'Failed to get price';
-    console.error('❌ PaymentStep - Price fetch error:', error);
+    // Log error (async but non-blocking)
+    logToAdmin('PaymentStep', 'price_fetch_error', 'Price fetch error', {
+      error: error instanceof Error ? error.message : 'Failed to get price',
+      stack: error instanceof Error ? error.stack : null
+    });
   }
 
   // Only calculate pricing if we have a valid base price

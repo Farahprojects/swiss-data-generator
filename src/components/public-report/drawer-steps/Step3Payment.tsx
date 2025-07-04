@@ -89,16 +89,23 @@ const Step3Payment = ({
         request // NEW: Include request field
       };
       
-      console.log('💰 Step3Payment - Price calculation with form data:', formData);
-      
       basePrice = getReportPrice(formData);
       reportTitle = getReportTitle(formData);
       
-      console.log('💰 Step3Payment - Calculated price:', basePrice, 'Title:', reportTitle);
+      // Log price calculation (async but non-blocking)
+      logToAdmin('Step3Payment', 'price_calculation', 'Price calculation with form data', {
+        formData: formData,
+        basePrice: basePrice,
+        reportTitle: reportTitle
+      });
     }
   } catch (error) {
     priceError = error instanceof Error ? error.message : 'Failed to get price';
-    console.error('❌ Step3Payment - Price fetch error:', error);
+    // Log error (async but non-blocking)
+    logToAdmin('Step3Payment', 'price_fetch_error', 'Price fetch error', {
+      error: error instanceof Error ? error.message : 'Failed to get price',
+      stack: error instanceof Error ? error.stack : null
+    });
   }
 
   // Only calculate pricing if we have a valid base price

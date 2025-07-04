@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { useToast } from '@/hooks/use-toast';
+import { logToAdmin } from '@/utils/adminLogger';
 
 interface MobileReportViewerProps {
   reportContent: string;
@@ -27,7 +28,9 @@ const MobileReportViewer = ({
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
-      console.warn('No PDF data available for download');
+      logToAdmin('MobileReportViewer', 'pdf_download_warning', 'No PDF data available for download', {
+        customerName: customerName
+      });
       return;
     }
 
@@ -53,7 +56,10 @@ const MobileReportViewer = ({
 
       
     } catch (error) {
-      console.error('❌ Error downloading PDF:', error);
+      logToAdmin('MobileReportViewer', 'pdf_download_error', 'Error downloading PDF', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : null
+      });
     }
   };
 
@@ -74,7 +80,10 @@ const MobileReportViewer = ({
       
       
     } catch (error) {
-      console.error('❌ Error copying to clipboard:', error);
+      logToAdmin('MobileReportViewer', 'clipboard_copy_error', 'Error copying to clipboard', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : null
+      });
       toast({
         title: "Copy failed",
         description: "Unable to copy to clipboard. Please try selecting and copying the text manually.",
@@ -113,7 +122,10 @@ const MobileReportViewer = ({
       }, 2000);
       
     } catch (error) {
-      console.error('❌ Error copying to clipboard:', error);
+      logToAdmin('MobileReportViewer', 'clipboard_copy_error_fallback', 'Error copying to clipboard fallback', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : null
+      });
       setIsCopping(false);
       toast({
         title: "Copy failed",

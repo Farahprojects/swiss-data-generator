@@ -7,6 +7,7 @@ import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { motion } from 'framer-motion';
+import { logToAdmin } from '@/utils/adminLogger';
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -99,9 +100,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // Video ready handler
   // ---------------------------------------------------------------------------
   const handleVideoReady = useCallback(() => {
-    console.log('🎬 Video is ready, setting isVideoReady to true');
+    logToAdmin('SuccessScreen', 'video_ready', 'Video is ready, setting isVideoReady to true', {
+      name: name,
+      email: email,
+      guestReportId: guestReportId
+    });
     setIsVideoReady(true);
-  }, []);
+  }, [name, email, guestReportId]);
 
   // ---------------------------------------------------------------------------
   // Auto-scroll and polling lifecycle - wait for video to be ready
@@ -119,7 +124,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (autoStartPolling && reportIdToUse && !isPolling && isVideoReady) {
-      console.log('🚀 Starting polling after video is ready');
+      logToAdmin('SuccessScreen', 'polling_start', 'Starting polling after video is ready', {
+        reportIdToUse: reportIdToUse,
+        isPolling: isPolling,
+        isVideoReady: isVideoReady
+      });
       setTimeout(() => startPolling(reportIdToUse), 2000); // 2 second delay after video ready
     }
     return () => stopPolling();
@@ -160,7 +169,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       countdownRef.current = setTimeout(() => setCountdown((c) => c - 1), 1_000);
     } else if (countdown === 0) {
       // Debug logging for when countdown hits 0
-      console.log('🚨 Countdown hit 0s - Debug Info:', {
+      logToAdmin('SuccessScreen', 'countdown_zero_debug', 'Countdown hit 0s - Debug Info', {
         isReady,
         countdown,
         caseNumber,
@@ -171,10 +180,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       
       const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
       if (!isReady && !caseNumber && reportIdToUse) {
-        console.log('🚨 All conditions met - triggering error handling');
+        logToAdmin('SuccessScreen', 'error_handling_triggered', 'All conditions met - triggering error handling', {
+          reportIdToUse: reportIdToUse
+        });
         triggerErrorHandling(reportIdToUse);
       } else {
-        console.log('🚨 Conditions not met for error handling:', {
+        logToAdmin('SuccessScreen', 'error_handling_conditions_not_met', 'Conditions not met for error handling', {
           isReady: isReady,
           hasCaseNumber: !!caseNumber,
           hasReportId: !!reportIdToUse
