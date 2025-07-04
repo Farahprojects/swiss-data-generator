@@ -352,7 +352,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     ? 'Processing...' 
                     : isValidatingPromo
                     ? 'Validating...'
-                    : 'Complete Order'
+                    : 'Confirm'
                   }
                 </button>
               </div>
