@@ -1,5 +1,4 @@
 import React, {
-  useCallback,
   useMemo,
   useState,
 } from 'react';
@@ -10,9 +9,8 @@ import {
   FieldErrors,
 } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { ReportFormData } from '@/types/public-report';
 import PersonCard from './PersonCard';
 
@@ -22,8 +20,6 @@ interface Step2BirthDetailsProps {
   setValue: UseFormSetValue<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
-  onNext: () => void;
-  onPrev: () => void;
 }
 
 const Step2BirthDetails = React.memo(function Step2BirthDetails({
@@ -31,12 +27,8 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   setValue,
   watch,
   errors,
-  onNext,
-  onPrev,
 }: Step2BirthDetailsProps) {
   const [showSecondPerson, setShowSecondPerson] = useState(false);
-  const [hasTriedSubmit, setHasTriedSubmit] = useState(false);
-  
 
   const reportCategory = watch('reportCategory');
   const request = watch('request');
@@ -72,43 +64,7 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
     return !!(n && d && t && l);
   }, [watch, isCompatibilityReport]);
 
-  const canProceed = isCompatibilityReport
-    ? isFirstPersonComplete && isSecondPersonComplete
-    : isFirstPersonComplete;
 
-  const ERROR_FIELDS: (keyof ReportFormData)[] = useMemo(
-    () => [
-      'name',
-      'email',
-      'birthDate',
-      'birthTime',
-      'birthLocation',
-      'secondPersonName',
-      'secondPersonBirthDate',
-      'secondPersonBirthTime',
-      'secondPersonBirthLocation',
-    ],
-    []
-  );
-
-  const scrollToFirstError = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    for (const field of ERROR_FIELDS) {
-      if (errors[field]) {
-        const el = document.querySelector(`#${field}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          break;
-        }
-      }
-    }
-  }, [ERROR_FIELDS, errors]);
-
-  const handleReviewAndPay = useCallback(() => {
-    setHasTriedSubmit(true);
-    if (canProceed) return onNext();
-    setTimeout(scrollToFirstError, 100); // allow error states to paint first
-  }, [canProceed, onNext, scrollToFirstError]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -142,7 +98,7 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
             setValue={setValue}
             watch={watch}
             errors={errors}
-            hasTriedToSubmit={hasTriedSubmit}
+            hasTriedToSubmit={false}
           />
         </div>
 
@@ -182,26 +138,12 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
                 setValue={setValue}
                 watch={watch}
                 errors={errors}
-                hasTriedToSubmit={hasTriedSubmit}
+                hasTriedToSubmit={false}
               />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Review & Pay */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="px-6 pb-12"
-        >
-          <button
-            onClick={handleReviewAndPay}
-            className="w-full bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
-          >
-            Review & Pay
-          </button>
-        </motion.div>
       </motion.div>
     </div>
   );

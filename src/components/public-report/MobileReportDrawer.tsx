@@ -244,17 +244,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       >
         {/* Header buttons */}
         <div className="absolute top-3 left-0 right-0 flex justify-between items-center px-4 z-10">
-          {(currentStep === 2 || currentStep === 3) && (
-            <button
-              type="button"
-              onClick={prevStep}
-              aria-label="Go back"
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-          )}
           <div className="flex-1"></div>
           <button
             type="button"
@@ -277,7 +266,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
             <div
               ref={scrollContainerRef}
-              className={`flex-1 px-6 pb-6 ${needsScrolling ? 'overflow-y-auto scrollbar-hide' : 'flex items-center justify-center'}`}
+              className={`flex-1 px-6 ${(currentStep === 3 || currentStep === 4) ? 'pb-24' : 'pb-6'} ${needsScrolling ? 'overflow-y-auto scrollbar-hide' : 'flex items-center justify-center'}`}
               style={{ 
                 paddingTop: currentStep === 3 ? '1rem' : undefined // Extra padding for Step2BirthDetails
               }}
@@ -322,8 +311,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     setValue={setValue}
                     watch={watch}
                     errors={errors}
-                    onNext={nextStep}
-                    onPrev={prevStep}
                   />
                 )}
 
@@ -333,8 +320,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     register={register}
                     watch={watch}
                     errors={errors}
-                    onPrev={prevStep}
-                    onSubmit={handleFormSubmit}
                     isProcessing={isProcessing}
                     promoValidation={promoValidationState}
                     isValidatingPromo={isValidatingPromo}
@@ -342,6 +327,36 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Footer for steps 3 and 4 */}
+            {(currentStep === 3 || currentStep === 4) && (
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={currentStep === 3 ? nextStep : handleFormSubmit}
+                  disabled={currentStep === 4 && (isProcessing || isValidatingPromo)}
+                  className="flex-2 bg-gray-900 text-white px-6 py-3 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none', flex: '2' }}
+                >
+                  {currentStep === 3 
+                    ? 'Review & Pay' 
+                    : isProcessing 
+                    ? 'Processing...' 
+                    : isValidatingPromo
+                    ? 'Validating...'
+                    : 'Get My Insights'
+                  }
+                </button>
+              </div>
+            )}
           </div>
         )}
 

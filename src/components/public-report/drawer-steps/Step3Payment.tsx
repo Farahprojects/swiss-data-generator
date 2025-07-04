@@ -2,16 +2,13 @@
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ReportFormData } from '@/types/public-report';
-import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
-import { logToAdmin } from '@/utils/adminLogger';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -24,8 +21,6 @@ interface Step3PaymentProps {
   register: UseFormRegister<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
-  onPrev: () => void;
-  onSubmit: () => void;
   isProcessing: boolean;
   promoValidation: PromoValidationState;
   isValidatingPromo: boolean;
@@ -39,8 +34,6 @@ const Step3Payment = ({
   register, 
   watch, 
   errors, 
-  onPrev, 
-  onSubmit,
   isProcessing,
   promoValidation,
   isValidatingPromo,
@@ -50,7 +43,6 @@ const Step3Payment = ({
   onPromoConfirmationContinue = () => {}
 }: Step3PaymentProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
-  const { validatePromoManually } = usePromoValidation();
   
   // SSR-safe pricing hook initialization
   const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = typeof window !== 'undefined' ? usePriceFetch() : {
@@ -90,26 +82,12 @@ const Step3Payment = ({
       
       basePrice = getReportPrice(formData);
       reportTitle = getReportTitle(formData);
-      
-      // Log price calculation (async but non-blocking)
-      logToAdmin('Step3Payment', 'price_calculation', 'Price calculation with form data', {
-        formData: formData,
-        basePrice: basePrice,
-        reportTitle: reportTitle
-      });
     }
   } catch (error) {
     // Silently handle pricing errors when navigating backwards - don't show UI errors
     if (process.env.NODE_ENV === 'development') {
       console.warn('Pricing error (silenced for navigation):', error);
     }
-    
-    // Log error but don't set priceError to avoid UI disruption
-    logToAdmin('Step3Payment', 'price_fetch_error_silent', 'Price fetch error (silenced)', {
-      error: error instanceof Error ? error.message : 'Failed to get price',
-      formData: { reportType, request, reportCategory },
-      note: 'Error silenced to prevent UI disruption during navigation'
-    });
   }
 
   // Calculate pricing - global fallback will handle missing prices
@@ -135,48 +113,6 @@ const Step3Payment = ({
     return promoValidation.message || '';
   };
 
-  const handleButtonClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    await logToAdmin('Step3Payment', 'handleButtonClick_start', 'Get My Insights button clicked', {
-      reportType: reportType,
-      request: requestField,
-      reportCategory: reportCategory,
-      basePrice: basePrice,
-      promoCode: promoCode
-    });
-
-    try {
-      // First validate promo code if present
-      if (promoCode && promoCode.trim() !== '') {
-        await logToAdmin('Step3Payment', 'promo_validation_start', 'Starting promo validation', {
-          promoCode: promoCode
-        });
-        
-        const validation = await validatePromoManually(promoCode);
-        
-        await logToAdmin('Step3Payment', 'promo_validation_result', 'Promo validation completed', {
-          validation: validation
-        });
-        
-        // Give user time to see the validation result
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      
-      await logToAdmin('Step3Payment', 'calling_onSubmit', 'About to call onSubmit function', {});
-      
-      // Then proceed with form submission via parent
-      await onSubmit();
-      
-      await logToAdmin('Step3Payment', 'onSubmit_success', 'onSubmit completed successfully', {});
-    } catch (err) {
-      await logToAdmin('Step3Payment', 'onSubmit_error', 'onSubmit failed with error', {
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : null
-      });
-    }
-  };
 
   // Render content based on state - no early returns that bypass hooks
   let content;
@@ -195,20 +131,7 @@ const Step3Payment = ({
       <div className="min-h-screen bg-white">
         <div className="space-y-12">
           {/* Header */}
-          <div className="flex items-center justify-center relative px-6 py-8">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onPrev}
-              className="absolute left-6 p-2 hover:bg-gray-50"
-              type="button"
-              style={{ 
-                touchAction: 'manipulation',
-                WebkitTapHighlightColor: 'transparent'
-              }}
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-700" />
-            </Button>
+          <div className="flex items-center justify-center px-6 py-8">
             <div className="text-center">
               <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-4 tracking-tight">
                 Review & <em className="italic font-light">Payment</em>
@@ -313,40 +236,13 @@ const Step3Payment = ({
             </Collapsible>
           </div>
 
-          {/* Payment Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="px-6 pb-12"
-          >
-            <button
-              onClick={handleButtonClick}
-              disabled={isProcessing || isValidatingPromo || isPricingLoading}
-              className="w-full bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
-              type="button"
-              style={{ 
-                touchAction: 'manipulation',
-                WebkitTapHighlightColor: 'transparent',
-                WebkitAppearance: 'none',
-                userSelect: 'none'
-              }}
-            >
-              {isProcessing 
-                ? 'Processing...' 
-                : isValidatingPromo
-                ? 'Validating...'
-                : isPricingLoading
-                ? 'Loading...'
-                : 'Get My Insights'
-              }
-            </button>
-            
-            <p className="text-sm text-gray-500 text-center mt-4 font-light leading-relaxed">
+          {/* Footer info */}
+          <div className="px-6 pb-6">
+            <p className="text-sm text-gray-500 text-center font-light leading-relaxed">
               Your report will be delivered to your email within minutes. 
               {!pricing?.isFree && ' Secure payment processed by Stripe.'}
             </p>
-          </motion.div>
+          </div>
         </div>
       </div>
     );
