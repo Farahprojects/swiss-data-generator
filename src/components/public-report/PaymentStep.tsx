@@ -125,6 +125,32 @@ const PaymentStep = ({
     e.preventDefault();
     e.stopPropagation();
     
+    // Log the complete form data BEFORE payment
+    const formData = {
+      name: watch('name'),
+      email: watch('email'),
+      birthDate: watch('birthDate'), 
+      birthTime: watch('birthTime'),
+      birthLocation: watch('birthLocation'),
+      birthLatitude: watch('birthLatitude'),
+      birthLongitude: watch('birthLongitude'),
+      reportType: watch('reportType'),
+      request: watch('request'),
+      promoCode: promoCode
+    };
+    
+    await logToAdmin('PaymentStep', 'form_data_before_payment', 'Complete form data captured before payment', {
+      formData: formData,
+      hasName: !!formData.name,
+      hasEmail: !!formData.email,
+      hasBirthDate: !!formData.birthDate,
+      hasBirthTime: !!formData.birthTime,
+      hasLocation: !!formData.birthLocation,
+      hasCoordinates: !!(formData.birthLatitude && formData.birthLongitude),
+      reportType: formData.reportType,
+      request: formData.request
+    });
+    
     // First validate promo code if present
     if (promoCode && promoCode.trim() !== '') {
       const validation = await validatePromoManually(promoCode);
