@@ -17,8 +17,6 @@ import {
   Target,
   CalendarDays,
 } from 'lucide-react';
-import { usePriceFetch } from '@/hooks/usePriceFetch';
-
 interface ReportGuideDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,85 +25,62 @@ interface ReportGuideDrawerProps {
 
 const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDrawerProps) => {
   const targetRef = useRef<HTMLDivElement>(null);
-  const { getReportPrice } = usePriceFetch();
-  
-  const formatPrice = (price: number) => `$${Math.round(price)}`;
-  
-  const getPrice = (reportType: string, subType?: string) => {
-    const formData = { reportType, essenceType: subType, relationshipType: subType };
-    return getReportPrice(formData);
-  };
-
-  const getSubTypesWithPricing = (type: string) => {
-    switch (type) {
-      case 'Essence':
-        return [
-          `Personal – Your authentic self and emotional patterns (${formatPrice(getPrice('essence', 'personal'))})`,
-          `Professional – How you work best and lead others (${formatPrice(getPrice('essence', 'professional'))})`,
-          `Relational – Your relationship style and communication needs (${formatPrice(getPrice('essence', 'relational'))})`
-        ];
-      case 'Sync':
-        return [
-          `Personal Sync – Romantic and close relationships (${formatPrice(getPrice('sync', 'personal'))})`,
-          `Professional Sync – Work partnerships and team dynamics (${formatPrice(getPrice('sync', 'professional'))})`
-        ];
-      case 'Snapshots':
-        return [
-          `Focus – Best hours for deep work or rest today (${formatPrice(getPrice('focus'))})`,
-          `Mindset – Current mental clarity and cognitive strengths (${formatPrice(getPrice('mindset'))})`,
-          `Monthly – Personal forecast for the current month (${formatPrice(getPrice('monthly'))})`
-        ];
-      case 'AstroData':
-        return [
-          `Essence Data – Complete personality chart calculations (${formatPrice(getPrice('essence'))})`,
-          `Sync Data – Relationship compatibility calculations (${formatPrice(getPrice('sync'))})`
-        ];
-      default:
-        return [];
-    }
-  };
 
   const reportGuides = [
     {
       type: 'Essence',
       icon: <UserCircle className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Personal Insights',
-      priceKey: 'essence_personal',
+      price: '$10',
       bestFor: 'Self-understanding',
       isRecommended: true,
       description: 'Discover who you are and what drives you',
       details: 'Understand your core personality, decision-making style, and natural strengths. Perfect for personal growth and self-awareness.',
-      subTypes: getSubTypesWithPricing('Essence')
+      subTypes: [
+        'Personal – Your authentic self and emotional patterns',
+        'Professional – How you work best and lead others',
+        'Relational – Your relationship style and communication needs'
+      ]
     },
     {
       type: 'Sync',
       icon: <Users className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Compatibility Analysis',
-      priceKey: 'sync_personal',
+      price: '$10',
       bestFor: 'Relationships',
       description: 'See how you connect with someone else',
       details: 'Analyze relationship dynamics, compatibility, and areas of harmony or challenge with another person.',
-      subTypes: getSubTypesWithPricing('Sync')
+      subTypes: [
+        'Personal Sync – Romantic and close relationships',
+        'Professional Sync – Work partnerships and team dynamics'
+      ]
     },
     {
       type: 'Snapshots',
       icon: <CalendarDays className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Snapshot Reports',
-      priceKey: 'focus',
+      price: '$3',
       bestFor: 'Quick insights',
       description: 'Fast, focused insights for daily life',
       details: 'Get quick snapshots of your mental state, focus times, and emotional rhythms.',
-      subTypes: getSubTypesWithPricing('Snapshots')
+      subTypes: [
+        'Focus – Best hours for deep work or rest today',
+        'Mindset – Current mental clarity and cognitive strengths',
+        'Monthly – Personal forecast for the current month'
+      ]
     },
     {
       type: 'AstroData',
       icon: <Brain className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Astro Data',
-      priceKey: 'essence',
+      price: '$10',
       bestFor: 'Raw astrological data',
       description: 'Pure astrological calculations and data',
       details: 'Access precise birth chart calculations, planetary positions, and astrological house data.',
-      subTypes: getSubTypesWithPricing('AstroData')
+      subTypes: [
+        'Essence Data – Complete personality chart calculations',
+        'Sync Data – Relationship compatibility calculations'
+      ]
     }
   ];
 
@@ -124,25 +99,10 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
   const formatSubType = (subType: string) => {
     const parts = subType.split(' – ');
     if (parts.length === 2) {
-      // Check if there's a price in parentheses
-      const priceMatch = parts[1].match(/^(.*)\s+\((\$\d+)\)$/);
-      if (priceMatch) {
-        return (
-          <div className="flex items-center justify-between w-full">
-            <div>
-              <span className="text-gray-900 font-medium text-sm">{parts[0]}</span>
-              <span className="text-gray-600 text-sm"> – {priceMatch[1]}</span>
-            </div>
-            <span className="text-base font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded ml-2 flex-shrink-0">
-              {priceMatch[2]}
-            </span>
-          </div>
-        );
-      }
       return (
         <>
-          <span className="text-gray-900 font-medium">{parts[0]}</span>
-          <span className="text-gray-600"> – {parts[1]}</span>
+          <span className="text-gray-900 font-medium text-sm">{parts[0]}</span>
+          <span className="text-gray-600 text-sm"> – {parts[1]}</span>
         </>
       );
     }
@@ -186,7 +146,6 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
           <div className="space-y-6">
             {reportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
-              const price = getPrice(report.type === 'Essence' ? 'essence' : 'sync', 'personal');
               
               return (
                 <Card 
@@ -219,11 +178,9 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                           Best for {report.bestFor}
                         </span>
                       </div>
-                      {(report.type === 'Essence' || report.type === 'Sync') && (
-                        <span className="font-light text-xl text-gray-900">
-                          {formatPrice(price)}
-                        </span>
-                      )}
+                      <span className="font-light text-xl text-gray-900">
+                        {report.price}
+                      </span>
                     </div>
 
                     <p className="text-base text-gray-700 mb-3 font-light leading-relaxed">
