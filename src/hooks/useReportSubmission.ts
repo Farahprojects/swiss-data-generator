@@ -1,3 +1,4 @@
+
 // test 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -64,22 +65,21 @@ export const useReportSubmission = () => {
             errorType: validatedPromo.errorType
           });
 
-          // Get pricing for confirmation dialog
-          const amount = getReportPrice({
+          // FIXED: Get pricing with both reportType AND request field
+          const formDataForPricing = {
             reportType: data.reportType,
             essenceType: data.essenceType,
             relationshipType: data.relationshipType,
             reportCategory: data.reportCategory,
-            reportSubCategory: data.reportSubCategory
-          });
+            reportSubCategory: data.reportSubCategory,
+            astroDataType: data.astroDataType,
+            request: data.request // NEW: Include request field
+          };
           
-          const description = getReportTitle({
-            reportType: data.reportType,
-            essenceType: data.essenceType,
-            relationshipType: data.relationshipType,
-            reportCategory: data.reportCategory,
-            reportSubCategory: data.reportSubCategory
-          });
+          console.log('💰 useReportSubmission - Getting price with form data:', formDataForPricing);
+          
+          const amount = getReportPrice(formDataForPricing);
+          const description = getReportTitle(formDataForPricing);
 
           // Store submission data and show confirmation dialog
           setPendingSubmissionData({ data, basePrice: amount, description });
@@ -99,13 +99,18 @@ export const useReportSubmission = () => {
       if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
         console.log('Processing free report with promo code:', data.promoCode);
         
-        // For astro data requests, use 'request' field and leave 'reportType' empty
-        // For AI reports, use 'reportType' field and leave 'request' empty
-        const isAstroData = data.astroDataType && data.astroDataType.trim() !== '';
+        // FIXED: Use request field for astro data detection
+        const isAstroData = data.request && data.request.trim() !== '';
+        
+        console.log('💰 useReportSubmission - Astro data detection:', { 
+          isAstroData, 
+          request: data.request, 
+          reportType: data.reportType 
+        });
         
         const reportData = {
-          reportType: isAstroData ? data.astroDataType : completeReportType,
-          request: isAstroData ? data.astroDataType : '',
+          reportType: isAstroData ? data.request : completeReportType,
+          request: isAstroData ? data.request : '',
           relationshipType: data.relationshipType,
           essenceType: data.essenceType,
           name: data.name,
@@ -140,22 +145,21 @@ export const useReportSubmission = () => {
         return;
       }
       
-      // Regular paid flow
-      const amount = getReportPrice({
+      // Regular paid flow - FIXED: Get pricing with both reportType AND request field
+      const formDataForPricing = {
         reportType: data.reportType,
         essenceType: data.essenceType,
         relationshipType: data.relationshipType,
         reportCategory: data.reportCategory,
-        reportSubCategory: data.reportSubCategory
-      });
+        reportSubCategory: data.reportSubCategory,
+        astroDataType: data.astroDataType,
+        request: data.request // NEW: Include request field
+      };
       
-      const description = getReportTitle({
-        reportType: data.reportType,
-        essenceType: data.essenceType,
-        relationshipType: data.relationshipType,
-        reportCategory: data.reportCategory,
-        reportSubCategory: data.reportSubCategory
-      });
+      console.log('💰 useReportSubmission - Getting price for paid flow with form data:', formDataForPricing);
+      
+      const amount = getReportPrice(formDataForPricing);
+      const description = getReportTitle(formDataForPricing);
 
       // Apply promo code discount if valid (but not free)
       let finalAmount = amount;
@@ -163,13 +167,18 @@ export const useReportSubmission = () => {
         finalAmount = amount * (1 - validatedPromo.discountPercent / 100);
       }
 
-      // For astro data requests, use 'request' field and leave 'reportType' empty
-      // For AI reports, use 'reportType' field and leave 'request' empty
-      const isAstroData = data.astroDataType && data.astroDataType.trim() !== '';
+      // FIXED: Use request field for astro data detection
+      const isAstroData = data.request && data.request.trim() !== '';
+      
+      console.log('💰 useReportSubmission - Astro data detection for paid flow:', { 
+        isAstroData, 
+        request: data.request, 
+        reportType: data.reportType 
+      });
       
       const reportData = {
-        reportType: isAstroData ? data.astroDataType : completeReportType,
-        request: isAstroData ? data.astroDataType : '',
+        reportType: isAstroData ? data.request : completeReportType,
+        request: isAstroData ? data.request : '',
         relationshipType: data.relationshipType,
         essenceType: data.essenceType,
         name: data.name,
