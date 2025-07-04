@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -22,7 +23,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
       return `$${price}`;
     } catch (error) {
       console.warn('Price fetch failed for astro data type:', astroDataType, error);
-      return '$0';
+      throw error;
     }
   };
 
@@ -47,7 +48,13 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
             {astroDataSubCategories.map((subCategory) => {
               const IconComponent = subCategory.icon;
               const isSelected = field.value === subCategory.value;
-              const price = getAstroDataPrice(subCategory.value);
+              
+              let price = 'Loading...';
+              try {
+                price = getAstroDataPrice(subCategory.value);
+              } catch (error) {
+                price = 'Price unavailable';
+              }
               
               return (
                 <motion.button
