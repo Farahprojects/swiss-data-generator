@@ -337,17 +337,68 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
               <>
                 {PersonalNote}
                 {isAstroDataReport ? (
-                  <motion.button
-                    onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
-                    className="group flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-light transition-all duration-200"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <span>View Data</span>
-                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </motion.button>
+                  isMobile ? (
+                    <div className="flex gap-8 justify-center">
+                      <button 
+                        onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
+                        className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
+                      >
+                        View
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = report!.report_content!;
+                            const cleanText = tempDiv.textContent || tempDiv.innerText || '';
+                            await navigator.clipboard.writeText(cleanText);
+                          } catch (error) {
+                            console.error('Copy failed:', error);
+                          }
+                        }}
+                        className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = report!.report_content!;
+                            const cleanText = tempDiv.textContent || tempDiv.innerText || '';
+                            await navigator.clipboard.writeText(cleanText);
+                            setTimeout(() => {
+                              const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological report and provide additional insights or answer any questions I might have:\n\n${cleanText}`)}`;
+                              window.open(chatGPTUrl, '_blank');
+                            }, 1000);
+                          } catch (error) {
+                            console.error('ChatGPT action failed:', error);
+                          }
+                        }}
+                        className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
+                      >
+                        <img 
+                          src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
+                          alt="ChatGPT" 
+                          className="h-5 w-5"
+                        />
+                      </button>
+                    </div>
+                  ) : (
+                    <motion.button
+                      onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
+                      className="group flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-light transition-all duration-200"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <span>View Data</span>
+                      <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </motion.button>
+                  )
                 ) : (
                   <Button 
                     onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
