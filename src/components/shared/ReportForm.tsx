@@ -66,6 +66,27 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const userName = watch('name');
   const userEmail = watch('email');
 
+  /** ------------------------------------------------------------------
+   *  STEP-PROGRESS FLAGS
+   *  ------------------------------------------------------------------
+   *  step1Done  → user has picked a report-type OR typed a free-form request
+   *  step2Done  → the key personal fields are filled in & geo-coords exist
+   */
+  const formValues = form.watch();
+  const step1Done = Boolean(formValues.reportType || formValues.request);
+
+  const step2Done =
+    step1Done &&
+    Boolean(
+      formValues.name &&
+        formValues.email &&
+        formValues.birthDate &&
+        formValues.birthTime &&
+        formValues.birthLocation &&
+        formValues.birthLatitude &&
+        formValues.birthLongitude,
+    );
+
   // Check if form should be unlocked (either reportType or request field filled)
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);
 
@@ -189,6 +210,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-8">
+          {/* ─────────────────────────────  STEP 1  ───────────────────────────── */}
           <ReportTypeSelector
             control={control}
             errors={errors}
@@ -198,24 +220,30 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             setValue={setValue}
           />
 
+          {/* ─────────────────────────────  STEP 2  ───────────────────────────── */}
+          {step1Done && (
+            <>
+              <CombinedPersonalDetailsForm
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+              />
 
-          <CombinedPersonalDetailsForm
-            register={register}
-            setValue={setValue}
-            watch={watch}
-            errors={errors}
-          />
-
-          {requiresSecondPerson && (
-            <SecondPersonForm
-              register={register}
-              setValue={setValue}
-              watch={watch}
-              errors={errors}
-            />
+              {requiresSecondPerson && (
+                <SecondPersonForm
+                  register={register}
+                  setValue={setValue}
+                  watch={watch}
+                  errors={errors}
+                />
+              )}
+            </>
           )}
 
-          <PaymentStep
+          {/* ─────────────────────────────  STEP 3  ───────────────────────────── */}
+          {step2Done && (
+            <PaymentStep
               register={register}
               watch={watch}
               errors={errors}
@@ -239,6 +267,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
               onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
               onPromoConfirmationContinue={() => handlePromoConfirmationContinue(() => {})}
             />
+          )}
         </div>
       </form>
     </div>
