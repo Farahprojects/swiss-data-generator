@@ -42,6 +42,8 @@ export const useMobileDrawerForm = () => {
 
   const prevStep = () => {
     if (currentStep > 1) {
+      // Clear any potential error states when navigating backwards
+      form.clearErrors();
       setCurrentStep((prev) => (prev - 1) as DrawerStep);
     }
   };

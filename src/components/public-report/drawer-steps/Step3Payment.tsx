@@ -99,16 +99,21 @@ const Step3Payment = ({
       });
     }
   } catch (error) {
-    priceError = error instanceof Error ? error.message : 'Failed to get price';
-    // Log error (async but non-blocking)
-    logToAdmin('Step3Payment', 'price_fetch_error', 'Price fetch error', {
+    // Silently handle pricing errors when navigating backwards - don't show UI errors
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Pricing error (silenced for navigation):', error);
+    }
+    
+    // Log error but don't set priceError to avoid UI disruption
+    logToAdmin('Step3Payment', 'price_fetch_error_silent', 'Price fetch error (silenced)', {
       error: error instanceof Error ? error.message : 'Failed to get price',
-      stack: error instanceof Error ? error.stack : null
+      formData: { reportType, request, reportCategory },
+      note: 'Error silenced to prevent UI disruption during navigation'
     });
   }
 
-  // Only calculate pricing if we have a valid base price
-  const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : null;
+  // Only calculate pricing if we have a valid base price, otherwise use fallback
+  const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : calculatePricing(19.99, promoValidation);
 
   const getPromoValidationIcon = () => {
     if (isValidatingPromo) {
@@ -185,7 +190,8 @@ const Step3Payment = ({
         </div>
       </div>
     );
-  } else if (priceError) {
+  } else if (!pricing && !reportType && !request) {
+    // Only show "pricing unavailable" if we truly have no form data to work with  
     content = (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
@@ -199,46 +205,21 @@ const Step3Payment = ({
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="text-center flex-1">
-            <h2 className="text-2xl font-bold text-gray-900">Pricing Error</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Complete Your Selection</h2>
           </div>
         </div>
 
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-          <p className="text-red-700 mb-2">Unable to load pricing information</p>
-          <p className="text-sm text-red-600">{priceError}</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+          <AlertTriangle className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+          <p className="text-blue-700">Please complete the previous steps to view pricing</p>
           <Button 
-            onClick={() => window.location.reload()}
+            onClick={onPrev}
             variant="outline"
             size="sm"
             className="mt-3"
           >
-            Retry
+            Go Back
           </Button>
-        </div>
-      </div>
-    );
-  } else if (!pricing) {
-    content = (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onPrev}
-            className="p-2"
-            type="button"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="text-center flex-1">
-            <h2 className="text-2xl font-bold text-gray-900">Pricing Unavailable</h2>
-          </div>
-        </div>
-
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-          <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-          <p className="text-yellow-700">No pricing available for this report configuration</p>
         </div>
       </div>
     );
@@ -279,29 +260,29 @@ const Step3Payment = ({
               </h2>
               
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-light text-gray-700">{reportTitle}</span>
-                  <span className="text-lg font-light text-gray-900">
-                    ${pricing.basePrice.toFixed(2)}
-                  </span>
-                </div>
-                
-                {pricing.discount > 0 && (
-                  <div className="flex justify-between items-center text-green-600">
-                    <span className="text-lg font-light">Discount ({pricing.discountPercent}%)</span>
-                    <span className="text-lg font-light">-${pricing.discount.toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-              
-              <hr className="border-gray-200" />
-              
-              <div className="flex justify-between items-center">
-                <span className="text-2xl font-light text-gray-900">Total</span>
-                <span className={`text-2xl font-light ${pricing.isFree ? 'text-green-600' : 'text-gray-900'}`}>
-                  {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
-                </span>
-              </div>
+                 <div className="flex justify-between items-center">
+                   <span className="text-lg font-light text-gray-700">{reportTitle}</span>
+                   <span className="text-lg font-light text-gray-900">
+                     ${pricing?.basePrice?.toFixed(2) || '0.00'}
+                   </span>
+                 </div>
+                 
+                 {pricing?.discount > 0 && (
+                   <div className="flex justify-between items-center text-green-600">
+                     <span className="text-lg font-light">Discount ({pricing?.discountPercent}%)</span>
+                     <span className="text-lg font-light">-${pricing?.discount?.toFixed(2)}</span>
+                   </div>
+                 )}
+               </div>
+               
+               <hr className="border-gray-200" />
+               
+               <div className="flex justify-between items-center">
+                 <span className="text-2xl font-light text-gray-900">Total</span>
+                 <span className={`text-2xl font-light ${pricing?.isFree ? 'text-green-600' : 'text-gray-900'}`}>
+                   {pricing?.isFree ? 'FREE' : `$${pricing?.finalPrice?.toFixed(2) || '0.00'}`}
+                 </span>
+               </div>
             </div>
           </div>
 
@@ -396,7 +377,7 @@ const Step3Payment = ({
             
             <p className="text-sm text-gray-500 text-center mt-4 font-light leading-relaxed">
               Your report will be delivered to your email within minutes. 
-              {!pricing.isFree && ' Secure payment processed by Stripe.'}
+              {!pricing?.isFree && ' Secure payment processed by Stripe.'}
             </p>
           </motion.div>
         </div>

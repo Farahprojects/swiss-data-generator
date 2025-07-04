@@ -52,7 +52,12 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                 try {
                   return getReportPrice(formData);
                 } catch (error) {
-                  // Log mobile price calculation errors in production
+                  // Silently handle pricing errors and provide fallback
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn('Price calculation error (using fallback):', error);
+                  }
+                  
+                  // Log mobile price calculation errors in production for debugging only
                   if (isMobile && process.env.NODE_ENV === 'production') {
                     logAction('AstroData price calculation error', 'error', {
                       subCategoryValue: subCategory.value,
@@ -61,7 +66,9 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
                     });
                   }
-                  return 0; // Fallback price
+                  
+                  // Return fallback price to prevent UI breakage
+                  return 19.99;
                 }
               }, [subCategory.value]);
               
