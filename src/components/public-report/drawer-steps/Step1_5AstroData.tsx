@@ -18,7 +18,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
   // Get price for astro data type - just ask for the report type directly
   const getAstroDataPrice = (astroDataType: string): string => {
     try {
-      const price = getReportPrice({ reportType: astroDataType });
+      const price = getReportPrice({ id: astroDataType });
       return `$${price}`;
     } catch (error) {
       console.warn('Price fetch failed for astro data type:', astroDataType, error);
