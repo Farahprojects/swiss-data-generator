@@ -39,8 +39,9 @@ export const reportSchema = z.object({
   message: "Please select a report type or specify a request",
   path: ["reportType"]
 }).refine((data) => {
-  // Check essence type for both reportType and request fields
-  if ((data.reportType === 'essence' || data.request === 'essence') && (!data.essenceType || data.essenceType === '')) {
+  // Check essence type ONLY for AI reports (reportType === 'essence')
+  // NOT for astro data requests (request === 'essence' + reportCategory === 'astro-data')
+  if (data.reportType === 'essence' && (!data.essenceType || data.essenceType === '')) {
     return false;
   }
   return true;
