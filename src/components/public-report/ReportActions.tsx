@@ -79,7 +79,7 @@ export const ReportActions = ({
               <img 
                 src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
                 alt="ChatGPT" 
-                className={`h-6 w-6 transition-opacity duration-200 ${!isCopyCompleted ? 'opacity-50' : ''}`}
+                className={`h-8 w-8 transition-opacity duration-200 ${!isCopyCompleted ? 'opacity-50' : ''}`}
               />
             </div>
             <div>
@@ -100,7 +100,7 @@ export const ReportActions = ({
               <img 
                 src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
                 alt="ChatGPT" 
-                className="h-4 w-4 mr-2"
+                className="h-5 w-5 mr-2"
               />
               <span className="font-medium">ChatGPT</span>
             </Button>

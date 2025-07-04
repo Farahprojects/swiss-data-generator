@@ -206,7 +206,11 @@ const MobileReportViewer = ({
             onClick={handleChatGPT}
             className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
           >
-            <span className="mr-2 text-xl">🤖</span>
+            <img 
+              src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
+              alt="ChatGPT" 
+              className="h-5 w-5 mr-2"
+            />
             GPT
           </button>
         </div>
