@@ -223,7 +223,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     </div>
   );
 
-  const needsScrolling = currentStep >= 2; // Changed from 3 to 2 to include Step2BirthDetails
+  const needsScrolling = true; // Enable scrolling for all steps
 
   // -------------------------------------------------------------------------
   return (
