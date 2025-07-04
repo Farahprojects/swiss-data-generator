@@ -45,7 +45,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, onExplor
     >
       <div className="flex items-center justify-between">
         <div className="flex-1 text-center md:text-left">
-          <h3 className={`text-4xl md:text-5xl font-light transition-all duration-500 whitespace-nowrap tracking-tight ${
+          <h3 className={`text-3xl md:text-4xl font-light transition-all duration-500 whitespace-nowrap tracking-tight ${
             isActive || isHovered 
               ? 'text-gray-900' 
               : 'text-gray-500'
