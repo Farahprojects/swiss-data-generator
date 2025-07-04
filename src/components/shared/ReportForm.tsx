@@ -202,14 +202,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             setValue={setValue}
           />
 
-          {shouldUnlockForm && (
-            <CombinedPersonalDetailsForm
-              register={register}
-              setValue={setValue}
-              watch={watch}
-              errors={errors}
-            />
-          )}
+          <CombinedPersonalDetailsForm
+            register={register}
+            setValue={setValue}
+            watch={watch}
+            errors={errors}
+          />
 
           {requiresSecondPerson && (
             <SecondPersonForm
@@ -220,8 +218,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             />
           )}
 
-          {shouldUnlockForm && (
-            <PaymentStep
+          <PaymentStep
               register={register}
               watch={watch}
               errors={errors}
@@ -245,7 +242,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
               onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
               onPromoConfirmationContinue={() => handlePromoConfirmationContinue(() => {})}
             />
-          )}
         </div>
       </form>
     </div>
