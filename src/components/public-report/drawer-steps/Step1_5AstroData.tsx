@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { astroDataSubCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
-import { usePriceFetch } from '@/hooks/usePriceFetch';
+import { useReportGuidePricing } from '@/hooks/useReportGuidePricing';
 
 interface Step1_5AstroDataProps {
   control: any;
@@ -14,18 +13,7 @@ interface Step1_5AstroDataProps {
 }
 
 const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: Step1_5AstroDataProps) => {
-  const { getReportPrice } = usePriceFetch();
-
-  // Get price for astro data type using request field (essence or sync)
-  const getAstroDataPrice = (astroDataType: string): string => {
-    try {
-      const price = getReportPrice({ request: astroDataType });
-      return `$${price}`;
-    } catch (error) {
-      console.warn('Price fetch failed for astro data type:', astroDataType, error);
-      throw error;
-    }
-  };
+  const { pricing, formatPrice } = useReportGuidePricing();
 
   return (
     <motion.div
@@ -48,13 +36,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
             {astroDataSubCategories.map((subCategory) => {
               const IconComponent = subCategory.icon;
               const isSelected = field.value === subCategory.value;
-              
-              let price = 'Loading...';
-              try {
-                price = getAstroDataPrice(subCategory.value);
-              } catch (error) {
-                price = 'Price unavailable';
-              }
+              const price = pricing[subCategory.value];
               
               return (
                 <motion.button
@@ -62,10 +44,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                   type="button"
                   onClick={() => {
                     field.onChange(subCategory.value);
-                    // Set request field for backend processing (essence or sync)
-                    setValue('request', subCategory.value);
-                    // Set reportType to empty string for astro data (not AI report)
-                    setValue('reportType', '');
+                    setValue('reportType', subCategory.reportType);
                     setTimeout(() => onNext(), 100);
                   }}
                   className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
@@ -83,7 +62,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                       <div className="flex justify-between items-start mb-1">
                         <h3 className="text-lg font-semibold text-gray-900">{subCategory.title}</h3>
                         <span className="text-sm font-bold text-primary">
-                          {price}
+                          {formatPrice(price)}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">{subCategory.description}</p>

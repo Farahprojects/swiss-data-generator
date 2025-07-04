@@ -37,9 +37,15 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
     return mappedId;
   }
   
-  // Handle direct report types for astro data (essence, sync)
-  if (['essence', 'sync'].includes(reportType)) {
-    return reportType;
+  // Handle astro data reports - use the specific astro data type
+  if (reportCategory === 'astro-data' && astroDataType) {
+    return astroDataType; // essence_bundle, sync_rich
+  }
+  
+  // Handle astro data based on request field (fallback)
+  if (request && !reportType) {
+    if (request === 'essence') return 'essence_bundle';
+    if (request === 'sync') return 'sync_rich';
   }
   
   // Handle snapshot reports - map subcategory to actual report type

@@ -1,4 +1,4 @@
-//
+
 import { ReportTypeOption } from '@/types/public-report';
 import { User, Heart, Target, Calendar, Brain, Briefcase } from 'lucide-react';
 

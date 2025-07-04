@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
 import ReportGuideResponsive from "./ReportGuideResponsive";
-import { usePriceFetch } from "@/hooks/usePriceFetch";
 import * as LucideIcons from "lucide-react";
 import {
   UserCircle,
@@ -150,49 +149,9 @@ export default function TestsSection() {
   const [selectedTest, setSelectedTest] = useState(testData[0]);
   const [showReportGuide, setShowReportGuide] = useState(false);
   const [targetReportType, setTargetReportType] = useState<string | null>(null);
-  const { getReportPrice } = usePriceFetch();
-  
-  // Map test types to pricing identifiers
-  const getTestPrice = (testId: string): string => {
-    try {
-      let price: number;
-      switch (testId) {
-        case 'Essence':
-        case 'The Self':
-          price = getReportPrice({ reportType: 'essence', essenceType: 'personal' });
-          break;
-        case 'Sync':
-        case 'Compatibility':
-          price = getReportPrice({ reportType: 'sync', relationshipType: 'personal' });
-          break;
-        case 'Monthly':
-          price = getReportPrice({ reportType: 'monthly' });
-          break;
-        case 'Mindset':
-          price = getReportPrice({ reportType: 'mindset' });
-          break;
-        case 'Focus':
-          price = getReportPrice({ reportType: 'focus' });
-          break;
-        case 'Flow':
-          price = getReportPrice({ reportType: 'flow' });
-          break;
-        default:
-          price = 0;
-      }
-      return `$${price}`;
-    } catch (error) {
-      console.warn('Price fetch failed for', testId, error);
-      return '$0';
-    }
-  };
   
   const getReportGuide = (testId: string) => {
-    const baseGuide = reportGuides.find(guide => guide.type === testId) || reportGuides[0];
-    return {
-      ...baseGuide,
-      price: getTestPrice(testId)
-    };
+    return reportGuides.find(guide => guide.type === testId) || reportGuides[0];
   };
 
   const handleExploreClick = (testName: string) => {
