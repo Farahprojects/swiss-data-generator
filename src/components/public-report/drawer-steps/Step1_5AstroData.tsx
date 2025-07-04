@@ -15,10 +15,10 @@ interface Step1_5AstroDataProps {
 const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: Step1_5AstroDataProps) => {
   const { getReportPrice } = usePriceFetch();
 
-  // Get price for astro data type - just ask for the report type directly
+  // Get price for astro data type - ask for reportType directly (essence or sync)
   const getAstroDataPrice = (astroDataType: string): string => {
     try {
-      const price = getReportPrice({ id: astroDataType });
+      const price = getReportPrice({ reportType: astroDataType });
       return `$${price}`;
     } catch (error) {
       console.warn('Price fetch failed for astro data type:', astroDataType, error);
