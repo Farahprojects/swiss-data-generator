@@ -266,7 +266,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
             <div
               ref={scrollContainerRef}
-              className={`flex-1 px-6 ${(currentStep === 3 || currentStep === 4) ? 'pb-24' : 'pb-6'} ${needsScrolling ? 'overflow-y-auto scrollbar-hide' : 'flex items-center justify-center'}`}
+              className={`flex-1 px-6 ${(currentStep === 3 || currentStep === 4) ? 'pb-20' : 'pb-6'} ${needsScrolling ? 'overflow-y-auto scrollbar-hide' : 'flex items-center justify-center'}`}
               style={{ 
                 paddingTop: currentStep === 3 ? '1rem' : undefined // Extra padding for Step2BirthDetails
               }}
@@ -330,11 +330,11 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
             {/* Footer for steps 3 and 4 */}
             {(currentStep === 3 || currentStep === 4) && (
-              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3">
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3 z-50">
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300"
+                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg text-base font-medium hover:bg-gray-200 transition-all duration-300"
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
                 >
                   Back
@@ -343,16 +343,16 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                   type="button"
                   onClick={currentStep === 3 ? nextStep : handleFormSubmit}
                   disabled={currentStep === 4 && (isProcessing || isValidatingPromo)}
-                  className="flex-2 bg-gray-900 text-white px-6 py-3 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
+                  className="flex-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg text-base font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none', flex: '2' }}
                 >
                   {currentStep === 3 
-                    ? 'Review & Pay' 
+                    ? 'Continue' 
                     : isProcessing 
                     ? 'Processing...' 
                     : isValidatingPromo
                     ? 'Validating...'
-                    : 'Get My Insights'
+                    : 'Complete Order'
                   }
                 </button>
               </div>

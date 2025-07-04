@@ -67,7 +67,7 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
 
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="bg-white">
       <motion.div
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}

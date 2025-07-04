@@ -128,7 +128,7 @@ const Step3Payment = ({
     );
   } else {
     content = (
-      <div className="min-h-screen bg-white">
+      <div className="bg-white">
         <div className="space-y-12">
           {/* Header */}
           <div className="flex items-center justify-center px-6 py-8">
