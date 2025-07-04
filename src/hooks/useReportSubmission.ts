@@ -38,7 +38,6 @@ export const useReportSubmission = () => {
       reportType: data.reportType,
       request: data.request,
       reportCategory: data.reportCategory,
-      request: data.request,
       hasPromoCode: !!data.promoCode,
       promoStatus: promoValidation.status,
       skipPromoValidation: skipPromoValidation
@@ -83,8 +82,7 @@ export const useReportSubmission = () => {
             relationshipType: data.relationshipType,
             reportCategory: data.reportCategory,
             reportSubCategory: data.reportSubCategory,
-            request: data.request,
-            request: data.request // NEW: Include request field
+            request: data.request
           };
           
           console.log('💰 useReportSubmission - Getting price with form data:', formDataForPricing);
@@ -170,8 +168,7 @@ export const useReportSubmission = () => {
         relationshipType: data.relationshipType,
         reportCategory: data.reportCategory,
         reportSubCategory: data.reportSubCategory,
-        request: data.request,
-        request: data.request // NEW: Include request field
+        request: data.request
       };
       
       console.log('💰 useReportSubmission - Getting price for paid flow with form data:', formDataForPricing);

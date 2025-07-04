@@ -76,8 +76,7 @@ const PaymentStep = ({
         relationshipType,
         reportCategory,
         reportSubCategory,
-        request: requestField,
-        request // NEW: Include request field
+        request: requestField
       };
       
       basePrice = getReportPrice(formData);

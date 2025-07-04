@@ -85,8 +85,7 @@ const Step3Payment = ({
         relationshipType,
         reportCategory,
         reportSubCategory,
-        request: requestField,
-        request // NEW: Include request field
+        request: requestField
       };
       
       basePrice = getReportPrice(formData);
@@ -137,9 +136,8 @@ const Step3Payment = ({
 
     await logToAdmin('Step3Payment', 'handleButtonClick_start', 'Get My Insights button clicked', {
       reportType: reportType,
-      request: request,
-      reportCategory: reportCategory,
       request: requestField,
+      reportCategory: reportCategory,
       basePrice: basePrice,
       promoCode: promoCode
     });

@@ -45,9 +45,8 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
               // Memoized price calculation to handle mobile race conditions
               const price = useMemo(() => {
                 const formData = {
-                  request: subCategory.value === 'essence' ? 'essence' : subCategory.value === 'sync' ? 'sync' : subCategory.value,
-                  reportCategory: 'astro-data',
-                  request: subCategory.value
+                  request: subCategory.value,
+                  reportCategory: 'astro-data'
                 };
                 
                 try {

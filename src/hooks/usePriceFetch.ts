@@ -11,7 +11,6 @@ const ReportTypeMappingSchema = z.object({
   reportCategory: z.string().optional(),
   reportSubCategory: z.string().optional(),
   request: z.string().optional(),
-  request: z.string().optional(),
 });
 
 export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
