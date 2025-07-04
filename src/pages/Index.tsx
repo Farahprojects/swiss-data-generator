@@ -219,12 +219,12 @@ const Index = () => {
         </section>
 
         {/* Modern CTA Section */}
-        <section className="py-32 bg-gray-900 text-white relative overflow-hidden">
+        <section className="py-32 bg-white relative overflow-hidden">
           <div className="absolute inset-0">
-            <div className="absolute top-1/4 left-8 w-2 h-2 bg-white/10 rounded-full animate-pulse"></div>
-            <div className="absolute top-1/3 right-12 w-1 h-1 bg-white/20 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
-            <div className="absolute bottom-1/4 left-1/4 w-1.5 h-1.5 bg-white/15 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
-            <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-white/10 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
+            <div className="absolute top-1/4 left-8 w-2 h-2 bg-primary/10 rounded-full animate-pulse"></div>
+            <div className="absolute top-1/3 right-12 w-1 h-1 bg-primary/20 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
+            <div className="absolute bottom-1/4 left-1/4 w-1.5 h-1.5 bg-primary/15 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
+            <div className="absolute bottom-1/3 right-1/4 w-2 h-2 bg-primary/10 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
           </div>
           
           <div className="relative w-full md:px-4 md:container md:mx-auto text-center">
@@ -235,11 +235,11 @@ const Index = () => {
               transition={{ duration: 0.8 }}
               className="max-w-4xl mx-auto space-y-12"
             >
-              <h2 className="text-5xl md:text-6xl font-light leading-tight">
+              <h2 className="text-5xl md:text-6xl font-light leading-tight text-gray-900">
                 Ready to <span className="italic font-medium">transform</span> your practice?
               </h2>
               
-              <p className="text-xl text-gray-300 font-light max-w-2xl mx-auto leading-relaxed">
+              <p className="text-xl text-gray-600 font-light max-w-2xl mx-auto leading-relaxed">
                 Join professionals creating breakthrough moments with their clients every day
               </p>
               
@@ -247,7 +247,7 @@ const Index = () => {
                 <Link to="/signup">
                   <Button 
                     size="lg" 
-                    className="bg-white text-gray-900 hover:bg-gray-100 px-12 py-6 rounded-xl text-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                    className="bg-gray-900 text-white hover:bg-gray-800 px-12 py-6 rounded-xl text-lg font-light transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                   >
                     Start for Free
                   </Button>
@@ -257,7 +257,7 @@ const Index = () => {
                   <Button 
                     size="lg" 
                     variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10 px-12 py-6 rounded-xl text-lg font-medium transition-all duration-300"
+                    className="border-gray-200 text-gray-900 hover:bg-gray-50 px-12 py-6 rounded-xl text-lg font-light transition-all duration-300"
                   >
                     Explore Features
                   </Button>
