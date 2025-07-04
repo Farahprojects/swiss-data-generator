@@ -1,4 +1,3 @@
-
 // test 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -7,6 +6,7 @@ import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation
 import { buildCompleteReportType } from '@/services/report-pricing';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
+import { logToAdmin } from '@/utils/adminLogger';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -33,6 +33,17 @@ export const useReportSubmission = () => {
     setPromoValidation: (state: PromoValidationState) => void,
     skipPromoValidation: boolean = false
   ) => {
+    // STEP 4: Log entry into submitReport function
+    await logToAdmin('useReportSubmission', 'submitReport_entry', 'submitReport function called', {
+      reportType: data.reportType,
+      request: data.request,
+      reportCategory: data.reportCategory,
+      astroDataType: data.astroDataType,
+      hasPromoCode: !!data.promoCode,
+      promoStatus: promoValidation.status,
+      skipPromoValidation: skipPromoValidation
+    });
+
     console.log('🚀 Form submission started');
     console.log('📝 Form data:', data);
     
@@ -102,6 +113,13 @@ export const useReportSubmission = () => {
         // FIXED: Use request field for astro data detection
         const isAstroData = data.request && data.request.trim() !== '';
         
+        await logToAdmin('useReportSubmission', 'free_report_processing', 'Processing free report', {
+          isAstroData: isAstroData,
+          request: data.request,
+          reportType: data.reportType,
+          completeReportType: completeReportType
+        });
+        
         console.log('💰 useReportSubmission - Astro data detection:', { 
           isAstroData, 
           request: data.request, 
@@ -170,6 +188,16 @@ export const useReportSubmission = () => {
       // FIXED: Use request field for astro data detection
       const isAstroData = data.request && data.request.trim() !== '';
       
+      await logToAdmin('useReportSubmission', 'paid_flow_processing', 'Processing paid report', {
+        isAstroData: isAstroData,
+        request: data.request,
+        reportType: data.reportType,
+        completeReportType: completeReportType,
+        amount: amount,
+        finalAmount: finalAmount,
+        description: description
+      });
+      
       console.log('💰 useReportSubmission - Astro data detection for paid flow:', { 
         isAstroData, 
         request: data.request, 
@@ -203,11 +231,30 @@ export const useReportSubmission = () => {
       
       console.log('Report data being sent to checkout:', reportData);
       
+      // STEP 5: Log before calling initiateGuestCheckout
+      await logToAdmin('useReportSubmission', 'calling_checkout', 'About to call initiateGuestCheckout', {
+        amount: finalAmount,
+        email: data.email,
+        description: description,
+        reportData: {
+          reportType: reportData.reportType,
+          request: reportData.request,
+          name: reportData.name,
+          email: reportData.email
+        }
+      });
+      
       const result = await initiateGuestCheckout({
         amount: finalAmount,
         email: data.email,
         description,
         reportData,
+      });
+      
+      // Log the checkout result
+      await logToAdmin('useReportSubmission', 'checkout_result', 'Checkout result received', {
+        success: result.success,
+        error: result.error || null
       });
       
       if (!result.success) {
@@ -218,6 +265,11 @@ export const useReportSubmission = () => {
         });
       }
     } catch (error) {
+      await logToAdmin('useReportSubmission', 'submission_error', 'Error in submitReport', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : null
+      });
+      
       console.error('Error processing report:', error);
       toast({
         title: "Error",

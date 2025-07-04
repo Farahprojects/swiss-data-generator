@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +12,7 @@ import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 import DesktopReportViewer from '@/components/public-report/DesktopReportViewer';
+import { logToAdmin } from '@/utils/adminLogger';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -108,7 +110,20 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const onSubmit = async (data: ReportFormData) => {
+    // STEP 3: Log entry into onSubmit function
+    await logToAdmin('ReportForm', 'onSubmit_entry', 'onSubmit function called', {
+      hasReportType: !!data.reportType,
+      hasRequest: !!data.request,
+      reportCategory: data.reportCategory,
+      astroDataType: data.astroDataType,
+      isValid: isValid,
+      formErrors: Object.keys(errors),
+      reportType: data.reportType,
+      request: data.request
+    });
+
     console.log('✅ Form submission successful, data:', data);
+    
     // Add coach attribution if provided
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
     
@@ -125,19 +140,51 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       message: '',
       discountPercent: 0
     };
+
+    // Log the submission data transformation
+    await logToAdmin('ReportForm', 'onSubmit_data_prep', 'Prepared submission data', {
+      hasCoachSlug: !!coachSlug,
+      promoValidationStatus: promoValidationState.status,
+      submissionDataKeys: Object.keys(submissionData)
+    });
     
     await submitReport(submissionData, promoValidationState, () => {});
   };
 
-  const handleButtonClick = () => {
+  const handleButtonClick = async () => {
+    // STEP 1: Log form button click
+    const formData = form.getValues();
+    await logToAdmin('ReportForm', 'button_click', 'Get My Insights button clicked', {
+      reportType: formData.reportType,
+      request: formData.request,
+      reportCategory: formData.reportCategory,
+      astroDataType: formData.astroDataType,
+      isValid: isValid,
+      hasErrors: Object.keys(errors).length > 0,
+      errorFields: Object.keys(errors),
+      shouldUnlockForm: shouldUnlockForm
+    });
+
     console.log('🖱️ Button clicked!');
     
+    // STEP 2: Log handleSubmit execution
     handleSubmit(
-      (data) => {
+      async (data) => {
+        await logToAdmin('ReportForm', 'handleSubmit_success', 'Form validation passed', {
+          reportType: data.reportType,
+          request: data.request,
+          reportCategory: data.reportCategory,
+          astroDataType: data.astroDataType
+        });
         console.log('✅ Form validation passed, submitting:', data);
-        onSubmit(data);
+        await onSubmit(data);
       },
-      (errors) => {
+      async (errors) => {
+        await logToAdmin('ReportForm', 'handleSubmit_error', 'Form validation failed', {
+          errors: errors,
+          errorFields: Object.keys(errors),
+          formData: form.getValues()
+        });
         console.log('❌ Form validation failed:', errors);
       }
     )();

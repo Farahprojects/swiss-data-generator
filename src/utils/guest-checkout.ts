@@ -1,5 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { ReportFormData } from "@/types/public-report";
+import { logToAdmin } from "./adminLogger";
 
 export interface GuestCheckoutOptions {
   amount: number;
@@ -19,6 +21,17 @@ export const initiateGuestCheckout = async ({
   cancelUrl,
 }: GuestCheckoutOptions) => {
   try {
+    // Log entry into guest checkout
+    await logToAdmin('guest-checkout', 'initiate_entry', 'initiateGuestCheckout called', {
+      amount: amount,
+      email: email,
+      description: description,
+      hasReportData: !!reportData,
+      reportType: reportData?.reportType || null,
+      request: reportData?.request || null,
+      coachSlug: reportData?.coachSlug || null
+    });
+
     console.log("🔄 Initiating guest checkout with unified function:", {
       amount,
       email,
@@ -27,18 +40,40 @@ export const initiateGuestCheckout = async ({
       coachSlug: reportData?.coachSlug
     });
 
+    const checkoutPayload = {
+      mode: "payment",
+      amount,
+      email,
+      isGuest: true,
+      description,
+      reportData,
+      successUrl,
+      cancelUrl,
+    };
+
+    // Log the payload being sent to Supabase function
+    await logToAdmin('guest-checkout', 'calling_supabase_function', 'Calling create-checkout function', {
+      payload: {
+        mode: checkoutPayload.mode,
+        amount: checkoutPayload.amount,
+        email: checkoutPayload.email,
+        isGuest: checkoutPayload.isGuest,
+        description: checkoutPayload.description,
+        hasReportData: !!checkoutPayload.reportData
+      }
+    });
+
     // Call the unified create-checkout function with isGuest flag
     const { data, error } = await supabase.functions.invoke("create-checkout", {
-      body: {
-        mode: "payment",
-        amount,
-        email,
-        isGuest: true,
-        description,
-        reportData,
-        successUrl,
-        cancelUrl,
-      },
+      body: checkoutPayload,
+    });
+
+    // Log the response from Supabase function
+    await logToAdmin('guest-checkout', 'supabase_function_response', 'Response from create-checkout function', {
+      hasData: !!data,
+      hasError: !!error,
+      error: error ? String(error) : null,
+      hasUrl: !!(data?.url)
     });
 
     if (error) {
@@ -52,6 +87,11 @@ export const initiateGuestCheckout = async ({
 
     console.log("✅ Guest checkout session created successfully");
 
+    // Log successful redirect attempt
+    await logToAdmin('guest-checkout', 'redirect_attempt', 'Attempting to redirect to Stripe', {
+      url: data.url
+    });
+
     // Fixed redirect method for Chrome mobile compatibility
     try {
       // First try opening in same tab (preferred for mobile)
@@ -64,6 +104,12 @@ export const initiateGuestCheckout = async ({
     
     return { success: true };
   } catch (err) {
+    // Log the error
+    await logToAdmin('guest-checkout', 'error', 'Error in initiateGuestCheckout', {
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : null
+    });
+
     console.error("❌ Failed to initiate guest checkout:", err);
     return { 
       success: false, 
