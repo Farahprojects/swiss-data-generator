@@ -61,7 +61,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     },
   });
 
-  const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
+  const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid }, formState } = form;
   const selectedReportType = watch('reportType');
   const selectedRequest = watch('request');
   const selectedReportCategory = watch('reportCategory');
@@ -162,7 +162,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       isValid: isValid,
       hasErrors: Object.keys(errors).length > 0,
       errorFields: Object.keys(errors),
-      shouldUnlockForm: shouldUnlockForm
+      shouldUnlockForm: shouldUnlockForm,
+      allFormData: formData
     });
 
     console.log('🖱️ Button clicked!');
@@ -174,7 +175,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           reportType: data.reportType,
           request: data.request,
           reportCategory: data.reportCategory,
-          astroDataType: data.astroDataType
+          astroDataType: data.astroDataType,
+          validatedData: data
         });
         console.log('✅ Form validation passed, submitting:', data);
         await onSubmit(data);
@@ -183,7 +185,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         await logToAdmin('ReportForm', 'handleSubmit_error', 'Form validation failed', {
           errors: errors,
           errorFields: Object.keys(errors),
-          formData: form.getValues()
+          formData: form.getValues(),
+          isValid: isValid,
+          formState: formState
         });
         console.log('❌ Form validation failed:', errors);
       }
