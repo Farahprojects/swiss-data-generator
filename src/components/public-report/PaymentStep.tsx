@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -241,38 +242,50 @@ const PaymentStep = ({
 
           {/* Right side - Payment Form */}
           <div className="space-y-6">
-            <div className="space-y-4">
-              <Button
-                variant="outline"
-                className="w-full h-12 justify-center border-2 border-primary text-primary bg-transparent hover:bg-primary/5"
-                type="button"
-                onClick={() => setShowPromoCode(!showPromoCode)}
-              >
-                <Tag className="h-4 w-4 mr-2" />
-                Have a promo code?
-              </Button>
-              
-              {showPromoCode && (
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="promoCode">Promo Code</Label>
+            <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
+              <CollapsibleTrigger asChild>
+                <button
+                  className="w-full bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
+                  type="button"
+                  style={{ 
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'transparent',
+                    WebkitAppearance: 'none'
+                  }}
+                >
+                  <Tag className="h-5 w-5 mr-3" />
+                  Have a promo code?
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-6">
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">
+                      Promo Code
+                    </Label>
                     <div className="relative">
                       <Input
                         id="promoCode"
                         {...register('promoCode')}
                         placeholder="Enter promo code"
-                        className="h-12 pr-10"
+                        className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 pr-12"
+                        style={{ 
+                          WebkitAppearance: 'none',
+                          touchAction: 'manipulation'
+                        }}
                       />
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                         {getPromoValidationIcon()}
                       </div>
                     </div>
                     {errors.promoCode && (
-                      <p className="text-sm text-red-500">{errors.promoCode.message}</p>
+                      <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
                     )}
                   </div>
+                  
+                  {/* Promo validation feedback */}
                   {promoValidation.message && (
-                    <div className={`text-sm p-3 rounded-lg ${
+                    <div className={`text-sm font-light p-4 rounded-xl ${
                       isValidatingPromo 
                         ? 'bg-gray-50 text-gray-600'
                         : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
@@ -283,8 +296,8 @@ const PaymentStep = ({
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             <Button
               onClick={handleButtonClick}
