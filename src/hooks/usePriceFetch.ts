@@ -39,7 +39,7 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
   
   // Handle astro data reports - use the specific astro data type
   if (reportCategory === 'astro-data' && astroDataType) {
-    return astroDataType; // essence_bundle, sync_rich
+    return astroDataType; // essence, sync
   }
   
   // Handle astro data based on request field (fallback)
