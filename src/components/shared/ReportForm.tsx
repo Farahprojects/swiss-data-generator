@@ -127,6 +127,19 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const onSubmit = async (data: ReportFormData) => {
+    // Log payload when Review & Pay is pressed
+    await logToAdmin('ReportForm', 'review_pay_pressed', 'User clicked Review & Pay - Final payload', {
+      reportType: data.reportType,
+      request: data.request,
+      name: data.name,
+      email: data.email,
+      birthDate: data.birthDate,
+      birthTime: data.birthTime,
+      birthLocation: data.birthLocation,
+      coordinates: { lat: data.birthLatitude, lng: data.birthLongitude },
+      hasSecondPerson: !!(data.secondPersonName),
+      promoCode: data.promoCode || 'none'
+    });
     
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
     
