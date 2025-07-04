@@ -37,9 +37,9 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
               const IconComponent = subCategory.icon;
               const isSelected = field.value === subCategory.value;
               
-              // Get price using desktop logic
+              // Get price using request field for proper fallback logic
               const formData = {
-                reportType: subCategory.reportType,
+                request: subCategory.value === 'essence_bundle' ? 'essence' : 'sync',
                 reportCategory: 'astro-data',
                 astroDataType: subCategory.value
               };
