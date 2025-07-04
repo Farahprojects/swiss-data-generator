@@ -39,9 +39,8 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   
 
   const reportCategory = watch('reportCategory');
-  const requestField = watch('request');
   const request = watch('request');
-  const isCompatibilityReport = reportCategory === 'compatibility' || requestField === 'sync' || request === 'sync';
+  const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
 
   // Person‑1
   const isFirstPersonComplete = useMemo(() => {
