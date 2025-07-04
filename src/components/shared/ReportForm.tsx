@@ -33,7 +33,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [reportPdfData, setReportPdfData] = useState<string | null>(null);
   
   const form = useForm<ReportFormData>({
-    resolver: zodResolver(reportSchema),
     mode: 'onBlur',
     defaultValues: {
       reportType: '',
@@ -156,38 +155,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       reportType: formData.reportType,
       request: formData.request,
       reportCategory: formData.reportCategory,
-      isValid: isValid,
-      hasErrors: Object.keys(errors).length > 0,
-      errorFields: Object.keys(errors),
       shouldUnlockForm: shouldUnlockForm,
       allFormData: formData
     });
 
     console.log('🖱️ Button clicked!');
     
-    // STEP 2: Log handleSubmit execution
-    handleSubmit(
-      async (data) => {
-        await logToAdmin('ReportForm', 'handleSubmit_success', 'Form validation passed', {
-          reportType: data.reportType,
-          request: data.request,
-          reportCategory: data.reportCategory,
-          validatedData: data
-        });
-        console.log('✅ Form validation passed, submitting:', data);
-        await onSubmit(data);
-      },
-      async (errors) => {
-        await logToAdmin('ReportForm', 'handleSubmit_error', 'Form validation failed', {
-          errors: errors,
-          errorFields: Object.keys(errors),
-          formData: form.getValues(),
-          isValid: isValid,
-          formState: formState
-        });
-        console.log('❌ Form validation failed:', errors);
-      }
-    )();
+    // Submit directly without validation
+    await onSubmit(formData);
   };
 
   // Show report viewer if user is viewing a report
