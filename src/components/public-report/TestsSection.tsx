@@ -53,7 +53,7 @@ const testData: Test[] = [
   {
     id: "Focus",
     name: "Astro Data",
-    description: "Optimal timing for productivity & rest • $3",
+    description: "Raw astro data delivered in seconds • $3",
     slug: "life-shift",
     time: "10 min",
     color: "bg-purple-500",

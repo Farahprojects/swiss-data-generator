@@ -53,7 +53,7 @@ export const TestCard = ({ title, description, path, isActive, onHover, onExplor
             {title}
           </h3>
           {description && (
-            <p className="text-sm text-gray-500 mt-2 font-light">{description}</p>
+            <p className="text-base text-gray-700 mt-2 font-normal">{description}</p>
           )}
         </div>
         
