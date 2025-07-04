@@ -104,19 +104,8 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
-      <div className="flex items-center justify-center relative px-6 py-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onPrev}
-          className="absolute left-6 p-2 hover:bg-gray-50"
-          type="button"
-        >
-          <ArrowLeft className="h-5 w-5 text-gray-700" />
-        </Button>
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{getHeadingText(selectedCategory)}</h2>
-        </div>
+      <div className="text-center space-y-2 pt-8">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{getHeadingText(selectedCategory)}</h2>
       </div>
 
       <Controller
