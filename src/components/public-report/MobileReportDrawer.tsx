@@ -345,7 +345,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             <div
               ref={scrollContainerRef}
               className={`flex-1 px-6 overflow-y-auto scrollbar-hide ${
-                currentStep >= 3 ? 'pb-[calc(var(--footer-space,72px))]' : 'pb-6'
+                currentStep >= 2 ? 'pb-[calc(var(--footer-space,72px))]' : 'pb-6'
               }`}
             >
               <AnimatePresence mode="wait">
@@ -406,7 +406,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             </div>
 
             {/* ----------------------- FOOTER -------------------------- */}
-            {currentStep >= 3 && (
+            {currentStep >= 2 && (
               <div
                 ref={footerRef}
                 className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 p-4 pb-safe flex gap-3 items-center z-50"
@@ -423,21 +423,23 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 >
                   Back
                 </button>
-                <button
-                  type="button"
-                  onClick={currentStep === 3 ? handleStep3Continue : handleFormSubmit}
-                  disabled={currentStep === 4 && (isProcessing || isValidatingPromo)}
-                  className="w-auto min-w-fit bg-gray-900 text-white px-8 py-2.5 rounded-lg text-base font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  {currentStep === 3
-                    ? 'Continue'
-                    : isProcessing
-                    ? 'Processing…'
-                    : isValidatingPromo
-                    ? 'Validating…'
-                    : 'Confirm'}
-                </button>
+                {currentStep >= 3 && (
+                  <button
+                    type="button"
+                    onClick={currentStep === 3 ? handleStep3Continue : handleFormSubmit}
+                    disabled={currentStep === 4 && (isProcessing || isValidatingPromo)}
+                    className="w-auto min-w-fit bg-gray-900 text-white px-8 py-2.5 rounded-lg text-base font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    {currentStep === 3
+                      ? 'Continue'
+                      : isProcessing
+                      ? 'Processing…'
+                      : isValidatingPromo
+                      ? 'Validating…'
+                      : 'Confirm'}
+                  </button>
+                )}
               </div>
             )}
           </div>
