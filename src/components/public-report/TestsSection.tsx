@@ -203,7 +203,7 @@ export default function TestsSection() {
                       className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
                     >
                       {test.id === 'Essence' ? (
-                        <div className="w-full h-full bg-white">
+                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                           <img 
                             src={test.imageSrc} 
                             alt="The Self Report" 
@@ -211,7 +211,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Sync' ? (
-                        <div className="w-full h-full bg-white">
+                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                           <img 
                             src={test.imageSrc} 
                             alt="Compatibility Report" 
@@ -219,7 +219,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Flow' ? (
-                        <div className="w-full h-full bg-white">
+                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                           <img 
                             src={test.imageSrc} 
                             alt="Flow Report" 
@@ -227,7 +227,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Monthly' ? (
-                        <div className="w-full h-full bg-white">
+                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                           <img 
                             src={test.imageSrc} 
                             alt="Energy Month Report" 
@@ -235,7 +235,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Mindset' ? (
-                        <div className="w-full h-full bg-white">
+                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                           <img 
                             src={test.imageSrc} 
                             alt="Mindset Report" 
@@ -243,7 +243,7 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : test.id === 'Focus' ? (
-                        <div className="w-full h-full bg-white">
+                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                           <img 
                             src={test.imageSrc} 
                             alt="Focus Report" 
@@ -251,16 +251,18 @@ export default function TestsSection() {
                           />
                         </div>
                       ) : (
-                        <ReportCard
-                          type={getReportGuide(test.id).type}
-                          icon={getReportGuide(test.id).icon}
-                          title={getReportGuide(test.id).title}
-                          price={getReportGuide(test.id).price}
-                          bestFor={getReportGuide(test.id).bestFor}
-                          description={getReportGuide(test.id).description}
-                          details={getReportGuide(test.id).details}
-                          subTypes={getReportGuide(test.id).subTypes}
-                        />
+                        <div className="w-full h-full flex items-center justify-center p-4">
+                          <ReportCard
+                            type={getReportGuide(test.id).type}
+                            icon={getReportGuide(test.id).icon}
+                            title={getReportGuide(test.id).title}
+                            price={getReportGuide(test.id).price}
+                            bestFor={getReportGuide(test.id).bestFor}
+                            description={getReportGuide(test.id).description}
+                            details={getReportGuide(test.id).details}
+                            subTypes={getReportGuide(test.id).subTypes}
+                          />
+                        </div>
                       )}
                     </div>
                   );
@@ -348,16 +350,18 @@ export default function TestsSection() {
                       />
                     </div>
                   ) : (
-                    <ReportCard
-                      type={getReportGuide(test.id).type}
-                      icon={getReportGuide(test.id).icon}
-                      title={getReportGuide(test.id).title}
-                      price={getReportGuide(test.id).price}
-                      bestFor={getReportGuide(test.id).bestFor}
-                      description={getReportGuide(test.id).description}
-                      details={getReportGuide(test.id).details}
-                      subTypes={getReportGuide(test.id).subTypes}
-                    />
+                     <div className="w-full h-full flex items-center justify-center p-4">
+                       <ReportCard
+                         type={getReportGuide(test.id).type}
+                         icon={getReportGuide(test.id).icon}
+                         title={getReportGuide(test.id).title}
+                         price={getReportGuide(test.id).price}
+                         bestFor={getReportGuide(test.id).bestFor}
+                         description={getReportGuide(test.id).description}
+                         details={getReportGuide(test.id).details}
+                         subTypes={getReportGuide(test.id).subTypes}
+                       />
+                     </div>
                   )}
                 </div>
               );
