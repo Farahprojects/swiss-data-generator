@@ -180,7 +180,8 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className="h-12"
+          className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
+          style={{ fontSize: '16px' }} // Prevent zoom on iOS
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
