@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -65,6 +66,7 @@ const Step3Payment = ({
   const essenceType = watch('essenceType');
   const relationshipType = watch('relationshipType');
   const astroDataType = watch('astroDataType');
+  const request = watch('request');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
@@ -74,14 +76,15 @@ const Step3Payment = ({
   let priceError: string | null = null;
 
   try {
-    if (reportType) {
+    if (reportType || request) {
       basePrice = getReportPrice({
         reportType,
         essenceType,
         relationshipType,
         reportCategory,
         reportSubCategory,
-        astroDataType
+        astroDataType,
+        request
       });
       
       reportTitle = getReportTitle({
@@ -90,7 +93,8 @@ const Step3Payment = ({
         relationshipType,
         reportCategory,
         reportSubCategory,
-        astroDataType
+        astroDataType,
+        request
       });
     }
   } catch (error) {
