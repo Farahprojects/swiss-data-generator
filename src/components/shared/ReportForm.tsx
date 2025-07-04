@@ -145,7 +145,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     form.reset();
     localStorage.removeItem('currentGuestReportId');
     localStorage.removeItem('pending_report_email');
-    window.location.reload(); // Refresh to completely reset the form
+    // Form reset handled by React state - no page reload needed
   };
 
   const onSubmit = async (data: ReportFormData) => {
