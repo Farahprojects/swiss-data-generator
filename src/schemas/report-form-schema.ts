@@ -1,3 +1,4 @@
+
 import * as z from 'zod';
 
 export const reportSchema = z.object({
@@ -38,7 +39,8 @@ export const reportSchema = z.object({
   message: "Please select a report type or specify a request",
   path: ["reportType"]
 }).refine((data) => {
-  if (data.reportType === 'essence' && (!data.essenceType || data.essenceType === '')) {
+  // Check essence type for both reportType and request fields
+  if ((data.reportType === 'essence' || data.request === 'essence') && (!data.essenceType || data.essenceType === '')) {
     return false;
   }
   return true;
@@ -46,7 +48,8 @@ export const reportSchema = z.object({
   message: "Please select an essence focus type",
   path: ["essenceType"]
 }).refine((data) => {
-  if (data.reportType === 'sync' && (!data.relationshipType || data.relationshipType === '')) {
+  // Check relationship type for both reportType and request fields
+  if ((data.reportType === 'sync' || data.request === 'sync') && (!data.relationshipType || data.relationshipType === '')) {
     return false;
   }
   return true;
@@ -54,7 +57,8 @@ export const reportSchema = z.object({
   message: "Please select a relationship type",
   path: ["relationshipType"]
 }).refine((data) => {
-  if (data.reportType === 'sync' && (!data.secondPersonName || data.secondPersonName.trim() === '')) {
+  // Check second person name for both reportType and request fields
+  if ((data.reportType === 'sync' || data.request === 'sync') && (!data.secondPersonName || data.secondPersonName.trim() === '')) {
     return false;
   }
   return true;
@@ -62,7 +66,8 @@ export const reportSchema = z.object({
   message: "Second person's name is required for sync reports",
   path: ["secondPersonName"]
 }).refine((data) => {
-  if (data.reportType === 'sync' && (!data.secondPersonBirthDate || data.secondPersonBirthDate === '')) {
+  // Check second person birth date for both reportType and request fields
+  if ((data.reportType === 'sync' || data.request === 'sync') && (!data.secondPersonBirthDate || data.secondPersonBirthDate === '')) {
     return false;
   }
   return true;
@@ -70,7 +75,8 @@ export const reportSchema = z.object({
   message: "Second person's birth date is required for sync reports",
   path: ["secondPersonBirthDate"]
 }).refine((data) => {
-  if (data.reportType === 'sync' && (!data.secondPersonBirthTime || data.secondPersonBirthTime === '')) {
+  // Check second person birth time for both reportType and request fields
+  if ((data.reportType === 'sync' || data.request === 'sync') && (!data.secondPersonBirthTime || data.secondPersonBirthTime === '')) {
     return false;
   }
   return true;
@@ -78,7 +84,8 @@ export const reportSchema = z.object({
   message: "Second person's birth time is required for sync reports",
   path: ["secondPersonBirthTime"]
 }).refine((data) => {
-  if (data.reportType === 'sync' && (!data.secondPersonBirthLocation || data.secondPersonBirthLocation.trim() === '')) {
+  // Check second person birth location for both reportType and request fields
+  if ((data.reportType === 'sync' || data.request === 'sync') && (!data.secondPersonBirthLocation || data.secondPersonBirthLocation.trim() === '')) {
     return false;
   }
   return true;
