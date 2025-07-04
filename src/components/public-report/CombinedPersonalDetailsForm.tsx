@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ReportFormData } from '@/types/public-report';
+import { useGoogleMapsScript } from '@/components/shared/forms/place-input/hooks/useGoogleMapsScript';
 import FormStep from './FormStep';
 
 interface CombinedPersonalDetailsFormProps {
@@ -16,12 +17,13 @@ interface CombinedPersonalDetailsFormProps {
 }
 
 const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: CombinedPersonalDetailsFormProps) => {
+  const { isLoaded: isGoogleMapsLoaded } = useGoogleMapsScript();
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
     email: false,
     birthDate: false,
     birthTime: false,
-    birthLocation: false,
+    birthLocation: false
   });
 
   const birthLocation = watch('birthLocation') || '';
@@ -125,20 +127,32 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: Comb
             </div>
           </div>
           <div className="space-y-2">
-            <CleanPlaceAutocomplete
-              label="Birth Location *"
-              value={birthLocation}
-              onChange={(value) => {
-                setValue('birthLocation', value);
-                if (!hasInteracted.birthLocation && value) {
-                  handleFieldInteraction('birthLocation');
-                }
-              }}
-              onPlaceSelect={handlePlaceSelect}
-              placeholder="Enter birth city, state, country"
-              id="birthLocation"
-              error={shouldShowError('birthLocation', errors.birthLocation) ? errors.birthLocation?.message : undefined}
-            />
+            {isGoogleMapsLoaded ? (
+              <CleanPlaceAutocomplete
+                label="Birth Location *"
+                value={birthLocation}
+                onChange={(value) => {
+                  setValue('birthLocation', value);
+                  if (!hasInteracted.birthLocation && value) {
+                    handleFieldInteraction('birthLocation');
+                  }
+                }}
+                onPlaceSelect={handlePlaceSelect}
+                placeholder="Enter birth city, state, country"
+                id="birthLocation"
+                error={shouldShowError('birthLocation', errors.birthLocation) ? errors.birthLocation?.message : undefined}
+              />
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="birthLocation">Birth Location *</Label>
+                <Input
+                  id="birthLocation"
+                  placeholder="Loading location search..."
+                  disabled
+                  className="bg-gray-50"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
