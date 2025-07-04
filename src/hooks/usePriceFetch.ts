@@ -37,9 +37,9 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
     return mappedId;
   }
   
-  // Handle astro data reports - use the specific astro data type
+  // Handle astro data reports - map to correct price IDs
   if (reportCategory === 'astro-data' && astroDataType) {
-    return astroDataType; // essence_bundle, sync_rich
+    return astroDataType; // essence, sync (direct mapping to price_list)
   }
   
   // Handle astro data based on request field (fallback)
