@@ -451,6 +451,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               email={submittedData.email}
               onViewReport={handleViewReport}
               guestReportId={localStorage.getItem('currentGuestReportId') || undefined}
+              isAstroDataReport={reportCategory === 'astro-data'}
             />
           </div>
         )}

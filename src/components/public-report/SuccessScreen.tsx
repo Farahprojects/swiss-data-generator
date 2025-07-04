@@ -73,6 +73,7 @@ interface SuccessScreenProps {
   onViewReport?: (content: string, pdf?: string | null) => void;
   autoStartPolling?: boolean;
   guestReportId?: string;
+  isAstroDataReport?: boolean;
 }
 
 const SuccessScreen: React.FC<SuccessScreenProps> = ({
@@ -81,6 +82,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   onViewReport,
   autoStartPolling = true,
   guestReportId,
+  isAstroDataReport = false,
 }) => {
   // ---------------------------------------------------------------------------
   // Hooks & State
@@ -196,17 +198,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   }, [countdown, isReady, caseNumber, email, triggerErrorHandling]);
 
   // ---------------------------------------------------------------------------
-  // Auto redirect when ready
+  // Auto redirect when ready (skip auto-redirect for astro data reports)
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (isReady && onViewReport) {
+    if (isReady && onViewReport && !isAstroDataReport) {
       redirectRef.current = setTimeout(
         () => onViewReport(report!.report_content!, report!.report_pdf_data),
         2_000,
       );
     }
     return () => redirectRef.current && clearTimeout(redirectRef.current);
-  }, [isReady, onViewReport, report]);
+  }, [isReady, onViewReport, report, isAstroDataReport]);
 
   // ---------------------------------------------------------------------------
   // Retry helper
@@ -334,12 +336,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
             {isReady && (
               <>
                 {PersonalNote}
-                <Button 
-                  onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
-                  className="bg-gray-900 hover:bg-gray-800 text-white font-light"
-                >
-                  View now
-                </Button>
+                {isAstroDataReport ? (
+                  <motion.button
+                    onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
+                    className="group flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-light transition-all duration-200"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <span>View Data</span>
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </motion.button>
+                ) : (
+                  <Button 
+                    onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
+                    className="bg-gray-900 hover:bg-gray-800 text-white font-light"
+                  >
+                    View now
+                  </Button>
+                )}
               </>
             )}
 
