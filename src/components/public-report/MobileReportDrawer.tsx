@@ -266,9 +266,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
             <div
               ref={scrollContainerRef}
-              className={`flex-1 px-6 ${(currentStep === 3 || currentStep === 4) ? 'pb-6' : 'pb-6'} ${needsScrolling ? 'overflow-y-auto scrollbar-hide' : 'flex items-center justify-center'}`}
+              className={`flex-1 px-6 ${(currentStep === 3 || currentStep === 4) ? 'pb-20' : 'pb-6'} ${needsScrolling ? 'overflow-y-auto scrollbar-hide' : 'flex items-center justify-center'}`}
               style={{ 
-                paddingTop: currentStep === 3 ? '0.5rem' : undefined // Reduced padding for Step2BirthDetails
+                paddingTop: currentStep === 3 ? '1rem' : undefined // Extra padding for Step2BirthDetails
               }}
             >
               <AnimatePresence mode="wait">

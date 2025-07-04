@@ -73,10 +73,10 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -50 }}
         transition={{ duration: 0.3 }}
-        className="space-y-6"
+        className="space-y-12"
       >
         {/* Header */}
-        <div className="flex items-center justify-center px-6 py-4">
+        <div className="flex items-center justify-center px-6 py-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-4 tracking-tight">
               Your <em className="italic font-light">Info</em>
