@@ -62,7 +62,7 @@ const testData: Test[] = [
   {
     id: "Flow",
     name: "",
-    description: "Creative & emotional rhythm tracking • $3",
+    description: "",
     slug: "Flow",
     time: "15 min",
     color: "bg-green-500",
