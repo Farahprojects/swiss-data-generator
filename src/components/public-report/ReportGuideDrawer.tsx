@@ -17,7 +17,7 @@ import {
   Target,
   CalendarDays,
 } from 'lucide-react';
-import { useReportGuidePricing } from '@/hooks/useReportGuidePricing';
+import { usePriceFetch } from '@/hooks/usePriceFetch';
 
 interface ReportGuideDrawerProps {
   isOpen: boolean;
@@ -27,31 +27,38 @@ interface ReportGuideDrawerProps {
 
 const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDrawerProps) => {
   const targetRef = useRef<HTMLDivElement>(null);
-  const { pricing, isLoading, formatPrice } = useReportGuidePricing();
+  const { getReportPrice } = usePriceFetch();
+  
+  const formatPrice = (price: number) => `$${Math.round(price)}`;
+  
+  const getPrice = (reportType: string, subType?: string) => {
+    const formData = { reportType, essenceType: subType, relationshipType: subType };
+    return getReportPrice(formData);
+  };
 
   const getSubTypesWithPricing = (type: string) => {
     switch (type) {
       case 'Essence':
         return [
-          `Personal – Your authentic self and emotional patterns (${formatPrice(pricing.essence_personal)})`,
-          `Professional – How you work best and lead others (${formatPrice(pricing.essence_professional)})`,
-          `Relational – Your relationship style and communication needs (${formatPrice(pricing.essence_relational)})`
+          `Personal – Your authentic self and emotional patterns (${formatPrice(getPrice('essence', 'personal'))})`,
+          `Professional – How you work best and lead others (${formatPrice(getPrice('essence', 'professional'))})`,
+          `Relational – Your relationship style and communication needs (${formatPrice(getPrice('essence', 'relational'))})`
         ];
       case 'Sync':
         return [
-          `Personal Sync – Romantic and close relationships (${formatPrice(pricing.sync_personal)})`,
-          `Professional Sync – Work partnerships and team dynamics (${formatPrice(pricing.sync_professional)})`
+          `Personal Sync – Romantic and close relationships (${formatPrice(getPrice('sync', 'personal'))})`,
+          `Professional Sync – Work partnerships and team dynamics (${formatPrice(getPrice('sync', 'professional'))})`
         ];
       case 'Snapshots':
         return [
-          `Focus – Best hours for deep work or rest today (${formatPrice(pricing.focus)})`,
-          `Mindset – Current mental clarity and cognitive strengths (${formatPrice(pricing.mindset)})`,
-          `Monthly – Personal forecast for the current month (${formatPrice(pricing.monthly)})`
+          `Focus – Best hours for deep work or rest today (${formatPrice(getPrice('focus'))})`,
+          `Mindset – Current mental clarity and cognitive strengths (${formatPrice(getPrice('mindset'))})`,
+          `Monthly – Personal forecast for the current month (${formatPrice(getPrice('monthly'))})`
         ];
       case 'AstroData':
         return [
-          `Essence Data – Complete personality chart calculations (${formatPrice(pricing.essence)})`,
-          `Sync Data – Relationship compatibility calculations (${formatPrice(pricing.sync)})`
+          `Essence Data – Complete personality chart calculations (${formatPrice(getPrice('essence'))})`,
+          `Sync Data – Relationship compatibility calculations (${formatPrice(getPrice('sync'))})`
         ];
       default:
         return [];
@@ -179,7 +186,7 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
           <div className="space-y-6">
             {reportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
-              const price = pricing[report.priceKey];
+              const price = getPrice(report.type === 'Essence' ? 'essence' : 'sync', 'personal');
               
               return (
                 <Card 
@@ -214,7 +221,7 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                       </div>
                       {(report.type === 'Essence' || report.type === 'Sync') && (
                         <span className="font-light text-xl text-gray-900">
-                          {isLoading ? '...' : formatPrice(price)}
+                          {formatPrice(price)}
                         </span>
                       )}
                     </div>

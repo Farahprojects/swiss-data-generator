@@ -3,7 +3,7 @@ import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { astroDataSubCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
-import { useReportGuidePricing } from '@/hooks/useReportGuidePricing';
+import { usePriceFetch } from '@/hooks/usePriceFetch';
 
 interface Step1_5AstroDataProps {
   control: any;
@@ -13,7 +13,7 @@ interface Step1_5AstroDataProps {
 }
 
 const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: Step1_5AstroDataProps) => {
-  const { pricing, formatPrice } = useReportGuidePricing();
+  const { getReportPrice } = usePriceFetch();
 
   return (
     <motion.div
@@ -36,7 +36,15 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
             {astroDataSubCategories.map((subCategory) => {
               const IconComponent = subCategory.icon;
               const isSelected = field.value === subCategory.value;
-              const price = pricing[subCategory.value];
+              
+              // Get price using desktop logic
+              const formData = {
+                reportType: subCategory.reportType,
+                reportCategory: 'astro-data',
+                astroDataType: subCategory.value
+              };
+              const price = getReportPrice(formData);
+              const formatPrice = (price: number) => `$${Math.round(price)}`;
               
               return (
                 <motion.button
