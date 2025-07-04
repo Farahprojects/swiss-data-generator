@@ -85,11 +85,8 @@ export const useReportSubmission = () => {
         }
       }
 
-      const completeReportType = buildCompleteReportType(
-        data.reportType, 
-        data.essenceType, 
-        data.relationshipType
-      );
+      // Simplified report type - removed complex validation
+      const reportTypeToUse = data.request || data.reportType || 'standard';
 
       // Handle free report with promo code
       if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
@@ -105,7 +102,7 @@ export const useReportSubmission = () => {
         
         
         const reportData = {
-          reportType: isAstroData ? data.request : completeReportType,
+          reportType: reportTypeToUse,
           request: isAstroData ? data.request : '',
           relationshipType: data.relationshipType,
           essenceType: data.essenceType,
@@ -173,7 +170,7 @@ export const useReportSubmission = () => {
       
       
       const reportData = {
-        reportType: isAstroData ? data.request : completeReportType,
+        reportType: reportTypeToUse,
         request: isAstroData ? data.request : '',
         relationshipType: data.relationshipType,
         essenceType: data.essenceType,

@@ -57,12 +57,7 @@ export const FormValidationStatus: React.FC<FormValidationStatusProps> = ({
       isValid: !!formData.birthLocation,
       isRequired: true
     },
-    {
-      field: 'coordinates',
-      label: 'Location coordinates',
-      isValid: !!(formData.birthLatitude && formData.birthLongitude),
-      isRequired: true
-    }
+    // Removed coordinate validation - let backend handle it
   ];
 
   // Add second person validation if required
