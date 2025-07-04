@@ -128,8 +128,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     handlePromoConfirmationContinue
   } = useReportSubmission();
 
-  // Simplified - no tight validation, let backend handle it
-  const requiresSecondPerson = false; // Removed tight validation
+  // Check if this is a compatibility report that needs second person data
+  const reportCategory = watch('reportCategory');
+  const reportType = watch('reportType');
+  const request = watch('request');
+  
+  const requiresSecondPerson = reportCategory === 'compatibility' || 
+                               reportType?.startsWith('sync_') || 
+                               request === 'sync';
 
   const handleViewReport = (content: string, pdfData?: string | null) => {
     setReportContent(content);
