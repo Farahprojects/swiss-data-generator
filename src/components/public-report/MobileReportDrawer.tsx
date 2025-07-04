@@ -330,11 +330,11 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
             {/* Footer for steps 3 and 4 */}
             {(currentStep === 3 || currentStep === 4) && (
-              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3 z-50">
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3 z-50 h-20">
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg text-base font-medium hover:bg-gray-200 transition-all duration-300"
+                  className="w-auto min-w-fit bg-gray-100 text-gray-700 px-6 py-2.5 rounded-lg text-base font-medium hover:bg-gray-200 transition-all duration-300"
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
                 >
                   Back
@@ -343,8 +343,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                   type="button"
                   onClick={currentStep === 3 ? nextStep : handleFormSubmit}
                   disabled={currentStep === 4 && (isProcessing || isValidatingPromo)}
-                  className="flex-2 bg-gray-900 text-white px-4 py-2.5 rounded-lg text-base font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
-                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none', flex: '2' }}
+                  className="w-auto min-w-fit bg-gray-900 text-white px-8 py-2.5 rounded-lg text-base font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', WebkitAppearance: 'none' }}
                 >
                   {currentStep === 3 
                     ? 'Continue' 
