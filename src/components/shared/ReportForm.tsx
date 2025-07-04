@@ -138,9 +138,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const handleCloseReportViewer = () => {
+    // Reset all form state and close the entire flow
     setViewingReport(false);
     setReportContent('');
     setReportPdfData(null);
+    form.reset();
+    localStorage.removeItem('currentGuestReportId');
+    localStorage.removeItem('pending_report_email');
+    window.location.reload(); // Refresh to completely reset the form
   };
 
   const onSubmit = async (data: ReportFormData) => {
