@@ -158,18 +158,6 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
           </div>
         )}
       />
-
-      {/* Compact back button with icon */}
-      <div className="flex justify-start">
-        <Button
-          onClick={onPrev}
-          variant="outline"
-          className="inline-flex items-center gap-2 px-4 py-2 h-10 text-sm font-medium border-2 border-primary text-primary bg-white hover:bg-accent"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-      </div>
     </motion.div>
   );
 };

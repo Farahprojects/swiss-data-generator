@@ -244,7 +244,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       >
         {/* Header buttons */}
         <div className="absolute top-3 left-0 right-0 flex justify-between items-center px-4 z-10">
-          {currentStep === 3 && (
+          {(currentStep === 2 || currentStep === 3) && (
             <button
               type="button"
               onClick={prevStep}
@@ -277,7 +277,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
             <div
               ref={scrollContainerRef}
-              className={`flex-1 px-6 pb-6 ${needsScrolling ? 'overflow-y-auto' : 'flex items-center justify-center'}`}
+              className={`flex-1 px-6 pb-6 ${needsScrolling ? 'overflow-y-auto scrollbar-hide' : 'flex items-center justify-center'}`}
               style={{ 
                 paddingTop: currentStep === 3 ? '1rem' : undefined // Extra padding for Step2BirthDetails
               }}
