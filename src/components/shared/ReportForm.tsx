@@ -1,8 +1,6 @@
 
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
@@ -12,6 +10,7 @@ import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 import DesktopReportViewer from '@/components/public-report/DesktopReportViewer';
+import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 import { logToAdmin } from '@/utils/adminLogger';
 
 interface ReportFormProps {
@@ -108,20 +107,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const onSubmit = async (data: ReportFormData) => {
-    // STEP 3: Log entry into onSubmit function with form data
-    await logToAdmin('ReportForm', 'onSubmit_entry', 'onSubmit function called', {
-      hasReportType: !!data.reportType,
-      hasRequest: !!data.request,
-      reportCategory: data.reportCategory,
+    await logToAdmin('ReportForm', 'submit', 'Form submitted', {
+      reportType: data.reportType,
       request: data.request,
-      isValid: isValid,
-      formErrors: Object.keys(errors),
-      reportType: data.reportType
+      hasName: !!data.name,
+      hasEmail: !!data.email
     });
 
-    console.log('✅ Form submission successful, data:', data);
+    console.log('✅ Form submission:', data);
     
-    // Add coach attribution if provided
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
     
     // Convert promoValidation to the expected format
@@ -137,31 +131,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       message: '',
       discountPercent: 0
     };
-
-    // Log the submission data transformation
-    await logToAdmin('ReportForm', 'onSubmit_data_prep', 'Prepared submission data', {
-      hasCoachSlug: !!coachSlug,
-      promoValidationStatus: promoValidationState.status,
-      submissionDataKeys: Object.keys(submissionData)
-    });
     
     await submitReport(submissionData, promoValidationState, () => {});
   };
 
   const handleButtonClick = async () => {
-    // STEP 1: Log form button click
     const formData = form.getValues();
-    await logToAdmin('ReportForm', 'button_click', 'Get My Insights button clicked', {
+    await logToAdmin('ReportForm', 'click', 'Submit clicked', {
       reportType: formData.reportType,
-      request: formData.request,
-      reportCategory: formData.reportCategory,
-      shouldUnlockForm: shouldUnlockForm,
-      allFormData: formData
+      request: formData.request
     });
 
-    console.log('🖱️ Button clicked!');
-    
-    // Submit directly without validation
+    console.log('🖱️ Submit clicked');
     await onSubmit(formData);
   };
 
@@ -200,6 +181,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             showReportGuide={false}
             setShowReportGuide={() => {}}
             setValue={setValue}
+          />
+
+          <FormValidationStatus
+            formData={form.getValues()}
+            errors={errors}
+            requiresSecondPerson={requiresSecondPerson}
           />
 
           <CombinedPersonalDetailsForm
