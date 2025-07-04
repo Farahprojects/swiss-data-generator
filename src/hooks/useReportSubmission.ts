@@ -33,14 +33,6 @@ export const useReportSubmission = () => {
     setPromoValidation: (state: PromoValidationState) => void,
     skipPromoValidation: boolean = false
   ) => {
-    await logToAdmin('useReportSubmission', 'submit', 'submitReport called', {
-      reportType: data.reportType,
-      request: data.request,
-      hasPromo: !!data.promoCode
-    });
-
-    console.log('🚀 Form submission started');
-    console.log('📝 Form data:', data);
     
     setIsProcessing(true);
     
@@ -48,7 +40,6 @@ export const useReportSubmission = () => {
       // Validate promo code if present and not skipping validation
       let validatedPromo = null;
       if (data.promoCode && data.promoCode.trim() !== '' && !skipPromoValidation) {
-        console.log('🎫 Validating promo code:', data.promoCode);
         setPromoValidation({
           status: 'validating',
           message: 'Validating promo code...',
@@ -81,7 +72,7 @@ export const useReportSubmission = () => {
             request: data.request
           };
           
-          console.log('💰 useReportSubmission - Getting price with form data:', formDataForPricing);
+          
           
           const amount = getReportPrice(formDataForPricing);
           const description = getReportTitle(formDataForPricing);
@@ -112,11 +103,6 @@ export const useReportSubmission = () => {
           request: data.request
         });
         
-        console.log('💰 useReportSubmission - Astro data detection:', { 
-          isAstroData, 
-          request: data.request, 
-          reportType: data.reportType 
-        });
         
         const reportData = {
           reportType: isAstroData ? data.request : completeReportType,
@@ -165,7 +151,7 @@ export const useReportSubmission = () => {
         request: data.request
       };
       
-      console.log('💰 useReportSubmission - Getting price for paid flow with form data:', formDataForPricing);
+      
       
       const amount = getReportPrice(formDataForPricing);
       const description = getReportTitle(formDataForPricing);
@@ -185,11 +171,6 @@ export const useReportSubmission = () => {
         amount: finalAmount
       });
       
-      console.log('💰 useReportSubmission - Astro data detection for paid flow:', { 
-        isAstroData, 
-        request: data.request, 
-        reportType: data.reportType 
-      });
       
       const reportData = {
         reportType: isAstroData ? data.request : completeReportType,
@@ -216,7 +197,7 @@ export const useReportSubmission = () => {
         promoCode: data.promoCode,
       };
       
-      console.log('Report data being sent to checkout:', reportData);
+      
       
       await logToAdmin('useReportSubmission', 'checkout', 'Calling checkout', {
         amount: finalAmount,
@@ -246,14 +227,13 @@ export const useReportSubmission = () => {
         error: error instanceof Error ? error.message : String(error)
       });
       
-      console.error('Error processing report:', error);
+      
       toast({
         title: "Error",
         description: "Failed to process your request. Please try again.",
         variant: "destructive",
       });
     } finally {
-      console.log('🏁 Form submission completed');
       setIsProcessing(false);
     }
   };

@@ -69,10 +69,28 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Check if form should be unlocked (either reportType or request field filled)
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);
 
-  // Notify parent of form state changes
+  // Check if all key information is filled out
   React.useEffect(() => {
+    const formData = form.getValues();
+    const hasReportTypeOrRequest = !!(formData.reportType || formData.request);
+    const hasPersonalInfo = !!(formData.name && formData.email && formData.birthDate && formData.birthTime);
+    const hasLocationWithCoords = !!(formData.birthLocation && formData.birthLatitude && formData.birthLongitude);
+    
+    if (hasReportTypeOrRequest && hasPersonalInfo && hasLocationWithCoords) {
+      console.log('✅ PAYLOAD READY:', {
+        reportType: formData.reportType,
+        request: formData.request,
+        name: formData.name,
+        email: formData.email,
+        birthDate: formData.birthDate,
+        birthTime: formData.birthTime,
+        birthLocation: formData.birthLocation,
+        coordinates: { lat: formData.birthLatitude, lng: formData.birthLongitude }
+      });
+    }
+    
     onFormStateChange?.(isValid, shouldUnlockForm);
-  }, [isValid, shouldUnlockForm, onFormStateChange]);
+  }, [form.watch(), isValid, shouldUnlockForm, onFormStateChange]);
 
   const { 
     isProcessing, 
@@ -93,28 +111,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     selectedRequest === 'sync';
 
   const handleViewReport = (content: string, pdfData?: string | null) => {
-    console.log('📄 Opening report viewer with content:', content ? 'Content loaded' : 'No content');
     setReportContent(content);
     setReportPdfData(pdfData || null);
     setViewingReport(true);
   };
 
   const handleCloseReportViewer = () => {
-    console.log('❌ Closing report viewer');
     setViewingReport(false);
     setReportContent('');
     setReportPdfData(null);
   };
 
   const onSubmit = async (data: ReportFormData) => {
-    await logToAdmin('ReportForm', 'submit', 'Form submitted', {
-      reportType: data.reportType,
-      request: data.request,
-      hasName: !!data.name,
-      hasEmail: !!data.email
-    });
-
-    console.log('✅ Form submission:', data);
     
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
     
@@ -137,12 +145,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const handleButtonClick = async () => {
     const formData = form.getValues();
-    await logToAdmin('ReportForm', 'click', 'Submit clicked', {
-      reportType: formData.reportType,
-      request: formData.request
-    });
-
-    console.log('🖱️ Submit clicked');
     await onSubmit(formData);
   };
 
