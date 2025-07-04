@@ -112,8 +112,8 @@ const Step3Payment = ({
     });
   }
 
-  // Only calculate pricing if we have a valid base price, otherwise use fallback
-  const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : calculatePricing(19.99, promoValidation);
+  // Calculate pricing - global fallback will handle missing prices
+  const pricing = calculatePricing(basePrice || 0, promoValidation);
 
   const getPromoValidationIcon = () => {
     if (isValidatingPromo) {
@@ -190,8 +190,8 @@ const Step3Payment = ({
         </div>
       </div>
     );
-  } else if (!pricing && !reportType && !request) {
-    // Only show "pricing unavailable" if we truly have no form data to work with  
+  } else if (!reportType && !request) {
+    // If no report data, go back to complete selection
     content = (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">

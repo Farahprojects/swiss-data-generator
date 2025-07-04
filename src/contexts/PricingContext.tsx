@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { GLOBAL_PRICING_FALLBACK, getGlobalPricing, getGlobalPricingByReportType } from '@/utils/globalPricing';
 
 interface PriceData {
   id: string;
@@ -75,19 +76,20 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
 
   const getPriceById = (id: string): PriceData | null => {
     const price = prices.find(p => p.id === id);
-    // Silenced: Only log in development mode and with debug level
-    if (!price && process.env.NODE_ENV === 'development') {
-      console.debug('Price lookup:', id, 'not found in current price list');
+    if (!price) {
+      // Use global fallback if not found in fetched prices
+      return getGlobalPricing(id);
     }
-    return price || null;
+    return price;
   };
 
   const getPriceByReportType = (reportType: string): PriceData | null => {
     const price = prices.find(p => p.report_type === reportType);
     if (!price) {
-      console.warn('❌ Price not found for report_type:', reportType);
+      // Use global fallback if not found in fetched prices
+      return getGlobalPricingByReportType(reportType);
     }
-    return price || null;
+    return price;
   };
 
   const value: PricingContextType = {

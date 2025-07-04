@@ -113,7 +113,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
         >
           <div className="flex items-center gap-2 group">
             <Star className="h-4 w-4 transition-transform group-hover:scale-110" />
-            <span>AI-Analyzed</span>
+            <span>Analyzed</span>
           </div>
           <div className="flex items-center gap-2 group">
             <Clock className="h-4 w-4 transition-transform group-hover:scale-110" />
