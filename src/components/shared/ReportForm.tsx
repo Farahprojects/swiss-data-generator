@@ -198,11 +198,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             setValue={setValue}
           />
 
-          <FormValidationStatus
-            formData={form.getValues()}
-            errors={errors}
-            requiresSecondPerson={requiresSecondPerson}
-          />
 
           <CombinedPersonalDetailsForm
             register={register}
