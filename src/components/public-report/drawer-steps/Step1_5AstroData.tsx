@@ -3,7 +3,7 @@ import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { astroDataSubCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
-import { useReportGuidePricing } from '@/hooks/useReportGuidePricing';
+import { usePriceFetch } from '@/hooks/usePriceFetch';
 
 interface Step1_5AstroDataProps {
   control: any;
@@ -13,7 +13,18 @@ interface Step1_5AstroDataProps {
 }
 
 const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: Step1_5AstroDataProps) => {
-  const { pricing, formatPrice } = useReportGuidePricing();
+  const { getReportPrice } = usePriceFetch();
+
+  // Get price for astro data type
+  const getAstroDataPrice = (astroDataType: string): string => {
+    try {
+      const price = getReportPrice({ astroDataType });
+      return `$${price}`;
+    } catch (error) {
+      console.warn('Price fetch failed for astro data type:', astroDataType, error);
+      return '$0';
+    }
+  };
 
   return (
     <motion.div
@@ -36,7 +47,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
             {astroDataSubCategories.map((subCategory) => {
               const IconComponent = subCategory.icon;
               const isSelected = field.value === subCategory.value;
-              const price = pricing[subCategory.value];
+              const price = getAstroDataPrice(subCategory.value);
               
               return (
                 <motion.button
@@ -62,7 +73,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                       <div className="flex justify-between items-start mb-1">
                         <h3 className="text-lg font-semibold text-gray-900">{subCategory.title}</h3>
                         <span className="text-sm font-bold text-primary">
-                          {formatPrice(price)}
+                          {price}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">{subCategory.description}</p>
