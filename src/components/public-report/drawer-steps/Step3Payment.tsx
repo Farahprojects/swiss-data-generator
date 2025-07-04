@@ -190,39 +190,6 @@ const Step3Payment = ({
         </div>
       </div>
     );
-  } else if (!reportType && !request) {
-    // If no report data, go back to complete selection
-    content = (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onPrev}
-            className="p-2"
-            type="button"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="text-center flex-1">
-            <h2 className="text-2xl font-bold text-gray-900">Complete Your Selection</h2>
-          </div>
-        </div>
-
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          <AlertTriangle className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-          <p className="text-blue-700">Please complete the previous steps to view pricing</p>
-          <Button 
-            onClick={onPrev}
-            variant="outline"
-            size="sm"
-            className="mt-3"
-          >
-            Go Back
-          </Button>
-        </div>
-      </div>
-    );
   } else {
     content = (
       <div className="min-h-screen bg-white">
