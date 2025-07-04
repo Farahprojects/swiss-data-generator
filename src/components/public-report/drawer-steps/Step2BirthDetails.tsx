@@ -42,6 +42,16 @@ const Step2BirthDetails = React.memo(function Step2BirthDetails({
   const request = watch('request');
   const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Step2BirthDetails Debug:', {
+      reportCategory,
+      request,
+      isCompatibilityReport,
+      showSecondPerson
+    });
+  }, [reportCategory, request, isCompatibilityReport, showSecondPerson]);
+
   // Person‑1
   const isFirstPersonComplete = useMemo(() => {
     const name = watch('name');
