@@ -71,25 +71,29 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Check if all key information is filled out
   React.useEffect(() => {
-    const formData = form.getValues();
-    const hasReportTypeOrRequest = !!(formData.reportType || formData.request);
-    const hasPersonalInfo = !!(formData.name && formData.email && formData.birthDate && formData.birthTime);
-    const hasLocationWithCoords = !!(formData.birthLocation && formData.birthLatitude && formData.birthLongitude);
+    const checkFormCompletion = async () => {
+      const formData = form.getValues();
+      const hasReportTypeOrRequest = !!(formData.reportType || formData.request);
+      const hasPersonalInfo = !!(formData.name && formData.email && formData.birthDate && formData.birthTime);
+      const hasLocationWithCoords = !!(formData.birthLocation && formData.birthLatitude && formData.birthLongitude);
+      
+      if (hasReportTypeOrRequest && hasPersonalInfo && hasLocationWithCoords) {
+        await logToAdmin('ReportForm', 'payload_ready', 'All required form data collected', {
+          reportType: formData.reportType,
+          request: formData.request,
+          name: formData.name,
+          email: formData.email,
+          birthDate: formData.birthDate,
+          birthTime: formData.birthTime,
+          birthLocation: formData.birthLocation,
+          coordinates: { lat: formData.birthLatitude, lng: formData.birthLongitude }
+        });
+      }
+      
+      onFormStateChange?.(isValid, shouldUnlockForm);
+    };
     
-    if (hasReportTypeOrRequest && hasPersonalInfo && hasLocationWithCoords) {
-      console.log('✅ PAYLOAD READY:', {
-        reportType: formData.reportType,
-        request: formData.request,
-        name: formData.name,
-        email: formData.email,
-        birthDate: formData.birthDate,
-        birthTime: formData.birthTime,
-        birthLocation: formData.birthLocation,
-        coordinates: { lat: formData.birthLatitude, lng: formData.birthLongitude }
-      });
-    }
-    
-    onFormStateChange?.(isValid, shouldUnlockForm);
+    checkFormCompletion();
   }, [form.watch(), isValid, shouldUnlockForm, onFormStateChange]);
 
   const { 
