@@ -11,6 +11,7 @@ import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
+import { logToAdmin } from '@/utils/adminLogger';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -127,23 +128,43 @@ const Step3Payment = ({
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('🟢 Attempting submission...');
+    await logToAdmin('Step3Payment', 'handleButtonClick_start', 'Get My Insights button clicked', {
+      reportType: reportType,
+      request: request,
+      reportCategory: reportCategory,
+      astroDataType: astroDataType,
+      basePrice: basePrice,
+      promoCode: promoCode
+    });
 
     try {
       // First validate promo code if present
       if (promoCode && promoCode.trim() !== '') {
+        await logToAdmin('Step3Payment', 'promo_validation_start', 'Starting promo validation', {
+          promoCode: promoCode
+        });
+        
         const validation = await validatePromoManually(promoCode);
+        
+        await logToAdmin('Step3Payment', 'promo_validation_result', 'Promo validation completed', {
+          validation: validation
+        });
         
         // Give user time to see the validation result
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
+      await logToAdmin('Step3Payment', 'calling_onSubmit', 'About to call onSubmit function', {});
+      
       // Then proceed with form submission via parent
       await onSubmit();
-      console.log('✅ onSubmit completed');
+      
+      await logToAdmin('Step3Payment', 'onSubmit_success', 'onSubmit completed successfully', {});
     } catch (err) {
-      console.error('❌ onSubmit failed:', err);
-      // Optional: send this to your Supabase log table
+      await logToAdmin('Step3Payment', 'onSubmit_error', 'onSubmit failed with error', {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : null
+      });
     }
   };
 
