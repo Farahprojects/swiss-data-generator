@@ -40,8 +40,13 @@ const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1R
                   type="button"
                   onClick={() => {
                     field.onChange(category.value);
-                    // Also set the reportType for desktop compatibility
-                    setValue('reportType', category.reportType);
+                    // Only set reportType for non-astro-data categories
+                    if (category.value !== 'astro-data') {
+                      setValue('reportType', category.reportType);
+                    } else {
+                      // Clear reportType for astro-data since it uses request field
+                      setValue('reportType', '');
+                    }
                     // Auto-advance to next step after selection
                     setTimeout(() => onNext(), 100);
                   }}
