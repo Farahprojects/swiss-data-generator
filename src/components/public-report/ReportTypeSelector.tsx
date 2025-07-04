@@ -74,6 +74,24 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   }, [watchedCategory]);
 
   /* ──────────────────────────
+   * Set combined reportType for essence
+   * ────────────────────────── */
+  useEffect(() => {
+    if (watchedCategory === 'the-self' && watchedEssence && setValue) {
+      setValue('reportType', `essence_${watchedEssence}`, { shouldValidate: true });
+    }
+  }, [watchedCategory, watchedEssence, setValue]);
+
+  /* ──────────────────────────
+   * Set combined reportType for relationship
+   * ────────────────────────── */
+  useEffect(() => {
+    if (watchedCategory === 'compatibility' && watchedRelationship && setValue) {
+      setValue('reportType', `sync_${watchedRelationship}`, { shouldValidate: true });
+    }
+  }, [watchedCategory, watchedRelationship, setValue]);
+
+  /* ──────────────────────────
    * Scroll: Step 1 → Step 1.5
    * ────────────────────────── */
   useEffect(() => {
@@ -119,11 +137,11 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
     ) => {
       onChange(value);
 
-      // Immediate reportType update for simple categories
-      if (value !== 'snapshot' && value !== 'astro-data' && setValue) {
+      // Only set reportType immediately for snapshot category
+      if (value === 'snapshot' && setValue) {
         setValue('reportType', reportType, { shouldValidate: true });
       } else {
-        // Clear reportType for categories that need sub-selection
+        // Clear reportType for categories that need sub-selection or don't use reportType
         setValue?.('reportType', '', { shouldValidate: true });
       }
     },
@@ -156,10 +174,8 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
    * ────────────────────────── */
   const showSnapshotSubCategories = watchedCategory === 'snapshot';
   const showAstroDataSubCategories = watchedCategory === 'astro-data';
-  const showEssenceOptions = watchedCategory === 'the-self' && selectedReportType === 'essence';
-  const showRelationshipOptions =
-    watchedCategory === 'compatibility' &&
-    (selectedReportType === 'sync' || selectedReportType === 'compatibility');
+  const showEssenceOptions = watchedCategory === 'the-self';
+  const showRelationshipOptions = watchedCategory === 'compatibility';
   const requiresReturnYear = selectedReportType === 'return';
   const currentYear = new Date().getFullYear();
 
