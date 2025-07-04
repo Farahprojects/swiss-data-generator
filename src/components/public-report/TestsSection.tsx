@@ -26,7 +26,7 @@ const testData: Test[] = [
   {
     id: "Essence",
     name: "The Self",
-    description: "Understand your core thought patterns",
+    description: "Personal, Professional & Relational reports • $10",
     slug: "Essence",
     time: "5 min",
     color: "bg-blue-500",
@@ -35,7 +35,7 @@ const testData: Test[] = [
   {
     id: "Sync",
     name: "Compatibility",
-    description: "Understand your interpersonal dynamics",
+    description: "Personal & Professional compatibility analysis • $10",
     slug: "relationships",
     time: "10 min",
     color: "bg-pink-500",
@@ -44,7 +44,7 @@ const testData: Test[] = [
   {
     id: "Monthly",
     name: "SnapShot",
-    description: "Discover your natural professional approach",
+    description: "Monthly forecast & timing guidance • $3",
     slug: "Monthly ",
     time: "12 min",
     color: "bg-orange-500",
@@ -53,7 +53,7 @@ const testData: Test[] = [
   {
     id: "Focus",
     name: "Astro Data",
-    description: "Discover what the next 12 months may hold for you",
+    description: "Optimal timing for productivity & rest • $3",
     slug: "life-shift",
     time: "10 min",
     color: "bg-purple-500",
@@ -62,7 +62,7 @@ const testData: Test[] = [
   {
     id: "Flow",
     name: "",
-    description: "Align your career with your cosmic blueprint",
+    description: "Creative & emotional rhythm tracking • $3",
     slug: "Flow",
     time: "15 min",
     color: "bg-green-500",
@@ -165,7 +165,7 @@ export default function TestsSection() {
                   <TestCard
                     key={test.id}
                     title={test.name}
-                    description=""
+                    description={test.description}
                     path={test.slug}
                     isActive={selectedTest.id === test.id}
                     onHover={() => setSelectedTest(test)}
@@ -252,7 +252,7 @@ export default function TestsSection() {
                 <TestCard
                   key={test.id}
                   title={test.name}
-                  description=""
+                  description={test.description}
                   path={test.slug}
                   isActive={selectedTest.id === test.id}
                   onHover={() => setSelectedTest(test)}
