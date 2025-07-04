@@ -18,7 +18,19 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
   // Get price for astro data type
   const getAstroDataPrice = (astroDataType: string): string => {
     try {
-      const price = getReportPrice({ astroDataType });
+      // Map astro data types to price list identifiers
+      const priceMapping: Record<string, string> = {
+        'essence': 'essence_bundle',
+        'sync': 'sync_rich'
+      };
+      
+      const priceId = priceMapping[astroDataType];
+      if (!priceId) {
+        console.warn('Unknown astro data type:', astroDataType);
+        return '$0';
+      }
+      
+      const price = getReportPrice({ astroDataType: priceId });
       return `$${price}`;
     } catch (error) {
       console.warn('Price fetch failed for astro data type:', astroDataType, error);
