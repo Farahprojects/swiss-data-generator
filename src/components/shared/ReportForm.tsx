@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
@@ -28,8 +28,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 }) => {
   const { promoValidation, isValidatingPromo } = usePromoValidation();
   const [viewingReport, setViewingReport] = useState(false);
-  const [showStep2, setShowStep2] = useState(false);
-  const [showStep3, setShowStep3] = useState(false);
   const [reportContent, setReportContent] = useState<string>('');
   const [reportPdfData, setReportPdfData] = useState<string | null>(null);
   
@@ -70,41 +68,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Check if form should be unlocked (either reportType or request field filled)
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);
-
-  // Auto-scroll function for smooth transitions
-  const scrollToElement = (elementId: string, delay = 500) => {
-    setTimeout(() => {
-      const element = document.getElementById(elementId);
-      if (element) {
-        element.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start',
-          inline: 'nearest'
-        });
-      }
-    }, delay);
-  };
-
-  // Progressive step showing logic
-  useEffect(() => {
-    if (shouldUnlockForm && !showStep2) {
-      setShowStep2(true);
-      scrollToElement('step-2');
-    }
-  }, [shouldUnlockForm, showStep2]);
-
-  // Watch for step 2 completion to show step 3
-  useEffect(() => {
-    const formData = form.getValues();
-    const hasPersonalInfo = !!(formData.name && formData.email && formData.birthDate && formData.birthTime);
-    const hasLocationWithCoords = !!(formData.birthLocation && formData.birthLatitude && formData.birthLongitude);
-    const step2Complete = hasPersonalInfo && hasLocationWithCoords;
-    
-    if (step2Complete && showStep2 && !showStep3) {
-      setShowStep3(true);
-      scrollToElement('step-3');
-    }
-  }, [form.watch(), showStep2, showStep3]);
 
   // Check if all key information is filled out
   React.useEffect(() => {
@@ -226,84 +189,56 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-8">
-          {/* Step 1 - Always visible */}
-          <div id="step-1">
-            <ReportTypeSelector
-              control={control}
-              errors={errors}
-              selectedReportType={selectedReportType}
-              showReportGuide={false}
-              setShowReportGuide={() => {}}
+          <ReportTypeSelector
+            control={control}
+            errors={errors}
+            selectedReportType={selectedReportType}
+            showReportGuide={false}
+            setShowReportGuide={() => {}}
+            setValue={setValue}
+          />
+
+
+          <CombinedPersonalDetailsForm
+            register={register}
+            setValue={setValue}
+            watch={watch}
+            errors={errors}
+          />
+
+          {requiresSecondPerson && (
+            <SecondPersonForm
+              register={register}
               setValue={setValue}
+              watch={watch}
+              errors={errors}
             />
-          </div>
+          )}
 
-          {/* Step 2 - Show only after step 1 completion */}
-          {showStep2 && (
-            <div 
-              id="step-2" 
-              className="animate-fade-in"
-              style={{ 
-                animation: 'fade-in 0.5s ease-out forwards',
-                opacity: 0
+          <PaymentStep
+              register={register}
+              watch={watch}
+              errors={errors}
+              onSubmit={handleButtonClick}
+              isProcessing={isProcessing || isPricingLoading}
+              promoValidation={promoValidation ? {
+                status: promoValidation.isValid ? 
+                  (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) : 
+                  'invalid' as const,
+                message: promoValidation.message,
+                discountPercent: promoValidation.discountPercent,
+                errorType: promoValidation.errorType
+              } : {
+                status: 'none' as const,
+                message: '',
+                discountPercent: 0
               }}
-            >
-              <CombinedPersonalDetailsForm
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-              />
-            </div>
-          )}
-
-          {requiresSecondPerson && showStep2 && (
-            <div className="animate-fade-in">
-              <SecondPersonForm
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-              />
-            </div>
-          )}
-
-          {/* Step 3 - Show only after step 2 completion */}
-          {showStep3 && (
-            <div 
-              id="step-3" 
-              className="animate-fade-in"
-              style={{ 
-                animation: 'fade-in 0.5s ease-out forwards',
-                opacity: 0
-              }}
-            >
-              <PaymentStep
-                register={register}
-                watch={watch}
-                errors={errors}
-                onSubmit={handleButtonClick}
-                isProcessing={isProcessing || isPricingLoading}
-                promoValidation={promoValidation ? {
-                  status: promoValidation.isValid ? 
-                    (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) : 
-                    'invalid' as const,
-                  message: promoValidation.message,
-                  discountPercent: promoValidation.discountPercent,
-                  errorType: promoValidation.errorType
-                } : {
-                  status: 'none' as const,
-                  message: '',
-                  discountPercent: 0
-                }}
-                isValidatingPromo={isValidatingPromo}
-                showPromoConfirmation={showPromoConfirmation}
-                pendingSubmissionData={pendingSubmissionData}
-                onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
-                onPromoConfirmationContinue={() => handlePromoConfirmationContinue(() => {})}
-              />
-            </div>
-          )}
+              isValidatingPromo={isValidatingPromo}
+              showPromoConfirmation={showPromoConfirmation}
+              pendingSubmissionData={pendingSubmissionData}
+              onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
+              onPromoConfirmationContinue={() => handlePromoConfirmationContinue(() => {})}
+            />
         </div>
       </form>
     </div>
