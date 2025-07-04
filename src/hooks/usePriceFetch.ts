@@ -10,7 +10,7 @@ const ReportTypeMappingSchema = z.object({
   relationshipType: z.string().optional(),
   reportCategory: z.string().optional(),
   reportSubCategory: z.string().optional(),
-  astroDataType: z.string().optional(),
+  request: z.string().optional(),
   request: z.string().optional(),
 });
 
@@ -18,7 +18,7 @@ export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 
 // Map form data to price_list identifiers
 const mapReportTypeToId = (data: ReportTypeMapping): string => {
-  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType, request } = data;
+  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, request } = data;
   
   console.log('🔍 mapReportTypeToId - Input data:', data);
   
@@ -51,9 +51,9 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
   }
   
   // Handle astro data reports - map to correct price IDs
-  if (reportCategory === 'astro-data' && astroDataType) {
-    console.log('🔍 mapReportTypeToId - Astro data type:', astroDataType);
-    return astroDataType; // essence, sync (direct mapping to price_list)
+  if (reportCategory === 'astro-data' && request) {
+    console.log('🔍 mapReportTypeToId - Astro data type:', request);
+    return request; // essence, sync (direct mapping to price_list)
   }
   
   // Handle snapshot reports - map subcategory to actual report type
@@ -123,7 +123,7 @@ export const usePriceFetch = () => {
   }, [getPriceById, getPriceByReportType]);
 
   const getReportTitle = useCallback((formData: ReportTypeMapping): string => {
-    const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType, request } = formData;
+    const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, request } = formData;
     
     console.log('📋 getReportTitle - Starting title lookup with:', formData);
     
@@ -155,7 +155,7 @@ export const usePriceFetch = () => {
     }
     
     if (reportCategory === 'astro-data') {
-      switch (astroDataType) {
+      switch (request) {
         case 'essence': return 'The Self - Astro Data';
         case 'sync': return 'Compatibility - Astro Data';
         default: return 'Astro Data Report';

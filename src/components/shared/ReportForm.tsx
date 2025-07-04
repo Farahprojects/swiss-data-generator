@@ -65,7 +65,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const selectedReportType = watch('reportType');
   const selectedRequest = watch('request');
   const selectedReportCategory = watch('reportCategory');
-  const selectedAstroDataType = watch('astroDataType');
+  const selectedRequest = watch('request');
   const userName = watch('name');
   const userEmail = watch('email');
 
@@ -92,7 +92,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     selectedReportType === 'sync' || 
     selectedReportType === 'compatibility' ||
     selectedReportCategory === 'compatibility' ||
-    selectedAstroDataType === 'sync' ||
+    selectedRequest === 'sync' ||
     selectedRequest === 'sync';
 
   const handleViewReport = (content: string, pdfData?: string | null) => {
@@ -115,7 +115,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       hasReportType: !!data.reportType,
       hasRequest: !!data.request,
       reportCategory: data.reportCategory,
-      astroDataType: data.astroDataType,
+      request: data.request,
       isValid: isValid,
       formErrors: Object.keys(errors),
       reportType: data.reportType,
@@ -158,7 +158,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       reportType: formData.reportType,
       request: formData.request,
       reportCategory: formData.reportCategory,
-      astroDataType: formData.astroDataType,
+      request: formData.request,
       isValid: isValid,
       hasErrors: Object.keys(errors).length > 0,
       errorFields: Object.keys(errors),
@@ -175,7 +175,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           reportType: data.reportType,
           request: data.request,
           reportCategory: data.reportCategory,
-          astroDataType: data.astroDataType,
+          request: data.request,
           validatedData: data
         });
         console.log('✅ Form validation passed, submitting:', data);

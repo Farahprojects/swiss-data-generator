@@ -38,7 +38,7 @@ export const useReportSubmission = () => {
       reportType: data.reportType,
       request: data.request,
       reportCategory: data.reportCategory,
-      astroDataType: data.astroDataType,
+      request: data.request,
       hasPromoCode: !!data.promoCode,
       promoStatus: promoValidation.status,
       skipPromoValidation: skipPromoValidation
@@ -83,7 +83,7 @@ export const useReportSubmission = () => {
             relationshipType: data.relationshipType,
             reportCategory: data.reportCategory,
             reportSubCategory: data.reportSubCategory,
-            astroDataType: data.astroDataType,
+            request: data.request,
             request: data.request // NEW: Include request field
           };
           
@@ -170,7 +170,7 @@ export const useReportSubmission = () => {
         relationshipType: data.relationshipType,
         reportCategory: data.reportCategory,
         reportSubCategory: data.reportSubCategory,
-        astroDataType: data.astroDataType,
+        request: data.request,
         request: data.request // NEW: Include request field
       };
       

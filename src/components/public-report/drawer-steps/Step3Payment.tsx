@@ -66,7 +66,7 @@ const Step3Payment = ({
   const reportType = watch('reportType');
   const essenceType = watch('essenceType');
   const relationshipType = watch('relationshipType');
-  const astroDataType = watch('astroDataType');
+  const requestField = watch('request');
   const request = watch('request'); // NEW: Watch the request field
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
@@ -85,7 +85,7 @@ const Step3Payment = ({
         relationshipType,
         reportCategory,
         reportSubCategory,
-        astroDataType,
+        request: requestField,
         request // NEW: Include request field
       };
       
@@ -139,7 +139,7 @@ const Step3Payment = ({
       reportType: reportType,
       request: request,
       reportCategory: reportCategory,
-      astroDataType: astroDataType,
+      request: requestField,
       basePrice: basePrice,
       promoCode: promoCode
     });

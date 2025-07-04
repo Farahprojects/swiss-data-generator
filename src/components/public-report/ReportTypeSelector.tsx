@@ -54,7 +54,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   const watchedEssence = useWatch({ control, name: 'essenceType' });
   const watchedRelationship = useWatch({ control, name: 'relationshipType' });
   const watchedSnapshot = useWatch({ control, name: 'reportType' });
-  const watchedAstroData = useWatch({ control, name: 'astroDataType' });
+  const watchedAstroData = useWatch({ control, name: 'request' });
 
   /* ──────────────────────────
    * Scroll targets
@@ -289,7 +289,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                 </h3>
                 <Controller
                   control={control}
-                  name="astroDataType"
+                  name="request"
                   render={({ field }) => (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {astroDataSubCategories.map((sub) => {

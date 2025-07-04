@@ -89,7 +89,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
-  const astroDataType = watch('astroDataType');
+  const request = watch('request');
 
   // Viewport height CSS custom prop – updates on resize & orientation change
   useEffect(() => {
@@ -284,7 +284,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     control={control}
                     setValue={setValue}
                     onNext={nextStep}
-                    selectedSubCategory={astroDataType}
+                    selectedSubCategory={request}
                   />
                 )}
 

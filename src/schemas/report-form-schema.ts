@@ -8,7 +8,7 @@ export const reportSchema = z.object({
   // Mobile-specific fields that help populate the above
   reportCategory: z.string().optional(),
   reportSubCategory: z.string().optional(),
-  astroDataType: z.string().optional(),
+  // astroDataType replaced with request field
   // Astro data request field
   request: z.string().optional(),
   name: z.string().min(2, 'Name must be at least 2 characters'),

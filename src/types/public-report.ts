@@ -22,7 +22,7 @@ export interface ReportFormData {
   // Mobile-specific fields
   reportCategory?: string;
   reportSubCategory?: string;
-  astroDataType?: string;
+  // astroDataType replaced with request field
   request?: string;
   name: string;
   email: string;

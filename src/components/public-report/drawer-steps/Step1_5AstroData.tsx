@@ -35,7 +35,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
 
       <Controller
         control={control}
-        name="astroDataType"
+        name="request"
         render={({ field }) => (
           <div className="space-y-4">
             {astroDataSubCategories.map((subCategory) => {
@@ -47,7 +47,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                 const formData = {
                   request: subCategory.value === 'essence' ? 'essence' : subCategory.value === 'sync' ? 'sync' : subCategory.value,
                   reportCategory: 'astro-data',
-                  astroDataType: subCategory.value
+                  request: subCategory.value
                 };
                 
                 try {

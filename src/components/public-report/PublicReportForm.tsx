@@ -15,8 +15,8 @@ interface PublicReportFormProps {
 const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
   const { register, setValue, formState: { errors }, watch } = form;
   
-  const astroDataType = watch('astroDataType');
-  const isCompatibilityReport = reportType === 'compatibility' || reportType === 'sync' || astroDataType === 'sync';
+  const request = watch('request');
+  const isCompatibilityReport = reportType === 'compatibility' || reportType === 'sync' || request === 'sync';
 
   const handlePlaceSelect = (placeData: PlaceData, fieldPrefix = '') => {
     const locationField = fieldPrefix ? `${fieldPrefix}Location` : 'birthLocation';
