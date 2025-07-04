@@ -1,50 +1,38 @@
 
-import { useMemo } from 'react';
-import { usePricing } from '@/contexts/PricingContext';
-
-interface ReportGuidePricing {
-  [key: string]: number | null;
-}
+import { usePriceFetch } from '@/hooks/usePriceFetch';
 
 export const useReportGuidePricing = () => {
-  const { prices, isLoading, error, getPriceById } = usePricing();
+  const { getReportPrice, isLoading, error } = usePriceFetch();
 
-  const pricing = useMemo(() => {
-    if (isLoading || prices.length === 0) {
-      return {};
+  const getAstroDataPrice = (astroDataType: string): number => {
+    try {
+      // For astro data, use the request field instead of reportType
+      return getReportPrice({ 
+        request: astroDataType,
+        reportType: '',
+        reportCategory: 'astro-data',
+        astroDataType: astroDataType
+      });
+    } catch (error) {
+      console.error('Error getting astro data price:', error);
+      return 0;
     }
+  };
 
-    return {
-      // Essence pricing
-      essence_personal: getPriceById('essence_personal')?.unit_price_usd || null,
-      essence_professional: getPriceById('essence_professional')?.unit_price_usd || null,
-      essence_relational: getPriceById('essence_relational')?.unit_price_usd || null,
-      
-      // Sync pricing
-      sync_personal: getPriceById('sync_personal')?.unit_price_usd || null,
-      sync_professional: getPriceById('sync_professional')?.unit_price_usd || null,
-      
-      // Snapshot pricing
-      focus: getPriceById('focus')?.unit_price_usd || null,
-      monthly: getPriceById('monthly')?.unit_price_usd || null,
-      mindset: getPriceById('mindset')?.unit_price_usd || null,
-      flow: getPriceById('flow')?.unit_price_usd || null,
-      
-      // Astro Data pricing
-      essence: getPriceById('essence')?.unit_price_usd || null,
-      sync: getPriceById('sync')?.unit_price_usd || null,
-    };
-  }, [prices, isLoading, getPriceById]);
+  const formatPrice = (price: number): string => {
+    return `$${price.toFixed(0)}`;
+  };
 
-  const formatPrice = (price: number | null): string => {
-    if (price === null) return 'Contact us';
-    return `$${Math.round(price)}`;
+  const pricing = {
+    essence: getAstroDataPrice('essence'),
+    sync: getAstroDataPrice('sync')
   };
 
   return {
     pricing,
-    isLoading,
-    error,
+    getAstroDataPrice,
     formatPrice,
+    isLoading,
+    error
   };
 };

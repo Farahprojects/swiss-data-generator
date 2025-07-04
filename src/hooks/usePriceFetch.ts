@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 import { useMemo, useCallback } from 'react';
 import { usePricing } from '@/contexts/PricingContext';
@@ -19,6 +20,18 @@ export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 const mapReportTypeToId = (data: ReportTypeMapping): string => {
   const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType, request } = data;
   
+  // Handle astro data reports - use the request field (essence/sync)
+  if (reportCategory === 'astro-data' && request) {
+    if (request === 'essence') return 'essence_bundle';
+    if (request === 'sync') return 'sync_rich';
+  }
+  
+  // Handle astro data based on request field (fallback)
+  if (request && !reportType) {
+    if (request === 'essence') return 'essence_bundle';
+    if (request === 'sync') return 'sync_rich';
+  }
+  
   // Handle essence reports
   if (reportType === 'essence') {
     if (essenceType) {
@@ -37,15 +50,10 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
     return mappedId;
   }
   
-  // Handle astro data reports - use the specific astro data type
-  if (reportCategory === 'astro-data' && astroDataType) {
-    return astroDataType; // essence_bundle, sync_rich
-  }
-  
-  // Handle astro data based on request field (fallback)
-  if (request && !reportType) {
-    if (request === 'essence') return 'essence_bundle';
-    if (request === 'sync') return 'sync_rich';
+  // Handle astro data based on astroDataType (additional fallback)
+  if (astroDataType) {
+    if (astroDataType === 'essence') return 'essence_bundle';
+    if (astroDataType === 'sync') return 'sync_rich';
   }
   
   // Handle snapshot reports - map subcategory to actual report type
@@ -120,8 +128,8 @@ export const usePriceFetch = () => {
     
     if (reportCategory === 'astro-data') {
       switch (astroDataType) {
-        case 'essence_bundle': return 'The Self - Astro Data';
-        case 'sync_rich': return 'Compatibility - Astro Data';
+        case 'essence': return 'The Self - Astro Data';
+        case 'sync': return 'Compatibility - Astro Data';
         default: return 'Astro Data Report';
       }
     }

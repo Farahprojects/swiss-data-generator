@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -13,7 +14,7 @@ interface Step1_5AstroDataProps {
 }
 
 const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: Step1_5AstroDataProps) => {
-  const { pricing, formatPrice } = useReportGuidePricing();
+  const { getAstroDataPrice, formatPrice } = useReportGuidePricing();
 
   return (
     <motion.div
@@ -36,7 +37,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
             {astroDataSubCategories.map((subCategory) => {
               const IconComponent = subCategory.icon;
               const isSelected = field.value === subCategory.value;
-              const price = pricing[subCategory.value];
+              const price = getAstroDataPrice(subCategory.value);
               
               return (
                 <motion.button
@@ -44,7 +45,8 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                   type="button"
                   onClick={() => {
                     field.onChange(subCategory.value);
-                    setValue('reportType', subCategory.reportType);
+                    setValue('request', subCategory.value); // Set request field to 'essence' or 'sync'
+                    setValue('reportType', ''); // Clear reportType for astro data
                     setTimeout(() => onNext(), 100);
                   }}
                   className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
