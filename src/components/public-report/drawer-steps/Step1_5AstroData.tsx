@@ -81,17 +81,9 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                 
                 field.onChange(subCategory.value);
                 
-                // NEW LOGIC: Set request field instead of reportType for astro data
-                if (subCategory.value === 'sync') {
-                  setValue('request', 'sync');
-                  setValue('reportType', null);
-                } else if (subCategory.value === 'essence') {
-                  setValue('request', 'essence');
-                  setValue('reportType', null);
-                } else {
-                  // Fallback for any future astro data types
-                  setValue('reportType', subCategory.reportType);
-                }
+                // Set the request field - this IS the report type for astro data
+                setValue('request', subCategory.value);
+                setValue('reportType', ''); // Clear reportType since astro data uses request
                 
                 setTimeout(() => onNext(), 100);
               };

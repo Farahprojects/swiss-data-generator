@@ -142,14 +142,13 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
     (value: string, reportType: ReportFormData['reportType'], onChange: (v: any) => void) => {
       onChange(value);
 
-      // Set request field based on category
-      const requestValue = watchedCategory === 'the-self' ? 'essence' : 'sync';
-      setValue?.('request', requestValue, { shouldValidate: true });
-
-      // Keep reportType blank for astro‑data
+      // For astro data, the request field IS the report type
+      setValue?.('request', value, { shouldValidate: true });
+      
+      // Clear reportType since astro data uses request field instead
       setValue?.('reportType', '', { shouldValidate: true });
     },
-    [setValue, watchedCategory],
+    [setValue],
   );
 
   /* ──────────────────────────

@@ -85,7 +85,7 @@ export const useReportSubmission = () => {
         }
       }
 
-      // Simplified report type - removed complex validation
+      // For astro data, use the request field directly. For regular reports, use reportType
       const reportTypeToUse = data.request || data.reportType || 'standard';
 
       // Handle free report with promo code
