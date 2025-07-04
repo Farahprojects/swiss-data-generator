@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -37,9 +38,9 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
               const IconComponent = subCategory.icon;
               const isSelected = field.value === subCategory.value;
               
-              // Get price using request field for proper fallback logic
+              // Get price using request field - directly use subCategory.value
               const formData = {
-                request: subCategory.value === 'essence_bundle' ? 'essence' : 'sync',
+                request: subCategory.value,
                 reportCategory: 'astro-data',
                 astroDataType: subCategory.value
               };
