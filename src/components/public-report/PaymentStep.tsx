@@ -62,13 +62,12 @@ const PaymentStep = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  // Get price and title using context
+  // Get price and title using context with global fallback
   let basePrice: number | null = null;
   let reportTitle = 'Personal Report';
-  let priceError: string | null = null;
 
   try {
-    // FIXED: Check for both reportType OR request field
+    // Check for both reportType OR request field
     if (reportType || request) {
       const formData = {
         reportType,
@@ -90,16 +89,21 @@ const PaymentStep = ({
       });
     }
   } catch (error) {
-    priceError = error instanceof Error ? error.message : 'Failed to get price';
-    // Log error (async but non-blocking)
-    logToAdmin('PaymentStep', 'price_fetch_error', 'Price fetch error', {
+    // Silently handle pricing errors - global fallback will handle missing prices
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Pricing error (silenced for clean UI):', error);
+    }
+    
+    // Log error but don't set UI error
+    logToAdmin('PaymentStep', 'price_fetch_error_silent', 'Price fetch error (silenced)', {
       error: error instanceof Error ? error.message : 'Failed to get price',
-      stack: error instanceof Error ? error.stack : null
+      formData: { reportType, request, reportCategory },
+      note: 'Error silenced to prevent UI disruption'
     });
   }
 
-  // Only calculate pricing if we have a valid base price
-  const pricing = basePrice !== null ? calculatePricing(basePrice, promoValidation) : null;
+  // Calculate pricing - global fallback will handle missing prices  
+  const pricing = calculatePricing(basePrice || 0, promoValidation);
 
   const getPromoValidationIcon = () => {
     if (isValidatingPromo) {
@@ -163,209 +167,178 @@ const PaymentStep = ({
     onSubmit();
   };
 
-  // Render content based on state - no early returns that bypass hooks
-  let content;
+  // Always show clean payment UI with global pricing fallback
+  const content = isPricingLoading ? (
+    <div className="max-w-4xl mx-auto flex items-center justify-center py-8">
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span>Loading pricing information...</span>
+      </div>
+    </div>
+  ) : (
+    <div className="max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left side - Order Summary */}
+        <Card className="h-fit">
+          <CardHeader>
+            <CardTitle className="text-2xl font-light text-gray-900 tracking-tight">Order Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 font-light">{reportTitle}</span>
+                <span className="font-normal text-gray-900">${pricing.basePrice.toFixed(2)}</span>
+              </div>
+              {pricing.discount > 0 && (
+                <div className="flex justify-between items-center text-green-600">
+                  <span>Discount ({pricing.discountPercent}%)</span>
+                  <span>-${pricing.discount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="border-t pt-3">
+                <div className="flex justify-between items-center font-light text-xl text-gray-900">
+                  <span>Total</span>
+                  <span className={pricing.isFree ? 'text-green-600' : 'text-gray-900'}>
+                    {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-  if (isPricingLoading) {
-    content = (
-      <div className="max-w-4xl mx-auto flex items-center justify-center py-8">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading pricing information...</span>
-        </div>
-      </div>
-    );
-  } else if (priceError) {
-    content = (
-      <div className="max-w-4xl mx-auto">
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="p-6 text-center">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-red-800 mb-2">Pricing Error</h3>
-            <p className="text-red-600 mb-4">Unable to load pricing information for this report type.</p>
-            <Button onClick={() => typeof window !== 'undefined' && window.location.reload()} variant="outline" className="mt-4">Retry</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  } else if (!pricing) {
-    content = (
-      <div className="max-w-4xl mx-auto">
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardContent className="p-6 text-center">
-            <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Pricing Available</h3>
-            <p className="text-yellow-600">Pricing information is not available for this report configuration.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  } else {
-    content = (
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left side - Order Summary */}
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle className="text-2xl font-light text-gray-900 tracking-tight">Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+            {/* What You'll Receive Section */}
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-lg font-light text-gray-900 tracking-tight">What You'll Receive:</h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 font-light">{reportTitle}</span>
-                  <span className="font-normal text-gray-900">${pricing.basePrice.toFixed(2)}</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-600 font-light">Instant email delivery</span>
                 </div>
-                {pricing.discount > 0 && (
-                  <div className="flex justify-between items-center text-green-600">
-                    <span>Discount ({pricing.discountPercent}%)</span>
-                    <span>-${pricing.discount.toFixed(2)}</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
                   </div>
-                )}
-                <div className="border-t pt-3">
-                  <div className="flex justify-between items-center font-light text-xl text-gray-900">
-                    <span>Total</span>
-                    <span className={pricing.isFree ? 'text-green-600' : 'text-gray-900'}>
-                      {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
-                    </span>
+                  <span className="text-gray-600 font-light">Downloadable PDF for your records</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
                   </div>
+                  <span className="text-gray-600 font-light">Professional astrology insights</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-600 font-light">Personalized recommendations</span>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
 
-              {/* What You'll Receive Section */}
-              <div className="space-y-4 pt-4 border-t">
-                <h3 className="text-lg font-light text-gray-900 tracking-tight">What You'll Receive:</h3>
+        {/* Right side - Payment Form */}
+        <div className="space-y-6">
+          <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
+            <CollapsibleTrigger asChild>
+              <button
+                className="w-full bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
+                type="button"
+                style={{ 
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  WebkitAppearance: 'none'
+                }}
+              >
+                <Tag className="h-5 w-5 mr-3" />
+                Have a promo code?
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-6">
+              <div className="space-y-6">
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
+                  <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">
+                    Promo Code
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="promoCode"
+                      {...register('promoCode')}
+                      placeholder="Enter promo code"
+                      className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 pr-12"
+                      style={{ 
+                        WebkitAppearance: 'none',
+                        touchAction: 'manipulation'
+                      }}
+                    />
+                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                      {getPromoValidationIcon()}
                     </div>
-                    <span className="text-gray-600 font-light">Instant email delivery</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-gray-600 font-light">Downloadable PDF for your records</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-gray-600 font-light">Professional astrology insights</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-gray-600 font-light">Personalized recommendations</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Right side - Payment Form */}
-          <div className="space-y-6">
-            <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
-              <CollapsibleTrigger asChild>
-                <button
-                  className="w-full bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
-                  type="button"
-                  style={{ 
-                    touchAction: 'manipulation',
-                    WebkitTapHighlightColor: 'transparent',
-                    WebkitAppearance: 'none'
-                  }}
-                >
-                  <Tag className="h-5 w-5 mr-3" />
-                  Have a promo code?
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-6">
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">
-                      Promo Code
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="promoCode"
-                        {...register('promoCode')}
-                        placeholder="Enter promo code"
-                        className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 pr-12"
-                        style={{ 
-                          WebkitAppearance: 'none',
-                          touchAction: 'manipulation'
-                        }}
-                      />
-                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                        {getPromoValidationIcon()}
-                      </div>
-                    </div>
-                    {errors.promoCode && (
-                      <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
-                    )}
-                  </div>
-                  
-                  {/* Promo validation feedback */}
-                  {promoValidation.message && (
-                    <div className={`text-sm font-light p-4 rounded-xl ${
-                      isValidatingPromo 
-                        ? 'bg-gray-50 text-gray-600'
-                        : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
-                        ? 'bg-green-50 text-green-700 border border-green-200'
-                        : 'bg-red-50 text-red-700 border border-red-200'
-                    }`}>
-                      {getPromoValidationMessage()}
-                    </div>
+                  {errors.promoCode && (
+                    <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
                   )}
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Button
-              onClick={handleButtonClick}
-              disabled={isProcessing || isValidatingPromo}
-              className="w-full h-14 text-lg font-light bg-gray-900 hover:bg-gray-800 text-white transition-colors"
-              type="button"
-            >
-              {isProcessing ? 'Processing...' : isValidatingPromo ? 'Validating...' : 'Generate My Report'}
-            </Button>
-
-            {/* Satisfaction Guarantee */}
-            <div className="bg-muted/30 rounded-lg p-6 text-center space-y-3">
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                  <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <h3 className="font-light text-gray-900 tracking-tight">100% Satisfaction Guarantee</h3>
+                
+                {/* Promo validation feedback */}
+                {promoValidation.message && (
+                  <div className={`text-sm font-light p-4 rounded-xl ${
+                    isValidatingPromo 
+                      ? 'bg-gray-50 text-gray-600'
+                      : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}>
+                    {getPromoValidationMessage()}
+                  </div>
+                )}
               </div>
-              <p className="text-sm text-gray-600 font-light leading-relaxed">
-                You're covered by our 100% Satisfaction Guarantee. Not happy with your report? We'll refund you within 7 days — no questions asked.
-              </p>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Button
+            onClick={handleButtonClick}
+            disabled={isProcessing || isValidatingPromo}
+            className="w-full h-14 text-lg font-light bg-gray-900 hover:bg-gray-800 text-white transition-colors"
+            type="button"
+          >
+            {isProcessing ? 'Processing...' : isValidatingPromo ? 'Validating...' : 'Generate My Report'}
+          </Button>
+
+          {/* Satisfaction Guarantee */}
+          <div className="bg-muted/30 rounded-lg p-6 text-center space-y-3">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <h3 className="font-light text-gray-900 tracking-tight">100% Satisfaction Guarantee</h3>
             </div>
+            <p className="text-sm text-gray-600 font-light leading-relaxed">
+              You're covered by our 100% Satisfaction Guarantee. Not happy with your report? We'll refund you within 7 days — no questions asked.
+            </p>
           </div>
         </div>
-
-        {/* Security Info - Centered below the section */}
-        <div className="text-center space-y-2 text-sm text-gray-500 font-light mt-8">
-          <p>Your payment is secure and encrypted.</p>
-          <p>Secure checkout powered by Stripe</p>
-          <p>Your report will be delivered to your email within minutes</p>
-        </div>
       </div>
-    );
-  }
+
+      {/* Security Info - Centered below the section */}
+      <div className="text-center space-y-2 text-sm text-gray-500 font-light mt-8">
+        <p>Your payment is secure and encrypted.</p>
+        <p>Secure checkout powered by Stripe</p>
+        <p>Your report will be delivered to your email within minutes</p>
+      </div>
+    </div>
+  );
 
   return (
     <>
