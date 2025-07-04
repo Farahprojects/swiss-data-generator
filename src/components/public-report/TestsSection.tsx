@@ -158,9 +158,9 @@ export default function TestsSection() {
           </div>
           
           {/* Desktop layout - side by side */}
-          <div className="hidden md:grid md:grid-cols-12 gap-8 md:items-center">
-            <div className="md:col-span-6">
-              <div className="space-y-0">
+          <div className="hidden md:grid md:grid-cols-12 gap-8 md:items-stretch">
+            <div className="md:col-span-6 flex flex-col justify-between">
+              <div className="flex flex-col justify-between h-[480px]">
                 {testData.map((test) => (
                   <TestCard
                     key={test.id}
