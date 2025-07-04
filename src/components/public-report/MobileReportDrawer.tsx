@@ -244,7 +244,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       >
         {/* Header buttons */}
         <div className="absolute top-3 left-0 right-0 flex justify-between items-center px-4 z-10">
-          {(currentStep >= 2) && (
+          {(currentStep === 2 || currentStep === 3) && (
             <button
               type="button"
               onClick={prevStep}

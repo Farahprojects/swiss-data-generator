@@ -104,7 +104,7 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
-      <div className="text-center space-y-2 pt-8">
+      <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{getHeadingText(selectedCategory)}</h2>
       </div>
 
