@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -65,6 +66,7 @@ const Step3Payment = ({
   const essenceType = watch('essenceType');
   const relationshipType = watch('relationshipType');
   const astroDataType = watch('astroDataType');
+  const request = watch('request'); // NEW: Watch the request field
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
@@ -74,28 +76,28 @@ const Step3Payment = ({
   let priceError: string | null = null;
 
   try {
-    if (reportType) {
-      basePrice = getReportPrice({
+    // FIXED: Check for both reportType OR request field
+    if (reportType || request) {
+      const formData = {
         reportType,
         essenceType,
         relationshipType,
         reportCategory,
         reportSubCategory,
-        astroDataType
-      });
+        astroDataType,
+        request // NEW: Include request field
+      };
       
-      reportTitle = getReportTitle({
-        reportType,
-        essenceType,
-        relationshipType,
-        reportCategory,
-        reportSubCategory,
-        astroDataType
-      });
+      console.log('💰 Step3Payment - Price calculation with form data:', formData);
+      
+      basePrice = getReportPrice(formData);
+      reportTitle = getReportTitle(formData);
+      
+      console.log('💰 Step3Payment - Calculated price:', basePrice, 'Title:', reportTitle);
     }
   } catch (error) {
     priceError = error instanceof Error ? error.message : 'Failed to get price';
-    console.error('Price fetch error:', error);
+    console.error('❌ Step3Payment - Price fetch error:', error);
   }
 
   // Only calculate pricing if we have a valid base price

@@ -20,8 +20,11 @@ export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 const mapReportTypeToId = (data: ReportTypeMapping): string => {
   const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType, request } = data;
   
+  console.log('🔍 mapReportTypeToId - Input data:', data);
+  
   // Handle astro data based on request field (new logic)
   if (request && !reportType) {
+    console.log('🔍 mapReportTypeToId - Using request field:', request);
     if (request === 'essence') return 'essence';
     if (request === 'sync') return 'sync';
   }
@@ -30,9 +33,11 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
   if (reportType === 'essence') {
     if (essenceType) {
       const mappedId = `essence_${essenceType}`;
+      console.log('🔍 mapReportTypeToId - Mapped essence report:', mappedId);
       return mappedId;
     } else {
       // Default to personal essence if no essenceType specified
+      console.log('🔍 mapReportTypeToId - Default to personal essence');
       return 'essence_personal';
     }
   }
@@ -41,26 +46,32 @@ const mapReportTypeToId = (data: ReportTypeMapping): string => {
   if (reportType === 'sync' || reportType === 'compatibility') {
     const relationship = relationshipType || 'personal'; // Default to personal if not specified
     const mappedId = `sync_${relationship}`;
+    console.log('🔍 mapReportTypeToId - Mapped sync report:', mappedId);
     return mappedId;
   }
   
   // Handle astro data reports - map to correct price IDs
   if (reportCategory === 'astro-data' && astroDataType) {
+    console.log('🔍 mapReportTypeToId - Astro data type:', astroDataType);
     return astroDataType; // essence, sync (direct mapping to price_list)
   }
   
   // Handle snapshot reports - map subcategory to actual report type
   if (reportCategory === 'snapshot' && reportSubCategory) {
+    console.log('🔍 mapReportTypeToId - Snapshot subcategory:', reportSubCategory);
     return reportSubCategory; // focus, monthly, mindset
   }
   
   // Handle direct report types
   if (['focus', 'monthly', 'mindset', 'flow'].includes(reportType)) {
+    console.log('🔍 mapReportTypeToId - Direct report type:', reportType);
     return reportType;
   }
   
   // Fallback to reportType
-  return reportType || '';
+  const fallback = reportType || '';
+  console.log('🔍 mapReportTypeToId - Fallback to reportType:', fallback);
+  return fallback;
 };
 
 // Custom hook for getting report price using context
@@ -69,18 +80,28 @@ export const usePriceFetch = () => {
 
   const getReportPrice = useCallback((formData: ReportTypeMapping): number => {
     try {
+      console.log('💰 getReportPrice - Starting price lookup with:', formData);
+      
       // Validate input data
       const validatedData = ReportTypeMappingSchema.parse(formData);
       
       // Map to price_list identifier
       const priceId = mapReportTypeToId(validatedData);
+      console.log('💰 getReportPrice - Mapped to price ID:', priceId);
+      
+      if (!priceId) {
+        throw new Error('No price identifier could be determined from form data');
+      }
       
       // Try to get price by ID first
       let priceData = getPriceById(priceId);
+      console.log('💰 getReportPrice - Price by ID:', priceData);
       
       // Fallback: try by report_type
       if (!priceData) {
+        console.log('💰 getReportPrice - Trying fallback by report type');
         priceData = getPriceByReportType(priceId);
+        console.log('💰 getReportPrice - Price by report type:', priceData);
       }
       
       if (!priceData) {
@@ -91,7 +112,9 @@ export const usePriceFetch = () => {
         throw new Error(`Price not found for report type: ${priceId}`);
       }
       
-      return Number(priceData.unit_price_usd);
+      const finalPrice = Number(priceData.unit_price_usd);
+      console.log('💰 getReportPrice - Final price:', finalPrice);
+      return finalPrice;
       
     } catch (error) {
       console.error('❌ Error in getReportPrice:', error);
@@ -102,8 +125,11 @@ export const usePriceFetch = () => {
   const getReportTitle = useCallback((formData: ReportTypeMapping): string => {
     const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, astroDataType, request } = formData;
     
+    console.log('📋 getReportTitle - Starting title lookup with:', formData);
+    
     // Handle astro data based on request field
     if (request && !reportType) {
+      console.log('📋 getReportTitle - Using request field for title');
       switch (request) {
         case 'essence': return 'The Self - Astro Data';
         case 'sync': return 'Compatibility - Astro Data';
@@ -157,7 +183,9 @@ export const usePriceFetch = () => {
       sync: 'Sync Report'
     };
     
-    return reportTitles[reportType] || 'Personal Report';
+    const title = reportTitles[reportType] || 'Personal Report';
+    console.log('📋 getReportTitle - Final title:', title);
+    return title;
   }, []);
 
   const calculatePricing = useCallback((basePrice: number, promoValidation: any) => {
