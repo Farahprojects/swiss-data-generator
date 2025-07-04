@@ -177,77 +177,79 @@ const PaymentStep = ({
     </div>
   ) : (
     <div className="max-w-6xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="flex flex-wrap md:flex-nowrap gap-6 w-full">
         {/* Left side - Order Summary */}
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle className="text-2xl font-light text-gray-900 tracking-tight">Order Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 font-light">{reportTitle}</span>
-                <span className="font-normal text-gray-900">${pricing.basePrice.toFixed(2)}</span>
-              </div>
-              {pricing.discount > 0 && (
-                <div className="flex justify-between items-center text-green-600">
-                  <span>Discount ({pricing.discountPercent}%)</span>
-                  <span>-${pricing.discount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="border-t pt-3">
-                <div className="flex justify-between items-center font-light text-xl text-gray-900">
-                  <span>Total</span>
-                  <span className={pricing.isFree ? 'text-green-600' : 'text-gray-900'}>
-                    {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* What You'll Receive Section */}
-            <div className="space-y-4 pt-4 border-t">
-              <h3 className="text-lg font-light text-gray-900 tracking-tight">What You'll Receive:</h3>
+        <div className="flex-1 min-w-[280px]">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="text-2xl font-light text-gray-900 tracking-tight">Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <span className="text-gray-600 font-light">Instant email delivery</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 font-light">{reportTitle}</span>
+                  <span className="font-normal text-gray-900">${pricing.basePrice.toFixed(2)}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+                {pricing.discount > 0 && (
+                  <div className="flex justify-between items-center text-green-600">
+                    <span>Discount ({pricing.discountPercent}%)</span>
+                    <span>-${pricing.discount.toFixed(2)}</span>
                   </div>
-                  <span className="text-gray-600 font-light">Downloadable PDF for your records</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+                )}
+                <div className="border-t pt-3">
+                  <div className="flex justify-between items-center font-light text-xl text-gray-900">
+                    <span>Total</span>
+                    <span className={pricing.isFree ? 'text-green-600' : 'text-gray-900'}>
+                      {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
+                    </span>
                   </div>
-                  <span className="text-gray-600 font-light">Professional astrology insights</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <span className="text-gray-600 font-light">Personalized recommendations</span>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+
+              {/* What You'll Receive Section */}
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-lg font-light text-gray-900 tracking-tight">What You'll Receive:</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-gray-600 font-light">Instant email delivery</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-gray-600 font-light">Downloadable PDF for your records</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-gray-600 font-light">Professional astrology insights</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-gray-600 font-light">Personalized recommendations</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Right side - Payment Form */}
-        <div className="space-y-6">
+        <div className="flex-1 min-w-[280px] flex flex-col gap-4 justify-start">
           <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
             <CollapsibleTrigger asChild>
               <button
