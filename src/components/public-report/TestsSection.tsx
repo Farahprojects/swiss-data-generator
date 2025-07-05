@@ -63,12 +63,12 @@ const getSubcategoryPrice = (reportType: string, subcategory: string, getPriceBy
 const getTestDataWithPricing = (getPriceById: any): Test[] => [
   {
     id: "TheSelf",
-    name: "The Self",
+    name: `The Self ${getSubcategoryPrice('TheSelf', 'personal', getPriceById)}`,
     description: "Discover your authentic self across all areas of life",
     subDescriptions: [
-      `Personal – Insights and identity  ${getSubcategoryPrice('TheSelf', 'personal', getPriceById)}`,
-      `Professional – Career path and purpose  ${getSubcategoryPrice('TheSelf', 'professional', getPriceById)}`,
-      `Relational – How you connect with others  ${getSubcategoryPrice('TheSelf', 'relational', getPriceById)}`
+      "Personal – Insights and identity",
+      "Professional – Career path and purpose",
+      "Relational – How you connect with others"
     ],
     slug: "Essence",
     time: "5 min",
@@ -77,11 +77,11 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
   },
   {
     id: "Compatibility",
-    name: "Compatibility",
+    name: `Compatibility ${getSubcategoryPrice('Compatibility', 'personal', getPriceById)}`,
     description: "Understand how your energy aligns with others",
     subDescriptions: [
-      `Personal – Chemistry and differences  ${getSubcategoryPrice('Compatibility', 'personal', getPriceById)}`,
-      `Professional – Collaboration dynamics  ${getSubcategoryPrice('Compatibility', 'professional', getPriceById)}`
+      "Personal – Chemistry and differences",
+      "Professional – Collaboration dynamics"
     ],
     slug: "relationships",
     time: "10 min",
@@ -90,11 +90,11 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
   },
   {
     id: "AstroData",
-    name: "Astro Data",
+    name: `Astro Data ${getSubcategoryPrice('AstroData', 'the self', getPriceById)}`,
     description: "Raw planetary data and alignments",
     subDescriptions: [
-      `The Self – Raw planetary data  ${getSubcategoryPrice('AstroData', 'the self', getPriceById)}`,
-      `Compatibility – Synastry charts  ${getSubcategoryPrice('AstroData', 'compatibility', getPriceById)}`
+      "The Self – Raw planetary data",
+      "Compatibility – Synastry charts"
     ],
     slug: "life-shift",
     time: "10 min",
@@ -103,12 +103,12 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
   },
   {
     id: "SnapShot",
-    name: "SnapShot",
+    name: `SnapShot ${getSubcategoryPrice('SnapShot', 'focus', getPriceById)}`,
     description: "Your personalized forecast and timing guidance",
     subDescriptions: [
-      `Focus – Energetic check-in  ${getSubcategoryPrice('SnapShot', 'focus', getPriceById)}`,
-      `Mindset – Thinking patterns  ${getSubcategoryPrice('SnapShot', 'mindset', getPriceById)}`,
-      `Monthly – Real-time insights  ${getSubcategoryPrice('SnapShot', 'monthly', getPriceById)}`
+      "Focus – Energetic check-in",
+      "Mindset – Thinking patterns",
+      "Monthly – Real-time insights"
     ],
     slug: "Monthly",
     time: "12 min",
