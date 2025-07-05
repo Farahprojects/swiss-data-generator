@@ -1,18 +1,15 @@
-
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
-  ]
-}
-
-{
-  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    },
     {
       "source": "/",
       "has": [
         {
           "type": "host",
-          "value": "theria-astro.com"
+          "value": "theraiastro.com"
         }
       ],
       "destination": "/report"
