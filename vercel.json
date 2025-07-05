@@ -5,7 +5,7 @@
       "has": [
         {
           "type": "host",
-          "value": "theraiastro.com"
+          "value": "www.theraiastro.com"
         }
       ],
       "destination": "/report"
