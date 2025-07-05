@@ -1,18 +1,26 @@
 {
   "rewrites": [
+    /*  🔒  Serve /report **only** when the host is www.theraiastro.com   */
     {
-      "source": "/report",
+      "source": "/report/:path*",
+      "has": [
+        { "type": "host", "value": "www.theraiastro.com" }
+      ],
+      "destination": "/report/:path*"
+    },
+
+    /*  🌐  Anything that comes in on *.theraiastro.com is a tenant site  */
+    {
+      "source": "/:path*",
       "has": [
         {
+          /*  Match the sub-domain part and expose it as :slug  */
           "type": "host",
-          "value": "www.theraiastro.com"
+          "value": "(?<slug>[^.]+)\\.theraiastro\\.com"
         }
       ],
-      "destination": "/report"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/"
+      /*  Your catch-all page (or API) can pick the slug up from the query  */
+      "destination": "/site?slug=:slug&path=:path*"
     }
   ]
 }
