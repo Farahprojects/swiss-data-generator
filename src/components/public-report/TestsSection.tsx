@@ -24,36 +24,16 @@ interface Test {
   imageSrc: string;
 }
 
-// Helper function to get subcategory price
-const getSubcategoryPrice = (reportType: string, subcategory: string, getPriceById: any): string => {
+// Helper function to get live price for report type
+const getReportPrice = (reportType: string, getPriceById: any): string => {
   let priceId = '';
   
-  if (reportType === 'TheSelf') {
-    switch (subcategory.toLowerCase()) {
-      case 'personal': priceId = 'essence_personal'; break;
-      case 'professional': priceId = 'essence_professional'; break;
-      case 'relational': priceId = 'essence_relational'; break;
-      default: priceId = 'essence_personal';
-    }
-  } else if (reportType === 'Compatibility') {
-    switch (subcategory.toLowerCase()) {
-      case 'personal': priceId = 'sync_personal'; break;
-      case 'professional': priceId = 'sync_professional'; break;
-      default: priceId = 'sync_personal';
-    }
-  } else if (reportType === 'AstroData') {
-    switch (subcategory.toLowerCase()) {
-      case 'the self': priceId = 'essence'; break;
-      case 'compatibility': priceId = 'sync'; break;
-      default: priceId = 'essence';
-    }
-  } else if (reportType === 'SnapShot') {
-    switch (subcategory.toLowerCase()) {
-      case 'focus': priceId = 'focus'; break;
-      case 'mindset': priceId = 'mindset'; break;
-      case 'monthly': priceId = 'monthly'; break;
-      default: priceId = 'focus';
-    }
+  switch (reportType) {
+    case 'TheSelf': priceId = 'essence_personal'; break;
+    case 'Compatibility': priceId = 'sync_personal'; break;
+    case 'AstroData': priceId = 'essence'; break;
+    case 'SnapShot': priceId = 'focus'; break;
+    default: priceId = 'essence_personal';
   }
 
   const priceData = getPriceById(priceId);
@@ -63,12 +43,10 @@ const getSubcategoryPrice = (reportType: string, subcategory: string, getPriceBy
 const getTestDataWithPricing = (getPriceById: any): Test[] => [
   {
     id: "TheSelf",
-    name: "The Self",
-    description: "Discover your authentic self across all areas of life",
+    name: `The Self ${getReportPrice('TheSelf', getPriceById)}`,
+    description: "Uncover insights",
     subDescriptions: [
-      `Personal – Insights and identity  ${getSubcategoryPrice('TheSelf', 'personal', getPriceById)}`,
-      `Professional – Career path and purpose  ${getSubcategoryPrice('TheSelf', 'professional', getPriceById)}`,
-      `Relational – How you connect with others  ${getSubcategoryPrice('TheSelf', 'relational', getPriceById)}`
+      "Personal – Professional – Relational"
     ],
     slug: "Essence",
     time: "5 min",
@@ -77,11 +55,10 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
   },
   {
     id: "Compatibility",
-    name: "Compatibility",
-    description: "Understand how your energy aligns with others",
+    name: `Compatibility ${getReportPrice('Compatibility', getPriceById)}`,
+    description: "Discover synergies",
     subDescriptions: [
-      `Personal – Chemistry and differences  ${getSubcategoryPrice('Compatibility', 'personal', getPriceById)}`,
-      `Professional – Collaboration dynamics  ${getSubcategoryPrice('Compatibility', 'professional', getPriceById)}`
+      "Personal or Professional"
     ],
     slug: "relationships",
     time: "10 min",
@@ -90,11 +67,10 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
   },
   {
     id: "AstroData",
-    name: "Astro Data",
+    name: `Astro Data ${getReportPrice('AstroData', getPriceById)}`,
     description: "Raw planetary data and alignments",
     subDescriptions: [
-      `The Self – Raw planetary data  ${getSubcategoryPrice('AstroData', 'the self', getPriceById)}`,
-      `Compatibility – Synastry charts  ${getSubcategoryPrice('AstroData', 'compatibility', getPriceById)}`
+      "The Self – Compatibility"
     ],
     slug: "life-shift",
     time: "10 min",
@@ -103,12 +79,10 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
   },
   {
     id: "SnapShot",
-    name: "SnapShot",
+    name: `SnapShot ${getReportPrice('SnapShot', getPriceById)}`,
     description: "Your personalized forecast and timing guidance",
     subDescriptions: [
-      `Focus – Energetic check-in  ${getSubcategoryPrice('SnapShot', 'focus', getPriceById)}`,
-      `Mindset – Thinking patterns  ${getSubcategoryPrice('SnapShot', 'mindset', getPriceById)}`,
-      `Monthly – Real-time insights  ${getSubcategoryPrice('SnapShot', 'monthly', getPriceById)}`
+      "Focus – Mindset – Monthly"
     ],
     slug: "Monthly",
     time: "12 min",
