@@ -212,7 +212,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                   >
                   
                   <CardContent className="p-10 min-h-[420px]">
-                    <div className="flex justify-between items-start mb-6">
+                    <div className="mb-6">
                       <div>
                         <h3 className="font-medium text-2xl text-gray-900 flex items-center mb-3 tracking-tight">
                           {report.icon}
@@ -222,9 +222,6 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                           Best for {report.bestFor}
                         </span>
                       </div>
-                      <span className="font-light text-3xl text-gray-900">
-                        {report.price}
-                      </span>
                     </div>
 
                     <p className="text-lg text-gray-700 mb-6 font-light leading-relaxed">

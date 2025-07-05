@@ -217,7 +217,7 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                   >
                   
                   <CardContent className="p-6 min-h-[380px]">
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="mb-4">
                       <div>
                         <h3 className="font-medium text-lg text-gray-900 flex items-center mb-2 tracking-tight">
                           {report.icon}
@@ -227,9 +227,6 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                           Best for {report.bestFor}
                         </span>
                       </div>
-                      <span className="font-light text-xl text-gray-900">
-                        {report.price}
-                      </span>
                     </div>
 
                     <p className="text-base text-gray-700 mb-4 font-light leading-relaxed">
