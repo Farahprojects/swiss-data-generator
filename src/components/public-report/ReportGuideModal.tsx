@@ -28,58 +28,58 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
 
   const reportGuides = [
     {
-      type: 'Essence',
+      type: 'TheSelf',
       icon: <UserCircle className="h-6 w-6 text-gray-700 inline-block mr-2" />,
-      title: 'Personal Insights',
-      price: '$10',
+      title: 'The Self',
+      price: '', // Price will be fetched dynamically
       bestFor: 'Self-understanding',
       isRecommended: true,
-      description: 'Discover who you are and what drives you',
-      details: 'Understand your core personality, decision-making style, and natural strengths. Perfect for personal growth and self-awareness.',
+      description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
+      details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
       subTypes: [
-        'Personal – Your authentic self and emotional patterns',
-        'Professional – How you work best and lead others',
-        'Relational – Your relationship style and communication needs'
+        'Personal – Discover insights about your identity, emotions, and natural strengths.',
+        'Professional – Understand your career path, purpose, and ambition patterns.',
+        'Relational – Explore how you connect, love, and grow with others.'
       ]
     },
     {
-      type: 'Sync',
+      type: 'Compatibility',
       icon: <Users className="h-6 w-6 text-gray-700 inline-block mr-2" />,
-      title: 'Compatibility Analysis',
-      price: '$10',
-      bestFor: 'Relationships',
-      description: 'See how you connect with someone else',
-      details: 'Analyze relationship dynamics, compatibility, and areas of harmony or challenge with another person.',
+      title: 'Compatibility',
+      price: '', // Price will be fetched dynamically
+      bestFor: 'Compatibility',
+      description: 'How your energy aligns with someone - connection, tension, and flow.',
+      details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
       subTypes: [
-        'Personal Sync – Romantic and close relationships',
-        'Professional Sync – Work partnerships and team dynamics'
-      ]
-    },
-    {
-      type: 'Snapshots',
-      icon: <CalendarDays className="h-6 w-6 text-gray-700 inline-block mr-2" />,
-      title: 'Snapshot Reports',
-      price: '$3',
-      bestFor: 'Quick insights',
-      description: 'Fast, focused insights for daily life',
-      details: 'Get quick snapshots of your mental state, focus times, and emotional rhythms.',
-      subTypes: [
-        'Focus – Best hours for deep work or rest today',
-        'Mindset – Current mental clarity and cognitive strengths',
-        'Monthly – Personal forecast for the current month'
+        'Personal – Compare your chart with a partner or friend to explore chemistry and differences.',
+        'Professional – Map out collaboration dynamics and working relationships.'
       ]
     },
     {
       type: 'AstroData',
-      icon: <Brain className="h-6 w-6 text-gray-700 inline-block mr-2" />,
+      icon: <Target className="h-6 w-6 text-gray-700 inline-block mr-2" />,
       title: 'Astro Data',
-      price: '$10',
-      bestFor: 'Raw astrological data',
-      description: 'Pure astrological calculations and data',
-      details: 'Access precise birth chart calculations, planetary positions, and astrological house data.',
+      price: '', // Price will be fetched dynamically
+      bestFor: 'Raw Data',
+      description: 'Raw planetary data and alignments with no interpretation',
+      details: 'Get the pure astronomical data and chart information without analysis or commentary.',
       subTypes: [
-        'Essence Data – Complete personality chart calculations',
-        'Sync Data – Relationship compatibility calculations'
+        'The Self – Raw planetary data and alignments tailored to you.',
+        'Compatibility – Synastry and composite charts with no interpretation.'
+      ]
+    },
+    {
+      type: 'SnapShot',
+      icon: <CalendarDays className="h-6 w-6 text-gray-700 inline-block mr-2" />,
+      title: 'SnapShot',
+      price: '', // Price will be fetched dynamically
+      bestFor: 'Timing insights',
+      description: 'Your personalized forecast and timing guidance',
+      details: 'Get focused insights on current energies, mental patterns, and monthly themes.',
+      subTypes: [
+        'Focus – A quick energetic check-in on where your attention naturally flows.',
+        'Mindset – See how your thinking patterns are currently influenced.',
+        'Monthly – A real-time look at how the stars are shaping your month.'
       ]
     }
   ];
@@ -112,12 +112,10 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
   const getReportType = (reportName: string) => {
     // Map display names to report types
     const nameToType: { [key: string]: string } = {
-      'The Self': 'Essence',
-      'Compatibility': 'Sync',
-      'Energy Month': 'Snapshots',
-      'Mindset': 'Snapshots',
-      'Focus': 'Snapshots',
-      'Flow': 'Snapshots'
+      'The Self': 'TheSelf',
+      'Compatibility': 'Compatibility',
+      'SnapShot': 'SnapShot',
+      'Astro Data': 'AstroData'
     };
     return nameToType[reportName] || reportName;
   };
@@ -209,7 +207,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
 
           <div className="mt-12 text-center">
             <p className="text-sm text-gray-500 font-light">
-              Not sure which one? Start with Personal Insights – it's our most comprehensive report.
+              Not sure which one? Start with The Self – it's our most comprehensive report.
             </p>
           </div>
         </DialogContent>
