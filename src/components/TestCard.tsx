@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface TestCardProps {
   title: string;
   description: string;
+  subDescriptions?: string[];
   path: string;
   isActive: boolean;
   onHover: () => void;
@@ -13,7 +14,7 @@ interface TestCardProps {
   icon: LucideIcon;
 }
 
-export const TestCard = ({ title, description, path, isActive, onHover, onExplore, icon: Icon }: TestCardProps) => {
+export const TestCard = ({ title, description, subDescriptions, path, isActive, onHover, onExplore, icon: Icon }: TestCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const isMobile = useIsMobile();
 
@@ -52,7 +53,15 @@ export const TestCard = ({ title, description, path, isActive, onHover, onExplor
           }`}>
             {title}
           </h3>
-          {description && (
+          {subDescriptions && subDescriptions.length > 0 ? (
+            <div className="mt-3 space-y-1">
+              {subDescriptions.map((subDesc, index) => (
+                <p key={index} className="text-sm text-gray-600 font-normal leading-relaxed">
+                  {subDesc}
+                </p>
+              ))}
+            </div>
+          ) : description && (
             <p className="text-base text-gray-700 mt-2 font-normal">{description}</p>
           )}
         </div>

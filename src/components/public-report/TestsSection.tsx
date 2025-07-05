@@ -16,6 +16,7 @@ interface Test {
   id: string;
   name: string;
   description: string;
+  subDescriptions: string[];
   slug: string;
   time: string;
   color: string;
@@ -24,37 +25,55 @@ interface Test {
 
 const testData: Test[] = [
   {
-    id: "Essence",
+    id: "TheSelf",
     name: "The Self",
-    description: "Personal, Professional & Relational insights • $10",
+    description: "Discover your authentic self across all areas of life",
+    subDescriptions: [
+      "Personal – Discover insights about your identity, emotions, and natural strengths.",
+      "Professional – Understand your career path, purpose, and ambition patterns.",
+      "Relational – Explore how you connect, love, and grow with others."
+    ],
     slug: "Essence",
     time: "5 min",
     color: "bg-blue-500",
     imageSrc: "/lovable-uploads/f2552227-155d-477d-9c93-ac4eb72b5ddf.png"
   },
   {
-    id: "Sync",
+    id: "Compatibility",
     name: "Compatibility",
-    description: "Personal & Professional compatibility analysis • $10",
+    description: "Understand how your energy aligns with others",
+    subDescriptions: [
+      "Personal – Compare your chart with a partner or friend to explore chemistry and differences.",
+      "Professional – Map out collaboration dynamics and working relationships."
+    ],
     slug: "relationships",
     time: "10 min",
     color: "bg-pink-500",
     imageSrc: "/lovable-uploads/71cede7b-0de9-4397-897f-29009a07c012.png"
   },
   {
-    id: "Focus",
+    id: "AstroData",
     name: "Astro Data",
-    description: "Raw planetary data and alignments • $3",
+    description: "Raw planetary data and alignments",
+    subDescriptions: [
+      "The Self – Raw planetary data and alignments tailored to you.",
+      "Compatibility – Synastry and composite charts with no interpretation."
+    ],
     slug: "life-shift",
     time: "10 min",
     color: "bg-purple-500",
     imageSrc: "/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png"
   },
   {
-    id: "Monthly",
+    id: "SnapShot",
     name: "SnapShot",
-    description: "Focus, Mindset & Monthly insights • $3",
-    slug: "Monthly ",
+    description: "Your personalized forecast and timing guidance",
+    subDescriptions: [
+      "Focus – A quick energetic check-in on where your attention naturally flows.",
+      "Mindset – See how your thinking patterns are currently influenced.",
+      "Monthly – A real-time look at how the stars are shaping your month."
+    ],
+    slug: "Monthly",
     time: "12 min",
     color: "bg-orange-500",
     imageSrc: "/lovable-uploads/62526a29-1fcb-4df9-a3fe-398ec868e224.png"
@@ -152,18 +171,19 @@ export default function TestsSection() {
           <div className="hidden md:grid md:grid-cols-12 gap-8 md:items-stretch">
             <div className="md:col-span-6 flex flex-col justify-between">
               <div className="flex flex-col justify-between h-[480px]">
-                {testData.map((test) => (
-                  <TestCard
-                    key={test.id}
-                    title={test.name}
-                    description={test.description}
-                    path={test.slug}
-                    isActive={selectedTest.id === test.id}
-                    onHover={() => setSelectedTest(test)}
-                    onExplore={() => handleExploreClick(test.name)}
-                    icon={LucideIcons.Sparkles}
-                  />
-                ))}
+                 {testData.map((test) => (
+                   <TestCard
+                     key={test.id}
+                     title={test.name}
+                     description={test.description}
+                     subDescriptions={test.subDescriptions}
+                     path={test.slug}
+                     isActive={selectedTest.id === test.id}
+                     onHover={() => setSelectedTest(test)}
+                     onExplore={() => handleExploreClick(test.name)}
+                     icon={LucideIcons.Sparkles}
+                   />
+                 ))}
               </div>
             </div>
             
@@ -175,7 +195,7 @@ export default function TestsSection() {
                       key={test.id}
                       className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
                     >
-                       {test.id === 'Essence' ? (
+                       {test.id === 'TheSelf' ? (
                          <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                            <img 
                              src={test.imageSrc} 
@@ -183,7 +203,7 @@ export default function TestsSection() {
                              className="w-full h-full object-cover rounded-xl"
                            />
                          </div>
-                       ) : test.id === 'Sync' ? (
+                       ) : test.id === 'Compatibility' ? (
                          <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                            <img 
                              src={test.imageSrc} 
@@ -191,7 +211,7 @@ export default function TestsSection() {
                              className="w-full h-full object-cover rounded-xl"
                            />
                          </div>
-                       ) : test.id === 'Monthly' ? (
+                       ) : test.id === 'SnapShot' ? (
                          <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                            <img 
                              src={test.imageSrc} 
@@ -199,7 +219,7 @@ export default function TestsSection() {
                              className="w-full h-full object-cover rounded-xl"
                            />
                          </div>
-                       ) : test.id === 'Focus' ? (
+                       ) : test.id === 'AstroData' ? (
                          <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                            <img 
                              src={test.imageSrc} 
@@ -231,18 +251,19 @@ export default function TestsSection() {
           {/* Mobile layout - test cards within container */}
           <div className="block md:hidden">
             <div className="space-y-0">
-              {testData.map((test) => (
-                <TestCard
-                  key={test.id}
-                  title={test.name}
-                  description={test.description}
-                  path={test.slug}
-                  isActive={selectedTest.id === test.id}
-                  onHover={() => setSelectedTest(test)}
-                  onExplore={() => handleExploreClick(test.name)}
-                  icon={LucideIcons.Sparkles}
-                />
-              ))}
+               {testData.map((test) => (
+                 <TestCard
+                   key={test.id}
+                   title={test.name}
+                   description={test.description}
+                   subDescriptions={test.subDescriptions}
+                   path={test.slug}
+                   isActive={selectedTest.id === test.id}
+                   onHover={() => setSelectedTest(test)}
+                   onExplore={() => handleExploreClick(test.name)}
+                   icon={LucideIcons.Sparkles}
+                 />
+               ))}
             </div>
           </div>
         </div>
@@ -258,7 +279,7 @@ export default function TestsSection() {
                   key={test.id}
                   className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
                 >
-                   {test.id === 'Essence' ? (
+                   {test.id === 'TheSelf' ? (
                      <div className="w-full h-full bg-white">
                        <img 
                          src={test.imageSrc} 
@@ -266,7 +287,7 @@ export default function TestsSection() {
                          className="w-full h-full object-cover rounded-r-xl"
                        />
                      </div>
-                   ) : test.id === 'Sync' ? (
+                   ) : test.id === 'Compatibility' ? (
                      <div className="w-full h-full bg-white">
                        <img 
                          src={test.imageSrc} 
@@ -274,7 +295,7 @@ export default function TestsSection() {
                          className="w-full h-full object-cover rounded-r-xl"
                        />
                      </div>
-                   ) : test.id === 'Monthly' ? (
+                   ) : test.id === 'SnapShot' ? (
                      <div className="w-full h-full bg-white">
                        <img 
                          src={test.imageSrc} 
@@ -282,7 +303,7 @@ export default function TestsSection() {
                          className="w-full h-full object-cover rounded-r-xl"
                        />
                      </div>
-                   ) : test.id === 'Focus' ? (
+                   ) : test.id === 'AstroData' ? (
                      <div className="w-full h-full bg-white">
                        <img 
                          src={test.imageSrc} 
