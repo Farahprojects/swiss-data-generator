@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { TestCard } from "@/components/TestCard";
 import ReportCard from "./ReportCard";
 import ReportGuideResponsive from "./ReportGuideResponsive";
+import { usePricing } from "@/contexts/PricingContext";
 import * as LucideIcons from "lucide-react";
 import {
   UserCircle,
@@ -128,12 +129,68 @@ const reportGuides = [
 ];
 
 export default function TestsSection() {
+  const { getPriceById, isLoading } = usePricing();
   const [selectedTest, setSelectedTest] = useState(testData[0]);
   const [showReportGuide, setShowReportGuide] = useState(false);
   const [targetReportType, setTargetReportType] = useState<string | null>(null);
+
+  // Helper function to get price with fallback
+  const getReportPrice = (reportId: string): string => {
+    if (isLoading) return '$--';
+    const priceData = getPriceById(reportId);
+    return priceData ? `$${priceData.unit_price_usd}` : '$--';
+  };
+
+  // Dynamic test data with pricing from database
+  const dynamicTestData = testData.map(test => {
+    let priceText = '';
+    switch (test.id) {
+      case 'Essence':
+        priceText = `Personal, Professional & Relational reports • ${getReportPrice('essence_personal')}`;
+        break;
+      case 'Sync':
+        priceText = `Personal & Professional compatibility analysis • ${getReportPrice('sync_personal')}`;
+        break;
+      case 'Monthly':
+        priceText = `Monthly forecast & timing guidance • ${getReportPrice('monthly')}`;
+        break;
+      case 'Focus':
+        priceText = `Raw astro data delivered in seconds • ${getReportPrice('focus')}`;
+        break;
+      case 'Flow':
+        priceText = `7-day creative energy forecast • ${getReportPrice('flow')}`;
+        break;
+      default:
+        priceText = test.description;
+    }
+    return { ...test, description: priceText };
+  });
+
+  // Dynamic report guides with pricing from database
+  const dynamicReportGuides = reportGuides.map(guide => {
+    let price = '$--';
+    switch (guide.type) {
+      case 'The Self':
+        price = getReportPrice('essence_personal');
+        break;
+      case 'Compatibility':
+        price = getReportPrice('sync_personal');
+        break;
+      case 'SnapShot':
+        price = getReportPrice('monthly');
+        break;
+      case 'Astro Data':
+        price = getReportPrice('focus');
+        break;
+      case '':
+        price = getReportPrice('flow');
+        break;
+    }
+    return { ...guide, price };
+  });
   
   const getReportGuide = (testId: string) => {
-    return reportGuides.find(guide => guide.type === testId) || reportGuides[0];
+    return dynamicReportGuides.find(guide => guide.type === testId) || dynamicReportGuides[0];
   };
 
   const handleExploreClick = (testName: string) => {
@@ -161,7 +218,7 @@ export default function TestsSection() {
           <div className="hidden md:grid md:grid-cols-12 gap-8 md:items-stretch">
             <div className="md:col-span-6 flex flex-col justify-between">
               <div className="flex flex-col justify-between h-[480px]">
-                {testData.map((test) => (
+                {dynamicTestData.map((test) => (
                   <TestCard
                     key={test.id}
                     title={test.name}
@@ -177,8 +234,8 @@ export default function TestsSection() {
             </div>
             
             <div className="md:col-span-6">
-              <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-[480px] mt-4">
-                {testData.map((test) => {
+            <div className="w-full overflow-hidden rounded-2xl relative shadow-lg h-[480px] mt-4">
+              {dynamicTestData.map((test) => {
                   return (
                     <div 
                       key={test.id}
@@ -248,7 +305,7 @@ export default function TestsSection() {
           {/* Mobile layout - test cards within container */}
           <div className="block md:hidden">
             <div className="space-y-0">
-              {testData.map((test) => (
+              {dynamicTestData.map((test) => (
                 <TestCard
                   key={test.id}
                   title={test.name}
@@ -269,7 +326,7 @@ export default function TestsSection() {
       <div className="block md:hidden mt-8">
         <div className="w-screen relative -mx-4">
           <div className="w-full overflow-hidden relative shadow-lg h-64">
-            {testData.map((test) => {
+            {dynamicTestData.map((test) => {
               return (
                 <div 
                   key={test.id}
