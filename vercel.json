@@ -2,12 +2,17 @@
   "rewrites": [
     {
       "source": "/report",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.theraiastro.com"
+        }
+      ],
       "destination": "/report"
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ]
 }
-
