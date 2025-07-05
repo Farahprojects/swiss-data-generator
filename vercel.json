@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/"
-    },
-    {
       "source": "/",
       "has": [
         {
@@ -13,6 +9,10 @@
         }
       ],
       "destination": "/report"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/"
     }
   ]
 }
