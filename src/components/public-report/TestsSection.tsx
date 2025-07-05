@@ -26,7 +26,7 @@ const testData: Test[] = [
   {
     id: "Essence",
     name: "The Self",
-    description: "Personal, Professional & Relational reports • $10",
+    description: "Personal, Professional & Relational insights • $10",
     slug: "Essence",
     time: "5 min",
     color: "bg-blue-500",
@@ -42,31 +42,22 @@ const testData: Test[] = [
     imageSrc: "/lovable-uploads/71cede7b-0de9-4397-897f-29009a07c012.png"
   },
   {
-    id: "Monthly",
-    name: "SnapShot",
-    description: "Monthly forecast & timing guidance • $3",
-    slug: "Monthly ",
-    time: "12 min",
-    color: "bg-orange-500",
-    imageSrc: "/lovable-uploads/62526a29-1fcb-4df9-a3fe-398ec868e224.png"
-  },
-  {
     id: "Focus",
     name: "Astro Data",
-    description: "Raw astro data delivered in seconds • $3",
+    description: "Raw planetary data and alignments • $3",
     slug: "life-shift",
     time: "10 min",
     color: "bg-purple-500",
     imageSrc: "/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png"
   },
   {
-    id: "Flow",
-    name: "",
-    description: "",
-    slug: "Flow",
-    time: "15 min",
-    color: "bg-green-500",
-    imageSrc: "/lovable-uploads/f2552227-155d-477d-9c93-ac4eb72b5ddf.png"
+    id: "Monthly",
+    name: "SnapShot",
+    description: "Focus, Mindset & Monthly insights • $3",
+    slug: "Monthly ",
+    time: "12 min",
+    color: "bg-orange-500",
+    imageSrc: "/lovable-uploads/62526a29-1fcb-4df9-a3fe-398ec868e224.png"
   },
 ];
 
@@ -80,9 +71,9 @@ const reportGuides = [
     description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
     details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
     subTypes: [
-      'Personal – Self-awareness, emotional behavior, inner wiring',
-      'Professional – How you operate at work: decision-making, productivity, and team dynamics. Useful for hiring, coaching, or leadership insight.', 
-      'Relational – How you show up in relationships (patterns, openness, tension)'
+      'Personal – Discover insights about your identity, emotions, and natural strengths.',
+      'Professional – Understand your career path, purpose, and ambition patterns.',
+      'Relational – Explore how you connect, love, and grow with others.'
     ]
   },
   {
@@ -94,8 +85,21 @@ const reportGuides = [
     description: 'How your energy aligns with someone - connection, tension, and flow.',
     details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
     subTypes: [
-      'Personal – Romantic, emotional, or close social connection',
-      'Professional  – Team dynamics, leadership compatibility, working styles'
+      'Personal – Compare your chart with a partner or friend to explore chemistry and differences.',
+      'Professional – Map out collaboration dynamics and working relationships.'
+    ]
+  },
+  {
+    type: 'Astro Data',
+    icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
+    title: 'Astro Data Report',
+    price: '$3',
+    bestFor: 'Raw Data',
+    description: 'Raw planetary data and alignments with no interpretation',
+    details: 'Get the pure astronomical data and chart information without analysis or commentary.',
+    subTypes: [
+      'The Self – Raw planetary data and alignments tailored to you.',
+      'Compatibility – Synastry and composite charts with no interpretation.'
     ]
   },
   {
@@ -103,27 +107,14 @@ const reportGuides = [
     icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
     title: 'SnapShot Report',
     price: '$3',
-    bestFor: 'Monthly planning',
-    description: 'Your personalized forecast for the current month',
-    details: 'Get monthly themes, key opportunities, and timing guidance for important decisions and activities.'
-  },
-  {
-    type: 'Astro Data',
-    icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Astro Data Report',
-    price: '$3',
-    bestFor: 'Productivity',
-    description: 'Best hours today for deep work or rest',
-    details: 'Identify your optimal times for concentration, productivity, and rest based on your personal energy cycles.'
-  },
-  {
-    type: '',
-    icon: <Repeat className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Report',
-    price: '$3',
-    bestFor: 'Emotional rhythm',
-    description: 'Creative/emotional openness over 7 days',
-    details: 'Track your creative and emotional rhythms throughout the week to optimize your creative output and emotional well-being.'
+    bestFor: 'Timing insights',
+    description: 'Your personalized forecast and timing guidance',
+    details: 'Get focused insights on current energies, mental patterns, and monthly themes.',
+    subTypes: [
+      'Focus – A quick energetic check-in on where your attention naturally flows.',
+      'Mindset – See how your thinking patterns are currently influenced.',
+      'Monthly – A real-time look at how the stars are shaping your month.'
+    ]
   }
 ];
 
@@ -184,60 +175,52 @@ export default function TestsSection() {
                       key={test.id}
                       className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
                     >
-                      {test.id === 'Essence' ? (
-                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                          <img 
-                            src={test.imageSrc} 
-                            alt="The Self Report" 
-                            className="w-full h-full object-cover rounded-xl"
-                          />
-                        </div>
-                      ) : test.id === 'Sync' ? (
-                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                          <img 
-                            src={test.imageSrc} 
-                            alt="Compatibility Report" 
-                            className="w-full h-full object-cover rounded-xl"
-                          />
-                        </div>
-                      ) : test.id === 'Flow' ? (
-                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                          <img 
-                            src={test.imageSrc} 
-                            alt="Report" 
-                            className="w-full h-full object-cover rounded-xl"
-                          />
-                        </div>
-                      ) : test.id === 'Monthly' ? (
-                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                          <img 
-                            src={test.imageSrc} 
-                            alt="SnapShot Report" 
-                            className="w-full h-full object-cover rounded-xl"
-                          />
-                        </div>
-                      ) : test.id === 'Focus' ? (
-                        <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
-                          <img 
-                            src={test.imageSrc} 
-                            alt="Astro Data Report" 
-                            className="w-full h-full object-cover rounded-xl"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center p-4">
-                          <ReportCard
-                            type={getReportGuide(test.id).type}
-                            icon={getReportGuide(test.id).icon}
-                            title={getReportGuide(test.id).title}
-                            price={getReportGuide(test.id).price}
-                            bestFor={getReportGuide(test.id).bestFor}
-                            description={getReportGuide(test.id).description}
-                            details={getReportGuide(test.id).details}
-                            subTypes={getReportGuide(test.id).subTypes}
-                          />
-                        </div>
-                      )}
+                       {test.id === 'Essence' ? (
+                         <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
+                           <img 
+                             src={test.imageSrc} 
+                             alt="The Self Report" 
+                             className="w-full h-full object-cover rounded-xl"
+                           />
+                         </div>
+                       ) : test.id === 'Sync' ? (
+                         <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
+                           <img 
+                             src={test.imageSrc} 
+                             alt="Compatibility Report" 
+                             className="w-full h-full object-cover rounded-xl"
+                           />
+                         </div>
+                       ) : test.id === 'Monthly' ? (
+                         <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
+                           <img 
+                             src={test.imageSrc} 
+                             alt="SnapShot Report" 
+                             className="w-full h-full object-cover rounded-xl"
+                           />
+                         </div>
+                       ) : test.id === 'Focus' ? (
+                         <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
+                           <img 
+                             src={test.imageSrc} 
+                             alt="Astro Data Report" 
+                             className="w-full h-full object-cover rounded-xl"
+                           />
+                         </div>
+                       ) : (
+                         <div className="w-full h-full flex items-center justify-center p-4">
+                           <ReportCard
+                             type={getReportGuide(test.id).type}
+                             icon={getReportGuide(test.id).icon}
+                             title={getReportGuide(test.id).title}
+                             price={getReportGuide(test.id).price}
+                             bestFor={getReportGuide(test.id).bestFor}
+                             description={getReportGuide(test.id).description}
+                             details={getReportGuide(test.id).details}
+                             subTypes={getReportGuide(test.id).subTypes}
+                           />
+                         </div>
+                       )}
                     </div>
                   );
                 })}
@@ -275,60 +258,52 @@ export default function TestsSection() {
                   key={test.id}
                   className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
                 >
-                  {test.id === 'Essence' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="The Self Report" 
-                        className="w-full h-full object-cover rounded-r-xl"
-                      />
-                    </div>
-                  ) : test.id === 'Sync' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="Compatibility Report" 
-                        className="w-full h-full object-cover rounded-r-xl"
-                      />
-                    </div>
-                  ) : test.id === 'Flow' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="Report" 
-                        className="w-full h-full object-cover rounded-r-xl"
-                      />
-                    </div>
-                  ) : test.id === 'Monthly' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="SnapShot Report" 
-                        className="w-full h-full object-cover rounded-r-xl"
-                      />
-                    </div>
-                  ) : test.id === 'Focus' ? (
-                    <div className="w-full h-full bg-white">
-                      <img 
-                        src={test.imageSrc} 
-                        alt="Astro Data Report" 
-                        className="w-full h-full object-cover rounded-r-xl"
-                      />
-                    </div>
-                  ) : (
-                     <div className="w-full h-full flex items-center justify-center p-4">
-                       <ReportCard
-                         type={getReportGuide(test.id).type}
-                         icon={getReportGuide(test.id).icon}
-                         title={getReportGuide(test.id).title}
-                         price={getReportGuide(test.id).price}
-                         bestFor={getReportGuide(test.id).bestFor}
-                         description={getReportGuide(test.id).description}
-                         details={getReportGuide(test.id).details}
-                         subTypes={getReportGuide(test.id).subTypes}
+                   {test.id === 'Essence' ? (
+                     <div className="w-full h-full bg-white">
+                       <img 
+                         src={test.imageSrc} 
+                         alt="The Self Report" 
+                         className="w-full h-full object-cover rounded-r-xl"
                        />
                      </div>
-                  )}
+                   ) : test.id === 'Sync' ? (
+                     <div className="w-full h-full bg-white">
+                       <img 
+                         src={test.imageSrc} 
+                         alt="Compatibility Report" 
+                         className="w-full h-full object-cover rounded-r-xl"
+                       />
+                     </div>
+                   ) : test.id === 'Monthly' ? (
+                     <div className="w-full h-full bg-white">
+                       <img 
+                         src={test.imageSrc} 
+                         alt="SnapShot Report" 
+                         className="w-full h-full object-cover rounded-r-xl"
+                       />
+                     </div>
+                   ) : test.id === 'Focus' ? (
+                     <div className="w-full h-full bg-white">
+                       <img 
+                         src={test.imageSrc} 
+                         alt="Astro Data Report" 
+                         className="w-full h-full object-cover rounded-r-xl"
+                       />
+                     </div>
+                   ) : (
+                      <div className="w-full h-full flex items-center justify-center p-4">
+                        <ReportCard
+                          type={getReportGuide(test.id).type}
+                          icon={getReportGuide(test.id).icon}
+                          title={getReportGuide(test.id).title}
+                          price={getReportGuide(test.id).price}
+                          bestFor={getReportGuide(test.id).bestFor}
+                          description={getReportGuide(test.id).description}
+                          details={getReportGuide(test.id).details}
+                          subTypes={getReportGuide(test.id).subTypes}
+                        />
+                      </div>
+                   )}
                 </div>
               );
             })}
