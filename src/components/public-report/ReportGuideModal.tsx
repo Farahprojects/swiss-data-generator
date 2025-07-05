@@ -123,7 +123,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
   return (
     <div className="hidden md:block">
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto bg-white/95 backdrop-blur-sm border border-gray-200/50">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-sm border border-gray-200/50">
           <DialogClose className="absolute right-6 top-6 rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
             <X className="h-5 w-5" />
             <span className="sr-only">Close</span>
@@ -160,7 +160,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                     </div>
                   )}
                   
-                  <CardContent className="p-8">
+                  <CardContent className="p-10 min-h-[420px]">
                     <div className="flex justify-between items-start mb-6">
                       <div>
                         <h3 className="font-medium text-2xl text-gray-900 flex items-center mb-3 tracking-tight">

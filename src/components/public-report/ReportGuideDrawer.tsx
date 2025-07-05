@@ -165,7 +165,7 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                     </div>
                   )}
                   
-                  <CardContent className="p-5">
+                  <CardContent className="p-6 min-h-[380px]">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-medium text-lg text-gray-900 flex items-center mb-2 tracking-tight">
