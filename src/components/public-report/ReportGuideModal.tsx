@@ -136,29 +136,30 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
             <p className="text-gray-500 text-center leading-relaxed">Select the insights that matter most to you right now</p>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
             {reportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
               
               return (
-                <Card 
-                  key={report.type} 
-                  className={`border transition-all duration-300 relative overflow-hidden group hover:shadow-lg hover:border-gray-300/60 ${
-                    isTargeted 
-                      ? 'border-gray-400 bg-gray-50/50 shadow-lg ring-2 ring-gray-300/30' 
-                      : report.isRecommended 
-                      ? 'border-gray-300 bg-gray-50/30 shadow-md' 
-                      : 'border-gray-200/50 bg-white/80 backdrop-blur-sm'
-                  }`}
-                  ref={isTargeted ? targetRef : null}
-                >
+                <div key={report.type} className="relative">
                   {report.isRecommended && (
-                    <div className="absolute -top-3 left-8">
-                      <span className="bg-gray-900 text-white text-xs px-4 py-1.5 rounded-full font-medium tracking-wide">
+                    <div className="absolute -top-3 left-8 z-10">
+                      <span className="bg-gray-900 text-white text-xs px-4 py-1.5 rounded-full font-medium tracking-wide shadow-lg">
                         Most Popular
                       </span>
                     </div>
                   )}
+                  
+                  <Card 
+                    className={`border transition-all duration-300 relative ${
+                      isTargeted 
+                        ? 'border-gray-400 bg-gray-50/50 shadow-lg ring-2 ring-gray-300/30' 
+                        : report.isRecommended 
+                        ? 'border-gray-300 bg-gray-50/30 shadow-md' 
+                        : 'border-gray-200/50 bg-white/80 backdrop-blur-sm'
+                    }`}
+                    ref={isTargeted ? targetRef : null}
+                  >
                   
                   <CardContent className="p-10 min-h-[420px]">
                     <div className="flex justify-between items-start mb-6">
@@ -200,7 +201,8 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
                       </div>
                     )}
                   </CardContent>
-                </Card>
+                  </Card>
+                </div>
               );
             })}
           </div>

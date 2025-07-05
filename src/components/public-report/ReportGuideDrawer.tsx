@@ -140,30 +140,31 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
           <p className="text-gray-500 text-center text-sm leading-relaxed">Select the insights that matter most to you right now</p>
         </DrawerHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-6" style={{ touchAction: 'pan-y' }}>
+        <div className="flex-1 overflow-y-auto px-4 pb-6 pt-2" style={{ touchAction: 'pan-y' }}>
           <div className="space-y-6">
             {reportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
               
               return (
-                <Card 
-                  key={report.type} 
-                  className={`border transition-all duration-300 relative overflow-hidden ${
-                    isTargeted 
-                      ? 'border-gray-400 bg-gray-50/50 shadow-lg ring-2 ring-gray-300/30' 
-                      : report.isRecommended 
-                      ? 'border-gray-300 bg-gray-50/30 shadow-md' 
-                      : 'border-gray-200/50 bg-white/80 backdrop-blur-sm'
-                  }`}
-                  ref={isTargeted ? targetRef : null}
-                >
+                <div key={report.type} className="relative">
                   {report.isRecommended && (
-                    <div className="absolute -top-2 left-6">
-                      <span className="bg-gray-900 text-white text-xs px-3 py-1 rounded-full font-medium tracking-wide">
+                    <div className="absolute -top-3 left-6 z-10">
+                      <span className="bg-gray-900 text-white text-xs px-3 py-1 rounded-full font-medium tracking-wide shadow-lg">
                         Most Popular
                       </span>
                     </div>
                   )}
+                  
+                  <Card 
+                    className={`border transition-all duration-300 relative ${
+                      isTargeted 
+                        ? 'border-gray-400 bg-gray-50/50 shadow-lg ring-2 ring-gray-300/30' 
+                        : report.isRecommended 
+                        ? 'border-gray-300 bg-gray-50/30 shadow-md' 
+                        : 'border-gray-200/50 bg-white/80 backdrop-blur-sm'
+                    }`}
+                    ref={isTargeted ? targetRef : null}
+                  >
                   
                   <CardContent className="p-6 min-h-[380px]">
                     <div className="flex justify-between items-start mb-4">
@@ -205,7 +206,8 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                       </div>
                     )}
                   </CardContent>
-                </Card>
+                  </Card>
+                </div>
               );
             })}
           </div>
