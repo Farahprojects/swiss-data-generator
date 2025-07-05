@@ -46,6 +46,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     name: `The Self ${getReportPrice('TheSelf', getPriceById)}`,
     description: "Uncover insights",
     subDescriptions: [
+      "Know yourself",
       "Personal – Professional – Relational"
     ],
     slug: "Essence",
@@ -58,6 +59,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     name: `Compatibility ${getReportPrice('Compatibility', getPriceById)}`,
     description: "Discover synergies",
     subDescriptions: [
+      "Connection guide",
       "Personal or Professional"
     ],
     slug: "relationships",
@@ -70,6 +72,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     name: `Astro Data ${getReportPrice('AstroData', getPriceById)}`,
     description: "Raw planetary data and alignments",
     subDescriptions: [
+      "Pure facts",
       "The Self – Compatibility"
     ],
     slug: "life-shift",
@@ -82,6 +85,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     name: `SnapShot ${getReportPrice('SnapShot', getPriceById)}`,
     description: "Your personalized forecast and timing guidance",
     subDescriptions: [
+      "Current flow",
       "Focus – Mindset – Monthly"
     ],
     slug: "Monthly",
