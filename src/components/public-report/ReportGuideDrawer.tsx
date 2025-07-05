@@ -28,6 +28,42 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
   const targetRef = useRef<HTMLDivElement>(null);
   const { getPriceById } = usePricing();
 
+  // Helper function to get price for a subcategory
+  const getSubcategoryPrice = (reportType: string, subcategory: string): string => {
+    let priceId = '';
+    
+    if (reportType === 'TheSelf') {
+      switch (subcategory.toLowerCase()) {
+        case 'personal': priceId = 'essence_personal'; break;
+        case 'professional': priceId = 'essence_professional'; break;
+        case 'relational': priceId = 'essence_relational'; break;
+        default: priceId = 'essence_personal';
+      }
+    } else if (reportType === 'Compatibility') {
+      switch (subcategory.toLowerCase()) {
+        case 'personal': priceId = 'sync_personal'; break;
+        case 'professional': priceId = 'sync_professional'; break;
+        default: priceId = 'sync_personal';
+      }
+    } else if (reportType === 'AstroData') {
+      switch (subcategory.toLowerCase()) {
+        case 'the self': priceId = 'essence'; break;
+        case 'compatibility': priceId = 'sync'; break;
+        default: priceId = 'essence';
+      }
+    } else if (reportType === 'SnapShot') {
+      switch (subcategory.toLowerCase()) {
+        case 'focus': priceId = 'focus'; break;
+        case 'mindset': priceId = 'mindset'; break;
+        case 'monthly': priceId = 'monthly'; break;
+        default: priceId = 'focus';
+      }
+    }
+
+    const priceData = getPriceById(priceId);
+    return priceData ? `$${priceData.unit_price_usd}` : '$--';
+  };
+
   // Helper function to get base price for a report type
   const getBasePrice = (reportType: string): string => {
     let priceId = '';
@@ -49,55 +85,51 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
       type: 'TheSelf',
       icon: <UserCircle className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'The Self',
-      price: getBasePrice('TheSelf'),
+      price: 'starting at ' + getBasePrice('TheSelf'),
       bestFor: 'Self-understanding',
       isRecommended: true,
-      description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
-      details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
+      description: 'Deep insights into who you are',
       subTypes: [
-        'Personal – Discover insights about your identity, emotions, and natural strengths.',
-        'Professional – Understand your career path, purpose, and ambition patterns.',
-        'Relational – Explore how you connect, love, and grow with others.'
+        `Personal (${getSubcategoryPrice('TheSelf', 'personal')}) – Discover insights about your identity, emotions, and natural strengths.`,
+        `Professional (${getSubcategoryPrice('TheSelf', 'professional')}) – Understand your career path, purpose, and ambition patterns.`,
+        `Relational (${getSubcategoryPrice('TheSelf', 'relational')}) – Explore how you connect, love, and grow with others.`
       ]
     },
     {
       type: 'Compatibility',
       icon: <Users className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Compatibility',
-      price: getBasePrice('Compatibility'),
-      bestFor: 'Compatibility',
-      description: 'How your energy aligns with someone - connection, tension, and flow.',
-      details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
+      price: 'starting at ' + getBasePrice('Compatibility'),
+      bestFor: 'Relationships',
+      description: 'How you connect with others',
       subTypes: [
-        'Personal – Compare your chart with a partner or friend to explore chemistry and differences.',
-        'Professional – Map out collaboration dynamics and working relationships.'
+        `Personal (${getSubcategoryPrice('Compatibility', 'personal')}) – Compare your chart with a partner or friend to explore chemistry and differences.`,
+        `Professional (${getSubcategoryPrice('Compatibility', 'professional')}) – Map out collaboration dynamics and working relationships.`
       ]
     },
     {
       type: 'AstroData',
       icon: <Target className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Astro Data',
-      price: getBasePrice('AstroData'),
+      price: 'starting at ' + getBasePrice('AstroData'),
       bestFor: 'Raw Data',
-      description: 'Raw planetary data and alignments with no interpretation',
-      details: 'Get the pure astronomical data and chart information without analysis or commentary.',
+      description: 'Raw chart data, no interpretation',
       subTypes: [
-        'The Self – Raw planetary data and alignments tailored to you.',
-        'Compatibility – Synastry and composite charts with no interpretation.'
+        `The Self (${getSubcategoryPrice('AstroData', 'the self')}) – Raw planetary data and alignments tailored to you.`,
+        `Compatibility (${getSubcategoryPrice('AstroData', 'compatibility')}) – Synastry and composite charts with no interpretation.`
       ]
     },
     {
       type: 'SnapShot',
       icon: <CalendarDays className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'SnapShot',
-      price: getBasePrice('SnapShot'),
+      price: 'starting at ' + getBasePrice('SnapShot'),
       bestFor: 'Timing insights',
-      description: 'Your personalized forecast and timing guidance',
-      details: 'Get focused insights on current energies, mental patterns, and monthly themes.',
+      description: 'Current timing and energy',
       subTypes: [
-        'Focus – A quick energetic check-in on where your attention naturally flows.',
-        'Mindset – See how your thinking patterns are currently influenced.',
-        'Monthly – A real-time look at how the stars are shaping your month.'
+        `Focus (${getSubcategoryPrice('SnapShot', 'focus')}) – A quick energetic check-in on where your attention naturally flows.`,
+        `Mindset (${getSubcategoryPrice('SnapShot', 'mindset')}) – See how your thinking patterns are currently influenced.`,
+        `Monthly (${getSubcategoryPrice('SnapShot', 'monthly')}) – A real-time look at how the stars are shaping your month.`
       ]
     }
   ];
@@ -200,12 +232,8 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
                       </span>
                     </div>
 
-                    <p className="text-base text-gray-700 mb-3 font-light leading-relaxed">
+                    <p className="text-base text-gray-700 mb-4 font-light leading-relaxed">
                       {report.description}
-                    </p>
-
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                      {report.details}
                     </p>
 
                     {report.subTypes && (
