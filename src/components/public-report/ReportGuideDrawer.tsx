@@ -17,6 +17,7 @@ import {
   Target,
   CalendarDays,
 } from 'lucide-react';
+import { usePricing } from '@/contexts/PricingContext';
 interface ReportGuideDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -25,13 +26,30 @@ interface ReportGuideDrawerProps {
 
 const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDrawerProps) => {
   const targetRef = useRef<HTMLDivElement>(null);
+  const { getPriceById } = usePricing();
+
+  // Helper function to get base price for a report type
+  const getBasePrice = (reportType: string): string => {
+    let priceId = '';
+    
+    switch (reportType) {
+      case 'TheSelf': priceId = 'essence_personal'; break;
+      case 'Compatibility': priceId = 'sync_personal'; break;
+      case 'AstroData': priceId = 'essence'; break;
+      case 'SnapShot': priceId = 'focus'; break;
+      default: priceId = 'essence_personal';
+    }
+
+    const priceData = getPriceById(priceId);
+    return priceData ? `$${priceData.unit_price_usd}` : '$--';
+  };
 
   const reportGuides = [
     {
       type: 'TheSelf',
       icon: <UserCircle className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'The Self',
-      price: '', // Price will be fetched dynamically
+      price: getBasePrice('TheSelf'),
       bestFor: 'Self-understanding',
       isRecommended: true,
       description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
@@ -46,7 +64,7 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
       type: 'Compatibility',
       icon: <Users className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Compatibility',
-      price: '', // Price will be fetched dynamically
+      price: getBasePrice('Compatibility'),
       bestFor: 'Compatibility',
       description: 'How your energy aligns with someone - connection, tension, and flow.',
       details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
@@ -59,7 +77,7 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
       type: 'AstroData',
       icon: <Target className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'Astro Data',
-      price: '', // Price will be fetched dynamically
+      price: getBasePrice('AstroData'),
       bestFor: 'Raw Data',
       description: 'Raw planetary data and alignments with no interpretation',
       details: 'Get the pure astronomical data and chart information without analysis or commentary.',
@@ -72,7 +90,7 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
       type: 'SnapShot',
       icon: <CalendarDays className="h-5 w-5 text-gray-700 inline-block mr-2" />,
       title: 'SnapShot',
-      price: '', // Price will be fetched dynamically
+      price: getBasePrice('SnapShot'),
       bestFor: 'Timing insights',
       description: 'Your personalized forecast and timing guidance',
       details: 'Get focused insights on current energies, mental patterns, and monthly themes.',

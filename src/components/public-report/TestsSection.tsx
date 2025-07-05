@@ -11,6 +11,7 @@ import {
   Target,
   CalendarDays,
 } from 'lucide-react';
+import { usePricing } from '@/contexts/PricingContext';
 
 interface Test {
   id: string;
@@ -80,67 +81,85 @@ const testData: Test[] = [
   },
 ];
 
-const reportGuides = [
-  {
-    type: 'The Self',
-    icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'The Self Report',
-    price: '$10',
-    bestFor: 'Self-understanding',
-    description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
-    details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
-    subTypes: [
-      'Personal – Discover insights about your identity, emotions, and natural strengths.',
-      'Professional – Understand your career path, purpose, and ambition patterns.',
-      'Relational – Explore how you connect, love, and grow with others.'
-    ]
-  },
-  {
-    type: 'Compatibility',
-    icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Compatibility Report',
-    price: '$10',
-    bestFor: 'Compatibility',
-    description: 'How your energy aligns with someone - connection, tension, and flow.',
-    details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
-    subTypes: [
-      'Personal – Compare your chart with a partner or friend to explore chemistry and differences.',
-      'Professional – Map out collaboration dynamics and working relationships.'
-    ]
-  },
-  {
-    type: 'Astro Data',
-    icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'Astro Data Report',
-    price: '$3',
-    bestFor: 'Raw Data',
-    description: 'Raw planetary data and alignments with no interpretation',
-    details: 'Get the pure astronomical data and chart information without analysis or commentary.',
-    subTypes: [
-      'The Self – Raw planetary data and alignments tailored to you.',
-      'Compatibility – Synastry and composite charts with no interpretation.'
-    ]
-  },
-  {
-    type: 'SnapShot',
-    icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
-    title: 'SnapShot Report',
-    price: '$3',
-    bestFor: 'Timing insights',
-    description: 'Your personalized forecast and timing guidance',
-    details: 'Get focused insights on current energies, mental patterns, and monthly themes.',
-    subTypes: [
-      'Focus – A quick energetic check-in on where your attention naturally flows.',
-      'Mindset – See how your thinking patterns are currently influenced.',
-      'Monthly – A real-time look at how the stars are shaping your month.'
-    ]
-  }
-];
 
 export default function TestsSection() {
   const [selectedTest, setSelectedTest] = useState(testData[0]);
   const [showReportGuide, setShowReportGuide] = useState(false);
   const [targetReportType, setTargetReportType] = useState<string | null>(null);
+  const { getPriceById } = usePricing();
+
+  // Helper function to get base price for a report type
+  const getBasePrice = (reportType: string): string => {
+    let priceId = '';
+    
+    switch (reportType) {
+      case 'The Self': priceId = 'essence_personal'; break;
+      case 'Compatibility': priceId = 'sync_personal'; break;
+      case 'Astro Data': priceId = 'essence'; break;
+      case 'SnapShot': priceId = 'focus'; break;
+      default: priceId = 'essence_personal';
+    }
+
+    const priceData = getPriceById(priceId);
+    return priceData ? `$${priceData.unit_price_usd}` : '$--';
+  };
+
+  const reportGuides = [
+    {
+      type: 'The Self',
+      icon: <UserCircle className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'The Self Report',
+      price: getBasePrice('The Self'),
+      bestFor: 'Self-understanding',
+      description: 'A deep snapshot of who you are and what life\'s asking from you right now.',
+      details: 'Discover your core personality traits, natural gifts, and current life themes. Perfect for self-reflection and understanding your authentic self.',
+      subTypes: [
+        'Personal – Discover insights about your identity, emotions, and natural strengths.',
+        'Professional – Understand your career path, purpose, and ambition patterns.',
+        'Relational – Explore how you connect, love, and grow with others.'
+      ]
+    },
+    {
+      type: 'Compatibility',
+      icon: <Users className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'Compatibility Report',
+      price: getBasePrice('Compatibility'),
+      bestFor: 'Compatibility',
+      description: 'How your energy aligns with someone - connection, tension, and flow.',
+      details: 'Analyze relationship dynamics, compatibility factors, and areas of harmony or challenge between you and another person.',
+      subTypes: [
+        'Personal – Compare your chart with a partner or friend to explore chemistry and differences.',
+        'Professional – Map out collaboration dynamics and working relationships.'
+      ]
+    },
+    {
+      type: 'Astro Data',
+      icon: <Target className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'Astro Data Report',
+      price: getBasePrice('Astro Data'),
+      bestFor: 'Raw Data',
+      description: 'Raw planetary data and alignments with no interpretation',
+      details: 'Get the pure astronomical data and chart information without analysis or commentary.',
+      subTypes: [
+        'The Self – Raw planetary data and alignments tailored to you.',
+        'Compatibility – Synastry and composite charts with no interpretation.'
+      ]
+    },
+    {
+      type: 'SnapShot',
+      icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
+      title: 'SnapShot Report',
+      price: getBasePrice('SnapShot'),
+      bestFor: 'Timing insights',
+      description: 'Your personalized forecast and timing guidance',
+      details: 'Get focused insights on current energies, mental patterns, and monthly themes.',
+      subTypes: [
+        'Focus – A quick energetic check-in on where your attention naturally flows.',
+        'Mindset – See how your thinking patterns are currently influenced.',
+        'Monthly – A real-time look at how the stars are shaping your month.'
+      ]
+    }
+  ];
   
   const getReportGuide = (testId: string) => {
     return reportGuides.find(guide => guide.type === testId) || reportGuides[0];
