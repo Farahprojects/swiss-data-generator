@@ -1,16 +1,22 @@
 {
   "rewrites": [
     {
-      "source": "/",                 
+      "source": "/",
       "has": [
-        { "type": "host", "value": "www.theraiastro.com" }
+        {
+          "type": "host",
+          "value": "www.theraiastro.com"
+        }
       ],
-      "destination": "/report"       
+      "destination": "/report"
     },
     {
-      "source": "/:path*",          
+      "source": "/:path*",
       "has": [
-        { "type": "host", "value": "www.theraiastro.com" }
+        {
+          "type": "host",
+          "value": "www.theraiastro.com"
+        }
       ],
       "destination": "/report/:path*"
     },
@@ -19,5 +25,4 @@
       "destination": "/"
     }
   ]
-}
 }
