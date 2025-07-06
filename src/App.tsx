@@ -36,6 +36,8 @@ import CalendarPage from './pages/dashboard/CalendarPage';
 import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
 import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,6 +83,8 @@ function App() {
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/legal" element={<Legal />} />
+                      <Route path="/blog" element={<Blog />} />
+                      <Route path="/blog/:slug" element={<BlogPost />} />
                       
                       <Route path="/login" element={<Login />} />
                       <Route path="/signup" element={<Signup />} />

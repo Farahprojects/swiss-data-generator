@@ -137,6 +137,48 @@ export type Database = {
           },
         ]
       }
+      blog_posts: {
+        Row: {
+          author_name: string | null
+          content: string
+          cover_image_url: string | null
+          created_at: string | null
+          id: string
+          like_count: number | null
+          published: boolean | null
+          share_count: number | null
+          slug: string
+          tags: string[] | null
+          title: string
+        }
+        Insert: {
+          author_name?: string | null
+          content: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          id?: string
+          like_count?: number | null
+          published?: boolean | null
+          share_count?: number | null
+          slug: string
+          tags?: string[] | null
+          title: string
+        }
+        Update: {
+          author_name?: string | null
+          content?: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          id?: string
+          like_count?: number | null
+          published?: boolean | null
+          share_count?: number | null
+          slug?: string
+          tags?: string[] | null
+          title?: string
+        }
+        Relationships: []
+      }
       calendar_sessions: {
         Row: {
           client_id: string | null
