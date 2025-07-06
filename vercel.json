@@ -9,7 +9,7 @@
       "statusCode": 308
     },
     {
-      "source": "/((?!report/).*?)",
+      "source": "/((?!report($|/)).*)",
       "has": [
         { "type": "host", "value": "(?:www\\.)?theraiastro\\.com" }
       ],
