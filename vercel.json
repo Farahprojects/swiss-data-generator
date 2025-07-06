@@ -3,21 +3,15 @@
     {
       "source": "/",
       "has": [
-        { "type": "host", "value": "(?:www\\.)?theraiastro\\.com" }
+        {
+          "type": "host",
+          "value": "www.theraiastro.com"
+        }
       ],
       "destination": "/report",
       "statusCode": 308
-    },
-    {
-      "source": "/((?!report($|/)).*)",
-      "has": [
-        { "type": "host", "value": "(?:www\\.)?theraiastro\\.com" }
-      ],
-      "destination": "/report/$1",
-      "statusCode": 308
     }
   ],
-
   "rewrites": [
     {
       "source": "/:path*",
