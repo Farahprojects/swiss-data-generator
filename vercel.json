@@ -1,6 +1,5 @@
 {
   "redirects": [
-    /* 1 ─ Home page of theraiastro.com → /report */
     {
       "source": "/",
       "has": [
@@ -9,8 +8,6 @@
       "destination": "/report",
       "statusCode": 308
     },
-
-    /* 2 ─ Any path on theraiastro.com that does NOT already start with /report */
     {
       "source": "/((?!report/).*?)",
       "has": [
@@ -22,7 +19,6 @@
   ],
 
   "rewrites": [
-    /* 3 ─ Everything else (therai.co, *.coach, *.life, *.win, etc.) goes to the main SPA */
     {
       "source": "/:path*",
       "destination": "/"
