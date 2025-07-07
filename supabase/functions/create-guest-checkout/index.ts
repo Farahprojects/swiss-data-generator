@@ -86,7 +86,7 @@ serve(async (req) => {
     }
 
     /* -------- Success & cancel URLs with session ID -------- */
-    const baseOrigin = req.headers.get("origin") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+    const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://theraiastro.com";
     
     // FIXED: Use the correct Stripe format without extra parameters
     const finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}`;

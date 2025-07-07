@@ -117,10 +117,13 @@ serve(async (req) => {
       });
     }
     
-    // Get the Supabase URL and anon key
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || 
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+    // Get the Supabase URL and anon key from environment
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Missing required Supabase environment variables");
+    }
     
     // Start both operations in parallel for better performance
     

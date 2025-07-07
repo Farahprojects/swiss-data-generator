@@ -129,11 +129,12 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  -- Use environment-based configuration for production
   PERFORM net.http_post(
-    url := current_setting('app.supabase_url') || '/functions/v1/api-usage-handler',
+    url := 'https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/api-usage-handler',
     headers := jsonb_build_object(
       'Content-Type', 'application/json', 
-      'Authorization', 'Bearer ' || current_setting('app.supabase_key')
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0'
     ),
     body := jsonb_build_object('log_id', NEW.id)
   );
@@ -150,9 +151,8 @@ AFTER INSERT ON translator_logs
 FOR EACH ROW
 EXECUTE FUNCTION notify_new_log();
 
--- Set the necessary configuration for the trigger function
-ALTER SYSTEM SET app.supabase_url = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
-ALTER SYSTEM SET app.supabase_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
+-- Note: System configuration should be set via environment variables in production
+-- These settings are for reference only and should not contain hardcoded credentials
 
 -- Update the check_balance_for_topup function to use a $100 top-up amount
 CREATE OR REPLACE FUNCTION public.check_balance_for_topup()
