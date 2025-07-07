@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Register Supabase auth listener and get initial session
    * ────────────────────────────────────────────────────────────*/
   useEffect(() => {
-    // Skip auth initialization during SSR
+    // Skip auth initialization during SSR but don't return early from provider
     if (typeof window === 'undefined') {
       setLoading(false);
       return;
@@ -187,6 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
+      setLoading(false);
+    }).catch((error) => {
+      console.error('Error getting initial session:', error);
       setLoading(false);
     });
 
