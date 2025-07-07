@@ -1,3 +1,15 @@
+
+// supabase/functions/_shared/translator.ts
+//
+// ▸ 2025-06-16 patch v2.1 - LATEST VERSION DEBUG
+//   • removed undefined `raw` reference in logger
+//   • logger now accepts optional `translatorPayload` so you can see the
+//     exact JSON forwarded to Swiss
+//   • every call supplies that payload where it exists
+//   • small typographical tidy-ups (no functional change elsewhere)
+//   • added version debug logging
+// ---------------------------------------------------------------------------
+
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { handleReportGeneration } from "./reportHandler.ts";
@@ -13,7 +25,7 @@ const GEO_TTL   = +(Deno.env.get("GEOCODE_TTL_MIN") ?? "1440");
 const sb = createClient(SB_URL, SB_KEY);
 
 // Version identifier for debugging
-const TRANSLATOR_VERSION = "2025-07-07-v2.2-PROD";
+const TRANSLATOR_VERSION = "2025-06-16-v2.1-LATEST";
 
 /*──────────────── canonical maps ------------------------ */
 const CANON: Record<string, string> = {
@@ -28,8 +40,8 @@ const CANON: Record<string, string> = {
   body:          "body_matrix",
   body_matrix:   "body_matrix",
   sync:          "sync",
-  reports:       "reports",   // tracking‑only
-  /* ========= NEW ENDPOINTS (user‑friendly aliases) ===== */
+  reports:       "reports",   // tracking-only
+  /* ========= NEW ENDPOINTS (user-friendly aliases) ===== */
   essence:       "essence",   // natal + current transits bundle
   flow:          "flow",
   mindset:       "mindset",
@@ -48,27 +60,18 @@ const HOUSE_ALIASES: Record<string, string> = {
 /*──────────────── schema */
 const Base = z.object({ request: z.string().nonempty() }).passthrough();
 
-/*──────────────── util */
-/** Parse JSON without throwing – returns string fallback */
-function safeJSON(data: string) {
-  try { return JSON.parse(data); } catch { return data; }
-}
-
 /*──────────────── logger */
 async function logToSupabase(
-  requestType:       string,
-  requestPayload:    any,
-  responseStatus:    number,
-  /** AI‑only – pass null if none */
-  responsePayload:   any | null,
-  processingTime:    number,
-  errorMessage?:     string,
-  googleGeoUsed      = false,
-  userId?:           string,
-  translatorPayload?:any,
-  engineUsed?:       string,
-  /** Raw Swiss‑Ephemeris JSON */
-  swissData?:        any,
+  requestType: string,
+  requestPayload: any,
+  responseStatus: number,
+  responsePayload: any,
+  processingTime: number,
+  errorMessage?: string,
+  googleGeoUsed = false,
+  userId?: string,
+  translatorPayload?: any,        // NEW – what we sent to Swiss
+  engineUsed?: string,            // NEW – which report engine was used
 ) {
   const reportTier =
     requestPayload?.report ??
@@ -77,19 +80,17 @@ async function logToSupabase(
     null;
 
   const { error } = await sb.from("translator_logs").insert({
-    request_type:       requestType,
-    request_payload:    requestPayload,
-    translator_payload: translatorPayload ?? null,
-    response_status:    responseStatus,
-    response_payload:   responsePayload,   // AI or null
-    processing_time_ms: processingTime,
-    error_message:      errorMessage,
-    google_geo:         googleGeoUsed,
-    report_tier:        reportTier,
-    user_id:            userId,
-    engine_used:        engineUsed ?? null,
-    swiss_data:         swissData ?? null, // Swiss or null
-    is_guest:           isGuest,
+    request_type:        requestType,
+    request_payload:     requestPayload,
+    translator_payload:  translatorPayload ?? null,
+    response_status:     responseStatus,
+    response_payload:    responsePayload,
+    processing_time_ms:  processingTime,
+    error_message:       errorMessage,
+    google_geo:          googleGeoUsed,
+    report_tier:         reportTier,
+    user_id:             userId,
+    engine_used:         engineUsed ?? null,
   });
   if (error) console.error("Failed to log to Supabase:", error.message);
 }
@@ -171,10 +172,9 @@ export async function translate(
   const userId        = raw.user_id;
   const skipLogging   = raw.skip_logging === true;
   const requestId     = crypto.randomUUID().substring(0, 8);
-  const isGuest       = raw.is_guest === true || !userId || userId.trim() === '';
 
-  // VERSION DEBUG LOG – will appear in edge‑function logs
-  console.log(`[translator][${requestId}] ✅ TRANSLATOR VERSION: ${TRANSLATOR_VERSION}`);
+  // VERSION DEBUG LOG - This will appear in edge function logs
+  console.log(`[translator][${requestId}] ✅ TRANSLATOR VERSION: ${TRANSLATOR_VERSION} - LATEST FILE LOADED`);
 
   try {
     const body = Base.parse(raw);
@@ -188,7 +188,7 @@ export async function translate(
           requestType,
           raw,
           400,
-          null,
+          { error: err },
           Date.now() - startTime,
           err,
           googleGeoUsed,
@@ -200,7 +200,7 @@ export async function translate(
 
     requestType = canon;
 
-    /*──────────────── REPORTS (tracking‑only) ─────────────*/
+    /*──────────────── REPORTS (tracking-only) ─────────────*/
     if (canon === "reports") {
       const msg = "Reports request logged";
       if (!skipLogging) {
@@ -208,7 +208,7 @@ export async function translate(
           requestType,
           raw,
           200,
-          null,
+          { message: msg },
           Date.now() - startTime,
           undefined,
           googleGeoUsed,
@@ -227,7 +227,7 @@ export async function translate(
             requestType,
             raw,
             400,
-            null,
+            { error: err },
             Date.now() - startTime,
             err,
             googleGeoUsed,
@@ -249,13 +249,12 @@ export async function translate(
         headers: { "Content-Type": "application/json" },
         body:   JSON.stringify(payload),
       });
-      const txt        = await r.text();
-      const swissData  = safeJSON(txt);
+      const txt = await r.text();
 
       const reportResult = await handleReportGeneration({
-        requestData:       raw,
-        swissApiResponse:  txt,
-        swissApiStatus:    r.status,
+        requestData: raw,
+        swissApiResponse: txt,
+        swissApiStatus: r.status,
         requestId,
       });
 
@@ -264,22 +263,18 @@ export async function translate(
         ? `Swiss API returned ${r.status}`
         : undefined);
 
-      const engineUsed = reportResult.responseData?.engine_used;
-      const aiPayload  = reportResult.aiOnlyData; // Use AI-only data for logging
-
       if (!skipLogging) {
         await logToSupabase(
           requestType,
           raw,
           r.status,
-          aiPayload,
+          (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
           Date.now() - startTime,
           finalError,
           googleGeoUsed,
           userId,
-          payload,        // translator payload
-          engineUsed,
-          swissData,      // Swiss only
+          payload,                 // what we sent to Swiss
+          reportResult.responseData?.engine_used, // extract engine from responseData
         );
       }
 
@@ -290,29 +285,16 @@ export async function translate(
     }
 
     /*──────────────── simple GETs ─────────────────────────*/
-    if (canon === "moonphases" || canon === "positions") {
-      let url = "";
-      if (canon === "moonphases") {
-        const year = body.year ?? new Date().getFullYear();
-        url = `${SWISS_API}/moonphases?year=${year}`;
-        console.log(`[translator][${requestId}] GET /moonphases`);
-      } else {
-        const qs = new URLSearchParams({
-          utc:      body.utc ?? new Date().toISOString(),
-          sidereal: String(body.sidereal ?? false),
-        });
-        url = `${SWISS_API}/positions?${qs}`;
-        console.log(`[translator][${requestId}] GET /positions`);
-      }
-
-      const r    = await fetch(url);
-      const txt  = await r.text();
-      const swissData = safeJSON(txt);
+    if (canon === "moonphases") {
+      const year = body.year ?? new Date().getFullYear();
+      console.log(`[translator][${requestId}] GET /moonphases`);
+      const r   = await fetch(`${SWISS_API}/moonphases?year=${year}`);
+      const txt = await r.text();
 
       const reportResult = await handleReportGeneration({
-        requestData:       raw,
-        swissApiResponse:  txt,
-        swissApiStatus:    r.status,
+        requestData: raw,
+        swissApiResponse: txt,
+        swissApiStatus: r.status,
         requestId,
       });
 
@@ -321,22 +303,59 @@ export async function translate(
         ? `Swiss API returned ${r.status}`
         : undefined);
 
-      const engineUsed = reportResult.responseData?.engine_used;
-      const aiPayload  = reportResult.aiOnlyData; // Use AI-only data for logging
+      if (!skipLogging) {
+        await logToSupabase(
+          requestType,
+          raw,
+          r.status,
+          (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
+          Date.now() - startTime,
+          finalError,
+          googleGeoUsed,
+          userId,
+          undefined, // no translator payload for simple GET
+          reportResult.responseData?.engine_used, // extract engine from responseData
+        );
+      }
+      return {
+        status: r.status,
+        text: typeof finalData === "string" ? finalData : JSON.stringify(finalData),
+      };
+    }
+
+    if (canon === "positions") {
+      const qs = new URLSearchParams({
+        utc:      body.utc ?? new Date().toISOString(),
+        sidereal: String(body.sidereal ?? false),
+      });
+      console.log(`[translator][${requestId}] GET /positions`);
+      const r   = await fetch(`${SWISS_API}/positions?${qs}`);
+      const txt = await r.text();
+
+      const reportResult = await handleReportGeneration({
+        requestData: raw,
+        swissApiResponse: txt,
+        swissApiStatus: r.status,
+        requestId,
+      });
+
+      const finalData  = reportResult.responseData;
+      const finalError = reportResult.errorMessage || (!r.ok
+        ? `Swiss API returned ${r.status}`
+        : undefined);
 
       if (!skipLogging) {
         await logToSupabase(
           requestType,
           raw,
           r.status,
-          aiPayload,
+          (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
           Date.now() - startTime,
           finalError,
           googleGeoUsed,
           userId,
-          undefined,     // no translator payload for GET
-          engineUsed,
-          swissData,
+          undefined, // no translator payload for simple GET
+          reportResult.responseData?.engine_used, // extract engine from responseData
         );
       }
 
@@ -355,17 +374,16 @@ export async function translate(
     const path    = canon;
     console.log(`[translator][${requestId}] POST /${path}`);
     const r   = await fetch(`${SWISS_API}/${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body:   JSON.stringify(enriched),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body:   JSON.stringify(enriched),
     });
-    const txt        = await r.text();
-    const swissData  = safeJSON(txt);
+    const txt = await r.text();
 
     const reportResult = await handleReportGeneration({
-      requestData:       raw,
-      swissApiResponse:  txt,
-      swissApiStatus:    r.status,
+      requestData: raw,
+      swissApiResponse: txt,
+      swissApiStatus: r.status,
       requestId,
     });
 
@@ -374,22 +392,18 @@ export async function translate(
       ? `Swiss API returned ${r.status}`
       : undefined);
 
-    const engineUsed = reportResult.responseData?.engine_used;
-    const aiPayload  = reportResult.aiOnlyData; // Use AI-only data for logging
-
     if (!skipLogging) {
       await logToSupabase(
         requestType,
         raw,
         r.status,
-        aiPayload,
+        (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
         Date.now() - startTime,
         finalError,
         googleGeoUsed,
         userId,
-        enriched,          // translator payload
-        engineUsed,
-        swissData,
+        enriched,                // exact payload sent to Swiss
+        reportResult.responseData?.engine_used, // extract engine from responseData
       );
     }
 
@@ -405,7 +419,7 @@ export async function translate(
         requestType,
         raw,
         500,
-        null,
+        { error: msg },
         Date.now() - startTime,
         msg,
         googleGeoUsed,
