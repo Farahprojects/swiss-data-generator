@@ -282,9 +282,9 @@ export default function TestsSection() {
             </div>
           </div>
 
-          {/* Mobile layout - test cards within container */}
+          {/* Mobile layout - 2 column grid */}
           <div className="block md:hidden">
-            <div className="space-y-0">
+            <div className="grid grid-cols-2 gap-2">
                {testData.map((test) => (
                  <TestCard
                    key={test.id}
