@@ -133,8 +133,7 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                       setValue('reportType', option.reportType);
                     }
                     
-                    // Auto-advance to next step after selection
-                    setTimeout(() => onNext(), 100);
+                    // Selection made - user can now proceed manually
                   }}
                   className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                     isSelected 
