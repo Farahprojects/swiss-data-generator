@@ -79,6 +79,18 @@ async function logToSupabase(
     requestPayload?.reportType ??
     null;
 
+  // Check if this is a guest user by querying guest_reports
+  let isGuest = false;
+  if (userId) {
+    const { data: guestCheck } = await sb
+      .from("guest_reports")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+    
+    isGuest = !!guestCheck;
+  }
+
   const { error } = await sb.from("translator_logs").insert({
     request_type:        requestType,
     request_payload:     requestPayload,
@@ -91,6 +103,7 @@ async function logToSupabase(
     report_tier:         reportTier,
     user_id:             userId,
     engine_used:         engineUsed ?? null,
+    is_guest:            isGuest,
   });
   if (error) console.error("Failed to log to Supabase:", error.message);
 }
