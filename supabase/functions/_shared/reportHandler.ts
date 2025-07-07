@@ -3,6 +3,7 @@
 // Ensures consistent report generation across all endpoints
 
 import { processReportRequest } from "./reportOrchestrator.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface ReportHandlerParams {
   requestData: any;
@@ -84,12 +85,50 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       };
     }
 
+    // Resolve API key for guest reports
+    let resolvedApiKey = requestData.api_key;
+    
+    // Check if this is a guest report (has user_id but no api_key)
+    if (!resolvedApiKey && requestData.user_id) {
+      console.log(`${logPrefix} Guest report detected, checking for valid Stripe session...`);
+      
+      try {
+        const supabase = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          { auth: { persistSession: false } }
+        );
+        
+        const { data: guestReport, error } = await supabase
+          .from("guest_reports")
+          .select("stripe_session_id")
+          .eq("id", requestData.user_id)
+          .single();
+        
+        if (error) {
+          console.error(`${logPrefix} Failed to query guest_reports:`, error);
+          resolvedApiKey = null;
+        } else if (guestReport?.stripe_session_id) {
+          console.log(`${logPrefix} Valid Stripe session found for guest report`);
+          resolvedApiKey = "GUEST-STRIPE";
+        } else {
+          console.log(`${logPrefix} No valid Stripe session found for guest report`);
+          resolvedApiKey = null;
+        }
+      } catch (error) {
+        console.error(`${logPrefix} Error resolving guest API key:`, error);
+        resolvedApiKey = null;
+      }
+    }
+    
+    console.log(`${logPrefix} Resolved API key: ${resolvedApiKey ? 'present' : 'missing'} (${resolvedApiKey})`);
+
     // Prepare report payload with enhanced logging and embedded person names
     const reportPayload = {
       endpoint: requestData.request || "unknown",
       report_type: requestData.report,
       user_id: requestData.user_id,
-      apiKey: requestData.api_key,
+      apiKey: resolvedApiKey,
       chartData: {
         ...swissData,
         person_a_name: requestData.person_a?.name,
