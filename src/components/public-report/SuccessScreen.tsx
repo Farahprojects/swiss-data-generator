@@ -187,7 +187,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         logToAdmin('SuccessScreen', 'error_handling_triggered', 'All conditions met - triggering error handling', {
           reportIdToUse: reportIdToUse
         });
-        triggerErrorHandling(reportIdToUse, email);
+        triggerErrorHandling(reportIdToUse);
       } else {
         logToAdmin('SuccessScreen', 'error_handling_conditions_not_met', 'Conditions not met for error handling', {
           isReady: isReady,

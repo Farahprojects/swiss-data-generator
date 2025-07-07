@@ -578,7 +578,6 @@ export type Database = {
           coach_name: string | null
           coach_slug: string | null
           created_at: string
-          edge_function_confirmed: boolean | null
           email: string
           email_sent: boolean
           has_report: boolean
@@ -588,9 +587,6 @@ export type Database = {
           purchase_type: string | null
           report_content: string | null
           report_data: Json
-          report_pdf_data: string | null
-          report_pdf_error: string | null
-          report_pdf_status: string | null
           report_type: string | null
           stripe_session_id: string
           swiss_data: Json | null
@@ -602,7 +598,6 @@ export type Database = {
           coach_name?: string | null
           coach_slug?: string | null
           created_at?: string
-          edge_function_confirmed?: boolean | null
           email: string
           email_sent?: boolean
           has_report?: boolean
@@ -612,9 +607,6 @@ export type Database = {
           purchase_type?: string | null
           report_content?: string | null
           report_data?: Json
-          report_pdf_data?: string | null
-          report_pdf_error?: string | null
-          report_pdf_status?: string | null
           report_type?: string | null
           stripe_session_id: string
           swiss_data?: Json | null
@@ -626,7 +618,6 @@ export type Database = {
           coach_name?: string | null
           coach_slug?: string | null
           created_at?: string
-          edge_function_confirmed?: boolean | null
           email?: string
           email_sent?: boolean
           has_report?: boolean
@@ -636,9 +627,6 @@ export type Database = {
           purchase_type?: string | null
           report_content?: string | null
           report_data?: Json
-          report_pdf_data?: string | null
-          report_pdf_error?: string | null
-          report_pdf_status?: string | null
           report_type?: string | null
           stripe_session_id?: string
           swiss_data?: Json | null
@@ -1360,6 +1348,7 @@ export type Database = {
           google_geo: boolean | null
           id: string
           is_archived: boolean
+          is_guest: boolean
           processing_time_ms: number | null
           report_name: string | null
           report_tier: string | null
@@ -1367,6 +1356,7 @@ export type Database = {
           request_type: string | null
           response_payload: Json | null
           response_status: number | null
+          swiss_data: Json | null
           translator_payload: Json | null
           user_id: string | null
         }
@@ -1378,6 +1368,7 @@ export type Database = {
           google_geo?: boolean | null
           id?: string
           is_archived?: boolean
+          is_guest?: boolean
           processing_time_ms?: number | null
           report_name?: string | null
           report_tier?: string | null
@@ -1385,6 +1376,7 @@ export type Database = {
           request_type?: string | null
           response_payload?: Json | null
           response_status?: number | null
+          swiss_data?: Json | null
           translator_payload?: Json | null
           user_id?: string | null
         }
@@ -1396,6 +1388,7 @@ export type Database = {
           google_geo?: boolean | null
           id?: string
           is_archived?: boolean
+          is_guest?: boolean
           processing_time_ms?: number | null
           report_name?: string | null
           report_tier?: string | null
@@ -1403,6 +1396,7 @@ export type Database = {
           request_type?: string | null
           response_payload?: Json | null
           response_status?: number | null
+          swiss_data?: Json | null
           translator_payload?: Json | null
           user_id?: string | null
         }
