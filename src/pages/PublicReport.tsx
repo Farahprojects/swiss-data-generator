@@ -139,6 +139,8 @@ const PublicReport = () => {
         
         <HeroSection onGetReportClick={handleGetReportClick} />
         
+        <TestsSection />
+        
         {/* Sample Report Section */}
         <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
           <div className="w-full md:px-4 md:container md:mx-auto">
@@ -333,8 +335,6 @@ const PublicReport = () => {
           </div>
         </section>
 
-
-        <TestsSection />
         <TheraiChatGPTSection />
         {!isClientMobile && (
           <div id="report-form">
