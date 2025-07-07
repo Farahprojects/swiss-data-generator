@@ -6,8 +6,8 @@ interface GuestReport {
   id: string;
   email: string;
   has_report: boolean;
-  report_content: string | null;
-  report_pdf_data?: string | null;
+  translator_log_id?: string | null;
+  report_log_id?: string | null;
   payment_status: string;
   created_at: string;
   stripe_session_id: string;
@@ -89,7 +89,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         retryCountRef.current = 0; // Reset retry count on success
         
         // Stop polling if report is ready
-        if (data.has_report && (data.report_content || data.swiss_data)) {
+        if (data.has_report && (data.translator_log_id || data.report_log_id)) {
           console.log('✅ Report is ready, stopping polling');
           stopPolling();
         }

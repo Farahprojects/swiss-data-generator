@@ -119,6 +119,7 @@ async function processSwissDataInBackground(
 ) {
   let swissData: any;
   let swissError: string | null = null;
+  let translatorLogId: string | null = null;
 
   try {
     const payload = buildTranslatorPayload(reportData);
@@ -134,6 +135,19 @@ async function processSwissDataInBackground(
 
     const translated = await translate(translatorRequest);
     swissData = JSON.parse(translated.text);
+
+    // Find the translator_log record that was just created
+    const { data: translatorLog } = await supabase
+      .from("translator_logs")
+      .select("id")
+      .eq("user_id", guestReportId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (translatorLog) {
+      translatorLogId = translatorLog.id;
+    }
   } catch (err: any) {
     swissError = err.message;
     swissData  = {
@@ -144,13 +158,19 @@ async function processSwissDataInBackground(
     };
   }
 
+  // Update guest_reports with reference to translator_logs instead of duplicate data
+  const updateData: any = {
+    has_report:  !swissError,
+    updated_at:  new Date().toISOString(),
+  };
+
+  if (translatorLogId) {
+    updateData.translator_log_id = translatorLogId;
+  }
+
   await supabase
     .from("guest_reports")
-    .update({
-      swiss_data:  swissData,
-      has_report:  !swissError,
-      updated_at:  new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", guestReportId);
 }
 
@@ -186,14 +206,13 @@ serve(async (req) => {
       if (error || !record) throw new Error("Free session not found");
 
       // If Swiss already processed, just return it
-      if (record.swiss_data) {
+      if (record.translator_log_id) {
         return new Response(JSON.stringify({
           success:       true,
           verified:      true,
           paymentStatus: "free",
           reportData:    record.report_data,
           guestReportId: record.id,
-          swissData:     record.swiss_data,
           message:       "Free session already processed",
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }

@@ -590,11 +590,11 @@ export type Database = {
           payment_status: string
           promo_code_used: string | null
           purchase_type: string | null
-          report_content: string | null
           report_data: Json
+          report_log_id: string | null
           report_type: string | null
           stripe_session_id: string
-          swiss_data: Json | null
+          translator_log_id: string | null
           updated_at: string
         }
         Insert: {
@@ -610,11 +610,11 @@ export type Database = {
           payment_status?: string
           promo_code_used?: string | null
           purchase_type?: string | null
-          report_content?: string | null
           report_data?: Json
+          report_log_id?: string | null
           report_type?: string | null
           stripe_session_id: string
-          swiss_data?: Json | null
+          translator_log_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -630,14 +630,29 @@ export type Database = {
           payment_status?: string
           promo_code_used?: string | null
           purchase_type?: string | null
-          report_content?: string | null
           report_data?: Json
+          report_log_id?: string | null
           report_type?: string | null
           stripe_session_id?: string
-          swiss_data?: Json | null
+          translator_log_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "guest_reports_report_log_id_fkey"
+            columns: ["report_log_id"]
+            isOneToOne: false
+            referencedRelation: "report_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_reports_translator_log_id_fkey"
+            columns: ["translator_log_id"]
+            isOneToOne: false
+            referencedRelation: "translator_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       insight_entries: {
         Row: {

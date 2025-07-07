@@ -151,7 +151,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     if (report.payment_status === 'paid' && !report.has_report) {
       return { step: 2, title: 'Generating Your Report', desc: 'Our AI is crafting your personalized insights', progress: 60, icon: Clock };
     }
-    if (report.has_report && report.report_content) {
+    if (report.has_report && (report.translator_log_id || report.report_log_id)) {
       return { step: 3, title: 'Report Ready!', desc: 'Your personalized report is complete', progress: 100, icon: CheckCircle };
     }
     return { step: 1, title: 'Processing', desc: 'Please wait while we prepare your report', progress: 30, icon: Clock };
@@ -159,7 +159,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   const status = getStatus();
   const StatusIcon = status.icon;
-  const isReady = report?.has_report && !!report?.report_content;
+  const isReady = report?.has_report && !!(report?.translator_log_id || report?.report_log_id);
 
   // ---------------------------------------------------------------------------
   // Countdown logic
@@ -179,7 +179,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         caseNumber,
         email,
         hasReport: report?.has_report,
-        reportContent: !!report?.report_content
+        reportContent: !!(report?.translator_log_id || report?.report_log_id)
       });
       
       const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
@@ -205,7 +205,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   useEffect(() => {
     if (isReady && onViewReport && !isAstroDataReport) {
       redirectRef.current = setTimeout(
-        () => onViewReport(report!.report_content!, report!.report_pdf_data),
+        () => onViewReport('Report content will be fetched from database', null),
         2_000,
       );
     }
@@ -397,7 +397,7 @@ The report was not generated within the expected timeframe. Please help me resol
                   isMobile ? (
                     <div className="flex gap-8 justify-center">
                       <button 
-                        onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
+                        onClick={() => onViewReport?.('Report content will be fetched from database', null)}
                         className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
                       >
                         View
@@ -406,7 +406,7 @@ The report was not generated within the expected timeframe. Please help me resol
                         onClick={async () => {
                           try {
                             const tempDiv = document.createElement('div');
-                            tempDiv.innerHTML = report!.report_content!;
+                            tempDiv.innerHTML = 'Report content will need to be fetched from database';
                             const cleanText = tempDiv.textContent || tempDiv.innerText || '';
                             await navigator.clipboard.writeText(cleanText);
                           } catch (error) {
@@ -423,7 +423,7 @@ The report was not generated within the expected timeframe. Please help me resol
                         onClick={async () => {
                           try {
                             const tempDiv = document.createElement('div');
-                            tempDiv.innerHTML = report!.report_content!;
+                            tempDiv.innerHTML = 'Report content will need to be fetched from database';
                             const cleanText = tempDiv.textContent || tempDiv.innerText || '';
                             await navigator.clipboard.writeText(cleanText);
                             setTimeout(() => {
@@ -445,7 +445,7 @@ The report was not generated within the expected timeframe. Please help me resol
                     </div>
                   ) : (
                     <motion.button
-                      onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
+                      onClick={() => onViewReport?.('Report content will be fetched from database', null)}
                       className="group flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-light transition-all duration-200"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -458,7 +458,7 @@ The report was not generated within the expected timeframe. Please help me resol
                   )
                 ) : (
                   <Button 
-                    onClick={() => onViewReport?.(report!.report_content!, report!.report_pdf_data)}
+                    onClick={() => onViewReport?.('Report content will be fetched from database', null)}
                     className="bg-gray-900 hover:bg-gray-800 text-white font-light"
                   >
                     View now
