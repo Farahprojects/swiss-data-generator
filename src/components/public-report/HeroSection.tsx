@@ -59,7 +59,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: "easeOut" }}
         >
-          <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
+          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
             <span className="italic font-medium flex items-center justify-center gap-x-2 flex-wrap">
@@ -86,7 +86,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           transition={{ delay: 0.6, duration: 0.8 }}
           className="mb-16"
         >
-          <p className="text-xl text-gray-500 max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl text-gray-500 max-w-xl mx-auto leading-relaxed">
             Psychological insights that create momentum
           </p>
         </motion.div>

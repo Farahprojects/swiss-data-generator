@@ -46,7 +46,7 @@ export const TestCard = ({ title, description, subDescriptions, path, isActive, 
     >
       <div className="flex items-center justify-between">
         <div className="flex-1 text-center md:text-left">
-          <h3 className={`text-3xl md:text-4xl font-light transition-all duration-500 whitespace-nowrap tracking-tight transform ${
+          <h3 className={`text-lg sm:text-xl md:text-3xl lg:text-4xl font-light transition-all duration-500 tracking-tight transform ${
             isActive || isHovered 
               ? 'text-gray-900 scale-105 drop-shadow-sm' 
               : 'text-gray-500 scale-100'
@@ -56,7 +56,7 @@ export const TestCard = ({ title, description, subDescriptions, path, isActive, 
           {subDescriptions && subDescriptions.length > 0 ? (
             <div className="mt-3 space-y-1">
               {subDescriptions.map((subDesc, index) => (
-                <p key={index} className="text-sm text-gray-600 font-normal leading-relaxed">
+                <p key={index} className="text-xs sm:text-sm text-gray-600 font-normal leading-relaxed">
                   {subDesc}
                 </p>
               ))}
