@@ -291,7 +291,6 @@ async function logReportAttempt(
       user_id: userId,
       report_type: reportType,
       endpoint: endpoint,
-      swiss_payload: swissPayload,
       report_text: reportText,
       status: status,
       duration_ms: durationMs,
