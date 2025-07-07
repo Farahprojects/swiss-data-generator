@@ -1,3 +1,0 @@
-
-name = "stripe-webhook-handler"
-verify_jwt = false

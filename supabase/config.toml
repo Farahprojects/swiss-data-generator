@@ -1,1 +1,67 @@
 project_id = "wrvqqvqvwqmfdqvqmaar"
+
+[functions.contact-form-handler]
+verify_jwt = false
+
+[functions.create-guest-checkout]
+verify_jwt = false
+
+[functions.create-report]
+verify_jwt = false
+
+[functions.email-check]
+verify_jwt = false
+
+[functions.email-verification]
+verify_jwt = false
+
+[functions.outbound-messenger]
+verify_jwt = false
+
+[functions.password_token]
+verify_jwt = false
+
+[functions.process-credits]
+verify_jwt = false
+
+[functions.process-guest-report-pdf]
+verify_jwt = false
+
+[functions.process-topup-queue]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.send-notification-email]
+verify_jwt = false
+
+[functions.signup_token]
+verify_jwt = false
+
+[functions.standard-report-one]
+verify_jwt = false
+
+[functions.standard-report-two]
+verify_jwt = false
+
+[functions.standard-report-three]
+verify_jwt = false
+
+[functions.standard-report]
+verify_jwt = false
+
+[functions.stripe-webhook-handler]
+verify_jwt = false
+
+[functions.swiss]
+verify_jwt = false
+
+[functions.update-service-purchase-metadata]
+verify_jwt = false
+
+[functions.verification-emailer]
+verify_jwt = false
+
+[functions.verify-guest-payment]
+verify_jwt = false

@@ -1,3 +1,0 @@
-
-name = "verify-guest-payment"
-verify_jwt = false
