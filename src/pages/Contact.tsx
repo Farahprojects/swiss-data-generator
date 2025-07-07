@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { logToSupabase } from "@/utils/batchedLogManager";
 import { validateEmail } from "@/utils/authValidation";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -137,16 +138,10 @@ const Contact = () => {
       });
 
       // The actual fetch request
-      const fetchPromise = fetch(
-        "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/functions/v1/contact-form-handler",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      // Use Supabase edge function via the client
+      const fetchPromise = supabase.functions.invoke('contact-form-handler', {
+        body: formData
+      });
 
       // Show a processing toast after 3 seconds if still submitting
       const toastTimeoutId = setTimeout(() => {
@@ -160,12 +155,12 @@ const Contact = () => {
 
       // Race between timeout and actual fetch
       try {
-        const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
         clearTimeout(toastTimeoutId);
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Server responded with ${response.status}`);
+        const result = response as { data?: any; error?: any };
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to send message');
         }
         
         logToSupabase("Contact form submission successful", {
@@ -192,8 +187,9 @@ const Contact = () => {
           // Continue with the fetch in the background
           fetchPromise.then(response => {
             clearTimeout(toastTimeoutId);
-            if (!response.ok) {
-              throw new Error(`Server responded with ${response.status}`);
+            const bgResult = response as { data?: any; error?: any };
+            if (bgResult.error) {
+              throw new Error(bgResult.error.message || 'Server error');
             }
             // IMPROVED: Set submitted state immediately when we get a response
             setSubmitted(true);

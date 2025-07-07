@@ -1,5 +1,6 @@
 
 import { logToSupabase } from "@/utils/batchedLogManager";
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Types of email notifications supported by the system
@@ -38,40 +39,29 @@ export const sendEmailNotification = async (
     });
 
     // Call the edge function to send the notification (no auth token required)
-    const response = await fetch(
-      "https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/send-notification-email", 
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          templateType: type,
-          recipientEmail,
-          variables
-        })
+    const { data, error } = await supabase.functions.invoke('send-notification-email', {
+      body: {
+        templateType: type,
+        recipientEmail,
+        variables
       }
-    );
+    });
 
-    if (!response.ok) {
-      const errorData = await response.json();
+    if (error) {
       logToSupabase("Failed to send email notification", {
         level: 'error',
         page: 'notificationService',
         data: { 
           type, 
           recipient: recipientEmail,
-          status: response.status,
-          error: errorData 
+          error: error.message 
         }
       });
       return { 
         success: false, 
-        error: errorData.error || `Failed to send notification (${response.status})` 
+        error: error.message || 'Failed to send notification' 
       };
     }
-
-    const responseData = await response.json();
     
     logToSupabase("Email notification sent successfully", {
       level: 'info',

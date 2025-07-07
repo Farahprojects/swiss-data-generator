@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { logToSupabase } from '@/utils/batchedLogManager';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EmailVerificationModalProps {
   isOpen: boolean;
@@ -46,27 +47,18 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
         data: { currentEmail, newEmail, userId: user?.id }
       });
 
-      const SUPABASE_URL = "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-      const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
-
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-        },
-        body: JSON.stringify({
+      // Use Supabase edge function via the client
+      const { data, error } = await supabase.functions.invoke('email-verification', {
+        body: {
           user_id: user?.id || ''
-        })
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to resend verification (${response.status})`);
+      if (error) {
+        throw new Error(error.message || 'Failed to resend verification');
       }
 
-      const result = await response.json();
+      const result = data;
       
       if (result.status === 'sent') {
         setResendSuccess(true);

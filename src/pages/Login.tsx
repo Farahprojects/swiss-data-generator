@@ -12,14 +12,11 @@ import { validateEmail } from '@/utils/authValidation';
 import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { logToSupabase } from '@/utils/batchedLogManager';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
- * SUPABASE edge‑function constants (extracted so they are not re‑created on every render)
- * NOTE: in production you should store these in environment variables.
+ * Use the centralized Supabase client instead of hardcoded constants
  */
-const SUPABASE_URL = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
 
 /**
  * Login page component
@@ -134,20 +131,13 @@ const Login = () => {
         data: { userId: user?.id, email },
       });
 
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/email-verification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ user_id: user?.id ?? '' }),
+      // Use Supabase edge function via the client
+      const { data, error } = await supabase.functions.invoke('email-verification', {
+        body: { user_id: user?.id ?? '' }
       });
 
-      if (!response.ok) {
-        const { error } = await response.json();
-        const errorMessage = error ?? `Failed (${response.status})`;
-        return { error: new Error(errorMessage) };
+      if (error) {
+        throw new Error(error.message || 'Failed to send verification email');
       }
 
       toast({

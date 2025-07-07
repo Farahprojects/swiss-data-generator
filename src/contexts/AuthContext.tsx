@@ -14,11 +14,8 @@ const debug = (...args: any[]) => {
 };
 
 // ──────────────────────────────────────────
-// env / constants
+// Remove hardcoded constants - use the centralized Supabase client instead
 // ──────────────────────────────────────────
-const SUPABASE_URL = 'https://wrvqqvqvwqmfdqvqmaar.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0';
 
 /**
  * Typed shape for the Auth context.
@@ -47,18 +44,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  */
 const checkForPendingEmailChange = async (sessionToken: string, userEmail: string) => {
   try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/email-check`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${sessionToken}`,
-      },
-      body: JSON.stringify({ email: userEmail }),
+    // Use Supabase edge function via the client
+    const { data, error } = await supabase.functions.invoke('email-check', {
+      body: { email: userEmail }
     });
 
-    if (!res.ok) return null;
-    return await res.json();
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
   } catch (err) {
     logToSupabase('email-check failed', {
       level: 'warn',
@@ -323,7 +318,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Create popup window
       const popup = window.open(
-        `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        `https://wrvqqvqvwqmfdqvqmaar.supabase.co/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
         'googleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
@@ -364,7 +359,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Create popup window
       const popup = window.open(
-        `${SUPABASE_URL}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        `https://wrvqqvqvwqmfdqvqmaar.supabase.co/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
         'appleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
