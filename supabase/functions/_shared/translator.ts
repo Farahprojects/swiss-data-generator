@@ -86,6 +86,7 @@ async function logToSupabase(
     request_payload:     requestPayload,
     translator_payload:  translatorPayload ?? null,
     response_status:     responseStatus,
+    swiss_data:          responsePayload,
     processing_time_ms:  processingTime,
     error_message:       errorMessage,
     google_geo:          googleGeoUsed,
