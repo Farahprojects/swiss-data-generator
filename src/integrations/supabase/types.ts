@@ -1184,7 +1184,6 @@ export type Database = {
           request_payload: Json | null
           request_type: string | null
           response_status: number | null
-          response_text: string | null
           timestamp: string | null
           user_id: string | null
         }
@@ -1195,7 +1194,6 @@ export type Database = {
           request_payload?: Json | null
           request_type?: string | null
           response_status?: number | null
-          response_text?: string | null
           timestamp?: string | null
           user_id?: string | null
         }
@@ -1206,7 +1204,6 @@ export type Database = {
           request_payload?: Json | null
           request_type?: string | null
           response_status?: number | null
-          response_text?: string | null
           timestamp?: string | null
           user_id?: string | null
         }
