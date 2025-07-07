@@ -59,10 +59,10 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: "easeOut" }}
         >
-          <h1 className="text-5xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
+          <h1 className="text-4xl xs:text-5xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
-            <span className="italic font-medium flex items-center justify-start md:justify-center whitespace-nowrap gap-x-2 ml-1">
+            <span className="italic font-medium flex items-center justify-center gap-x-2 flex-wrap">
               <span>Your</span>
               <AnimatePresence mode="wait">
                 <motion.span
