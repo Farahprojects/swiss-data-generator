@@ -965,7 +965,6 @@ export type Database = {
           report_text: string | null
           report_type: string | null
           status: string | null
-          swiss_payload: Json | null
           user_id: string | null
         }
         Insert: {
@@ -980,7 +979,6 @@ export type Database = {
           report_text?: string | null
           report_type?: string | null
           status?: string | null
-          swiss_payload?: Json | null
           user_id?: string | null
         }
         Update: {
@@ -995,7 +993,6 @@ export type Database = {
           report_text?: string | null
           report_type?: string | null
           status?: string | null
-          swiss_payload?: Json | null
           user_id?: string | null
         }
         Relationships: [
