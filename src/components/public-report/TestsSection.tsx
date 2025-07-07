@@ -52,7 +52,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "Essence",
     time: "5 min",
     color: "bg-blue-500",
-    imageSrc: "/placeholder.svg"
+    imageSrc: "https://auth.theraiastro.com/storage/v1/object/public/feature-images//waterfall.png"
   },
   {
     id: "Compatibility",
@@ -65,7 +65,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "relationships",
     time: "10 min",
     color: "bg-pink-500",
-    imageSrc: "/placeholder.svg"
+    imageSrc: "https://auth.theraiastro.com/storage/v1/object/public/feature-images//hand.png"
   },
   {
     id: "AstroData",
@@ -78,7 +78,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "life-shift",
     time: "10 min",
     color: "bg-purple-500",
-    imageSrc: "/placeholder.svg"
+    imageSrc: "https://auth.theraiastro.com/storage/v1/object/public/feature-images//focus.png"
   },
   {
     id: "SnapShot",
@@ -91,7 +91,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "Monthly",
     time: "12 min",
     color: "bg-orange-500",
-    imageSrc: "/placeholder.svg"
+    imageSrc: "https://auth.theraiastro.com/storage/v1/object/public/feature-images//month.png"
   },
 ];
 
@@ -195,8 +195,10 @@ export default function TestsSection() {
       <div className="w-full md:px-4 md:container md:mx-auto">
         <div className="max-w-7xl mx-auto">
           <div className="mb-16 text-center">
-            <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">AI insights into your mind generated in 2 min</h2>
-            <p className="text-lg text-gray-500 max-w-3xl mx-auto leading-relaxed">
+            <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-light text-gray-900 mb-6 tracking-tight md:mb-6 sm:mb-4 xs:mb-3">
+              AI insights into your mind generated in 2 min
+            </h2>
+            <p className="text-base xs:text-lg sm:text-lg md:text-xl text-gray-500 max-w-3xl mx-auto leading-relaxed">
               Unlock the deeper patterns behind how you think, lead, and evolve
             </p>
           </div>
@@ -282,83 +284,63 @@ export default function TestsSection() {
             </div>
           </div>
 
-          {/* Mobile layout - test cards within container */}
-          <div className="block md:hidden">
-            <div className="space-y-0">
-               {testData.map((test) => (
-                 <TestCard
-                   key={test.id}
-                   title={test.name}
-                   description={test.description}
-                   subDescriptions={test.subDescriptions}
-                   path={test.slug}
-                   isActive={selectedTest.id === test.id}
-                   onHover={() => setSelectedTest(test)}
-                   onExplore={() => handleExploreClick(test.name)}
-                   icon={LucideIcons.Sparkles}
-                 />
-               ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Mobile full-width image section - outside containers */}
-      <div className="block md:hidden mt-8">
-        <div className="w-screen relative -mx-4">
-          <div className="w-full overflow-hidden relative shadow-lg h-64">
-            {testData.map((test) => {
+          {/* Small screen layout - zigzag alternating pattern */}
+          <div className="block md:hidden space-y-4">
+            {testData.map((test, index) => {
+              const isImageFirst = index % 2 === 1;
               return (
-                <div 
-                  key={test.id}
-                  className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
-                >
-                   {test.id === 'TheSelf' ? (
-                     <div className="w-full h-full bg-white">
-                       <img 
-                         src={test.imageSrc} 
-                         alt="The Self Report" 
-                         className="w-full h-full object-cover rounded-r-xl"
-                       />
-                     </div>
-                   ) : test.id === 'Compatibility' ? (
-                     <div className="w-full h-full bg-white">
-                       <img 
-                         src={test.imageSrc} 
-                         alt="Compatibility Report" 
-                         className="w-full h-full object-cover rounded-r-xl"
-                       />
-                     </div>
-                   ) : test.id === 'SnapShot' ? (
-                     <div className="w-full h-full bg-white">
-                       <img 
-                         src={test.imageSrc} 
-                         alt="SnapShot Report" 
-                         className="w-full h-full object-cover rounded-r-xl"
-                       />
-                     </div>
-                   ) : test.id === 'AstroData' ? (
-                     <div className="w-full h-full bg-white">
-                       <img 
-                         src={test.imageSrc} 
-                         alt="Astro Data Report" 
-                         className="w-full h-full object-cover rounded-r-xl"
-                       />
-                     </div>
-                   ) : (
-                      <div className="w-full h-full flex items-center justify-center p-4">
-                        <ReportCard
-                          type={getReportGuide(test.id).type}
-                          icon={getReportGuide(test.id).icon}
-                          title={getReportGuide(test.id).title}
-                          price={getReportGuide(test.id).price}
-                          bestFor={getReportGuide(test.id).bestFor}
-                          description={getReportGuide(test.id).description}
-                          details={getReportGuide(test.id).details}
-                          subTypes={getReportGuide(test.id).subTypes}
+                <div key={test.id} className="w-full">
+                  {isImageFirst ? (
+                    // Image first, then text
+                    <div className="flex items-center gap-3">
+                      <div className="w-24 h-24 flex-shrink-0 overflow-hidden rounded-lg shadow-lg">
+                        <img 
+                          src={test.imageSrc} 
+                          alt={`${test.name} Report`} 
+                          className="w-full h-full object-cover rounded-lg"
                         />
                       </div>
-                   )}
+                      <div className="flex-1">
+                        <TestCard
+                          key={test.id}
+                          title={test.name}
+                          description={test.description}
+                          subDescriptions={test.subDescriptions}
+                          path={test.slug}
+                          isActive={selectedTest.id === test.id}
+                          onHover={() => setSelectedTest(test)}
+                          onExplore={() => handleExploreClick(test.name)}
+                          icon={LucideIcons.Sparkles}
+                          mobileLayout="image-first"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    // Text first, then image
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <TestCard
+                          key={test.id}
+                          title={test.name}
+                          description={test.description}
+                          subDescriptions={test.subDescriptions}
+                          path={test.slug}
+                          isActive={selectedTest.id === test.id}
+                          onHover={() => setSelectedTest(test)}
+                          onExplore={() => handleExploreClick(test.name)}
+                          icon={LucideIcons.Sparkles}
+                          mobileLayout="text-first"
+                        />
+                      </div>
+                      <div className="w-24 h-24 flex-shrink-0 overflow-hidden rounded-lg shadow-lg">
+                        <img 
+                          src={test.imageSrc} 
+                          alt={`${test.name} Report`} 
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

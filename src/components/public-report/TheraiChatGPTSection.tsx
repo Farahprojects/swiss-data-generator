@@ -1,6 +1,5 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
-import theraiChatGPTMockup from '@/assets/therai-chatgpt-mockup.jpg';
 
 const TheraiChatGPTSection = () => {
   return (
@@ -12,15 +11,11 @@ const TheraiChatGPTSection = () => {
             <div className="relative">
               <div className="relative overflow-hidden rounded-2xl shadow-2xl bg-white p-8">
                 <img 
-                  src={theraiChatGPTMockup}
-                  alt="Therai ChatGPT Interface"
+                  src="https://auth.theraiastro.com/storage/v1/object/public/feature-images/phone.png"
+                  alt="Therai Phone Interface"
                   className="w-full h-auto rounded-xl"
                 />
               </div>
-              
-              {/* Floating elements for visual appeal */}
-              <div className="absolute -top-4 -right-4 w-8 h-8 bg-gray-200 rounded-full animate-pulse opacity-60"></div>
-              <div className="absolute -bottom-6 -left-6 w-6 h-6 bg-gray-300 rounded-full animate-pulse opacity-40" style={{animationDelay: '1s'}}></div>
             </div>
 
             {/* Content on the right */}

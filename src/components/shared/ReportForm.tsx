@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ReportFormData } from '@/types/public-report';
@@ -35,6 +34,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     mode: 'onBlur',
     defaultValues: {
       reportType: '',
+      reportSubCategory: '',
       relationshipType: '',
       essenceType: '',
       name: '',

@@ -88,7 +88,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
             <h3 className="text-2xl font-light text-gray-900">Check your <em>email</em></h3>
             <p className="text-gray-600 font-light leading-relaxed">
               We sent a password reset link to <span className="font-medium text-gray-900">{email}</span>
-            </p>
+          </p>
           </div>
         </div>
 

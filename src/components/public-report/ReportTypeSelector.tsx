@@ -36,7 +36,7 @@ interface ReportTypeSelectorProps {
  *   – Step 1   → Step 1.5 (sub‑step) once a main category is picked
  *   – Step 1.5 → Step 2     once the sub‑step is complete
  * ✦ Flags reset automatically when the user changes category
- * ✦ No brittle DOM queries – uses React refs so it’s SSR‑safe
+ * ✦ No brittle DOM queries – uses React refs so it's SSR‑safe
  * ✦ Removed redundant local state (fully derived from RHF values)
  */
 const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
@@ -59,8 +59,8 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   /* ──────────────────────────
    * Scroll targets
    * ────────────────────────── */
-  const subStepRef = useRef<HTMLDivElement>(null); // Step 1.5
-  const stepTwoRef = useRef<HTMLDivElement>(null); // Step 2
+  const subStepRef = useRef<HTMLDivElement>(null); // Step 1.5
+  const stepTwoRef = useRef<HTMLDivElement>(null); // Step 2
 
   const hasScrolledToSubStep = useRef(false);
   const hasScrolledToStepTwo = useRef(false);
@@ -92,7 +92,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   }, [watchedCategory, watchedRelationship, setValue]);
 
   /* ──────────────────────────
-   * Scroll: Step 1 → Step 1.5
+   * Scroll: Step 1 → Step 1.5
    * ────────────────────────── */
   useEffect(() => {
     if (typeof window === 'undefined') return; // SSR guard
@@ -114,7 +114,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
     (watchedCategory === 'astro-data' && !!watchedAstroData);
 
   /* ──────────────────────────
-   * Scroll: Step 1.5 → Step 2
+   * Scroll: Step 1.5 → Step 2
    * ────────────────────────── */
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -136,9 +136,8 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
       onChange: (v: any) => void,
     ) => {
       onChange(value);
-
-      // Only set reportType immediately for snapshot category
-      if (value === 'snapshot' && setValue) {
+      // Do NOT set reportType for snapshot category here
+      if (value !== 'snapshot' && setValue) {
         setValue('reportType', reportType, { shouldValidate: true });
       } else {
         // Clear reportType for categories that need sub-selection or don't use reportType
@@ -184,7 +183,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
    * ────────────────────────── */
   return (
     <>
-      {/* STEP 1 */}
+      {/* STEP 1 */}
       <FormStep
         stepNumber={1}
         title="Choose Your Report Type"
@@ -336,7 +335,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                                 <h3 className="text-lg font-semibold text-gray-900">{sub.title}</h3>
                                 <p className="text-sm text-muted-foreground">{sub.description}</p>
                                 <div className="mt-2 text-xs text-green-600 font-medium">
-                                  ⚡ Instant delivery (~5 seconds)
+                                  ⚡ Instant delivery (~5 seconds)
                                 </div>
                               </div>
                             </div>

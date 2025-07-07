@@ -12,9 +12,10 @@ interface TestCardProps {
   onHover: () => void;
   onExplore?: () => void;
   icon: LucideIcon;
+  mobileLayout?: 'text-first' | 'image-first';
 }
 
-export const TestCard = ({ title, description, subDescriptions, path, isActive, onHover, onExplore, icon: Icon }: TestCardProps) => {
+export const TestCard = ({ title, description, subDescriptions, path, isActive, onHover, onExplore, icon: Icon, mobileLayout = 'text-first' }: TestCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const isMobile = useIsMobile();
 
@@ -34,7 +35,7 @@ export const TestCard = ({ title, description, subDescriptions, path, isActive, 
 
   return (
     <div 
-      className={`py-4 px-6 transition-all duration-500 group ${
+      className={`py-2 px-4 transition-all duration-500 group ${
         isMobile ? 'cursor-pointer' : 'cursor-pointer'
       }`}
       onMouseEnter={() => {
@@ -46,7 +47,7 @@ export const TestCard = ({ title, description, subDescriptions, path, isActive, 
     >
       <div className="flex items-center justify-between">
         <div className="flex-1 text-center md:text-left">
-          <h3 className={`text-3xl md:text-4xl font-light transition-all duration-500 whitespace-nowrap tracking-tight transform ${
+          <h3 className={`text-sm sm:text-base md:text-3xl lg:text-4xl font-light transition-all duration-500 tracking-tight transform ${
             isActive || isHovered 
               ? 'text-gray-900 scale-105 drop-shadow-sm' 
               : 'text-gray-500 scale-100'
@@ -54,15 +55,15 @@ export const TestCard = ({ title, description, subDescriptions, path, isActive, 
             {title}
           </h3>
           {subDescriptions && subDescriptions.length > 0 ? (
-            <div className="mt-3 space-y-1">
+            <div className="mt-1 space-y-1">
               {subDescriptions.map((subDesc, index) => (
-                <p key={index} className="text-sm text-gray-600 font-normal leading-relaxed">
+                <p key={index} className="text-xs text-gray-600 font-normal leading-relaxed">
                   {subDesc}
                 </p>
               ))}
             </div>
           ) : description && (
-            <p className="text-base text-gray-700 mt-2 font-normal">{description}</p>
+            <p className="text-xs sm:text-sm text-gray-700 mt-1 font-normal">{description}</p>
           )}
         </div>
         

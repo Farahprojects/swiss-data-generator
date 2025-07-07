@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { User, Briefcase, Heart, Target, Calendar, Brain, ArrowLeft } from 'lucide-react';
@@ -95,9 +94,18 @@ const getHeadingText = (category: string) => {
 
 const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategory, selectedSubCategory }: Step1_5SubCategoryProps) => {
   const options = subCategoryOptions[selectedCategory as keyof typeof subCategoryOptions] || [];
-  
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to top when this step is rendered (mobile UX)
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
   return (
     <motion.div
+      ref={containerRef}
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
@@ -116,6 +124,7 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
             {options.map((option) => {
               const IconComponent = option.icon;
               const isSelected = field.value === option.value;
+              const isFocus = option.value === 'focus';
               
               return (
                 <motion.button
@@ -132,26 +141,13 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                     } else if (selectedCategory === 'snapshot' && 'reportType' in option) {
                       setValue('reportType', option.reportType);
                     }
-                    
-                    // Auto-advance to next step after selection
-                    setTimeout(() => onNext(), 100);
                   }}
-                  className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
-                    isSelected 
-                      ? 'border-primary shadow-lg' 
-                      : 'border-neutral-200 hover:border-neutral-300'
-                  }`}
-                  whileTap={{ scale: 0.98 }}
+                  className={`w-full flex items-center gap-4 rounded-xl border px-4 py-3 transition-all duration-150
+                    ${isFocus ? 'border-red-600 bg-red-50' : isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+                  aria-pressed={isSelected}
                 >
-                  <div className="flex gap-4 items-center">
-                    <div className="bg-white shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
-                      <IconComponent className="h-6 w-6 text-gray-700" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <h3 className="text-lg font-semibold text-gray-900">{option.title}</h3>
-                      <p className="text-sm text-muted-foreground">{option.description}</p>
-                    </div>
-                  </div>
+                  <IconComponent className={`w-6 h-6 ${isFocus ? 'text-red-600' : 'text-blue-600'}`} />
+                  <span className="text-lg font-medium text-gray-900">{option.title}</span>
                 </motion.button>
               );
             })}

@@ -126,7 +126,8 @@ const PublicReport = () => {
             <img 
               src="/favicon.png" 
               alt="TheRAI Logo" 
-              className="h-8 w-8 object-contain"
+              className="h-8 w-8 object-contain transition-opacity duration-300 ease-out"
+              style={{ opacity: textOpacity }}
             />
             <span 
               className="font-gt-sectra font-medium text-foreground tracking-tight text-2xl transition-opacity duration-300 ease-out"
@@ -335,7 +336,6 @@ const PublicReport = () => {
 
 
         <TestsSection />
-        <TheraiChatGPTSection />
         {!isClientMobile && (
           <div id="report-form">
             <ReportForm />
@@ -349,6 +349,7 @@ const PublicReport = () => {
           isOpen={isDrawerOpen} 
           onClose={handleCloseDrawer} 
         />
+        <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />
         <Footer />
       </div>
