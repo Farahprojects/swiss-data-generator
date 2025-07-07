@@ -335,7 +335,6 @@ const PublicReport = () => {
 
 
         <TestsSection />
-        <TheraiChatGPTSection />
         {!isClientMobile && (
           <div id="report-form">
             <ReportForm />
@@ -350,6 +349,7 @@ const PublicReport = () => {
           onClose={handleCloseDrawer} 
         />
         <FeaturesSection onGetReportClick={handleGetReportClick} />
+        <TheraiChatGPTSection />
         <Footer />
       </div>
     );
