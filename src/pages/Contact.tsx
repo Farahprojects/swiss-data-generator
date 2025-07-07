@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,12 +41,41 @@ const Contact = () => {
     }
   }, []);
 
+  // Check for pre-filled form data from error handling
+  useEffect(() => {
+    const prefillData = localStorage.getItem("contactFormPrefill");
+    if (prefillData) {
+      try {
+        const parsedData = JSON.parse(prefillData);
+        console.log('📝 Found contact form prefill data:', parsedData);
+        setFormData(prev => ({
+          ...prev,
+          name: parsedData.name || "",
+          email: parsedData.email || "",
+          subject: parsedData.subject || "",
+          message: parsedData.message || ""
+        }));
+        // Clear the prefill data after using it
+        localStorage.removeItem("contactFormPrefill");
+        console.log('📝 Cleared contact form prefill data from localStorage');
+      } catch (error) {
+        console.error("Error parsing contact form prefill data:", error);
+        localStorage.removeItem("contactFormPrefill");
+      }
+    }
+  }, []);
+
   // Scroll to top when showing the thank you message
   useEffect(() => {
     if (submitted) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [submitted]);
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

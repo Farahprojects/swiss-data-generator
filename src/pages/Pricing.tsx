@@ -6,6 +6,7 @@ import { Check, Loader2, Star, Users, TrendingUp } from "lucide-react";
 import { faqs } from "@/utils/pricing";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePricing } from "@/contexts/PricingContext";
 import { toast } from "sonner";
 import { storeStripeReturnPath } from "@/utils/stripe-links";
 import { supabase } from "@/integrations/supabase/client";
@@ -268,7 +269,9 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
             <p className="text-gray-600 mb-6 font-light">
               Want a deeper demo or have specific questions about integration?
             </p>
-            <Button variant="outline" onClick={handleContactSales}>Contact Sales</Button>
+            <Button variant="outline" onClick={handleContactSales} className="border-gray-300 text-gray-900 font-light rounded-xl px-8 py-4 transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-100 hover:text-blue-700 hover:scale-105 hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-400">
+              Contact Sales
+            </Button>
           </div>
         </div>
       </div>
@@ -278,35 +281,7 @@ const FAQSection = ({ items }: { items: { question: string; answer: string }[] }
 
 const Pricing = () => {
   const { user } = useAuth();
-  const [prices, setPrices] = useState<PriceItem[]>([]);
-  const [pricesLoading, setPricesLoading] = useState(true);
-  const [pricesError, setPricesError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchPrices = async () => {
-      try {
-        setPricesLoading(true);
-        const { data, error } = await supabase
-          .from('price_list')
-          .select('*')
-          .not('report_type', 'is', null)
-          .order('unit_price_usd', { ascending: true });
-
-        if (error) {
-          throw error;
-        }
-
-        setPrices(data || []);
-      } catch (err) {
-        console.error('Error fetching prices:', err);
-        setPricesError('Failed to load pricing information. Please try again later.');
-      } finally {
-        setPricesLoading(false);
-      }
-    };
-
-    fetchPrices();
-  }, []);
+  const { getPriceById, isLoading: pricesLoading, error: pricesError } = usePricing();
 
   const formatPrice = (price: number): string => {
     if (price >= 1 && price % 1 === 0) {
@@ -335,11 +310,11 @@ const Pricing = () => {
         {/* PRICING CARDS */}
         <section className="container mx-auto pb-16 px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <EssenceSuiteCard />
-            <RelationshipDynamicsCard />
-            <DeeperInsightsCard />
+            <EssenceSuiteCard getPriceById={getPriceById} formatPrice={formatPrice} />
+            <RelationshipDynamicsCard getPriceById={getPriceById} formatPrice={formatPrice} />
+            <DeeperInsightsCard getPriceById={getPriceById} formatPrice={formatPrice} />
           </div>
-          <TimingToolkitSection />
+          <TimingToolkitSection getPriceById={getPriceById} formatPrice={formatPrice} />
         </section>
 
         <FAQSection items={coachingFaqs} />
@@ -353,7 +328,7 @@ const Pricing = () => {
           No astrological knowledge needed.
         </p>
         <Link to={user ? "/dashboard" : "/login"}>
-          <Button className="bg-gray-900 px-8 py-6 text-lg text-white hover:bg-gray-800 font-light">
+          <Button className="bg-gradient-to-r from-blue-600 to-indigo-500 px-8 py-6 text-lg text-white font-light rounded-xl shadow-lg transition-all duration-300 hover:from-blue-700 hover:to-indigo-600 hover:scale-105 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-blue-400">
             {user ? "Get API Access" : "Start Now"}
           </Button>
         </Link>

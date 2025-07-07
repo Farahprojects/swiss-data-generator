@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import HeroSection from '@/components/public-report/HeroSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
@@ -10,6 +9,7 @@ import MobileReportTrigger from '@/components/public-report/MobileReportTrigger'
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
+import Logo from '@/components/Logo';
 
 const PublicReport = () => {
   // SSR Debug Logging
@@ -27,12 +27,25 @@ const PublicReport = () => {
   try {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isClientMobile, setIsClientMobile] = useState(false);
+    const [scrollY, setScrollY] = useState(0);
 
     // Safe mobile detection on client side only
     useEffect(() => {
       if (typeof window !== 'undefined') {
         setIsClientMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
       }
+    }, []);
+
+    // Scroll position tracking
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+
+      const handleScroll = () => {
+        setScrollY(window.scrollY);
+      };
+
+      window.addEventListener('scroll', handleScroll);
+      return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
     // Global error handlers to catch client-side errors
@@ -101,9 +114,29 @@ const PublicReport = () => {
       setIsDrawerOpen(true);
     };
 
+    // Calculate text opacity based on scroll position
+    const textOpacity = Math.max(0, 1 - (scrollY / 100)); // Fade out over 100px scroll
+
   try {
     return (
       <div className="min-h-screen bg-background">
+        {/* Animated header with logo */}
+        <header className="fixed top-0 left-0 z-50 p-6">
+          <div className="flex items-center gap-2">
+            <img 
+              src="/favicon.png" 
+              alt="TheRAI Logo" 
+              className="h-8 w-8 object-contain"
+            />
+            <span 
+              className="font-gt-sectra font-medium text-foreground tracking-tight text-2xl transition-opacity duration-300 ease-out"
+              style={{ opacity: textOpacity }}
+            >
+              Therai.
+            </span>
+          </div>
+        </header>
+        
         <HeroSection onGetReportClick={handleGetReportClick} />
         
         {/* Sample Report Section */}

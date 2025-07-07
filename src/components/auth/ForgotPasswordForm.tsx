@@ -76,29 +76,39 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
 
   if (emailSent) {
     return (
-      <div className="space-y-8 text-center">
-        <div>
-          <h3 className="text-2xl font-bold mb-1">Check your email</h3>
-          <p className="text-gray-600">
-            We sent a password reset link to <span className="font-medium">{email}</span>
-          </p>
+      <div className="max-w-md mx-auto space-y-8 text-center">
+        <div className="space-y-4">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <h3 className="text-2xl font-light text-gray-900">Check your <em>email</em></h3>
+            <p className="text-gray-600 font-light leading-relaxed">
+              We sent a password reset link to <span className="font-medium text-gray-900">{email}</span>
+            </p>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">
+        <div className="space-y-6">
+          <p className="text-sm text-gray-500 font-light">
             Didn't receive the email? Check your spam folder or request another link.
           </p>
-          <div className="flex flex-col space-y-3">
+          
+          <div className="space-y-4">
             <Button 
               onClick={() => setEmailSent(false)}
-              className="w-full bg-primary text-white hover:bg-primary-hover"
+              className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-xl text-lg"
             >
               Try again
             </Button>
+            
             <Button 
               variant="outline" 
               onClick={onCancel}
-              className="w-full"
+              className="w-full border-gray-900 text-gray-900 hover:bg-gray-50 font-light px-8 py-4 rounded-xl text-lg"
             >
               Back to login
             </Button>
@@ -109,16 +119,16 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h3 className="text-2xl font-bold mb-1">Reset password</h3>
-        <p className="text-gray-600">
+    <div className="max-w-md mx-auto space-y-8">
+      <div className="text-center space-y-4">
+        <h3 className="text-2xl font-light text-gray-900">Reset your <em>password</em></h3>
+        <p className="text-gray-600 font-light leading-relaxed">
           Enter your email and we'll send you a link to reset your password
         </p>
       </div>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="space-y-6">
           <EmailInput 
             email={email} 
             isValid={emailValid} 
@@ -126,18 +136,18 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
           />
         </div>
 
-        <div className="flex flex-col space-y-3">
+        <div className="space-y-4">
           <Button 
             type="submit" 
-            className="w-full" 
+            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-xl text-lg" 
             disabled={loading || !emailValid}
           >
             {loading ? 'Sending...' : 'Send Reset Link'}
           </Button>
           
           {resetLinkSent && (
-            <div className="flex items-center justify-center text-sm text-green-600 py-2">
-              <CheckCircle className="h-4 w-4 mr-1" />
+            <div className="flex items-center justify-center text-sm text-green-600 py-3 font-light">
+              <CheckCircle className="h-4 w-4 mr-2" />
               Reset link sent! Check your email
             </div>
           )}
@@ -146,9 +156,9 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
             type="button" 
             variant="outline"
             onClick={onCancel}
-            className="w-full flex items-center justify-center gap-2"
+            className="w-full flex items-center justify-center gap-3 border-gray-900 text-gray-900 hover:bg-gray-50 font-light px-8 py-4 rounded-xl text-lg"
           >
-            <ArrowLeft size={16} /> Back to Login
+            <ArrowLeft size={18} /> Back to Login
           </Button>
         </div>
       </form>

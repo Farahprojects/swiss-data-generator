@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -45,16 +44,12 @@ const About = () => {
         <section className="py-24 bg-gradient-to-b from-background to-accent/20">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-light mb-16 text-center text-gray-900 tracking-tight">Our Team</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto">
               {/* Founder Card */}
-              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all">
+              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-10 shadow-lg border border-white/20 hover:shadow-xl transition-all flex flex-col justify-between">
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-24 h-24 mb-6 rounded-full overflow-hidden">
-                    <img 
-                      src="/lovable-uploads/97523ce9-e477-4fb9-9a9c-f8cf223342c6.png" 
-                      alt="Peter Farah" 
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-24 h-24 mb-6 rounded-full overflow-hidden flex items-center justify-center">
+                    <img src="https://auth.theraiastro.com/storage/v1/object/public/therai-assets//me.png" alt="Peter Farah" className="object-cover w-24 h-24" />
                   </div>
                   <h3 className="text-2xl font-light mb-2 text-gray-900 tracking-tight">Peter Farah</h3>
                   <p className="text-lg font-light text-gray-700 mb-2">Founder and Creator</p>
@@ -64,14 +59,13 @@ const About = () => {
                     commitment to deep understanding.
                   </p>
                   <p className="text-sm text-gray-500 mb-4">Australia</p>
-                  
                   {/* Social Media Icons */}
-                  <div className="flex space-x-4">
+                  <div className="flex space-x-4 mt-2">
                     <a
                       href="https://www.linkedin.com/public-profile/settings?trk=d_flagship3_profile_self_view_public_profile"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-black hover:text-gray-700 transition-colors transform hover:scale-110 transition-transform duration-200"
+                      className="text-black hover:text-[#0077b5] transition-all duration-200 hover:scale-110"
                     >
                       <Linkedin className="w-5 h-5" />
                     </a>
@@ -79,57 +73,30 @@ const About = () => {
                       href="https://x.com/farahprojects"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="transform hover:scale-110 transition-transform duration-200"
+                      className="text-black hover:text-gray-700 transition-all duration-200 hover:scale-110"
                     >
-                      <img 
-                        src="/lovable-uploads/0b87b08c-6306-4b6b-9156-4d375f61b05f.png" 
-                        alt="X (formerly Twitter)" 
-                        className="w-[18px] h-[18px]"
-                      />
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                      </svg>
                     </a>
                   </div>
                 </div>
               </div>
 
               {/* OpenAI Support Card */}
-              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all">
+              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-10 shadow-lg border border-white/20 hover:shadow-xl transition-all flex flex-col justify-between">
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-24 h-24 mb-6 rounded-full overflow-hidden bg-white flex items-center justify-center p-4">
-                    <img 
-                      src="/lovable-uploads/3ae82216-0e7c-428d-9da6-9d37b2dca09a.png" 
-                      alt="OpenAI" 
-                      className="w-full h-full object-contain"
-                    />
+                  <div className="w-24 h-24 mb-6 rounded-full overflow-hidden flex items-center justify-center">
+                    <img src="https://auth.theraiastro.com/storage/v1/object/public/therai-assets//OpenAI-black-monoblossom.png" alt="OpenAI Logo" className="object-contain w-20 h-20" />
                   </div>
                   <h3 className="text-2xl font-light mb-2 text-gray-900 tracking-tight">OpenAI</h3>
-                  <p className="text-lg font-light text-gray-700 mb-2">Creative Technology Support</p>
+                  <p className="text-lg font-light text-gray-700 mb-2">AI Platform Partner</p>
                   <p className="text-gray-600 font-light">
-                    Powering the AI tools that assist and inspire the development of our platform,
-                    enabling innovative solutions and enhanced user experiences through advanced
-                    artificial intelligence.
+                    Therai is built with the help of OpenAI's advanced language models. While not a team member, OpenAI's platform empowers the creative and technical process—enabling new features, rapid prototyping, and smarter user experiences. We proudly use OpenAI as a core tool in our development journey.
                   </p>
                 </div>
               </div>
 
-              {/* Lovable Card */}
-              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-24 h-24 mb-6 rounded-full overflow-hidden bg-white flex items-center justify-center p-4">
-                    <img 
-                      src="/lovable-uploads/a247971a-7a36-4d5c-bdb5-e00ae893ab87.png" 
-                      alt="Lovable" 
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <h3 className="text-2xl font-light mb-2 text-gray-900 tracking-tight">Lovable</h3>
-                  <p className="text-lg font-light text-gray-700 mb-2">Development Platform</p>
-                  <p className="text-gray-600 font-light">
-                    The AI-powered development platform that enables rapid prototyping and 
-                    deployment of web applications, providing the technical foundation for 
-                    bringing innovative ideas to life.
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         </section>
@@ -174,21 +141,17 @@ const About = () => {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-white">
+        <section className="py-24 bg-white">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-light mb-6 text-gray-900 tracking-tight">
-              Join us in revolutionizing astrology software
-            </h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto text-gray-700 font-light">
-              Start your journey with the best astrological applications with the most accurate data available.
+            <h2 className="text-3xl font-light mb-8 text-gray-900 tracking-tight">Ready to Get Started?</h2>
+            <p className="text-lg text-gray-600 mb-12 max-w-2xl mx-auto font-light">
+              Join thousands of users who are already discovering their cosmic insights with Therai.
             </p>
-            <div className="flex justify-center">
-              <Link to="/signup">
-                <Button className="bg-primary text-white hover:bg-primary/90 text-lg px-8 py-6">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
+            <Link to="/report">
+              <button className="bg-black text-white px-10 py-4 text-lg font-light rounded-xl shadow-lg transition-all duration-300 hover:bg-gray-900 hover:scale-105 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-gray-400">
+                Get Started
+              </button>
+            </Link>
           </div>
         </section>
       </main>

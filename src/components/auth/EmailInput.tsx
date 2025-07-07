@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +25,7 @@ const EmailInput: React.FC<Props> = ({
   disabled = false,
   placeholder = "Enter your email",
 }) => (
-  <div className="space-y-2">
+  <div className="space-y-3">
     <Label htmlFor="email" className="text-gray-700 font-light text-sm tracking-wide">Email</Label>
 
     <Input
@@ -37,7 +36,7 @@ const EmailInput: React.FC<Props> = ({
       onFocus={onFocus}
       disabled={disabled}
       placeholder={placeholder}
-      className={`h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-gray-600 font-light ${
+      className={`h-12 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:border-gray-600 font-light rounded-xl ${
         !isValid && email ? "border-red-500 focus:border-red-500" : ""
       }`}
       required

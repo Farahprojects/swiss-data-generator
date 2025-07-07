@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,7 +45,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {label && <Label htmlFor={inputId} className="text-gray-700 font-light text-sm tracking-wide">{label}</Label>}
       <div className="relative">
         <Input
@@ -56,7 +55,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           onChange={(e) => onChange(e.target.value)}
           onFocus={onFocus}
           placeholder={placeholder}
-          className={`h-12 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-gray-600 font-light pr-12 ${
+          className={`h-12 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:border-gray-600 font-light pr-12 rounded-xl ${
             (!isValid && password) || showMatchError ? 'border-red-500 focus:border-red-500' : ''
           }`}
           required
@@ -72,22 +71,27 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
-      
-      {showRequirements && password.length > 0 && (
-        <div className="mt-2 space-y-1">
-          {passwordRequirements.map((req) => (
-            <div 
-              key={req.key} 
-              className={`text-xs flex items-center font-light ${req.validate(password) ? 'text-green-600' : 'text-gray-500'}`}
-            >
-              <span className="mr-1">•</span> {req.text}
-            </div>
-          ))}
-        </div>
-      )}
 
       {showMatchError && (
-        <p className="text-xs text-red-600 mt-1 font-light">Passwords do not match</p>
+        <p className="text-xs text-red-600 font-light">Passwords do not match</p>
+      )}
+
+      {showRequirements && password && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-600 font-light">Password requirements:</p>
+          <ul className="space-y-1">
+            {passwordRequirements.map((req, index) => (
+              <li key={index} className={`text-xs font-light flex items-center gap-2 ${
+                req.validate(password) ? 'text-green-600' : 'text-red-600'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  req.validate(password) ? 'bg-green-500' : 'bg-red-500'
+                }`} />
+                {req.text}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

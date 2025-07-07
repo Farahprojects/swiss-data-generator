@@ -211,10 +211,42 @@ const UnifiedNavigation = ({
             <div className="hidden md:flex items-center space-x-8">
               {!isLoggedIn && (
                 <>
-                  <Link to="/features" className="text-gray-700 hover:text-primary text-sm font-medium">Features</Link>
-                  <Link to="/pricing" className="text-gray-700 hover:text-primary text-sm font-medium">Pricing</Link>
-                  <Link to="/about" className="text-gray-700 hover:text-primary text-sm font-medium">About</Link>
-                  <Link to="/contact" className="text-gray-700 hover:text-primary text-sm font-medium">Contact</Link>
+                  <Link 
+                    to="/features" 
+                    className="text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out hover:translate-y-[-1px] transform text-sm font-medium group relative"
+                  >
+                    <span className="relative">
+                      Features
+                      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
+                    </span>
+                  </Link>
+                  <Link 
+                    to="/pricing" 
+                    className="text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out hover:translate-y-[-1px] transform text-sm font-medium group relative"
+                  >
+                    <span className="relative">
+                      Pricing
+                      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
+                    </span>
+                  </Link>
+                  <Link 
+                    to="/about" 
+                    className="text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out hover:translate-y-[-1px] transform text-sm font-medium group relative"
+                  >
+                    <span className="relative">
+                      About
+                      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
+                    </span>
+                  </Link>
+                  <Link 
+                    to="/contact" 
+                    className="text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out hover:translate-y-[-1px] transform text-sm font-medium group relative"
+                  >
+                    <span className="relative">
+                      Contact
+                      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
+                    </span>
+                  </Link>
                 </>
               )}
             </div>
@@ -311,7 +343,7 @@ const UnifiedNavigation = ({
                     <Button variant="outline" className="px-4">Log In</Button>
                   </Link>
                   <Link to="/signup">
-                    <Button className="px-4">Sign Up</Button>
+                    <Button className="px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 ease-out transform hover:scale-105">Sign Up</Button>
                   </Link>
                 </>
               )}
@@ -339,17 +371,49 @@ const UnifiedNavigation = ({
         {isMenuOpen && !isLoggedIn && (
           <div className="absolute top-full left-0 right-0 md:hidden bg-white border-t shadow-lg z-40">
             <div className="px-4 py-4 space-y-2">
-              <Link to="/features" className="block text-gray-700 hover:text-primary py-2">Features</Link>
-              <Link to="/pricing" className="block text-gray-700 hover:text-primary py-2">Pricing</Link>
-              <Link to="/about" className="block text-gray-700 hover:text-primary py-2">About</Link>
-              <Link to="/contact" className="block text-gray-700 hover:text-primary py-2">Contact</Link>
+              <Link 
+                to="/features" 
+                className="block text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out py-2 group relative"
+              >
+                <span className="relative">
+                  Features
+                  <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
+                </span>
+              </Link>
+              <Link 
+                to="/pricing" 
+                className="block text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out py-2 group relative"
+              >
+                <span className="relative">
+                  Pricing
+                  <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
+                </span>
+              </Link>
+              <Link 
+                to="/about" 
+                className="block text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out py-2 group relative"
+              >
+                <span className="relative">
+                  About
+                  <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
+                </span>
+              </Link>
+              <Link 
+                to="/contact" 
+                className="block text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out py-2 group relative"
+              >
+                <span className="relative">
+                  Contact
+                  <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
+                </span>
+              </Link>
               
               <div className="flex flex-col space-y-2 pt-4">
                 <Link to="/login">
-                  <Button variant="outline" className="w-full">Log In</Button>
+                  <Button variant="outline" className="w-full hover:bg-gray-50 transition-all duration-300 ease-out">Log In</Button>
                 </Link>
                 <Link to="/signup">
-                  <Button className="w-full">Sign Up</Button>
+                  <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 ease-out transform hover:scale-105">Sign Up</Button>
                 </Link>
               </div>
             </div>

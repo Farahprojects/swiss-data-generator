@@ -18,7 +18,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { guestReportId, errorType, errorMessage } = await req.json();
+    const { guestReportId, errorType, errorMessage, email } = await req.json();
 
     if (!guestReportId || !errorType) {
       throw new Error("guestReportId and errorType are required");
@@ -36,7 +36,7 @@ serve(async (req) => {
       .from('user_errors')
       .insert({
         guest_report_id: guestReportId,
-        email: guestReport?.email || 'unknown',
+        email: guestReport?.email || email || 'unknown',
         error_type: errorType,
         price_paid: guestReport?.amount_paid || null,
         error_message: errorMessage,
@@ -51,12 +51,15 @@ serve(async (req) => {
       .single();
 
     if (error) {
+      console.error("[log-user-error] Database error:", error);
       throw new Error(`Failed to log error: ${error.message}`);
     }
 
+    console.log("[log-user-error] Successfully logged error with case number:", errorLog?.case_number);
+
     return new Response(JSON.stringify({
       success: true,
-      case_number: errorLog.case_number
+      case_number: errorLog?.case_number
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }

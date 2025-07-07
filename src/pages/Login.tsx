@@ -30,6 +30,11 @@ const Login = () => {
   const location = useLocation();
   const { toast } = useToast();
 
+  // Auto-scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // ————————————————————————————————————————————————
   // Auth context
   // ————————————————————————————————————————————————
@@ -197,8 +202,13 @@ const Login = () => {
         return openVerificationModal();
       }
 
-      // Step 3: success — redirect handled by useEffect
+      // Step 3: success — redirect immediately
       logToSupabase('Login successful', { level: 'info', page: 'Login' });
+      
+      // Force immediate redirect after successful login
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+      
     } catch (err: any) {
       toast({
         title: 'Error',

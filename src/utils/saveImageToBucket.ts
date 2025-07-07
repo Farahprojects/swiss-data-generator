@@ -28,7 +28,7 @@ export const saveUploadedImageToBucket = async (imageUrl: string, fileName: stri
 };
 
 // Auto-save the uploaded dotted circle image
-const imagePath = '/lovable-uploads/2d99e053-b373-4af7-8107-3c6423583974.png';
+  const imagePath = '/placeholder.svg';
 const fileName = 'dotted-circle-logo.png';
 
 saveUploadedImageToBucket(imagePath, fileName)

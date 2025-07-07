@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -20,8 +19,19 @@ const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProp
     lg: 'text-3xl',
   };
 
+  const logoSizeClasses = {
+    sm: 'h-6 w-6',
+    md: 'h-8 w-8',
+    lg: 'h-10 w-10',
+  };
+
   const logoElement = (
-    <div className={cn('flex items-center', className)}>
+    <div className={cn('flex items-center gap-2', className)}>
+      <img 
+        src="/favicon.png" 
+        alt="TheRAI Logo" 
+        className={cn('object-contain', logoSizeClasses[size])}
+      />
       <span className={cn(
         'font-gt-sectra font-medium text-foreground tracking-tight',
         sizeClasses[size]

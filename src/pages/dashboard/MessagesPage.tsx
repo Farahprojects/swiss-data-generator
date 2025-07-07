@@ -424,38 +424,46 @@ const MessagesPage = () => {
   // Desktop layout (sidebar, sticky header, etc)
   return (
     <div className="w-full">
-      {/* Sticky Header */}
-      <div
-        className="sticky top-16 z-10 bg-white border-b px-0 py-3 w-full flex items-center"
-        style={{ minHeight: HEADER_HEIGHT, height: HEADER_HEIGHT }}
-      >
-        {/* Compose button floats absolutely over sidebar */}
-        <div className="absolute left-0 top-0 h-full flex items-center pl-6 z-20" style={{ width: 256 }}>
-          <Button
-            onClick={() => setShowCompose(true)}
-            className="h-10 px-7 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Compose
-          </Button>
-        </div>
-        <div className="ml-64 flex items-center gap-4 w-full pr-10">
-          <h1 className="text-2xl font-normal text-gray-900 min-w-fit mr-4">
-            {showEmailBranding ? 'Email Branding' : 'Messages'}
-          </h1>
-          {!showEmailBranding && (
-            <div className="relative flex-1 max-w-2xl">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search mail"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
-              />
-            </div>
-          )}
+      {/* Fixed Header with Compose button and title */}
+      <div className="fixed left-0 top-16 z-20 bg-white border-b w-full" style={{ height: HEADER_HEIGHT }}>
+        <div className="flex items-center h-full px-0 py-3">
+          {/* Compose button */}
+          <div className="pl-6" style={{ width: 256 }}>
+            <Button
+              onClick={() => setShowCompose(true)}
+              className="h-10 px-7 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Compose
+            </Button>
+          </div>
+          
+          {/* Title */}
+          <div className="flex items-center gap-4 pr-10">
+            <h1 className="text-2xl font-normal text-gray-900 min-w-fit mr-4">
+              {showEmailBranding ? 'Email Branding' : 'Messages'}
+            </h1>
+          </div>
         </div>
       </div>
+      
+      {/* Fixed Search bar - positioned to the right of the title */}
+      {!showEmailBranding && (
+        <div className="fixed left-96 top-20 z-30 pr-10" style={{ right: '2.5rem' }}>
+          <div className="relative max-w-2xl">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search mail"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="pl-12 bg-gray-50 border-gray-200 rounded-full h-10 text-sm focus:bg-white focus:shadow-sm transition-all placeholder:text-gray-500 w-full"
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Spacer to account for fixed header */}
+      <div style={{ height: HEADER_HEIGHT }}></div>
       <div className="flex">
         <MessagesSidebar
           activeFilter={activeFilter}

@@ -68,7 +68,7 @@ export const ReportHeader = ({
               className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200"
             >
               <img 
-                src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
+                src="/placeholder.svg" 
                 alt="ChatGPT" 
                 className="h-4 w-4"
               />

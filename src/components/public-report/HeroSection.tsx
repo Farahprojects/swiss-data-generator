@@ -14,9 +14,9 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
   
   // Banner images for smooth transitions - from explore more section
   const bannerImages = [
-    '/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png', // Focus
-    '/lovable-uploads/f2552227-155d-477d-9c93-ac4eb72b5ddf.png', // Flow
-    '/lovable-uploads/71cede7b-0de9-4397-897f-29009a07c012.png', // Compatibility
+    '/placeholder.svg', // Focus
+    '/placeholder.svg', // Flow
+    '/placeholder.svg', // Compatibility
   ];
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);

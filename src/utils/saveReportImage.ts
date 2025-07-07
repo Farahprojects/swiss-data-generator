@@ -38,7 +38,7 @@ export const saveReportImageToBucket = async (imageUrl: string, fileName: string
 };
 
 // Auto-save the essence report image
-const imagePath = '/lovable-uploads/aa1bc8da-b181-46c3-92ce-7058a107633f.png';
+  const imagePath = '/placeholder.svg';
 const fileName = 'essence-water-drop.png';
 
 saveReportImageToBucket(imagePath, fileName)

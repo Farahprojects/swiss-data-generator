@@ -61,6 +61,7 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
         }
 
         console.log('✅ Successfully fetched prices:', data.length, 'items');
+        console.log('🔍 Fetched price IDs:', data.map(p => p.id));
         setPrices(data);
         
       } catch (err) {
@@ -76,9 +77,12 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
 
   const getPriceById = (id: string): PriceData | null => {
     const price = prices.find(p => p.id === id);
+    console.log(`🔍 getPriceById(${id}):`, price ? 'Found' : 'Not found, using fallback');
     if (!price) {
       // Use global fallback if not found in fetched prices
-      return getGlobalPricing(id);
+      const fallbackPrice = getGlobalPricing(id);
+      console.log(`🔍 getPriceById(${id}) fallback:`, fallbackPrice);
+      return fallbackPrice;
     }
     return price;
   };

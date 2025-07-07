@@ -7,7 +7,7 @@ interface GuestReport {
   email: string;
   has_report: boolean;
   report_content: string | null;
-  report_pdf_data: string | null;
+  report_pdf_data?: string | null;
   payment_status: string;
   created_at: string;
   stripe_session_id: string;

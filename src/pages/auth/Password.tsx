@@ -1,14 +1,5 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,8 +8,6 @@ import Logo from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
 import { logToSupabase } from '@/utils/batchedLogManager';
 import PasswordResetForm from '@/components/auth/PasswordResetForm';
-
-const BRAND_PURPLE = '#7C3AED';
 
 const ResetPassword: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'update-password'>('loading');
@@ -113,16 +102,16 @@ const ResetPassword: React.FC = () => {
 
   const bgColor =
     status === 'loading'
-      ? 'bg-indigo-100 text-indigo-600'
+      ? 'bg-blue-100 text-blue-600'
       : status === 'success'
-      ? 'bg-emerald-100 text-emerald-600'
+      ? 'bg-green-100 text-green-600'
       : 'bg-red-100 text-red-600';
 
   // Show password update form when status is 'update-password'
   if (status === 'update-password') {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
-        <header className="w-full py-5 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
+        <header className="w-full py-8 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
           <Logo size="md" />
         </header>
 
@@ -137,7 +126,7 @@ const ResetPassword: React.FC = () => {
           </motion.div>
         </main>
 
-        <footer className="py-6 text-center text-xs text-gray-500">
+        <footer className="py-8 text-center text-xs text-gray-500 font-light">
           © {new Date().getFullYear()} Theraiapi. All rights reserved.
         </footer>
       </div>
@@ -146,7 +135,7 @@ const ResetPassword: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
-      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
+      <header className="w-full py-8 flex justify-center bg-white/90 backdrop-blur-md shadow-sm">
         <Logo size="md" />
       </header>
 
@@ -157,53 +146,57 @@ const ResetPassword: React.FC = () => {
           transition={{ duration: 0.35, ease: 'easeOut' }}
           className="w-full max-w-md sm:max-w-lg md:max-w-xl"
         >
-          <Card className="relative overflow-hidden border border-gray-200 shadow-xl rounded-3xl bg-white min-h-[24rem]">
-            <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-[radial-gradient(circle_at_top_left,theme(colors.indigo.300)_0%,transparent_70%)]" />
-
-            <CardHeader className="text-center pb-1 relative z-10 bg-white/85 backdrop-blur-sm rounded-t-3xl">
-              <CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-lg p-8 space-y-8">
+            <div className="text-center space-y-4">
+              <h2 className="text-2xl font-light text-gray-900">
                 {heading}
-              </CardTitle>
-              <CardDescription className="text-gray-600">
+              </h2>
+              <p className="text-gray-600 font-light leading-relaxed">
                 {status === 'loading'
                   ? 'Verifying reset link…'
                   : status === 'success'
                   ? 'You can now sign in with your new password.'
                   : 'We encountered a problem.'}
-              </CardDescription>
-            </CardHeader>
+              </p>
+            </div>
 
-            <CardContent className="flex flex-col items-center gap-6 p-10 relative z-10">
+            <div className="flex flex-col items-center space-y-6">
               <motion.div
                 className={`flex items-center justify-center h-20 w-20 rounded-full ${bgColor}`}
                 animate={status}
                 variants={iconVariants}
               >
-                <Icon className="h-12 w-12" />
+                <Icon className="h-10 w-10" />
               </motion.div>
-              <p className="text-center text-lg text-gray-700 max-w-sm leading-relaxed">{message}</p>
-            </CardContent>
+              
+              <p className="text-center text-gray-700 font-light leading-relaxed max-w-sm">
+                {message}
+              </p>
+            </div>
 
-            <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center bg-gray-50 rounded-b-3xl relative z-10 p-6">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {status === 'success' ? (
                 <Button
-                  style={{ background: BRAND_PURPLE }}
                   onClick={() => navigate('/login')}
-                  className="w-full sm:w-auto text-white hover:opacity-90"
+                  className="w-full sm:w-auto bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-xl text-lg"
                 >
                   Go to Login
                 </Button>
               ) : (
-                <Button onClick={() => navigate('/login')} className="w-full sm:w-auto" variant="outline">
+                <Button 
+                  onClick={() => navigate('/login')} 
+                  className="w-full sm:w-auto border-gray-900 text-gray-900 hover:bg-gray-50 font-light px-8 py-4 rounded-xl text-lg" 
+                  variant="outline"
+                >
                   Return to Login
                 </Button>
               )}
-            </CardFooter>
-          </Card>
+            </div>
+          </div>
         </motion.div>
       </main>
 
-      <footer className="py-6 text-center text-xs text-gray-500">
+      <footer className="py-8 text-center text-xs text-gray-500 font-light">
         © {new Date().getFullYear()} Theraiapi. All rights reserved.
       </footer>
     </div>

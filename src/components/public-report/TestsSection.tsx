@@ -52,7 +52,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "Essence",
     time: "5 min",
     color: "bg-blue-500",
-    imageSrc: "/lovable-uploads/f2552227-155d-477d-9c93-ac4eb72b5ddf.png"
+    imageSrc: "/placeholder.svg"
   },
   {
     id: "Compatibility",
@@ -65,7 +65,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "relationships",
     time: "10 min",
     color: "bg-pink-500",
-    imageSrc: "/lovable-uploads/71cede7b-0de9-4397-897f-29009a07c012.png"
+    imageSrc: "/placeholder.svg"
   },
   {
     id: "AstroData",
@@ -78,7 +78,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "life-shift",
     time: "10 min",
     color: "bg-purple-500",
-    imageSrc: "/lovable-uploads/410f6d32-9a00-4def-9f98-9b76bceff492.png"
+    imageSrc: "/placeholder.svg"
   },
   {
     id: "SnapShot",
@@ -91,7 +91,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "Monthly",
     time: "12 min",
     color: "bg-orange-500",
-    imageSrc: "/lovable-uploads/62526a29-1fcb-4df9-a3fe-398ec868e224.png"
+    imageSrc: "/placeholder.svg"
   },
 ];
 

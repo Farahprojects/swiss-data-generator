@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -122,44 +121,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
 
       if (event === 'SIGNED_IN' && supaSession) {
-        // Check for pending email change after successful sign-in
-        setIsPendingEmailCheck(true);
-        
-        // Defer the email check to avoid blocking the auth flow
-        setTimeout(async () => {
-          try {
-            const emailCheckData = await checkForPendingEmailChange(
-              supaSession.access_token, 
-              supaSession.user.email || ''
-            );
-            
-            logToSupabase('email-check response in AuthContext', {
-              level: 'debug',
-              page: 'AuthContext',
-              data: emailCheckData,
-            });
-
-            if (emailCheckData?.status === 'pending') {
-              setPendingEmailAddress(emailCheckData.pending_to);
-              logToSupabase('Pending email change detected, setting pendingEmailAddress', {
-                level: 'info',
+        // Only check for pending email change if we suspect there might be one
+        // Don't block the auth flow for every sign-in
+        const hasEmailChangeHistory = localStorage.getItem('hasEmailChangeHistory');
+        if (hasEmailChangeHistory === 'true') {
+          setIsPendingEmailCheck(true);
+          
+          // Defer the email check to avoid blocking the auth flow
+          setTimeout(async () => {
+            try {
+              const emailCheckData = await checkForPendingEmailChange(
+                supaSession.access_token, 
+                supaSession.user.email || ''
+              );
+              
+              logToSupabase('email-check response in AuthContext', {
+                level: 'debug',
                 page: 'AuthContext',
-                data: { pendingTo: emailCheckData.pending_to }
+                data: emailCheckData,
               });
-            } else {
+
+              if (emailCheckData?.status === 'pending') {
+                setPendingEmailAddress(emailCheckData.pending_to);
+                logToSupabase('Pending email change detected, setting pendingEmailAddress', {
+                  level: 'info',
+                  page: 'AuthContext',
+                  data: { pendingTo: emailCheckData.pending_to }
+                });
+              } else {
+                setPendingEmailAddress(null);
+              }
+            } catch (error) {
+              logToSupabase('Error checking for pending email change', {
+                level: 'error',
+                page: 'AuthContext',
+                data: { error: error instanceof Error ? error.message : String(error) }
+              });
               setPendingEmailAddress(null);
+            } finally {
+              setIsPendingEmailCheck(false);
             }
-          } catch (error) {
-            logToSupabase('Error checking for pending email change', {
-              level: 'error',
-              page: 'AuthContext',
-              data: { error: error instanceof Error ? error.message : String(error) }
-            });
-            setPendingEmailAddress(null);
-          } finally {
-            setIsPendingEmailCheck(false);
-          }
-        }, 0);
+          }, 0);
+        } else {
+          // No email change history, skip the check entirely
+          setPendingEmailAddress(null);
+          setIsPendingEmailCheck(false);
+        }
       }
 
       if (event === 'SIGNED_OUT') {
@@ -209,9 +216,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { email }
       });
 
-      // Ensure we have a clean session before signing in
-      await authService.refreshSession();
-
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
@@ -232,6 +236,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         level: 'info',
         data: { userId: data.user?.id }
       });
+      
+      // Manually set user state if auth state change doesn't fire
+      if (data?.user) {
+        setUser(data.user);
+        setSession(data.session);
+        setLoading(false);
+      }
       
       return { error: null, data };
     } catch (err: unknown) {
@@ -306,21 +317,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (): Promise<{ error: Error | null }> => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${baseUrl}/dashboard` },
+      // Create popup window
+      const popup = window.open(
+        `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        'googleSignIn',
+        'width=500,height=600,scrollbars=yes,resizable=yes'
+      );
+
+      if (!popup) {
+        return { error: new Error('Popup blocked. Please allow popups for this site.') };
+      }
+
+      // Wait for popup to close or redirect
+      return new Promise<{ error: Error | null }>((resolve) => {
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            // Check if user was authenticated by checking current session
+            supabase.auth.getSession().then(({ data: { session } }) => {
+              if (session) {
+                resolve({ error: null });
+              } else {
+                resolve({ error: new Error('Authentication was cancelled or failed') });
+              }
+            });
+          }
+        }, 1000);
       });
-      return { error };
     } catch (err: unknown) {
       return { error: err instanceof Error ? err : new Error('Unexpected Google sign-in error') };
     }
   };
 
-  const signInWithApple = async () => {
+  const signInWithApple = async (): Promise<{ error: Error | null }> => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     try {
@@ -329,20 +362,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         level: 'info',
       });
       
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: { redirectTo: `${baseUrl}/dashboard` },
-      });
-      
-      if (error) {
-        logToSupabase('Apple sign in failed in context', {
-          page: 'AuthContext',
-          level: 'error',
-          data: { errorMessage: error.message }
-        });
+      // Create popup window
+      const popup = window.open(
+        `${SUPABASE_URL}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        'appleSignIn',
+        'width=500,height=600,scrollbars=yes,resizable=yes'
+      );
+
+      if (!popup) {
+        return { error: new Error('Popup blocked. Please allow popups for this site.') };
       }
-      
-      return { error };
+
+      // Wait for popup to close or redirect
+      return new Promise<{ error: Error | null }>((resolve) => {
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            // Check if user was authenticated by checking current session
+            supabase.auth.getSession().then(({ data: { session } }) => {
+              if (session) {
+                resolve({ error: null });
+              } else {
+                resolve({ error: new Error('Authentication was cancelled or failed') });
+              }
+            });
+          }
+        }, 1000);
+      });
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected Apple sign-in error');
       logToSupabase('Apple sign in exception', {

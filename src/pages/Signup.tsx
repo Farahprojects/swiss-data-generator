@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,11 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signUp, signInWithGoogle, signInWithApple, user } = useAuth();
+
+  // Auto-scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

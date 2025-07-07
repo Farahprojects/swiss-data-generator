@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,15 +104,16 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">Set New Password</CardTitle>
-        <CardDescription>
+    <div className="max-w-md mx-auto space-y-8">
+      <div className="text-center space-y-4">
+        <h3 className="text-2xl font-light text-gray-900">Set your new <em>password</em></h3>
+        <p className="text-gray-600 font-light leading-relaxed">
           Please create a new password for your account
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        </p>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="space-y-6">
           <PasswordInput
             password={newPassword}
             isValid={passwordValid}
@@ -135,20 +135,22 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
               showMatchError={confirmPassword.length > 0 && !passwordsMatch}
             />
           )}
+        </div>
 
+        <div className="space-y-4">
           <Button
             type="submit"
-            className="w-full"
+            className="w-full bg-gray-900 text-white hover:bg-gray-800 font-light px-8 py-4 rounded-xl text-lg"
             disabled={!passwordValid || !passwordsMatch || isUpdating || showSuccess}
           >
             {isUpdating ? (
               <>
-                <Loader className="h-4 w-4 mr-2 animate-spin" />
+                <Loader className="h-5 w-5 mr-3 animate-spin" />
                 Updating Password...
               </>
             ) : showSuccess ? (
               <>
-                <CheckCircle className="h-4 w-4 mr-2" />
+                <CheckCircle className="h-5 w-5 mr-3" />
                 Password Updated Successfully!
               </>
             ) : (
@@ -157,13 +159,13 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
           </Button>
 
           {showSuccess && (
-            <div className="text-center text-sm text-green-600 mt-2">
+            <div className="text-center text-sm text-green-600 mt-4 font-light">
               Success! Redirecting to login...
             </div>
           )}
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+      </form>
+    </div>
   );
 };
 

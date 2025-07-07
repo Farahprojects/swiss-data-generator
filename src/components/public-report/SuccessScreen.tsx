@@ -8,6 +8,7 @@ import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { motion } from 'framer-motion';
 import { logToAdmin } from '@/utils/adminLogger';
+import { useNavigate } from 'react-router-dom';
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -26,7 +27,7 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
     const vid = videoRef.current;
     if (!vid) return;
     vid.muted = !isMuted;
-    // On some browsers, volume resets when muted flips – make sure it’s audible
+    // On some browsers, volume resets when muted flips – make sure it's audible
     if (!vid.muted) vid.volume = 1;
     setIsMuted(!isMuted);
   };
@@ -90,6 +91,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const { report, isPolling, error, caseNumber, startPolling, stopPolling, triggerErrorHandling } = useGuestReportStatus();
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   useViewportHeight();
 
@@ -163,13 +165,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // Countdown logic
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!isReady) setCountdown(24);
-  }, [status.step, isReady]);
+    if (!isReady && !error) setCountdown(24);
+  }, [status.step, isReady, error]);
 
   useEffect(() => {
-    if (!isReady && countdown > 0) {
+    if (!isReady && countdown > 0 && !error) {
       countdownRef.current = setTimeout(() => setCountdown((c) => c - 1), 1_000);
-    } else if (countdown === 0) {
+    } else if (countdown === 0 && !error) {
       // Debug logging for when countdown hits 0
       logToAdmin('SuccessScreen', 'countdown_zero_debug', 'Countdown hit 0s - Debug Info', {
         isReady,
@@ -185,7 +187,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         logToAdmin('SuccessScreen', 'error_handling_triggered', 'All conditions met - triggering error handling', {
           reportIdToUse: reportIdToUse
         });
-        triggerErrorHandling(reportIdToUse);
+        triggerErrorHandling(reportIdToUse, email);
       } else {
         logToAdmin('SuccessScreen', 'error_handling_conditions_not_met', 'Conditions not met for error handling', {
           isReady: isReady,
@@ -195,7 +197,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       }
     }
     return () => countdownRef.current && clearTimeout(countdownRef.current);
-  }, [countdown, isReady, caseNumber, email, triggerErrorHandling]);
+  }, [countdown, isReady, caseNumber, email, triggerErrorHandling, error]);
 
   // ---------------------------------------------------------------------------
   // Auto redirect when ready (skip auto-redirect for astro data reports)
@@ -211,13 +213,53 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   }, [isReady, onViewReport, report, isAstroDataReport]);
 
   // ---------------------------------------------------------------------------
-  // Retry helper
+  // Error handling functions
   // ---------------------------------------------------------------------------
-  const retry = () => {
-    const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-    if (reportIdToUse && !isPolling) {
-      startPolling(reportIdToUse);
+  const handleTryAgain = () => {
+    // Navigate to home page
+    navigate('/');
+  };
+
+  const handleContactSupport = async () => {
+    // Wait a moment for error logging to complete if case number isn't available yet
+    let finalCaseNumber = caseNumber;
+    if (!finalCaseNumber) {
+      // Wait up to 2 seconds for case number to be generated
+      for (let i = 0; i < 20; i++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (caseNumber) {
+          finalCaseNumber = caseNumber;
+          break;
+        }
+      }
     }
+
+    // Create error message for contact form
+    const errorMessage = `Hi, I'm experiencing an issue with my report generation. 
+    
+Report Details:
+- Name: ${name}
+- Email: ${email}
+- Report ID: ${guestReportId || 'N/A'}
+- Case Number: ${finalCaseNumber || 'N/A'}
+- Error occurred during: Report processing
+- Time: ${new Date().toLocaleString()}
+
+The report was not generated within the expected timeframe. Please help me resolve this issue.`;
+
+    // Store the pre-filled data in localStorage for the contact page to pick up
+    const prefillData = {
+      name: name,
+      email: email,
+      subject: 'General Inquiry',
+      message: errorMessage
+    };
+    
+    localStorage.setItem('contactFormPrefill', JSON.stringify(prefillData));
+    console.log('📝 Stored contact form prefill data:', prefillData);
+
+    // Navigate to contact page
+    navigate('/contact');
   };
 
   // ---------------------------------------------------------------------------
@@ -228,7 +270,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
         <StatusIcon className="h-6 w-6 text-gray-600" />
       </div>
-      {!isReady && (
+      {!isReady && !error && (
         <>
           <div className="text-3xl font-light text-gray-900">{countdown}s</div>
           <div className="text-gray-600 font-light">Report generating...</div>
@@ -236,6 +278,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       )}
       {isReady && (
         <div className="text-gray-600 font-light">Ready to view</div>
+      )}
+      {error && (
+        <div className="text-gray-600 font-light">Processing issue detected</div>
       )}
     </div>
   );
@@ -249,29 +294,27 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   );
 
   const ErrorBlock = error && (
-    <div className="bg-gradient-to-r from-red-50 to-red-100/50 border border-red-200 rounded-xl p-6 shadow-sm">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-          <Clock className="w-5 h-5 text-red-600" />
+    <div className="max-w-xl mx-auto bg-gradient-to-br from-red-50 to-white border border-red-200 rounded-xl p-8 shadow-md space-y-6 mt-8">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+          <Clock className="w-6 h-6 text-red-600" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-red-800 mb-1">
-            Report Processing Issue
+          <h3 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">
+            <span className='italic'>Report</span> Processing Issue
           </h3>
-          <p className="text-sm text-red-600">
+          <p className="text-gray-600 font-light">
             We're working to resolve this quickly
           </p>
         </div>
       </div>
-      
-      <div className="bg-white/50 rounded-lg p-4 mb-4">
-        <p className="text-sm text-red-800 leading-relaxed">
+      <div className="bg-white/80 rounded-xl p-6">
+        <p className="text-base text-gray-700 font-light leading-relaxed">
           We're experiencing a delay with your report generation. Our team has been automatically notified and is working to resolve this issue.
         </p>
       </div>
-
       {caseNumber && (
-        <div className="bg-white rounded-lg border border-red-200 p-4 mb-4">
+        <div className="bg-white rounded-xl border border-red-200 p-4 mb-2">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 bg-red-500 rounded-full"></div>
             <p className="text-sm font-medium text-red-800">
@@ -286,14 +329,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
           </p>
         </div>
       )}
-      
-      <div className="flex flex-col sm:flex-row gap-3">
-        {!caseNumber && (
-          <Button onClick={retry} variant="outline" size="sm" className="text-red-700 border-red-300 hover:bg-red-50 bg-white">
-            Try Again
-          </Button>
-        )}
-        <Button variant="outline" size="sm" className="text-red-700 border-red-300 hover:bg-red-50 bg-white">
+      <div className="flex flex-col sm:flex-row gap-4 pt-2">
+        <Button 
+          onClick={handleTryAgain} 
+          className="bg-gray-900 text-white font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-800 transition-all"
+        >
+          Try Again
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={handleContactSupport}
+          className="border-gray-900 text-gray-900 font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-100 transition-all"
+        >
           Contact Support
         </Button>
       </div>
@@ -330,6 +377,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
                 <VideoLoader onVideoReady={handleVideoReady} />
                 {PersonalNote}
               </>
+            )}
+
+            {/* Error state - hide video and show error message */}
+            {error && (
+              <div className="text-center py-8">
+                <div className="text-gray-600 font-light mb-4">
+                  We've detected an issue with your report generation. Our team has been notified.
+                </div>
+                {PersonalNote}
+              </div>
             )}
 
             {/* Ready state */}
@@ -380,7 +437,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
                         className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
                       >
                         <img 
-                          src="/lovable-uploads/67ed6da3-4beb-4530-be57-881bfb7b0f3f.png" 
+                          src="/placeholder.svg" 
                           alt="ChatGPT" 
                           className="h-5 w-5"
                         />
