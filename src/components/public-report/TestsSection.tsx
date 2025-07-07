@@ -282,85 +282,80 @@ export default function TestsSection() {
             </div>
           </div>
 
-          {/* Small screen layout - smaller grid */}
-          <div className="block md:hidden">
-            <div className="grid grid-cols-12 gap-2 sm:gap-4 items-start">
-              <div className="col-span-7 space-y-1">
-                 {testData.map((test) => (
-                   <TestCard
-                     key={test.id}
-                     title={test.name}
-                     description={test.description}
-                     subDescriptions={test.subDescriptions}
-                     path={test.slug}
-                     isActive={selectedTest.id === test.id}
-                     onHover={() => setSelectedTest(test)}
-                     onExplore={() => handleExploreClick(test.name)}
-                     icon={LucideIcons.Sparkles}
-                   />
-                 ))}
-              </div>
-              
-              <div className="col-span-5">
-                <div className="w-full overflow-hidden rounded-lg relative shadow-lg h-48 sm:h-64">
-                  {testData.map((test) => {
-                    return (
-                      <div 
-                        key={test.id}
-                        className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === test.id ? 'opacity-100' : 'opacity-0'}`}
-                      >
-                         {test.id === 'TheSelf' ? (
-                           <div className="w-full h-full bg-white rounded-lg flex items-center justify-center">
-                             <img 
-                               src={test.imageSrc} 
-                               alt="The Self Report" 
-                               className="w-full h-full object-cover rounded-lg"
-                             />
-                           </div>
-                         ) : test.id === 'Compatibility' ? (
-                           <div className="w-full h-full bg-white rounded-lg flex items-center justify-center">
-                             <img 
-                               src={test.imageSrc} 
-                               alt="Compatibility Report" 
-                               className="w-full h-full object-cover rounded-lg"
-                             />
-                           </div>
-                         ) : test.id === 'SnapShot' ? (
-                           <div className="w-full h-full bg-white rounded-lg flex items-center justify-center">
-                             <img 
-                               src={test.imageSrc} 
-                               alt="SnapShot Report" 
-                               className="w-full h-full object-cover rounded-lg"
-                             />
-                           </div>
-                         ) : test.id === 'AstroData' ? (
-                           <div className="w-full h-full bg-white rounded-lg flex items-center justify-center">
-                             <img 
-                               src={test.imageSrc} 
-                               alt="Astro Data Report" 
-                               className="w-full h-full object-cover rounded-lg"
-                             />
-                           </div>
-                         ) : (
-                            <div className="w-full h-full flex items-center justify-center p-2">
-                              <ReportCard
-                                type={getReportGuide(test.id).type}
-                                icon={getReportGuide(test.id).icon}
-                                title={getReportGuide(test.id).title}
-                                price={getReportGuide(test.id).price}
-                                bestFor={getReportGuide(test.id).bestFor}
-                                description={getReportGuide(test.id).description}
-                                details={getReportGuide(test.id).details}
-                                subTypes={getReportGuide(test.id).subTypes}
-                              />
-                            </div>
-                         )}
+          {/* Small screen layout - zigzag alternating pattern */}
+          <div className="block md:hidden space-y-4">
+            {testData.map((test, index) => {
+              const isImageFirst = index % 2 === 1;
+              return (
+                <div key={test.id} className="w-full">
+                  {isImageFirst ? (
+                    // Image first, then text
+                    <div className="flex items-center gap-3">
+                      <div className="w-24 h-24 flex-shrink-0 overflow-hidden rounded-lg relative shadow-lg">
+                        {testData.map((t) => (
+                          <div 
+                            key={t.id}
+                            className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === t.id ? 'opacity-100' : 'opacity-0'}`}
+                          >
+                            <img 
+                              src={t.imageSrc} 
+                              alt={`${t.name} Report`} 
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          </div>
+                        ))}
                       </div>
-                    );
-                  })}
+                      <div className="flex-1">
+                        <TestCard
+                          key={test.id}
+                          title={test.name}
+                          description={test.description}
+                          subDescriptions={test.subDescriptions}
+                          path={test.slug}
+                          isActive={selectedTest.id === test.id}
+                          onHover={() => setSelectedTest(test)}
+                          onExplore={() => handleExploreClick(test.name)}
+                          icon={LucideIcons.Sparkles}
+                          mobileLayout="image-first"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    // Text first, then image
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <TestCard
+                          key={test.id}
+                          title={test.name}
+                          description={test.description}
+                          subDescriptions={test.subDescriptions}
+                          path={test.slug}
+                          isActive={selectedTest.id === test.id}
+                          onHover={() => setSelectedTest(test)}
+                          onExplore={() => handleExploreClick(test.name)}
+                          icon={LucideIcons.Sparkles}
+                          mobileLayout="text-first"
+                        />
+                      </div>
+                      <div className="w-24 h-24 flex-shrink-0 overflow-hidden rounded-lg relative shadow-lg">
+                        {testData.map((t) => (
+                          <div 
+                            key={t.id}
+                            className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === t.id ? 'opacity-100' : 'opacity-0'}`}
+                          >
+                            <img 
+                              src={t.imageSrc} 
+                              alt={`${t.name} Report`} 
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
