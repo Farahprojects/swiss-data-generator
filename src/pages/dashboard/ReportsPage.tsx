@@ -19,7 +19,6 @@ type Report = {
   created_at: string;
   request_type: string;
   report_tier: string | null;
-  report_name: string | null;
   response_payload?: any;
   request_payload?: any;
   error_message?: string;
@@ -75,10 +74,9 @@ const ReportsPage = () => {
         response_status: item.response_status || 0,
         request_type: item.request_type || '',
         report_tier: item.report_tier,
-        report_name: item.report_name,
         total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
         processing_time_ms: item.processing_time_ms,
-        response_payload: item.response_payload,
+        response_payload: item.swiss_data,
         request_payload: item.request_payload,
         error_message: item.error_message,
         google_geo: item.google_geo
@@ -106,12 +104,10 @@ const ReportsPage = () => {
     if (search.trim()) {
       const searchTerm = search.toLowerCase().trim();
       filtered = filtered.filter(report => {
-        const reportName = report.report_name?.toLowerCase() || '';
         const reportId = report.id.toLowerCase();
         const shortId = report.id.substring(0, 8).toLowerCase();
         
-        return reportName.includes(searchTerm) || 
-               reportId.includes(searchTerm) || 
+        return reportId.includes(searchTerm) || 
                shortId.includes(searchTerm);
       });
     }
@@ -136,16 +132,6 @@ const ReportsPage = () => {
   };
 
   const getDisplayName = (report: Report): string => {
-    if (report.report_name) {
-      // Remove any descriptive text after delimiters like " - ", " | ", etc.
-      const cleanName = report.report_name
-        .split(' - ')[0]  // Remove everything after " - "
-        .split(' | ')[0]  // Remove everything after " | "
-        .split(' (')[0]   // Remove everything after " ("
-        .trim();
-      
-      return cleanName || generateReportId(report);
-    }
     return generateReportId(report);
   };
 

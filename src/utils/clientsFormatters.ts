@@ -4,10 +4,9 @@ import { InsightEntry } from '@/types/database';
 export interface ClientReport {
   id: string;
   request_type: string;
-  response_payload: any;
+  swiss_data: any;
   created_at: string;
   response_status: number;
-  report_name?: string;
   report_tier?: string;
 }
 
@@ -45,7 +44,7 @@ export const transformReportForDrawer = (report: ClientReport) => {
     report_tier: report.report_tier,
     total_cost_usd: 0,
     processing_time_ms: null,
-    response_payload: report.response_payload,
+    response_payload: report.swiss_data,
     request_payload: null,
     error_message: undefined,
     google_geo: false

@@ -9,10 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 interface ClientReport {
   id: string;
   request_type: string;
-  response_payload: any;
+  swiss_data: any;
   created_at: string;
   response_status: number;
-  report_name?: string;
   report_tier?: string;
   is_archived?: boolean;
 }
@@ -34,7 +33,7 @@ export const useClientData = (clientId: string | undefined) => {
       // Load client reports with report_tier field and filter out archived reports
       const { data: reportsData, error: reportsError } = await supabase
         .from('translator_logs')
-        .select('id, request_type, response_payload, created_at, response_status, report_name, report_tier, is_archived')
+        .select('id, request_type, swiss_data, created_at, response_status, report_tier, is_archived')
         .eq('client_id', clientId)
         .eq('is_archived', false)
         .order('created_at', { ascending: false });

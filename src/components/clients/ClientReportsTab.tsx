@@ -12,10 +12,9 @@ import { formatDate } from '@/utils/dateFormatters';
 interface ClientReport {
   id: string;
   request_type: string;
-  response_payload: any;
+  swiss_data: any;
   created_at: string;
   response_status: number;
-  report_name?: string;
   report_tier?: string;
 }
 
@@ -28,14 +27,6 @@ interface ClientReportsTabProps {
 }
 
 const getDisplayName = (report: ClientReport): string => {
-  if (report.report_name) {
-    const cleanName = report.report_name
-      .split(' - ')[0]
-      .split(' | ')[0]
-      .split(' (')[0]
-      .trim();
-    return cleanName || `#${report.id.substring(0, 8)}`;
-  }
   return `#${report.id.substring(0, 8)}`;
 };
 
@@ -71,9 +62,9 @@ const getReportBadgeVariant = (tier: string | null | undefined) => {
 };
 
 const getReportSummary = (report: ClientReport) => {
-  if (!report.response_payload?.report) return '';
+  if (!report.swiss_data?.report) return '';
   
-  const content = report.response_payload.report;
+  const content = report.swiss_data.report;
   if (typeof content === 'string') {
     // Extract first meaningful paragraph or sentence
     const sentences = content.split('.').filter(s => s.trim().length > 20);
@@ -84,8 +75,8 @@ const getReportSummary = (report: ClientReport) => {
 };
 
 const hasExpandableContent = (report: ClientReport) => {
-  if (!report.response_payload?.report) return false;
-  const content = report.response_payload.report;
+  if (!report.swiss_data?.report) return false;
+  const content = report.swiss_data.report;
   return typeof content === 'string' && content.length > 200;
 };
 
@@ -193,7 +184,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                             </AccordionTrigger>
                             <AccordionContent className="pt-2">
                               <ReportRenderer 
-                                content={report.response_payload.report}
+                                content={report.swiss_data.report}
                                 className="text-gray-700"
                               />
                             </AccordionContent>

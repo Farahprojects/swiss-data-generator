@@ -71,7 +71,6 @@ async function logToSupabase(
   googleGeoUsed = false,
   userId?: string,
   translatorPayload?: any,        // NEW – what we sent to Swiss
-  engineUsed?: string,            // NEW – which report engine was used
 ) {
   const reportTier =
     requestPayload?.report ??
@@ -92,7 +91,6 @@ async function logToSupabase(
     google_geo:          googleGeoUsed,
     report_tier:         reportTier,
     user_id:             userId,
-    engine_used:         engineUsed ?? null,
     is_guest:            isGuest,
   });
   if (error) console.error("Failed to log to Supabase:", error.message);
@@ -277,7 +275,6 @@ export async function translate(
           googleGeoUsed,
           userId,
           payload,                 // what we sent to Swiss
-          reportResult.responseData?.engine_used, // extract engine from responseData
         );
       }
 
@@ -317,7 +314,6 @@ export async function translate(
           googleGeoUsed,
           userId,
           undefined, // no translator payload for simple GET
-          reportResult.responseData?.engine_used, // extract engine from responseData
         );
       }
       return {
@@ -358,7 +354,6 @@ export async function translate(
           googleGeoUsed,
           userId,
           undefined, // no translator payload for simple GET
-          reportResult.responseData?.engine_used, // extract engine from responseData
         );
       }
 
@@ -406,7 +401,6 @@ export async function translate(
         googleGeoUsed,
         userId,
         enriched,                // exact payload sent to Swiss
-        reportResult.responseData?.engine_used, // extract engine from responseData
       );
     }
 

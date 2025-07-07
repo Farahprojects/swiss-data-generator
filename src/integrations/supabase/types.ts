@@ -1342,18 +1342,15 @@ export type Database = {
         Row: {
           client_id: string | null
           created_at: string | null
-          engine_used: string | null
           error_message: string | null
           google_geo: boolean | null
           id: string
           is_archived: boolean
           is_guest: boolean
           processing_time_ms: number | null
-          report_name: string | null
           report_tier: string | null
           request_payload: Json | null
           request_type: string | null
-          response_payload: Json | null
           response_status: number | null
           swiss_data: Json | null
           translator_payload: Json | null
@@ -1362,18 +1359,15 @@ export type Database = {
         Insert: {
           client_id?: string | null
           created_at?: string | null
-          engine_used?: string | null
           error_message?: string | null
           google_geo?: boolean | null
           id?: string
           is_archived?: boolean
           is_guest?: boolean
           processing_time_ms?: number | null
-          report_name?: string | null
           report_tier?: string | null
           request_payload?: Json | null
           request_type?: string | null
-          response_payload?: Json | null
           response_status?: number | null
           swiss_data?: Json | null
           translator_payload?: Json | null
@@ -1382,18 +1376,15 @@ export type Database = {
         Update: {
           client_id?: string | null
           created_at?: string | null
-          engine_used?: string | null
           error_message?: string | null
           google_geo?: boolean | null
           id?: string
           is_archived?: boolean
           is_guest?: boolean
           processing_time_ms?: number | null
-          report_name?: string | null
           report_tier?: string | null
           request_payload?: Json | null
           request_type?: string | null
-          response_payload?: Json | null
           response_status?: number | null
           swiss_data?: Json | null
           translator_payload?: Json | null

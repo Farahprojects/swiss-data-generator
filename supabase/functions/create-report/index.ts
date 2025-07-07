@@ -336,9 +336,8 @@ serve(async (req) => {
       user_id: user.id,
       request_type: formData.reportType,
       request_payload: cleanPayload,
-      response_payload: swissResult.data,
+      swiss_data: swissResult.data,
       response_status: 200,
-      report_name: reportName,
       report_tier: cleanPayload.report
     };
 

@@ -16,41 +16,15 @@ async function getNextEngine(supabase: any) {
   try {
     console.log(`[reportOrchestrator] Selecting next engine using database-based round-robin`);
     
-    // Get the most recently used engine from translator_logs
-    const { data: lastReport, error } = await supabase
-      .from("translator_logs")
-      .select("engine_used")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Use simple round-robin without database dependency
+    const now = Date.now();
+    const nextEngineIndex = Math.floor(now / 1000) % EDGE_ENGINES.length;
+    console.log(`[reportOrchestrator] Using time-based round-robin, selected index: ${nextEngineIndex}`);
     
-    if (error) {
-      console.error(`[reportOrchestrator] Error querying last engine: ${error.message}`);
-      console.log(`[reportOrchestrator] Defaulting to first engine due to query error`);
-      return EDGE_ENGINES[0];
-    }
+    let nextEngineIndex_final = nextEngineIndex; // Default using time-based round-robin
     
-    let nextEngineIndex = 0; // Default to first engine
-    
-    if (lastReport && lastReport.engine_used) {
-      console.log(`[reportOrchestrator] Last engine used: ${lastReport.engine_used}`);
-      
-      // Find the index of the last used engine
-      const lastEngineIndex = EDGE_ENGINES.indexOf(lastReport.engine_used);
-      
-      if (lastEngineIndex !== -1) {
-        // Move to next engine in round-robin fashion
-        nextEngineIndex = (lastEngineIndex + 1) % EDGE_ENGINES.length;
-        console.log(`[reportOrchestrator] Last engine '${lastReport.engine_used}' found at index ${lastEngineIndex}, selecting next at index ${nextEngineIndex}`);
-      } else {
-        console.log(`[reportOrchestrator] Last engine '${lastReport.engine_used}' not found in engines array, defaulting to first`);
-      }
-    } else {
-      console.log(`[reportOrchestrator] No previous reports found, defaulting to first engine`);
-    }
-    
-    const selectedEngine = EDGE_ENGINES[nextEngineIndex];
-    console.log(`[reportOrchestrator] Selected engine: ${selectedEngine} (index: ${nextEngineIndex}/${EDGE_ENGINES.length - 1})`);
+    const selectedEngine = EDGE_ENGINES[nextEngineIndex_final];
+    console.log(`[reportOrchestrator] Selected engine: ${selectedEngine} (index: ${nextEngineIndex_final}/${EDGE_ENGINES.length - 1})`);
     
     return selectedEngine;
   } catch (error) {

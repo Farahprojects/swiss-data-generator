@@ -80,7 +80,7 @@ export const RecentApiCalls = () => {
           report_tier: item.report_tier,
           total_cost_usd: item.api_usage?.[0]?.total_cost_usd || 0,
           processing_time_ms: item.processing_time_ms,
-          response_payload: item.response_payload,
+          response_payload: item.swiss_data,
           request_payload: item.request_payload,
           error_message: item.error_message,
           google_geo: item.google_geo

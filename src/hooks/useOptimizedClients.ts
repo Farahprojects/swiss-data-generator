@@ -10,10 +10,9 @@ import { supabase } from '@/integrations/supabase/client';
 interface ClientReport {
   id: string;
   request_type: string;
-  response_payload: any;
+  swiss_data: any;
   created_at: string;
   response_status: number;
-  report_name?: string;
   report_tier?: string;
 }
 

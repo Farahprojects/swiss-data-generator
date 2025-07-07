@@ -30,7 +30,6 @@ interface SwissDebugLog {
   request_type: string;
   request_payload: any;
   response_status: number;
-  response_text: string;
 }
 
 export const SwissDebugLogsViewer = () => {
@@ -189,9 +188,9 @@ export const SwissDebugLogsViewer = () => {
                             </div>
                             
                             <div>
-                              <div className="font-semibold mb-1">Response:</div>
+                              <div className="font-semibold mb-1">Response Status:</div>
                               <pre className="bg-gray-100 p-2 rounded overflow-x-auto whitespace-pre-wrap text-xs">
-                                {log.response_text}
+                                {log.response_status}
                               </pre>
                             </div>
                           </div>

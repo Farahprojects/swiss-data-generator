@@ -33,7 +33,7 @@ interface ClientReport {
   id: string;
   request_type: string;
   report_tier?: string;
-  response_payload: any;
+  swiss_data: any;
   created_at: string;
 }
 
@@ -87,8 +87,8 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
     // Extract human-readable report content from response payload
     let reportText = '';
     try {
-      if (report.response_payload) {
-        const payload = report.response_payload;
+      if (report.swiss_data) {
+        const payload = report.swiss_data;
         
         // Look for generated report content in various fields
         if (payload.report?.content) {
@@ -132,8 +132,8 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
     // Extract raw astrological data from response payload
     let astroData = '';
     try {
-      if (report.response_payload?.astroData || report.response_payload?.natal || report.response_payload?.transits) {
-        const payload = report.response_payload;
+      if (report.swiss_data?.astroData || report.swiss_data?.natal || report.swiss_data?.transits) {
+        const payload = report.swiss_data;
         
         // Extract natal chart data
         if (payload.natal) {
@@ -174,7 +174,7 @@ export const GenerateInsightModal: React.FC<GenerateInsightModalProps> = ({
         }
       } else {
         // Fallback to raw payload if no specific astro structure
-        astroData = JSON.stringify(report.response_payload, null, 2);
+        astroData = JSON.stringify(report.swiss_data, null, 2);
       }
     } catch (error) {
       console.error('Error extracting astro data from report:', error);
