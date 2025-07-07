@@ -5,6 +5,7 @@ import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { logToSupabase } from '@/utils/batchedLogManager';
 import { authService } from '@/services/authService';
+import { SUPABASE_CONFIG } from '@/config/supabase-config';
 
 /**
  * Utility – only logs outside production builds.
@@ -320,13 +321,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Create popup window
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        return { error: new Error('Supabase URL not configured') };
-      }
-      
       const popup = window.open(
-        `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        `${SUPABASE_CONFIG.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
         'googleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
@@ -366,13 +362,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       // Create popup window
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
-        return { error: new Error('Supabase URL not configured') };
-      }
-      
       const popup = window.open(
-        `${supabaseUrl}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        `${SUPABASE_CONFIG.url}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
         'appleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
