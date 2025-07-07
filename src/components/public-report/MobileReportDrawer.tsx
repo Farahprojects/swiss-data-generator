@@ -135,10 +135,21 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       const container = scrollContainerRef.current;
       if (!container) return;
       container.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Only focus actual form inputs, not selection buttons
       const firstFocusable = container.querySelector<HTMLElement>(
-        'input, select, textarea, button:not([disabled]):not(.sr-only)'
+        'input[type="text"], input[type="email"], input[type="date"], input[type="time"], select, textarea'
       );
-      firstFocusable?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (firstFocusable) {
+        firstFocusable.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        // Ensure no accidental focus on interactive elements
+        setTimeout(() => {
+          const activeElement = document.activeElement as HTMLElement;
+          if (activeElement && activeElement.tagName === 'BUTTON') {
+            activeElement.blur();
+          }
+        }, 100);
+      }
     }, 350);
     return () => window.clearTimeout(t);
   }, [currentStep]);
