@@ -348,8 +348,8 @@ const PublicReport = () => {
           isOpen={isDrawerOpen} 
           onClose={handleCloseDrawer} 
         />
-        <FeaturesSection onGetReportClick={handleGetReportClick} />
         <TheraiChatGPTSection />
+        <FeaturesSection onGetReportClick={handleGetReportClick} />
         <Footer />
       </div>
     );
