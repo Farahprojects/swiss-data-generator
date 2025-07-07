@@ -128,6 +128,7 @@ async function processSwissDataInBackground(
     const translatorRequest = {
       ...payload,
       user_id: guestReportId,  // This will appear in translator_logs.user_id
+      is_guest: true,          // Explicit guest flag
       skip_logging: false      // Ensure logging is enabled
     };
 

@@ -76,8 +76,6 @@ async function logToSupabase(
     requestPayload?.reportType ??
     null;
 
-  const isGuest = !userId || userId.trim() === '';
-
   const { error } = await sb.from("translator_logs").insert({
     request_type:       requestType,
     request_payload:    requestPayload,
@@ -173,6 +171,7 @@ export async function translate(
   const userId        = raw.user_id;
   const skipLogging   = raw.skip_logging === true;
   const requestId     = crypto.randomUUID().substring(0, 8);
+  const isGuest       = raw.is_guest === true || !userId || userId.trim() === '';
 
   // VERSION DEBUG LOG – will appear in edge‑function logs
   console.log(`[translator][${requestId}] ✅ TRANSLATOR VERSION: ${TRANSLATOR_VERSION}`);
