@@ -33,8 +33,7 @@ async function logSwissDebug(request: any, responseStatus: number, responseText:
       balance_usd: request.balance,
       request_type: request.requestType,
       request_payload: request.payload,
-      response_status: responseStatus,
-      response_text: responseText
+      response_status: responseStatus
     };
     
     // Insert log data into swissdebuglogs table (lowercase)
