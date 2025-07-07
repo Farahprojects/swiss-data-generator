@@ -79,6 +79,8 @@ async function logToSupabase(
     requestPayload?.reportType ??
     null;
 
+  const isGuest = requestPayload?.is_guest === true;
+
   const { error } = await sb.from("translator_logs").insert({
     request_type:        requestType,
     request_payload:     requestPayload,
@@ -91,6 +93,7 @@ async function logToSupabase(
     report_tier:         reportTier,
     user_id:             userId,
     engine_used:         engineUsed ?? null,
+    is_guest:            isGuest,
   });
   if (error) console.error("Failed to log to Supabase:", error.message);
 }
