@@ -1,5 +1,7 @@
 # TheRAI - Celestial Nexus
 
+Auto-sync enabled! 🚀
+
 An AI-driven astrology platform that provides personalized insights and reports based on birth details and astrological data.
 
 ## Features
@@ -9,6 +11,10 @@ An AI-driven astrology platform that provides personalized insights and reports 
 - **Modern UI/UX**: Clean, elegant interface built with React and Tailwind CSS
 - **Mobile Responsive**: Optimized for all devices
 - **Real-time Processing**: Instant report generation and delivery
+- **React + Vite frontend**
+- **Supabase backend**
+- **Error handling improvements**
+- **Auto-sync with GitHub**
 
 ## Tech Stack
 
