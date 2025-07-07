@@ -291,19 +291,12 @@ export default function TestsSection() {
                   {isImageFirst ? (
                     // Image first, then text
                     <div className="flex items-center gap-3">
-                      <div className="w-24 h-24 flex-shrink-0 overflow-hidden rounded-lg relative shadow-lg">
-                        {testData.map((t) => (
-                          <div 
-                            key={t.id}
-                            className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === t.id ? 'opacity-100' : 'opacity-0'}`}
-                          >
-                            <img 
-                              src={t.imageSrc} 
-                              alt={`${t.name} Report`} 
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                          </div>
-                        ))}
+                      <div className="w-24 h-24 flex-shrink-0 overflow-hidden rounded-lg shadow-lg">
+                        <img 
+                          src={test.imageSrc} 
+                          alt={`${test.name} Report`} 
+                          className="w-full h-full object-cover rounded-lg"
+                        />
                       </div>
                       <div className="flex-1">
                         <TestCard
@@ -337,19 +330,12 @@ export default function TestsSection() {
                           mobileLayout="text-first"
                         />
                       </div>
-                      <div className="w-24 h-24 flex-shrink-0 overflow-hidden rounded-lg relative shadow-lg">
-                        {testData.map((t) => (
-                          <div 
-                            key={t.id}
-                            className={`absolute inset-0 transition-opacity duration-500 ${selectedTest.id === t.id ? 'opacity-100' : 'opacity-0'}`}
-                          >
-                            <img 
-                              src={t.imageSrc} 
-                              alt={`${t.name} Report`} 
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                          </div>
-                        ))}
+                      <div className="w-24 h-24 flex-shrink-0 overflow-hidden rounded-lg shadow-lg">
+                        <img 
+                          src={test.imageSrc} 
+                          alt={`${test.name} Report`} 
+                          className="w-full h-full object-cover rounded-lg"
+                        />
                       </div>
                     </div>
                   )}
