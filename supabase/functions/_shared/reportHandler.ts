@@ -14,6 +14,7 @@ interface ReportHandlerParams {
 interface ReportHandlerResult {
   success: boolean;
   responseData: any;
+  aiOnlyData?: any;
   errorMessage?: string;
 }
 
@@ -148,12 +149,19 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
         engine_used: reportResult.report.engine_used // <- Engine info from report generation
       };
       
+      // Create AI-only data for logging (without Swiss data)
+      const aiOnlyData = {
+        report: reportResult.report,
+        engine_used: reportResult.report.engine_used
+      };
+      
       console.log(`${logPrefix} Combined response prepared with report and engine info included`);
       console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
       
       return {
         success: true,
         responseData: combinedResponse,
+        aiOnlyData: aiOnlyData,
         errorMessage: undefined
       };
     } else {

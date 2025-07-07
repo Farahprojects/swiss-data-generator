@@ -266,7 +266,7 @@ export async function translate(
         : undefined);
 
       const engineUsed = reportResult.responseData?.engine_used;
-      const aiPayload  = engineUsed ? finalData : null;
+      const aiPayload  = reportResult.aiOnlyData; // Use AI-only data for logging
 
       if (!skipLogging) {
         await logToSupabase(
@@ -323,7 +323,7 @@ export async function translate(
         : undefined);
 
       const engineUsed = reportResult.responseData?.engine_used;
-      const aiPayload  = engineUsed ? finalData : null;
+      const aiPayload  = reportResult.aiOnlyData; // Use AI-only data for logging
 
       if (!skipLogging) {
         await logToSupabase(
@@ -376,7 +376,7 @@ export async function translate(
       : undefined);
 
     const engineUsed = reportResult.responseData?.engine_used;
-    const aiPayload  = engineUsed ? finalData : null;
+    const aiPayload  = reportResult.aiOnlyData; // Use AI-only data for logging
 
     if (!skipLogging) {
       await logToSupabase(
