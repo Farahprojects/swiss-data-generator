@@ -173,9 +173,6 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
 
     console.log(`${logPrefix} Calling report orchestrator for "${reportPayload.report_type}" report...`);
     
-    // Add this to flush payload before it goes in:
-    console.log(`${logPrefix} Payload being sent to orchestrator:`, JSON.stringify(reportPayload, null, 2));
-    
     // Generate the report
     const reportResult = await processReportRequest(reportPayload);
     
