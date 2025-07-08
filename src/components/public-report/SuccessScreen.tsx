@@ -82,7 +82,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // ---------------------------------------------------------------------------
   // Hooks & State
   // ---------------------------------------------------------------------------
-  const { report, isLoading, error, caseNumber, fetchReport, triggerErrorHandling, fetchReportContent, fetchAstroData, isAstroReport } = useGuestReportStatus();
+  const { report, isLoading, error, caseNumber, fetchReport, triggerErrorHandling, fetchReportContent, fetchAstroData, isAstroReport, setupRealtimeListener } = useGuestReportStatus();
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -93,7 +93,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const [isVideoReady, setIsVideoReady] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const redirectRef = useRef<NodeJS.Timeout | null>(null);
-  const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const cleanupRealtimeRef = useRef<(() => void) | null>(null);
 
   // Check if this is an astro report type
   const isAstro = isAstroReport(report?.report_type);
@@ -111,7 +111,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   }, [name, email, guestReportId]);
 
   // ---------------------------------------------------------------------------
-  // Initial fetch and periodic checks
+  // Initial fetch and realtime setup
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const scrollToProcessing = () => {
@@ -133,25 +133,24 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         setIsVideoReady(true);
       }
       
-      // Check every 10 seconds until report is ready
-      const shouldStartChecking = isAstro || isVideoReady;
-      if (shouldStartChecking) {
-        checkIntervalRef.current = setInterval(() => {
-          if (report?.has_report) {
-            clearInterval(checkIntervalRef.current!);
-            return;
-          }
-          fetchReport(reportIdToUse);
-        }, 10000);
+      // Set up realtime listener when ready (either astro report or video is ready)
+      const shouldStartListening = isAstro || isVideoReady;
+      if (shouldStartListening && !report?.has_report) {
+        console.log('🎯 Setting up realtime listener for report updates');
+        cleanupRealtimeRef.current = setupRealtimeListener(reportIdToUse, () => {
+          console.log('📨 Report ready notification received from realtime');
+          // Report is ready, no additional action needed - state will update automatically
+        });
       }
     }
 
     return () => {
-      if (checkIntervalRef.current) {
-        clearInterval(checkIntervalRef.current);
+      if (cleanupRealtimeRef.current) {
+        cleanupRealtimeRef.current();
+        cleanupRealtimeRef.current = null;
       }
     };
-  }, [guestReportId, isVideoReady, fetchReport, report?.has_report, isAstro]);
+  }, [guestReportId, isVideoReady, fetchReport, setupRealtimeListener, isAstro, report?.has_report]);
 
   // ---------------------------------------------------------------------------
   // Status helpers

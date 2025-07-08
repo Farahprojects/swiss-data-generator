@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface GuestReport {
   id: string;
@@ -23,6 +24,7 @@ interface UseGuestReportStatusReturn {
   fetchReportContent: (guestReportId: string) => Promise<string | null>;
   fetchAstroData: (guestReportId: string) => Promise<string | null>;
   isAstroReport: (reportType: string | null) => boolean;
+  setupRealtimeListener: (guestReportId: string, onReportReady: () => void) => () => void;
 }
 
 export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
@@ -30,6 +32,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [caseNumber, setCaseNumber] = useState<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   const logUserError = useCallback(async (guestReportId: string, errorType: string, errorMessage?: string) => {
     try {
@@ -197,6 +200,54 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     setError('We are looking into this issue. Please reference your case number if you contact support.');
   }, [logUserError]);
 
+  const setupRealtimeListener = useCallback((guestReportId: string, onReportReady: () => void) => {
+    console.log('🔄 Setting up realtime listener for guest report:', guestReportId);
+    
+    // Clean up existing channel if any
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
+    // Create new channel with specific filter for this report
+    const channel = supabase
+      .channel(`guest-report-${guestReportId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'guest_reports',
+          filter: `id=eq.${guestReportId}`
+        },
+        (payload) => {
+          console.log('📨 Realtime update received:', payload);
+          
+          const updatedRecord = payload.new as GuestReport;
+          
+          // Check if report data is now available
+          if (updatedRecord.translator_log_id || updatedRecord.report_log_id) {
+            console.log('✅ Report data available, updating local state');
+            setReport(updatedRecord);
+            onReportReady();
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', status);
+      });
+
+    channelRef.current = channel;
+
+    // Return cleanup function
+    return () => {
+      console.log('🧹 Cleaning up realtime listener');
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, []);
+
   return {
     report,
     isLoading,
@@ -207,5 +258,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     fetchReportContent,
     fetchAstroData,
     isAstroReport,
+    setupRealtimeListener,
   };
 };
