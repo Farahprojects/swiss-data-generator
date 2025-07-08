@@ -43,51 +43,28 @@ function isUUID(value: string): boolean {
   return isValid;
 }
 
-// Smart user identity resolution: signed-in user or guest with Stripe
-async function resolveUserId(supabase: any, userId: string | null): Promise<{ userId: string | null, userType: string | null, error?: string }> {
-  if (!userId) {
-    return { userId: null, userType: null };
+// Simplified user identity resolution for guest-aware logic
+async function resolveUserId(supabase: any, userId: string | null, isGuest: boolean): Promise<{ user_id: string | null, client_id: string | null, error?: string }> {
+  if (isGuest) {
+    const { data: guest, error } = await supabase
+      .from("guest_reports")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (guest) {
+      return { user_id: null, client_id: guest.id }; // guest is valid
+    } else {
+      return { user_id: null, client_id: null, error: "Guest not found" };
+    }
   }
 
-  if (!isUUID(userId)) {
-    console.warn(`[orchestrator] Invalid user ID format: ${userId}`);
-    return { userId: null, userType: null, error: "Invalid user ID format" };
+  // For signed-in users
+  if (userId && isUUID(userId)) {
+    return { user_id: userId, client_id: null };
   }
 
-  console.log(`[orchestrator] Resolving user identity for: ${userId}`);
-
-  // Check if it's a real auth user
-  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
-  
-  if (authUser?.user && !authError) {
-    console.log(`[orchestrator] Resolved as authenticated user: ${userId}`);
-    return { userId, userType: "authenticated" };
-  }
-
-  // Otherwise check if it's a guest user with completed payment
-  const { data: guest, error: guestError } = await supabase
-    .from("guest_reports")
-    .select("stripe_session_id, payment_status")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (guestError) {
-    console.error(`[orchestrator] Error checking guest reports: ${guestError.message}`);
-    return { userId: null, userType: null, error: "Database error during user resolution" };
-  }
-
-  if (guest?.stripe_session_id && guest?.payment_status === 'completed') {
-    console.log(`[orchestrator] Resolved as paid guest user: ${userId}`);
-    return { userId, userType: "guest" };
-  }
-
-  if (guest && (!guest.stripe_session_id || guest.payment_status !== 'completed')) {
-    console.warn(`[orchestrator] Guest user found but payment not completed: ${userId}`);
-    return { userId: null, userType: null, error: "Guest payment not completed" };
-  }
-
-  console.warn(`[orchestrator] User not found in auth or guest tables: ${userId}`);
-  return { userId: null, userType: null, error: "User not found" };
+  return { user_id: null, client_id: null, error: "Invalid user ID" };
 }
 
 interface ReportPayload {
@@ -96,6 +73,7 @@ interface ReportPayload {
   user_id?: string;
   apiKey?: string;
   chartData: any;
+  is_guest?: boolean;
   [key: string]: any;
 }
 
@@ -129,15 +107,16 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     .maybeSingle();
   if (!priceData) return { success: false, errorMessage: "Could not determine report price" };
 
-  // Resolve and validate user identity
-  const userResolution = await resolveUserId(supabase, payload.user_id ?? null);
+  // Resolve and validate user identity using simplified guest-aware logic
+  const userResolution = await resolveUserId(supabase, payload.user_id ?? null, payload.is_guest ?? false);
   if (userResolution.error) {
     console.error(`[orchestrator] User resolution failed: ${userResolution.error}`);
     return { success: false, errorMessage: userResolution.error };
   }
 
-  const userId = userResolution.userId;
-  console.log(`[orchestrator] User resolved - ID: ${userId}, Type: ${userResolution.userType}`);
+  const userId = userResolution.user_id;
+  const clientId = userResolution.client_id;
+  console.log(`[orchestrator] User resolved - user_id: ${userId}, client_id: ${clientId}, is_guest: ${payload.is_guest}`);
 
   const report = await generateReport(payload, supabase);
   if (!report.success) return { success: false, errorMessage: report.errorMessage };
@@ -235,8 +214,8 @@ async function generateReport(payload: ReportPayload, supabase: any) {
 async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: string, errorMessage: string) {
   try {
     // Use the same user resolution logic for failed attempts
-    const userResolution = await resolveUserId(supabase, payload.user_id ?? null);
-    const userId = userResolution.userId;
+    const userResolution = await resolveUserId(supabase, payload.user_id ?? null, payload.is_guest ?? false);
+    const userId = userResolution.user_id;
 
     const { error: logError } = await supabase.from("report_logs").insert({
       api_key: payload.apiKey ?? null,

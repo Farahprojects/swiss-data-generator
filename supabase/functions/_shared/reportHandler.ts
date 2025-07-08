@@ -123,12 +123,16 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
     
     console.log(`${logPrefix} Resolved API key: ${resolvedApiKey ? 'present' : 'missing'} (${resolvedApiKey})`);
 
+    // Determine if this is a guest user by checking for stripe_session_id in requestData
+    const isGuest = !!(requestData.stripe_session_id || resolvedApiKey === "GUEST-STRIPE");
+
     // Prepare report payload with enhanced logging and embedded person names
     const reportPayload = {
       endpoint: requestData.request || "unknown",
       report_type: requestData.report,
       user_id: requestData.user_id,
       apiKey: resolvedApiKey,
+      is_guest: isGuest,
       chartData: {
         ...swissData,
         person_a_name: requestData.person_a?.name,
@@ -143,6 +147,7 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       report_type: reportPayload.report_type,
       user_id: reportPayload.user_id ? 'present' : 'missing',
       apiKey: reportPayload.apiKey ? 'present' : 'missing',
+      is_guest: reportPayload.is_guest,
       chartData: reportPayload.chartData ? 'present' : 'missing',
       chartDataKeys: reportPayload.chartData ? Object.keys(reportPayload.chartData).join(', ') : 'none',
       person_a_name: reportPayload.chartData.person_a_name || 'not provided',
