@@ -11,78 +11,40 @@ const EDGE_ENGINES = [
   "standard-report-two",
 ];
 
-// Database-based round-robin engine selection
-async function getNextEngine(supabase: any) {
-  try {
-    console.log(`[reportOrchestrator] Selecting next engine using report_logs for round-robin`);
-
-    // Get the most recently used engine from report_logs (NOT translator_logs anymore)
-    const { data: lastReport, error } = await supabase
-      .from("report_logs")
-      .select("engine_used")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error(`[reportOrchestrator] Error querying last engine: ${error.message}`);
-      console.log(`[reportOrchestrator] Defaulting to first engine due to query error`);
-      return EDGE_ENGINES[0];
-    }
-
-    let nextEngineIndex = 0;
-
-    if (lastReport?.engine_used) {
-      const lastEngineIndex = EDGE_ENGINES.indexOf(lastReport.engine_used);
-      if (lastEngineIndex !== -1) {
-        nextEngineIndex = (lastEngineIndex + 1) % EDGE_ENGINES.length;
-        console.log(`[reportOrchestrator] Last engine '${lastReport.engine_used}' found at index ${lastEngineIndex}, selecting next at index ${nextEngineIndex}`);
-      } else {
-        console.log(`[reportOrchestrator] Last engine '${lastReport.engine_used}' not in list, defaulting to first`);
-      }
-    } else {
-      console.log(`[reportOrchestrator] No previous engine found in report_logs, defaulting to first`);
-    }
-
-    const selectedEngine = EDGE_ENGINES[nextEngineIndex];
-    console.log(`[reportOrchestrator] Selected engine: ${selectedEngine}`);
-    return selectedEngine;
-  } catch (error) {
-    console.error(`[reportOrchestrator] Unexpected error in getNextEngine: ${error instanceof Error ? error.message : String(error)}`);
-    return EDGE_ENGINES[0];
-  }
-}
-
 // Initialize Supabase client
 const initSupabase = () => {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error("[reportOrchestrator] Missing Supabase credentials");
-    throw new Error("Missing Supabase credentials");
-  }
-
-  console.log(`[reportOrchestrator] Initializing Supabase client with URL: ${supabaseUrl}`);
-  console.log(`[reportOrchestrator] Service key format check: ${supabaseServiceKey.startsWith("eyJ") ? "Correct" : "Incorrect"} format`);
-  
-  try {
-    const client = createClient(supabaseUrl, supabaseServiceKey);
-    console.log(`[reportOrchestrator] Supabase client successfully initialized`);
-    return client;
-  } catch (error) {
-    console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨: Failed to initialize Supabase client: ${error instanceof Error ? error.message : String(error)}`);
-    throw error;
-  }
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return createClient(url, key);
 };
+
+// Database-based round-robin engine selection
+async function getNextEngine(supabase: any) {
+  const { data: lastReport, error } = await supabase
+    .from("report_logs")
+    .select("engine_used")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !lastReport?.engine_used) return EDGE_ENGINES[0];
+
+  const lastIndex = EDGE_ENGINES.indexOf(lastReport.engine_used);
+  return EDGE_ENGINES[(lastIndex + 1) % EDGE_ENGINES.length];
+};
+
+// UUID validation helper
+function isUUID(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
 
 interface ReportPayload {
   endpoint: string;
-  report_type: string; 
-  user_id: string;
-  apiKey: string;
-  chartData: any; // Swiss API response data
-  [key: string]: any; // Other properties
+  report_type: string;
+  user_id?: string;
+  apiKey?: string;
+  chartData: any;
+  [key: string]: any;
 }
 
 interface ReportResult {
@@ -99,133 +61,40 @@ interface ReportResult {
  * @returns Object containing success status and either report or error message
  */
 export const processReportRequest = async (payload: ReportPayload): Promise<ReportResult> => {
-  console.log(`[reportOrchestrator] Processing ${payload.report_type} report request for endpoint: ${payload.endpoint}`);
-  const startTime = Date.now();
-  
-  try {
-    // Step 1: Initialize Supabase client
-    let supabase;
-    try {
-      supabase = initSupabase();
-    } catch (initError) {
-      console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨: Failed to initialize Supabase: ${initError instanceof Error ? initError.message : String(initError)}`);
-      return {
-        success: false,
-        errorMessage: "Authentication error when initializing database connection"
-      };
-    }
+  const supabase = initSupabase();
 
-    // Step 2: Dynamic validation - check if report type exists in report_prompts table
-    try {
-      const { data: promptExists, error: promptError } = await supabase
-        .from("report_prompts")
-        .select("name")
-        .eq("name", payload.report_type)
-        .maybeSingle();
-      
-      if (promptError) {
-        if (promptError.message?.includes("JWT")) {
-          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 in prompt validation: ${promptError.message}`);
-        } else {
-          console.error(`[reportOrchestrator] Error validating report type: ${promptError.message}`);
-        }
-        throw promptError;
-      }
-      
-      if (!promptExists) {
-        console.error(`[reportOrchestrator] Invalid report type: ${payload.report_type}`);
-        return { 
-          success: false, 
-          errorMessage: `Report type '${payload.report_type}' not found. Please check available report types.` 
-        };
-      }
-      
-      console.log(`[reportOrchestrator] Report type '${payload.report_type}' validated successfully`);
-    } catch (dbError) {
-      if (String(dbError).includes("JWT")) {
-        console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 during report type validation: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
-      } else {
-        console.error(`[reportOrchestrator] Database error during validation: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
-      }
-      return {
-        success: false,
-        errorMessage: "Error validating report type"
-      };
-    }
+  const { data: promptExists } = await supabase
+    .from("report_prompts")
+    .select("name")
+    .eq("name", payload.report_type)
+    .maybeSingle();
+  if (!promptExists) return { success: false, errorMessage: "Invalid report_type" };
 
-    // Step 3: Get cost from price_list using the actual report_type
-    try {
-      const { data: priceData, error: priceError } = await supabase
-        .from("price_list")
-        .select("unit_price_usd")
-        .eq("id", payload.report_type)
-        .maybeSingle();
-      
-      if (priceError) {
-        if (priceError.message?.includes("JWT")) {
-          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 in price fetch: ${priceError.message}`);
-        } else {
-          console.error(`[reportOrchestrator] Error fetching price: ${priceError.message}`);
-        }
-        throw priceError;
-      }
-      
-      if (!priceData) {
-        console.error(`[reportOrchestrator] No price found for ${payload.report_type} report`);
-        return {
-          success: false,
-          errorMessage: "Could not determine report price"
-        };
-      }
-      
-      const reportCost = priceData.unit_price_usd;
-      console.log(`[reportOrchestrator] ${payload.report_type} report cost: ${reportCost}`);
-    } catch (dbError) {
-      if (String(dbError).includes("JWT")) {
-        console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 during database query: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
-      } else {
-        console.error(`[reportOrchestrator] Database error: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
-      }
-      return {
-        success: false,
-        errorMessage: "Error retrieving pricing information"
-      };
-    }
-    
-    // Trust the payload for user_id instead of checking balances
-    const userId = payload.user_id;
-    
-    // Step 4: Generate the report
-    const report = await generateReport(payload, supabase);
-    
-    if (!report.success) {
-      return {
-        success: false,
-        errorMessage: report.errorMessage || "Failed to generate report"
-      };
-    }
-    
-    // Report logging is now solely the responsibility of the edge function
-    console.log(`[reportOrchestrator] Successfully generated ${payload.report_type} report for user: ${userId}`);
-    
-    return {
-      success: true,
-      report: report.data
-    };
-  } catch (err) {
-    // Check for JWT errors specifically
-    if (String(err).includes("JWT") || String(err).includes("401")) {
-      console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨: ${err instanceof Error ? err.message : String(err)}`);
-    } else {
-      console.error(`[reportOrchestrator] Unexpected error:`, err);
-    }
-    
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    return {
-      success: false,
-      errorMessage
-    };
-  }
+  const { data: priceData } = await supabase
+    .from("price_list")
+    .select("unit_price_usd")
+    .eq("id", payload.report_type)
+    .maybeSingle();
+  if (!priceData) return { success: false, errorMessage: "Could not determine report price" };
+
+  const userId = payload.user_id ?? null;
+
+  const report = await generateReport(payload, supabase);
+  if (!report.success) return { success: false, errorMessage: report.errorMessage };
+
+  // Insert into report_logs - orchestrator is now responsible for all logging
+  await supabase.from("report_logs").insert({
+    api_key: payload.apiKey ?? null,
+    user_id: userId && isUUID(userId) ? userId : null,
+    report_type: payload.report_type,
+    endpoint: payload.endpoint,
+    engine_used: report.report.engine_used,
+    report_text: report.report.content,
+    status: 'success',
+    created_at: new Date().toISOString(),
+  });
+
+  return { success: true, report: report.report };
 };
 
 /**
@@ -233,83 +102,32 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
  * This will call the standard or premium report generation function
  */
 async function generateReport(payload: ReportPayload, supabase: any) {
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    if (!supabaseUrl) {
-      console.error(`[reportOrchestrator] Missing SUPABASE_URL environment variable`);
-      throw new Error("Missing SUPABASE_URL environment variable");
-    }
-    
-    // Select next engine using database-based round-robin
-    const selectedEngine = await getNextEngine(supabase);
-    console.log(`[reportOrchestrator] Using engine '${selectedEngine}' for ${payload.report_type} report`);
-    
-    try {
-      const response = await fetch(`${supabaseUrl}/functions/v1/${selectedEngine}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // No Authorization header as verify_jwt = false in config.toml
-        },
-        body: JSON.stringify({
-          ...payload,
-          reportType: payload.report_type, // Pass the actual report type
-          selectedEngine: selectedEngine // Pass the selected engine so it can be logged
-        })
-      });
-      
-      // Improved error handling for HTTP errors
-      if (!response.ok) {
-        const errorText = await response.text();
-        const status = response.status;
-        
-        if (status === 401 || errorText.includes("JWT")) {
-          console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 from ${selectedEngine} function: ${status} - ${errorText}`);
-          return {
-            success: false,
-            errorMessage: `JWT authentication error (401): ${errorText}`
-          };
-        } else {
-          console.error(`[reportOrchestrator] Error from ${selectedEngine} function: ${status} - ${errorText}`);
-          return {
-            success: false,
-            errorMessage: `Report generation failed with status ${status}: ${errorText}`
-          };
-        }
-      }
-      
-      const reportResult = await response.json();
-      console.log(`[reportOrchestrator] Successfully received ${payload.report_type} report from ${selectedEngine} function`);
-      
-      return {
-        success: true,
-        data: {
-          title: `${payload.report_type.charAt(0).toUpperCase() + payload.report_type.slice(1)} ${payload.endpoint} Report`,
-          content: reportResult.report,
-          generated_at: new Date().toISOString(),
-          engine_used: selectedEngine // Track which engine was used
-        }
-      };
-    } catch (fetchErr) {
-      if (String(fetchErr).includes("JWT") || String(fetchErr).includes("401")) {
-        console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 calling ${selectedEngine}: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
-      } else {
-        console.error(`[reportOrchestrator] Fetch error calling ${selectedEngine}:`, fetchErr);
-      }
-      return {
-        success: false,
-        errorMessage: `Network error calling ${selectedEngine} service: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`
-      };
-    }
-  } catch (err) {
-    if (String(err).includes("JWT") || String(err).includes("401")) {
-      console.error(`[reportOrchestrator] 🚨 JWT ERROR 🚨 generating report: ${err instanceof Error ? err.message : String(err)}`);
-    } else {
-      console.error(`[reportOrchestrator] Error generating report:`, err);
-    }
-    return {
-      success: false,
-      errorMessage: err instanceof Error ? err.message : String(err)
-    };
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const selectedEngine = await getNextEngine(supabase);
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/${selectedEngine}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...payload,
+      reportType: payload.report_type,
+      selectedEngine,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return { success: false, errorMessage: errorText };
   }
+
+  const reportResult = await response.json();
+  return {
+    success: true,
+    report: {
+      title: `${payload.report_type} ${payload.endpoint} Report`,
+      content: reportResult.report,
+      generated_at: new Date().toISOString(),
+      engine_used: selectedEngine,
+    },
+  };
 }
