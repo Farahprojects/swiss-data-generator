@@ -63,7 +63,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     setIsLoading(true);
     try {
       console.log('🔍 Fetching report status for guest ID:', guestReportId);
-      
+
       const { data, error } = await supabase
         .from('guest_reports')
         .select('*')
@@ -79,7 +79,8 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
           id: data.id,
           has_report: data.has_report,
           payment_status: data.payment_status,
-          created_at: data.created_at
+          created_at: data.created_at,
+          swiss_boolean: data.swiss_boolean,
         });
         setReport(data);
         setError(null);
@@ -97,14 +98,9 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
   const fetchReportContent = useCallback(async (guestReportId: string) => {
     try {
-      console.log('📖 Fetching report content for guest ID:', guestReportId);
-      
       const { data, error } = await supabase
         .from('guest_reports')
-        .select(`
-          report_log_id,
-          report_logs!inner(report_text)
-        `)
+        .select(`report_log_id, report_logs!inner(report_text)`)
         .eq('id', guestReportId)
         .single();
 
@@ -113,13 +109,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         return null;
       }
 
-      if (data?.report_logs?.report_text) {
-        console.log('✅ Report content fetched successfully');
-        return data.report_logs.report_text;
-      } else {
-        console.log('📄 No report content found');
-        return null;
-      }
+      return data?.report_logs?.report_text || null;
     } catch (err) {
       console.error('❌ Error fetching report content:', err);
       return null;
@@ -128,9 +118,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
   const fetchAstroData = useCallback(async (guestReportId: string) => {
     try {
-      console.log('📊 Fetching astro data from translator_logs for guest ID:', guestReportId);
-      
-      // First fetch the guest_reports to get translator_log_id
       const { data: guestData, error: guestError } = await supabase
         .from('guest_reports')
         .select('translator_log_id')
@@ -142,12 +129,8 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         return null;
       }
 
-      if (!guestData?.translator_log_id) {
-        console.log('📄 No translator_log_id found');
-        return null;
-      }
+      if (!guestData?.translator_log_id) return null;
 
-      // Then fetch the translator_logs using the translator_log_id
       const { data: translatorData, error: translatorError } = await supabase
         .from('translator_logs')
         .select('swiss_data')
@@ -159,35 +142,22 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         return null;
       }
 
-      if (translatorData?.swiss_data) {
-        const swissData = translatorData.swiss_data as any;
-        console.log('✅ Astro data fetched successfully:', swissData);
+      const swissData = translatorData?.swiss_data;
+      if (!swissData) return null;
 
-        // Check for report generation errors first
-        if (swissData.report_error) {
-          console.error('❌ Report generation failed:', swissData.report_error);
-          return `Report generation failed: ${swissData.report_error}`;
-        }
-
-        // Extract report content from swiss_data.report.content
-        if (swissData.report?.content) {
-          console.log('📋 Extracted report content from swiss_data.report.content');
-          return swissData.report.content;
-        }
-
-        // Fallback: check if report is directly in swiss_data
-        if (swissData.report && typeof swissData.report === 'string') {
-          console.log('📋 Found report content as string in swiss_data.report');
-          return swissData.report;
-        }
-
-        // Fallback: return formatted swiss_data if no report content found
-        console.warn('⚠️ No report content found, returning formatted swiss_data');
-        return JSON.stringify(swissData, null, 2);
-      } else {
-        console.log('📄 No astro data found');
-        return null;
+      if (swissData.report_error) {
+        return `Report generation failed: ${swissData.report_error}`;
       }
+
+      if (swissData.report?.content) {
+        return swissData.report.content;
+      }
+
+      if (typeof swissData.report === 'string') {
+        return swissData.report;
+      }
+
+      return JSON.stringify(swissData, null, 2);
     } catch (err) {
       console.error('❌ Error fetching astro data:', err);
       return null;
@@ -197,34 +167,26 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const isAstroReport = useCallback((reportType: string | null) => {
     if (!reportType) return false;
     const type = reportType.toLowerCase();
-    return type === 'sync' || type.startsWith('essence');
+    return type === 'sync' || type === 'essence';
   }, []);
 
   const triggerErrorHandling = useCallback(async (guestReportId: string) => {
-    console.log('🚨 Triggering error handling for timeout');
-    
     const case_number = await logUserError(
-      guestReportId, 
-      'timeout_no_report', 
+      guestReportId,
+      'timeout_no_report',
       'Report not found after timeout'
     );
-    
-    if (case_number) {
-      setCaseNumber(case_number);
-    }
-    
+    if (case_number) setCaseNumber(case_number);
     setError('We are looking into this issue. Please reference your case number if you contact support.');
   }, [logUserError]);
 
   const setupRealtimeListener = useCallback((guestReportId: string, onReportReady?: () => void) => {
     console.log('🔄 Setting up realtime listener for guest report:', guestReportId);
-    
-    // Clean up existing channel if any
+
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
     }
 
-    // Create new channel with specific filter for this report
     const channel = supabase
       .channel(`guest-report-${guestReportId}`)
       .on(
@@ -236,47 +198,31 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
           filter: `id=eq.${guestReportId}`
         },
         async (payload) => {
-          console.log('📨 Realtime update received:', payload);
-          
           const updatedRecord = payload.new as GuestReport;
-          
-          // Check multiple conditions for report availability:
-          // 1. has_report = true (covers both Astro and AI reports)
-          // 2. translator_log_id IS NOT NULL (for Astro reports)
-          // 3. report_log_id IS NOT NULL (for AI reports)
-          const isReportReady = updatedRecord.has_report || 
-                               updatedRecord.translator_log_id || 
-                               updatedRecord.report_log_id;
-          
+
+          const isReportReady =
+            updatedRecord.swiss_boolean === true ||
+            (updatedRecord.has_report && (updatedRecord.translator_log_id || updatedRecord.report_log_id));
+
           if (isReportReady) {
-            console.log('✅ Report ready - triggering content load. Conditions met:', {
+            console.log('✅ Report ready:', {
+              swiss_boolean: updatedRecord.swiss_boolean,
               has_report: updatedRecord.has_report,
               translator_log_id: !!updatedRecord.translator_log_id,
               report_log_id: !!updatedRecord.report_log_id
             });
-            
-            // Update local state
             setReport(updatedRecord);
-            
-            // Trigger callback to notify UI
             onReportReady?.();
           }
         }
       )
       .subscribe((status) => {
         console.log('📡 Realtime subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to real-time updates');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error');
-        }
       });
 
     channelRef.current = channel;
 
-    // Return cleanup function
     return () => {
-      console.log('🧹 Cleaning up realtime listener');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
