@@ -2,6 +2,8 @@
    Central workflow handler for astrology-report generation
    ───────────────────────────────────────────────────────────────────────────*/
 
+console.log("[orchestrator] ✅ Orchestrator file loaded");
+
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /*────────────────────────── CONFIG & HELPERS ────────────────────────────────*/
@@ -152,14 +154,19 @@ interface ReportResult {
 export const processReportRequest = async (
   payload: ReportPayload,
 ): Promise<ReportResult> => {
+  console.log("[orchestrator] 🟢 Received request to generate report");
+  
   const start = Date.now();
   const supabase = initSupabase();
 
   /* Early validation – no OpenAI calls yet */
   const v = await validateRequest(supabase, payload);
   if (!v.ok) {
+    console.warn(`[orchestrator] 🔴 Validation failed: ${v.reason}`);
     await logFailedAttempt(supabase, payload, "validator", v.reason, Date.now() - start);
     return { success: false, errorMessage: v.reason };
+  } else {
+    console.log(`[orchestrator] ✅ Validation passed`);
   }
 
   /* Choose edge engine */
