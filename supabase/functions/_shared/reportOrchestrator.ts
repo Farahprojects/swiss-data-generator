@@ -91,6 +91,7 @@ interface ReportResult {
  * @returns Object containing success status and either report or error message
  */
 export const processReportRequest = async (payload: ReportPayload): Promise<ReportResult> => {
+  const startTime = Date.now();
   const supabase = initSupabase();
 
   const { data: promptExists } = await supabase
@@ -119,17 +120,25 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
   console.log(`[orchestrator] User resolved - user_id: ${userId}, client_id: ${clientId}, is_guest: ${payload.is_guest}`);
 
   const report = await generateReport(payload, supabase);
-  if (!report.success) return { success: false, errorMessage: report.errorMessage };
+  if (!report.success) {
+    const duration = Date.now() - startTime;
+    await logFailedAttempt(supabase, payload, "orchestrator", report.errorMessage || "Unknown error", duration);
+    return { success: false, errorMessage: report.errorMessage };
+  }
+
+  // Calculate duration for performance tracking
+  const duration = Date.now() - startTime;
 
   // Insert into report_logs - orchestrator is now responsible for all logging
   const { data: logData, error: logError } = await supabase.from("report_logs").insert({
     api_key: payload.apiKey ?? null,
-    user_id: userId,
+    user_id: payload.is_guest ? payload.user_id : userId, // Use guest UUID for guests
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: report.report.engine_used,
     report_text: report.report.content,
     status: 'success',
+    duration_ms: duration,
     created_at: new Date().toISOString(),
   });
 
@@ -211,7 +220,7 @@ async function generateReport(payload: ReportPayload, supabase: any) {
 }
 
 // Helper function to log failed report attempts
-async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: string, errorMessage: string) {
+async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: string, errorMessage: string, duration?: number) {
   try {
     // Use the same user resolution logic for failed attempts
     const userResolution = await resolveUserId(supabase, payload.user_id ?? null, payload.is_guest ?? false);
@@ -219,13 +228,14 @@ async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: s
 
     const { error: logError } = await supabase.from("report_logs").insert({
       api_key: payload.apiKey ?? null,
-      user_id: userId,
+      user_id: payload.is_guest ? payload.user_id : userId, // Use guest UUID for guests
       report_type: payload.report_type,
       endpoint: payload.endpoint,
       engine_used: engine,
       report_text: null,
       status: 'failed',
       error_message: errorMessage,
+      duration_ms: duration,
       created_at: new Date().toISOString(),
     });
 
