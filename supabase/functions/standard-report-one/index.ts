@@ -267,45 +267,7 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
   }
 }
 
-// Log report generation attempt to the report_logs table
-async function logReportAttempt(
-  apiKey: string,
-  userId: string,
-  reportType: string,
-  endpoint: string,
-  swissPayload: any,
-  reportText: string | null,
-  status: string,
-  durationMs: number,
-  errorMessage: string | null,
-  engineUsed: string,
-  requestId: string
-) {
-  const logPrefix = `[standard-report][${requestId}]`;
-  try {
-    console.log(`${logPrefix} Logging report attempt to report_logs table with engine: ${engineUsed}`);
-    
-    const { error } = await supabase.from("report_logs").insert({
-      api_key: apiKey,
-      user_id: userId,
-      report_type: reportType,
-      endpoint: endpoint,
-      report_text: reportText,
-      status: status,
-      duration_ms: durationMs,
-      error_message: errorMessage,
-      engine_used: engineUsed
-    });
-    
-    if (error) {
-      console.error(`${logPrefix} Error logging report attempt: ${error.message}`);
-    } else {
-      console.log(`${logPrefix} Successfully logged ${status} report attempt for user ${userId} with engine ${engineUsed}`);
-    }
-  } catch (err) {
-    console.error(`${logPrefix} Failed to log report attempt: ${err instanceof Error ? err.message : String(err)}`);
-  }
-}
+// Logging is now handled by the orchestrator
 
 // Main handler function
 serve(async (req) => {
@@ -356,22 +318,7 @@ serve(async (req) => {
     if (!reportData || !reportData.chartData || !reportData.endpoint) {
       console.error(`${logPrefix} Missing required fields in request payload. Received:`, reportData);
       
-      // Log the failed attempt
-      if (reportData && reportData.apiKey && reportData.user_id) {
-        await logReportAttempt(
-          reportData.apiKey,
-          reportData.user_id,
-          reportType,
-          reportData.endpoint || "unknown",
-          null,
-          null,
-          "failed",
-          Date.now() - startTime,
-          "Missing required fields: chartData and endpoint are required",
-          selectedEngine,
-          requestId
-        );
-      }
+      // Field validation failed - let orchestrator handle logging
       
       return jsonResponse(
         { error: "Missing required fields: chartData and endpoint are required", requestId },
@@ -386,30 +333,16 @@ serve(async (req) => {
     // Generate the report
     const report = await generateReport(systemPrompt, reportData, requestId);
     
-    // Log successful report generation - this is now the ONLY place reports are logged
-{
-  await logReportAttempt(
-    reportData.apiKey,
-    reportData.user_id,
-    reportType,
-    reportData.endpoint,
-    reportData.chartData,
-    report, // Make sure this contains the actual report text
-    "success",
-    Date.now() - startTime,
-    null,
-    selectedEngine,
-    requestId
-  );
-}
-
-
-
-    // Return the generated report
+    // Return the generated report with proper structure
     console.log(`${logPrefix} Successfully processed ${reportType} request in ${Date.now() - startTime}ms`);
     return jsonResponse({
       success: true,
-      report: report,
+      report: {
+        title: `${reportType} ${reportData.endpoint} Report`,
+        content: report,
+        generated_at: new Date().toISOString(),
+        engine_used: selectedEngine
+      },
       requestId
     }, {}, requestId);
 
@@ -417,25 +350,7 @@ serve(async (req) => {
     const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
     console.error(`${logPrefix} Error processing request: ${errorMessage}`, err instanceof Error ? err.stack : err);
     
-    // Log the failed attempt if we have user info
-    if (err instanceof Error && err.cause && typeof err.cause === 'object' && err.cause !== null) {
-      const payload = err.cause as any;
-      if (payload.apiKey && payload.user_id && payload.selectedEngine) {
-        await logReportAttempt(
-          payload.apiKey,
-          payload.user_id,
-          payload.reportType || payload.report_type || "unknown",
-          payload.endpoint || "unknown",
-          payload.chartData,
-          null,
-          "failed",
-          Date.now() - startTime,
-          errorMessage,
-          payload.selectedEngine,
-          requestId
-        );
-      }
-    }
+    // Error occurred - let orchestrator handle logging
     
     return jsonResponse({
       success: false,
