@@ -219,7 +219,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   const status = getStatus();
   const StatusIcon = status.icon;
-  const isReady = report?.has_report && !!(report?.translator_log_id || report?.report_log_id);
+  const isReady =
+  report?.swiss_boolean === true || // new Swiss-only logic
+  (report?.has_report && !!(report?.translator_log_id || report?.report_log_id)); // original AI logic
+
 
   // ---------------------------------------------------------------------------
   // Countdown logic
