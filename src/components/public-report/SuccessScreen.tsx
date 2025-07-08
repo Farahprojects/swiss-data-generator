@@ -82,7 +82,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // ---------------------------------------------------------------------------
   // Hooks & State
   // ---------------------------------------------------------------------------
-  const { report, isLoading, error, caseNumber, fetchReport, triggerErrorHandling } = useGuestReportStatus();
+  const { report, isLoading, error, caseNumber, fetchReport, triggerErrorHandling, fetchReportContent } = useGuestReportStatus();
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -187,17 +187,30 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   }, [countdown, isReady, error, isVideoReady, guestReportId, triggerErrorHandling]);
 
   // ---------------------------------------------------------------------------
+  // Handle view report with actual content
+  // ---------------------------------------------------------------------------
+  const handleViewReport = useCallback(async () => {
+    const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+    if (!reportIdToUse || !onViewReport) return;
+
+    const reportContent = await fetchReportContent(reportIdToUse);
+    if (reportContent) {
+      onViewReport(reportContent, null);
+    } else {
+      console.warn('Could not fetch report content');
+      onViewReport('Report content could not be loaded', null);
+    }
+  }, [guestReportId, fetchReportContent, onViewReport]);
+
+  // ---------------------------------------------------------------------------
   // Auto redirect when ready
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (isReady && onViewReport && !isAstroDataReport) {
-      redirectRef.current = setTimeout(
-        () => onViewReport('Report content will be fetched from database', null),
-        2000,
-      );
+      redirectRef.current = setTimeout(handleViewReport, 2000);
     }
     return () => redirectRef.current && clearTimeout(redirectRef.current);
-  }, [isReady, onViewReport, isAstroDataReport]);
+  }, [isReady, onViewReport, isAstroDataReport, handleViewReport]);
 
   // ---------------------------------------------------------------------------
   // Error handling functions
@@ -359,21 +372,20 @@ The report was not generated within the expected timeframe. Please help me resol
                 {isAstroDataReport ? (
                   isMobile ? (
                     <div className="flex gap-8 justify-center">
-                      <button 
-                        onClick={() => onViewReport?.('Report content will be fetched from database', null)}
-                        className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
-                      >
-                        View
-                      </button>
+                       <button 
+                         onClick={handleViewReport}
+                         className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
+                       >
+                         View
+                       </button>
                       <button 
                         onClick={async () => {
-                          try {
-                            const tempDiv = document.createElement('div');
-                            tempDiv.innerHTML = 'Report content will need to be fetched from database';
-                            const cleanText = tempDiv.textContent || tempDiv.innerText || '';
-                            await navigator.clipboard.writeText(cleanText);
-                          } catch (error) {
-                            console.error('Copy failed:', error);
+                          const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+                          if (reportIdToUse) {
+                            const reportContent = await fetchReportContent(reportIdToUse);
+                            if (reportContent) {
+                              await navigator.clipboard.writeText(reportContent);
+                            }
                           }
                         }}
                         className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
@@ -384,17 +396,16 @@ The report was not generated within the expected timeframe. Please help me resol
                       </button>
                       <button 
                         onClick={async () => {
-                          try {
-                            const tempDiv = document.createElement('div');
-                            tempDiv.innerHTML = 'Report content will need to be fetched from database';
-                            const cleanText = tempDiv.textContent || tempDiv.innerText || '';
-                            await navigator.clipboard.writeText(cleanText);
-                            setTimeout(() => {
-                              const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological report and provide additional insights or answer any questions I might have:\n\n${cleanText}`)}`;
-                              window.open(chatGPTUrl, '_blank');
-                            }, 1000);
-                          } catch (error) {
-                            console.error('ChatGPT action failed:', error);
+                          const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+                          if (reportIdToUse) {
+                            const reportContent = await fetchReportContent(reportIdToUse);
+                            if (reportContent) {
+                              await navigator.clipboard.writeText(reportContent);
+                              setTimeout(() => {
+                                const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological report and provide additional insights or answer any questions I might have:\n\n${reportContent}`)}`;
+                                window.open(chatGPTUrl, '_blank');
+                              }, 1000);
+                            }
                           }
                         }}
                         className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
@@ -407,21 +418,21 @@ The report was not generated within the expected timeframe. Please help me resol
                       </button>
                     </div>
                   ) : (
-                    <motion.button
-                      onClick={() => onViewReport?.('Report content will be fetched from database', null)}
-                      className="group flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-light transition-all duration-200"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <span>View Data</span>
-                      <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </motion.button>
+                     <motion.button
+                       onClick={handleViewReport}
+                       className="group flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-light transition-all duration-200"
+                       whileHover={{ scale: 1.05 }}
+                       whileTap={{ scale: 0.95 }}
+                     >
+                       <span>View Data</span>
+                       <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                       </svg>
+                     </motion.button>
                   )
                 ) : (
                   <Button 
-                    onClick={() => onViewReport?.('Report content will be fetched from database', null)}
+                    onClick={handleViewReport}
                     className="bg-gray-900 hover:bg-gray-800 text-white font-light"
                   >
                     View now

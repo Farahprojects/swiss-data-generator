@@ -19,6 +19,7 @@ interface UseGuestReportStatusReturn {
   caseNumber: string | null;
   fetchReport: (guestReportId: string) => Promise<void>;
   triggerErrorHandling: (guestReportId: string) => Promise<void>;
+  fetchReportContent: (guestReportId: string) => Promise<string | null>;
 }
 
 export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
@@ -87,6 +88,37 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
+  const fetchReportContent = useCallback(async (guestReportId: string) => {
+    try {
+      console.log('📖 Fetching report content for guest ID:', guestReportId);
+      
+      const { data, error } = await supabase
+        .from('guest_reports')
+        .select(`
+          report_log_id,
+          report_logs!inner(report_text)
+        `)
+        .eq('id', guestReportId)
+        .single();
+
+      if (error) {
+        console.error('❌ Error fetching report content:', error);
+        return null;
+      }
+
+      if (data?.report_logs?.report_text) {
+        console.log('✅ Report content fetched successfully');
+        return data.report_logs.report_text;
+      } else {
+        console.log('📄 No report content found');
+        return null;
+      }
+    } catch (err) {
+      console.error('❌ Error fetching report content:', err);
+      return null;
+    }
+  }, []);
+
   const triggerErrorHandling = useCallback(async (guestReportId: string) => {
     console.log('🚨 Triggering error handling for timeout');
     
@@ -110,5 +142,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     caseNumber,
     fetchReport,
     triggerErrorHandling,
+    fetchReportContent,
   };
 };
