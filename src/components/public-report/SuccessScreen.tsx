@@ -61,14 +61,12 @@ interface SuccessScreenProps {
 const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
   const {
     report,
-    isLoading,
     error,
     caseNumber,
     fetchReport,
     triggerErrorHandling,
     fetchReportContent,
     fetchAstroData,
-    setupRealtimeListener,
   } = useGuestReportStatus();
 
   const firstName = name?.split(' ')[0] || 'there';
@@ -80,35 +78,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [countdown, setCountdown] = useState(24);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
-  const cleanupRealtimeRef = useRef<(() => void) | null>(null);
 
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
 
-  // ✅ Define isReady before any useEffects that reference it
   const isReady =
     report?.swiss_boolean === true ||
     (report?.has_report && !!(report?.translator_log_id || report?.report_log_id));
 
-  useEffect(() => {
-    if (report) {
-      console.log('[✅ Report Fetched]', {
-        id: report?.id,
-        type: report?.report_type,
-        has_report: report?.has_report,
-        swiss_boolean: report?.swiss_boolean,
-      });
-    }
-  }, [report]);
-
   const handleVideoReady = useCallback(() => {
-    logToAdmin('SuccessScreen', 'video_ready', 'Video is ready, starting report checks', {
-      name,
-      email,
-      guestReportId,
-    });
     setIsVideoReady(true);
-  }, [name, email, guestReportId]);
+  }, []);
 
   useEffect(() => {
     const scrollToProcessing = () => {
@@ -116,45 +96,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     scrollToProcessing();
+
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (reportIdToUse) {
       fetchReport(reportIdToUse);
-      if (isAstroDataOnly) setIsVideoReady(true);
-      cleanupRealtimeRef.current = setupRealtimeListener(reportIdToUse);
     }
-    return () => cleanupRealtimeRef.current?.();
-  }, [guestReportId, fetchReport, setupRealtimeListener, isAstroDataOnly]);
-
-  // 🟡 Polling fallback if real-time fails
-  useEffect(() => {
-    if (!isReady && !error && isVideoReady) {
-      const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-      const poll = setInterval(() => {
-        fetchReport(reportIdToUse);
-      }, 4000);
-
-      return () => clearInterval(poll);
-    }
-  }, [isReady, error, isVideoReady, fetchReport, guestReportId]);
-
-  const getStatus = useCallback(() => {
-    if (!report) {
-      return { step: 1, title: 'Processing Your Request', desc: "We're setting up your personalized report", progress: 10, icon: Clock };
-    }
-    if (report.payment_status === 'pending') {
-      return { step: 1, title: 'Payment Processing', desc: 'Confirming your payment details', progress: 25, icon: Clock };
-    }
-    if (report.payment_status === 'paid' && !report.has_report) {
-      return { step: 2, title: 'Generating Your Report', desc: 'Our AI is crafting your personalized insights', progress: 60, icon: Clock };
-    }
-    if (report.has_report && (report.translator_log_id || report.report_log_id)) {
-      return { step: 3, title: 'Report Ready!', desc: 'Your personalized report is complete', progress: 100, icon: CheckCircle };
-    }
-    return { step: 1, title: 'Processing', desc: 'Please wait while we prepare your report', progress: 30, icon: Clock };
-  }, [report]);
-
-  const status = getStatus();
-  const StatusIcon = status.icon;
+  }, [guestReportId, fetchReport]);
 
   useEffect(() => {
     if (!isReady && !error && isVideoReady) {
@@ -192,6 +139,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
     onViewReport(reportContent ?? 'Report content could not be loaded', null);
   }, [guestReportId, onViewReport, reportType, fetchAstroData, fetchReportContent, report?.swiss_boolean]);
+
+  const status = (() => {
+    if (!report) return { title: 'Processing Your Request', desc: 'Setting up your report', icon: Clock };
+    if (report.payment_status === 'pending') return { title: 'Payment Processing', desc: 'Confirming payment', icon: Clock };
+    if (report.payment_status === 'paid' && !report.has_report) return { title: 'Generating Report', desc: 'Preparing insights', icon: Clock };
+    if (isReady) return { title: 'Report Ready!', desc: 'Your report is complete', icon: CheckCircle };
+    return { title: 'Processing', desc: 'Please wait', icon: Clock };
+  })();
+
+  const StatusIcon = status.icon;
 
   const handleTryAgain = () => navigate('/');
   const handleContactSupport = () => {
@@ -275,41 +232,33 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
             {!isReady && !error && !isAstroDataOnly && (
               <>
                 <VideoLoader onVideoReady={handleVideoReady} />
-                {PersonalNote}
-              </>
-            )}
-            {!isReady && !error && isAstroDataOnly && PersonalNote}
-            {error && (
-              <div className="text-center py-8">
-                <div className="text-gray-600 font-light mb-4">
-                  We've detected an issue with your report generation. Our team has been notified.
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                  Hi {firstName}! We're working on your report.<br />
+                  <span className="font-medium">{email}</span>
                 </div>
-                {PersonalNote}
-              </div>
+              </>
             )}
             {isReady && (
               <>
-                {PersonalNote}
-                {isAstroDataOnly ? (
-                  <motion.button
-                    onClick={handleViewReport}
-                    className="group flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-light transition-all duration-200"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <span>View Data</span>
-                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </motion.button>
-                ) : (
-                  <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
-                    View now
-                  </Button>
-                )}
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                  Hi {firstName}! Your report is ready. <br />
+                  <span className="font-medium">{email}</span>
+                </div>
+                <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
+                  View Report
+                </Button>
               </>
             )}
-            {ErrorBlock}
+            {error && (
+              <div className="text-center py-8">
+                <div className="text-gray-600 font-light mb-4">
+                  We've detected an issue with your report. Our team has been notified.
+                </div>
+                <Button onClick={handleTryAgain} className="bg-gray-900 text-white font-light">
+                  Try Again
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
