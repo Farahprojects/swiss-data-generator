@@ -130,22 +130,37 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     try {
       console.log('📊 Fetching astro data from translator_logs for guest ID:', guestReportId);
       
-      const { data, error } = await supabase
+      // First fetch the guest_reports to get translator_log_id
+      const { data: guestData, error: guestError } = await supabase
         .from('guest_reports')
-        .select(`
-          translator_log_id,
-          translator_logs!inner(swiss_data)
-        `)
+        .select('translator_log_id')
         .eq('id', guestReportId)
         .single();
 
-      if (error) {
-        console.error('❌ Error fetching astro data:', error);
+      if (guestError) {
+        console.error('❌ Error fetching guest report:', guestError);
         return null;
       }
 
-      if (data?.translator_logs?.swiss_data) {
-        const swissData = data.translator_logs.swiss_data as any;
+      if (!guestData?.translator_log_id) {
+        console.log('📄 No translator_log_id found');
+        return null;
+      }
+
+      // Then fetch the translator_logs using the translator_log_id
+      const { data: translatorData, error: translatorError } = await supabase
+        .from('translator_logs')
+        .select('swiss_data')
+        .eq('id', guestData.translator_log_id)
+        .single();
+
+      if (translatorError) {
+        console.error('❌ Error fetching translator data:', translatorError);
+        return null;
+      }
+
+      if (translatorData?.swiss_data) {
+        const swissData = translatorData.swiss_data as any;
         console.log('✅ Astro data fetched successfully:', swissData);
 
         // Check for report generation errors first

@@ -252,12 +252,27 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (!reportIdToUse || !onViewReport) return;
 
-    const reportContent = isAstroDataOnly
-      ? await fetchAstroData(reportIdToUse)
-      : await fetchReportContent(reportIdToUse);
+    let reportContent: string | null = null;
+
+    // Check report type to determine fetch strategy
+    if (reportType === 'essence' || reportType === 'sync') {
+      // Swiss-only reports: fetch only from translator_logs
+      console.log('🔬 Fetching Swiss-only report data');
+      reportContent = await fetchAstroData(reportIdToUse);
+    } else {
+      // AI+Swiss reports: try both sources
+      console.log('🤖 Fetching AI+Swiss report data');
+      reportContent = await fetchReportContent(reportIdToUse);
+      
+      // If no AI report content, try Swiss data as fallback
+      if (!reportContent) {
+        console.log('🔬 Falling back to Swiss data');
+        reportContent = await fetchAstroData(reportIdToUse);
+      }
+    }
 
     onViewReport(reportContent ?? 'Report content could not be loaded', null);
-  }, [guestReportId, onViewReport, isAstroDataOnly, fetchAstroData, fetchReportContent]);
+  }, [guestReportId, onViewReport, reportType, fetchAstroData, fetchReportContent]);
 
   // ---------------------------------------------------------------------------
   // Auto redirect when ready (only for AI+Astro reports)
