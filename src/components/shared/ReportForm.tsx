@@ -131,7 +131,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     showPromoConfirmation,
     pendingSubmissionData,
     handlePromoConfirmationTryAgain,
-    handlePromoConfirmationContinue
+    handlePromoConfirmationContinue,
+    resetReportState
   } = useReportSubmission();
 
   // Check if this is a compatibility report that needs second person data
@@ -157,6 +158,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     form.reset();
     localStorage.removeItem('currentGuestReportId');
     localStorage.removeItem('pending_report_email');
+    resetReportState();
     // Form reset handled by React state - no page reload needed
   };
 

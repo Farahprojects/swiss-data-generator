@@ -266,6 +266,10 @@ export const useReportSubmission = () => {
     setPendingSubmissionData(null);
   };
 
+  const resetReportState = () => {
+    setReportCreated(false);
+  };
+
   return {
     isProcessing,
     isPricingLoading,
@@ -274,6 +278,7 @@ export const useReportSubmission = () => {
     showPromoConfirmation,
     pendingSubmissionData,
     handlePromoConfirmationTryAgain,
-    handlePromoConfirmationContinue
+    handlePromoConfirmationContinue,
+    resetReportState
   };
 };
