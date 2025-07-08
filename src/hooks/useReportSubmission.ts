@@ -1,5 +1,5 @@
 // test 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { initiateGuestCheckout } from '@/utils/guest-checkout';
 import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation';
@@ -18,6 +18,11 @@ interface PromoValidationState {
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
+
+  // Reset reportCreated state on mount to prevent stale success screens
+  useEffect(() => {
+    setReportCreated(false);
+  }, []);
   const [showPromoConfirmation, setShowPromoConfirmation] = useState(false);
   const [pendingSubmissionData, setPendingSubmissionData] = useState<{
     data: ReportFormData;

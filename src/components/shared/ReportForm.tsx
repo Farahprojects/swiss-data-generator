@@ -59,6 +59,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     },
   });
 
+  // Clear old state and localStorage on component mount to prevent stale success screens
+  React.useEffect(() => {
+    localStorage.removeItem('currentGuestReportId');
+    localStorage.removeItem('pending_report_email');
+  }, []);
+
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid }, formState } = form;
   const selectedReportType = watch('reportType');
   const selectedRequest = watch('request');
