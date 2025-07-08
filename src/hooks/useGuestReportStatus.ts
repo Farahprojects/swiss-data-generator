@@ -141,8 +141,30 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       }
 
       if (data?.translator_logs?.swiss_data) {
-        console.log('✅ Astro data fetched successfully');
-        return JSON.stringify(data.translator_logs.swiss_data, null, 2);
+        const swissData = data.translator_logs.swiss_data as any;
+        console.log('✅ Astro data fetched successfully:', swissData);
+
+        // Check for report generation errors first
+        if (swissData.report_error) {
+          console.error('❌ Report generation failed:', swissData.report_error);
+          return `Report generation failed: ${swissData.report_error}`;
+        }
+
+        // Extract report content from swiss_data.report.content
+        if (swissData.report?.content) {
+          console.log('📋 Extracted report content from swiss_data.report.content');
+          return swissData.report.content;
+        }
+
+        // Fallback: check if report is directly in swiss_data
+        if (swissData.report && typeof swissData.report === 'string') {
+          console.log('📋 Found report content as string in swiss_data.report');
+          return swissData.report;
+        }
+
+        // Fallback: return formatted swiss_data if no report content found
+        console.warn('⚠️ No report content found, returning formatted swiss_data');
+        return JSON.stringify(swissData, null, 2);
       } else {
         console.log('📄 No astro data found');
         return null;
