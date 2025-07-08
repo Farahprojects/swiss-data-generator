@@ -195,7 +195,7 @@ async function generateReport(payload: ReportPayload, supabase: any) {
       return { success: false, errorMessage: "Invalid response structure from report engine" };
     }
 
-    console.log(`[orchestrator] Successfully generated report using ${selectedEngine}`);
+    console.log(`[orchestrator] Successfully generated report using ${selectedEngine} - v2`);
 
     return {
       success: true,
