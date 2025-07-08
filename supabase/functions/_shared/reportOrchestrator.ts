@@ -1,4 +1,3 @@
-
 // Report orchestrator utility
 // Handles report processing workflow including balance checks and report generation
 
@@ -89,18 +88,10 @@ interface ReportResult {
   errorMessage?: string;
 }
 
-/**
- * Process a report request from the translator
- * Handles balance checks, cost estimation, and report generation
- * 
- * @param payload The normalized payload from translator
- * @returns Object containing success status and either report or error message
- */
 export const processReportRequest = async (payload: ReportPayload): Promise<ReportResult> => {
   const startTime = Date.now();
   const supabase = initSupabase();
 
-  // Monitor payload size for Edge Runtime limits
   const payloadSize = JSON.stringify(payload).length;
   console.log(`[orchestrator] Payload size: ${payloadSize} bytes`);
   if (payloadSize > 1000000) {
@@ -121,7 +112,6 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     .maybeSingle();
   if (!priceData) return { success: false, errorMessage: "Could not determine report price" };
 
-  // Resolve and validate user identity using simplified guest-aware logic
   const userResolution = await resolveUserId(supabase, payload.user_id ?? null, payload.is_guest ?? false);
   if (userResolution.error) {
     console.error(`[orchestrator] User resolution failed: ${userResolution.error}`);
@@ -139,10 +129,8 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     return { success: false, errorMessage: report.errorMessage };
   }
 
-  // Calculate duration for performance tracking
   const duration = Date.now() - startTime;
 
-  // Insert into report_logs - orchestrator is now responsible for all logging
   try {
     const logData = await check(
       supabase.from("report_logs").insert({
@@ -171,10 +159,6 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
   return { success: true, report: report.report };
 };
 
-/**
- * Generate the appropriate report based on type
- * This will call the standard or premium report generation function
- */
 async function generateReport(payload: ReportPayload, supabase: any) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const selectedEngine = await getNextEngine(supabase);
@@ -195,22 +179,16 @@ async function generateReport(payload: ReportPayload, supabase: any) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[orchestrator] ${selectedEngine} returned error:`, response.status, errorText);
-      
-      // Log failed attempt to report_logs
       await logFailedAttempt(supabase, payload, selectedEngine, errorText);
-      
       return { success: false, errorMessage: errorText };
     }
 
     const reportResult = await response.json();
-    
-    // Handle different response structures from edge functions
+
     let reportContent;
     if (reportResult.report?.content) {
-      // New structure: { success: true, report: { content: "...", title: "...", generated_at: "...", engine_used: "..." } }
       reportContent = reportResult.report.content;
     } else if (typeof reportResult.report === 'string') {
-      // Legacy structure: { success: true, report: "report text..." }
       reportContent = reportResult.report;
     } else {
       console.error(`[orchestrator] Unexpected response structure from ${selectedEngine}:`, reportResult);
@@ -218,7 +196,7 @@ async function generateReport(payload: ReportPayload, supabase: any) {
     }
 
     console.log(`[orchestrator] Successfully generated report using ${selectedEngine}`);
-    
+
     return {
       success: true,
       report: {
@@ -231,18 +209,13 @@ async function generateReport(payload: ReportPayload, supabase: any) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error during report generation";
     console.error(`[orchestrator] Exception calling ${selectedEngine}:`, error);
-    
-    // Log failed attempt to report_logs
     await logFailedAttempt(supabase, payload, selectedEngine, errorMessage);
-    
     return { success: false, errorMessage };
   }
 }
 
-// Helper function to log failed report attempts
 async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: string, errorMessage: string, duration?: number) {
   try {
-    // Use the same user resolution logic for failed attempts
     const userResolution = await resolveUserId(supabase, payload.user_id ?? null, payload.is_guest ?? false);
     const userId = userResolution.user_id;
     const clientId = userResolution.client_id;
@@ -272,3 +245,4 @@ async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: s
     });
   }
 }
+
