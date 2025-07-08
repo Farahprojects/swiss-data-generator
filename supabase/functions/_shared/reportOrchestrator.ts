@@ -114,49 +114,60 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
 
   // Check for explicit guest flag first - more reliable than user resolution
   const isGuest = payload.is_guest === true;
-  console.log(`[orchestrator] Processing request - is_guest: ${isGuest}`);
+  const userType = isGuest ? "Guest" : "Authenticated User";
+  console.log(`[orchestrator] 🎭 Processing ${userType} request for ${payload.report_type}/${payload.endpoint}`);
+  console.log(`[orchestrator] 📋 Key payload fields: {reportType: ${payload.report_type}, endpoint: ${payload.endpoint}, is_guest: ${isGuest}, user_id: ${payload.user_id}}`);
 
   const userResolution = await resolveUserId(supabase, payload.user_id ?? null, isGuest);
   if (userResolution.error) {
-    console.error(`[orchestrator] User resolution failed: ${userResolution.error}`);
+    console.error(`[orchestrator] ❌ User resolution failed for ${userType}: ${userResolution.error}`);
     return { success: false, errorMessage: userResolution.error };
   }
 
   const userId = userResolution.user_id;
   const clientId = userResolution.client_id;
-  console.log(`[orchestrator] User resolved - user_id: ${userId}, client_id: ${clientId}, is_guest: ${isGuest}`);
+  console.log(`[orchestrator] 🔄 ${userType} resolved - user_id: ${userId}, client_id: ${clientId}${isGuest ? ' (from guest_reports)' : ''}`);
 
+  console.log(`[orchestrator] 🚀 Starting report generation for ${userType}...`);
   const report = await generateReport(payload, supabase);
   if (!report.success) {
     const duration = Date.now() - startTime;
+    console.error(`[orchestrator] ❌ Report generation failed for ${userType} after ${duration}ms: ${report.errorMessage}`);
     await logFailedAttempt(supabase, payload, "orchestrator", report.errorMessage || "Unknown error", duration);
     return { success: false, errorMessage: report.errorMessage };
   }
 
   const duration = Date.now() - startTime;
+  console.log(`[orchestrator] ✅ Report generation completed for ${userType} in ${duration}ms using ${report.report.engine_used}`);
+
+  // Prepare database save data
+  const dbSaveData = {
+    api_key: payload.apiKey ?? null,
+    user_id: userId,
+    client_id: clientId,
+    report_type: payload.report_type,
+    endpoint: payload.endpoint,
+    engine_used: report.report.engine_used,
+    report_text: report.report.content,
+    status: 'success',
+    duration_ms: duration,
+    created_at: new Date().toISOString(),
+  };
+  
+  console.log(`[orchestrator] 💾 Saving to report_logs: {user_id: ${userId}, report_type: ${payload.report_type}, engine_used: ${report.report.engine_used}, status: success}`);
 
   try {
     const logData = await check(
-      supabase.from("report_logs").insert({
-        api_key: payload.apiKey ?? null,
-        user_id: userId,
-        client_id: clientId,
-        report_type: payload.report_type,
-        endpoint: payload.endpoint,
-        engine_used: report.report.engine_used,
-        report_text: report.report.content,
-        status: 'success',
-        duration_ms: duration,
-        created_at: new Date().toISOString(),
-      }).select()
+      supabase.from("report_logs").insert(dbSaveData).select()
     );
-    console.log(`[orchestrator] Successfully inserted report_logs for ${payload.report_type}/${payload.endpoint} using ${report.report.engine_used}`);
+    console.log(`[orchestrator] ✅ Successfully saved report_logs with ID: ${logData[0]?.id} for ${userType}`);
   } catch (logError) {
-    console.error(`[orchestrator] Failed to insert report_logs:`, {
+    console.error(`[orchestrator] ❌ Database save failed for ${userType}:`, {
       message: logError.message,
       details: logError.details,
       hint: logError.hint,
-      code: logError.code
+      code: logError.code,
+      attempted_data: dbSaveData
     });
   }
 
@@ -166,8 +177,10 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
 async function generateReport(payload: ReportPayload, supabase: any) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const selectedEngine = await getNextEngine(supabase);
+  const userType = payload.is_guest ? "Guest" : "Authenticated User";
 
-  console.log(`[orchestrator] Calling ${selectedEngine} for ${payload.report_type}/${payload.endpoint}`);
+  console.log(`[orchestrator] ⚙️ Selected engine: ${selectedEngine} for ${userType}`);
+  console.log(`[orchestrator] 📡 Calling ${selectedEngine} for ${payload.report_type}/${payload.endpoint}`);
 
   try {
     const response = await fetch(`${supabaseUrl}/functions/v1/${selectedEngine}`, {
