@@ -10,10 +10,25 @@ import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
 
 // -----------------------------------------------------------------------------
+// Runtime-safe ReportType
+// -----------------------------------------------------------------------------
+type ReportType = 'ESSENCE' | 'SYNC';
+
+// -----------------------------------------------------------------------------
 // Constants
 // -----------------------------------------------------------------------------
 const VIDEO_SRC =
   'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
+
+// -----------------------------------------------------------------------------
+// Helper utils
+// -----------------------------------------------------------------------------
+/**
+ * Returns true when the report type denotes an Astro-Data-only purchase.
+ * Keeps the logic in *one* place so you never forget to update it.
+ */
+const isAstroOnlyType = (type?: ReportType): boolean =>
+  type === 'ESSENCE' || type === 'SYNC';
 
 // -----------------------------------------------------------------------------
 // Helper Components
@@ -49,7 +64,7 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
         onCanPlay={handleVideoReady}
         onLoadedData={handleVideoReady}
       />
-      
+
       <button
         onClick={toggleMute}
         className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full p-2 backdrop-blur-sm hover:bg-black/70 transition"
@@ -69,7 +84,6 @@ interface SuccessScreenProps {
   email: string;
   onViewReport?: (content: string, pdf?: string | null) => void;
   guestReportId?: string;
-  isAstroDataReport?: boolean;
 }
 
 const SuccessScreen: React.FC<SuccessScreenProps> = ({
@@ -77,35 +91,49 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   email,
   onViewReport,
   guestReportId,
-  isAstroDataReport = false,
 }) => {
   // ---------------------------------------------------------------------------
   // Hooks & State
   // ---------------------------------------------------------------------------
-  const { report, isLoading, error, caseNumber, fetchReport, triggerErrorHandling, fetchReportContent, fetchAstroData, isAstroReport, setupRealtimeListener } = useGuestReportStatus();
+  const {
+    report,
+    isLoading,
+    error,
+    caseNumber,
+    fetchReport,
+    triggerErrorHandling,
+    fetchReportContent,
+    fetchAstroData,
+    setupRealtimeListener,
+  } = useGuestReportStatus();
+
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
   useViewportHeight();
 
-  const [countdown, setCountdown] = useState(30);
+  // Countdown STARTS AT 24 s
+  const [countdown, setCountdown] = useState(24);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const redirectRef = useRef<NodeJS.Timeout | null>(null);
   const cleanupRealtimeRef = useRef<(() => void) | null>(null);
 
-  // Check if this is an astro report type
-  const isAstro = isAstroReport(report?.report_type);
+  // ---------- Runtime-safe cast (do it once) ----------
+  const reportType = report?.report_type as ReportType | undefined;
+
+  // Determine if this purchase is Astro-Data only
+  const isAstroDataOnly = isAstroOnlyType(reportType);
 
   // ---------------------------------------------------------------------------
   // Video ready handler
   // ---------------------------------------------------------------------------
   const handleVideoReady = useCallback(() => {
     logToAdmin('SuccessScreen', 'video_ready', 'Video is ready, starting report checks', {
-      name: name,
-      email: email,
-      guestReportId: guestReportId
+      name,
+      email,
+      guestReportId,
     });
     setIsVideoReady(true);
   }, [name, email, guestReportId]);
@@ -120,54 +148,73 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     };
-    
+
     scrollToProcessing();
-    
+
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (reportIdToUse) {
-      console.log('🎯 Setting up report monitoring for ID:', reportIdToUse);
-      
-      // Initial fetch
       fetchReport(reportIdToUse);
-      
-      // For astro reports, skip video and start immediately
-      if (isAstro) {
+
+      // Astro-only reports skip video wait
+      if (isAstroDataOnly) {
         setIsVideoReady(true);
       }
-      
-      // Set up real-time listener immediately - no waiting for video or report status
-      console.log('🔄 Setting up real-time listener immediately for report updates');
-      cleanupRealtimeRef.current = setupRealtimeListener(reportIdToUse, () => {
-        console.log('📨 Report ready notification received from real-time listener');
-        // Report is ready, state updated automatically via listener
-      });
+
+      cleanupRealtimeRef.current = setupRealtimeListener(reportIdToUse);
     }
 
     return () => {
-      if (cleanupRealtimeRef.current) {
-        cleanupRealtimeRef.current();
-        cleanupRealtimeRef.current = null;
-      }
+      cleanupRealtimeRef.current?.();
     };
-  }, [guestReportId, fetchReport, setupRealtimeListener, isAstro]); // Removed problematic dependencies
+  }, [guestReportId, fetchReport, setupRealtimeListener, isAstroDataOnly]);
 
   // ---------------------------------------------------------------------------
   // Status helpers
   // ---------------------------------------------------------------------------
   const getStatus = useCallback(() => {
     if (!report) {
-      return { step: 1, title: 'Processing Your Request', desc: "We're setting up your personalized report", progress: 10, icon: Clock };
+      return {
+        step: 1,
+        title: 'Processing Your Request',
+        desc: "We're setting up your personalized report",
+        progress: 10,
+        icon: Clock,
+      };
     }
     if (report.payment_status === 'pending') {
-      return { step: 1, title: 'Payment Processing', desc: 'Confirming your payment details', progress: 25, icon: Clock };
+      return {
+        step: 1,
+        title: 'Payment Processing',
+        desc: 'Confirming your payment details',
+        progress: 25,
+        icon: Clock,
+      };
     }
     if (report.payment_status === 'paid' && !report.has_report) {
-      return { step: 2, title: 'Generating Your Report', desc: 'Our AI is crafting your personalized insights', progress: 60, icon: Clock };
+      return {
+        step: 2,
+        title: 'Generating Your Report',
+        desc: 'Our AI is crafting your personalized insights',
+        progress: 60,
+        icon: Clock,
+      };
     }
     if (report.has_report && (report.translator_log_id || report.report_log_id)) {
-      return { step: 3, title: 'Report Ready!', desc: 'Your personalized report is complete', progress: 100, icon: CheckCircle };
+      return {
+        step: 3,
+        title: 'Report Ready!',
+        desc: 'Your personalized report is complete',
+        progress: 100,
+        icon: CheckCircle,
+      };
     }
-    return { step: 1, title: 'Processing', desc: 'Please wait while we prepare your report', progress: 30, icon: Clock };
+    return {
+      step: 1,
+      title: 'Processing',
+      desc: 'Please wait while we prepare your report',
+      progress: 30,
+      icon: Clock,
+    };
   }, [report]);
 
   const status = getStatus();
@@ -182,17 +229,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       countdownRef.current = setTimeout(() => {
         setCountdown((c) => {
           if (c <= 1) {
-            const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-            if (reportIdToUse) {
-              triggerErrorHandling(reportIdToUse);
-            }
+            const reportIdToUse =
+              guestReportId || localStorage.getItem('currentGuestReportId');
+            if (reportIdToUse) triggerErrorHandling(reportIdToUse);
             return 0;
           }
           return c - 1;
         });
       }, 1000);
     }
-    return () => countdownRef.current && clearTimeout(countdownRef.current);
+
+    return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
   }, [countdown, isReady, error, isVideoReady, guestReportId, triggerErrorHandling]);
 
   // ---------------------------------------------------------------------------
@@ -202,86 +249,49 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (!reportIdToUse || !onViewReport) return;
 
-    // Use different fetch method based on report type
-    const reportContent = isAstro 
+    const reportContent = isAstroDataOnly
       ? await fetchAstroData(reportIdToUse)
       : await fetchReportContent(reportIdToUse);
-      
-    if (reportContent) {
-      onViewReport(reportContent, null);
-    } else {
-      console.warn('Could not fetch report content');
-      onViewReport('Report content could not be loaded', null);
-    }
-  }, [guestReportId, fetchReportContent, fetchAstroData, onViewReport, isAstro]);
+
+    onViewReport(reportContent ?? 'Report content could not be loaded', null);
+  }, [guestReportId, onViewReport, isAstroDataOnly, fetchAstroData, fetchReportContent]);
 
   // ---------------------------------------------------------------------------
-  // Auto redirect when ready
+  // Auto redirect when ready (only for AI+Astro reports)
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (isReady && onViewReport && !isAstroDataReport) {
+    if (isReady && onViewReport && !isAstroDataOnly) {
       redirectRef.current = setTimeout(handleViewReport, 2000);
     }
-    return () => redirectRef.current && clearTimeout(redirectRef.current);
-  }, [isReady, onViewReport, isAstroDataReport, handleViewReport]);
+    return () => clearTimeout(redirectRef.current as NodeJS.Timeout);
+  }, [isReady, onViewReport, isAstroDataOnly, handleViewReport]);
 
   // ---------------------------------------------------------------------------
-  // Error handling functions
+  // Error helpers
   // ---------------------------------------------------------------------------
-  const handleTryAgain = () => {
-    navigate('/');
-  };
+  const handleTryAgain = () => navigate('/');
 
-  const handleContactSupport = async () => {
-    const errorMessage = `Hi, I'm experiencing an issue with my report generation. 
-    
-Report Details:
-- Name: ${name}
-- Email: ${email}
-- Report ID: ${guestReportId || 'N/A'}
-- Case Number: ${caseNumber || 'N/A'}
-- Error occurred during: Report processing
-- Time: ${new Date().toLocaleString()}
+  const handleContactSupport = () => {
+    const errorMessage = `Hi, I'm experiencing an issue with my report generation.\n\nReport Details:\n- Name: ${name}\n- Email: ${email}\n- Report ID: ${
+      guestReportId || 'N/A'
+    }\n- Case Number: ${caseNumber || 'N/A'}\n- Time: ${new Date().toLocaleString()}\n`;
 
-The report was not generated within the expected timeframe. Please help me resolve this issue.`;
-
-    const prefillData = {
-      name: name,
-      email: email,
-      subject: 'General Inquiry',
-      message: errorMessage
-    };
-    
-    localStorage.setItem('contactFormPrefill', JSON.stringify(prefillData));
+    localStorage.setItem(
+      'contactFormPrefill',
+      JSON.stringify({ name, email, subject: 'Report Issue', message: errorMessage })
+    );
     navigate('/contact');
   };
 
   // ---------------------------------------------------------------------------
-  // Shared blocks
+  // Layout helpers
   // ---------------------------------------------------------------------------
-  const ProcessingStatus = (
-    <div className="flex items-center justify-center gap-4 py-4">
-      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-        <StatusIcon className="h-6 w-6 text-gray-600" />
-      </div>
-      {!isReady && !error && (
-        <>
-          <div className="text-3xl font-light text-gray-900">{countdown}s</div>
-          <div className="text-gray-600 font-light">Report generating...</div>
-        </>
-      )}
-      {isReady && (
-        <div className="text-gray-600 font-light">Ready to view</div>
-      )}
-      {error && (
-        <div className="text-gray-600 font-light">Processing issue detected</div>
-      )}
-    </div>
-  );
-
   const PersonalNote = (
     <div className="bg-muted/50 rounded-lg p-4 text-sm">
-      Hi {firstName}! {isReady ? 'Your report is ready to view. We\'ve also emailed it to you.' : "We're working on your report and will notify you when it's ready."}
+      Hi {firstName}!{' '}
+      {isReady
+        ? "Your report is ready to view. We've also emailed it to you."
+        : "We're working on your report and will notify you when it's ready."}
       <br />
       <span className="font-medium">{email}</span>
     </div>
@@ -294,44 +304,37 @@ The report was not generated within the expected timeframe. Please help me resol
           <Clock className="w-6 h-6 text-red-600" />
         </div>
         <div>
-          <h3 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">
-            <span className='italic'>Report</span> Processing Issue
+          <h3 className="text-2xl font-light text-gray-900 mb-1 tracking-tight italic">
+            Report Processing Issue
           </h3>
-          <p className="text-gray-600 font-light">
-            We're working to resolve this quickly
-          </p>
+          <p className="text-gray-600 font-light">We're working to resolve this quickly</p>
         </div>
       </div>
       <div className="bg-white/80 rounded-xl p-6">
         <p className="text-base text-gray-700 font-light leading-relaxed">
-          We're experiencing a delay with your report generation. Our team has been automatically notified and is working to resolve this issue.
+          We're experiencing a delay with your report generation. Our team has been automatically
+          notified and is working to resolve this issue.
         </p>
       </div>
       {caseNumber && (
         <div className="bg-white rounded-xl border border-red-200 p-4 mb-2">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-            <p className="text-sm font-medium text-red-800">
-              Reference Number
-            </p>
+            <div className="w-2 h-2 bg-red-500 rounded-full" />
+            <p className="text-sm font-medium text-red-800">Reference Number</p>
           </div>
-          <p className="text-lg font-mono text-red-900 mb-2">
-            {caseNumber}
-          </p>
-          <p className="text-xs text-red-600">
-            Please save this reference number for your records. Our support team can use it to help you faster.
-          </p>
+          <p className="text-lg font-mono text-red-900 mb-2">{caseNumber}</p>
+          <p className="text-xs text-red-600">Save this reference number for faster assistance.</p>
         </div>
       )}
       <div className="flex flex-col sm:flex-row gap-4 pt-2">
-        <Button 
-          onClick={handleTryAgain} 
+        <Button
+          onClick={handleTryAgain}
           className="bg-gray-900 text-white font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-800 transition-all"
         >
           Try Again
         </Button>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={handleContactSupport}
           className="border-gray-900 text-gray-900 font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-100 transition-all"
         >
@@ -342,39 +345,53 @@ The report was not generated within the expected timeframe. Please help me resol
   );
 
   // ---------------------------------------------------------------------------
-  // Layout
+  // Render
   // ---------------------------------------------------------------------------
   return (
     <div
+      data-success-screen
       className={
         isMobile
           ? 'min-h-[calc(var(--vh,1vh)*100)] flex items-start justify-center pt-8 px-4 bg-gradient-to-b from-background to-muted/20 overflow-y-auto'
           : 'w-full py-10 px-4 flex justify-center'
       }
-      data-success-screen
     >
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            {ProcessingStatus}
+            {/* Status header */}
+            <div className="flex items-center justify-center gap-4 py-4">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                <StatusIcon className="h-6 w-6 text-gray-600" />
+              </div>
+              {!isReady && !error && (
+                <>
+                  <div className="text-3xl font-light text-gray-900">{countdown}s</div>
+                  <div className="text-gray-600 font-light">Report generating...</div>
+                </>
+              )}
+              {isReady && <div className="text-gray-600 font-light">Ready to view</div>}
+              {error && (
+                <div className="text-gray-600 font-light">Processing issue detected</div>
+              )}
+            </div>
 
+            {/* Status title */}
             <div>
-              <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
+              <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">
+                {status.title}
+              </h2>
               <p className="text-gray-600 font-light">{status.desc}</p>
             </div>
 
-            {!isReady && !error && !isAstro && (
+            {/* Video or note depending on type */}
+            {!isReady && !error && !isAstroDataOnly && (
               <>
                 <VideoLoader onVideoReady={handleVideoReady} />
                 {PersonalNote}
               </>
             )}
-
-            {!isReady && !error && isAstro && (
-              <>
-                {PersonalNote}
-              </>
-            )}
+            {!isReady && !error && isAstroDataOnly && PersonalNote}
 
             {error && (
               <div className="text-center py-8">
@@ -388,69 +405,30 @@ The report was not generated within the expected timeframe. Please help me resol
             {isReady && (
               <>
                 {PersonalNote}
-                {isAstroDataReport ? (
-                  isMobile ? (
-                    <div className="flex gap-8 justify-center">
-                       <button 
-                         onClick={handleViewReport}
-                         className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
-                       >
-                         View
-                       </button>
-                      <button 
-                        onClick={async () => {
-                          const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-                          if (reportIdToUse) {
-                            const reportContent = await fetchReportContent(reportIdToUse);
-                            if (reportContent) {
-                              await navigator.clipboard.writeText(reportContent);
-                            }
-                          }
-                        }}
-                        className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
-                      >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                        </svg>
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-                          if (reportIdToUse) {
-                            const reportContent = await fetchReportContent(reportIdToUse);
-                            if (reportContent) {
-                              await navigator.clipboard.writeText(reportContent);
-                              setTimeout(() => {
-                                const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological report and provide additional insights or answer any questions I might have:\n\n${reportContent}`)}`;
-                                window.open(chatGPTUrl, '_blank');
-                              }, 1000);
-                            }
-                          }
-                        }}
-                        className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
-                      >
-                        <img 
-                          src="/placeholder.svg" 
-                          alt="ChatGPT" 
-                          className="h-5 w-5"
-                        />
-                      </button>
-                    </div>
-                  ) : (
-                     <motion.button
-                       onClick={handleViewReport}
-                       className="group flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-light transition-all duration-200"
-                       whileHover={{ scale: 1.05 }}
-                       whileTap={{ scale: 0.95 }}
-                     >
-                       <span>View Data</span>
-                       <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                       </svg>
-                     </motion.button>
-                  )
+                {isAstroDataOnly ? (
+                  <motion.button
+                    onClick={handleViewReport}
+                    className="group flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-light transition-all duration-200"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <span>View Data</span>
+                    <svg
+                      className="w-4 h-4 transition-transform group-hover:translate-x-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </motion.button>
                 ) : (
-                  <Button 
+                  <Button
                     onClick={handleViewReport}
                     className="bg-gray-900 hover:bg-gray-800 text-white font-light"
                   >
@@ -460,6 +438,7 @@ The report was not generated within the expected timeframe. Please help me resol
               </>
             )}
 
+            {/* Error UI */}
             {ErrorBlock}
           </CardContent>
         </Card>
