@@ -9,34 +9,14 @@ import { motion } from 'framer-motion';
 import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
 
-// -----------------------------------------------------------------------------
-// Runtime-safe ReportType
-// -----------------------------------------------------------------------------
 type ReportType = 'essence' | 'sync';
+const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
 
-// -----------------------------------------------------------------------------
-// Constants
-// -----------------------------------------------------------------------------
-const VIDEO_SRC =
-  'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
+const isAstroOnlyType = (type?: ReportType): boolean => type === 'essence' || type === 'sync';
 
-// -----------------------------------------------------------------------------
-// Helper utils
-// -----------------------------------------------------------------------------
-/**
- * Returns true when the report type denotes an Astro-Data-only purchase.
- * Keeps the logic in *one* place so you never forget to update it.
- */
-const isAstroOnlyType = (type?: ReportType): boolean =>
-  type === 'essence' || type === 'sync';
-
-// -----------------------------------------------------------------------------
-// Helper Components
-// -----------------------------------------------------------------------------
 const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-
   const toggleMute = () => {
     const vid = videoRef.current;
     if (!vid) return;
@@ -44,11 +24,7 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
     if (!vid.muted) vid.volume = 1;
     setIsMuted(!isMuted);
   };
-
-  const handleVideoReady = () => {
-    onVideoReady?.();
-  };
-
+  const handleVideoReady = () => onVideoReady?.();
   return (
     <div className="relative w-full h-0 pt-[56.25%] overflow-hidden rounded-xl shadow-lg">
       <video
@@ -64,7 +40,6 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
         onCanPlay={handleVideoReady}
         onLoadedData={handleVideoReady}
       />
-
       <button
         onClick={toggleMute}
         className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full p-2 backdrop-blur-sm hover:bg-black/70 transition"
@@ -76,9 +51,6 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
   );
 };
 
-// -----------------------------------------------------------------------------
-// Main Component
-// -----------------------------------------------------------------------------
 interface SuccessScreenProps {
   name: string;
   email: string;
@@ -86,15 +58,7 @@ interface SuccessScreenProps {
   guestReportId?: string;
 }
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({
-  name,
-  email,
-  onViewReport,
-  guestReportId,
-}) => {
-  // ---------------------------------------------------------------------------
-  // Hooks & State
-  // ---------------------------------------------------------------------------
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
   const {
     report,
     isLoading,
@@ -113,22 +77,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   useViewportHeight();
 
-  // Countdown STARTS AT 24 s
   const [countdown, setCountdown] = useState(24);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const redirectRef = useRef<NodeJS.Timeout | null>(null);
   const cleanupRealtimeRef = useRef<(() => void) | null>(null);
 
-  // ---------- Runtime-safe cast (do it once) ----------
   const reportType = report?.report_type as ReportType | undefined;
-
-  // Determine if this purchase is Astro-Data only
   const isAstroDataOnly = isAstroOnlyType(reportType);
 
-  // ---------------------------------------------------------------------------
-  // Video ready handler
-  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (report) {
+      console.log('[✅ Report Fetched]', {
+        id: report?.id,
+        type: report?.report_type,
+        has_report: report?.has_report,
+        swiss_boolean: report?.swiss_boolean,
+      });
+    }
+  }, [report]);
+
   const handleVideoReady = useCallback(() => {
     logToAdmin('SuccessScreen', 'video_ready', 'Video is ready, starting report checks', {
       name,
@@ -138,102 +106,50 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     setIsVideoReady(true);
   }, [name, email, guestReportId]);
 
-  // ---------------------------------------------------------------------------
-  // Initial fetch and realtime setup
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     const scrollToProcessing = () => {
       const element = document.querySelector('[data-success-screen]');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
-
     scrollToProcessing();
-
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (reportIdToUse) {
       fetchReport(reportIdToUse);
-
-      // Astro-only reports skip video wait
-      if (isAstroDataOnly) {
-        setIsVideoReady(true);
-      }
-
+      if (isAstroDataOnly) setIsVideoReady(true);
       cleanupRealtimeRef.current = setupRealtimeListener(reportIdToUse);
     }
-
-    return () => {
-      cleanupRealtimeRef.current?.();
-    };
+    return () => cleanupRealtimeRef.current?.();
   }, [guestReportId, fetchReport, setupRealtimeListener, isAstroDataOnly]);
 
-  // ---------------------------------------------------------------------------
-  // Status helpers
-  // ---------------------------------------------------------------------------
   const getStatus = useCallback(() => {
     if (!report) {
-      return {
-        step: 1,
-        title: 'Processing Your Request',
-        desc: "We're setting up your personalized report",
-        progress: 10,
-        icon: Clock,
-      };
+      return { step: 1, title: 'Processing Your Request', desc: "We're setting up your personalized report", progress: 10, icon: Clock };
     }
     if (report.payment_status === 'pending') {
-      return {
-        step: 1,
-        title: 'Payment Processing',
-        desc: 'Confirming your payment details',
-        progress: 25,
-        icon: Clock,
-      };
+      return { step: 1, title: 'Payment Processing', desc: 'Confirming your payment details', progress: 25, icon: Clock };
     }
     if (report.payment_status === 'paid' && !report.has_report) {
-      return {
-        step: 2,
-        title: 'Generating Your Report',
-        desc: 'Our AI is crafting your personalized insights',
-        progress: 60,
-        icon: Clock,
-      };
+      return { step: 2, title: 'Generating Your Report', desc: 'Our AI is crafting your personalized insights', progress: 60, icon: Clock };
     }
     if (report.has_report && (report.translator_log_id || report.report_log_id)) {
-      return {
-        step: 3,
-        title: 'Report Ready!',
-        desc: 'Your personalized report is complete',
-        progress: 100,
-        icon: CheckCircle,
-      };
+      return { step: 3, title: 'Report Ready!', desc: 'Your personalized report is complete', progress: 100, icon: CheckCircle };
     }
-    return {
-      step: 1,
-      title: 'Processing',
-      desc: 'Please wait while we prepare your report',
-      progress: 30,
-      icon: Clock,
-    };
+    return { step: 1, title: 'Processing', desc: 'Please wait while we prepare your report', progress: 30, icon: Clock };
   }, [report]);
 
   const status = getStatus();
   const StatusIcon = status.icon;
+
   const isReady =
-  report?.swiss_boolean === true || // new Swiss-only logic
-  (report?.has_report && !!(report?.translator_log_id || report?.report_log_id)); // original AI logic
+    report?.swiss_boolean === true ||
+    (report?.has_report && !!(report?.translator_log_id || report?.report_log_id));
 
-
-  // ---------------------------------------------------------------------------
-  // Countdown logic
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!isReady && !error && isVideoReady) {
       countdownRef.current = setTimeout(() => {
         setCountdown((c) => {
           if (c <= 1) {
-            const reportIdToUse =
-              guestReportId || localStorage.getItem('currentGuestReportId');
+            const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
             if (reportIdToUse) triggerErrorHandling(reportIdToUse);
             return 0;
           }
@@ -241,30 +157,21 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         });
       }, 1000);
     }
-
     return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
   }, [countdown, isReady, error, isVideoReady, guestReportId, triggerErrorHandling]);
 
-  // ---------------------------------------------------------------------------
-  // Handle view report with actual content
-  // ---------------------------------------------------------------------------
   const handleViewReport = useCallback(async () => {
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (!reportIdToUse || !onViewReport) return;
 
     let reportContent: string | null = null;
 
-    // Check report type to determine fetch strategy
-    if (reportType === 'essence' || reportType === 'sync') {
-      // Swiss-only reports: fetch only from translator_logs
+    if (report?.swiss_boolean === true || reportType === 'essence' || reportType === 'sync') {
       console.log('🔬 Fetching Swiss-only report data');
       reportContent = await fetchAstroData(reportIdToUse);
     } else {
-      // AI+Swiss reports: try both sources
       console.log('🤖 Fetching AI+Swiss report data');
       reportContent = await fetchReportContent(reportIdToUse);
-      
-      // If no AI report content, try Swiss data as fallback
       if (!reportContent) {
         console.log('🔬 Falling back to Swiss data');
         reportContent = await fetchAstroData(reportIdToUse);
@@ -272,11 +179,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
 
     onViewReport(reportContent ?? 'Report content could not be loaded', null);
-  }, [guestReportId, onViewReport, reportType, fetchAstroData, fetchReportContent]);
+  }, [guestReportId, onViewReport, reportType, fetchAstroData, fetchReportContent, report?.swiss_boolean]);
 
-  // ---------------------------------------------------------------------------
-  // Auto redirect when ready (only for AI+Astro reports)
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     if (isReady && onViewReport && !isAstroDataOnly) {
       redirectRef.current = setTimeout(handleViewReport, 2000);
@@ -284,26 +188,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     return () => clearTimeout(redirectRef.current as NodeJS.Timeout);
   }, [isReady, onViewReport, isAstroDataOnly, handleViewReport]);
 
-  // ---------------------------------------------------------------------------
-  // Error helpers
-  // ---------------------------------------------------------------------------
   const handleTryAgain = () => navigate('/');
-
   const handleContactSupport = () => {
-    const errorMessage = `Hi, I'm experiencing an issue with my report generation.\n\nReport Details:\n- Name: ${name}\n- Email: ${email}\n- Report ID: ${
-      guestReportId || 'N/A'
-    }\n- Case Number: ${caseNumber || 'N/A'}\n- Time: ${new Date().toLocaleString()}\n`;
-
-    localStorage.setItem(
-      'contactFormPrefill',
-      JSON.stringify({ name, email, subject: 'Report Issue', message: errorMessage })
-    );
+    const errorMessage = `Hi, I'm experiencing an issue with my report generation.\n\nReport Details:\n- Name: ${name}\n- Email: ${email}\n- Report ID: ${guestReportId || 'N/A'}\n- Case Number: ${caseNumber || 'N/A'}\n- Time: ${new Date().toLocaleString()}\n`;
+    localStorage.setItem('contactFormPrefill', JSON.stringify({ name, email, subject: 'Report Issue', message: errorMessage }));
     navigate('/contact');
   };
 
-  // ---------------------------------------------------------------------------
-  // Layout helpers
-  // ---------------------------------------------------------------------------
   const PersonalNote = (
     <div className="bg-muted/50 rounded-lg p-4 text-sm">
       Hi {firstName}!{' '}
@@ -330,8 +221,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       </div>
       <div className="bg-white/80 rounded-xl p-6">
         <p className="text-base text-gray-700 font-light leading-relaxed">
-          We're experiencing a delay with your report generation. Our team has been automatically
-          notified and is working to resolve this issue.
+          We're experiencing a delay with your report generation. Our team has been automatically notified and is working to resolve this issue.
         </p>
       </div>
       {caseNumber && (
@@ -345,39 +235,21 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         </div>
       )}
       <div className="flex flex-col sm:flex-row gap-4 pt-2">
-        <Button
-          onClick={handleTryAgain}
-          className="bg-gray-900 text-white font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-800 transition-all"
-        >
+        <Button onClick={handleTryAgain} className="bg-gray-900 text-white font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-800 transition-all">
           Try Again
         </Button>
-        <Button
-          variant="outline"
-          onClick={handleContactSupport}
-          className="border-gray-900 text-gray-900 font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-100 transition-all"
-        >
+        <Button variant="outline" onClick={handleContactSupport} className="border-gray-900 text-gray-900 font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-100 transition-all">
           Contact Support
         </Button>
       </div>
     </div>
   );
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
   return (
-    <div
-      data-success-screen
-      className={
-        isMobile
-          ? 'min-h-[calc(var(--vh,1vh)*100)] flex items-start justify-center pt-8 px-4 bg-gradient-to-b from-background to-muted/20 overflow-y-auto'
-          : 'w-full py-10 px-4 flex justify-center'
-      }
-    >
+    <div data-success-screen className={isMobile ? 'min-h-[calc(var(--vh,1vh)*100)] flex items-start justify-center pt-8 px-4 bg-gradient-to-b from-background to-muted/20 overflow-y-auto' : 'w-full py-10 px-4 flex justify-center'}>
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            {/* Status header */}
             <div className="flex items-center justify-center gap-4 py-4">
               <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
                 <StatusIcon className="h-6 w-6 text-gray-600" />
@@ -389,20 +261,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
                 </>
               )}
               {isReady && <div className="text-gray-600 font-light">Ready to view</div>}
-              {error && (
-                <div className="text-gray-600 font-light">Processing issue detected</div>
-              )}
+              {error && <div className="text-gray-600 font-light">Processing issue detected</div>}
             </div>
-
-            {/* Status title */}
             <div>
-              <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">
-                {status.title}
-              </h2>
+              <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
               <p className="text-gray-600 font-light">{status.desc}</p>
             </div>
-
-            {/* Video or note depending on type */}
             {!isReady && !error && !isAstroDataOnly && (
               <>
                 <VideoLoader onVideoReady={handleVideoReady} />
@@ -410,7 +274,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
               </>
             )}
             {!isReady && !error && isAstroDataOnly && PersonalNote}
-
             {error && (
               <div className="text-center py-8">
                 <div className="text-gray-600 font-light mb-4">
@@ -419,7 +282,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
                 {PersonalNote}
               </div>
             )}
-
             {isReady && (
               <>
                 {PersonalNote}
@@ -431,32 +293,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
                     whileTap={{ scale: 0.95 }}
                   >
                     <span>View Data</span>
-                    <svg
-                      className="w-4 h-4 transition-transform group-hover:translate-x-1"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </motion.button>
                 ) : (
-                  <Button
-                    onClick={handleViewReport}
-                    className="bg-gray-900 hover:bg-gray-800 text-white font-light"
-                  >
+                  <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
                     View now
                   </Button>
                 )}
               </>
             )}
-
-            {/* Error UI */}
             {ErrorBlock}
           </CardContent>
         </Card>
