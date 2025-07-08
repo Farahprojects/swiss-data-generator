@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { CheckCircle, Clock, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -21,13 +20,12 @@ const VIDEO_SRC =
 // -----------------------------------------------------------------------------
 const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isMuted, setIsMuted] = useState<boolean>(false); // Start unmuted for audio
+  const [isMuted, setIsMuted] = useState<boolean>(false);
 
   const toggleMute = () => {
     const vid = videoRef.current;
     if (!vid) return;
     vid.muted = !isMuted;
-    // On some browsers, volume resets when muted flips – make sure it's audible
     if (!vid.muted) vid.volume = 1;
     setIsMuted(!isMuted);
   };
@@ -38,7 +36,6 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
 
   return (
     <div className="relative w-full h-0 pt-[56.25%] overflow-hidden rounded-xl shadow-lg">
-      
       <video
         ref={videoRef}
         src={VIDEO_SRC}
@@ -53,7 +50,6 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
         onLoadedData={handleVideoReady}
       />
       
-      {/* Mute / Un‑mute toggle */}
       <button
         onClick={toggleMute}
         className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full p-2 backdrop-blur-sm hover:bg-black/70 transition"
@@ -72,7 +68,6 @@ interface SuccessScreenProps {
   name: string;
   email: string;
   onViewReport?: (content: string, pdf?: string | null) => void;
-  autoStartPolling?: boolean;
   guestReportId?: string;
   isAstroDataReport?: boolean;
 }
@@ -81,30 +76,30 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   name,
   email,
   onViewReport,
-  autoStartPolling = true,
   guestReportId,
   isAstroDataReport = false,
 }) => {
   // ---------------------------------------------------------------------------
   // Hooks & State
   // ---------------------------------------------------------------------------
-  const { report, isPolling, error, caseNumber, startPolling, stopPolling, triggerErrorHandling } = useGuestReportStatus();
+  const { report, isLoading, error, caseNumber, fetchReport, triggerErrorHandling } = useGuestReportStatus();
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
   useViewportHeight();
 
-  const [countdown, setCountdown] = useState(24);
+  const [countdown, setCountdown] = useState(30);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const redirectRef = useRef<NodeJS.Timeout | null>(null);
+  const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // ---------------------------------------------------------------------------
   // Video ready handler
   // ---------------------------------------------------------------------------
   const handleVideoReady = useCallback(() => {
-    logToAdmin('SuccessScreen', 'video_ready', 'Video is ready, setting isVideoReady to true', {
+    logToAdmin('SuccessScreen', 'video_ready', 'Video is ready, starting report checks', {
       name: name,
       email: email,
       guestReportId: guestReportId
@@ -113,10 +108,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   }, [name, email, guestReportId]);
 
   // ---------------------------------------------------------------------------
-  // Auto-scroll and polling lifecycle - wait for video to be ready
+  // Initial fetch and periodic checks
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    // Auto-scroll to the processing section when component mounts
     const scrollToProcessing = () => {
       const element = document.querySelector('[data-success-screen]');
       if (element) {
@@ -127,16 +121,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     scrollToProcessing();
     
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-    if (autoStartPolling && reportIdToUse && !isPolling && isVideoReady) {
-      logToAdmin('SuccessScreen', 'polling_start', 'Starting polling after video is ready', {
-        reportIdToUse: reportIdToUse,
-        isPolling: isPolling,
-        isVideoReady: isVideoReady
-      });
-      setTimeout(() => startPolling(reportIdToUse), 2000); // 2 second delay after video ready
+    if (reportIdToUse && isVideoReady) {
+      // Initial fetch
+      fetchReport(reportIdToUse);
+      
+      // Check every 10 seconds until report is ready
+      checkIntervalRef.current = setInterval(() => {
+        if (report?.has_report) {
+          clearInterval(checkIntervalRef.current!);
+          return;
+        }
+        fetchReport(reportIdToUse);
+      }, 10000);
     }
-    return () => stopPolling();
-  }, [autoStartPolling, guestReportId, isPolling, isVideoReady, startPolling, stopPolling]);
+
+    return () => {
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
+      }
+    };
+  }, [guestReportId, isVideoReady, fetchReport, report?.has_report]);
 
   // ---------------------------------------------------------------------------
   // Status helpers
@@ -165,89 +169,56 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // Countdown logic
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!isReady && !error) setCountdown(24);
-  }, [status.step, isReady, error]);
-
-  useEffect(() => {
-    if (!isReady && countdown > 0 && !error) {
-      countdownRef.current = setTimeout(() => setCountdown((c) => c - 1), 1_000);
-    } else if (countdown === 0 && !error) {
-      // Debug logging for when countdown hits 0
-      logToAdmin('SuccessScreen', 'countdown_zero_debug', 'Countdown hit 0s - Debug Info', {
-        isReady,
-        countdown,
-        caseNumber,
-        email,
-        hasReport: report?.has_report,
-        reportContent: !!(report?.translator_log_id || report?.report_log_id)
-      });
-      
-      const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-      if (!isReady && !caseNumber && reportIdToUse) {
-        logToAdmin('SuccessScreen', 'error_handling_triggered', 'All conditions met - triggering error handling', {
-          reportIdToUse: reportIdToUse
+    if (!isReady && !error && isVideoReady) {
+      countdownRef.current = setTimeout(() => {
+        setCountdown((c) => {
+          if (c <= 1) {
+            const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+            if (reportIdToUse) {
+              triggerErrorHandling(reportIdToUse);
+            }
+            return 0;
+          }
+          return c - 1;
         });
-        triggerErrorHandling(reportIdToUse);
-      } else {
-        logToAdmin('SuccessScreen', 'error_handling_conditions_not_met', 'Conditions not met for error handling', {
-          isReady: isReady,
-          hasCaseNumber: !!caseNumber,
-          hasReportId: !!reportIdToUse
-        });
-      }
+      }, 1000);
     }
     return () => countdownRef.current && clearTimeout(countdownRef.current);
-  }, [countdown, isReady, caseNumber, email, triggerErrorHandling, error]);
+  }, [countdown, isReady, error, isVideoReady, guestReportId, triggerErrorHandling]);
 
   // ---------------------------------------------------------------------------
-  // Auto redirect when ready (skip auto-redirect for astro data reports)
+  // Auto redirect when ready
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (isReady && onViewReport && !isAstroDataReport) {
       redirectRef.current = setTimeout(
         () => onViewReport('Report content will be fetched from database', null),
-        2_000,
+        2000,
       );
     }
     return () => redirectRef.current && clearTimeout(redirectRef.current);
-  }, [isReady, onViewReport, report, isAstroDataReport]);
+  }, [isReady, onViewReport, isAstroDataReport]);
 
   // ---------------------------------------------------------------------------
   // Error handling functions
   // ---------------------------------------------------------------------------
   const handleTryAgain = () => {
-    // Navigate to home page
     navigate('/');
   };
 
   const handleContactSupport = async () => {
-    // Wait a moment for error logging to complete if case number isn't available yet
-    let finalCaseNumber = caseNumber;
-    if (!finalCaseNumber) {
-      // Wait up to 2 seconds for case number to be generated
-      for (let i = 0; i < 20; i++) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        if (caseNumber) {
-          finalCaseNumber = caseNumber;
-          break;
-        }
-      }
-    }
-
-    // Create error message for contact form
     const errorMessage = `Hi, I'm experiencing an issue with my report generation. 
     
 Report Details:
 - Name: ${name}
 - Email: ${email}
 - Report ID: ${guestReportId || 'N/A'}
-- Case Number: ${finalCaseNumber || 'N/A'}
+- Case Number: ${caseNumber || 'N/A'}
 - Error occurred during: Report processing
 - Time: ${new Date().toLocaleString()}
 
 The report was not generated within the expected timeframe. Please help me resolve this issue.`;
 
-    // Store the pre-filled data in localStorage for the contact page to pick up
     const prefillData = {
       name: name,
       email: email,
@@ -256,9 +227,6 @@ The report was not generated within the expected timeframe. Please help me resol
     };
     
     localStorage.setItem('contactFormPrefill', JSON.stringify(prefillData));
-    console.log('📝 Stored contact form prefill data:', prefillData);
-
-    // Navigate to contact page
     navigate('/contact');
   };
 
@@ -362,16 +330,13 @@ The report was not generated within the expected timeframe. Please help me resol
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            {/* Processing Status - Consolidated */}
             {ProcessingStatus}
 
-            {/* Title / desc */}
             <div>
               <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
               <p className="text-gray-600 font-light">{status.desc}</p>
             </div>
 
-            {/* Content while generating */}
             {!isReady && !error && (
               <>
                 <VideoLoader onVideoReady={handleVideoReady} />
@@ -379,7 +344,6 @@ The report was not generated within the expected timeframe. Please help me resol
               </>
             )}
 
-            {/* Error state - hide video and show error message */}
             {error && (
               <div className="text-center py-8">
                 <div className="text-gray-600 font-light mb-4">
@@ -389,7 +353,6 @@ The report was not generated within the expected timeframe. Please help me resol
               </div>
             )}
 
-            {/* Ready state */}
             {isReady && (
               <>
                 {PersonalNote}
