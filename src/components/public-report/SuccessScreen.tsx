@@ -85,6 +85,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
 
+  // ✅ Define isReady before any useEffects that reference it
+  const isReady =
+    report?.swiss_boolean === true ||
+    (report?.has_report && !!(report?.translator_log_id || report?.report_log_id));
+
   useEffect(() => {
     if (report) {
       console.log('[✅ Report Fetched]', {
@@ -150,10 +155,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const status = getStatus();
   const StatusIcon = status.icon;
-
-  const isReady =
-    report?.swiss_boolean === true ||
-    (report?.has_report && !!(report?.translator_log_id || report?.report_log_id));
 
   useEffect(() => {
     if (!isReady && !error && isVideoReady) {
