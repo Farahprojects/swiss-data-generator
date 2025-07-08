@@ -2,8 +2,6 @@
    Central workflow handler for astrology-report generation
    ───────────────────────────────────────────────────────────────────────────*/
 
-console.log("[orchestrator] ✅ Orchestrator file loaded");
-
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /*────────────────────────── CONFIG & HELPERS ────────────────────────────────*/
