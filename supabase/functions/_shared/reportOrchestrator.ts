@@ -9,6 +9,7 @@ const EDGE_ENGINES = [
   "standard-report",
   "standard-report-one", 
   "standard-report-two",
+  "standard-report-three",
 ];
 
 // Initialize Supabase client
@@ -33,9 +34,13 @@ async function getNextEngine(supabase: any) {
   return EDGE_ENGINES[(lastIndex + 1) % EDGE_ENGINES.length];
 };
 
-// UUID validation helper
+// UUID validation helper with logging
 function isUUID(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  const isValid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  if (!isValid) {
+    console.warn(`[orchestrator] Invalid UUID format: ${value}`);
+  }
+  return isValid;
 }
 
 interface ReportPayload {
@@ -83,7 +88,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
   if (!report.success) return { success: false, errorMessage: report.errorMessage };
 
   // Insert into report_logs - orchestrator is now responsible for all logging
-  await supabase.from("report_logs").insert({
+  const { data: logData, error: logError } = await supabase.from("report_logs").insert({
     api_key: payload.apiKey ?? null,
     user_id: userId && isUUID(userId) ? userId : null,
     report_type: payload.report_type,
@@ -93,6 +98,12 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     status: 'success',
     created_at: new Date().toISOString(),
   });
+
+  if (logError) {
+    console.error(`[orchestrator] Failed to insert report_logs:`, logError.message, logError);
+  } else {
+    console.log(`[orchestrator] Successfully inserted report_logs for ${payload.report_type}/${payload.endpoint} using ${report.report.engine_used}`);
+  }
 
   return { success: true, report: report.report };
 };
@@ -105,29 +116,87 @@ async function generateReport(payload: ReportPayload, supabase: any) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const selectedEngine = await getNextEngine(supabase);
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/${selectedEngine}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...payload,
-      reportType: payload.report_type,
-      selectedEngine,
-    }),
-  });
+  console.log(`[orchestrator] Calling ${selectedEngine} for ${payload.report_type}/${payload.endpoint}`);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    return { success: false, errorMessage: errorText };
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/${selectedEngine}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        reportType: payload.report_type,
+        selectedEngine,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[orchestrator] ${selectedEngine} returned error:`, response.status, errorText);
+      
+      // Log failed attempt to report_logs
+      await logFailedAttempt(supabase, payload, selectedEngine, errorText);
+      
+      return { success: false, errorMessage: errorText };
+    }
+
+    const reportResult = await response.json();
+    
+    // Handle different response structures from edge functions
+    let reportContent;
+    if (reportResult.report?.content) {
+      // New structure: { success: true, report: { content: "...", title: "...", generated_at: "...", engine_used: "..." } }
+      reportContent = reportResult.report.content;
+    } else if (typeof reportResult.report === 'string') {
+      // Legacy structure: { success: true, report: "report text..." }
+      reportContent = reportResult.report;
+    } else {
+      console.error(`[orchestrator] Unexpected response structure from ${selectedEngine}:`, reportResult);
+      return { success: false, errorMessage: "Invalid response structure from report engine" };
+    }
+
+    console.log(`[orchestrator] Successfully generated report using ${selectedEngine}`);
+    
+    return {
+      success: true,
+      report: {
+        title: `${payload.report_type} ${payload.endpoint} Report`,
+        content: reportContent,
+        generated_at: new Date().toISOString(),
+        engine_used: selectedEngine,
+      },
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error during report generation";
+    console.error(`[orchestrator] Exception calling ${selectedEngine}:`, error);
+    
+    // Log failed attempt to report_logs
+    await logFailedAttempt(supabase, payload, selectedEngine, errorMessage);
+    
+    return { success: false, errorMessage };
   }
+}
 
-  const reportResult = await response.json();
-  return {
-    success: true,
-    report: {
-      title: `${payload.report_type} ${payload.endpoint} Report`,
-      content: reportResult.report,
-      generated_at: new Date().toISOString(),
-      engine_used: selectedEngine,
-    },
-  };
+// Helper function to log failed report attempts
+async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: string, errorMessage: string) {
+  try {
+    const { error: logError } = await supabase.from("report_logs").insert({
+      api_key: payload.apiKey ?? null,
+      user_id: payload.user_id && isUUID(payload.user_id) ? payload.user_id : null,
+      report_type: payload.report_type,
+      endpoint: payload.endpoint,
+      engine_used: engine,
+      report_text: null,
+      status: 'failed',
+      error_message: errorMessage,
+      created_at: new Date().toISOString(),
+    });
+
+    if (logError) {
+      console.error(`[orchestrator] Failed to log error attempt:`, logError.message);
+    } else {
+      console.log(`[orchestrator] Logged failed attempt for ${payload.report_type}/${payload.endpoint} using ${engine}`);
+    }
+  } catch (err) {
+    console.error(`[orchestrator] Exception while logging failed attempt:`, err);
+  }
 }
