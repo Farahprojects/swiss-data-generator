@@ -43,6 +43,53 @@ function isUUID(value: string): boolean {
   return isValid;
 }
 
+// Smart user identity resolution: signed-in user or guest with Stripe
+async function resolveUserId(supabase: any, userId: string | null): Promise<{ userId: string | null, userType: string | null, error?: string }> {
+  if (!userId) {
+    return { userId: null, userType: null };
+  }
+
+  if (!isUUID(userId)) {
+    console.warn(`[orchestrator] Invalid user ID format: ${userId}`);
+    return { userId: null, userType: null, error: "Invalid user ID format" };
+  }
+
+  console.log(`[orchestrator] Resolving user identity for: ${userId}`);
+
+  // Check if it's a real auth user
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+  
+  if (authUser?.user && !authError) {
+    console.log(`[orchestrator] Resolved as authenticated user: ${userId}`);
+    return { userId, userType: "authenticated" };
+  }
+
+  // Otherwise check if it's a guest user with completed payment
+  const { data: guest, error: guestError } = await supabase
+    .from("guest_reports")
+    .select("stripe_session_id, payment_status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (guestError) {
+    console.error(`[orchestrator] Error checking guest reports: ${guestError.message}`);
+    return { userId: null, userType: null, error: "Database error during user resolution" };
+  }
+
+  if (guest?.stripe_session_id && guest?.payment_status === 'completed') {
+    console.log(`[orchestrator] Resolved as paid guest user: ${userId}`);
+    return { userId, userType: "guest" };
+  }
+
+  if (guest && (!guest.stripe_session_id || guest.payment_status !== 'completed')) {
+    console.warn(`[orchestrator] Guest user found but payment not completed: ${userId}`);
+    return { userId: null, userType: null, error: "Guest payment not completed" };
+  }
+
+  console.warn(`[orchestrator] User not found in auth or guest tables: ${userId}`);
+  return { userId: null, userType: null, error: "User not found" };
+}
+
 interface ReportPayload {
   endpoint: string;
   report_type: string;
@@ -82,7 +129,15 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     .maybeSingle();
   if (!priceData) return { success: false, errorMessage: "Could not determine report price" };
 
-  const userId = payload.user_id ?? null;
+  // Resolve and validate user identity
+  const userResolution = await resolveUserId(supabase, payload.user_id ?? null);
+  if (userResolution.error) {
+    console.error(`[orchestrator] User resolution failed: ${userResolution.error}`);
+    return { success: false, errorMessage: userResolution.error };
+  }
+
+  const userId = userResolution.userId;
+  console.log(`[orchestrator] User resolved - ID: ${userId}, Type: ${userResolution.userType}`);
 
   const report = await generateReport(payload, supabase);
   if (!report.success) return { success: false, errorMessage: report.errorMessage };
@@ -90,7 +145,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
   // Insert into report_logs - orchestrator is now responsible for all logging
   const { data: logData, error: logError } = await supabase.from("report_logs").insert({
     api_key: payload.apiKey ?? null,
-    user_id: userId && isUUID(userId) ? userId : null,
+    user_id: userId,
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: report.report.engine_used,
@@ -179,9 +234,13 @@ async function generateReport(payload: ReportPayload, supabase: any) {
 // Helper function to log failed report attempts
 async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: string, errorMessage: string) {
   try {
+    // Use the same user resolution logic for failed attempts
+    const userResolution = await resolveUserId(supabase, payload.user_id ?? null);
+    const userId = userResolution.userId;
+
     const { error: logError } = await supabase.from("report_logs").insert({
       api_key: payload.apiKey ?? null,
-      user_id: payload.user_id && isUUID(payload.user_id) ? payload.user_id : null,
+      user_id: userId,
       report_type: payload.report_type,
       endpoint: payload.endpoint,
       engine_used: engine,
