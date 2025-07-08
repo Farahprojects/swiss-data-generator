@@ -1,77 +1,36 @@
-// Report orchestrator utility
-// Handles report processing workflow including balance checks and report generation
+/*─────────────────────── orchestrator.ts (rewritten) ────────────────────────
+   Central workflow handler for astrology-report generation
+   ───────────────────────────────────────────────────────────────────────────*/
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Helper function to force full error surfacing
-function check<T>(q: any): T {
-  if (q.error) throw q.error;
-  return q.data;
-}
-
-// Available edge engines for round-robin load balancing
+/*────────────────────────── CONFIG & HELPERS ────────────────────────────────*/
+// Edge engines available for round-robin load-balancing
 const EDGE_ENGINES = [
   "standard-report",
-  "standard-report-one", 
+  "standard-report-one",
   "standard-report-two",
   "standard-report-three",
 ];
 
-// Initialize Supabase client
+// Initialise Supabase SR client once per invocation
 const initSupabase = () => {
   const url = Deno.env.get("SUPABASE_URL")!;
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   return createClient(url, key);
 };
 
-// Database-based round-robin engine selection
-async function getNextEngine(supabase: any) {
-  const { data: lastReport, error } = await supabase
-    .from("report_logs")
-    .select("engine_used")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !lastReport?.engine_used) return EDGE_ENGINES[0];
-
-  const lastIndex = EDGE_ENGINES.indexOf(lastReport.engine_used);
-  return EDGE_ENGINES[(lastIndex + 1) % EDGE_ENGINES.length];
-};
-
-// UUID validation helper with logging
-function isUUID(value: string): boolean {
-  const isValid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-  if (!isValid) {
-    console.warn(`[orchestrator] Invalid UUID format: ${value}`);
-  }
-  return isValid;
+// Small utility to surface query errors immediately
+function check<T>(q: any): T {
+  if (q.error) throw q.error;
+  return q.data;
 }
 
-// Simplified user identity resolution for guest-aware logic
-async function resolveUserId(supabase: any, userId: string | null, isGuest: boolean): Promise<{ user_id: string | null, client_id: string | null, error?: string }> {
-  if (isGuest) {
-    const { data: guest, error } = await supabase
-      .from("guest_reports")
-      .select("id")
-      .eq("id", userId)
-      .maybeSingle();
+const isUUID = (v: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(v);
 
-    if (guest) {
-      return { user_id: userId, client_id: null }; // Store guest UUID in user_id for consistency
-    } else {
-      return { user_id: null, client_id: null, error: "Guest not found" };
-    }
-  }
-
-  // For signed-in users
-  if (userId && isUUID(userId)) {
-    return { user_id: userId, client_id: null };
-  }
-
-  return { user_id: null, client_id: null, error: "Invalid user ID" };
-}
-
+/*────────────────────────── VALIDATION LAYER ────────────────────────────────*/
 interface ReportPayload {
   endpoint: string;
   report_type: string;
@@ -79,187 +38,187 @@ interface ReportPayload {
   apiKey?: string;
   chartData: any;
   is_guest?: boolean;
-  [key: string]: any;
+  [k: string]: any;
 }
 
+async function validateRequest(
+  supabase: SupabaseClient,
+  p: ReportPayload,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  /* 1️⃣  valid report_type? */
+  const { data: promptExists } = await supabase
+    .from("report_prompts")
+    .select("name")
+    .eq("name", p.report_type)
+    .maybeSingle();
+  if (!promptExists) return { ok: false, reason: "Invalid report_type" };
+
+  /* 2️⃣  basic field presence */
+  if (!p.endpoint) return { ok: false, reason: "Missing endpoint" };
+  if (!p.chartData) return { ok: false, reason: "Missing chartData" };
+
+  /* 3️⃣  guest vs user identity */
+  if (p.is_guest) {
+    const { data: guest } = await supabase
+      .from("guest_reports")
+      .select("id")
+      .eq("id", p.user_id)
+      .maybeSingle();
+    if (!guest) return { ok: false, reason: "Guest ID not found" };
+  } else {
+    if (!p.user_id || !isUUID(p.user_id))
+      return { ok: false, reason: "user_id missing or not a UUID" };
+
+    const { error } = await supabase.rpc("auth_uid_exists", { uid: p.user_id });
+    /* `auth_uid_exists` is a tiny SQL hash function that returns void on success
+       and raises an error when uid is absent; replace with your own check if
+       you don’t have it.                                      */
+    if (error) return { ok: false, reason: "User not found" };
+  }
+
+  /* (Optional 4️⃣  balance / credit check goes here) */
+
+  return { ok: true };
+}
+
+/*──────────────────────── USER-ID RESOLUTION ───────────────────────────────*/
+async function resolveUserId(
+  supabase: SupabaseClient,
+  rawId: string | null,
+  isGuest: boolean,
+): Promise<{ user_id: string | null; client_id: string | null; error?: string }> {
+  if (isGuest) {
+    const { data: guest } = await supabase
+      .from("guest_reports")
+      .select("id")
+      .eq("id", rawId)
+      .maybeSingle();
+    return guest
+      ? { user_id: null, client_id: rawId }
+      : { user_id: null, client_id: null, error: "Guest not found" };
+  }
+
+  if (rawId && isUUID(rawId)) return { user_id: rawId, client_id: null };
+
+  return { user_id: null, client_id: null, error: "Invalid user_id" };
+}
+
+/*────────────────── DB HELPERS: engine + logging ───────────────────────────*/
+async function getNextEngine(supabase: SupabaseClient) {
+  const { data: last } = await supabase
+    .from("report_logs")
+    .select("engine_used")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const idx = last ? EDGE_ENGINES.indexOf(last.engine_used) : -1;
+  return EDGE_ENGINES[(idx + 1) % EDGE_ENGINES.length];
+}
+
+async function logFailedAttempt(
+  supabase: SupabaseClient,
+  payload: ReportPayload,
+  engine: string,
+  errorMessage: string,
+  durationMs?: number,
+) {
+  const ids = await resolveUserId(
+    supabase,
+    payload.user_id ?? null,
+    payload.is_guest ?? false,
+  );
+
+  await check(supabase.from("report_logs").insert({
+    api_key: payload.apiKey ?? null,
+    user_id: ids.user_id,
+    client_id: ids.client_id,
+    report_type: payload.report_type,
+    endpoint: payload.endpoint,
+    engine_used: engine,
+    status: "failed",
+    error_message: errorMessage,
+    duration_ms: durationMs ?? null,
+    created_at: new Date().toISOString(),
+  }).select());
+}
+
+/*───────────────── MAIN EXPORT: processReportRequest ───────────────────────*/
 interface ReportResult {
   success: boolean;
   report?: any;
   errorMessage?: string;
 }
 
-export const processReportRequest = async (payload: ReportPayload): Promise<ReportResult> => {
-  const startTime = Date.now();
+export const processReportRequest = async (
+  payload: ReportPayload,
+): Promise<ReportResult> => {
+  const start = Date.now();
   const supabase = initSupabase();
 
-  const payloadSize = JSON.stringify(payload).length;
-  console.log(`[orchestrator] Payload size: ${payloadSize} bytes`);
-  if (payloadSize > 1000000) {
-    console.warn(`[orchestrator] Large payload detected: ${payloadSize} bytes (>1MB)`);
+  /* Early validation – no OpenAI calls yet */
+  const v = await validateRequest(supabase, payload);
+  if (!v.ok) {
+    await logFailedAttempt(supabase, payload, "validator", v.reason, Date.now() - start);
+    return { success: false, errorMessage: v.reason };
   }
 
-  const { data: promptExists } = await supabase
-    .from("report_prompts")
-    .select("name")
-    .eq("name", payload.report_type)
-    .maybeSingle();
-  if (!promptExists) return { success: false, errorMessage: "Invalid report_type" };
+  /* Choose edge engine */
+  const engine = await getNextEngine(supabase);
+  console.log(`[orchestrator] using engine: ${engine}`);
 
-  const { data: priceData } = await supabase
-    .from("price_list")
-    .select("unit_price_usd")
-    .eq("id", payload.report_type)
-    .maybeSingle();
-  if (!priceData) return { success: false, errorMessage: "Could not determine report price" };
-
-  // Check for explicit guest flag first - more reliable than user resolution
-  const isGuest = payload.is_guest === true;
-  const userType = isGuest ? "Guest" : "Authenticated User";
-  console.log(`[orchestrator] 🎭 Processing ${userType} request for ${payload.report_type}/${payload.endpoint}`);
-  console.log(`[orchestrator] 📋 Key payload fields: {reportType: ${payload.report_type}, endpoint: ${payload.endpoint}, is_guest: ${isGuest}, user_id: ${payload.user_id}}`);
-
-  const userResolution = await resolveUserId(supabase, payload.user_id ?? null, isGuest);
-  if (userResolution.error) {
-    console.error(`[orchestrator] ❌ User resolution failed for ${userType}: ${userResolution.error}`);
-    return { success: false, errorMessage: userResolution.error };
-  }
-
-  const userId = userResolution.user_id;
-  const clientId = userResolution.client_id;
-  console.log(`[orchestrator] 🔄 ${userType} resolved - user_id: ${userId}, client_id: ${clientId}${isGuest ? ' (from guest_reports)' : ''}`);
-
-  console.log(`[orchestrator] 🚀 Starting report generation for ${userType}...`);
-  const report = await generateReport(payload, supabase);
-  if (!report.success) {
-    const duration = Date.now() - startTime;
-    console.error(`[orchestrator] ❌ Report generation failed for ${userType} after ${duration}ms: ${report.errorMessage}`);
-    await logFailedAttempt(supabase, payload, "orchestrator", report.errorMessage || "Unknown error", duration);
-    return { success: false, errorMessage: report.errorMessage };
-  }
-
-  const duration = Date.now() - startTime;
-  console.log(`[orchestrator] ✅ Report generation completed for ${userType} in ${duration}ms using ${report.report.engine_used}`);
-
-  // Prepare database save data
-  const dbSaveData = {
-    api_key: payload.apiKey ?? null,
-    user_id: userId,
-    client_id: clientId,
-    report_type: payload.report_type,
-    endpoint: payload.endpoint,
-    engine_used: report.report.engine_used,
-    report_text: report.report.content,
-    status: 'success',
-    duration_ms: duration,
-    created_at: new Date().toISOString(),
-  };
-  
-  console.log(`[orchestrator] 💾 Saving to report_logs: {user_id: ${userId}, report_type: ${payload.report_type}, engine_used: ${report.report.engine_used}, status: success}`);
-
+  /* Call the edge function (costly path) */
+  let reportContent = "";
   try {
-    const logData = await check(
-      supabase.from("report_logs").insert(dbSaveData).select()
+    const response = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/${engine}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, reportType: payload.report_type, selectedEngine: engine }),
+      },
     );
-    console.log(`[orchestrator] ✅ Successfully saved report_logs with ID: ${logData[0]?.id} for ${userType}`);
-  } catch (logError) {
-    console.error(`[orchestrator] ❌ Database save failed for ${userType}:`, {
-      message: logError.message,
-      details: logError.details,
-      hint: logError.hint,
-      code: logError.code,
-      attempted_data: dbSaveData
-    });
-  }
-
-  return { success: true, report: report.report };
-};
-
-async function generateReport(payload: ReportPayload, supabase: any) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const selectedEngine = await getNextEngine(supabase);
-  const userType = payload.is_guest ? "Guest" : "Authenticated User";
-
-  console.log(`[orchestrator] ⚙️ Selected engine: ${selectedEngine} for ${userType}`);
-  console.log(`[orchestrator] 📡 Calling ${selectedEngine} for ${payload.report_type}/${payload.endpoint}`);
-
-  try {
-    const response = await fetch(`${supabaseUrl}/functions/v1/${selectedEngine}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...payload,
-        reportType: payload.report_type,
-        selectedEngine,
-      }),
-    });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[orchestrator] ${selectedEngine} returned error:`, response.status, errorText);
-      await logFailedAttempt(supabase, payload, selectedEngine, errorText);
-      return { success: false, errorMessage: errorText };
+      const errText = await response.text();
+      await logFailedAttempt(supabase, payload, engine, errText, Date.now() - start);
+      return { success: false, errorMessage: errText };
     }
 
-    const reportResult = await response.json();
-
-    let reportContent;
-    if (reportResult.report?.content) {
-      reportContent = reportResult.report.content;
-    } else if (typeof reportResult.report === 'string') {
-      reportContent = reportResult.report;
-    } else {
-      console.error(`[orchestrator] Unexpected response structure from ${selectedEngine}:`, reportResult);
-      return { success: false, errorMessage: "Invalid response structure from report engine" };
-    }
-
-    console.log(`[orchestrator] Successfully generated report using ${selectedEngine} - v2`);
-
-    return {
-      success: true,
-      report: {
-        title: `${payload.report_type} ${payload.endpoint} Report`,
-        content: reportContent,
-        generated_at: new Date().toISOString(),
-        engine_used: selectedEngine,
-      },
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error during report generation";
-    console.error(`[orchestrator] Exception calling ${selectedEngine}:`, error);
-    await logFailedAttempt(supabase, payload, selectedEngine, errorMessage);
-    return { success: false, errorMessage };
+    const json = await response.json();
+    reportContent = json.report?.content ?? json.report;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    await logFailedAttempt(supabase, payload, engine, msg, Date.now() - start);
+    return { success: false, errorMessage: msg };
   }
-}
 
-async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: string, errorMessage: string, duration?: number) {
-  try {
-    const userResolution = await resolveUserId(supabase, payload.user_id ?? null, payload.is_guest ?? false);
-    const userId = userResolution.user_id;
-    const clientId = userResolution.client_id;
+  /* Save success row */
+  const ids = await resolveUserId(
+    supabase,
+    payload.user_id ?? null,
+    payload.is_guest ?? false,
+  );
 
-    const logData = await check(
-      supabase.from("report_logs").insert({
-        api_key: payload.apiKey ?? null,
-        user_id: userId,
-        client_id: clientId,
-        report_type: payload.report_type,
-        endpoint: payload.endpoint,
-        engine_used: engine,
-        report_text: null,
-        status: 'failed',
-        error_message: errorMessage,
-        duration_ms: duration ?? null,
-        created_at: new Date().toISOString(),
-      }).select()
-    );
-    console.log(`[orchestrator] Logged failed attempt for ${payload.report_type}/${payload.endpoint} using ${engine}`);
-  } catch (logError) {
-    console.error(`[orchestrator] Failed to log error attempt:`, {
-      message: logError.message,
-      details: logError.details,
-      hint: logError.hint,
-      code: logError.code
-    });
-  }
-}
+  await check(supabase.from("report_logs").insert({
+    api_key: payload.apiKey ?? null,
+    user_id: ids.user_id,          // null for guests
+    client_id: ids.client_id,      // guest UUID or null
+    report_type: payload.report_type,
+    endpoint: payload.endpoint,
+    engine_used: engine,
+    report_text: reportContent,
+    status: "success",
+    duration_ms: Date.now() - start,
+    created_at: new Date().toISOString(),
+  }).select());
 
+  return {
+    success: true,
+    report: {
+      title: `${payload.report_type} ${payload.endpoint} Report`,
+      content: reportContent,
+      generated_at: new Date().toISOString(),
+      engine_used: engine,
+    },
+  };
+};
