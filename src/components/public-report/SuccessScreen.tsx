@@ -80,7 +80,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [countdown, setCountdown] = useState(24);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
-  const redirectRef = useRef<NodeJS.Timeout | null>(null);
   const cleanupRealtimeRef = useRef<(() => void) | null>(null);
 
   const reportType = report?.report_type as ReportType | undefined;
@@ -120,6 +119,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
     return () => cleanupRealtimeRef.current?.();
   }, [guestReportId, fetchReport, setupRealtimeListener, isAstroDataOnly]);
+
+  // 🟡 Polling fallback if real-time fails
+  useEffect(() => {
+    if (!isReady && !error && isVideoReady) {
+      const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+      const poll = setInterval(() => {
+        fetchReport(reportIdToUse);
+      }, 4000);
+
+      return () => clearInterval(poll);
+    }
+  }, [isReady, error, isVideoReady, fetchReport, guestReportId]);
 
   const getStatus = useCallback(() => {
     if (!report) {
@@ -180,13 +191,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
     onViewReport(reportContent ?? 'Report content could not be loaded', null);
   }, [guestReportId, onViewReport, reportType, fetchAstroData, fetchReportContent, report?.swiss_boolean]);
-
-  useEffect(() => {
-    if (isReady && onViewReport && !isAstroDataOnly) {
-      redirectRef.current = setTimeout(handleViewReport, 2000);
-    }
-    return () => clearTimeout(redirectRef.current as NodeJS.Timeout);
-  }, [isReady, onViewReport, isAstroDataOnly, handleViewReport]);
 
   const handleTryAgain = () => navigate('/');
   const handleContactSupport = () => {
