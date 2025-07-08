@@ -4,6 +4,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Helper function to force full error surfacing
+function check<T>(q: any): T {
+  if (q.error) throw q.error;
+  return q.data;
+}
+
 // Available edge engines for round-robin load balancing
 const EDGE_ENGINES = [
   "standard-report",
@@ -53,7 +59,7 @@ async function resolveUserId(supabase: any, userId: string | null, isGuest: bool
       .maybeSingle();
 
     if (guest) {
-      return { user_id: null, client_id: guest.id }; // guest is valid
+      return { user_id: userId, client_id: null }; // Store guest UUID in user_id for consistency
     } else {
       return { user_id: null, client_id: null, error: "Guest not found" };
     }
@@ -94,6 +100,13 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
   const startTime = Date.now();
   const supabase = initSupabase();
 
+  // Monitor payload size for Edge Runtime limits
+  const payloadSize = JSON.stringify(payload).length;
+  console.log(`[orchestrator] Payload size: ${payloadSize} bytes`);
+  if (payloadSize > 1000000) {
+    console.warn(`[orchestrator] Large payload detected: ${payloadSize} bytes (>1MB)`);
+  }
+
   const { data: promptExists } = await supabase
     .from("report_prompts")
     .select("name")
@@ -130,22 +143,29 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
   const duration = Date.now() - startTime;
 
   // Insert into report_logs - orchestrator is now responsible for all logging
-  const { data: logData, error: logError } = await supabase.from("report_logs").insert({
-    api_key: payload.apiKey ?? null,
-    user_id: payload.is_guest ? payload.user_id : userId, // Use guest UUID for guests
-    report_type: payload.report_type,
-    endpoint: payload.endpoint,
-    engine_used: report.report.engine_used,
-    report_text: report.report.content,
-    status: 'success',
-    duration_ms: duration,
-    created_at: new Date().toISOString(),
-  });
-
-  if (logError) {
-    console.error(`[orchestrator] Failed to insert report_logs:`, logError.message, logError);
-  } else {
+  try {
+    const logData = await check(
+      supabase.from("report_logs").insert({
+        api_key: payload.apiKey ?? null,
+        user_id: userId,
+        client_id: clientId,
+        report_type: payload.report_type,
+        endpoint: payload.endpoint,
+        engine_used: report.report.engine_used,
+        report_text: report.report.content,
+        status: 'success',
+        duration_ms: duration,
+        created_at: new Date().toISOString(),
+      }).select()
+    );
     console.log(`[orchestrator] Successfully inserted report_logs for ${payload.report_type}/${payload.endpoint} using ${report.report.engine_used}`);
+  } catch (logError) {
+    console.error(`[orchestrator] Failed to insert report_logs:`, {
+      message: logError.message,
+      details: logError.details,
+      hint: logError.hint,
+      code: logError.code
+    });
   }
 
   return { success: true, report: report.report };
@@ -225,26 +245,30 @@ async function logFailedAttempt(supabase: any, payload: ReportPayload, engine: s
     // Use the same user resolution logic for failed attempts
     const userResolution = await resolveUserId(supabase, payload.user_id ?? null, payload.is_guest ?? false);
     const userId = userResolution.user_id;
+    const clientId = userResolution.client_id;
 
-    const { error: logError } = await supabase.from("report_logs").insert({
-      api_key: payload.apiKey ?? null,
-      user_id: payload.is_guest ? payload.user_id : userId, // Use guest UUID for guests
-      report_type: payload.report_type,
-      endpoint: payload.endpoint,
-      engine_used: engine,
-      report_text: null,
-      status: 'failed',
-      error_message: errorMessage,
-      duration_ms: duration,
-      created_at: new Date().toISOString(),
+    const logData = await check(
+      supabase.from("report_logs").insert({
+        api_key: payload.apiKey ?? null,
+        user_id: userId,
+        client_id: clientId,
+        report_type: payload.report_type,
+        endpoint: payload.endpoint,
+        engine_used: engine,
+        report_text: null,
+        status: 'failed',
+        error_message: errorMessage,
+        duration_ms: duration ?? null,
+        created_at: new Date().toISOString(),
+      }).select()
+    );
+    console.log(`[orchestrator] Logged failed attempt for ${payload.report_type}/${payload.endpoint} using ${engine}`);
+  } catch (logError) {
+    console.error(`[orchestrator] Failed to log error attempt:`, {
+      message: logError.message,
+      details: logError.details,
+      hint: logError.hint,
+      code: logError.code
     });
-
-    if (logError) {
-      console.error(`[orchestrator] Failed to log error attempt:`, logError.message);
-    } else {
-      console.log(`[orchestrator] Logged failed attempt for ${payload.report_type}/${payload.endpoint} using ${engine}`);
-    }
-  } catch (err) {
-    console.error(`[orchestrator] Exception while logging failed attempt:`, err);
   }
 }
