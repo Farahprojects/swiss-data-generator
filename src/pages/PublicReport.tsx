@@ -12,11 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
 
 const PublicReport = () => {
-  // SSR Debug Logging
+  // Debug logging reduced to prevent spam
   if (typeof window === 'undefined') {
     console.log('[🧠 SSR] PublicReport.tsx is rendering on server');
-  } else {
-    console.log('[🌐 CLIENT] PublicReport.tsx is rendering on client');
   }
 
   // Hard fail test for SSR debugging (uncomment to test error boundary)
