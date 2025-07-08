@@ -121,7 +121,11 @@ async function processSwissDataInBackground(
   let swissError: string | null = null;
 
   try {
-    const payload = buildTranslatorPayload(reportData);
+    const payload = {
+      ...buildTranslatorPayload(reportData),
+      is_guest: true,
+      user_id: guestReportId, // Required for orchestrator validation
+    };
     console.log("[guest_verify_payment] Translator payload →", payload);
 
     // Call the translation service directly
