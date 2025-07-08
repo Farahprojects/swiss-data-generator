@@ -594,6 +594,7 @@ export type Database = {
           report_log_id: string | null
           report_type: string | null
           stripe_session_id: string
+          swiss_boolean: boolean | null
           translator_log_id: string | null
           updated_at: string
         }
@@ -614,6 +615,7 @@ export type Database = {
           report_log_id?: string | null
           report_type?: string | null
           stripe_session_id: string
+          swiss_boolean?: boolean | null
           translator_log_id?: string | null
           updated_at?: string
         }
@@ -634,6 +636,7 @@ export type Database = {
           report_log_id?: string | null
           report_type?: string | null
           stripe_session_id?: string
+          swiss_boolean?: boolean | null
           translator_log_id?: string | null
           updated_at?: string
         }

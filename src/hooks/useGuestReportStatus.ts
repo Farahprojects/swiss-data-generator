@@ -12,6 +12,7 @@ interface GuestReport {
   created_at: string;
   stripe_session_id: string;
   report_type?: string | null;
+  swiss_boolean?: boolean | null;
 }
 
 interface UseGuestReportStatusReturn {
@@ -24,7 +25,7 @@ interface UseGuestReportStatusReturn {
   fetchReportContent: (guestReportId: string) => Promise<string | null>;
   fetchAstroData: (guestReportId: string) => Promise<string | null>;
   isAstroReport: (reportType: string | null) => boolean;
-  setupRealtimeListener: (guestReportId: string, onReportReady: () => void) => () => void;
+  setupRealtimeListener: (guestReportId: string, onReportReady?: () => void) => () => void;
 }
 
 export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
@@ -200,7 +201,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     setError('We are looking into this issue. Please reference your case number if you contact support.');
   }, [logUserError]);
 
-  const setupRealtimeListener = useCallback((guestReportId: string, onReportReady: () => void) => {
+  const setupRealtimeListener = useCallback((guestReportId: string, onReportReady?: () => void) => {
     console.log('🔄 Setting up realtime listener for guest report:', guestReportId);
     
     // Clean up existing channel if any
@@ -243,7 +244,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
             setReport(updatedRecord);
             
             // Trigger callback to notify UI
-            onReportReady();
+            onReportReady?.();
           }
         }
       )

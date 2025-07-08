@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 // -----------------------------------------------------------------------------
 // Runtime-safe ReportType
 // -----------------------------------------------------------------------------
-type ReportType = 'ESSENCE' | 'SYNC';
+type ReportType = 'essence' | 'sync';
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -28,7 +28,7 @@ const VIDEO_SRC =
  * Keeps the logic in *one* place so you never forget to update it.
  */
 const isAstroOnlyType = (type?: ReportType): boolean =>
-  type === 'ESSENCE' || type === 'SYNC';
+  type === 'essence' || type === 'sync';
 
 // -----------------------------------------------------------------------------
 // Helper Components
