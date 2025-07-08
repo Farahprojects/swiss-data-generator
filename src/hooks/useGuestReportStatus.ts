@@ -219,21 +219,41 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
           table: 'guest_reports',
           filter: `id=eq.${guestReportId}`
         },
-        (payload) => {
+        async (payload) => {
           console.log('📨 Realtime update received:', payload);
           
           const updatedRecord = payload.new as GuestReport;
           
-          // Check if report data is now available
-          if (updatedRecord.translator_log_id || updatedRecord.report_log_id) {
-            console.log('✅ Report data available, updating local state');
+          // Check multiple conditions for report availability:
+          // 1. has_report = true (covers both Astro and AI reports)
+          // 2. translator_log_id IS NOT NULL (for Astro reports)
+          // 3. report_log_id IS NOT NULL (for AI reports)
+          const isReportReady = updatedRecord.has_report || 
+                               updatedRecord.translator_log_id || 
+                               updatedRecord.report_log_id;
+          
+          if (isReportReady) {
+            console.log('✅ Report ready - triggering content load. Conditions met:', {
+              has_report: updatedRecord.has_report,
+              translator_log_id: !!updatedRecord.translator_log_id,
+              report_log_id: !!updatedRecord.report_log_id
+            });
+            
+            // Update local state
             setReport(updatedRecord);
+            
+            // Trigger callback to notify UI
             onReportReady();
           }
         }
       )
       .subscribe((status) => {
         console.log('📡 Realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to real-time updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error');
+        }
       });
 
     channelRef.current = channel;
