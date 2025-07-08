@@ -142,7 +142,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         return null;
       }
 
-      const swissData = translatorData?.swiss_data;
+      const swissData = translatorData?.swiss_data as any;
       if (!swissData) return null;
 
       if (swissData.report_error) {

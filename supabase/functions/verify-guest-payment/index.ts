@@ -119,59 +119,83 @@ async function processSwissDataInBackground(
 ) {
   let swissData: any;
   let swissError: string | null = null;
-  let translatorLogId: string | null = null;
 
   try {
     const payload = buildTranslatorPayload(reportData);
     console.log("[guest_verify_payment] Translator payload →", payload);
 
-    // UPDATED: Pass guest report ID as user_id for tracing in translator_logs
-    const translatorRequest = {
-      ...payload,
-      user_id: guestReportId,  // This will appear in translator_logs.user_id
-      is_guest: true,          // Explicit guest flag
-      skip_logging: false      // Ensure logging is enabled
-    };
-
-    const translated = await translate(translatorRequest);
+    // Call the translation service directly
+    const translated = await translate(payload);
     swissData = JSON.parse(translated.text);
 
-    // Find the translator_log record that was just created
-    const { data: translatorLog } = await supabase
+    // Insert directly into translator_logs and capture the ID
+    const { data: insertedLog, error: insertError } = await supabase
       .from("translator_logs")
+      .insert({
+        user_id: guestReportId,
+        request_type: payload.request,
+        request_payload: reportData,
+        translator_payload: payload,
+        swiss_data: swissData,
+        response_status: 200,
+        is_guest: true,
+        report_tier: payload.request,
+      })
       .select("id")
-      .eq("user_id", guestReportId)
-      .order("created_at", { ascending: false })
-      .limit(1)
       .single();
 
-    if (translatorLog) {
-      translatorLogId = translatorLog.id;
+    if (insertError || !insertedLog) {
+      throw new Error(`Failed to insert translator_log: ${insertError?.message}`);
     }
+
+    // Update guest_reports with the translator_log_id
+    await supabase
+      .from("guest_reports")
+      .update({
+        translator_log_id: insertedLog.id,
+        has_report: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", guestReportId);
+
   } catch (err: any) {
     swissError = err.message;
-    swissData  = {
-      error:            true,
-      error_message:    err.message,
-      timestamp:        new Date().toISOString(),
+    swissData = {
+      error: true,
+      error_message: err.message,
+      timestamp: new Date().toISOString(),
       attempted_payload: reportData,
     };
+
+    // Insert failed translator_log entry
+    const { data: insertedLog } = await supabase
+      .from("translator_logs")
+      .insert({
+        user_id: guestReportId,
+        request_type: reportData.request || 'unknown',
+        request_payload: reportData,
+        error_message: swissError,
+        response_status: 500,
+        is_guest: true,
+      })
+      .select("id")
+      .single();
+
+    // Update guest_reports with failed status
+    const updateData: any = {
+      has_report: false,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (insertedLog) {
+      updateData.translator_log_id = insertedLog.id;
+    }
+
+    await supabase
+      .from("guest_reports")
+      .update(updateData)
+      .eq("id", guestReportId);
   }
-
-  // Update guest_reports with reference to translator_logs instead of duplicate data
-  const updateData: any = {
-    has_report:  !swissError,
-    updated_at:  new Date().toISOString(),
-  };
-
-  if (translatorLogId) {
-    updateData.translator_log_id = translatorLogId;
-  }
-
-  await supabase
-    .from("guest_reports")
-    .update(updateData)
-    .eq("id", guestReportId);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
