@@ -82,7 +82,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // ---------------------------------------------------------------------------
   // Hooks & State
   // ---------------------------------------------------------------------------
-  const { report, isLoading, error, caseNumber, fetchReport, triggerErrorHandling, fetchReportContent } = useGuestReportStatus();
+  const { report, isLoading, error, caseNumber, fetchReport, triggerErrorHandling, fetchReportContent, fetchAstroData, isAstroReport } = useGuestReportStatus();
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -94,6 +94,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const redirectRef = useRef<NodeJS.Timeout | null>(null);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if this is an astro report type
+  const isAstro = isAstroReport(report?.report_type);
 
   // ---------------------------------------------------------------------------
   // Video ready handler
@@ -121,18 +124,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     scrollToProcessing();
     
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-    if (reportIdToUse && isVideoReady) {
+    if (reportIdToUse) {
       // Initial fetch
       fetchReport(reportIdToUse);
       
+      // For astro reports, skip video and start immediately
+      if (isAstro) {
+        setIsVideoReady(true);
+      }
+      
       // Check every 10 seconds until report is ready
-      checkIntervalRef.current = setInterval(() => {
-        if (report?.has_report) {
-          clearInterval(checkIntervalRef.current!);
-          return;
-        }
-        fetchReport(reportIdToUse);
-      }, 10000);
+      const shouldStartChecking = isAstro || isVideoReady;
+      if (shouldStartChecking) {
+        checkIntervalRef.current = setInterval(() => {
+          if (report?.has_report) {
+            clearInterval(checkIntervalRef.current!);
+            return;
+          }
+          fetchReport(reportIdToUse);
+        }, 10000);
+      }
     }
 
     return () => {
@@ -140,7 +151,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         clearInterval(checkIntervalRef.current);
       }
     };
-  }, [guestReportId, isVideoReady, fetchReport, report?.has_report]);
+  }, [guestReportId, isVideoReady, fetchReport, report?.has_report, isAstro]);
 
   // ---------------------------------------------------------------------------
   // Status helpers
@@ -193,14 +204,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (!reportIdToUse || !onViewReport) return;
 
-    const reportContent = await fetchReportContent(reportIdToUse);
+    // Use different fetch method based on report type
+    const reportContent = isAstro 
+      ? await fetchAstroData(reportIdToUse)
+      : await fetchReportContent(reportIdToUse);
+      
     if (reportContent) {
       onViewReport(reportContent, null);
     } else {
       console.warn('Could not fetch report content');
       onViewReport('Report content could not be loaded', null);
     }
-  }, [guestReportId, fetchReportContent, onViewReport]);
+  }, [guestReportId, fetchReportContent, fetchAstroData, onViewReport, isAstro]);
 
   // ---------------------------------------------------------------------------
   // Auto redirect when ready
@@ -350,9 +365,15 @@ The report was not generated within the expected timeframe. Please help me resol
               <p className="text-gray-600 font-light">{status.desc}</p>
             </div>
 
-            {!isReady && !error && (
+            {!isReady && !error && !isAstro && (
               <>
                 <VideoLoader onVideoReady={handleVideoReady} />
+                {PersonalNote}
+              </>
+            )}
+
+            {!isReady && !error && isAstro && (
+              <>
                 {PersonalNote}
               </>
             )}

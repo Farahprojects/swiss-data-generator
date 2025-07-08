@@ -10,6 +10,7 @@ interface GuestReport {
   payment_status: string;
   created_at: string;
   stripe_session_id: string;
+  report_type?: string | null;
 }
 
 interface UseGuestReportStatusReturn {
@@ -20,6 +21,8 @@ interface UseGuestReportStatusReturn {
   fetchReport: (guestReportId: string) => Promise<void>;
   triggerErrorHandling: (guestReportId: string) => Promise<void>;
   fetchReportContent: (guestReportId: string) => Promise<string | null>;
+  fetchAstroData: (guestReportId: string) => Promise<string | null>;
+  isAstroReport: (reportType: string | null) => boolean;
 }
 
 export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
@@ -119,6 +122,43 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
+  const fetchAstroData = useCallback(async (guestReportId: string) => {
+    try {
+      console.log('📊 Fetching astro data from translator_logs for guest ID:', guestReportId);
+      
+      const { data, error } = await supabase
+        .from('guest_reports')
+        .select(`
+          translator_log_id,
+          translator_logs!inner(swiss_data)
+        `)
+        .eq('id', guestReportId)
+        .single();
+
+      if (error) {
+        console.error('❌ Error fetching astro data:', error);
+        return null;
+      }
+
+      if (data?.translator_logs?.swiss_data) {
+        console.log('✅ Astro data fetched successfully');
+        return JSON.stringify(data.translator_logs.swiss_data, null, 2);
+      } else {
+        console.log('📄 No astro data found');
+        return null;
+      }
+    } catch (err) {
+      console.error('❌ Error fetching astro data:', err);
+      return null;
+    }
+  }, []);
+
+  const isAstroReport = useCallback((reportType: string | null) => {
+    if (!reportType) return false;
+    const type = reportType.toLowerCase();
+    return type === 'sync' || type.startsWith('essence');
+  }, []);
+
   const triggerErrorHandling = useCallback(async (guestReportId: string) => {
     console.log('🚨 Triggering error handling for timeout');
     
@@ -143,5 +183,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     fetchReport,
     triggerErrorHandling,
     fetchReportContent,
+    fetchAstroData,
+    isAstroReport,
   };
 };
