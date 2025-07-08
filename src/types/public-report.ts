@@ -42,6 +42,7 @@ export interface ReportFormData {
   returnYear?: string;
   notes?: string;
   promoCode?: string;
+  is_guest?: boolean;
 }
 
 export interface ReportTypeOption {

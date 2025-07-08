@@ -112,7 +112,11 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
     .maybeSingle();
   if (!priceData) return { success: false, errorMessage: "Could not determine report price" };
 
-  const userResolution = await resolveUserId(supabase, payload.user_id ?? null, payload.is_guest ?? false);
+  // Check for explicit guest flag first - more reliable than user resolution
+  const isGuest = payload.is_guest === true;
+  console.log(`[orchestrator] Processing request - is_guest: ${isGuest}`);
+
+  const userResolution = await resolveUserId(supabase, payload.user_id ?? null, isGuest);
   if (userResolution.error) {
     console.error(`[orchestrator] User resolution failed: ${userResolution.error}`);
     return { success: false, errorMessage: userResolution.error };
@@ -120,7 +124,7 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
 
   const userId = userResolution.user_id;
   const clientId = userResolution.client_id;
-  console.log(`[orchestrator] User resolved - user_id: ${userId}, client_id: ${clientId}, is_guest: ${payload.is_guest}`);
+  console.log(`[orchestrator] User resolved - user_id: ${userId}, client_id: ${clientId}, is_guest: ${isGuest}`);
 
   const report = await generateReport(payload, supabase);
   if (!report.success) {

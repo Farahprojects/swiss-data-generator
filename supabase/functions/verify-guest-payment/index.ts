@@ -307,6 +307,7 @@ serve(async (req) => {
       notes:                     md.notes,
       promoCode:                 md.promoCode,
       name:                      md.guest_name || "Guest",
+      is_guest:                  true,  // Explicitly mark as guest report
     };
 
     // Only validate translator payload if we have a reportType (for actual reports)
