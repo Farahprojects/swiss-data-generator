@@ -9,9 +9,10 @@ import { formatSwissAstroData, hasValidAstroData } from '@/utils/swissDataFormat
 interface ReportContentProps {
   reportContent: string;
   swissData?: any;
+  customerName: string;
 }
 
-export const ReportContent = ({ reportContent, swissData }: ReportContentProps) => {
+export const ReportContent = ({ reportContent, swissData, customerName }: ReportContentProps) => {
   const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
   
   const hasSwissData = hasValidAstroData(swissData);
@@ -21,18 +22,8 @@ export const ReportContent = ({ reportContent, swissData }: ReportContentProps) 
       <Card className="shadow-lg border-0 shadow-2xl">
         <CardHeader className="pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-xl font-light text-gray-900 tracking-tight">
-              {activeView === 'report' ? (
-                <>
-                  <FileText className="h-6 w-6 text-gray-600" />
-                  Report Content
-                </>
-              ) : (
-                <>
-                  <Stars className="h-6 w-6 text-gray-600" />
-                  Astro Data
-                </>
-              )}
+            <CardTitle className="text-xl font-light text-gray-900 tracking-tight">
+              Your <em className="italic font-light">Report</em> - Generated for {customerName}
             </CardTitle>
             
             {showToggle && (

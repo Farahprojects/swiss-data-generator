@@ -147,7 +147,7 @@ const DesktopReportViewer = ({
         isCopyCompleted={isCopyCompleted}
       />
 
-      <ReportContent reportContent={reportContent} swissData={swissData} />
+      <ReportContent reportContent={reportContent} swissData={swissData} customerName={customerName} />
     </motion.div>
   );
 };

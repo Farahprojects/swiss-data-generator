@@ -189,7 +189,7 @@ const MobileReportViewer = ({
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-8 pb-24">
           <div className="max-w-4xl mx-auto">
-            <ReportContent reportContent={reportContent} swissData={swissData} />
+            <ReportContent reportContent={reportContent} swissData={swissData} customerName={customerName} />
           </div>
         </div>
       </div>
