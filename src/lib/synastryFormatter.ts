@@ -55,7 +55,7 @@ const enrichPlanets = (rawPlanets: any): EnrichedPlanet[] => {
       };
     });
   }
-  
+
   if (typeof rawPlanets === 'object' && rawPlanets !== null) {
     return Object.entries(rawPlanets).map(([key, val]: [string, any]) => {
       const longitude = val.deg ?? val.longitude ?? val;
@@ -70,7 +70,7 @@ const enrichPlanets = (rawPlanets: any): EnrichedPlanet[] => {
       };
     });
   }
-  
+
   return [];
 };
 
@@ -89,15 +89,13 @@ const enrichAspects = (arr: any[]): EnrichedAspect[] =>
   });
 
 export const parseSynastryRich = (raw: any): EnrichedSynastry => {
-  // Debug logging to see the actual data structure
   console.log('🔍 [parseSynastryRich] Full raw data:', raw);
-  
+
   const meta = raw.meta ?? {};
   const transits = raw.transits ?? {};
   const pA = transits.person_a ?? raw.person_a ?? {};
   const pB = transits.person_b ?? raw.person_b ?? {};
 
-  // Debug specific name-related fields
   console.log('🔍 [parseSynastryRich] Name fields check:', {
     'meta.personAName': meta.personAName,
     'raw.personAName': raw.personAName,
@@ -112,21 +110,19 @@ export const parseSynastryRich = (raw: any): EnrichedSynastry => {
     'raw.chartData': raw.chartData
   });
 
-  // Extract names from various possible locations in the data
-  // Check in chartData first (where backend stores them), then other locations
-  const personAName = raw.chartData?.person_a_name || 
-                     meta.personAName || 
-                     raw.personAName || 
-                     raw.person_a_name || 
-                     raw.name || 
-                     meta.name;
-                     
-  const personBName = raw.chartData?.person_b_name || 
-                     meta.personBName || 
-                     raw.personBName || 
-                     raw.person_b_name || 
-                     raw.secondPersonName || 
-                     meta.secondPersonName;
+  const personAName = raw.chartData?.person_a_name ||
+                      meta.personAName ||
+                      raw.personAName ||
+                      raw.person_a_name ||
+                      raw.name ||
+                      meta.name;
+
+  const personBName = raw.chartData?.person_b_name ||
+                      meta.personBName ||
+                      raw.personBName ||
+                      raw.person_b_name ||
+                      raw.secondPersonName ||
+                      meta.secondPersonName;
 
   console.log('🔍 [parseSynastryRich] Extracted names:', { personAName, personBName });
 
@@ -135,18 +131,18 @@ export const parseSynastryRich = (raw: any): EnrichedSynastry => {
       dateISO: meta.date ?? meta.utc?.split('T')[0] ?? new Date().toISOString().split('T')[0],
       time: meta.time ?? meta.utc?.split('T')[1]?.split('.')[0] ?? '12:00:00',
       lunarPhase: meta.lunar_phase,
-      personAName: personAName,
-      personBName: personBName,
+      personAName,
+      personBName,
       tz: meta.tz
     },
     personA: {
-      label: 'Person A',
+      label: personAName || 'Person A',
       name: personAName,
       planets: enrichPlanets(pA.planets ?? {}),
       aspectsToNatal: enrichAspects(pA.aspects_to_natal ?? [])
     },
     personB: {
-      label: 'Person B', 
+      label: personBName || 'Person B',
       name: personBName,
       planets: enrichPlanets(pB.planets ?? {}),
       aspectsToNatal: enrichAspects(pB.aspects_to_natal ?? [])
@@ -159,8 +155,7 @@ export const parseSynastryRich = (raw: any): EnrichedSynastry => {
 // Helper to detect if data is synastry/sync format
 export const isSynastryData = (raw: any): boolean => {
   if (!raw) return false;
-  
-  // Check for typical synastry data patterns
+
   return !!(
     raw.transits?.person_a ||
     raw.transits?.person_b ||
