@@ -24,9 +24,9 @@ export class AstroTemplate extends BaseTemplate {
     };
     this.setMetadata(metadata);
 
-    // Header
+    // Header - Using a serif font closest to GT Sectra
     const logoY = 20;
-    this.doc.setFontSize(26).setFont('times', 'bold').setTextColor(40, 40, 60);
+    this.doc.setFontSize(26).setFont('times', 'normal').setTextColor(40, 40, 60);
     this.doc.text('Therai.', this.pageWidth / 2, logoY + 12, { align: 'center' });
 
     this.doc.setFontSize(20).setFont('helvetica', 'bold');

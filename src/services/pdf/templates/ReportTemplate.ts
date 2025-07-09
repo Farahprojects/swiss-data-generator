@@ -15,7 +15,7 @@ export class ReportTemplate extends BaseTemplate {
 
     // ═════════════ HEADER ═════════════
     const logoY = 20;
-    this.doc.setFontSize(26).setFont('times', 'bold').setTextColor(40, 40, 60);
+    this.doc.setFontSize(26).setFont('times', 'normal').setTextColor(40, 40, 60);
     this.doc.text('Therai.', this.pageWidth / 2, logoY + 12, { align: 'center' });
 
     this.doc.setFontSize(20).setFont('helvetica', 'bold');
