@@ -1,4 +1,3 @@
-
 import { ReportTypeOption } from '@/types/public-report';
 import { User, Heart, Target, Calendar, Brain, Briefcase, Camera } from 'lucide-react';
 
@@ -43,7 +42,7 @@ export const reportCategories = [
     title: 'Astro Data',
     description: 'Raw astrological data - instant ephemeris calculations',
     icon: Target,
-    reportType: 'astro-data',
+    reportType: 'astro-data', // used only for category selection, will be cleared later
   },
   {
     value: 'snapshot',
@@ -117,20 +116,20 @@ export const detailedRelationshipTypes = [
   },
 ];
 
-// Astro Data subcategories - raw ephemeris data only
-export const astroDataSubCategories = [
+// 🔥 NEW: Astro Data subcategories - raw ephemeris data requests
+export const astroRequestCategories = [
   {
     value: 'essence',
     title: 'The Self',
     description: 'Your birth chart + current transits (raw astrological data)',
     icon: User,
-    reportType: 'essence',
+    request: 'essence',
   },
   {
     value: 'sync',
     title: 'Compatibility',
     description: 'Synastry + composite + transits (raw astrological data)',
     icon: Heart,
-    reportType: 'sync',
+    request: 'sync',
   },
 ];
