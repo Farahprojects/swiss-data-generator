@@ -49,9 +49,10 @@ function assertPresent(obj: Record<string, any>, keys: string[]) {
   }
 }
 
-// ✅ START: Patched function
+// ✅ START: DEFINITIVELY FIXED FUNCTION
 function buildTranslatorPayload(rd: ReportData) {
-  // Check if rd.request exists first (for astro data), otherwise map reportType
+  // 1. Determine the base request type ("essence", "sync", etc.)
+  // This part of your logic is already correct.
   let request;
   if (rd.request && rd.request.trim() !== '') {
     request = rd.request;
@@ -63,16 +64,6 @@ function buildTranslatorPayload(rd: ReportData) {
     throw new Error(`Unsupported reportType '${rd.reportType}' and no request field provided`);
   }
 
-  // New logic to build the correct report string
-  // Determine the subtype from available data, defaulting to "general"
-  const reportSubtype = rd.essenceType || rd.relationshipType || "general";
-
-  // Sanitize the subtype to be safe for identifiers (e.g., "General Use" -> "general_use")
-  const safeSubtype = (reportSubtype || "general").toLowerCase().replace(/\s+/g, "_");
-
-  // Construct the final report string, e.g., "essence_professional"
-  const finalReportString = `${request}_${safeSubtype}`;
-
   // Single-person endpoints
   if (["essence", "flow", "mindset", "monthly", "focus"].includes(request)) {
     assertPresent(rd, [
@@ -80,13 +71,14 @@ function buildTranslatorPayload(rd: ReportData) {
     ]);
 
     return {
-      request,
-      birth_date: rd.birthDate,
+      request, // Correctly set to "essence"
+      birth_date:  rd.birthDate,
       birth_time: rd.birthTime,
       latitude:   parseFloat(rd.birthLatitude),
       longitude:  parseFloat(rd.birthLongitude),
       name:       rd.name ?? "Guest",
-      report:     finalReportString, // CHANGED: Use the correctly constructed report string
+      // FIX: Use the full reportType from the source data directly.
+      report:     rd.reportType,
     };
   }
 
@@ -99,29 +91,30 @@ function buildTranslatorPayload(rd: ReportData) {
     ]);
 
     return {
-      request,
+      request, // Correctly set to "sync"
       person_a: {
-        birth_date: rd.birthDate,
+        birth_date:  rd.birthDate,
         birth_time: rd.birthTime,
         latitude:   parseFloat(rd.birthLatitude),
         longitude:  parseFloat(rd.birthLongitude),
         name:       rd.name ?? "A",
       },
       person_b: {
-        birth_date: rd.secondPersonBirthDate,
+        birth_date:  rd.secondPersonBirthDate,
         birth_time: rd.secondPersonBirthTime,
         latitude:   parseFloat(rd.secondPersonLatitude),
         longitude:  parseFloat(rd.secondPersonLongitude),
         name:       rd.secondPersonName ?? "B",
       },
       relationship_type: rd.relationshipType ?? "general",
-      report:            finalReportString, // CHANGED: Use the correctly constructed report string
+      // FIX: Use the full reportType from the source data directly.
+      report:           rd.reportType,
     };
   }
 
   throw new Error(`Unhandled request type '${request}'`);
 }
-// ✅ END: Patched function
+// ✅ END: DEFINITIVELY FIXED FUNCTION
 
 async function processSwissDataInBackground(
   guestReportId: string,
@@ -287,40 +280,40 @@ serve(async (req) => {
     
     // ────────── SERVICE PURCHASES - FIXED HANDLING ──────────
     if (md.purchase_type === 'service') {
-  console.log("[guest_verify_payment] Service purchase detected - processing without report data");
+      console.log("[guest_verify_payment] Service purchase detected - processing without report data");
 
-  const { error: serviceInsertErr } = await supabase
-    .from("service_purchases") // ✅ use your actual table name
-    .upsert({
-      stripe_session_id: session.id,
-      email: session.customer_details?.email ?? null,
-      coach_slug: md.coach_slug ?? null,
-      coach_name: md.coach_name ?? null,
-      service_title: md.service_title ?? null,
-      amount_paid: (session.amount_total ?? 0) / 100,
-      currency: session.currency,
-      purchase_type: 'service',
-      payment_status: 'paid',
-    }, { onConflict: 'stripe_session_id' });
+      const { error: serviceInsertErr } = await supabase
+        .from("service_purchases") // ✅ use your actual table name
+        .upsert({
+          stripe_session_id: session.id,
+          email: session.customer_details?.email ?? null,
+          coach_slug: md.coach_slug ?? null,
+          coach_name: md.coach_name ?? null,
+          service_title: md.service_title ?? null,
+          amount_paid: (session.amount_total ?? 0) / 100,
+          currency: session.currency,
+          purchase_type: 'service',
+          payment_status: 'paid',
+        }, { onConflict: 'stripe_session_id' });
 
-  if (serviceInsertErr) {
-    console.error("[guest_verify_payment] Failed to log service purchase:", serviceInsertErr);
-  }
+      if (serviceInsertErr) {
+        console.error("[guest_verify_payment] Failed to log service purchase:", serviceInsertErr);
+      }
 
-  return new Response(JSON.stringify({
-    success:        true,
-    verified:       true,
-    paymentStatus:  session.payment_status,
-    amountPaid:     session.amount_total,
-    currency:       session.currency,
-    isService:      true,
-    isCoachReport:  true,
-    coach_slug:     md.coach_slug || null,
-    coach_name:     md.coach_name || null,
-    service_title:  md.service_title || null,
-    message:        "Service purchase verified successfully",
-  }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}
+      return new Response(JSON.stringify({
+        success:        true,
+        verified:       true,
+        paymentStatus:  session.payment_status,
+        amountPaid:     session.amount_total,
+        currency:       session.currency,
+        isService:      true,
+        isCoachReport:  true,
+        coach_slug:     md.coach_slug || null,
+        coach_name:     md.coach_name || null,
+        service_title:  md.service_title || null,
+        message:        "Service purchase verified successfully",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // This is a report purchase - proceed with report creation
     const reportData: ReportData = {
