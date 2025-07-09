@@ -206,11 +206,20 @@ serve(async (req) => {
     // 3. WEBSOCKET/SSE PUSH
     // await pushReportReadyNotification(guest_report_id);
 
-    // 4. UPDATE ORCHESTRATION STATUS
-    // await supabase
-    //   .from("guest_reports")
-    //   .update({ orchestration_status: "completed" })
-    //   .eq("id", guest_report_id);
+    // 4. UPDATE ORCHESTRATION STATUS - SET MODAL READY FLAG
+    const { error: updateError } = await supabase
+      .from("guest_reports")
+      .update({ 
+        modal_ready: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", guest_report_id);
+
+    if (updateError) {
+      console.error("[orchestrate-report-ready] Failed to set modal_ready flag:", updateError);
+    } else {
+      console.log(`[orchestrate-report-ready] Set modal_ready=true for: ${guest_report_id}`);
+    }
 
     console.log(`[orchestrate-report-ready] Orchestration completed successfully for: ${guest_report_id}`);
     

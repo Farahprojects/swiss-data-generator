@@ -67,6 +67,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     triggerErrorHandling,
     fetchReportContent,
     fetchAstroData,
+    setupRealtimeListener,
   } = useGuestReportStatus();
 
   const firstName = name?.split(' ')[0] || 'there';
@@ -77,6 +78,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const [countdown, setCountdown] = useState(24);
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [modalTriggered, setModalTriggered] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   const reportType = report?.report_type as ReportType | undefined;
@@ -89,35 +91,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const handleVideoReady = useCallback(() => {
     setIsVideoReady(true);
   }, []);
-
-  useEffect(() => {
-    const scrollToProcessing = () => {
-      const element = document.querySelector('[data-success-screen]');
-      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-    scrollToProcessing();
-
-    const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-    if (reportIdToUse) {
-      fetchReport(reportIdToUse);
-    }
-  }, [guestReportId, fetchReport]);
-
-  useEffect(() => {
-    if (!isReady && !error && isVideoReady) {
-      countdownRef.current = setTimeout(() => {
-        setCountdown((c) => {
-          if (c <= 1) {
-            const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-            if (reportIdToUse) triggerErrorHandling(reportIdToUse);
-            return 0;
-          }
-          return c - 1;
-        });
-      }, 1000);
-    }
-    return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
-  }, [countdown, isReady, error, isVideoReady, guestReportId, triggerErrorHandling]);
 
   const handleViewReport = useCallback(async () => {
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
@@ -139,6 +112,47 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
     onViewReport(reportContent ?? 'Report content could not be loaded', null);
   }, [guestReportId, onViewReport, reportType, fetchAstroData, fetchReportContent, report?.swiss_boolean]);
+
+  useEffect(() => {
+    const scrollToProcessing = () => {
+      const element = document.querySelector('[data-success-screen]');
+      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    scrollToProcessing();
+
+    const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+    if (reportIdToUse) {
+      fetchReport(reportIdToUse);
+      
+      // Setup realtime listener to auto-trigger modal
+      const cleanup = setupRealtimeListener(reportIdToUse, () => {
+        console.log('🔥 Realtime detected report ready - auto-triggering modal');
+        if (!modalTriggered) {
+          setModalTriggered(true);
+          handleViewReport();
+        }
+      });
+      
+      return cleanup;
+    }
+  }, [guestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered]);
+
+  useEffect(() => {
+    if (!isReady && !error && isVideoReady) {
+      countdownRef.current = setTimeout(() => {
+        setCountdown((c) => {
+          if (c <= 1) {
+            const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+            if (reportIdToUse) triggerErrorHandling(reportIdToUse);
+            return 0;
+          }
+          return c - 1;
+        });
+      }, 1000);
+    }
+    return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
+  }, [countdown, isReady, error, isVideoReady, guestReportId, triggerErrorHandling]);
+
 
   const status = (() => {
     if (!report) return { title: 'Processing Your Request', desc: 'Setting up your report', icon: Clock };

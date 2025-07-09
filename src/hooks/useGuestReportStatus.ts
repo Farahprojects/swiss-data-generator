@@ -198,20 +198,27 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
           filter: `id=eq.${guestReportId}`
         },
         async (payload) => {
-          const updatedRecord = payload.new as GuestReport;
+          const updatedRecord = payload.new as GuestReport & { modal_ready?: boolean };
 
           const isReportReady =
             updatedRecord.swiss_boolean === true ||
             (updatedRecord.has_report && (updatedRecord.translator_log_id || updatedRecord.report_log_id));
 
-          if (isReportReady) {
+          // Check if orchestrator set modal_ready flag
+          const shouldTriggerModal = updatedRecord.modal_ready === true;
+
+          if (isReportReady || shouldTriggerModal) {
             console.log('✅ Report ready:', {
               swiss_boolean: updatedRecord.swiss_boolean,
               has_report: updatedRecord.has_report,
               translator_log_id: !!updatedRecord.translator_log_id,
-              report_log_id: !!updatedRecord.report_log_id
+              report_log_id: !!updatedRecord.report_log_id,
+              modal_ready: updatedRecord.modal_ready
             });
             setReport(updatedRecord);
+            if (shouldTriggerModal) {
+              console.log('🔥 Modal ready flag detected - triggering modal');
+            }
             onReportReady?.();
           }
         }
