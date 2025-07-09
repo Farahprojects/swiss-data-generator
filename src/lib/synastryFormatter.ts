@@ -94,24 +94,28 @@ export const parseSynastryRich = (raw: any): EnrichedSynastry => {
   const pA = transits.person_a ?? raw.person_a ?? {};
   const pB = transits.person_b ?? raw.person_b ?? {};
 
+  // Extract names from various possible locations in the data
+  const personAName = meta.personAName || raw.personAName || raw.name || meta.name;
+  const personBName = meta.personBName || raw.personBName || raw.secondPersonName || meta.secondPersonName;
+
   return {
     meta: {
       dateISO: meta.date ?? meta.utc?.split('T')[0] ?? new Date().toISOString().split('T')[0],
       time: meta.time ?? meta.utc?.split('T')[1]?.split('.')[0] ?? '12:00:00',
       lunarPhase: meta.lunar_phase,
-      personAName: meta.personAName || raw.personAName,
-      personBName: meta.personBName || raw.personBName,
+      personAName: personAName,
+      personBName: personBName,
       tz: meta.tz
     },
     personA: {
       label: 'Person A',
-      name: meta.personAName || raw.personAName || raw.name,
+      name: personAName,
       planets: enrichPlanets(pA.planets ?? {}),
       aspectsToNatal: enrichAspects(pA.aspects_to_natal ?? [])
     },
     personB: {
       label: 'Person B', 
-      name: meta.personBName || raw.personBName || raw.secondPersonName,
+      name: personBName,
       planets: enrichPlanets(pB.planets ?? {}),
       aspectsToNatal: enrichAspects(pB.aspects_to_natal ?? [])
     },
