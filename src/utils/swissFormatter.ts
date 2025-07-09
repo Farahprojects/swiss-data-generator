@@ -22,6 +22,13 @@ export interface EnrichedSnapshot {
   dateISO: string;        // "2025-07-08"
   timeISO: string;        // "12:00:00"
   tz: string;             // "Australia/Melbourne"
+  name?: string;          // Person's name
+  meta?: {                // Birth location and coordinates
+    location?: string;
+    lat?: number;
+    lon?: number;
+    tz?: string;
+  };
   planets: EnrichedPlanet[];
   aspects: EnrichedAspect[];
 }
@@ -62,6 +69,15 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
   const timeISO = meta.utc ? new Date(meta.utc).toISOString().slice(11,19) : meta.time;
   const tz      = meta.tz ?? 'UTC';
 
+  // --- Name and location data ----------------------------------
+  const name = meta.name || natal.name || raw.name;
+  const metaInfo = {
+    location: meta.location || natal.location,
+    lat: meta.lat || natal.lat || natal.latitude,
+    lon: meta.lon || natal.lon || natal.longitude,
+    tz: tz
+  };
+
   // --- Planets --------------------------------------------------
   const planets: EnrichedPlanet[] = Array.isArray(natal.planets) 
     ? natal.planets.map((p:any) => {
@@ -90,5 +106,5 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
       })
     : [];
 
-  return { dateISO, timeISO, tz, planets, aspects };
+  return { dateISO, timeISO, tz, name, meta: metaInfo, planets, aspects };
 };

@@ -29,13 +29,21 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON }) => {
     <div className="w-full max-w-md mx-auto font-sans text-[15px] leading-relaxed text-neutral-900">
       {/* Header: Identity */}
       <div className="text-center mb-6">
-        <p className="font-semibold text-lg">{data.name ?? "Personal Report"}</p>
+        <h2 className="font-semibold text-lg mb-2">Your Astro Data</h2>
+        {data.name && (
+          <p className="font-medium text-base mb-1">{data.name}</p>
+        )}
         <p className="text-sm text-neutral-600">
-          {formattedDate} — {formattedTime} ({data.meta?.tz})
+          {formattedDate} — {formattedTime} ({data.tz})
         </p>
-        <p className="text-sm text-neutral-600">
-          {data.meta?.location} ({data.meta?.lat}, {data.meta?.lon})
-        </p>
+        {data.meta?.location && (
+          <p className="text-sm text-neutral-600">
+            {data.meta.location}
+            {data.meta.lat && data.meta.lon && (
+              <span> ({data.meta.lat.toFixed(2)}°, {data.meta.lon.toFixed(2)}°)</span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Planetary Positions */}
