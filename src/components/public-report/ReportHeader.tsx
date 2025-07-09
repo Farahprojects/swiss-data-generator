@@ -3,6 +3,7 @@ import React from 'react';
 import { ArrowLeft, Copy, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { hasValidAstroData } from '@/utils/swissDataFormatter';
+import { shouldHideToggle } from '@/utils/reportTypeUtils';
 
 interface ReportHeaderProps {
   customerName: string;
@@ -39,8 +40,19 @@ export const ReportHeader = ({
   swissBoolean,
   isPureAstroReport
 }: ReportHeaderProps) => {
-  // Hide toggle for pure astro reports or swiss-only reports
-  const showToggle = !isPureAstroReport && !swissBoolean;
+  // Use utility function for reliable toggle detection
+  const reportData = { reportContent, swissData, swissBoolean, hasReport };
+  const hideToggle = shouldHideToggle(reportData);
+  const showToggle = !hideToggle;
+  
+  console.log('🔍 ReportHeader - Debug values:', {
+    swissBoolean,
+    hasReport,
+    contentLength: reportContent?.length,
+    swissDataExists: !!swissData,
+    hideToggle,
+    showToggle
+  });
   return (
     <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-4">

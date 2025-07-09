@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AstroDataRenderer } from './AstroDataRenderer';
+import { isSwissOnlyReport, getDefaultView, shouldHideToggle } from '@/utils/reportTypeUtils';
 
 interface ReportContentProps {
   reportContent: string;
@@ -26,8 +27,10 @@ export const ReportContent = ({
   swissBoolean,
   isPureAstroReport,
 }: ReportContentProps) => {
-  // Default view: 'astro' if Swiss-only or pure astro report, otherwise 'report'
-  const defaultView = (isPureAstroReport || swissBoolean) ? 'astro' : 'report';
+  // Use utility function for reliable detection
+  const reportData = { reportContent, swissData, swissBoolean, hasReport };
+  const isSwissOnly = isSwissOnlyReport(reportData);
+  const defaultView = getDefaultView(reportData);
   const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>(defaultView);
 
   const activeView = externalActiveView || internalActiveView;
@@ -35,13 +38,25 @@ export const ReportContent = ({
 
   // Enforce Swiss-only mode: force astro view
   useEffect(() => {
-    if (swissBoolean) {
+    if (isSwissOnly) {
       setActiveView('astro');
     }
-  }, [swissBoolean, setActiveView]);
+  }, [isSwissOnly, setActiveView]);
 
-  // Hide toggle if Swiss-only, pure astro, or external view is fixed
-  const showToggle = !isPureAstroReport && !swissBoolean && !externalActiveView && hasReport;
+  // Hide toggle using utility function
+  const hideToggle = shouldHideToggle(reportData);
+  const showToggle = !hideToggle && !externalActiveView && hasReport;
+
+  console.log('🔍 ReportContent - Debug values:', {
+    swissBoolean,
+    hasReport,
+    contentLength: reportContent?.length,
+    swissDataExists: !!swissData,
+    isSwissOnly,
+    hideToggle,
+    showToggle,
+    activeView
+  });
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">

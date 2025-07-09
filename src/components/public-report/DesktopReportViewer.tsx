@@ -6,6 +6,7 @@ import { logToAdmin } from '@/utils/adminLogger';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { ReportHeader } from './ReportHeader';
 import { ReportContent } from './ReportContent';
+import { isSwissOnlyReport, getDefaultView, shouldHideToggle } from '@/utils/reportTypeUtils';
 
 interface DesktopReportViewerProps {
   reportContent: string;
@@ -29,11 +30,22 @@ const DesktopReportViewer = ({
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   
-  // Determine if this is a pure astro report (no AI content)
-  const isPureAstroReport = swissData && (!reportContent || reportContent.trim() === '');
-  // Default view: 'astro' if Swiss-only or pure astro report, otherwise 'report'
-  const defaultView = (isPureAstroReport || swissBoolean) ? 'astro' : 'report';
+  // Use utility function for reliable detection
+  const reportData = { reportContent, swissData, swissBoolean, hasReport };
+  const isPureAstroReport = isSwissOnlyReport(reportData);
+  const defaultView = getDefaultView(reportData);
   const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
+
+  console.log('🔍 DesktopReportViewer - Debug values:', {
+    reportContent: reportContent?.substring(0, 100) + '...',
+    contentLength: reportContent?.length,
+    swissBoolean,
+    hasReport,
+    swissDataExists: !!swissData,
+    isPureAstroReport,
+    defaultView,
+    shouldHideToggle: shouldHideToggle(reportData)
+  });
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {

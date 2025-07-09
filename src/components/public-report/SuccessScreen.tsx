@@ -107,12 +107,20 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       primaryContent = await fetchAstroData(reportIdToUse);
     }
 
+    console.log('🔍 SuccessScreen handleViewReport - Debug values:', {
+      reportSwissBoolean: report?.swiss_boolean,
+      reportHasReport: report?.has_report,
+      reportType: reportType,
+      primaryContentLength: primaryContent?.length,
+      swissDataExists: !!swissData
+    });
+
     onViewReport(
       primaryContent ?? 'Report content could not be loaded', 
       null, 
       swissData,
       report?.has_report || false,
-      report?.swiss_boolean || false
+      report?.swiss_boolean ?? false
     );
   }, [guestReportId, onViewReport, reportType, fetchBothReportData, fetchAstroData, report?.swiss_boolean]);
 
