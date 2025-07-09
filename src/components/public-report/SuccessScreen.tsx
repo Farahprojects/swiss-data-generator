@@ -54,7 +54,7 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
 interface SuccessScreenProps {
   name: string;
   email: string;
-  onViewReport?: (content: string, pdf?: string | null) => void;
+  onViewReport?: (content: string, pdf?: string | null, swissData?: any) => void;
   guestReportId?: string;
 }
 
@@ -67,6 +67,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     triggerErrorHandling,
     fetchReportContent,
     fetchAstroData,
+    fetchBothReportData,
     setupRealtimeListener,
   } = useGuestReportStatus();
 
@@ -96,22 +97,22 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (!reportIdToUse || !onViewReport) return;
 
-    let reportContent: string | null = null;
+    console.log('🔄 Fetching both report and Swiss data');
+    const { reportContent, swissData } = await fetchBothReportData(reportIdToUse);
 
-    if (report?.swiss_boolean === true || reportType === 'essence' || reportType === 'sync') {
-      console.log('🔬 Fetching Swiss-only report data');
-      reportContent = await fetchAstroData(reportIdToUse);
-    } else {
-      console.log('🤖 Fetching AI+Swiss report data');
-      reportContent = await fetchReportContent(reportIdToUse);
-      if (!reportContent) {
-        console.log('🔬 Falling back to Swiss data');
-        reportContent = await fetchAstroData(reportIdToUse);
-      }
+    // Determine primary content for Swiss-only reports
+    let primaryContent = reportContent;
+    if (!reportContent && (report?.swiss_boolean === true || reportType === 'essence' || reportType === 'sync')) {
+      console.log('🔬 Using Swiss data as primary content for astro-only report');
+      primaryContent = await fetchAstroData(reportIdToUse);
     }
 
-    onViewReport(reportContent ?? 'Report content could not be loaded', null);
-  }, [guestReportId, onViewReport, reportType, fetchAstroData, fetchReportContent, report?.swiss_boolean]);
+    onViewReport(
+      primaryContent ?? 'Report content could not be loaded', 
+      null, 
+      swissData
+    );
+  }, [guestReportId, onViewReport, reportType, fetchBothReportData, fetchAstroData, report?.swiss_boolean]);
 
   useEffect(() => {
     const scrollToProcessing = () => {

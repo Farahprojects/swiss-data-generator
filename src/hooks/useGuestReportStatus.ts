@@ -15,6 +15,11 @@ interface GuestReport {
   swiss_boolean?: boolean | null;
 }
 
+interface ReportData {
+  reportContent: string | null;
+  swissData: any;
+}
+
 interface UseGuestReportStatusReturn {
   report: GuestReport | null;
   isLoading: boolean;
@@ -24,6 +29,7 @@ interface UseGuestReportStatusReturn {
   triggerErrorHandling: (guestReportId: string) => Promise<void>;
   fetchReportContent: (guestReportId: string) => Promise<string | null>;
   fetchAstroData: (guestReportId: string) => Promise<string | null>;
+  fetchBothReportData: (guestReportId: string) => Promise<ReportData>;
   isAstroReport: (reportType: string | null) => boolean;
   setupRealtimeListener: (guestReportId: string, onReportReady?: () => void) => () => void;
 }
@@ -164,6 +170,41 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
+  const fetchBothReportData = useCallback(async (guestReportId: string): Promise<ReportData> => {
+    try {
+      // Fetch both report content and Swiss data in parallel
+      const [reportContent, astroDataRaw] = await Promise.all([
+        fetchReportContent(guestReportId),
+        fetchAstroData(guestReportId)
+      ]);
+
+      // Get raw Swiss data for formatting
+      const { data: guestData } = await supabase
+        .from('guest_reports')
+        .select('translator_log_id')
+        .eq('id', guestReportId)
+        .single();
+
+      let swissData = null;
+      if (guestData?.translator_log_id) {
+        const { data: translatorData } = await supabase
+          .from('translator_logs')
+          .select('swiss_data')
+          .eq('id', guestData.translator_log_id)
+          .single();
+        swissData = translatorData?.swiss_data;
+      }
+
+      return {
+        reportContent,
+        swissData
+      };
+    } catch (err) {
+      console.error('❌ Error fetching both report data:', err);
+      return { reportContent: null, swissData: null };
+    }
+  }, [fetchReportContent, fetchAstroData]);
+
   const isAstroReport = useCallback((reportType: string | null) => {
     if (!reportType) return false;
     const type = reportType.toLowerCase();
@@ -246,6 +287,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     triggerErrorHandling,
     fetchReportContent,
     fetchAstroData,
+    fetchBothReportData,
     isAstroReport,
     setupRealtimeListener,
   };

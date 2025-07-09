@@ -10,6 +10,7 @@ interface DesktopReportViewerProps {
   reportContent: string;
   reportPdfData?: string | null;
   customerName: string;
+  swissData?: any;
   onBack: () => void;
 }
 
@@ -17,6 +18,7 @@ const DesktopReportViewer = ({
   reportContent, 
   reportPdfData, 
   customerName,
+  swissData,
   onBack 
 }: DesktopReportViewerProps) => {
   const { toast } = useToast();
@@ -145,7 +147,7 @@ const DesktopReportViewer = ({
         isCopyCompleted={isCopyCompleted}
       />
 
-      <ReportContent reportContent={reportContent} />
+      <ReportContent reportContent={reportContent} swissData={swissData} />
     </motion.div>
   );
 };

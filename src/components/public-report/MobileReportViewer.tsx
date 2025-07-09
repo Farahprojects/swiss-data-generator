@@ -5,7 +5,7 @@ import { Download, FileText, ArrowLeft, Copy, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ReportRenderer } from '@/components/shared/ReportRenderer';
+import { ReportContent } from './ReportContent';
 import { useToast } from '@/hooks/use-toast';
 import { logToAdmin } from '@/utils/adminLogger';
 
@@ -13,6 +13,7 @@ interface MobileReportViewerProps {
   reportContent: string;
   reportPdfData?: string | null;
   customerName: string;
+  swissData?: any;
   onBack: () => void;
 }
 
@@ -20,6 +21,7 @@ const MobileReportViewer = ({
   reportContent, 
   reportPdfData, 
   customerName,
+  swissData,
   onBack 
 }: MobileReportViewerProps) => {
   const { toast } = useToast();
@@ -187,7 +189,7 @@ const MobileReportViewer = ({
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-8 pb-24">
           <div className="max-w-4xl mx-auto">
-            <ReportRenderer content={reportContent} />
+            <ReportContent reportContent={reportContent} swissData={swissData} />
           </div>
         </div>
       </div>

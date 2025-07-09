@@ -23,9 +23,9 @@ const PublicReport = () => {
   // }
 
   try {
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [isClientMobile, setIsClientMobile] = useState(false);
-    const [scrollY, setScrollY] = useState(0);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isClientMobile, setIsClientMobile] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
 
     // Safe mobile detection on client side only
     useEffect(() => {
@@ -88,6 +88,7 @@ const PublicReport = () => {
     const handleOpenDrawer = () => {
       setIsDrawerOpen(true);
     };
+
 
     // Calculate text opacity based on scroll position
     const textOpacity = Math.max(0, 1 - (scrollY / 100)); // Fade out over 100px scroll
@@ -327,6 +328,7 @@ const PublicReport = () => {
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />
         <Footer />
+
       </div>
     );
     } catch (err: any) {
