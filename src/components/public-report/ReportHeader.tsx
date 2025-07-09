@@ -2,6 +2,7 @@
 import React from 'react';
 import { ArrowLeft, Copy, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { hasValidAstroData } from '@/utils/swissDataFormatter';
 
 interface ReportHeaderProps {
   customerName: string;
@@ -11,6 +12,10 @@ interface ReportHeaderProps {
   onChatGPTClick: () => void;
   reportPdfData?: string | null;
   isCopyCompleted: boolean;
+  swissData?: any;
+  reportContent: string;
+  activeView: 'report' | 'astro';
+  setActiveView: (view: 'report' | 'astro') => void;
 }
 
 export const ReportHeader = ({
@@ -20,8 +25,14 @@ export const ReportHeader = ({
   onDownloadPdf,
   onChatGPTClick,
   reportPdfData,
-  isCopyCompleted
+  isCopyCompleted,
+  swissData,
+  reportContent,
+  activeView,
+  setActiveView
 }: ReportHeaderProps) => {
+  const hasSwissData = hasValidAstroData(swissData);
+  const showToggle = hasSwissData && reportContent;
   return (
     <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-4">
@@ -36,9 +47,30 @@ export const ReportHeader = ({
               <ArrowLeft className="h-4 w-4" />
               Back to Form
             </Button>
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">Report Actions</h1>
-            </div>
+            {showToggle && (
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveView('report')}
+                  className={`px-4 py-2 rounded-md text-sm font-light transition-all ${
+                    activeView === 'report'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Report
+                </button>
+                <button
+                  onClick={() => setActiveView('astro')}
+                  className={`px-4 py-2 rounded-md text-sm font-light transition-all ${
+                    activeView === 'astro'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Astro
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button

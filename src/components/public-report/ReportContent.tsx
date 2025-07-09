@@ -10,13 +10,18 @@ interface ReportContentProps {
   reportContent: string;
   swissData?: any;
   customerName: string;
+  activeView?: 'report' | 'astro';
+  setActiveView?: (view: 'report' | 'astro') => void;
 }
 
-export const ReportContent = ({ reportContent, swissData, customerName }: ReportContentProps) => {
-  const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
+export const ReportContent = ({ reportContent, swissData, customerName, activeView: externalActiveView, setActiveView: externalSetActiveView }: ReportContentProps) => {
+  const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>('report');
+  
+  const activeView = externalActiveView || internalActiveView;
+  const setActiveView = externalSetActiveView || setInternalActiveView;
   
   const hasSwissData = hasValidAstroData(swissData);
-  const showToggle = hasSwissData && reportContent;
+  const showToggle = hasSwissData && reportContent && !externalActiveView;
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Card className="shadow-lg border-0 shadow-2xl">

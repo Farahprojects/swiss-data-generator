@@ -23,6 +23,7 @@ const DesktopReportViewer = ({
 }: DesktopReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
+  const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
@@ -145,9 +146,13 @@ const DesktopReportViewer = ({
         onChatGPTClick={handleChatGPTClick}
         reportPdfData={reportPdfData}
         isCopyCompleted={isCopyCompleted}
+        swissData={swissData}
+        reportContent={reportContent}
+        activeView={activeView}
+        setActiveView={setActiveView}
       />
 
-      <ReportContent reportContent={reportContent} swissData={swissData} customerName={customerName} />
+      <ReportContent reportContent={reportContent} swissData={swissData} customerName={customerName} activeView={activeView} setActiveView={setActiveView} />
     </motion.div>
   );
 };
