@@ -38,10 +38,6 @@ export const useReportSubmission = () => {
     setPromoValidation: (state: PromoValidationState) => void,
     skipPromoValidation: boolean = false
   ) => {
-    // CLEAN SLATE: Clear all previous report state at the start of new submission
-    localStorage.removeItem('currentGuestReportId');
-    localStorage.removeItem('pending_report_email');
-    console.log('🧹 Cleared previous report state for fresh submission');
     
     setIsProcessing(true);
     
@@ -137,9 +133,8 @@ export const useReportSubmission = () => {
         const result = await createFreeReport(data.promoCode, reportData);
         
         setReportCreated(true);
-        // Store the FRESH guest report ID immediately
+        // Store the guest report ID for polling
         localStorage.setItem('currentGuestReportId', result.reportId);
-        console.log('✅ Set fresh report ID for free report:', result.reportId);
         toast({
           title: "Free Report Created!",
           description: "Your report has been generated and will be sent to your email shortly.",
@@ -273,10 +268,6 @@ export const useReportSubmission = () => {
 
   const resetReportState = () => {
     setReportCreated(false);
-    // Clear localStorage when resetting report state
-    localStorage.removeItem('currentGuestReportId');
-    localStorage.removeItem('pending_report_email');
-    console.log('🧹 Reset report state and cleared localStorage');
   };
 
   return {

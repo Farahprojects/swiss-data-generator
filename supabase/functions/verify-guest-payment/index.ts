@@ -53,9 +53,7 @@ function assertPresent(obj: Record<string, any>, keys: string[]) {
 function buildTranslatorPayload(rd: ReportData) {
   // Check if rd.request exists first (for astro data), otherwise map reportType
   let request;
-  const isAstroData = rd.request && rd.request.trim() !== '';
-  
-  if (isAstroData) {
+  if (rd.request && rd.request.trim() !== '') {
     request = rd.request;
   } else {
     request = mapReportTypeToRequest(rd.reportType);
@@ -71,21 +69,15 @@ function buildTranslatorPayload(rd: ReportData) {
       "birthDate", "birthTime", "birthLatitude", "birthLongitude",
     ]);
 
-    const payload: any = {
+    return {
       request,
       birth_date:  rd.birthDate,
       birth_time: rd.birthTime,                       // must be HH:MM[:SS]
       latitude:   parseFloat(rd.birthLatitude),
       longitude:  parseFloat(rd.birthLongitude),
       name:       rd.name ?? "Guest",
+      report:     rd.reportType,                      // Use actual reportType instead of hardcoded "standard"
     };
-
-    // Only include report field for AI reports, NOT for astro data
-    if (!isAstroData) {
-      payload.report = rd.reportType;
-    }
-
-    return payload;
   }
 
   // Synchronicity / compatibility endpoints
@@ -96,7 +88,7 @@ function buildTranslatorPayload(rd: ReportData) {
       "secondPersonLatitude", "secondPersonLongitude",
     ]);
 
-    const payload: any = {
+    return {
       request,
       person_a: {
         birth_date:  rd.birthDate,
@@ -113,14 +105,8 @@ function buildTranslatorPayload(rd: ReportData) {
         name:       rd.secondPersonName ?? "B",
       },
       relationship_type: rd.relationshipType ?? "general",
+      report:           rd.reportType,                // Use actual reportType instead of hardcoded "compatibility"
     };
-
-    // Only include report field for AI reports, NOT for astro data
-    if (!isAstroData) {
-      payload.report = rd.reportType;
-    }
-
-    return payload;
   }
 
   throw new Error(`Unhandled request type '${request}'`);

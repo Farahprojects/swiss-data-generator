@@ -17,7 +17,7 @@ import { CreateClientData } from '@/types/database';
 import { clientsService } from '@/services/clients';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
-import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
+import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
 import { useTabVisibility } from '@/hooks/useTabVisibility';
@@ -250,7 +250,7 @@ const ClientForm = ({ open, onOpenChange, onClientCreated }: ClientFormProps) =>
               name="birth_location"
               control={control}
               render={({ field }) => (
-                <CleanPlaceAutocomplete
+                <PlaceAutocomplete
                   label="Birth Location"
                   value={field.value || ''}
                   onChange={field.onChange}

@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertCircle } from 'lucide-react';
-import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
+import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -348,7 +348,7 @@ const PersonCard = ({
 
         {/* LOCATION ---------------------------------------------------- */}
         <div className="space-y-3">
-          <CleanPlaceAutocomplete
+          <PlaceAutocomplete
             label="Birth Location *"
             value={birthLocation}
             onChange={(value) => {
