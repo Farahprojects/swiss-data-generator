@@ -94,8 +94,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   }, []);
 
   const handleViewReport = useCallback(async () => {
+    console.log('🔘 View Report button clicked - MANUAL TRIGGER');
+    
+    // Prevent auto-trigger from interfering
+    setModalTriggered(true);
+    
+    console.log('🔍 Button click data:', {
+      guestReportId,
+      onViewReport: !!onViewReport,
+      reportType,
+      report
+    });
+
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-    if (!reportIdToUse || !onViewReport) return;
+    if (!reportIdToUse || !onViewReport) {
+      console.error('❌ Missing required data for view report:', {
+        reportIdToUse,
+        onViewReport: !!onViewReport
+      });
+      return;
+    }
 
     // Check if this is a Swiss-only report first
     const isSwissOnly = report?.swiss_boolean === true || reportType === 'essence' || reportType === 'sync';
@@ -107,30 +125,40 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       isSwissOnly
     });
 
-    if (isSwissOnly) {
-      // For Swiss-only reports, only fetch astro data and pass empty report content
-      console.log('🔬 Swiss-only report detected - fetching only astro data');
-      const swissData = await fetchAstroData(reportIdToUse);
-      
-      onViewReport(
-        '', // Empty report content for Swiss-only reports
-        null, 
-        swissData,
-        false, // hasReport = false for Swiss-only
-        true   // swissBoolean = true for Swiss-only
-      );
-    } else {
-      // For regular reports, fetch both content types
-      console.log('🔄 Regular report - fetching both report and Swiss data');
-      const { reportContent, swissData } = await fetchBothReportData(reportIdToUse);
-      
-      onViewReport(
-        reportContent ?? 'Report content could not be loaded', 
-        null, 
-        swissData,
-        report?.has_report ?? true,
-        report?.swiss_boolean ?? false
-      );
+    try {
+      if (isSwissOnly) {
+        // For Swiss-only reports, only fetch astro data and pass empty report content
+        console.log('🔬 Swiss-only report detected - fetching only astro data');
+        const swissData = await fetchAstroData(reportIdToUse);
+        console.log('📊 Swiss data fetched:', !!swissData);
+        
+        console.log('🚀 Calling onViewReport with Swiss data');
+        onViewReport(
+          '', // Empty report content for Swiss-only reports
+          null, 
+          swissData,
+          false, // hasReport = false for Swiss-only
+          true   // swissBoolean = true for Swiss-only
+        );
+        console.log('✅ onViewReport called successfully');
+      } else {
+        // For regular reports, fetch both content types
+        console.log('🔄 Regular report - fetching both report and Swiss data');
+        const { reportContent, swissData } = await fetchBothReportData(reportIdToUse);
+        console.log('📊 Regular data fetched:', { reportContent: !!reportContent, swissData: !!swissData });
+        
+        console.log('🚀 Calling onViewReport with regular data');
+        onViewReport(
+          reportContent ?? 'Report content could not be loaded', 
+          null, 
+          swissData,
+          report?.has_report ?? true,
+          report?.swiss_boolean ?? false
+        );
+        console.log('✅ onViewReport called successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error in handleViewReport:', error);
     }
   }, [guestReportId, onViewReport, reportType, fetchBothReportData, fetchAstroData, report?.swiss_boolean, report?.has_report]);
 
@@ -145,14 +173,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (reportIdToUse) {
       fetchReport(reportIdToUse);
       
-      // Setup realtime listener to auto-trigger modal
-      const cleanup = setupRealtimeListener(reportIdToUse, () => {
-        console.log('🔥 Realtime detected report ready - auto-triggering modal');
-        if (!modalTriggered) {
-          setModalTriggered(true);
-          handleViewReport();
-        }
-      });
+        // Setup realtime listener to auto-trigger modal
+        const cleanup = setupRealtimeListener(reportIdToUse, () => {
+          console.log('🔥 Realtime detected report ready - auto-triggering modal');
+          if (!modalTriggered) {
+            console.log('🎯 Auto-triggering modal from realtime');
+            setModalTriggered(true);
+            handleViewReport();
+          } else {
+            console.log('⚠️ Modal already triggered, skipping auto-trigger');
+          }
+        });
       
       return cleanup;
     }

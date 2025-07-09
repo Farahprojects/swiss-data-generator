@@ -154,12 +154,24 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     hasReport?: boolean,
     swissBoolean?: boolean
   ) => {
+    console.log('📨 handleViewReport called in ReportForm with:', {
+      content: content?.substring(0, 100) + '...',
+      pdfData: !!pdfData,
+      swissData: !!swissData,
+      hasReport,
+      swissBoolean
+    });
+
     setReportContent(content);
     setReportPdfData(pdfData || null);
     setSwissData(swissData);
     setHasReport(hasReport || false);
     setSwissBoolean(swissBoolean || false);
+    
+    console.log('🔄 Setting viewingReport to true');
     setViewingReport(true);
+    
+    console.log('✅ ReportForm state updated, should show modal now');
   };
 
   const handleCloseReportViewer = () => {
@@ -217,7 +229,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   // Show report viewer if user is viewing a report
-  if (viewingReport && reportContent && userName) {
+  console.log('🔍 ReportForm render check:', {
+    viewingReport,
+    reportContent: !!reportContent,
+    userName: !!userName,
+    shouldShowViewer: viewingReport && userName
+  });
+
+  if (viewingReport && userName) {
+    console.log('🎯 Rendering DesktopReportViewer');
     return (
       <DesktopReportViewer
         reportContent={reportContent}
