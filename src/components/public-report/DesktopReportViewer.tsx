@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { logToAdmin } from '@/utils/adminLogger';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { ReportHeader } from './ReportHeader';
 import { ReportContent } from './ReportContent';
+import { supabase } from '@/lib/supabaseClient';
 
 interface DesktopReportViewerProps {
   reportContent: string;
@@ -14,6 +15,7 @@ interface DesktopReportViewerProps {
   onBack: () => void;
   hasReport?: boolean;
   swissBoolean?: boolean;
+  reportId: string; // ✅ Required for listening
 }
 
 const DesktopReportViewer = ({
@@ -23,15 +25,47 @@ const DesktopReportViewer = ({
   swissData,
   onBack,
   hasReport,
-  swissBoolean
+  swissBoolean,
+  reportId
 }: DesktopReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
 
-  // Determine if this is a pure astro report (no AI content)
   const isPureAstroReport = swissData && (!reportContent || reportContent.trim() === '');
-  const defaultView = isPureAstroReport ? 'astro' : 'report';
+  const defaultView = (isPureAstroReport || swissBoolean) ? 'astro' : 'report';
   const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
+
+  const [isSwissEnforced, setIsSwissEnforced] = useState(swissBoolean ?? false);
+
+  // ✅ Listen for guest_reports.swiss_only becoming true
+  useEffect(() => {
+    if (isSwissEnforced || !reportId) return;
+
+    const channel = supabase
+      .channel(`watch-swiss-${reportId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'guest_reports',
+          filter: `id=eq.${reportId}`
+        },
+        (payload) => {
+          const updated = payload.new;
+          if (updated?.swiss_only === true) {
+            setIsSwissEnforced(true);
+            setActiveView('astro');
+            supabase.removeChannel(channel);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [reportId, isSwissEnforced]);
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
@@ -43,11 +77,10 @@ const DesktopReportViewer = ({
 
     try {
       const byteCharacters = atob(reportPdfData);
-      const byteNumbers = new Array(byteCharacters.length);
+      const byteArray = new Uint8Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+        byteArray[i] = byteCharacters.charCodeAt(i);
       }
-      const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: 'application/pdf' });
 
       const url = URL.createObjectURL(blob);
@@ -75,7 +108,6 @@ const DesktopReportViewer = ({
       await navigator.clipboard.writeText(cleanText);
 
       setIsCopyCompleted(true);
-
       toast({
         title: "Copied to clipboard!",
         description: "Your report has been copied and is ready to paste anywhere.",
@@ -103,8 +135,8 @@ const DesktopReportViewer = ({
         tempDiv.innerHTML = reportContent;
         const cleanText = tempDiv.textContent || tempDiv.innerText || '';
         await navigator.clipboard.writeText(cleanText);
-        setIsCopyCompleted(true);
 
+        setIsCopyCompleted(true);
         toast({
           title: "Report copied to clipboard!",
           description: "Redirecting to ChatGPT..."
@@ -188,9 +220,9 @@ const DesktopReportViewer = ({
         swissData={swissData}
         reportContent={reportContent}
         hasReport={hasReport}
-        swissBoolean={swissBoolean}
+        swissBoolean={isSwissEnforced}
         isPureAstroReport={isPureAstroReport}
-        {...(!swissBoolean && {
+        {...(!isSwissEnforced && {
           activeView,
           setActiveView,
         })}
@@ -201,9 +233,9 @@ const DesktopReportViewer = ({
         swissData={swissData}
         customerName={customerName}
         hasReport={hasReport}
-        swissBoolean={swissBoolean}
+        swissBoolean={isSwissEnforced}
         isPureAstroReport={isPureAstroReport}
-        {...(!swissBoolean && {
+        {...(!isSwissEnforced && {
           activeView,
           setActiveView,
         })}
@@ -213,3 +245,4 @@ const DesktopReportViewer = ({
 };
 
 export default DesktopReportViewer;
+
