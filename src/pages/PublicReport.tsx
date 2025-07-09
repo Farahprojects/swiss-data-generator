@@ -22,76 +22,75 @@ const PublicReport = () => {
   //   throw new Error('🔥 Force fail on SSR to test error boundary');
   // }
 
-  try {
+  // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isClientMobile, setIsClientMobile] = useState(false);
   const [scrollY, setScrollY] = useState(0);
 
-    // Safe mobile detection on client side only
-    useEffect(() => {
-      if (typeof window !== 'undefined') {
-        setIsClientMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
-      }
-    }, []);
+  // Safe mobile detection on client side only
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsClientMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    }
+  }, []);
 
-    // Scroll position tracking
-    useEffect(() => {
-      if (typeof window === 'undefined') return;
+  // Scroll position tracking
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-      const handleScroll = () => {
-        setScrollY(window.scrollY);
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Global error handlers to catch client-side errors
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleError = (event: ErrorEvent) => {
+        console.error('[CLIENT ERROR]', event?.error || event?.message || event);
       };
 
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+      const handleRejection = (event: PromiseRejectionEvent) => {
+        console.error('[CLIENT PROMISE ERROR]', event?.reason || event);
+      };
 
-    // Global error handlers to catch client-side errors
-    useEffect(() => {
-      if (typeof window !== 'undefined') {
-        const handleError = (event: ErrorEvent) => {
-          console.error('[CLIENT ERROR]', event?.error || event?.message || event);
-        };
+      window.addEventListener('error', handleError);
+      window.addEventListener('unhandledrejection', handleRejection);
 
-        const handleRejection = (event: PromiseRejectionEvent) => {
-          console.error('[CLIENT PROMISE ERROR]', event?.reason || event);
-        };
-
-        window.addEventListener('error', handleError);
-        window.addEventListener('unhandledrejection', handleRejection);
-
-        return () => {
-          window.removeEventListener('error', handleError);
-          window.removeEventListener('unhandledrejection', handleRejection);
-        };
-      }
-    }, []);
+      return () => {
+        window.removeEventListener('error', handleError);
+        window.removeEventListener('unhandledrejection', handleRejection);
+      };
+    }
+  }, []);
 
   // Removed diagnostic code that was leaking database data to console
 
-    const handleGetReportClick = () => {
-      if (isClientMobile) {
-        setIsDrawerOpen(true);
-      } else if (typeof window !== 'undefined') {
-        // For desktop, scroll to form
-        const reportSection = document.querySelector('#report-form');
-        if (reportSection) {
-          reportSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
-    };
-
-    const handleCloseDrawer = () => {
-      setIsDrawerOpen(false);
-    };
-
-    const handleOpenDrawer = () => {
+  const handleGetReportClick = () => {
+    if (isClientMobile) {
       setIsDrawerOpen(true);
-    };
+    } else if (typeof window !== 'undefined') {
+      // For desktop, scroll to form
+      const reportSection = document.querySelector('#report-form');
+      if (reportSection) {
+        reportSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+  };
 
-    // Calculate text opacity based on scroll position
-    const textOpacity = Math.max(0, 1 - (scrollY / 100)); // Fade out over 100px scroll
+  const handleOpenDrawer = () => {
+    setIsDrawerOpen(true);
+  };
+
+  // Calculate text opacity based on scroll position
+  const textOpacity = Math.max(0, 1 - (scrollY / 100)); // Fade out over 100px scroll
 
   try {
     return (
@@ -310,7 +309,6 @@ const PublicReport = () => {
           </div>
         </section>
 
-
         <TestsSection />
         {!isClientMobile && (
           <div id="report-form">
@@ -328,15 +326,10 @@ const PublicReport = () => {
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />
         <Footer />
-
       </div>
     );
-    } catch (err: any) {
-      console.error('[REPORT RUNTIME ERROR]', err);
-      return <div>Sorry, something went wrong.</div>;
-    }
   } catch (err: any) {
-    console.error('[REPORT SSR ERROR]', err?.message || err);
+    console.error('[REPORT RUNTIME ERROR]', err);
     return <div>Sorry, something went wrong.</div>;
   }
 };
