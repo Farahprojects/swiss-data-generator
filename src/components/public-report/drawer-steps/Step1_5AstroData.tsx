@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { astroDataSubCategories } from '@/constants/report-types';
+import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -38,7 +38,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
         name="request"
         render={({ field }) => (
           <div className="space-y-4">
-            {astroDataSubCategories.map((subCategory) => {
+            {astroRequestCategories.map((subCategory) => {
               const IconComponent = subCategory.icon;
               const isSelected = field.value === subCategory.value;
               
@@ -79,7 +79,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                 if (isMobile && process.env.NODE_ENV === 'production') {
                   logAction('AstroData button tap', 'info', {
                     selectedValue: subCategory.value,
-                    reportType: subCategory.reportType,
+                    request: subCategory.request,
                     calculatedPrice: price,
                     timestamp: new Date().toISOString(),
                     touchSupported: typeof window !== 'undefined' && 'ontouchstart' in window

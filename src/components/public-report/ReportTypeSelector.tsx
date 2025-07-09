@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import {
   reportCategories,
   snapshotSubCategories,
-  astroDataSubCategories,
+  astroRequestCategories,
   detailedEssenceTypes,
   detailedRelationshipTypes,
 } from '@/constants/report-types';
@@ -306,7 +306,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                   name="request"
                   render={({ field }) => (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {astroDataSubCategories.map((sub) => {
+                      {astroRequestCategories.map((sub) => {
                         const IconComponent = sub.icon;
                         const isSelected = watchedAstroData === sub.value;
                         return (
@@ -316,7 +316,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                             role="radio"
                             aria-checked={isSelected}
                             onClick={() =>
-                              handleAstroDataClick(sub.value, sub.reportType, field.onChange)
+                              handleAstroDataClick(sub.value, sub.request, field.onChange)
                             }
                             className={[
                               'w-full p-6 rounded-2xl border transition-all duration-200 shadow-md',
