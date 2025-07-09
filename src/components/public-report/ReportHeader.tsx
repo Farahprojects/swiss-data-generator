@@ -15,8 +15,8 @@ interface ReportHeaderProps {
   isCopyCompleted: boolean;
   swissData?: any;
   reportContent: string;
-  activeView: 'report' | 'astro';
-  setActiveView: (view: 'report' | 'astro') => void;
+  activeView?: 'report' | 'astro';
+  setActiveView?: (view: 'report' | 'astro') => void;
   hasReport?: boolean;
   swissBoolean?: boolean;
   isPureAstroReport?: boolean;
@@ -39,8 +39,8 @@ export const ReportHeader = ({
   swissBoolean,
   isPureAstroReport
 }: ReportHeaderProps) => {
-  // Hide toggle for pure astro reports
-  const showToggle = !isPureAstroReport;
+  // Hide toggle for pure astro reports or swiss-only reports
+  const showToggle = !isPureAstroReport && !swissBoolean;
   return (
     <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-4">
@@ -55,7 +55,7 @@ export const ReportHeader = ({
               <ArrowLeft className="h-4 w-4" />
               Back to Form
             </Button>
-            {showToggle && (
+            {showToggle && setActiveView && (
               <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setActiveView('report')}

@@ -31,7 +31,8 @@ const DesktopReportViewer = ({
   
   // Determine if this is a pure astro report (no AI content)
   const isPureAstroReport = swissData && (!reportContent || reportContent.trim() === '');
-  const defaultView = isPureAstroReport ? 'astro' : 'report';
+  // Default view: 'astro' if Swiss-only or pure astro report, otherwise 'report'
+  const defaultView = (isPureAstroReport || swissBoolean) ? 'astro' : 'report';
   const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
 
   const handleDownloadPdf = () => {
