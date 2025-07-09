@@ -97,6 +97,7 @@ export const ReportHeader = ({
                 onClick={onDownloadPdf}
                 className="flex items-center gap-2"
               >
+                <Download className="h-4 w-4" />
                 PDF
               </Button>
             )}
@@ -107,7 +108,8 @@ export const ReportHeader = ({
                 onClick={onDownloadAstroPdf}
                 className="flex items-center gap-2"
               >
-                Astro PDF
+                <Download className="h-4 w-4" />
+                PDF
               </Button>
             )}
             <Button
