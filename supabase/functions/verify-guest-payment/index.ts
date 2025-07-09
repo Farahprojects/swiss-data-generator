@@ -1,3 +1,4 @@
+
 // Edge Function: verifies Stripe/"free" sessions, records the guest report,
 // ▸ Changes
 //   • strict validation so ONLY translator-ready payloads are built
@@ -49,10 +50,8 @@ function assertPresent(obj: Record<string, any>, keys: string[]) {
   }
 }
 
-// ✅ START: DEFINITIVELY FIXED FUNCTION
 function buildTranslatorPayload(rd: ReportData) {
-  // 1. Determine the base request type ("essence", "sync", etc.)
-  // This part of your logic is already correct.
+  // Check if rd.request exists first (for astro data), otherwise map reportType
   let request;
   if (rd.request && rd.request.trim() !== '') {
     request = rd.request;
@@ -65,20 +64,19 @@ function buildTranslatorPayload(rd: ReportData) {
   }
 
   // Single-person endpoints
-  if (["essence", "flow", "mindset", "monthly", "focus"].includes(request)) {
+  if (["essence","flow","mindset","monthly","focus"].includes(request)) {
     assertPresent(rd, [
       "birthDate", "birthTime", "birthLatitude", "birthLongitude",
     ]);
 
     return {
-      request, // Correctly set to "essence"
+      request,
       birth_date:  rd.birthDate,
-      birth_time: rd.birthTime,
+      birth_time: rd.birthTime,                       // must be HH:MM[:SS]
       latitude:   parseFloat(rd.birthLatitude),
       longitude:  parseFloat(rd.birthLongitude),
       name:       rd.name ?? "Guest",
-      // FIX: Use the full reportType from the source data directly.
-      report:     rd.reportType,
+      report:     rd.reportType,                      // Use actual reportType instead of hardcoded "standard"
     };
   }
 
@@ -91,7 +89,7 @@ function buildTranslatorPayload(rd: ReportData) {
     ]);
 
     return {
-      request, // Correctly set to "sync"
+      request,
       person_a: {
         birth_date:  rd.birthDate,
         birth_time: rd.birthTime,
@@ -107,14 +105,12 @@ function buildTranslatorPayload(rd: ReportData) {
         name:       rd.secondPersonName ?? "B",
       },
       relationship_type: rd.relationshipType ?? "general",
-      // FIX: Use the full reportType from the source data directly.
-      report:           rd.reportType,
+      report:           rd.reportType,                // Use actual reportType instead of hardcoded "compatibility"
     };
   }
 
   throw new Error(`Unhandled request type '${request}'`);
 }
-// ✅ END: DEFINITIVELY FIXED FUNCTION
 
 async function processSwissDataInBackground(
   guestReportId: string,
@@ -280,40 +276,40 @@ serve(async (req) => {
     
     // ────────── SERVICE PURCHASES - FIXED HANDLING ──────────
     if (md.purchase_type === 'service') {
-      console.log("[guest_verify_payment] Service purchase detected - processing without report data");
+  console.log("[guest_verify_payment] Service purchase detected - processing without report data");
 
-      const { error: serviceInsertErr } = await supabase
-        .from("service_purchases") // ✅ use your actual table name
-        .upsert({
-          stripe_session_id: session.id,
-          email: session.customer_details?.email ?? null,
-          coach_slug: md.coach_slug ?? null,
-          coach_name: md.coach_name ?? null,
-          service_title: md.service_title ?? null,
-          amount_paid: (session.amount_total ?? 0) / 100,
-          currency: session.currency,
-          purchase_type: 'service',
-          payment_status: 'paid',
-        }, { onConflict: 'stripe_session_id' });
+  const { error: serviceInsertErr } = await supabase
+    .from("service_purchases") // ✅ use your actual table name
+    .upsert({
+      stripe_session_id: session.id,
+      email: session.customer_details?.email ?? null,
+      coach_slug: md.coach_slug ?? null,
+      coach_name: md.coach_name ?? null,
+      service_title: md.service_title ?? null,
+      amount_paid: (session.amount_total ?? 0) / 100,
+      currency: session.currency,
+      purchase_type: 'service',
+      payment_status: 'paid',
+    }, { onConflict: 'stripe_session_id' });
 
-      if (serviceInsertErr) {
-        console.error("[guest_verify_payment] Failed to log service purchase:", serviceInsertErr);
-      }
+  if (serviceInsertErr) {
+    console.error("[guest_verify_payment] Failed to log service purchase:", serviceInsertErr);
+  }
 
-      return new Response(JSON.stringify({
-        success:        true,
-        verified:       true,
-        paymentStatus:  session.payment_status,
-        amountPaid:     session.amount_total,
-        currency:       session.currency,
-        isService:      true,
-        isCoachReport:  true,
-        coach_slug:     md.coach_slug || null,
-        coach_name:     md.coach_name || null,
-        service_title:  md.service_title || null,
-        message:        "Service purchase verified successfully",
-      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+  return new Response(JSON.stringify({
+    success:        true,
+    verified:       true,
+    paymentStatus:  session.payment_status,
+    amountPaid:     session.amount_total,
+    currency:       session.currency,
+    isService:      true,
+    isCoachReport:  true,
+    coach_slug:     md.coach_slug || null,
+    coach_name:     md.coach_name || null,
+    service_title:  md.service_title || null,
+    message:        "Service purchase verified successfully",
+  }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
 
     // This is a report purchase - proceed with report creation
     const reportData: ReportData = {
