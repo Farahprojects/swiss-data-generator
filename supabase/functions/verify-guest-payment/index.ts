@@ -63,21 +63,28 @@ function buildTranslatorPayload(rd: ReportData) {
     throw new Error(`Unsupported reportType '${rd.reportType}' and no request field provided`);
   }
 
+  const includeReportField = !["essence", "sync"].includes(request); // AstroData flows shouldn't have this
+
   // Single-person endpoints
   if (["essence","flow","mindset","monthly","focus"].includes(request)) {
     assertPresent(rd, [
       "birthDate", "birthTime", "birthLatitude", "birthLongitude",
     ]);
 
-    return {
+    const payload: Record<string, any> = {
       request,
-      birth_date:  rd.birthDate,
-      birth_time: rd.birthTime,                       // must be HH:MM[:SS]
-      latitude:   parseFloat(rd.birthLatitude),
-      longitude:  parseFloat(rd.birthLongitude),
-      name:       rd.name ?? "Guest",
-      report:     rd.reportType,                      // Use actual reportType instead of hardcoded "standard"
+      birth_date: rd.birthDate,
+      birth_time: rd.birthTime,
+      latitude: parseFloat(rd.birthLatitude),
+      longitude: parseFloat(rd.birthLongitude),
+      name: rd.name ?? "Guest",
     };
+
+    if (includeReportField) {
+      payload.report = rd.reportType;
+    }
+
+    return payload;
   }
 
   // Synchronicity / compatibility endpoints
@@ -88,25 +95,30 @@ function buildTranslatorPayload(rd: ReportData) {
       "secondPersonLatitude", "secondPersonLongitude",
     ]);
 
-    return {
+    const payload: Record<string, any> = {
       request,
       person_a: {
-        birth_date:  rd.birthDate,
+        birth_date: rd.birthDate,
         birth_time: rd.birthTime,
-        latitude:   parseFloat(rd.birthLatitude),
-        longitude:  parseFloat(rd.birthLongitude),
-        name:       rd.name ?? "A",
+        latitude: parseFloat(rd.birthLatitude),
+        longitude: parseFloat(rd.birthLongitude),
+        name: rd.name ?? "A",
       },
       person_b: {
-        birth_date:  rd.secondPersonBirthDate,
+        birth_date: rd.secondPersonBirthDate,
         birth_time: rd.secondPersonBirthTime,
-        latitude:   parseFloat(rd.secondPersonLatitude),
-        longitude:  parseFloat(rd.secondPersonLongitude),
-        name:       rd.secondPersonName ?? "B",
+        latitude: parseFloat(rd.secondPersonLatitude),
+        longitude: parseFloat(rd.secondPersonLongitude),
+        name: rd.secondPersonName ?? "B",
       },
       relationship_type: rd.relationshipType ?? "general",
-      report:           rd.reportType,                // Use actual reportType instead of hardcoded "compatibility"
     };
+
+    if (includeReportField) {
+      payload.report = rd.reportType;
+    }
+
+    return payload;
   }
 
   throw new Error(`Unhandled request type '${request}'`);
