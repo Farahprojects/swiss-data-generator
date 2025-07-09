@@ -54,7 +54,7 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
 interface SuccessScreenProps {
   name: string;
   email: string;
-  onViewReport?: (content: string, pdf?: string | null, swissData?: any) => void;
+  onViewReport?: (content: string, pdf?: string | null, swissData?: any, hasReport?: boolean, swissBoolean?: boolean) => void;
   guestReportId?: string;
 }
 
@@ -110,7 +110,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     onViewReport(
       primaryContent ?? 'Report content could not be loaded', 
       null, 
-      swissData
+      swissData,
+      report?.has_report || false,
+      report?.swiss_boolean || false
     );
   }, [guestReportId, onViewReport, reportType, fetchBothReportData, fetchAstroData, report?.swiss_boolean]);
 

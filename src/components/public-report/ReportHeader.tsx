@@ -16,6 +16,8 @@ interface ReportHeaderProps {
   reportContent: string;
   activeView: 'report' | 'astro';
   setActiveView: (view: 'report' | 'astro') => void;
+  hasReport?: boolean;
+  swissBoolean?: boolean;
 }
 
 export const ReportHeader = ({
@@ -29,13 +31,24 @@ export const ReportHeader = ({
   swissData,
   reportContent,
   activeView,
-  setActiveView
+  setActiveView,
+  hasReport,
+  swissBoolean
 }: ReportHeaderProps) => {
-  const hasSwissData = hasValidAstroData(swissData);
-  const showToggle = hasSwissData && reportContent;
+  // Updated logic: Show toggle when there's both report content AND Swiss data
+  // swiss_boolean = false + has_report = true = Both exist (show toggle)
+  // swiss_boolean = true = Only Swiss data exists (show toggle) 
+  // has_report = false = No report content (don't show toggle)
+  const showToggle = hasReport === true && (swissBoolean === false || swissBoolean === true);
   
   // Debug logging
-  console.log('🔍 Toggle Debug:', { hasSwissData, reportContent: !!reportContent, swissData, showToggle });
+  console.log('🔍 Toggle Debug (Fixed):', { 
+    hasReport, 
+    swissBoolean, 
+    reportContent: !!reportContent, 
+    showToggle,
+    swissData: !!swissData 
+  });
   return (
     <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-4">

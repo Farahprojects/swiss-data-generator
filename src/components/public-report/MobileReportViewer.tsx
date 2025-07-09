@@ -15,6 +15,8 @@ interface MobileReportViewerProps {
   customerName: string;
   swissData?: any;
   onBack: () => void;
+  hasReport?: boolean;
+  swissBoolean?: boolean;
 }
 
 const MobileReportViewer = ({ 
@@ -22,7 +24,9 @@ const MobileReportViewer = ({
   reportPdfData, 
   customerName,
   swissData,
-  onBack 
+  onBack,
+  hasReport,
+  swissBoolean
 }: MobileReportViewerProps) => {
   const { toast } = useToast();
   const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
@@ -181,7 +185,13 @@ const MobileReportViewer = ({
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-8 pb-24">
           <div className="max-w-4xl mx-auto">
-            <ReportContent reportContent={reportContent} swissData={swissData} customerName={customerName} />
+            <ReportContent 
+              reportContent={reportContent} 
+              swissData={swissData} 
+              customerName={customerName}
+              hasReport={hasReport}
+              swissBoolean={swissBoolean}
+            />
           </div>
         </div>
       </div>

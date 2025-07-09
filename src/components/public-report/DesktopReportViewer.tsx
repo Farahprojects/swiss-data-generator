@@ -12,6 +12,8 @@ interface DesktopReportViewerProps {
   customerName: string;
   swissData?: any;
   onBack: () => void;
+  hasReport?: boolean;
+  swissBoolean?: boolean;
 }
 
 const DesktopReportViewer = ({ 
@@ -19,7 +21,9 @@ const DesktopReportViewer = ({
   reportPdfData, 
   customerName,
   swissData,
-  onBack 
+  onBack,
+  hasReport,
+  swissBoolean
 }: DesktopReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
@@ -150,9 +154,19 @@ const DesktopReportViewer = ({
         reportContent={reportContent}
         activeView={activeView}
         setActiveView={setActiveView}
+        hasReport={hasReport}
+        swissBoolean={swissBoolean}
       />
 
-      <ReportContent reportContent={reportContent} swissData={swissData} customerName={customerName} activeView={activeView} setActiveView={setActiveView} />
+      <ReportContent 
+        reportContent={reportContent} 
+        swissData={swissData} 
+        customerName={customerName} 
+        activeView={activeView} 
+        setActiveView={setActiveView}
+        hasReport={hasReport}
+        swissBoolean={swissBoolean}
+      />
     </motion.div>
   );
 };

@@ -85,6 +85,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const [reportData, setReportData] = useState<{
     content: string;
     pdfData?: string | null;
+    swissData?: any;
+    hasReport?: boolean;
+    swissBoolean?: boolean;
   } | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const footerRef = useRef<HTMLDivElement>(null);
@@ -234,9 +237,18 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   const handleViewReport = (
     reportContent: string,
-    reportPdfData?: string | null
+    reportPdfData?: string | null,
+    swissData?: any,
+    hasReport?: boolean,
+    swissBoolean?: boolean
   ) => {
-    setReportData({ content: reportContent, pdfData: reportPdfData });
+    setReportData({ 
+      content: reportContent, 
+      pdfData: reportPdfData,
+      swissData,
+      hasReport,
+      swissBoolean
+    });
     setCurrentView('report-viewer');
   };
   const handleBackFromReport = () => resetDrawer();
@@ -475,7 +487,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               reportContent={reportData.content}
               reportPdfData={reportData.pdfData}
               customerName={submittedData.name}
+              swissData={reportData.swissData}
               onBack={handleBackFromReport}
+              hasReport={reportData.hasReport}
+              swissBoolean={reportData.swissBoolean}
             />
           </div>
         )}

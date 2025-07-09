@@ -12,16 +12,39 @@ interface ReportContentProps {
   customerName: string;
   activeView?: 'report' | 'astro';
   setActiveView?: (view: 'report' | 'astro') => void;
+  hasReport?: boolean;
+  swissBoolean?: boolean;
 }
 
-export const ReportContent = ({ reportContent, swissData, customerName, activeView: externalActiveView, setActiveView: externalSetActiveView }: ReportContentProps) => {
+export const ReportContent = ({ 
+  reportContent, 
+  swissData, 
+  customerName, 
+  activeView: externalActiveView, 
+  setActiveView: externalSetActiveView,
+  hasReport,
+  swissBoolean
+}: ReportContentProps) => {
   const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>('report');
   
   const activeView = externalActiveView || internalActiveView;
   const setActiveView = externalSetActiveView || setInternalActiveView;
   
-  const hasSwissData = hasValidAstroData(swissData);
-  const showToggle = hasSwissData && reportContent && !externalActiveView;
+  // Updated logic: Show toggle when there's both report content AND Swiss data
+  // swiss_boolean = false + has_report = true = Both exist (show toggle)
+  // swiss_boolean = true = Only Swiss data exists (show toggle)
+  // Use the same logic as ReportHeader
+  const showToggle = hasReport === true && (swissBoolean === false || swissBoolean === true) && !externalActiveView;
+  
+  // Debug logging
+  console.log('🔍 ReportContent Toggle Debug:', { 
+    hasReport, 
+    swissBoolean, 
+    reportContent: !!reportContent, 
+    showToggle,
+    externalActiveView,
+    swissData: !!swissData 
+  });
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Card className="shadow-lg border-0 shadow-2xl">

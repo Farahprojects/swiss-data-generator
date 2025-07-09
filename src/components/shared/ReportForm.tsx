@@ -29,6 +29,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [viewingReport, setViewingReport] = useState(false);
   const [reportContent, setReportContent] = useState<string>('');
   const [reportPdfData, setReportPdfData] = useState<string | null>(null);
+  const [swissData, setSwissData] = useState<any>(null);
+  const [hasReport, setHasReport] = useState<boolean>(false);
+  const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
   
   const form = useForm<ReportFormData>({
     mode: 'onBlur',
@@ -144,9 +147,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                                reportType?.startsWith('sync_') || 
                                request === 'sync';
 
-  const handleViewReport = (content: string, pdfData?: string | null) => {
+  const handleViewReport = (
+    content: string, 
+    pdfData?: string | null, 
+    swissData?: any,
+    hasReport?: boolean,
+    swissBoolean?: boolean
+  ) => {
     setReportContent(content);
     setReportPdfData(pdfData || null);
+    setSwissData(swissData);
+    setHasReport(hasReport || false);
+    setSwissBoolean(swissBoolean || false);
     setViewingReport(true);
   };
 
@@ -155,6 +167,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setViewingReport(false);
     setReportContent('');
     setReportPdfData(null);
+    setSwissData(null);
+    setHasReport(false);
+    setSwissBoolean(false);
     form.reset();
     localStorage.removeItem('currentGuestReportId');
     localStorage.removeItem('pending_report_email');
@@ -208,7 +223,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         reportContent={reportContent}
         reportPdfData={reportPdfData}
         customerName={userName}
+        swissData={swissData}
         onBack={handleCloseReportViewer}
+        hasReport={hasReport}
+        swissBoolean={swissBoolean}
       />
     );
   }
