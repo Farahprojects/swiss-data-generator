@@ -45,12 +45,25 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
     };
   }
 
+  // Check if this is an AstroData request (raw Swiss data only)
+  const isAstroDataRequest = requestData?.request === 'essence' || requestData?.request === 'sync';
+  
   // Enhanced report request checking with detailed logging
   const reportRequested = requestData?.report;
   console.log(`${logPrefix} Raw report field value: "${reportRequested}"`);
   console.log(`${logPrefix} Report requested check: ${reportRequested ? 'YES' : 'NO'}`);
+  console.log(`${logPrefix} AstroData request check: ${isAstroDataRequest ? 'YES' : 'NO'}`);
   
   if (!reportRequested) {
+    if (isAstroDataRequest) {
+      console.log(`${logPrefix} AstroData request detected - returning raw Swiss data without report generation`);
+      console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
+      return {
+        success: true,
+        responseData: swissApiResponse
+      };
+    }
+    
     console.warn(`${logPrefix} No report requested - request payload:`, {
       hasReportField: 'report' in (requestData || {}),
       reportValue: requestData?.report,
