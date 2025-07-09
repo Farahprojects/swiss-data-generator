@@ -24,6 +24,12 @@ export interface EnrichedSnapshot {
   tz: string;             // "Australia/Melbourne"
   planets: EnrichedPlanet[];
   aspects: EnrichedAspect[];
+  personName?: string;    // "John Doe"
+  birthLocation?: string; // "New York, NY"
+  coordinates?: {
+    lat: number;
+    lon: number;
+  };
 }
 
 const ZODIAC_SIGNS = [
@@ -90,5 +96,16 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
       })
     : [];
 
-  return { dateISO, timeISO, tz, planets, aspects };
+  // --- Person & Location data ----------------------------------
+  const personName = raw.name || raw.personName || meta.name;
+  const birthLocation = meta.location || raw.location || raw.birthLocation;
+  const coordinates = (meta.lat && meta.lon) ? {
+    lat: meta.lat,
+    lon: meta.lon
+  } : undefined;
+
+  return { 
+    dateISO, timeISO, tz, planets, aspects,
+    personName, birthLocation, coordinates
+  };
 };
