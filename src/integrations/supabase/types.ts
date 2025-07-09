@@ -1736,6 +1736,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: string
       }
+      rpc_notify_orchestrator: {
+        Args: { guest_report_id: string }
+        Returns: undefined
+      }
       send_notification_email: {
         Args: {
           template_type: string
