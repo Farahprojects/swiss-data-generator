@@ -22,19 +22,25 @@ export const isSwissOnlyReport = (data: ReportDetectionData): boolean => {
     return true;
   }
   
-  // Secondary check: Swiss data exists but no meaningful report content
-  const hasSwissData = !!swissData;
-  const hasEmptyOrNoContent = !reportContent || reportContent.trim() === '' || reportContent.trim().length < 50;
-  
-  if (hasSwissData && hasEmptyOrNoContent) {
-    console.log('🔬 Swiss-only detected: has Swiss data but no/empty content');
-    return true;
-  }
-  
-  // Tertiary check: specific report types that are astro-only
+  // Secondary check: specific report types that are astro-only
   const astroOnlyTypes = ['essence', 'sync'];
   if (reportType && astroOnlyTypes.includes(reportType)) {
     console.log('🔬 Swiss-only detected: report type is astro-only', reportType);
+    return true;
+  }
+  
+  // Tertiary check: hasReport explicitly false and Swiss data exists
+  if (hasReport === false && !!swissData) {
+    console.log('🔬 Swiss-only detected: hasReport=false with Swiss data');
+    return true;
+  }
+  
+  // Quaternary check: Empty/minimal report content with Swiss data
+  const hasSwissData = !!swissData;
+  const hasEmptyOrNoContent = !reportContent || reportContent.trim() === '' || reportContent.trim().length < 20;
+  
+  if (hasSwissData && hasEmptyOrNoContent) {
+    console.log('🔬 Swiss-only detected: has Swiss data but no/empty content');
     return true;
   }
   
@@ -43,6 +49,7 @@ export const isSwissOnlyReport = (data: ReportDetectionData): boolean => {
     hasSwissData,
     hasEmptyOrNoContent,
     reportType,
+    hasReport,
     contentLength: reportContent?.length || 0
   });
   
@@ -51,9 +58,29 @@ export const isSwissOnlyReport = (data: ReportDetectionData): boolean => {
 
 /**
  * Determines if the toggle should be hidden based on report data
+ * Toggle should only show when we have BOTH meaningful report content AND Swiss data
  */
 export const shouldHideToggle = (data: ReportDetectionData): boolean => {
-  return isSwissOnlyReport(data);
+  const { reportContent, swissData } = data;
+  
+  // Always hide toggle for Swiss-only reports
+  if (isSwissOnlyReport(data)) {
+    return true;
+  }
+  
+  // Hide toggle if we don't have both content types
+  const hasMeaningfulReportContent = reportContent && reportContent.trim().length > 20;
+  const hasSwissData = !!swissData;
+  
+  if (!hasMeaningfulReportContent || !hasSwissData) {
+    console.log('🔬 Hiding toggle: missing content types', {
+      hasMeaningfulReportContent,
+      hasSwissData
+    });
+    return true;
+  }
+  
+  return false;
 };
 
 /**

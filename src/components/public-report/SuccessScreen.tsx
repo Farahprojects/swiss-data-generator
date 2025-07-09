@@ -97,32 +97,42 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (!reportIdToUse || !onViewReport) return;
 
-    console.log('🔄 Fetching both report and Swiss data');
-    const { reportContent, swissData } = await fetchBothReportData(reportIdToUse);
-
-    // Determine primary content for Swiss-only reports
-    let primaryContent = reportContent;
-    if (!reportContent && (report?.swiss_boolean === true || reportType === 'essence' || reportType === 'sync')) {
-      console.log('🔬 Using Swiss data as primary content for astro-only report');
-      primaryContent = await fetchAstroData(reportIdToUse);
-    }
-
-    console.log('🔍 SuccessScreen handleViewReport - Debug values:', {
-      reportSwissBoolean: report?.swiss_boolean,
-      reportHasReport: report?.has_report,
-      reportType: reportType,
-      primaryContentLength: primaryContent?.length,
-      swissDataExists: !!swissData
+    // Check if this is a Swiss-only report first
+    const isSwissOnly = report?.swiss_boolean === true || reportType === 'essence' || reportType === 'sync';
+    
+    console.log('🔄 SuccessScreen - Report detection:', {
+      reportType,
+      swiss_boolean: report?.swiss_boolean,
+      has_report: report?.has_report,
+      isSwissOnly
     });
 
-    onViewReport(
-      primaryContent ?? 'Report content could not be loaded', 
-      null, 
-      swissData,
-      report?.has_report || false,
-      report?.swiss_boolean ?? false
-    );
-  }, [guestReportId, onViewReport, reportType, fetchBothReportData, fetchAstroData, report?.swiss_boolean]);
+    if (isSwissOnly) {
+      // For Swiss-only reports, only fetch astro data and pass empty report content
+      console.log('🔬 Swiss-only report detected - fetching only astro data');
+      const swissData = await fetchAstroData(reportIdToUse);
+      
+      onViewReport(
+        '', // Empty report content for Swiss-only reports
+        null, 
+        swissData,
+        false, // hasReport = false for Swiss-only
+        true   // swissBoolean = true for Swiss-only
+      );
+    } else {
+      // For regular reports, fetch both content types
+      console.log('🔄 Regular report - fetching both report and Swiss data');
+      const { reportContent, swissData } = await fetchBothReportData(reportIdToUse);
+      
+      onViewReport(
+        reportContent ?? 'Report content could not be loaded', 
+        null, 
+        swissData,
+        report?.has_report ?? true,
+        report?.swiss_boolean ?? false
+      );
+    }
+  }, [guestReportId, onViewReport, reportType, fetchBothReportData, fetchAstroData, report?.swiss_boolean, report?.has_report]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
