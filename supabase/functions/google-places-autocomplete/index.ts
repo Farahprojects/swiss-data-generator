@@ -16,6 +16,11 @@ serve(async (req) => {
   try {
     const { input, types = 'geocode', componentRestrictions } = await req.json();
     
+    // Add user agent logging for debugging mobile issues
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+    console.log(`📱 Request from ${isMobile ? 'mobile' : 'desktop'} device:`, userAgent.substring(0, 100));
+    
     if (!input) {
       return new Response(
         JSON.stringify({ error: 'Input parameter is required' }),
@@ -51,10 +56,37 @@ serve(async (req) => {
 
     const url = `${baseUrl}?${params.toString()}`;
     
-    console.log('🔍 Making request to Google Places API');
+    console.log('🔍 Making request to Google Places API for input:', input);
     
-    const response = await fetch(url);
-    const data = await response.json();
+    // Add retry logic for mobile reliability
+    let response;
+    let data;
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        response = await fetch(url, {
+          headers: {
+            'User-Agent': 'TheRAI-Autocomplete/1.0'
+          }
+        });
+        data = await response.json();
+        
+        if (response.ok) break;
+        
+        if (retryCount === maxRetries) throw new Error(`API request failed after ${maxRetries + 1} attempts`);
+        
+        console.warn(`Retry ${retryCount + 1}/${maxRetries} for Google Places API`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+        retryCount++;
+      } catch (error) {
+        if (retryCount === maxRetries) throw error;
+        console.warn(`Network error, retrying... (${retryCount + 1}/${maxRetries})`);
+        retryCount++;
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      }
+    }
 
     if (!response.ok) {
       console.error('❌ Google Places API error:', data);
@@ -67,12 +99,24 @@ serve(async (req) => {
       );
     }
 
-    console.log('✅ Successfully retrieved autocomplete suggestions');
+    const predictions = data.predictions || [];
+    console.log(`✅ Successfully retrieved ${predictions.length} autocomplete suggestions`);
+    
+    // Add mobile-specific optimizations
+    const optimizedPredictions = predictions.map((prediction: any) => ({
+      ...prediction,
+      // Ensure structured formatting for better mobile display
+      structured_formatting: prediction.structured_formatting || {
+        main_text: prediction.description.split(',')[0],
+        secondary_text: prediction.description.split(',').slice(1).join(',').trim()
+      }
+    }));
     
     return new Response(
       JSON.stringify({
-        predictions: data.predictions || [],
-        status: data.status
+        predictions: optimizedPredictions,
+        status: data.status,
+        mobile_optimized: isMobile
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

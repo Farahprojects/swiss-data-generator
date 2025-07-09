@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, forwardRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2, MapPin, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PlaceData } from './utils/extractPlaceData';
 
@@ -45,9 +45,17 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
     const [isLoading, setIsLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
+    const [lastSearchFailed, setLastSearchFailed] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const debounceRef = useRef<NodeJS.Timeout>();
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Detect mobile on mount for optimizations
+    useEffect(() => {
+      const mobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+    }, []);
 
     // Sync with external value changes
     useEffect(() => {
@@ -56,33 +64,65 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
       }
     }, [value]);
 
-    // Debounced search function
-    const searchPlaces = async (input: string) => {
+    // Enhanced search function with retry logic and mobile optimizations
+    const searchPlaces = async (input: string, retryCount = 0) => {
       if (input.length < 2) {
         setPredictions([]);
         setIsOpen(false);
+        setLastSearchFailed(false);
         return;
       }
 
       setIsLoading(true);
+      setLastSearchFailed(false);
+      
       try {
+        console.log(`🔍 Searching places: "${input}" (attempt ${retryCount + 1})`);
+        
         const { data, error } = await supabase.functions.invoke('google-places-autocomplete', {
-          body: { input, types: 'geocode' }
+          body: { 
+            input, 
+            types: 'geocode',
+            // Add component restrictions for better mobile results
+            componentRestrictions: isMobile ? undefined : {}
+          }
         });
 
         if (error) {
           console.error('Places search error:', error);
+          setLastSearchFailed(true);
+          
+          // Retry once on failure
+          if (retryCount < 1) {
+            console.log('🔄 Retrying place search...');
+            setTimeout(() => searchPlaces(input, retryCount + 1), 1000);
+            return;
+          }
+          
           setPredictions([]);
           setIsOpen(false);
           return;
         }
 
         const newPredictions = data.predictions || [];
+        console.log(`✅ Found ${newPredictions.length} predictions`);
+        
         setPredictions(newPredictions);
         setIsOpen(newPredictions.length > 0);
         setHighlightedIndex(-1);
+        setLastSearchFailed(false);
+        
       } catch (error) {
         console.error('Error searching places:', error);
+        setLastSearchFailed(true);
+        
+        // Retry once on network error
+        if (retryCount < 1) {
+          console.log('🔄 Retrying place search after error...');
+          setTimeout(() => searchPlaces(input, retryCount + 1), 1000);
+          return;
+        }
+        
         setPredictions([]);
         setIsOpen(false);
       } finally {
@@ -100,10 +140,10 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
         clearTimeout(debounceRef.current);
       }
 
-      // Set new debounce
+      // Set new debounce - longer on mobile to prevent excessive API calls
       debounceRef.current = setTimeout(() => {
         searchPlaces(newValue);
-      }, 300);
+      }, isMobile ? 500 : 300);
     };
 
     const handlePlaceSelect = async (prediction: Prediction) => {
@@ -222,6 +262,7 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
               placeholder={placeholder}
               disabled={disabled}
               className="h-12 pl-10"
+              style={{ fontSize: '16px' }} // Prevent zoom on iOS
             />
             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             {isLoading && (
@@ -264,7 +305,14 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
           )}
         </div>
         
+        {/* Error states and retry option */}
         {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+        {lastSearchFailed && !isLoading && (
+          <div className="flex items-center gap-2 text-sm text-orange-600 mt-1">
+            <AlertTriangle className="h-4 w-4" />
+            <span>Search failed. Try typing more of the address.</span>
+          </div>
+        )}
       </div>
     );
   }
