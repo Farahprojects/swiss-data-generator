@@ -37,8 +37,7 @@ export const ReportHeader = ({
               Back to Form
             </Button>
             <div>
-              <h1 className="text-xl font-semibold text-foreground">Your Report</h1>
-              <p className="text-sm text-muted-foreground">Generated for {customerName}</p>
+              <h1 className="text-xl font-semibold text-foreground">Report Actions</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">

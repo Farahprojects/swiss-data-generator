@@ -155,14 +155,6 @@ const MobileReportViewer = ({
         >
           <ArrowLeft className="h-5 w-5 text-gray-700" />
         </Button>
-        <div className="text-center">
-          <h1 className="text-3xl font-light text-gray-900 mb-2 tracking-tight">
-            Your <em className="italic font-light">Report</em>
-          </h1>
-          <p className="text-lg text-gray-500 font-light">
-            Generated for {customerName}
-          </p>
-        </div>
         <div className="absolute right-6 flex gap-2">
           <Button
             variant="ghost"
