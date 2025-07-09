@@ -219,11 +219,16 @@ async function processSwissDataInBackground(
 // ────────────────────────────────────────────────────────────────────────────
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+  // Add comprehensive error handling and logging
+  console.log(`[verify-guest-payment] Request received: ${req.method} ${req.url}`);
+  
+  // Wrap everything in try-catch to ensure CORS headers are always returned
   try {
+    if (req.method === "OPTIONS") {
+      console.log(`[verify-guest-payment] Handling OPTIONS request`);
+      return new Response(null, { headers: corsHeaders });
+    }
+
     const { sessionId } = await req.json();
     if (!sessionId) throw new Error("Session ID is required");
 
@@ -288,40 +293,40 @@ serve(async (req) => {
     
     // ────────── SERVICE PURCHASES - FIXED HANDLING ──────────
     if (md.purchase_type === 'service') {
-  console.log("[guest_verify_payment] Service purchase detected - processing without report data");
+      console.log("[guest_verify_payment] Service purchase detected - processing without report data");
 
-  const { error: serviceInsertErr } = await supabase
-    .from("service_purchases") // ✅ use your actual table name
-    .upsert({
-      stripe_session_id: session.id,
-      email: session.customer_details?.email ?? null,
-      coach_slug: md.coach_slug ?? null,
-      coach_name: md.coach_name ?? null,
-      service_title: md.service_title ?? null,
-      amount_paid: (session.amount_total ?? 0) / 100,
-      currency: session.currency,
-      purchase_type: 'service',
-      payment_status: 'paid',
-    }, { onConflict: 'stripe_session_id' });
+      const { error: serviceInsertErr } = await supabase
+        .from("service_purchases") // ✅ use your actual table name
+        .upsert({
+          stripe_session_id: session.id,
+          email: session.customer_details?.email ?? null,
+          coach_slug: md.coach_slug ?? null,
+          coach_name: md.coach_name ?? null,
+          service_title: md.service_title ?? null,
+          amount_paid: (session.amount_total ?? 0) / 100,
+          currency: session.currency,
+          purchase_type: 'service',
+          payment_status: 'paid',
+        }, { onConflict: 'stripe_session_id' });
 
-  if (serviceInsertErr) {
-    console.error("[guest_verify_payment] Failed to log service purchase:", serviceInsertErr);
-  }
+      if (serviceInsertErr) {
+        console.error("[guest_verify_payment] Failed to log service purchase:", serviceInsertErr);
+      }
 
-  return new Response(JSON.stringify({
-    success:        true,
-    verified:       true,
-    paymentStatus:  session.payment_status,
-    amountPaid:     session.amount_total,
-    currency:       session.currency,
-    isService:      true,
-    isCoachReport:  true,
-    coach_slug:     md.coach_slug || null,
-    coach_name:     md.coach_name || null,
-    service_title:  md.service_title || null,
-    message:        "Service purchase verified successfully",
-  }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}
+      return new Response(JSON.stringify({
+        success:        true,
+        verified:       true,
+        paymentStatus:  session.payment_status,
+        amountPaid:     session.amount_total,
+        currency:       session.currency,
+        isService:      true,
+        isCoachReport:  true,
+        coach_slug:     md.coach_slug || null,
+        coach_name:     md.coach_name || null,
+        service_title:  md.service_title || null,
+        message:        "Service purchase verified successfully",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // This is a report purchase - proceed with report creation
     const reportData: ReportData = {
@@ -434,7 +439,8 @@ serve(async (req) => {
     }
 
   } catch (err: any) {
-    console.error("[guest_verify_payment] Error:", err.message);
+    console.error("[verify-guest-payment] Error:", err.message);
+    console.error("[verify-guest-payment] Stack:", err.stack);
     return new Response(JSON.stringify({
       success:  false,
       verified: false,
