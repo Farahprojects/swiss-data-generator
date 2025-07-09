@@ -35,8 +35,8 @@ export const ReportContent = ({
   const activeView = externalActiveView || internalActiveView;
   const setActiveView = externalSetActiveView || setInternalActiveView;
   
-  // Hide toggle for pure astro reports
-  const showToggle = !isPureAstroReport && !externalActiveView;
+  // Hide toggle for pure astro reports or when swiss_boolean is true (no AI report)
+  const showToggle = !isPureAstroReport && !externalActiveView && !swissBoolean && hasReport;
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Card className="shadow-lg border-0 shadow-2xl">
