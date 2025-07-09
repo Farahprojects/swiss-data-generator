@@ -89,14 +89,46 @@ const enrichAspects = (arr: any[]): EnrichedAspect[] =>
   });
 
 export const parseSynastryRich = (raw: any): EnrichedSynastry => {
+  // Debug logging to see the actual data structure
+  console.log('🔍 [parseSynastryRich] Full raw data:', raw);
+  
   const meta = raw.meta ?? {};
   const transits = raw.transits ?? {};
   const pA = transits.person_a ?? raw.person_a ?? {};
   const pB = transits.person_b ?? raw.person_b ?? {};
 
+  // Debug specific name-related fields
+  console.log('🔍 [parseSynastryRich] Name fields check:', {
+    'meta.personAName': meta.personAName,
+    'raw.personAName': raw.personAName,
+    'raw.person_a_name': raw.person_a_name,
+    'raw.name': raw.name,
+    'meta.name': meta.name,
+    'meta.personBName': meta.personBName,
+    'raw.personBName': raw.personBName,
+    'raw.person_b_name': raw.person_b_name,
+    'raw.secondPersonName': raw.secondPersonName,
+    'meta.secondPersonName': meta.secondPersonName,
+    'raw.chartData': raw.chartData
+  });
+
   // Extract names from various possible locations in the data
-  const personAName = meta.personAName || raw.personAName || raw.person_a_name || raw.name || meta.name;
-  const personBName = meta.personBName || raw.personBName || raw.person_b_name || raw.secondPersonName || meta.secondPersonName;
+  // Check in chartData first (where backend stores them), then other locations
+  const personAName = raw.chartData?.person_a_name || 
+                     meta.personAName || 
+                     raw.personAName || 
+                     raw.person_a_name || 
+                     raw.name || 
+                     meta.name;
+                     
+  const personBName = raw.chartData?.person_b_name || 
+                     meta.personBName || 
+                     raw.personBName || 
+                     raw.person_b_name || 
+                     raw.secondPersonName || 
+                     meta.secondPersonName;
+
+  console.log('🔍 [parseSynastryRich] Extracted names:', { personAName, personBName });
 
   return {
     meta: {
