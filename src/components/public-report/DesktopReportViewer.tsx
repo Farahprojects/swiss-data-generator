@@ -5,7 +5,7 @@ import { logToAdmin } from '@/utils/adminLogger';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { ReportHeader } from './ReportHeader';
 import { ReportContent } from './ReportContent';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DesktopReportViewerProps {
   reportContent: string;
@@ -53,7 +53,7 @@ const DesktopReportViewer = ({
         },
         (payload) => {
           const updated = payload.new;
-          if (updated?.swiss_only === true) {
+          if (updated?.swiss_boolean === true) {
             setIsSwissEnforced(true);
             setActiveView('astro');
             supabase.removeChannel(channel);

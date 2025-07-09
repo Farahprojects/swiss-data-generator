@@ -227,6 +227,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         onBack={handleCloseReportViewer}
         hasReport={hasReport}
         swissBoolean={swissBoolean}
+        reportId={localStorage.getItem('currentGuestReportId') || ''}
       />
     );
   }

@@ -39,8 +39,8 @@ export const ReportHeader = ({
   swissBoolean,
   isPureAstroReport
 }: ReportHeaderProps) => {
-  // Hide toggle for pure astro reports
-  const showToggle = !isPureAstroReport;
+  // Hide toggle for pure astro reports or swiss-only reports
+  const showToggle = !isPureAstroReport && !swissBoolean;
   return (
     <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-4">
