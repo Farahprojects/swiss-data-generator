@@ -1,3 +1,4 @@
+
 import React from "react";
 import { parseSwissDataRich, EnrichedSnapshot } from "@/utils/swissFormatter";
 
