@@ -1,10 +1,8 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Stars } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatSwissAstroData, hasValidAstroData } from '@/utils/swissDataFormatter';
 import { AstroDataRenderer } from './AstroDataRenderer';
 
 interface ReportContentProps {
@@ -18,34 +16,42 @@ interface ReportContentProps {
   isPureAstroReport?: boolean;
 }
 
-export const ReportContent = ({ 
-  reportContent, 
-  swissData, 
-  customerName, 
-  activeView: externalActiveView, 
+export const ReportContent = ({
+  reportContent,
+  swissData,
+  customerName,
+  activeView: externalActiveView,
   setActiveView: externalSetActiveView,
   hasReport,
   swissBoolean,
-  isPureAstroReport
+  isPureAstroReport,
 }: ReportContentProps) => {
-  // For pure astro reports, default to astro view
-  const defaultView = isPureAstroReport ? 'astro' : 'report';
+  // Default view: 'astro' if Swiss-only or pure astro report, otherwise 'report'
+  const defaultView = (isPureAstroReport || swissBoolean) ? 'astro' : 'report';
   const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>(defaultView);
-  
+
   const activeView = externalActiveView || internalActiveView;
   const setActiveView = externalSetActiveView || setInternalActiveView;
-  
-  // Hide toggle for pure astro reports or when swiss_boolean is true (no AI report)
-  const showToggle = !isPureAstroReport && !externalActiveView && !swissBoolean && hasReport;
+
+  // Enforce Swiss-only mode: force astro view
+  useEffect(() => {
+    if (swissBoolean) {
+      setActiveView('astro');
+    }
+  }, [swissBoolean, setActiveView]);
+
+  // Hide toggle if Swiss-only, pure astro, or external view is fixed
+  const showToggle = !isPureAstroReport && !swissBoolean && !externalActiveView && hasReport;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Card className="shadow-lg border-0 shadow-2xl">
         <CardHeader className="pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-light text-gray-900 tracking-tight">
-              Your <em className="italic font-light">{activeView === 'astro' ? 'Astro Data' : 'Report'}</em> - Generated for {customerName}
+              Your <em className="italic font-light">{activeView === 'astro' ? 'Astro Data' : 'Report'}</em> — Generated for {customerName}
             </CardTitle>
-            
+
             {showToggle && (
               <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
@@ -89,3 +95,4 @@ export const ReportContent = ({
     </div>
   );
 };
+
