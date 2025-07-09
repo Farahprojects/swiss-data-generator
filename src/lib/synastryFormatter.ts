@@ -95,8 +95,8 @@ export const parseSynastryRich = (raw: any): EnrichedSynastry => {
   const pB = transits.person_b ?? raw.person_b ?? {};
 
   // Extract names from various possible locations in the data
-  const personAName = meta.personAName || raw.personAName || raw.name || meta.name;
-  const personBName = meta.personBName || raw.personBName || raw.secondPersonName || meta.secondPersonName;
+  const personAName = meta.personAName || raw.personAName || raw.person_a_name || raw.name || meta.name;
+  const personBName = meta.personBName || raw.personBName || raw.person_b_name || raw.secondPersonName || meta.secondPersonName;
 
   return {
     meta: {
