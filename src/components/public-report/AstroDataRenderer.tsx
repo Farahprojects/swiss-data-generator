@@ -132,9 +132,6 @@ const RawDataSection = ({ rawData }: { rawData: any }) => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold text-gray-900 mb-6 tracking-tight">
-        RAW DATA
-      </h2>
       <div className="bg-gray-50 p-6 rounded-lg">
         <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
           {typeof rawData === 'string' ? rawData : JSON.stringify(rawData, null, 2)}

@@ -210,7 +210,63 @@ export const parseSwissData = (rawData: any): ParsedSwissData => {
     chartData = rawData || {};
   }
 
-  // Extract birth information
+  // Handle nested structure (e.g., { natal: { meta: {...}, planets: [...] } })
+  if (chartData.natal) {
+    const natalData = chartData.natal;
+    
+    // Extract birth information from meta or root level
+    const meta = natalData.meta || {};
+    const birthInfo: BirthInformation = {
+      date: meta.date || natalData.date || extractDateFromUTC(meta.utc),
+      time: meta.time || natalData.time || extractTimeFromUTC(meta.utc),
+      location: meta.location || natalData.location || `${meta.lat}, ${meta.lon}`,
+      latitude: meta.lat || natalData.latitude,
+      longitude: meta.lon || natalData.longitude,
+      timezone: meta.tz || natalData.timezone
+    };
+
+    // Extract planetary positions
+    const planets: PlanetPosition[] = (natalData.planets || []).map(planet => {
+      if (typeof planet.longitude === 'number') {
+        const zodiac = degreesToZodiac(planet.longitude);
+        return {
+          ...planet,
+          sign: zodiac.sign,
+          degree: zodiac.degree,
+          minute: zodiac.minute
+        };
+      }
+      return planet;
+    });
+
+    // Extract aspects
+    const aspects: AspectData[] = natalData.aspects || [];
+
+    // Extract houses
+    const houses: HouseData[] = (natalData.houses || []).map((house, index) => {
+      if (typeof house === 'number') {
+        const zodiac = degreesToZodiac(house);
+        return {
+          house: index + 1,
+          longitude: house,
+          sign: zodiac.sign,
+          degree: zodiac.degree,
+          minute: zodiac.minute
+        };
+      }
+      return house;
+    });
+
+    return {
+      birthInfo,
+      planets,
+      aspects,
+      houses,
+      rawData: chartData
+    };
+  }
+
+  // Handle flat structure
   const birthInfo: BirthInformation = {
     date: chartData.date,
     time: chartData.time,
@@ -259,6 +315,28 @@ export const parseSwissData = (rawData: any): ParsedSwissData => {
     houses,
     rawData: chartData
   };
+};
+
+// Helper function to extract date from UTC string
+const extractDateFromUTC = (utc?: string): string | undefined => {
+  if (!utc) return undefined;
+  try {
+    const date = new Date(utc);
+    return date.toISOString().split('T')[0];
+  } catch {
+    return undefined;
+  }
+};
+
+// Helper function to extract time from UTC string
+const extractTimeFromUTC = (utc?: string): string | undefined => {
+  if (!utc) return undefined;
+  try {
+    const date = new Date(utc);
+    return date.toTimeString().split(' ')[0];
+  } catch {
+    return undefined;
+  }
 };
 
 /**

@@ -52,7 +52,7 @@ export const ReportContent = ({
         <CardHeader className="pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-light text-gray-900 tracking-tight">
-              Your <em className="italic font-light">Report</em> - Generated for {customerName}
+              Your <em className="italic font-light">{activeView === 'astro' ? 'Astro Data' : 'Report'}</em> - Generated for {customerName}
             </CardTitle>
             
             {showToggle && (
