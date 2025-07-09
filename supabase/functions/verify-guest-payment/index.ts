@@ -1,4 +1,3 @@
-
 // Edge Function: verifies Stripe/"free" sessions, records the guest report,
 // ▸ Changes
 //   • strict validation so ONLY translator-ready payloads are built
@@ -50,6 +49,7 @@ function assertPresent(obj: Record<string, any>, keys: string[]) {
   }
 }
 
+// ✅ START: Patched function
 function buildTranslatorPayload(rd: ReportData) {
   // Check if rd.request exists first (for astro data), otherwise map reportType
   let request;
@@ -63,20 +63,30 @@ function buildTranslatorPayload(rd: ReportData) {
     throw new Error(`Unsupported reportType '${rd.reportType}' and no request field provided`);
   }
 
+  // New logic to build the correct report string
+  // Determine the subtype from available data, defaulting to "general"
+  const reportSubtype = rd.essenceType || rd.relationshipType || "general";
+
+  // Sanitize the subtype to be safe for identifiers (e.g., "General Use" -> "general_use")
+  const safeSubtype = (reportSubtype || "general").toLowerCase().replace(/\s+/g, "_");
+
+  // Construct the final report string, e.g., "essence_professional"
+  const finalReportString = `${request}_${safeSubtype}`;
+
   // Single-person endpoints
-  if (["essence","flow","mindset","monthly","focus"].includes(request)) {
+  if (["essence", "flow", "mindset", "monthly", "focus"].includes(request)) {
     assertPresent(rd, [
       "birthDate", "birthTime", "birthLatitude", "birthLongitude",
     ]);
 
     return {
       request,
-      birth_date:  rd.birthDate,
-      birth_time: rd.birthTime,                       // must be HH:MM[:SS]
+      birth_date: rd.birthDate,
+      birth_time: rd.birthTime,
       latitude:   parseFloat(rd.birthLatitude),
       longitude:  parseFloat(rd.birthLongitude),
       name:       rd.name ?? "Guest",
-      report:     rd.reportType,                      // Use actual reportType instead of hardcoded "standard"
+      report:     finalReportString, // CHANGED: Use the correctly constructed report string
     };
   }
 
@@ -91,26 +101,27 @@ function buildTranslatorPayload(rd: ReportData) {
     return {
       request,
       person_a: {
-        birth_date:  rd.birthDate,
+        birth_date: rd.birthDate,
         birth_time: rd.birthTime,
         latitude:   parseFloat(rd.birthLatitude),
         longitude:  parseFloat(rd.birthLongitude),
         name:       rd.name ?? "A",
       },
       person_b: {
-        birth_date:  rd.secondPersonBirthDate,
+        birth_date: rd.secondPersonBirthDate,
         birth_time: rd.secondPersonBirthTime,
         latitude:   parseFloat(rd.secondPersonLatitude),
         longitude:  parseFloat(rd.secondPersonLongitude),
         name:       rd.secondPersonName ?? "B",
       },
       relationship_type: rd.relationshipType ?? "general",
-      report:           rd.reportType,                // Use actual reportType instead of hardcoded "compatibility"
+      report:            finalReportString, // CHANGED: Use the correctly constructed report string
     };
   }
 
   throw new Error(`Unhandled request type '${request}'`);
 }
+// ✅ END: Patched function
 
 async function processSwissDataInBackground(
   guestReportId: string,
