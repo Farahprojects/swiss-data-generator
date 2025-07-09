@@ -587,6 +587,7 @@ export type Database = {
           email_sent: boolean
           has_report: boolean
           id: string
+          modal_ready: boolean | null
           payment_status: string
           promo_code_used: string | null
           purchase_type: string | null
@@ -608,6 +609,7 @@ export type Database = {
           email_sent?: boolean
           has_report?: boolean
           id?: string
+          modal_ready?: boolean | null
           payment_status?: string
           promo_code_used?: string | null
           purchase_type?: string | null
@@ -629,6 +631,7 @@ export type Database = {
           email_sent?: boolean
           has_report?: boolean
           id?: string
+          modal_ready?: boolean | null
           payment_status?: string
           promo_code_used?: string | null
           purchase_type?: string | null
