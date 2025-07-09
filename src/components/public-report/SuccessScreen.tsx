@@ -1,55 +1,11 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { CheckCircle, Clock, Volume2, VolumeX } from 'lucide-react';
+import React, { useEffect, useCallback } from 'react';
+import { CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { motion } from 'framer-motion';
-import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
-
-type ReportType = 'essence' | 'sync';
-const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
-
-const isAstroOnlyType = (type?: ReportType): boolean => type === 'essence' || type === 'sync';
-
-const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
-  const toggleMute = () => {
-    const vid = videoRef.current;
-    if (!vid) return;
-    vid.muted = !isMuted;
-    if (!vid.muted) vid.volume = 1;
-    setIsMuted(!isMuted);
-  };
-  const handleVideoReady = () => onVideoReady?.();
-  return (
-    <div className="relative w-full h-0 pt-[56.25%] overflow-hidden rounded-xl shadow-lg">
-      <video
-        ref={videoRef}
-        src={VIDEO_SRC}
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay
-        loop
-        muted={isMuted}
-        playsInline
-        preload="auto"
-        controls={false}
-        onCanPlay={handleVideoReady}
-        onLoadedData={handleVideoReady}
-      />
-      <button
-        onClick={toggleMute}
-        className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full p-2 backdrop-blur-sm hover:bg-black/70 transition"
-        aria-label={isMuted ? 'Unmute video' : 'Mute video'}
-      >
-        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-      </button>
-    </div>
-  );
-};
 
 interface SuccessScreenProps {
   name: string;
@@ -65,10 +21,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     caseNumber,
     fetchReport,
     triggerErrorHandling,
-    fetchReportContent,
     fetchAstroData,
     fetchBothReportData,
-    setupRealtimeListener,
   } = useGuestReportStatus();
 
   const firstName = name?.split(' ')[0] || 'there';
@@ -77,77 +31,31 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   useViewportHeight();
 
-  const [countdown, setCountdown] = useState(24);
-  const [isVideoReady, setIsVideoReady] = useState(false);
-  const [modalTriggered, setModalTriggered] = useState(false);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
-
-  const reportType = report?.report_type as ReportType | undefined;
-  const isAstroDataOnly = isAstroOnlyType(reportType);
-
+  // Simple ready state - only thing that matters
   const isReady =
     report?.swiss_boolean === true ||
     (report?.has_report && !!(report?.translator_log_id || report?.report_log_id));
 
-  const handleVideoReady = useCallback(() => {
-    setIsVideoReady(true);
-  }, []);
-
   const handleViewReport = useCallback(async () => {
-    console.log('🔘 View Report button clicked - MANUAL TRIGGER');
+    console.log('🔘 View Report button clicked');
     
-    // Prevent auto-trigger from interfering
-    setModalTriggered(true);
-    
-    console.log('🔍 Button click data:', {
-      guestReportId,
-      onViewReport: !!onViewReport,
-      reportType,
-      report
-    });
-
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (!reportIdToUse || !onViewReport) {
-      console.error('❌ Missing required data for view report:', {
-        reportIdToUse,
-        onViewReport: !!onViewReport
-      });
+      console.error('❌ Missing required data for view report');
       return;
     }
 
-    // Check if this is a Swiss-only report first
-    const isSwissOnly = report?.swiss_boolean === true || reportType === 'essence' || reportType === 'sync';
-    
-    console.log('🔄 SuccessScreen - Report detection:', {
-      reportType,
-      swiss_boolean: report?.swiss_boolean,
-      has_report: report?.has_report,
-      isSwissOnly
-    });
+    // Check if this is a Swiss-only report
+    const isSwissOnly = report?.swiss_boolean === true || 
+                       report?.report_type === 'essence' || 
+                       report?.report_type === 'sync';
 
     try {
       if (isSwissOnly) {
-        // For Swiss-only reports, only fetch astro data and pass empty report content
-        console.log('🔬 Swiss-only report detected - fetching only astro data');
         const swissData = await fetchAstroData(reportIdToUse);
-        console.log('📊 Swiss data fetched:', !!swissData);
-        
-        console.log('🚀 Calling onViewReport with Swiss data');
-        onViewReport(
-          '', // Empty report content for Swiss-only reports
-          null, 
-          swissData,
-          false, // hasReport = false for Swiss-only
-          true   // swissBoolean = true for Swiss-only
-        );
-        console.log('✅ onViewReport called successfully');
+        onViewReport('', null, swissData, false, true);
       } else {
-        // For regular reports, fetch both content types
-        console.log('🔄 Regular report - fetching both report and Swiss data');
         const { reportContent, swissData } = await fetchBothReportData(reportIdToUse);
-        console.log('📊 Regular data fetched:', { reportContent: !!reportContent, swissData: !!swissData });
-        
-        console.log('🚀 Calling onViewReport with regular data');
         onViewReport(
           reportContent ?? 'Report content could not be loaded', 
           null, 
@@ -155,55 +63,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
           report?.has_report ?? true,
           report?.swiss_boolean ?? false
         );
-        console.log('✅ onViewReport called successfully');
       }
     } catch (error) {
       console.error('❌ Error in handleViewReport:', error);
     }
-  }, [guestReportId, onViewReport, reportType, fetchBothReportData, fetchAstroData, report?.swiss_boolean, report?.has_report]);
+  }, [guestReportId, onViewReport, fetchBothReportData, fetchAstroData, report]);
 
   useEffect(() => {
-    const scrollToProcessing = () => {
-      const element = document.querySelector('[data-success-screen]');
-      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-    scrollToProcessing();
-
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
     if (reportIdToUse) {
       fetchReport(reportIdToUse);
-      
-        // Setup realtime listener to auto-trigger modal
-        const cleanup = setupRealtimeListener(reportIdToUse, () => {
-          console.log('🔥 Realtime detected report ready - auto-triggering modal');
-          if (!modalTriggered) {
-            console.log('🎯 Auto-triggering modal from realtime');
-            setModalTriggered(true);
-            handleViewReport();
-          } else {
-            console.log('⚠️ Modal already triggered, skipping auto-trigger');
-          }
-        });
-      
-      return cleanup;
     }
-  }, [guestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered]);
-
-  useEffect(() => {
-    if (!isReady && !error && isVideoReady) {
-      countdownRef.current = setTimeout(() => {
-        setCountdown((c) => {
-          if (c <= 1) {
-            const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-            if (reportIdToUse) triggerErrorHandling(reportIdToUse);
-            return 0;
-          }
-          return c - 1;
-        });
-      }, 1000);
-    }
-    return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
-  }, [countdown, isReady, error, isVideoReady, guestReportId, triggerErrorHandling]);
+  }, [guestReportId, fetchReport]);
 
 
   const status = (() => {
@@ -283,10 +154,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                 <StatusIcon className="h-6 w-6 text-gray-600" />
               </div>
               {!isReady && !error && (
-                <>
-                  <div className="text-3xl font-light text-gray-900">{countdown}s</div>
-                  <div className="text-gray-600 font-light">Report generating...</div>
-                </>
+                <div className="text-gray-600 font-light">Report generating...</div>
               )}
               {isReady && <div className="text-gray-600 font-light">Ready to view</div>}
               {error && <div className="text-gray-600 font-light">Processing issue detected</div>}
@@ -295,15 +163,28 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
               <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
               <p className="text-gray-600 font-light">{status.desc}</p>
             </div>
-            {!isReady && !error && !isAstroDataOnly && (
-              <>
-                <VideoLoader onVideoReady={handleVideoReady} />
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  Hi {firstName}! We're working on your report.<br />
-                  <span className="font-medium">{email}</span>
+            
+            {/* Error State */}
+            {error && (
+              <div className="text-center py-8">
+                <div className="text-gray-600 font-light mb-4">
+                  We've detected an issue with your report. Our team has been notified.
                 </div>
-              </>
+                <Button onClick={handleTryAgain} className="bg-gray-900 text-white font-light">
+                  Try Again
+                </Button>
+              </div>
             )}
+            
+            {/* Loading State */}
+            {!isReady && !error && (
+              <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                Hi {firstName}! We're working on your report.<br />
+                <span className="font-medium">{email}</span>
+              </div>
+            )}
+            
+            {/* Ready State */}
             {isReady && (
               <>
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
@@ -314,16 +195,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   View Report
                 </Button>
               </>
-            )}
-            {error && (
-              <div className="text-center py-8">
-                <div className="text-gray-600 font-light mb-4">
-                  We've detected an issue with your report. Our team has been notified.
-                </div>
-                <Button onClick={handleTryAgain} className="bg-gray-900 text-white font-light">
-                  Try Again
-                </Button>
-              </div>
             )}
           </CardContent>
         </Card>
