@@ -63,28 +63,32 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
   const tz      = meta.tz ?? 'UTC';
 
   // --- Planets --------------------------------------------------
-  const planets: EnrichedPlanet[] = (natal.planets ?? []).map((p:any) => {
-    const { sign, glyph, deg, min } = degreesToSign(p.longitude);
-    return {
-      name : PLANET_NAMES[p.planet?.toLowerCase()] ?? p.planet,
-      sign, signGlyph: glyph,
-      deg, min,
-      retro : !!p.retrograde
-    };
-  });
+  const planets: EnrichedPlanet[] = Array.isArray(natal.planets) 
+    ? natal.planets.map((p:any) => {
+        const { sign, glyph, deg, min } = degreesToSign(p.longitude);
+        return {
+          name : PLANET_NAMES[p.planet?.toLowerCase()] ?? p.planet,
+          sign, signGlyph: glyph,
+          deg, min,
+          retro : !!p.retrograde
+        };
+      })
+    : [];
 
   // --- Aspects --------------------------------------------------
-  const aspects: EnrichedAspect[] = (natal.aspects ?? []).map((a:any) => {
-    const orbDeg = Math.floor(a.orb);
-    const orbMin = Math.round((a.orb - orbDeg) * 60);
-    return {
-      a : PLANET_NAMES[a.a?.toLowerCase()] ?? a.a,
-      b : PLANET_NAMES[a.b?.toLowerCase()] ?? a.b,
-      type : a.type,
-      orbDeg,
-      orbMin
-    };
-  });
+  const aspects: EnrichedAspect[] = Array.isArray(natal.aspects) 
+    ? natal.aspects.map((a:any) => {
+        const orbDeg = Math.floor(a.orb);
+        const orbMin = Math.round((a.orb - orbDeg) * 60);
+        return {
+          a : PLANET_NAMES[a.a?.toLowerCase()] ?? a.a,
+          b : PLANET_NAMES[a.b?.toLowerCase()] ?? a.b,
+          type : a.type,
+          orbDeg,
+          orbMin
+        };
+      })
+    : [];
 
   return { dateISO, timeISO, tz, planets, aspects };
 };
