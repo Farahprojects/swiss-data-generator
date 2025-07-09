@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatSwissAstroData, hasValidAstroData } from '@/utils/swissDataFormatter';
+import { AstroDataRenderer } from './AstroDataRenderer';
 
 interface ReportContentProps {
   reportContent: string;
@@ -88,9 +89,7 @@ export const ReportContent = ({
                   <ReportRenderer content={reportContent} />
                 </div>
               ) : (
-                <div className="font-mono text-sm leading-relaxed whitespace-pre-wrap text-gray-800 bg-gray-50 p-6 rounded-lg">
-                  {formatSwissAstroData(swissData)}
-                </div>
+                <AstroDataRenderer swissData={swissData} />
               )}
             </div>
           </ScrollArea>

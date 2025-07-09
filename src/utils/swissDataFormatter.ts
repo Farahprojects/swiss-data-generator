@@ -1,7 +1,7 @@
 // Swiss Astrological Data Formatter
 // Modular formatting functions for astrological chart data
 
-interface PlanetPosition {
+export interface PlanetPosition {
   planet: string;
   longitude: number;
   latitude?: number;
@@ -14,12 +14,37 @@ interface PlanetPosition {
   retrograde?: boolean;
 }
 
-interface AspectData {
+export interface AspectData {
   planet1: string;
   planet2: string;
   aspect: string;
   orb: number;
   applying?: boolean;
+}
+
+export interface BirthInformation {
+  date?: string;
+  time?: string;
+  location?: string;
+  latitude?: number;
+  longitude?: number;
+  timezone?: string;
+}
+
+interface HouseData {
+  house: number;
+  longitude: number;
+  sign?: string;
+  degree?: number;
+  minute?: number;
+}
+
+export interface ParsedSwissData {
+  birthInfo: BirthInformation;
+  planets: PlanetPosition[];
+  aspects: AspectData[];
+  houses: HouseData[];
+  rawData?: any;
 }
 
 interface SwissChartData {
@@ -43,7 +68,7 @@ const ZODIAC_SIGNS = [
 ];
 
 // Planet names mapping
-const PLANET_NAMES: { [key: string]: string } = {
+export const PLANET_NAMES: { [key: string]: string } = {
   'sun': 'Sun',
   'moon': 'Moon',
   'mercury': 'Mercury',
@@ -61,7 +86,7 @@ const PLANET_NAMES: { [key: string]: string } = {
 };
 
 // Aspect names mapping
-const ASPECT_NAMES: { [key: string]: string } = {
+export const ASPECT_NAMES: { [key: string]: string } = {
   'conjunction': 'Conjunction',
   'opposition': 'Opposition',
   'trine': 'Trine',
@@ -160,6 +185,80 @@ export const formatDateTimeInfo = (data: SwissChartData): string => {
   }
   
   return output;
+};
+
+/**
+ * Parse raw Swiss data into structured format for modular rendering
+ */
+export const parseSwissData = (rawData: any): ParsedSwissData => {
+  let chartData: SwissChartData = {};
+  
+  if (typeof rawData === 'string') {
+    try {
+      chartData = JSON.parse(rawData);
+    } catch {
+      // If not JSON, create minimal structure
+      return {
+        birthInfo: {},
+        planets: [],
+        aspects: [],
+        houses: [],
+        rawData: rawData
+      };
+    }
+  } else {
+    chartData = rawData || {};
+  }
+
+  // Extract birth information
+  const birthInfo: BirthInformation = {
+    date: chartData.date,
+    time: chartData.time,
+    location: chartData.location,
+    latitude: chartData.latitude,
+    longitude: chartData.longitude,
+    timezone: chartData.timezone
+  };
+
+  // Extract and enhance planetary positions
+  const planets: PlanetPosition[] = (chartData.planets || []).map(planet => {
+    if (typeof planet.longitude === 'number') {
+      const zodiac = degreesToZodiac(planet.longitude);
+      return {
+        ...planet,
+        sign: zodiac.sign,
+        degree: zodiac.degree,
+        minute: zodiac.minute
+      };
+    }
+    return planet;
+  });
+
+  // Extract aspects
+  const aspects: AspectData[] = chartData.aspects || [];
+
+  // Extract houses
+  const houses: HouseData[] = (chartData.houses || []).map((house, index) => {
+    if (typeof house === 'number') {
+      const zodiac = degreesToZodiac(house);
+      return {
+        house: index + 1,
+        longitude: house,
+        sign: zodiac.sign,
+        degree: zodiac.degree,
+        minute: zodiac.minute
+      };
+    }
+    return house;
+  });
+
+  return {
+    birthInfo,
+    planets,
+    aspects,
+    houses,
+    rawData: chartData
+  };
 };
 
 /**
