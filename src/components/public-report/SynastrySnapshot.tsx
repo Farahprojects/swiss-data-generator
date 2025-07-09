@@ -10,6 +10,12 @@ const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
 
 const PlanetTable: React.FC<{ planets: EnrichedPlanet[] }> = ({ planets }) => (
   <table className="w-full text-sm">
+    <thead>
+      <tr className="text-neutral-500 text-xs tracking-wide">
+        <th className="text-left py-1">Planet</th>
+        <th className="text-left py-1">Position</th>
+      </tr>
+    </thead>
     <tbody>
       {planets.map((p) => (
         <tr key={p.name}>
@@ -72,7 +78,7 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON }) => {
   const personBDisplay = data.personB.name || "Person B";
 
   return (
-    <div className="w-full max-w-md mx-auto font-sans text-[15px] leading-relaxed text-neutral-900">
+    <div className="w-full max-w-md mx-auto font-sans text-[14.5px] leading-relaxed text-neutral-900 tracking-tight">
       {/* Header: Compatibility Data */}
       <div className="text-center mb-6">
         <h2 className="font-semibold text-lg mb-2">
@@ -84,6 +90,9 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON }) => {
         {data.meta.lunarPhase && (
           <p className="text-xs text-neutral-500">{data.meta.lunarPhase}</p>
         )}
+        {data.meta.tz && (
+          <p className="text-xs text-neutral-500">{data.meta.tz}</p>
+        )}
       </div>
 
       {/* Person A */}
@@ -93,6 +102,9 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON }) => {
       <SectionTitle>{`${personADisplay} - ASPECTS TO NATAL`}</SectionTitle>
       <AspectTable aspects={data.personA.aspectsToNatal} />
 
+      {/* Divider between Person A and B */}
+      <div className="my-6 border-t border-neutral-200" />
+
       {/* Person B */}
       <SectionTitle>{`${personBDisplay} - CURRENT POSITIONS`}</SectionTitle>
       <PlanetTable planets={data.personB.planets} />
@@ -101,18 +113,32 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON }) => {
       <AspectTable aspects={data.personB.aspectsToNatal} />
 
       {/* Composite Chart */}
-      {data.composite.length > 0 && (
+      {data.composite.length > 0 ? (
         <>
           <SectionTitle>COMPOSITE CHART - MIDPOINTS</SectionTitle>
           <PlanetTable planets={data.composite} />
         </>
+      ) : (
+        <>
+          <SectionTitle>COMPOSITE CHART - MIDPOINTS</SectionTitle>
+          <p className="text-xs italic text-neutral-500 text-center mt-2">
+            No composite chart data available.
+          </p>
+        </>
       )}
 
       {/* Synastry Aspects */}
-      {data.synastry.length > 0 && (
+      {data.synastry.length > 0 ? (
         <>
           <SectionTitle>{`SYNASTRY ASPECTS (${personADisplay} ↔ ${personBDisplay})`}</SectionTitle>
           <AspectTable aspects={data.synastry} />
+        </>
+      ) : (
+        <>
+          <SectionTitle>{`SYNASTRY ASPECTS (${personADisplay} ↔ ${personBDisplay})`}</SectionTitle>
+          <p className="text-xs italic text-neutral-500 text-center mt-2">
+            No significant synastry aspects detected.
+          </p>
         </>
       )}
     </div>

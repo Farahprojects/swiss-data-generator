@@ -32,6 +32,7 @@ export interface EnrichedSynastry {
     lunarPhase?: string;
     personAName?: string;
     personBName?: string;
+    tz?: string;
   };
   personA: PersonBlock;
   personB: PersonBlock;
@@ -99,7 +100,8 @@ export const parseSynastryRich = (raw: any): EnrichedSynastry => {
       time: meta.time ?? meta.utc?.split('T')[1]?.split('.')[0] ?? '12:00:00',
       lunarPhase: meta.lunar_phase,
       personAName: meta.personAName || raw.personAName,
-      personBName: meta.personBName || raw.personBName
+      personBName: meta.personBName || raw.personBName,
+      tz: meta.tz
     },
     personA: {
       label: 'Person A',
