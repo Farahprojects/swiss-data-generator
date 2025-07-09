@@ -15,6 +15,7 @@ interface ReportContentProps {
   setActiveView?: (view: 'report' | 'astro') => void;
   hasReport?: boolean;
   swissBoolean?: boolean;
+  isPureAstroReport?: boolean;
 }
 
 export const ReportContent = ({ 
@@ -24,15 +25,18 @@ export const ReportContent = ({
   activeView: externalActiveView, 
   setActiveView: externalSetActiveView,
   hasReport,
-  swissBoolean
+  swissBoolean,
+  isPureAstroReport
 }: ReportContentProps) => {
-  const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>('report');
+  // For pure astro reports, default to astro view
+  const defaultView = isPureAstroReport ? 'astro' : 'report';
+  const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>(defaultView);
   
   const activeView = externalActiveView || internalActiveView;
   const setActiveView = externalSetActiveView || setInternalActiveView;
   
-  // Toggle is always visible as part of the report modal
-  const showToggle = !externalActiveView;
+  // Hide toggle for pure astro reports
+  const showToggle = !isPureAstroReport && !externalActiveView;
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Card className="shadow-lg border-0 shadow-2xl">

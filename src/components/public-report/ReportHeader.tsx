@@ -9,6 +9,7 @@ interface ReportHeaderProps {
   onBack: () => void;
   onCopyToClipboard: () => void;
   onDownloadPdf: () => void;
+  onDownloadAstroPdf?: () => void;
   onChatGPTClick: () => void;
   reportPdfData?: string | null;
   isCopyCompleted: boolean;
@@ -18,6 +19,7 @@ interface ReportHeaderProps {
   setActiveView: (view: 'report' | 'astro') => void;
   hasReport?: boolean;
   swissBoolean?: boolean;
+  isPureAstroReport?: boolean;
 }
 
 export const ReportHeader = ({
@@ -25,6 +27,7 @@ export const ReportHeader = ({
   onBack,
   onCopyToClipboard,
   onDownloadPdf,
+  onDownloadAstroPdf,
   onChatGPTClick,
   reportPdfData,
   isCopyCompleted,
@@ -33,10 +36,11 @@ export const ReportHeader = ({
   activeView,
   setActiveView,
   hasReport,
-  swissBoolean
+  swissBoolean,
+  isPureAstroReport
 }: ReportHeaderProps) => {
-  // Toggle is always visible as part of the report modal
-  const showToggle = true;
+  // Hide toggle for pure astro reports
+  const showToggle = !isPureAstroReport;
   return (
     <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-4">
@@ -95,6 +99,17 @@ export const ReportHeader = ({
               >
                 <Download className="h-4 w-4" />
                 Download PDF
+              </Button>
+            )}
+            {swissData && onDownloadAstroPdf && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onDownloadAstroPdf}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download Astro PDF
               </Button>
             )}
             <Button

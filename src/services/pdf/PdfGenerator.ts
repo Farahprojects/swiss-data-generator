@@ -1,10 +1,16 @@
 
 import { ReportTemplate } from './templates/ReportTemplate';
+import { AstroTemplate, AstroPdfData } from './templates/AstroTemplate';
 import { ReportPdfData, PdfGenerationOptions } from './types';
 
 export class PdfGenerator {
   static async generateReportPdf(data: ReportPdfData, options?: PdfGenerationOptions): Promise<void> {
     const template = new ReportTemplate(options);
+    await template.generate(data, options);
+  }
+
+  static async generateAstroPdf(data: AstroPdfData, options?: PdfGenerationOptions): Promise<void> {
+    const template = new AstroTemplate(options);
     await template.generate(data, options);
   }
 

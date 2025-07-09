@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { logToAdmin } from '@/utils/adminLogger';
+import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { ReportHeader } from './ReportHeader';
 import { ReportContent } from './ReportContent';
 
@@ -27,7 +28,11 @@ const DesktopReportViewer = ({
 }: DesktopReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
-  const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
+  
+  // Determine if this is a pure astro report (no AI content)
+  const isPureAstroReport = swissData && (!reportContent || reportContent.trim() === '');
+  const defaultView = isPureAstroReport ? 'astro' : 'report';
+  const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
@@ -134,6 +139,45 @@ const DesktopReportViewer = ({
     }
   };
 
+  const handleDownloadAstroPdf = async () => {
+    if (!swissData) {
+      toast({
+        title: "No astro data available",
+        description: "Unable to generate PDF without astro data.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await PdfGenerator.generateAstroPdf({
+        id: Math.random().toString(36).substring(7),
+        title: 'Astro Data Report',
+        customerName: customerName,
+        swissData: swissData,
+        metadata: {
+          generatedAt: new Date().toLocaleString(),
+          reportType: 'astro'
+        }
+      });
+
+      toast({
+        title: "PDF Generated!",
+        description: "Your astro data PDF has been downloaded.",
+      });
+    } catch (error) {
+      logToAdmin('DesktopReportViewer', 'astro_pdf_error', 'Error generating astro PDF', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : null
+      });
+      toast({
+        title: "PDF generation failed",
+        description: "Unable to generate PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -147,6 +191,7 @@ const DesktopReportViewer = ({
         onBack={onBack}
         onCopyToClipboard={handleCopyToClipboard}
         onDownloadPdf={handleDownloadPdf}
+        onDownloadAstroPdf={handleDownloadAstroPdf}
         onChatGPTClick={handleChatGPTClick}
         reportPdfData={reportPdfData}
         isCopyCompleted={isCopyCompleted}
@@ -156,6 +201,7 @@ const DesktopReportViewer = ({
         setActiveView={setActiveView}
         hasReport={hasReport}
         swissBoolean={swissBoolean}
+        isPureAstroReport={isPureAstroReport}
       />
 
       <ReportContent 
@@ -166,6 +212,7 @@ const DesktopReportViewer = ({
         setActiveView={setActiveView}
         hasReport={hasReport}
         swissBoolean={swissBoolean}
+        isPureAstroReport={isPureAstroReport}
       />
     </motion.div>
   );

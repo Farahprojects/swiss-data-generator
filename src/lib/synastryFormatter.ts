@@ -105,13 +105,13 @@ export const parseSynastryRich = (raw: any): EnrichedSynastry => {
     },
     personA: {
       label: 'Person A',
-      name: meta.personAName || raw.personAName,
+      name: meta.personAName || raw.personAName || raw.name,
       planets: enrichPlanets(pA.planets ?? {}),
       aspectsToNatal: enrichAspects(pA.aspects_to_natal ?? [])
     },
     personB: {
       label: 'Person B', 
-      name: meta.personBName || raw.personBName,
+      name: meta.personBName || raw.personBName || raw.secondPersonName,
       planets: enrichPlanets(pB.planets ?? {}),
       aspectsToNatal: enrichAspects(pB.aspects_to_natal ?? [])
     },
