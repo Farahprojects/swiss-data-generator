@@ -31,21 +31,8 @@ export const ReportContent = ({
   const activeView = externalActiveView || internalActiveView;
   const setActiveView = externalSetActiveView || setInternalActiveView;
   
-  // Updated logic: Show toggle when there's both report content AND Swiss data
-  // swiss_boolean = false + has_report = true = Both exist (show toggle)
-  // swiss_boolean = true = Only Swiss data exists (show toggle)
-  // Use the same logic as ReportHeader
-  const showToggle = hasReport === true && (swissBoolean === false || swissBoolean === true) && !externalActiveView;
-  
-  // Debug logging
-  console.log('🔍 ReportContent Toggle Debug:', { 
-    hasReport, 
-    swissBoolean, 
-    reportContent: !!reportContent, 
-    showToggle,
-    externalActiveView,
-    swissData: !!swissData 
-  });
+  // Toggle is always visible as part of the report modal
+  const showToggle = !externalActiveView;
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Card className="shadow-lg border-0 shadow-2xl">
