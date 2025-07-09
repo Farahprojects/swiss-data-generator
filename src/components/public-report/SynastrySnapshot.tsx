@@ -1,0 +1,122 @@
+// components/public-report/SynastrySnapshot.tsx
+import React from "react";
+import { parseSynastryRich, EnrichedPlanet, EnrichedAspect } from "@/lib/synastryFormatter";
+
+const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
+  <h3 className="mt-8 mb-2 text-center font-semibold tracking-wider text-xs text-neutral-500 uppercase border-b pb-1">
+    {children}
+  </h3>
+);
+
+const PlanetTable: React.FC<{ planets: EnrichedPlanet[] }> = ({ planets }) => (
+  <table className="w-full text-sm">
+    <tbody>
+      {planets.map((p) => (
+        <tr key={p.name}>
+          <td className="py-1 pr-2 text-left">{p.name}</td>
+          <td className="py-1 text-left">
+            {String(p.deg).padStart(2, "0")}°{String(p.min).padStart(2, "0")}' in {p.sign}
+            {p.retro && <span className="italic text-sm ml-1">Retrograde</span>}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+);
+
+const AspectTable: React.FC<{ aspects: EnrichedAspect[] }> = ({ aspects }) => (
+  <table className="w-full text-sm">
+    <thead>
+      <tr className="text-neutral-500 text-xs tracking-wide">
+        <th className="text-left py-1">Planet</th>
+        <th className="text-left py-1">Aspect</th>
+        <th className="text-left py-1">To</th>
+        <th className="text-left py-1">Orb</th>
+      </tr>
+    </thead>
+    <tbody>
+      {aspects.map((a, i) => (
+        <tr key={i}>
+          <td className="py-1 pr-2 text-left">{a.a}</td>
+          <td className="py-1 pr-2 text-left">{a.type}</td>
+          <td className="py-1 pr-2 text-left">{a.b}</td>
+          <td className="py-1 text-left">
+            {a.orbDeg}°{String(a.orbMin).padStart(2, "0")}'
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+);
+
+interface Props {
+  rawSyncJSON: any;
+}
+
+const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON }) => {
+  const data = parseSynastryRich(rawSyncJSON);
+
+  const formattedDate = new Date(data.meta.dateISO).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const formattedTime = new Date(`1970-01-01T${data.meta.time}Z`).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  // Use actual names if available, fallback to Person A/B
+  const personADisplay = data.personA.name || "Person A";
+  const personBDisplay = data.personB.name || "Person B";
+
+  return (
+    <div className="w-full max-w-md mx-auto font-sans text-[15px] leading-relaxed text-neutral-900">
+      {/* Header: Compatibility Data */}
+      <div className="text-center mb-6">
+        <h2 className="font-semibold text-lg mb-2">
+          {personADisplay} & {personBDisplay} - Compatibility Astro Data
+        </h2>
+        <p className="text-sm text-neutral-600">
+          {formattedDate} — {formattedTime}
+        </p>
+        {data.meta.lunarPhase && (
+          <p className="text-xs text-neutral-500">{data.meta.lunarPhase}</p>
+        )}
+      </div>
+
+      {/* Person A */}
+      <SectionTitle>{`${personADisplay} - CURRENT POSITIONS`}</SectionTitle>
+      <PlanetTable planets={data.personA.planets} />
+
+      <SectionTitle>{`${personADisplay} - ASPECTS TO NATAL`}</SectionTitle>
+      <AspectTable aspects={data.personA.aspectsToNatal} />
+
+      {/* Person B */}
+      <SectionTitle>{`${personBDisplay} - CURRENT POSITIONS`}</SectionTitle>
+      <PlanetTable planets={data.personB.planets} />
+
+      <SectionTitle>{`${personBDisplay} - ASPECTS TO NATAL`}</SectionTitle>
+      <AspectTable aspects={data.personB.aspectsToNatal} />
+
+      {/* Composite Chart */}
+      {data.composite.length > 0 && (
+        <>
+          <SectionTitle>COMPOSITE CHART - MIDPOINTS</SectionTitle>
+          <PlanetTable planets={data.composite} />
+        </>
+      )}
+
+      {/* Synastry Aspects */}
+      {data.synastry.length > 0 && (
+        <>
+          <SectionTitle>{`SYNASTRY ASPECTS (${personADisplay} ↔ ${personBDisplay})`}</SectionTitle>
+          <AspectTable aspects={data.synastry} />
+        </>
+      )}
+    </div>
+  );
+};
+
+export default SynastrySnapshot;
