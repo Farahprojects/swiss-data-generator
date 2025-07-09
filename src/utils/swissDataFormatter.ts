@@ -225,37 +225,41 @@ export const parseSwissData = (rawData: any): ParsedSwissData => {
       timezone: meta.tz || natalData.timezone
     };
 
-    // Extract planetary positions
-    const planets: PlanetPosition[] = (natalData.planets || []).map(planet => {
-      if (typeof planet.longitude === 'number') {
-        const zodiac = degreesToZodiac(planet.longitude);
-        return {
-          ...planet,
-          sign: zodiac.sign,
-          degree: zodiac.degree,
-          minute: zodiac.minute
-        };
-      }
-      return planet;
-    });
+    // Extract planetary positions - ensure it's an array
+    const planets: PlanetPosition[] = Array.isArray(natalData.planets) 
+      ? natalData.planets.map(planet => {
+          if (typeof planet.longitude === 'number') {
+            const zodiac = degreesToZodiac(planet.longitude);
+            return {
+              ...planet,
+              sign: zodiac.sign,
+              degree: zodiac.degree,
+              minute: zodiac.minute
+            };
+          }
+          return planet;
+        })
+      : [];
 
-    // Extract aspects
-    const aspects: AspectData[] = natalData.aspects || [];
+    // Extract aspects - ensure it's an array
+    const aspects: AspectData[] = Array.isArray(natalData.aspects) ? natalData.aspects : [];
 
-    // Extract houses
-    const houses: HouseData[] = (natalData.houses || []).map((house, index) => {
-      if (typeof house === 'number') {
-        const zodiac = degreesToZodiac(house);
-        return {
-          house: index + 1,
-          longitude: house,
-          sign: zodiac.sign,
-          degree: zodiac.degree,
-          minute: zodiac.minute
-        };
-      }
-      return house;
-    });
+    // Extract houses - ensure it's an array
+    const houses: HouseData[] = Array.isArray(natalData.houses) 
+      ? natalData.houses.map((house, index) => {
+          if (typeof house === 'number') {
+            const zodiac = degreesToZodiac(house);
+            return {
+              house: index + 1,
+              longitude: house,
+              sign: zodiac.sign,
+              degree: zodiac.degree,
+              minute: zodiac.minute
+            };
+          }
+          return house;
+        })
+      : [];
 
     return {
       birthInfo,
@@ -276,37 +280,41 @@ export const parseSwissData = (rawData: any): ParsedSwissData => {
     timezone: chartData.timezone
   };
 
-  // Extract and enhance planetary positions
-  const planets: PlanetPosition[] = (chartData.planets || []).map(planet => {
-    if (typeof planet.longitude === 'number') {
-      const zodiac = degreesToZodiac(planet.longitude);
-      return {
-        ...planet,
-        sign: zodiac.sign,
-        degree: zodiac.degree,
-        minute: zodiac.minute
-      };
-    }
-    return planet;
-  });
+  // Extract and enhance planetary positions - ensure it's an array
+  const planets: PlanetPosition[] = Array.isArray(chartData.planets)
+    ? chartData.planets.map(planet => {
+        if (typeof planet.longitude === 'number') {
+          const zodiac = degreesToZodiac(planet.longitude);
+          return {
+            ...planet,
+            sign: zodiac.sign,
+            degree: zodiac.degree,
+            minute: zodiac.minute
+          };
+        }
+        return planet;
+      })
+    : [];
 
-  // Extract aspects
-  const aspects: AspectData[] = chartData.aspects || [];
+  // Extract aspects - ensure it's an array
+  const aspects: AspectData[] = Array.isArray(chartData.aspects) ? chartData.aspects : [];
 
-  // Extract houses
-  const houses: HouseData[] = (chartData.houses || []).map((house, index) => {
-    if (typeof house === 'number') {
-      const zodiac = degreesToZodiac(house);
-      return {
-        house: index + 1,
-        longitude: house,
-        sign: zodiac.sign,
-        degree: zodiac.degree,
-        minute: zodiac.minute
-      };
-    }
-    return house;
-  });
+  // Extract houses - ensure it's an array
+  const houses: HouseData[] = Array.isArray(chartData.houses) 
+    ? chartData.houses.map((house, index) => {
+        if (typeof house === 'number') {
+          const zodiac = degreesToZodiac(house);
+          return {
+            house: index + 1,
+            longitude: house,
+            sign: zodiac.sign,
+            degree: zodiac.degree,
+            minute: zodiac.minute
+          };
+        }
+        return house;
+      })
+    : [];
 
   return {
     birthInfo,
