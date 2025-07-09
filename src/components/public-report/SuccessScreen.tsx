@@ -40,8 +40,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     console.log('🔘 View Report button clicked');
     
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+    console.log('🔍 Using report ID for view:', reportIdToUse);
     if (!reportIdToUse || !onViewReport) {
-      console.error('❌ Missing required data for view report');
+      console.error('❌ Missing required data for view report', { reportIdToUse, hasOnViewReport: !!onViewReport });
       return;
     }
 
@@ -71,8 +72,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   useEffect(() => {
     const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+    console.log('🔍 SuccessScreen fetching report with ID:', reportIdToUse);
     if (reportIdToUse) {
       fetchReport(reportIdToUse);
+    } else {
+      console.error('❌ No report ID available in SuccessScreen');
     }
   }, [guestReportId, fetchReport]);
 
