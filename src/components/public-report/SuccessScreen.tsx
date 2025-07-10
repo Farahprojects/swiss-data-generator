@@ -241,9 +241,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   };
   
-  const handleBackToForm = () => {
+  const handleBackToHome = () => {
     clearAllSessionData();
-    navigate('/report');
+    navigate('/');
   };
   
   const handleContactSupport = () => {
@@ -288,8 +288,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   <Button variant="outline" onClick={handleContactSupport} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
                     Contact Support
                   </Button>
-                  <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                    Start New Report
+                  <Button variant="outline" onClick={handleBackToHome} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                    Back to Home
                   </Button>
                 </div>
               </>
@@ -331,7 +331,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                       <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
                         View Report
                       </Button>
-                      <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                      <Button variant="outline" onClick={handleBackToHome} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
                         Home
                       </Button>
                     </div>
