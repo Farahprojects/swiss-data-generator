@@ -172,7 +172,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const handleCloseReportViewer = () => {
-    // Reset all form state and close the entire flow
+    // Immediate hard reset with comprehensive state clearing
     setViewingReport(false);
     setReportContent('');
     setReportPdfData(null);
@@ -181,9 +181,25 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setSwissBoolean(false);
     form.reset();
     clearGuestReportId();
+    
+    // Clear all localStorage and sessionStorage
+    localStorage.removeItem('currentGuestReportId');
+    localStorage.removeItem('reportFormData');
+    localStorage.removeItem('guestReportData');
+    localStorage.removeItem('formStep');
+    localStorage.removeItem('paymentSession');
+    localStorage.removeItem('reportProgress');
     localStorage.removeItem('pending_report_email');
+    sessionStorage.clear();
+    
+    // Reset form state
     resetReportState();
-    // Form reset handled by React state - no page reload needed
+    
+    // Clear URL state and force immediate navigation
+    window.history.replaceState({}, '', '/');
+    
+    // Force immediate page reload to completely reset state
+    window.location.replace('/');
   };
 
   const onSubmit = async (data: ReportFormData) => {
