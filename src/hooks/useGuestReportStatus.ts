@@ -34,6 +34,8 @@ interface UseGuestReportStatusReturn {
   fetchCompleteReport: (guestReportId?: string) => Promise<any>;
   isAstroReport: (reportType: string | null) => boolean;
   setupRealtimeListener: (guestReportId?: string, onReportReady?: () => void) => () => void;
+  setError: (error: string | null) => void;
+  setCaseNumber: (caseNumber: string | null) => void;
 }
 
 export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
@@ -47,7 +49,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     try {
       const { data, error } = await supabase.functions.invoke('log-user-error', {
         body: {
-          guestReportId,
+          guestReportId: guestReportId || null,
           errorType,
           errorMessage,
           timestamp: new Date().toISOString()
@@ -60,7 +62,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       }
 
       console.log('📝 Logged error successfully');
-      return 'CASE-' + Date.now();
+      return data?.case_number || 'CASE-' + Date.now();
     } catch (err) {
       console.error('❌ Error logging user error:', err);
       return null;
@@ -256,7 +258,19 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
   const triggerErrorHandling = useCallback(async (guestReportId?: string) => {
     const reportId = guestReportId || getGuestReportId();
-    if (!reportId) return;
+    
+    // Handle case where no report ID is available
+    if (!reportId) {
+      console.warn('⚠️ Triggering error handling without report ID');
+      const case_number = await logUserError(
+        '',
+        'missing_report_id',
+        'No guest report ID available for error handling'
+      );
+      if (case_number) setCaseNumber(case_number);
+      setError('We are looking into this issue. Please reference your case number if you contact support.');
+      return;
+    }
 
     const case_number = await logUserError(
       reportId,
@@ -343,5 +357,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     fetchCompleteReport,
     isAstroReport,
     setupRealtimeListener,
+    setError,
+    setCaseNumber,
   };
 };

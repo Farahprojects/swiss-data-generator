@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
 import { getGuestReportId } from '@/utils/urlHelpers';
+import { supabase } from '@/integrations/supabase/client';
 
 type ReportType = 'essence' | 'sync';
 const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
@@ -68,6 +69,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     triggerErrorHandling,
     fetchCompleteReport,
     setupRealtimeListener,
+    setError,
+    setCaseNumber,
   } = useGuestReportStatus();
 
   const firstName = name?.split(' ')[0] || 'there';
@@ -157,8 +160,40 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       });
       
       return cleanup;
+    } else {
+      // Handle missing ID scenario immediately
+      console.warn('🚨 No guest report ID found - triggering missing ID error handling');
+      const handleMissingId = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('log-user-error', {
+            body: {
+              guestReportId: null,
+              errorType: 'missing_report_id',
+              errorMessage: 'No guest report ID detected in URL or localStorage',
+              email: email || 'unknown'
+            }
+          });
+
+          if (error) {
+            console.error('Failed to log missing ID error:', error);
+          } else {
+            console.log('📝 Logged missing ID error with case number:', data?.case_number);
+            setCaseNumber(data?.case_number || 'MISSING-' + Date.now());
+          }
+        } catch (err) {
+          console.error('❌ Error logging missing ID:', err);
+          setCaseNumber('MISSING-' + Date.now());
+        }
+        
+        // Clear any stale state and set error
+        localStorage.removeItem('currentGuestReportId');
+        window.history.replaceState({}, '', window.location.pathname);
+        setError('No report ID detected. Please restart the process.');
+      };
+      
+      handleMissingId();
     }
-  }, [guestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered]);
+  }, [guestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
 
   useEffect(() => {
     if (!isReady && !error && isVideoReady) {

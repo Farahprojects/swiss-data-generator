@@ -20,16 +20,20 @@ serve(async (req) => {
 
     const { guestReportId, errorType, errorMessage, email } = await req.json();
 
-    if (!guestReportId || !errorType) {
-      throw new Error("guestReportId and errorType are required");
+    if (!errorType) {
+      throw new Error("errorType is required");
     }
 
-    // Get the guest report for context
-    const { data: guestReport } = await supabase
-      .from('guest_reports')
-      .select('*')
-      .eq('id', guestReportId)
-      .single();
+    // Get the guest report for context (if guestReportId exists)
+    let guestReport = null;
+    if (guestReportId) {
+      const { data } = await supabase
+        .from('guest_reports')
+        .select('*')
+        .eq('id', guestReportId)
+        .single();
+      guestReport = data;
+    }
 
     // Insert error log with service role permissions
     const { data: errorLog, error } = await supabase
