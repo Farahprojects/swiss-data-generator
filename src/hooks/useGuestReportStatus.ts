@@ -14,6 +14,7 @@ interface GuestReport {
   stripe_session_id: string;
   report_type?: string | null;
   swiss_boolean?: boolean | null;
+  has_swiss_error?: boolean | null;
 }
 
 interface ReportData {
@@ -44,6 +45,13 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const [error, setError] = useState<string | null>(null);
   const [caseNumber, setCaseNumber] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+
+  const getSwissErrorMessage = useCallback((reportType: string | null) => {
+    if (reportType === 'essence') {
+      return 'Unable to generate your astrological essence data. This can happen due to incomplete birth information or system issues.';
+    }
+    return 'Astrological calculation failed. Please ensure your birth details are accurate and try again.';
+  }, []);
 
   const logUserError = useCallback(async (guestReportId: string, errorType: string, errorMessage?: string) => {
     try {
@@ -92,7 +100,14 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
       if (data) {
         setReport(data);
-        setError(null);
+        
+        // Check for Swiss error immediately
+        if (data.has_swiss_error === true) {
+          const errorMessage = getSwissErrorMessage(data.report_type);
+          setError(errorMessage);
+        } else {
+          setError(null);
+        }
       } else {
         setReport(null);
       }
@@ -298,6 +313,14 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         },
         async (payload) => {
           const updatedRecord = payload.new as GuestReport & { modal_ready?: boolean };
+
+          // Check for Swiss error first
+          if (updatedRecord.has_swiss_error === true) {
+            setReport(updatedRecord);
+            const errorMessage = getSwissErrorMessage(updatedRecord.report_type);
+            setError(errorMessage);
+            return; // Don't trigger modal for errors
+          }
 
           const isReportReady =
             updatedRecord.swiss_boolean === true ||

@@ -586,6 +586,7 @@ export type Database = {
           email: string
           email_sent: boolean
           has_report: boolean
+          has_swiss_error: boolean | null
           id: string
           modal_ready: boolean | null
           payment_status: string
@@ -608,6 +609,7 @@ export type Database = {
           email: string
           email_sent?: boolean
           has_report?: boolean
+          has_swiss_error?: boolean | null
           id?: string
           modal_ready?: boolean | null
           payment_status?: string
@@ -630,6 +632,7 @@ export type Database = {
           email?: string
           email_sent?: boolean
           has_report?: boolean
+          has_swiss_error?: boolean | null
           id?: string
           modal_ready?: boolean | null
           payment_status?: string

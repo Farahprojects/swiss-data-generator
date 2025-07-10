@@ -113,12 +113,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
 
-  const isReady = fetchedReportData?.metadata?.content_type === 'both' || 
-                   fetchedReportData?.metadata?.content_type === 'astro' || 
-                   fetchedReportData?.metadata?.content_type === 'ai' ||
-                   // Fallback to original logic if edge function data not available
-                   (isAstroDataOnly && report?.swiss_boolean === true) ||
-                   (!isAstroDataOnly && !!report?.has_report && !!report?.swiss_boolean);
+  const hasSwissError = report?.has_swiss_error === true;
+  
+  const isReady = !hasSwissError && (
+    fetchedReportData?.metadata?.content_type === 'both' || 
+    fetchedReportData?.metadata?.content_type === 'astro' || 
+    fetchedReportData?.metadata?.content_type === 'ai' ||
+    // Fallback to original logic if edge function data not available
+    (isAstroDataOnly && report?.swiss_boolean === true) ||
+    (!isAstroDataOnly && !!report?.has_report && !!report?.swiss_boolean)
+  );
 
   const handleVideoReady = useCallback(() => {
     setIsVideoReady(true);
@@ -205,15 +209,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
 
-  // Simplified countdown - no error handling logic
+  // Countdown logic - stop if Swiss error detected
   useEffect(() => {
-    if (!isReady && isVideoReady) {
+    if (!isReady && isVideoReady && !hasSwissError) {
       countdownRef.current = setTimeout(() => {
         setCountdown((c) => (c <= 1 ? 0 : c - 1));
       }, 1000);
     }
     return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
-  }, [countdown, isReady, isVideoReady]);
+  }, [countdown, isReady, isVideoReady, hasSwissError]);
 
 
   const status = (() => {
@@ -298,7 +302,36 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                 </div>
               </>
             )}
-            {/* Error UI temporarily removed - focus on token persistence */}
+            {/* Swiss Error UI */}
+            {hasSwissError && error && (
+              <>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                    </div>
+                    <span className="font-medium text-red-800">Astrological Data Error</span>
+                  </div>
+                  <p className="text-red-700 mb-3">{error}</p>
+                  {caseNumber && (
+                    <p className="text-red-600 text-xs">
+                      Reference: <span className="font-mono">{caseNumber}</span>
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button onClick={handleTryAgain} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
+                    Try Again
+                  </Button>
+                  <Button variant="outline" onClick={handleContactSupport} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                    Contact Support
+                  </Button>
+                  <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                    Start New Report
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
