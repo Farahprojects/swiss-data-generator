@@ -8,7 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { motion } from 'framer-motion';
 import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
-import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
+import { getGuestToken, clearAllSessionData } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
 type ReportType = 'essence' | 'sync';
@@ -86,10 +86,29 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [fetchedReportData, setFetchedReportData] = useState<any>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Preload guest report ID using useMemo
+  // Clean token retrieval
   const currentGuestReportId = useMemo(() => {
-    return guestReportId || getGuestReportId();
+    return guestReportId || getGuestToken();
   }, [guestReportId]);
+
+  // Protect against null tokens - redirect if no token found
+  if (!currentGuestReportId) {
+    return (
+      <div className="w-full py-10 px-4 flex justify-center">
+        <Card className="border-2 border-gray-200 shadow-lg">
+          <CardContent className="p-8 text-center">
+            <p className="text-gray-600">Session expired. Please start a new report.</p>
+            <Button 
+              onClick={() => navigate('/report')} 
+              className="mt-4 bg-gray-900 text-white font-light hover:bg-gray-800"
+            >
+              Start New Report
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
@@ -183,68 +202,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       });
       
       return cleanup;
-    } else {
-      // Handle missing ID scenario immediately
-      console.warn('🚨 No guest report ID found - triggering missing ID error handling');
-      const handleMissingId = async () => {
-        try {
-          const { data, error } = await supabase.functions.invoke('log-user-error', {
-            body: {
-              guestReportId: null,
-              errorType: 'missing_report_id',
-              errorMessage: 'No guest report ID detected in URL or localStorage',
-              email: email || 'unknown'
-            }
-          });
-
-          if (error) {
-            console.error('Failed to log missing ID error:', error);
-          } else {
-            setCaseNumber(data?.case_number || 'MISSING-' + Date.now());
-          }
-        } catch (err) {
-          console.error('❌ Error logging missing ID:', err);
-          setCaseNumber('MISSING-' + Date.now());
-        }
-        
-        // Clear any stale state and set error
-        localStorage.removeItem('currentGuestReportId');
-        window.history.replaceState({}, '', window.location.pathname);
-        setError('No report ID detected. Please restart the process.');
-      };
-      
-      handleMissingId();
     }
   }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
 
+  // Simplified countdown - no error handling logic
   useEffect(() => {
-    // If user has already been through the flow (has guest report ID) and there's no report ready,
-    // trigger error handling immediately instead of waiting for countdown
-    if (currentGuestReportId && !isReady && !error && isVideoReady && !report?.has_report) {
-      // Check if enough time has passed (e.g., 5 seconds) to avoid immediate error
-      const checkDelay = setTimeout(() => {
-        if (!isReady && !error) {
-          triggerErrorHandling(currentGuestReportId);
-        }
-      }, 5000); // 5 second delay instead of 24 seconds
-      
-      return () => clearTimeout(checkDelay);
-    }
-
-    // Original countdown logic for cases where we still want the full countdown
-    if (!isReady && !error && isVideoReady && !currentGuestReportId) {
+    if (!isReady && isVideoReady) {
       countdownRef.current = setTimeout(() => {
-        setCountdown((c) => {
-          if (c <= 1) {
-            if (currentGuestReportId) triggerErrorHandling(currentGuestReportId);
-            return 0;
-          }
-          return c - 1;
-        });
+        setCountdown((c) => (c <= 1 ? 0 : c - 1));
       }, 1000);
     }
     return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
-  }, [countdown, isReady, error, isVideoReady, currentGuestReportId, triggerErrorHandling, report]);
+  }, [countdown, isReady, isVideoReady]);
 
 
   const status = (() => {
@@ -292,20 +261,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
               <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
                 <StatusIcon className="h-6 w-6 text-gray-600" />
               </div>
-              {!isReady && !error && (
+              {!isReady && (
                 <>
                   <div className="text-3xl font-light text-gray-900">{countdown}s</div>
                   <div className="text-gray-600 font-light">Report generating...</div>
                 </>
               )}
               {isReady && <div className="text-gray-600 font-light">Ready to view</div>}
-              {error && <div className="text-gray-600 font-light">Processing issue detected</div>}
             </div>
             <div>
               <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
               <p className="text-gray-600 font-light">{status.desc}</p>
             </div>
-            {!isReady && !error && !isAstroDataOnly && (
+            {!isReady && !isAstroDataOnly && (
               <>
                 <VideoLoader onVideoReady={handleVideoReady} />
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
@@ -330,32 +298,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                 </div>
               </>
             )}
-            {error && (
-              <div className="space-y-4">
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  <p className="text-gray-700 font-light mb-2">
-                    We're experiencing a delay with your report generation. Our team has been automatically notified and is working to resolve this issue.
-                  </p>
-                  {caseNumber && (
-                    <div className="mt-3 p-3 bg-white rounded-lg border">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-2 h-2 bg-red-500 rounded-full" />
-                        <p className="text-sm font-medium text-gray-800">Reference Number</p>
-                      </div>
-                      <p className="text-lg font-mono text-gray-900">{caseNumber}</p>
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button onClick={handleTryAgain} className="bg-gray-900 text-white font-light hover:bg-gray-800">
-                    Try Again
-                  </Button>
-                  <Button variant="outline" onClick={handleHome} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                    Home
-                  </Button>
-                </div>
-              </div>
-            )}
+            {/* Error UI temporarily removed - focus on token persistence */}
           </CardContent>
         </Card>
       </div>

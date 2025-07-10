@@ -43,15 +43,21 @@ export const clearGuestReportIdFromUrl = (): void => {
 };
 
 /**
+ * Clean, production-ready token retrieval
+ */
+export const getGuestToken = (): string | null => {
+  const urlToken = new URLSearchParams(window.location.search).get('guest_id');
+  if (urlToken) return urlToken;
+
+  return localStorage.getItem('currentGuestReportId');
+};
+
+/**
  * Get guest report ID from URL or localStorage, with preference for URL
+ * @deprecated Use getGuestToken() instead
  */
 export const getGuestReportId = (): string | null => {
-  // First check URL (for refresh support)
-  const urlId = getGuestReportIdFromUrl();
-  if (urlId) return urlId;
-  
-  // Fallback to localStorage
-  return localStorage.getItem('currentGuestReportId');
+  return getGuestToken();
 };
 
 /**
