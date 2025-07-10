@@ -11,6 +11,7 @@ export const useErrorHandling = () => {
     errorMessage?: string,
     email?: string
   ) => {
+    console.log('🚨 Triggering error:', { guestReportId, errorType, errorMessage });
     const case_number = await logUserError(
       guestReportId || '',
       errorType,
@@ -23,15 +24,25 @@ export const useErrorHandling = () => {
   }, []);
 
   const clearError = useCallback(() => {
+    console.log('✅ Clearing error state');
     setError(null);
     setCaseNumber(null);
   }, []);
+
+  // Auto-clear error when it should be cleared
+  const clearErrorOnReady = useCallback(() => {
+    if (error) {
+      console.log('🔄 Auto-clearing error because report is ready');
+      clearError();
+    }
+  }, [error, clearError]);
 
   return {
     error,
     caseNumber,
     triggerError,
     clearError,
+    clearErrorOnReady,
     setError,
     setCaseNumber
   };

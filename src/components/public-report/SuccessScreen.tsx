@@ -51,12 +51,29 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const isAstroDataOnly = isAstroOnlyType(reportType);
 
   // Custom hooks for state management
-  const { error, caseNumber, triggerError, clearError, setError, setCaseNumber } = useErrorHandling();
+  const { error, caseNumber, triggerError, clearError, clearErrorOnReady, setError, setCaseNumber } = useErrorHandling();
   const isReady = useReportReadiness(report, fetchedReportData, reportType);
 
+  // Auto-clear error when report becomes ready
+  useEffect(() => {
+    if (isReady && error) {
+      clearErrorOnReady();
+    }
+  }, [isReady, error, clearErrorOnReady]);
+
+  // Define the primary UI state with priority logic
+  const primaryState = useMemo(() => {
+    console.log('🎯 Determining primary state:', { isReady, error: !!error, currentGuestReportId: !!currentGuestReportId });
+    
+    if (error) return 'error';
+    if (isReady) return 'ready';
+    if (currentGuestReportId) return 'processing';
+    return 'loading';
+  }, [isReady, error, currentGuestReportId]);
+
   // Countdown management - only start when we have ID but report isn't ready
-  const shouldStartCountdown = currentGuestReportId && !isReady && !error && isVideoReady;
-  console.log('🔄 Countdown conditions:', { currentGuestReportId: !!currentGuestReportId, isReady, error: !!error, isVideoReady, shouldStartCountdown });
+  const shouldStartCountdown = primaryState === 'processing' && isVideoReady;
+  console.log('🔄 Countdown conditions:', { primaryState, isVideoReady, shouldStartCountdown });
   
   const { countdown } = useCountdown(24, shouldStartCountdown, () => {
     console.log('⏰ Countdown completed, triggering error');
@@ -168,6 +185,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   // Debug useEffect - log state changes
   useEffect(() => {
     console.log('📊 Success Screen State:', {
+      primaryState,
       currentGuestReportId: !!currentGuestReportId,
       reportType,
       isReady,
@@ -177,7 +195,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       reportSwissBoolean: report?.swiss_boolean,
       reportPaymentStatus: report?.payment_status
     });
-  }, [currentGuestReportId, reportType, isReady, error, isVideoReady, report]);
+  }, [primaryState, currentGuestReportId, reportType, isReady, error, isVideoReady, report]);
 
 
   // Status and UI state
@@ -218,20 +236,21 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
               <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
                 <StatusIcon className="h-6 w-6 text-gray-600" />
               </div>
-              {!isReady && !error && (
+              {primaryState === 'processing' && (
                 <>
                   <div className="text-3xl font-light text-gray-900">{countdown}s</div>
                   <div className="text-gray-600 font-light">Report generating...</div>
                 </>
               )}
-              {isReady && <div className="text-gray-600 font-light">Ready to view</div>}
-              {error && <div className="text-gray-600 font-light">Processing issue detected</div>}
+              {primaryState === 'ready' && <div className="text-gray-600 font-light">Ready to view</div>}
+              {primaryState === 'error' && <div className="text-gray-600 font-light">Processing issue detected</div>}
+              {primaryState === 'loading' && <div className="text-gray-600 font-light">Initializing...</div>}
             </div>
             <div>
               <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
               <p className="text-gray-600 font-light">{status.desc}</p>
             </div>
-            {!isReady && !error && !isAstroDataOnly && (
+            {primaryState === 'processing' && !isAstroDataOnly && (
               <>
                 <VideoLoader onVideoReady={handleVideoReady} />
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
@@ -240,7 +259,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                 </div>
               </>
             )}
-            {isReady && (
+            {primaryState === 'ready' && (
               <>
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
                   Hi {firstName}! Your report is ready. <br />
@@ -256,7 +275,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                 </div>
               </>
             )}
-            {error && (
+            {primaryState === 'error' && (
               <div className="space-y-4">
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
                   <p className="text-gray-700 font-light mb-2">
