@@ -10,7 +10,6 @@ const EDGE_ENGINES = [
   "standard-report",
   "standard-report-one",
   "standard-report-two",
-  "standard-report-three",
 ];
 
 // Initialise Supabase SR client once per invocation
