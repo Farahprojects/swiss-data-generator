@@ -4,7 +4,7 @@ import { FormStepProps } from '@/types/public-report';
 
 const FormStep = ({ stepNumber, title, children, className = '', 'data-step': dataStep }: FormStepProps) => {
   return (
-    <section className={`min-h-screen py-12 ${className}`} data-step={dataStep}>
+    <section className={`min-h-screen pt-6 pb-12 ${className}`} data-step={dataStep}>
       <div className="w-full md:px-4 md:container md:mx-auto max-w-none md:max-w-4xl">
         <div className="space-y-8">
           <div className="flex items-center justify-center gap-4">
