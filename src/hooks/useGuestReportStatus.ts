@@ -234,7 +234,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       console.log('🔄 Fetching complete report data using get-guest-report endpoint');
       
       const { data, error } = await supabase.functions.invoke('get-guest-report', {
-        body: { id: reportId }
+        body: { guest_id: reportId }
       });
 
       if (error) {

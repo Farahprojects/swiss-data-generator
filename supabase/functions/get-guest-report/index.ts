@@ -42,7 +42,17 @@ serve(async (req) => {
 
     // Get guest report ID from query params or body
     const url = new URL(req.url);
-    const guestReportId = url.searchParams.get('id') || url.searchParams.get('guest_id');
+    let guestReportId = url.searchParams.get('id') || url.searchParams.get('guest_id');
+    
+    // If not in URL params, check request body
+    if (!guestReportId && req.method === 'POST') {
+      try {
+        const body = await req.json();
+        guestReportId = body.id || body.guest_id;
+      } catch (error) {
+        console.log('[get-guest-report] No valid JSON body found');
+      }
+    }
 
     if (!guestReportId) {
       console.error('[get-guest-report] Missing guest report ID');
