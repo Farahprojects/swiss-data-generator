@@ -1,57 +1,20 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { CheckCircle, Clock, Volume2, VolumeX } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { motion } from 'framer-motion';
-import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
 import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
-import { supabase } from '@/integrations/supabase/client';
+import { useCountdown } from '@/hooks/useCountdown';
+import { useReportReadiness } from '@/hooks/useReportReadiness';
+import { useErrorHandling } from '@/hooks/useErrorHandling';
+import { VideoLoader } from './VideoLoader';
+import { getReportStatus, isAstroOnlyType } from '@/utils/reportStatusChecker';
+import { handleMissingReportId } from '@/utils/errorHandler';
 
 type ReportType = 'essence' | 'sync';
-const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
-
-const isAstroOnlyType = (type?: ReportType): boolean => type === 'essence' || type === 'sync';
-
-const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
-  const toggleMute = () => {
-    const vid = videoRef.current;
-    if (!vid) return;
-    vid.muted = !isMuted;
-    if (!vid.muted) vid.volume = 1;
-    setIsMuted(!isMuted);
-  };
-  const handleVideoReady = () => onVideoReady?.();
-  return (
-    <div className="relative w-full h-0 pt-[56.25%] overflow-hidden rounded-xl shadow-lg">
-      <video
-        ref={videoRef}
-        src={VIDEO_SRC}
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay
-        loop
-        muted={isMuted}
-        playsInline
-        preload="auto"
-        controls={false}
-        onCanPlay={handleVideoReady}
-        onLoadedData={handleVideoReady}
-      />
-      <button
-        onClick={toggleMute}
-        className="absolute bottom-3 right-3 bg-black/50 text-white rounded-full p-2 backdrop-blur-sm hover:bg-black/70 transition"
-        aria-label={isMuted ? 'Unmute video' : 'Mute video'}
-      >
-        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-      </button>
-    </div>
-  );
-};
 
 interface SuccessScreenProps {
   name: string;
@@ -63,15 +26,9 @@ interface SuccessScreenProps {
 const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
   const {
     report,
-    error,
-    caseNumber,
     fetchReport,
-    triggerErrorHandling,
     fetchCompleteReport,
-    fetchBothReportData,
     setupRealtimeListener,
-    setError,
-    setCaseNumber,
   } = useGuestReportStatus();
 
   const firstName = name?.split(' ')[0] || 'there';
@@ -80,13 +37,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   useViewportHeight();
 
-  const [countdown, setCountdown] = useState(24);
+  // State management
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [modalTriggered, setModalTriggered] = useState(false);
   const [fetchedReportData, setFetchedReportData] = useState<any>(null);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Preload guest report ID using useMemo
+  // Core data
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestReportId();
   }, [guestReportId]);
@@ -94,12 +50,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
 
-  const isReady = fetchedReportData?.metadata?.content_type === 'both' || 
-                   fetchedReportData?.metadata?.content_type === 'astro' || 
-                   fetchedReportData?.metadata?.content_type === 'ai' ||
-                   // Fallback to original logic if edge function data not available
-                   (isAstroDataOnly && report?.swiss_boolean === true) ||
-                   (!isAstroDataOnly && !!report?.has_report && !!report?.swiss_boolean);
+  // Custom hooks for state management
+  const { error, caseNumber, triggerError, clearError, setError, setCaseNumber } = useErrorHandling();
+  const isReady = useReportReadiness(report, fetchedReportData, reportType);
+
+  // Countdown management
+  const shouldStartCountdown = !isReady && !error && isVideoReady && !currentGuestReportId;
+  const { countdown } = useCountdown(24, shouldStartCountdown, () => {
+    if (currentGuestReportId) {
+      triggerError(currentGuestReportId, 'timeout_no_report', 'Report not found after timeout', email);
+    }
+  });
 
   const handleVideoReady = useCallback(() => {
     setIsVideoReady(true);
@@ -186,36 +147,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     } else {
       // Handle missing ID scenario immediately
       console.warn('🚨 No guest report ID found - triggering missing ID error handling');
-      const handleMissingId = async () => {
-        try {
-          const { data, error } = await supabase.functions.invoke('log-user-error', {
-            body: {
-              guestReportId: null,
-              errorType: 'missing_report_id',
-              errorMessage: 'No guest report ID detected in URL or localStorage',
-              email: email || 'unknown'
-            }
-          });
-
-          if (error) {
-            console.error('Failed to log missing ID error:', error);
-          } else {
-            setCaseNumber(data?.case_number || 'MISSING-' + Date.now());
-          }
-        } catch (err) {
-          console.error('❌ Error logging missing ID:', err);
-          setCaseNumber('MISSING-' + Date.now());
-        }
-        
-        // Clear any stale state and set error
-        localStorage.removeItem('currentGuestReportId');
-        window.history.replaceState({}, '', window.location.pathname);
+      const handleMissingIdFlow = async () => {
+        const caseNumber = await handleMissingReportId(email);
+        setCaseNumber(caseNumber);
         setError('No report ID detected. Please restart the process.');
       };
       
-      handleMissingId();
+      handleMissingIdFlow();
     }
-  }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
+  }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email, setCaseNumber, setError]);
 
   useEffect(() => {
     // If user has already been through the flow (has guest report ID) and there's no report ready,
@@ -224,43 +164,22 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       // Check if enough time has passed (e.g., 5 seconds) to avoid immediate error
       const checkDelay = setTimeout(() => {
         if (!isReady && !error) {
-          triggerErrorHandling(currentGuestReportId);
+          triggerError(currentGuestReportId, 'timeout_no_report', 'Report not found after timeout', email);
         }
       }, 5000); // 5 second delay instead of 24 seconds
       
       return () => clearTimeout(checkDelay);
     }
-
-    // Original countdown logic for cases where we still want the full countdown
-    if (!isReady && !error && isVideoReady && !currentGuestReportId) {
-      countdownRef.current = setTimeout(() => {
-        setCountdown((c) => {
-          if (c <= 1) {
-            if (currentGuestReportId) triggerErrorHandling(currentGuestReportId);
-            return 0;
-          }
-          return c - 1;
-        });
-      }, 1000);
-    }
-    return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
-  }, [countdown, isReady, error, isVideoReady, currentGuestReportId, triggerErrorHandling, report]);
+  }, [isReady, error, isVideoReady, currentGuestReportId, report, triggerError, email]);
 
 
-  const status = (() => {
-    if (!report) return { title: 'Processing Your Request', desc: 'Setting up your report', icon: Clock };
-    if (report.payment_status === 'pending') return { title: 'Payment Processing', desc: 'Confirming payment', icon: Clock };
-    if (report.payment_status === 'paid' && !report.has_report) return { title: 'Generating Report', desc: 'Preparing insights', icon: Clock };
-    if (isReady) return { title: 'Report Ready!', desc: 'Your report is complete', icon: CheckCircle };
-    return { title: '', desc: 'Please wait', icon: Clock };
-  })();
-
-  const StatusIcon = status.icon;
+  // Status and UI state
+  const status = getReportStatus(report, isReady, error);
+  const StatusIcon = status.icon === 'CheckCircle' ? CheckCircle : Clock;
 
   const handleTryAgain = async () => {
     if (currentGuestReportId) {
-      setError(null);
-      setCaseNumber(null);
+      clearError();
       await fetchReport(currentGuestReportId);
     } else {
       navigate('/report');
