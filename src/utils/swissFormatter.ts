@@ -61,8 +61,21 @@ export const degreesToSign = (lon: number) => {
 };
 
 export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
+  // Return empty data structure if raw is null/undefined
+  if (!raw) {
+    return {
+      dateISO: new Date().toISOString().slice(0, 10),
+      timeISO: '00:00:00',
+      tz: 'UTC',
+      name: 'Unknown',
+      meta: {},
+      planets: [],
+      aspects: []
+    };
+  }
+
   const natal = raw.natal ?? raw;            // support {natal:{…}} or flat
-  const meta  = natal.meta ?? {};
+  const meta  = natal?.meta ?? {};
 
   // --- Date & time ---------------------------------------------
   const dateISO = meta.utc ? new Date(meta.utc).toISOString().slice(0,10) : meta.date;

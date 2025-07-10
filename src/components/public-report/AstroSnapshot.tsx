@@ -13,6 +13,18 @@ const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
 );
 
 const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON }) => {
+  // Add error handling for null/invalid data
+  if (!rawSwissJSON) {
+    return (
+      <div className="w-full max-w-md mx-auto font-sans text-[15px] leading-relaxed text-neutral-900">
+        <div className="text-center mb-6">
+          <h2 className="font-semibold text-lg mb-2">Astro Data</h2>
+          <p className="text-sm text-neutral-600">No astronomical data available</p>
+        </div>
+      </div>
+    );
+  }
+
   const data: EnrichedSnapshot = parseSwissDataRich(rawSwissJSON);
 
   const formattedDate = new Date(data.dateISO).toLocaleDateString("en-US", {
