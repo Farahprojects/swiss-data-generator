@@ -1,5 +1,8 @@
 import jsPDF from 'jspdf';
 import { PdfTemplate, PdfGenerationOptions } from '../types';
+import { AIReportTemplate } from './AIReportTemplate';
+import { AstroTemplate } from './AstroTemplate';
+import { isSynastryData } from '@/lib/synastryFormatter';
 
 export interface UnifiedPdfData {
   reportContent?: string;
@@ -10,6 +13,8 @@ export interface UnifiedPdfData {
 
 export class UnifiedTemplate implements PdfTemplate {
   private options: PdfGenerationOptions;
+  private aiTemplate: AIReportTemplate;
+  private astroTemplate: AstroTemplate;
 
   constructor(options?: PdfGenerationOptions) {
     this.options = {
@@ -20,6 +25,8 @@ export class UnifiedTemplate implements PdfTemplate {
       includeFooter: true,
       ...options
     };
+    this.aiTemplate = new AIReportTemplate(this.options);
+    this.astroTemplate = new AstroTemplate(this.options);
   }
 
   async generate(data: UnifiedPdfData, options?: PdfGenerationOptions): Promise<void> {
@@ -42,12 +49,12 @@ export class UnifiedTemplate implements PdfTemplate {
 
     // AI Report Section (Priority - Front and Center)
     if (data.reportContent) {
-      currentY = this.addAIReportSection(doc, data.reportContent, currentY, pageWidth, pageHeight, margins);
+      currentY = this.aiTemplate.renderAIReportSection(data.reportContent, currentY, doc);
     }
 
-    // Astro Data Section
+    // Astro Data Section - Use the proper AstroTemplate methods
     if (data.swissData) {
-      currentY = this.addAstroSection(doc, data.swissData, currentY, pageWidth, pageHeight, margins);
+      currentY = this.renderAstroSection(doc, data.swissData, currentY);
     }
 
     // Footer
@@ -71,66 +78,11 @@ export class UnifiedTemplate implements PdfTemplate {
     return startY + 70;
   }
 
-  private addAIReportSection(doc: jsPDF, reportContent: string, startY: number, pageWidth: number, pageHeight: number, margins: any): number {
+  private renderAstroSection(doc: jsPDF, swissData: any, startY: number): number {
     // Check if we need a new page
-    if (startY > pageHeight - 100) {
-      doc.addPage();
-      startY = margins.top;
-    }
-
-    // Section Header
-    doc.setFontSize(18).setFont("helvetica", "bold").setTextColor(75, 63, 114);
-    doc.text("AI Intelligence Report", margins.left, startY);
-    startY += 15;
-
-    // Clean HTML content to get plain text
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = reportContent;
-    const cleanText = tempDiv.textContent || tempDiv.innerText || '';
-
-    // Split content into paragraphs and process
-    const paragraphs = cleanText.split('\n').filter(p => p.trim());
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margins = this.options.margins!;
     
-    doc.setFontSize(11).setFont("helvetica", "normal").setTextColor(33);
-    const lineHeight = 7;
-    const maxWidth = pageWidth - margins.left - margins.right;
-
-    for (const paragraph of paragraphs) {
-      if (!paragraph.trim()) continue;
-
-      // Check for headings (lines that are short and appear to be titles)
-      if (paragraph.length < 100 && paragraph.includes(':')) {
-        doc.setFont("helvetica", "bold").setTextColor(40, 40, 60);
-        const lines = doc.splitTextToSize(paragraph, maxWidth);
-        for (const line of lines) {
-          if (startY > pageHeight - 30) {
-            doc.addPage();
-            startY = margins.top;
-          }
-          doc.text(line, margins.left, startY);
-          startY += lineHeight;
-        }
-        doc.setFont("helvetica", "normal").setTextColor(33);
-        startY += 5;
-      } else {
-        const lines = doc.splitTextToSize(paragraph, maxWidth);
-        for (const line of lines) {
-          if (startY > pageHeight - 30) {
-            doc.addPage();
-            startY = margins.top;
-          }
-          doc.text(line, margins.left, startY);
-          startY += lineHeight;
-        }
-        startY += 10;
-      }
-    }
-
-    return startY + 20;
-  }
-
-  private addAstroSection(doc: jsPDF, swissData: any, startY: number, pageWidth: number, pageHeight: number, margins: any): number {
-    // Check if we need a new page
     if (startY > pageHeight - 100) {
       doc.addPage();
       startY = margins.top;
@@ -141,53 +93,21 @@ export class UnifiedTemplate implements PdfTemplate {
     doc.text("Astrological Data", margins.left, startY);
     startY += 15;
 
-    doc.setFontSize(11).setFont("helvetica", "normal").setTextColor(33);
-    
-    // Extract and format astro data
-    if (swissData.chart_data) {
-      const chartData = swissData.chart_data;
+    // Use the proper AstroTemplate rendering methods
+    try {
+      if (isSynastryData(swissData)) {
+        return this.astroTemplate.renderSynastryData(swissData, startY, doc);
+      } else {
+        return this.astroTemplate.renderEssenceData(swissData, startY, doc);
+      }
+    } catch (error) {
+      console.error('Error rendering astro data:', error);
       
-      // Birth details
-      if (chartData.birth_details) {
-        doc.setFont("helvetica", "bold");
-        doc.text("Birth Details:", margins.left, startY);
-        startY += 10;
-        
-        doc.setFont("helvetica", "normal");
-        if (chartData.birth_details.date) {
-          doc.text(`Date: ${chartData.birth_details.date}`, margins.left + 5, startY);
-          startY += 7;
-        }
-        if (chartData.birth_details.time) {
-          doc.text(`Time: ${chartData.birth_details.time}`, margins.left + 5, startY);
-          startY += 7;
-        }
-        if (chartData.birth_details.location) {
-          doc.text(`Location: ${chartData.birth_details.location}`, margins.left + 5, startY);
-          startY += 7;
-        }
-        startY += 10;
-      }
-
-      // Planetary positions
-      if (chartData.planets) {
-        doc.setFont("helvetica", "bold");
-        doc.text("Planetary Positions:", margins.left, startY);
-        startY += 10;
-        
-        doc.setFont("helvetica", "normal");
-        Object.entries(chartData.planets).forEach(([planet, data]: [string, any]) => {
-          if (startY > pageHeight - 30) {
-            doc.addPage();
-            startY = margins.top;
-          }
-          doc.text(`${planet}: ${data.sign || 'N/A'} ${data.degree || ''}°`, margins.left + 5, startY);
-          startY += 7;
-        });
-      }
+      // Fallback: show basic info
+      doc.setFontSize(11).setFont("helvetica", "normal").setTextColor(33);
+      doc.text("Astrological data is available but could not be properly formatted.", margins.left, startY);
+      return startY + 20;
     }
-
-    return startY + 20;
   }
 
   private addFooter(doc: jsPDF, pageWidth: number, pageHeight: number): void {
