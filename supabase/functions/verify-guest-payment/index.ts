@@ -53,25 +53,11 @@ function assertPresent(obj: Record<string, any>, keys: string[]) {
 function buildTranslatorPayload(rd: ReportData) {
   // Check if rd.request exists first (for astro data), otherwise map reportType
   let request;
-
-// AstroData: explicitly uses `request`
-if (rd.request && rd.request.trim() !== '') {
-  request = rd.request;
-}
-
-// AI Report: uses `reportType` mapping, but only if no `request` present
-else if (rd.reportType && !rd.request) {
-  request = mapReportTypeToRequest(rd.reportType);
-  
-  // 🚫 If the reportType starts with "essence" or "sync", treat as AI
-  if (["essence", "sync"].includes(request) && !rd.request) {
-    request = rd.reportType; // fallback to raw reportType to force AI path
+  if (rd.request && rd.request.trim() !== '') {
+    request = rd.request;
+  } else {
+    request = mapReportTypeToRequest(rd.reportType);
   }
-}
-
-if (!request || request === "unknown") {
-  throw new Error(`Unsupported reportType '${rd.reportType}' and no request field provided`);
-}
 
   if (request === "unknown") {
     throw new Error(`Unsupported reportType '${rd.reportType}' and no request field provided`);
