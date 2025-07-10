@@ -68,6 +68,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     fetchReport,
     triggerErrorHandling,
     fetchCompleteReport,
+    fetchBothReportData,
     setupRealtimeListener,
     setError,
     setCaseNumber,
@@ -99,24 +100,35 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (!onViewReport) return;
 
     try {
-      const reportData = await fetchCompleteReport(guestReportId);
+      // Use fetchBothReportData instead of fetchCompleteReport for better data handling
+      const reportData = await fetchBothReportData(guestReportId);
 
-      // Extract content based on type
+      // Extract content - prioritize AI report content if available
       let reportContent = '';
-      if (reportData.metadata.is_ai_report && reportData.report_content) {
-        reportContent = reportData.report_content;
-      } else if (reportData.metadata.is_astro_report && reportData.swiss_data?.report?.content) {
-        reportContent = reportData.swiss_data.report.content;
-      } else if (reportData.metadata.is_astro_report && typeof reportData.swiss_data?.report === 'string') {
-        reportContent = reportData.swiss_data.report;
+      if (reportData.reportContent) {
+        // Use the AI-generated report content
+        reportContent = reportData.reportContent;
+      } else if (reportData.swissData?.report?.content) {
+        // Fallback to swiss report content
+        reportContent = reportData.swissData.report.content;
+      } else if (typeof reportData.swissData?.report === 'string') {
+        // Fallback to raw report string
+        reportContent = reportData.swissData.report;
       }
+
+      console.log('SuccessScreen - Passing data:', {
+        reportContent: reportContent ? 'HAS_CONTENT' : 'NO_CONTENT',
+        swissData: reportData.swissData ? 'HAS_SWISS_DATA' : 'NO_SWISS_DATA',
+        isAiReport: !!reportData.reportContent,
+        isAstroReport: !!reportData.swissData
+      });
 
       onViewReport(
         reportContent || 'Report content could not be loaded',
         null, // PDF data
-        reportData.swiss_data,
-        reportData.metadata.is_ai_report,
-        reportData.metadata.is_astro_report
+        reportData.swissData, // Pass the raw swiss data for astro components
+        !!reportData.reportContent, // has AI report
+        !!reportData.swissData // has astro data
       );
       
     } catch (error) {
@@ -129,7 +141,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         false
       );
     }
-  }, [guestReportId, onViewReport, fetchCompleteReport]);
+  }, [guestReportId, onViewReport, fetchBothReportData]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
