@@ -11,7 +11,7 @@ interface ReportData {
     id: string;
     email: string;
     report_type: string | null;
-    swiss_boolean: boolean | null;
+    swiss_boolean: boolean | null; // Kept for legacy/reference but not used in final logic
     has_report: boolean;
     payment_status: string;
     created_at: string;
@@ -92,13 +92,12 @@ serve(async (req) => {
 
     const hasTranslatorLog = !!guestReport.translator_log_id;
 
-    const isAstroOnly = guestReport.swiss_boolean === true;
-    const isAiReport = guestReport.has_report && !!guestReport.report_log_id;
-
     let reportContent: string | null = null;
     let swissData: any | null = null;
 
-    // Fetch AI report content
+    // Fetch AI report content (if available)
+    const isAiReport = guestReport.has_report && !!guestReport.report_log_id;
+
     if (isAiReport) {
       const { data: reportLog, error: reportError } = await supabase
         .from('report_logs')
@@ -113,7 +112,7 @@ serve(async (req) => {
       }
     }
 
-    // Fetch Swiss data if available
+    // Fetch Swiss astro data (if translator log exists)
     if (hasTranslatorLog) {
       const { data: translatorLog, error: translatorError } = await supabase
         .from('translator_logs')
@@ -128,7 +127,9 @@ serve(async (req) => {
       }
     }
 
-    const isAstroReport = isAstroOnly || !!swissData;
+    // ✅ Use Swiss data presence as source of truth (not swiss_boolean)
+    const isAstroReport = !!swissData;
+    const isAstroOnly = isAstroReport && !isAiReport;
 
     let contentType: 'astro' | 'ai' | 'both' | 'none' = 'none';
     if (isAstroReport && isAiReport) contentType = 'both';
