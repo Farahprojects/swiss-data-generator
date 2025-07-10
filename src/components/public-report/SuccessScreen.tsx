@@ -238,7 +238,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (report.payment_status === 'pending') return { title: 'Payment Processing', desc: 'Confirming payment', icon: Clock };
     if (report.payment_status === 'paid' && !report.has_report) return { title: 'Generating Report', desc: 'Preparing insights', icon: Clock };
     if (isReady) return { title: 'Report Ready!', desc: 'Your report is complete', icon: CheckCircle };
-    return { title: 'Processing', desc: 'Please wait', icon: Clock };
+    return { title: '', desc: 'Please wait', icon: Clock };
   })();
 
   const StatusIcon = status.icon;
