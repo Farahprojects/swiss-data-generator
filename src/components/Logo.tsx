@@ -20,9 +20,9 @@ const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProp
   };
 
   const logoSizeClasses = {
-    sm: 'h-6 w-6',
-    md: 'h-8 w-8',
-    lg: 'h-10 w-10',
+    sm: 'h-5 w-5',
+    md: 'h-6 w-6',
+    lg: 'h-8 w-8',
   };
 
   const logoElement = (

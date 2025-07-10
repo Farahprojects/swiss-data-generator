@@ -75,19 +75,11 @@ const PublicReport = () => {
       <div className="min-h-screen bg-background">
         {/* Animated header with logo */}
         <header className="fixed top-0 left-0 z-50 p-6">
-          <div className="flex items-center gap-2">
-            <img 
-              src="/favicon.png" 
-              alt="TheRAI Logo" 
-              className="h-8 w-8 object-contain transition-opacity duration-300 ease-out"
-              style={{ opacity: textOpacity }}
-            />
-            <span 
-              className="font-gt-sectra font-medium text-foreground tracking-tight text-2xl transition-opacity duration-300 ease-out"
-              style={{ opacity: textOpacity }}
-            >
-              Therai.
-            </span>
+          <div 
+            className="transition-opacity duration-300 ease-out"
+            style={{ opacity: textOpacity }}
+          >
+            <Logo size="md" asLink={false} />
           </div>
         </header>
         
