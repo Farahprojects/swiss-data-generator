@@ -62,22 +62,20 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
-            <span className="italic font-medium flex items-center justify-center flex-wrap">
+            <span className="italic font-medium flex items-center justify-center gap-x-8 flex-wrap">
               <span>Your</span>
-              <span className="relative inline-block w-24 ml-4">
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={currentWordIndex}
-                    initial={{ opacity: 0, rotateX: 90 }}
-                    animate={{ opacity: 1, rotateX: 0 }}
-                    exit={{ opacity: 0, rotateX: -90 }}
-                    transition={{ duration: 0.3 }}
-                    className="absolute left-0 top-0 w-full text-left"
-                  >
-                    {rotatingWords[currentWordIndex]}
-                  </motion.span>
-                </AnimatePresence>
-              </span>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={currentWordIndex}
+                  initial={{ opacity: 0, rotateX: 90 }}
+                  animate={{ opacity: 1, rotateX: 0 }}
+                  exit={{ opacity: 0, rotateX: -90 }}
+                  transition={{ duration: 0.3 }}
+                  className="inline-block min-w-[3rem] sm:min-w-[4rem] md:min-w-[8rem] lg:min-w-[10rem] text-center"
+                >
+                  {rotatingWords[currentWordIndex]}
+                </motion.span>
+              </AnimatePresence>
             </span>
           </h1>
         </motion.div>
