@@ -121,7 +121,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
     if (!subStepComplete || hasScrolledToStepTwo.current) return;
 
     window.requestAnimationFrame(() => {
-      stepTwoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      stepTwoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       hasScrolledToStepTwo.current = true;
     });
   }, [subStepComplete]);
