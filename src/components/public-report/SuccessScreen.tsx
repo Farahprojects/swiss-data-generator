@@ -100,51 +100,46 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (!onViewReport) return;
 
     try {
-      console.log('🔍 SuccessScreen - Starting fetchBothReportData for:', guestReportId);
+      console.log('🔍 SuccessScreen - Using get-guest-report edge function for:', guestReportId);
       
-      // Use fetchBothReportData instead of fetchCompleteReport for better data handling
-      const reportData = await fetchBothReportData(guestReportId);
+      // Use the get-guest-report edge function which has proper data extraction logic
+      const data = await fetchCompleteReport(guestReportId);
       
-      console.log('🔍 SuccessScreen - Raw fetchBothReportData result:', {
-        reportContent: reportData.reportContent ? 'HAS_AI_CONTENT' : 'NO_AI_CONTENT',
-        swissData: reportData.swissData ? 'HAS_SWISS_DATA' : 'NO_SWISS_DATA',
-        swissDataKeys: reportData.swissData ? Object.keys(reportData.swissData) : 'N/A',
-        swissDataNatal: reportData.swissData?.natal ? 'HAS_NATAL' : 'NO_NATAL'
+      console.log('🔍 SuccessScreen - Edge function response:', {
+        hasReportContent: !!data?.report_content,
+        hasSwissData: !!data?.swiss_data,
+        contentType: data?.metadata?.content_type,
+        isAstroReport: data?.metadata?.is_astro_report,
+        isAiReport: data?.metadata?.is_ai_report
       });
 
-      // Extract content - prioritize AI report content if available
-      let reportContent = '';
-      if (reportData.reportContent) {
-        // Use the AI-generated report content
-        reportContent = reportData.reportContent;
-        console.log('✅ Using AI report content');
-      } else if (reportData.swissData?.report?.content) {
-        // Fallback to swiss report content
-        reportContent = reportData.swissData.report.content;
-        console.log('✅ Using Swiss report content');
-      } else if (typeof reportData.swissData?.report === 'string') {
-        // Fallback to raw report string
-        reportContent = reportData.swissData.report;
-        console.log('✅ Using raw Swiss report string');
+      if (!data) {
+        throw new Error('No data returned from edge function');
       }
+
+      // Use the structured data from the edge function
+      const reportContent = data.report_content || 'Report content could not be loaded';
+      const swissData = data.swiss_data;
+      const hasAiReport = data.metadata?.is_ai_report || false;
+      const hasAstroData = data.metadata?.is_astro_report || false;
 
       console.log('🔍 SuccessScreen - Final data being passed to onViewReport:', {
         reportContent: reportContent ? 'HAS_CONTENT' : 'NO_CONTENT',
-        swissData: reportData.swissData ? 'HAS_SWISS_DATA' : 'NO_SWISS_DATA',
-        isAiReport: !!reportData.reportContent,
-        isAstroReport: !!reportData.swissData
+        swissData: swissData ? 'HAS_SWISS_DATA' : 'NO_SWISS_DATA',
+        hasAiReport,
+        hasAstroData
       });
 
       onViewReport(
-        reportContent || 'Report content could not be loaded',
+        reportContent,
         null, // PDF data
-        reportData.swissData, // Pass the raw swiss data for astro components
-        !!reportData.reportContent, // has AI report
-        !!reportData.swissData // has astro data
+        swissData, // Swiss data from edge function
+        hasAiReport,
+        hasAstroData
       );
       
     } catch (error) {
-      console.error('❌ Error fetching report data:', error);
+      console.error('❌ Error fetching report data via edge function:', error);
       onViewReport(
         'Failed to load report content. Please try again.',
         null,
@@ -153,7 +148,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         false
       );
     }
-  }, [guestReportId, onViewReport, fetchBothReportData]);
+  }, [guestReportId, onViewReport, fetchCompleteReport]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
