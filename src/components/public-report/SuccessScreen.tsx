@@ -89,15 +89,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const isAstroDataOnly = isAstroOnlyType(reportType);
 
   const isReady =
-    report?.swiss_boolean === true ||
-    (report?.has_report && !!(report?.translator_log_id || report?.report_log_id));
+    // Astro-only (essence/sync) types need just Swiss
+    (isAstroDataOnly && report?.swiss_boolean === true) ||
+    // AI reports must have both AI content + Swiss data
+    (!isAstroDataOnly && !!report?.has_report && !!report?.swiss_boolean);
 
   const handleVideoReady = useCallback(() => {
     setIsVideoReady(true);
   }, []);
 
   const handleViewReport = useCallback(async () => {
-    if (!onViewReport) return;
+    if (!onViewReport || !guestReportId) return;
 
     try {
       console.log('🔍 SuccessScreen - Using get-guest-report edge function for:', guestReportId);
@@ -122,6 +124,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       const swissData = data.swiss_data;
       const hasAiReport = data.metadata?.is_ai_report || false;
       const hasAstroData = data.metadata?.is_astro_report || false;
+
+      // Guard: Don't proceed unless everything is ready
+      if ((hasAiReport && (!reportContent || !swissData)) || (!hasAiReport && !swissData)) {
+        console.warn("🛑 Report not ready — skipping modal load", {
+          hasAiReport,
+          hasReportContent: !!reportContent,
+          hasSwissData: !!swissData
+        });
+        return;
+      }
 
       console.log('🔍 SuccessScreen - Final data being passed to onViewReport:', {
         reportContent: reportContent ? 'HAS_CONTENT' : 'NO_CONTENT',
