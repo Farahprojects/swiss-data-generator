@@ -33,7 +33,7 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
     const fetchAllPrices = async () => {
       // Skip Supabase calls during SSR
       if (typeof window === 'undefined') {
-        console.log('🏷️ Skipping price fetch during SSR');
+        console.log('🏷️ Skipping price fetch');
         setIsLoading(false);
         return;
       }
@@ -42,7 +42,7 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
         setIsLoading(true);
         setError(null);
         
-        console.log('🏷️ Fetching all prices from Supabase...');
+        console.log('🏷️ Fetch prices');
         
         const { data, error: fetchError } = await supabase
           .from('price_list')
