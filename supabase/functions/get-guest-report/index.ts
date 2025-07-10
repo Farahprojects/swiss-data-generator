@@ -106,8 +106,12 @@ serve(async (req) => {
     });
 
     // Determine report type
-    const isAstroReport = guestReport.report_type === 'essence' || guestReport.report_type === 'sync' || guestReport.swiss_boolean === true;
-    const isAiReport = guestReport.has_report && guestReport.report_log_id;
+    const hasTranslatorLog = !!guestReport.translator_log_id;
+    const isEssenceOrSyncType = typeof guestReport.report_type === 'string' &&
+      (guestReport.report_type.includes('essence') || guestReport.report_type.includes('sync'));
+
+    const isAstroReport = hasTranslatorLog || isEssenceOrSyncType || guestReport.swiss_boolean === true;
+    const isAiReport = guestReport.has_report && !!guestReport.report_log_id;
 
     let reportContent: string | null = null;
     let swissData: any | null = null;
@@ -129,8 +133,8 @@ serve(async (req) => {
       }
     }
 
-    // Fetch Swiss/astro data if available
-    if (guestReport.translator_log_id) {
+    // Fetch Swiss/astro data if translator_log_id exists
+    if (hasTranslatorLog) {
       console.log(`[get-guest-report] Fetching Swiss data`);
       const { data: translatorLog, error: translatorError } = await supabase
         .from('translator_logs')
@@ -138,11 +142,11 @@ serve(async (req) => {
         .eq('id', guestReport.translator_log_id)
         .single();
 
-      if (translatorError) {
-        console.error('[get-guest-report] Error fetching Swiss data:', translatorError);
-      } else {
+      if (!translatorError) {
         swissData = translatorLog?.swiss_data || null;
         console.log(`[get-guest-report] Swiss data available: ${!!swissData}`);
+      } else {
+        console.error('[get-guest-report] Error fetching Swiss data:', translatorError);
       }
     }
 
