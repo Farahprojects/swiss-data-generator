@@ -1,5 +1,6 @@
 import { BaseTemplate } from './BaseTemplate';
 import { PdfGenerationOptions, PdfMetadata } from '../types';
+import { ReportParser, ParsedBlock } from '@/utils/reportParser';
 
 export interface AIReportPdfData {
   reportContent: string;
@@ -67,46 +68,82 @@ export class AIReportTemplate extends BaseTemplate {
     doc.text('AI Intelligence Report', margins.left, currentY);
     currentY += 15;
 
-    // Clean HTML content to get plain text
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = reportContent;
-    const cleanText = tempDiv.textContent || tempDiv.innerText || '';
-
-    // Split content into paragraphs and process
-    const paragraphs = cleanText.split('\n').filter(p => p.trim());
+    // Parse content using the same parser as the modal
+    const blocks = ReportParser.parseReport(reportContent);
     
-    doc.setFontSize(11).setFont('helvetica', 'normal').setTextColor(33);
     const lineHeight = 7;
     const maxWidth = pageWidth - margins.left - margins.right;
+    const headingGap = 8;
+    const actionIndent = 15;
 
-    for (const paragraph of paragraphs) {
-      if (!paragraph.trim()) continue;
+    for (const block of blocks) {
+      if (currentY > pageHeight - 30) {
+        doc.addPage();
+        currentY = margins.top;
+      }
 
-      // Check for headings (lines that are short and appear to be titles)
-      if (paragraph.length < 100 && paragraph.includes(':')) {
-        doc.setFont('helvetica', 'bold').setTextColor(40, 40, 60);
-        const lines = doc.splitTextToSize(paragraph, maxWidth);
-        for (const line of lines) {
-          if (currentY > pageHeight - 30) {
-            doc.addPage();
-            currentY = margins.top;
+      switch (block.type) {
+        case 'heading':
+          // Add extra space before headings (except first)
+          if (currentY > margins.top + 20) currentY += headingGap;
+          
+          doc.setFontSize(12).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
+          const headingLines = doc.splitTextToSize(block.text, maxWidth);
+          for (const line of headingLines) {
+            if (currentY > pageHeight - 30) {
+              doc.addPage();
+              currentY = margins.top;
+            }
+            doc.text(line, margins.left, currentY);
+            currentY += lineHeight + 1;
           }
-          doc.text(line, margins.left, currentY);
-          currentY += lineHeight;
-        }
-        doc.setFont('helvetica', 'normal').setTextColor(33);
-        currentY += 5;
-      } else {
-        const lines = doc.splitTextToSize(paragraph, maxWidth);
-        for (const line of lines) {
-          if (currentY > pageHeight - 30) {
-            doc.addPage();
-            currentY = margins.top;
+          currentY += 3;
+          break;
+
+        case 'action':
+          doc.setFontSize(10).setFont('helvetica', 'normal').setTextColor(60, 60, 60);
+          const actionLines = doc.splitTextToSize(block.text, maxWidth - actionIndent);
+          for (const line of actionLines) {
+            if (currentY > pageHeight - 30) {
+              doc.addPage();
+              currentY = margins.top;
+            }
+            doc.text(line, margins.left + actionIndent, currentY);
+            currentY += lineHeight;
           }
-          doc.text(line, margins.left, currentY);
-          currentY += lineHeight;
-        }
-        currentY += 10;
+          currentY += 2;
+          break;
+
+        case 'tag':
+          doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(100, 100, 100);
+          const tagLines = doc.splitTextToSize(block.text, maxWidth - actionIndent);
+          for (const line of tagLines) {
+            if (currentY > pageHeight - 30) {
+              doc.addPage();
+              currentY = margins.top;
+            }
+            doc.text(line, margins.left + actionIndent, currentY);
+            currentY += lineHeight - 1;
+          }
+          break;
+
+        case 'spacer':
+          currentY += 4;
+          break;
+
+        default: // normal paragraph
+          doc.setFontSize(11).setFont('helvetica', 'normal').setTextColor(33);
+          const normalLines = doc.splitTextToSize(block.text, maxWidth);
+          for (const line of normalLines) {
+            if (currentY > pageHeight - 30) {
+              doc.addPage();
+              currentY = margins.top;
+            }
+            doc.text(line, margins.left, currentY);
+            currentY += lineHeight;
+          }
+          currentY += 4;
+          break;
       }
     }
 
