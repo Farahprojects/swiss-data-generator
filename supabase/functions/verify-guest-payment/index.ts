@@ -165,32 +165,16 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
       user_id: guestReportId,
     };
 
-    console.log("[guest_verify_payment] Translator payload →", payload);
+    console.log("[edge][translator_payload]", JSON.stringify(payload, null, 2));
 
     const translated = await translate(payload);
     swissData = JSON.parse(translated.text);
 
-    const { data: insertedLog, error: insertError } = await supabase
-      .from("translator_logs")
-      .insert({
-        user_id: guestReportId,
-        request_type: payload.request,
-        request_payload: reportData,
-        translator_payload: payload,
-        swiss_data: swissData,
-        response_status: 200,
-        is_guest: true,
-        report_tier: payload.request,
-      })
-      .select("id")
-      .single();
-
-    if (insertError || !insertedLog) throw new Error(`Failed to insert translator_log: ${insertError?.message}`);
+    console.log("[edge][swiss_result]", JSON.stringify(swissData, null, 2));
 
     await supabase
       .from("guest_reports")
       .update({
-        translator_log_id: insertedLog.id,
         has_report: true,
         updated_at: new Date().toISOString(),
       })
@@ -198,36 +182,20 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
 
   } catch (err: any) {
     swissError = err.message;
+    console.error("[edge][translator_error]", err.message, JSON.stringify({ guestReportId, payload: reportData }, null, 2));
+    
     swissData = {
       error: true,
       error_message: err.message,
       timestamp: new Date().toISOString(),
-      attempted_payload: reportData,
     };
-
-    const { data: insertedLog } = await supabase
-      .from("translator_logs")
-      .insert({
-        user_id: guestReportId,
-        request_type: reportData.request || "unknown",
-        request_payload: reportData,
-        error_message: swissError,
-        response_status: 500,
-        is_guest: true,
-      })
-      .select("id")
-      .single();
-
-    const updateData: any = {
-      has_report: false,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (insertedLog) updateData.translator_log_id = insertedLog.id;
 
     await supabase
       .from("guest_reports")
-      .update(updateData)
+      .update({
+        has_report: false,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", guestReportId);
   }
 }
