@@ -12,6 +12,9 @@ import DesktopReportViewer from '@/components/public-report/DesktopReportViewer'
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 import { logToAdmin } from '@/utils/adminLogger';
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -34,6 +37,21 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [hasReport, setHasReport] = useState<boolean>(false);
   const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
   const [currentReportType, setCurrentReportType] = useState<string>('');
+  
+  // Token recovery state
+  const [tokenRecoveryState, setTokenRecoveryState] = useState<{
+    isRecovering: boolean;
+    recovered: boolean;
+    error: string | null;
+    recoveredName: string | null;
+    recoveredEmail: string | null;
+  }>({
+    isRecovering: false,
+    recovered: false,
+    error: null,
+    recoveredName: null,
+    recoveredEmail: null,
+  });
   
   const form = useForm<ReportFormData>({
     mode: 'onBlur',
@@ -64,12 +82,54 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     },
   });
 
-  // Handle URL guest_id parameter for refresh support
+  // Handle URL guest_id parameter for refresh support and token recovery
   React.useEffect(() => {
     const urlGuestId = getGuestReportId();
     if (urlGuestId) {
-      // If there's a guest ID in URL, we're likely in a refresh scenario
-      // Don't clear it - let SuccessScreen handle the flow
+      // Attempt token recovery by fetching guest report data
+      setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
+      
+      const recoverTokenData = async () => {
+        try {
+          const { data: guestReport, error } = await supabase
+            .from('guest_reports')
+            .select('*')
+            .eq('id', urlGuestId)
+            .single();
+
+          if (error || !guestReport) {
+            throw new Error('Report not found');
+          }
+
+          // Extract name and email from report_data
+          const reportData = guestReport.report_data as any;
+          const name = reportData?.name;
+          const email = reportData?.email || guestReport.email;
+
+          if (!name || !email) {
+            throw new Error('Session data corrupted');
+          }
+
+          setTokenRecoveryState({
+            isRecovering: false,
+            recovered: true,
+            error: null,
+            recoveredName: name,
+            recoveredEmail: email,
+          });
+
+        } catch (err: any) {
+          setTokenRecoveryState({
+            isRecovering: false,
+            recovered: false,
+            error: err.message || 'Unable to recover session',
+            recoveredName: null,
+            recoveredEmail: null,
+          });
+        }
+      };
+
+      recoverTokenData();
       return;
     }
     
@@ -284,17 +344,91 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  // Show success screen if report was created OR if there's a guest ID in URL (refresh case)
+  // Handle token recovery and success screen logic
   const urlGuestId = getGuestReportId();
-  if ((reportCreated && userName && userEmail) || urlGuestId) {
+  
+  // Show success screen if report was created with valid form data
+  if (reportCreated && userName && userEmail) {
     return (
       <SuccessScreen 
-        name={userName || 'Guest'} 
-        email={userEmail || 'guest@example.com'} 
+        name={userName} 
+        email={userEmail} 
         onViewReport={handleViewReport}
         guestReportId={urlGuestId || undefined}
       />
     );
+  }
+  
+  // Handle token recovery scenarios
+  if (urlGuestId) {
+    // Still recovering token data
+    if (tokenRecoveryState.isRecovering) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Recovering your session...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    
+    // Token recovery failed - show error
+    if (tokenRecoveryState.error) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-center text-destructive">Session Recovery Failed</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-center text-muted-foreground">
+                {tokenRecoveryState.error === 'Report not found' && 'Report not found - please start a new report'}
+                {tokenRecoveryState.error === 'Session data corrupted' && 'Session data corrupted - please start a new report'}
+                {!['Report not found', 'Session data corrupted'].includes(tokenRecoveryState.error) && 'Unable to recover session - please try again'}
+              </p>
+              <div className="flex flex-col space-y-2">
+                <Button 
+                  onClick={() => {
+                    clearGuestReportId();
+                    window.location.replace('/');
+                  }}
+                  className="w-full"
+                >
+                  Start New Report
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.location.reload()}
+                  className="w-full"
+                >
+                  Try Again
+                </Button>
+              </div>
+              <p className="text-xs text-center text-muted-foreground">
+                Need help? Contact support with ID: {urlGuestId}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    
+    // Token recovery successful - show success screen with recovered data
+    if (tokenRecoveryState.recovered && tokenRecoveryState.recoveredName && tokenRecoveryState.recoveredEmail) {
+      return (
+        <SuccessScreen 
+          name={tokenRecoveryState.recoveredName} 
+          email={tokenRecoveryState.recoveredEmail} 
+          onViewReport={handleViewReport}
+          guestReportId={urlGuestId}
+        />
+      );
+    }
   }
 
   return (
