@@ -218,7 +218,21 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
 
   useEffect(() => {
-    if (!isReady && !error && isVideoReady) {
+    // If user has already been through the flow (has guest report ID) and there's no report ready,
+    // trigger error handling immediately instead of waiting for countdown
+    if (currentGuestReportId && !isReady && !error && isVideoReady && !report?.has_report) {
+      // Check if enough time has passed (e.g., 5 seconds) to avoid immediate error
+      const checkDelay = setTimeout(() => {
+        if (!isReady && !error) {
+          triggerErrorHandling(currentGuestReportId);
+        }
+      }, 5000); // 5 second delay instead of 24 seconds
+      
+      return () => clearTimeout(checkDelay);
+    }
+
+    // Original countdown logic for cases where we still want the full countdown
+    if (!isReady && !error && isVideoReady && !currentGuestReportId) {
       countdownRef.current = setTimeout(() => {
         setCountdown((c) => {
           if (c <= 1) {
@@ -230,7 +244,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       }, 1000);
     }
     return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
-  }, [countdown, isReady, error, isVideoReady, currentGuestReportId, triggerErrorHandling]);
+  }, [countdown, isReady, error, isVideoReady, currentGuestReportId, triggerErrorHandling, report]);
 
 
   const status = (() => {
