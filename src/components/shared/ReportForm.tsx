@@ -148,6 +148,30 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission();
 
+  // Auto-scroll functionality for desktop
+  const [lastPlaceSelectionTime, setLastPlaceSelectionTime] = React.useState<number>(0);
+  const paymentStepRef = React.useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to payment step when step2 is complete and place was recently selected (desktop only)
+  React.useEffect(() => {
+    const isDesktop = window.innerWidth >= 768; // md breakpoint
+    if (step2Done && lastPlaceSelectionTime > 0 && isDesktop) {
+      const timeSinceSelection = Date.now() - lastPlaceSelectionTime;
+      if (timeSinceSelection < 2000) { // Within 2 seconds of place selection
+        setTimeout(() => {
+          paymentStepRef.current?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }, 300); // Small delay to ensure DOM is updated
+      }
+    }
+  }, [step2Done, lastPlaceSelectionTime]);
+
+  const handlePlaceSelected = () => {
+    setLastPlaceSelectionTime(Date.now());
+  };
+
   // Check if this is a compatibility report that needs second person data
   const reportCategory = watch('reportCategory');
   const reportType = watch('reportType');
@@ -295,6 +319,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                 setValue={setValue}
                 watch={watch}
                 errors={errors}
+                onPlaceSelected={handlePlaceSelected}
               />
 
               {requiresSecondPerson && (
@@ -310,7 +335,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
           {/* ─────────────────────────────  STEP 3  ───────────────────────────── */}
           {step2Done && (
-            <PaymentStep
+            <div ref={paymentStepRef}>
+              <PaymentStep
               register={register}
               watch={watch}
               errors={errors}
@@ -333,7 +359,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
               pendingSubmissionData={pendingSubmissionData}
               onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
               onPromoConfirmationContinue={() => handlePromoConfirmationContinue(() => {})}
-            />
+              />
+            </div>
           )}
         </div>
       </form>

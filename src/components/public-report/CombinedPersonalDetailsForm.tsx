@@ -14,9 +14,10 @@ interface CombinedPersonalDetailsFormProps {
   setValue: UseFormSetValue<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
+  onPlaceSelected?: () => void;
 }
 
-const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: CombinedPersonalDetailsFormProps) => {
+const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlaceSelected }: CombinedPersonalDetailsFormProps) => {
   const { isLoaded: isGoogleMapsLoaded } = useGoogleMapsScript();
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
@@ -43,6 +44,9 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: Comb
     if (placeData.placeId) {
       setValue('birthPlaceId', placeData.placeId);
     }
+    
+    // Trigger auto-scroll callback
+    onPlaceSelected?.();
   };
 
   const handleFieldInteraction = (fieldName: string) => {
