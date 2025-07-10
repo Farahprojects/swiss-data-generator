@@ -69,3 +69,25 @@ export const clearGuestReportId = (): void => {
   localStorage.removeItem('currentGuestReportId');
   clearGuestReportIdFromUrl();
 };
+
+/**
+ * Clear all session data and navigate to home
+ */
+export const clearAllSessionData = (): void => {
+  // Clear all localStorage items
+  localStorage.removeItem('currentGuestReportId');
+  localStorage.removeItem('reportFormData');
+  localStorage.removeItem('guestReportData');
+  localStorage.removeItem('formStep');
+  localStorage.removeItem('paymentSession');
+  localStorage.removeItem('reportProgress');
+  
+  // Clear sessionStorage
+  sessionStorage.clear();
+  
+  // Clear URL state
+  window.history.replaceState({}, '', '/');
+  
+  // Force navigation to home
+  window.location.replace('/');
+};

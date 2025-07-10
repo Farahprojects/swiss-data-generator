@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { CheckCircle, Clock, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { motion } from 'framer-motion';
 import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
-import { getGuestReportId } from '@/utils/urlHelpers';
+import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
 type ReportType = 'essence' | 'sync';
@@ -85,6 +85,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [modalTriggered, setModalTriggered] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Preload guest report ID using useMemo
+  const currentGuestReportId = useMemo(() => {
+    return guestReportId || getGuestReportId();
+  }, [guestReportId]);
+
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
 
@@ -99,13 +104,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   }, []);
 
   const handleViewReport = useCallback(async () => {
-    if (!onViewReport || !guestReportId) return;
+    if (!onViewReport || !currentGuestReportId) return;
 
     try {
-      console.log('🔍 SuccessScreen - Using get-guest-report edge function for:', guestReportId);
+      console.log('🔍 SuccessScreen - Using get-guest-report edge function for:', currentGuestReportId);
       
       // Use the get-guest-report edge function which has proper data extraction logic
-      const data = await fetchCompleteReport(guestReportId);
+      const data = await fetchCompleteReport(currentGuestReportId);
       
       console.log('🔍 SuccessScreen - Edge function response:', {
         hasReportContent: !!data?.report_content,
@@ -160,7 +165,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         false
       );
     }
-  }, [guestReportId, onViewReport, fetchCompleteReport]);
+  }, [currentGuestReportId, onViewReport, fetchCompleteReport]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
@@ -169,12 +174,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     };
     scrollToProcessing();
 
-    const reportIdToUse = guestReportId || getGuestReportId();
-    if (reportIdToUse) {
-      fetchReport(reportIdToUse);
+    if (currentGuestReportId) {
+      fetchReport(currentGuestReportId);
       
       // Setup realtime listener to auto-trigger modal
-      const cleanup = setupRealtimeListener(reportIdToUse, () => {
+      const cleanup = setupRealtimeListener(currentGuestReportId, () => {
         if (!modalTriggered) {
           setModalTriggered(true);
           handleViewReport();
@@ -214,15 +218,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       
       handleMissingId();
     }
-  }, [guestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
+  }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
 
   useEffect(() => {
     if (!isReady && !error && isVideoReady) {
       countdownRef.current = setTimeout(() => {
         setCountdown((c) => {
           if (c <= 1) {
-            const reportIdToUse = guestReportId || getGuestReportId();
-            if (reportIdToUse) triggerErrorHandling(reportIdToUse);
+            if (currentGuestReportId) triggerErrorHandling(currentGuestReportId);
             return 0;
           }
           return c - 1;
@@ -230,7 +233,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       }, 1000);
     }
     return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
-  }, [countdown, isReady, error, isVideoReady, guestReportId, triggerErrorHandling]);
+  }, [countdown, isReady, error, isVideoReady, currentGuestReportId, triggerErrorHandling]);
 
 
   const status = (() => {
@@ -245,25 +248,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const handleTryAgain = () => navigate('/');
   
-  const handleBackToForm = () => {
-    // Immediate state clearing - no async operations
-    localStorage.removeItem('currentGuestReportId');
-    localStorage.removeItem('reportFormData');
-    localStorage.removeItem('guestReportData');
-    localStorage.removeItem('formStep');
-    localStorage.removeItem('paymentSession');
-    localStorage.removeItem('reportProgress');
-    sessionStorage.clear();
-    
-    // Clear URL state immediately
-    window.history.replaceState({}, '', '/');
-    
-    // Force immediate navigation with replace to prevent back button issues
-    window.location.replace('/');
-  };
+  const handleBackToForm = () => clearAllSessionData();
   
   const handleContactSupport = () => {
-    const errorMessage = `Hi, I'm experiencing an issue with my report generation.\n\nReport Details:\n- Name: ${name}\n- Email: ${email}\n- Report ID: ${guestReportId || 'N/A'}\n- Case Number: ${caseNumber || 'N/A'}\n- Time: ${new Date().toLocaleString()}\n`;
+    const errorMessage = `Hi, I'm experiencing an issue with my report generation.\n\nReport Details:\n- Name: ${name}\n- Email: ${email}\n- Report ID: ${currentGuestReportId || 'N/A'}\n- Case Number: ${caseNumber || 'N/A'}\n- Time: ${new Date().toLocaleString()}\n`;
     localStorage.setItem('contactFormPrefill', JSON.stringify({ name, email, subject: 'Report Issue', message: errorMessage }));
     navigate('/contact');
   };
