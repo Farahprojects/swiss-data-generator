@@ -36,16 +36,7 @@ const DesktopReportViewer = ({
   const defaultView = getDefaultView(reportData);
   const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
 
-  console.log('🔍 DesktopReportViewer - Debug values:', {
-    reportContent: reportContent?.substring(0, 100) + '...',
-    contentLength: reportContent?.length,
-    swissBoolean,
-    hasReport,
-    swissDataExists: !!swissData,
-    isPureAstroReport,
-    defaultView,
-    shouldHideToggle: shouldHideToggle(reportData)
-  });
+  const shouldHideToggleValue = shouldHideToggle(reportData);
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {

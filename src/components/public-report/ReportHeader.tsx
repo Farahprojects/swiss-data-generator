@@ -45,14 +45,6 @@ export const ReportHeader = ({
   const hideToggle = shouldHideToggle(reportData);
   const showToggle = !hideToggle;
   
-  console.log('🔍 ReportHeader - Debug values:', {
-    swissBoolean,
-    hasReport,
-    contentLength: reportContent?.length,
-    swissDataExists: !!swissData,
-    hideToggle,
-    showToggle
-  });
   return (
     <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-4">

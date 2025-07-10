@@ -47,17 +47,6 @@ export const ReportContent = ({
   const hideToggle = shouldHideToggle(reportData);
   const showToggle = !hideToggle && !externalActiveView && hasReport;
 
-  console.log('🔍 ReportContent - Debug values:', {
-    swissBoolean,
-    hasReport,
-    contentLength: reportContent?.length,
-    swissDataExists: !!swissData,
-    isSwissOnly,
-    hideToggle,
-    showToggle,
-    activeView
-  });
-
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Card className="shadow-lg border-0 shadow-2xl">

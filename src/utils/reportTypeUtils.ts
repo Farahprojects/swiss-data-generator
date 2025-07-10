@@ -18,20 +18,17 @@ export const isSwissOnlyReport = (data: ReportDetectionData): boolean => {
   
   // Primary check: explicit swiss_boolean flag
   if (swissBoolean === true) {
-    console.log('🔬 Swiss-only detected: swissBoolean = true');
     return true;
   }
   
   // Secondary check: specific report types that are astro-only
   const astroOnlyTypes = ['essence', 'sync'];
   if (reportType && astroOnlyTypes.includes(reportType)) {
-    console.log('🔬 Swiss-only detected: report type is astro-only', reportType);
     return true;
   }
   
   // Tertiary check: hasReport explicitly false and Swiss data exists
   if (hasReport === false && !!swissData) {
-    console.log('🔬 Swiss-only detected: hasReport=false with Swiss data');
     return true;
   }
   
@@ -40,18 +37,8 @@ export const isSwissOnlyReport = (data: ReportDetectionData): boolean => {
   const hasEmptyOrNoContent = !reportContent || reportContent.trim() === '' || reportContent.trim().length < 20;
   
   if (hasSwissData && hasEmptyOrNoContent) {
-    console.log('🔬 Swiss-only detected: has Swiss data but no/empty content');
     return true;
   }
-  
-  console.log('🔬 Not Swiss-only report:', {
-    swissBoolean,
-    hasSwissData,
-    hasEmptyOrNoContent,
-    reportType,
-    hasReport,
-    contentLength: reportContent?.length || 0
-  });
   
   return false;
 };
@@ -73,10 +60,6 @@ export const shouldHideToggle = (data: ReportDetectionData): boolean => {
   const hasSwissData = !!swissData;
   
   if (!hasMeaningfulReportContent || !hasSwissData) {
-    console.log('🔬 Hiding toggle: missing content types', {
-      hasMeaningfulReportContent,
-      hasSwissData
-    });
     return true;
   }
   
