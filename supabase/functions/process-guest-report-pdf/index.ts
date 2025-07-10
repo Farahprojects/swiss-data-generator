@@ -44,8 +44,11 @@ class ServerPdfGenerator {
     const m = { top: 20, right: 20, bottom: 20, left: 20 };
 
     doc.setFontSize(26).setFont("times", "bold").text("Therai.", pageW/2, 32, { align: "center" });
+    
+    // Use report type for title if available
+    const reportTitle = ServerPdfGenerator.getReportTitle(reportData.reportType);
     doc.setFontSize(20).setFont("helvetica", "bold")
-       .text("Intelligence Report", pageW/2, 48, { align: "center" });
+       .text(reportTitle, pageW/2, 48, { align: "center" });
 
     // ── meta
     let y = 60;
@@ -102,6 +105,21 @@ class ServerPdfGenerator {
     const dataUri = doc.output("datauristring");
     return dataUri.split(",")[1] ?? "";
   }
+
+  static getReportTitle(reportType?: string): string {
+    if (!reportType) return "Intelligence Report";
+    
+    const reportTitles: Record<string, string> = {
+      'essence': 'Astro Data',
+      'sync': 'Compatibility', 
+      'focus': 'Focus',
+      'flow': 'Professional',
+      'mindset': 'The Self Personal',
+      'monthly': 'Relational'
+    };
+    
+    return reportTitles[reportType.toLowerCase()] || "Intelligence Report";
+  }
 }
 
 // ─── SUPABASE CLIENT ──────────────────────────────────────────────────────────
@@ -142,6 +160,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     id: gr.id,
     content: reportContent,
     generatedAt: new Date(gr.created_at).toLocaleDateString(),
+    reportType: gr.report_type,
   }, requestId);
   if (!pdfBase64) throw new Error("PDF generation failed");
   
