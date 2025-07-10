@@ -49,6 +49,7 @@ const PaymentStep = ({
   onPromoConfirmationContinue = () => {}
 }: PaymentStepProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
+  const [isLocalProcessing, setIsLocalProcessing] = useState(false);
   const { validatePromoManually } = usePromoValidation();
   const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
   
@@ -128,6 +129,9 @@ const PaymentStep = ({
   const handleButtonClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Show processing immediately
+    setIsLocalProcessing(true);
     
     // Log the complete form data BEFORE payment
     const formData = {
@@ -309,11 +313,11 @@ const PaymentStep = ({
 
           <Button
             onClick={handleButtonClick}
-            disabled={isProcessing || isValidatingPromo}
+            disabled={isProcessing || isValidatingPromo || isLocalProcessing}
             className="w-full h-14 text-lg font-light bg-gray-900 hover:bg-gray-800 text-white transition-colors"
             type="button"
           >
-            {isProcessing ? 'Processing...' : isValidatingPromo ? 'Validating...' : 'Generate My Report'}
+            {isLocalProcessing || isProcessing ? 'Processing...' : isValidatingPromo ? 'Validating...' : 'Generate My Report'}
           </Button>
 
           {/* Satisfaction Guarantee */}
