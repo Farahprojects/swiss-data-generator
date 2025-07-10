@@ -1,4 +1,4 @@
-type ReportType = 'essence' | 'sync';
+type ReportType = 'essence' | 'sync' | string;
 
 export const isAstroOnlyType = (type?: ReportType): boolean => type === 'essence' || type === 'sync';
 
@@ -7,20 +7,37 @@ export const checkReportReadiness = (
   fetchedReportData: any,
   reportType?: ReportType
 ): boolean => {
+  console.log('🔍 Checking report readiness:', { report, fetchedReportData, reportType });
+  
   const isAstroDataOnly = isAstroOnlyType(reportType);
   
   // Check if we have edge function data with content type
   if (fetchedReportData?.metadata?.content_type) {
     const contentType = fetchedReportData.metadata.content_type;
-    return contentType === 'both' || contentType === 'astro' || contentType === 'ai';
+    const ready = contentType === 'both' || contentType === 'astro' || contentType === 'ai';
+    console.log('✅ Edge function data readiness:', { contentType, ready });
+    return ready;
   }
   
-  // Fallback to original logic
+  // Enhanced logic for different report types
   if (isAstroDataOnly) {
-    return report?.swiss_boolean === true;
+    // For essence and sync reports, check swiss_boolean
+    const ready = report?.swiss_boolean === true;
+    console.log('🔮 Astro report readiness:', { swiss_boolean: report?.swiss_boolean, ready });
+    return ready;
   }
   
-  return !!report?.has_report && !!report?.swiss_boolean;
+  // For AI reports (essence_personal, etc.), check has_report
+  if (reportType === 'essence_personal' || reportType?.includes('personal')) {
+    const ready = !!report?.has_report;
+    console.log('🤖 AI report readiness:', { has_report: report?.has_report, ready });
+    return ready;
+  }
+  
+  // Default logic - both flags should be true
+  const ready = !!report?.has_report && !!report?.swiss_boolean;
+  console.log('📋 Default report readiness:', { has_report: report?.has_report, swiss_boolean: report?.swiss_boolean, ready });
+  return ready;
 };
 
 export const getReportStatus = (report: any, isReady: boolean, error: string | null) => {

@@ -54,9 +54,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const { error, caseNumber, triggerError, clearError, setError, setCaseNumber } = useErrorHandling();
   const isReady = useReportReadiness(report, fetchedReportData, reportType);
 
-  // Countdown management
-  const shouldStartCountdown = !isReady && !error && isVideoReady && !currentGuestReportId;
+  // Countdown management - only start when we have ID but report isn't ready
+  const shouldStartCountdown = currentGuestReportId && !isReady && !error && isVideoReady;
+  console.log('🔄 Countdown conditions:', { currentGuestReportId: !!currentGuestReportId, isReady, error: !!error, isVideoReady, shouldStartCountdown });
+  
   const { countdown } = useCountdown(24, shouldStartCountdown, () => {
+    console.log('⏰ Countdown completed, triggering error');
     if (currentGuestReportId) {
       triggerError(currentGuestReportId, 'timeout_no_report', 'Report not found after timeout', email);
     }
@@ -145,32 +148,36 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       
       return cleanup;
     } else {
-      // Handle missing ID scenario immediately
-      console.warn('🚨 No guest report ID found - triggering missing ID error handling');
-      const handleMissingIdFlow = async () => {
-        const caseNumber = await handleMissingReportId(email);
-        setCaseNumber(caseNumber);
-        setError('No report ID detected. Please restart the process.');
-      };
+      // Handle missing ID scenario with a grace period for page loads
+      console.warn('🚨 No guest report ID found - waiting briefly before error handling');
+      const gracePeriod = setTimeout(async () => {
+        // Check one more time after page settles
+        const retryId = getGuestReportId();
+        if (!retryId) {
+          console.error('❌ No guest report ID found after grace period');
+          const caseNumber = await handleMissingReportId(email);
+          setCaseNumber(caseNumber);
+          setError('No report ID detected. Please restart the process.');
+        }
+      }, 2000); // 2 second grace period
       
-      handleMissingIdFlow();
+      return () => clearTimeout(gracePeriod);
     }
   }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email, setCaseNumber, setError]);
 
+  // Debug useEffect - log state changes
   useEffect(() => {
-    // If user has already been through the flow (has guest report ID) and there's no report ready,
-    // trigger error handling immediately instead of waiting for countdown
-    if (currentGuestReportId && !isReady && !error && isVideoReady && !report?.has_report) {
-      // Check if enough time has passed (e.g., 5 seconds) to avoid immediate error
-      const checkDelay = setTimeout(() => {
-        if (!isReady && !error) {
-          triggerError(currentGuestReportId, 'timeout_no_report', 'Report not found after timeout', email);
-        }
-      }, 5000); // 5 second delay instead of 24 seconds
-      
-      return () => clearTimeout(checkDelay);
-    }
-  }, [isReady, error, isVideoReady, currentGuestReportId, report, triggerError, email]);
+    console.log('📊 Success Screen State:', {
+      currentGuestReportId: !!currentGuestReportId,
+      reportType,
+      isReady,
+      error: !!error,
+      isVideoReady,
+      reportHasReport: report?.has_report,
+      reportSwissBoolean: report?.swiss_boolean,
+      reportPaymentStatus: report?.payment_status
+    });
+  }, [currentGuestReportId, reportType, isReady, error, isVideoReady, report]);
 
 
   // Status and UI state
