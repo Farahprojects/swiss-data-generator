@@ -215,13 +215,20 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const handleTryAgain = () => navigate('/');
   
   const handleBackToForm = () => {
-    // Clear all state memory
+    // Immediate state clearing - no async operations
     localStorage.removeItem('currentGuestReportId');
     localStorage.removeItem('reportFormData');
-    window.history.replaceState({}, '', window.location.pathname);
+    localStorage.removeItem('guestReportData');
+    localStorage.removeItem('formStep');
+    localStorage.removeItem('paymentSession');
+    localStorage.removeItem('reportProgress');
+    sessionStorage.clear();
     
-    // Navigate back to form
-    navigate('/report');
+    // Clear URL state immediately
+    window.history.replaceState({}, '', '/');
+    
+    // Force immediate navigation with replace to prevent back button issues
+    window.location.replace('/');
   };
   
   const handleContactSupport = () => {
