@@ -221,6 +221,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
 
   const status = (() => {
+    if (hasSwissError) return { title: 'We\'re sorry', desc: 'Technical issue encountered', icon: CheckCircle };
     if (!report) return { title: 'Processing Your Request', desc: 'Setting up your report', icon: Clock };
     if (report.payment_status === 'pending') return { title: 'Payment Processing', desc: 'Confirming payment', icon: Clock };
     if (report.payment_status === 'paid' && !report.has_report) return { title: 'Generating Report', desc: 'Preparing insights', icon: Clock };
@@ -261,72 +262,28 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            <div className="flex items-center justify-center gap-4 py-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <StatusIcon className="h-6 w-6 text-gray-600" />
-              </div>
-              {!isReady && (
-                <>
-                  <div className="text-3xl font-light text-gray-900">{countdown}s</div>
-                  <div className="text-gray-600 font-light">Report generating...</div>
-                </>
-              )}
-              {isReady && <div className="text-gray-600 font-light">Ready to view</div>}
-            </div>
-            <div>
-              <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
-              <p className="text-gray-600 font-light">{status.desc}</p>
-            </div>
-            {!isReady && !isAstroDataOnly && (
+            {/* Swiss Error State */}
+            {hasSwissError ? (
               <>
-                <VideoLoader onVideoReady={handleVideoReady} />
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  Hi {firstName}! We're working on your report.<br />
-                  <span className="font-medium">{email}</span>
-                </div>
-              </>
-            )}
-            {isReady && (
-              <>
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  Hi {firstName}! Your report is ready. <br />
-                  <span className="font-medium">{email}</span>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
-                    View Report
-                  </Button>
-                  <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                    Home
-                  </Button>
-                </div>
-              </>
-            )}
-            {/* Swiss Error UI */}
-            {hasSwissError && error && (
-              <>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                    </div>
-                    <span className="font-medium text-red-800">Astrological Data Error</span>
+                <div className="flex items-center justify-center gap-4 py-4">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                    <StatusIcon className="h-6 w-6 text-gray-600" />
                   </div>
-                  <p className="text-red-700 mb-3">{error}</p>
-                  {caseNumber && (
-                    <p className="text-red-600 text-xs">
-                      Reference: <span className="font-mono">{caseNumber}</span>
-                    </p>
-                  )}
                 </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm mb-4">
-                  <p className="text-red-800 font-medium mb-2">
+                <div>
+                  <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
+                  <p className="text-gray-600 font-light">{status.desc}</p>
+                </div>
+                
+                <div className="text-center space-y-3">
+                  <p className="text-gray-800 font-medium">
                     We are having technical issues, your case has been logged as: {caseNumber || 'Processing...'}
                   </p>
-                  <p className="text-red-700">
+                  <p className="text-gray-600">
                     We will send you an email within 24 hours.
                   </p>
                 </div>
+
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Button variant="outline" onClick={handleContactSupport} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
                     Contact Support
@@ -335,6 +292,51 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     Start New Report
                   </Button>
                 </div>
+              </>
+            ) : (
+              <>
+                {/* Normal Loading/Ready State */}
+                <div className="flex items-center justify-center gap-4 py-4">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                    <StatusIcon className="h-6 w-6 text-gray-600" />
+                  </div>
+                  {!isReady && (
+                    <>
+                      <div className="text-3xl font-light text-gray-900">{countdown}s</div>
+                      <div className="text-gray-600 font-light">Report generating...</div>
+                    </>
+                  )}
+                  {isReady && <div className="text-gray-600 font-light">Ready to view</div>}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
+                  <p className="text-gray-600 font-light">{status.desc}</p>
+                </div>
+                {!isReady && !isAstroDataOnly && (
+                  <>
+                    <VideoLoader onVideoReady={handleVideoReady} />
+                    <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                      Hi {firstName}! We're working on your report.<br />
+                      <span className="font-medium">{email}</span>
+                    </div>
+                  </>
+                )}
+                {isReady && (
+                  <>
+                    <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                      Hi {firstName}! Your report is ready. <br />
+                      <span className="font-medium">{email}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
+                        View Report
+                      </Button>
+                      <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                        Home
+                      </Button>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </CardContent>
