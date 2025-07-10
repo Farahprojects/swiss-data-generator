@@ -51,14 +51,11 @@ serve(async (req) => {
     }
 
     if (!guestReportId) {
-      console.error('[get-guest-report] Missing guest report ID');
       return new Response(
         JSON.stringify({ error: 'Guest report ID is required', code: 'MISSING_ID' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    console.log(`[get-guest-report] Fetching report for ID: ${guestReportId}`);
 
     const { data: guestReport, error: guestError } = await supabase
       .from('guest_reports')
@@ -78,7 +75,6 @@ serve(async (req) => {
       .single();
 
     if (guestError || !guestReport) {
-      console.error('[get-guest-report] Guest report not found:', guestError);
       return new Response(
         JSON.stringify({ error: 'Guest report not found', code: 'NOT_FOUND' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -94,55 +90,45 @@ serve(async (req) => {
       report_log_id: !!guestReport.report_log_id,
     });
 
-    // Determine report type
-    const isEssenceOrSyncType =
-      typeof guestReport.report_type === 'string' &&
-      (guestReport.report_type.includes('essence') || guestReport.report_type.includes('sync'));
-
-    const isAstroReport =
-      isEssenceOrSyncType || guestReport.swiss_boolean === true;
-
-    const isAiReport =
-      guestReport.has_report === true && !!guestReport.report_log_id;
-
     const hasTranslatorLog = !!guestReport.translator_log_id;
+
+    const isAstroOnly = guestReport.swiss_boolean === true;
+    const isAiReport = guestReport.has_report && !!guestReport.report_log_id;
 
     let reportContent: string | null = null;
     let swissData: any | null = null;
 
     // Fetch AI report content
-    if (isAiReport && guestReport.report_log_id) {
-      console.log('[get-guest-report] Fetching AI report content');
+    if (isAiReport) {
       const { data: reportLog, error: reportError } = await supabase
         .from('report_logs')
         .select('report_text')
         .eq('id', guestReport.report_log_id)
         .single();
 
-      if (reportError) {
-        console.error('[get-guest-report] Error fetching AI report:', reportError);
-      } else {
+      if (!reportError) {
         reportContent = reportLog?.report_text || null;
-        console.log('[get-guest-report] AI report content length:', reportContent?.length || 0);
+      } else {
+        console.error('[get-guest-report] Error fetching AI report:', reportError);
       }
     }
 
-    // Fetch Swiss data if available (even for AI reports)
+    // Fetch Swiss data if available
     if (hasTranslatorLog) {
-      console.log('[get-guest-report] Fetching Swiss data');
       const { data: translatorLog, error: translatorError } = await supabase
         .from('translator_logs')
         .select('swiss_data')
         .eq('id', guestReport.translator_log_id)
         .single();
 
-      if (translatorError) {
-        console.error('[get-guest-report] Error fetching Swiss data:', translatorError);
-      } else {
+      if (!translatorError) {
         swissData = translatorLog?.swiss_data || null;
-        console.log('[get-guest-report] Swiss data available:', !!swissData);
+      } else {
+        console.error('[get-guest-report] Error fetching Swiss data:', translatorError);
       }
     }
+
+    const isAstroReport = isAstroOnly || !!swissData;
 
     let contentType: 'astro' | 'ai' | 'both' | 'none' = 'none';
     if (isAstroReport && isAiReport) contentType = 'both';
@@ -168,8 +154,6 @@ serve(async (req) => {
         content_type: contentType,
       },
     };
-
-    console.log('[get-guest-report] Returning data with content type:', contentType);
 
     return new Response(JSON.stringify(responseData), {
       status: 200,
