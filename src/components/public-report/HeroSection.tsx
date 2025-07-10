@@ -62,7 +62,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
-            <span className="italic font-medium flex items-center justify-center gap-x-4 flex-wrap">
+            <span className="italic font-medium flex items-center justify-center gap-x-8 flex-wrap">
               <span>Your</span>
               <AnimatePresence mode="wait">
                 <motion.span
