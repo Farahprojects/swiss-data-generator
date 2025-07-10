@@ -60,8 +60,6 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
           return;
         }
 
-        console.log('✅ Successfully fetched prices:', data.length, 'items');
-        console.log('🔍 Fetched price IDs:', data.map(p => p.id));
         setPrices(data);
         
       } catch (err) {
