@@ -260,55 +260,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     navigate('/contact');
   };
 
-  const PersonalNote = (
-    <div className="bg-muted/50 rounded-lg p-4 text-sm">
-      Hi {firstName}!{' '}
-      {isReady
-        ? "Your report is ready to view. We've also emailed it to you."
-        : "We're working on your report and will notify you when it's ready."}
-      <br />
-      <span className="font-medium">{email}</span>
-    </div>
-  );
-
-  const ErrorBlock = error && (
-    <div className="max-w-xl mx-auto bg-gradient-to-br from-red-50 to-white border border-red-200 rounded-xl p-8 shadow-md space-y-6 mt-8">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-          <Clock className="w-6 h-6 text-red-600" />
-        </div>
-        <div>
-          <h3 className="text-2xl font-light text-gray-900 mb-1 tracking-tight italic">
-            Report Processing Issue
-          </h3>
-          <p className="text-gray-600 font-light">We're working to resolve this quickly</p>
-        </div>
-      </div>
-      <div className="bg-white/80 rounded-xl p-6">
-        <p className="text-base text-gray-700 font-light leading-relaxed">
-          We're experiencing a delay with your report generation. Our team has been automatically notified and is working to resolve this issue.
-        </p>
-      </div>
-      {caseNumber && (
-        <div className="bg-white rounded-xl border border-red-200 p-4 mb-2">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full" />
-            <p className="text-sm font-medium text-red-800">Reference Number</p>
-          </div>
-          <p className="text-lg font-mono text-red-900 mb-2">{caseNumber}</p>
-          <p className="text-xs text-red-600">Save this reference number for faster assistance.</p>
-        </div>
-      )}
-      <div className="flex flex-col sm:flex-row gap-4 pt-2">
-        <Button onClick={handleTryAgain} className="bg-gray-900 text-white font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-800 transition-all">
-          Try Again
-        </Button>
-        <Button variant="outline" onClick={handleContactSupport} className="border-gray-900 text-gray-900 font-light px-8 py-4 rounded-xl text-lg hover:bg-gray-100 transition-all">
-          Contact Support
-        </Button>
-      </div>
-    </div>
-  );
+  const handleHome = () => {
+    clearAllSessionData();
+    navigate('/report');
+  };
 
   return (
     <div data-success-screen className={isMobile ? 'min-h-[calc(var(--vh,1vh)*100)] flex items-start justify-center pt-8 px-4 bg-gradient-to-b from-background to-muted/20 overflow-y-auto' : 'w-full py-10 px-4 flex justify-center'}>
@@ -358,13 +313,29 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
               </>
             )}
             {error && (
-              <div className="text-center py-8">
-                <div className="text-gray-600 font-light mb-4">
-                  We've detected an issue with your report. Our team has been notified.
+              <div className="space-y-4">
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                  <p className="text-gray-700 font-light mb-2">
+                    We're experiencing a delay with your report generation. Our team has been automatically notified and is working to resolve this issue.
+                  </p>
+                  {caseNumber && (
+                    <div className="mt-3 p-3 bg-white rounded-lg border">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-2 h-2 bg-red-500 rounded-full" />
+                        <p className="text-sm font-medium text-gray-800">Reference Number</p>
+                      </div>
+                      <p className="text-lg font-mono text-gray-900">{caseNumber}</p>
+                    </div>
+                  )}
                 </div>
-                <Button onClick={handleTryAgain} className="bg-gray-900 text-white font-light">
-                  Try Again
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button onClick={handleTryAgain} className="bg-gray-900 text-white font-light hover:bg-gray-800">
+                    Try Again
+                  </Button>
+                  <Button variant="outline" onClick={handleHome} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                    Home
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
