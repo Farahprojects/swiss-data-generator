@@ -60,10 +60,10 @@ export const ReportHeader = ({
               variant="ghost"
               size="sm"
               onClick={onBack}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Form
+              <span>Back to Form</span>
             </Button>
             {showToggle && setActiveView && (
               <div className="flex bg-gray-100 rounded-lg p-1">
@@ -127,7 +127,7 @@ export const ReportHeader = ({
               className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200"
             >
               <img 
-                src="/placeholder.svg" 
+                src="/lovable-uploads/6c5be1f5-cd98-48a0-962f-2dd52fc0604e.png" 
                 alt="ChatGPT" 
                 className="h-4 w-4"
               />

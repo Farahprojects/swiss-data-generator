@@ -211,7 +211,7 @@ const MobileReportViewer = ({
             className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
           >
             <img 
-              src="/placeholder.svg" 
+              src="/lovable-uploads/6c5be1f5-cd98-48a0-962f-2dd52fc0604e.png" 
               alt="ChatGPT" 
               className="h-5 w-5 mr-2"
             />
