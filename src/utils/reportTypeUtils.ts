@@ -2,6 +2,8 @@
  * Utility functions for detecting report types and handling Swiss-only reports
  */
 
+import { getReportMeta } from '@/constants/report-types';
+
 export interface ReportDetectionData {
   reportContent?: string;
   swissData?: any;
@@ -12,35 +14,10 @@ export interface ReportDetectionData {
 
 /**
  * Reliably detects if this is a Swiss-only astro report that should not show the toggle
+ * Now uses clean lookup from report-types instead of heuristic logic
  */
 export const isSwissOnlyReport = (data: ReportDetectionData): boolean => {
-  const { reportContent, swissData, swissBoolean, reportType, hasReport } = data;
-  
-  // Primary check: explicit swiss_boolean flag
-  if (swissBoolean === true) {
-    return true;
-  }
-  
-  // Secondary check: specific report types that are astro-only
-  const astroOnlyTypes = ['essence', 'sync'];
-  if (reportType && astroOnlyTypes.includes(reportType)) {
-    return true;
-  }
-  
-  // Tertiary check: hasReport explicitly false and Swiss data exists
-  if (hasReport === false && !!swissData) {
-    return true;
-  }
-  
-  // Quaternary check: Empty/minimal report content with Swiss data
-  const hasSwissData = !!swissData;
-  const hasEmptyOrNoContent = !reportContent || reportContent.trim() === '' || reportContent.trim().length < 20;
-  
-  if (hasSwissData && hasEmptyOrNoContent) {
-    return true;
-  }
-  
-  return false;
+  return getReportMeta(data.reportType || '').isAstroOnly;
 };
 
 /**
@@ -48,18 +25,7 @@ export const isSwissOnlyReport = (data: ReportDetectionData): boolean => {
  * Toggle should only show when we have BOTH meaningful report content AND Swiss data
  */
 export const shouldHideToggle = (data: ReportDetectionData): boolean => {
-  const { reportContent, swissData } = data;
-  
-  // Always hide toggle for Swiss-only reports
-  if (isSwissOnlyReport(data)) {
-    return true;
-  }
-  
-  // Hide toggle only if we have neither content type
-  const hasMeaningfulReportContent = reportContent && reportContent.trim().length > 20;
-  const hasSwissData = !!swissData;
-  
-  return !(hasMeaningfulReportContent || hasSwissData);
+  return isSwissOnlyReport(data);
 };
 
 /**

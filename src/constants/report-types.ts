@@ -133,3 +133,20 @@ export const astroRequestCategories = [
     request: 'sync',
   },
 ];
+
+/**
+ * Helper function to get report metadata based on report type
+ * This replaces complex heuristic logic with a clean lookup
+ */
+export function getReportMeta(reportType: string) {
+  const astroOnly = reportType === 'astro-data';
+
+  return {
+    isAstroOnly: astroOnly,
+    hasAIContent: !astroOnly,
+    label:
+      reportTypes.find(r => r.value === reportType)?.label ??
+      reportCategories.find(r => r.reportType === reportType)?.title ??
+      'Unknown Report',
+  };
+}
