@@ -100,7 +100,7 @@ export const ReportHeader = ({
               <Copy className="h-4 w-4" />
               Copy
             </Button>
-            {(reportPdfData || swissData) && (
+            {(reportPdfData || swissData || (reportContent && reportContent.trim().length > 20)) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -111,6 +111,8 @@ export const ReportHeader = ({
                     onDownloadPdf();
                   } else if (swissData) {
                     onDownloadAstroPdf?.();
+                  } else if (reportContent && reportContent.trim().length > 20) {
+                    onDownloadAstroPdf?.(); // Use unified PDF for AI content
                   }
                 }}
                 className="flex items-center gap-2"
