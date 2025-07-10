@@ -143,36 +143,40 @@ const DesktopReportViewer = ({
     }
   };
 
-  const handleDownloadAstroPdf = async () => {
-    if (!swissData) {
+  const handleDownloadUnifiedPdf = async () => {
+    // Check if we have either report content or astro data
+    if (!reportContent && !swissData) {
       toast({
-        title: "No astro data available",
-        description: "Unable to generate PDF without astro data.",
+        title: "No data available",
+        description: "Unable to generate PDF without report or astro data.",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      await PdfGenerator.generateAstroPdf({
-        id: Math.random().toString(36).substring(7),
-        title: 'Astro Data Report',
-        customerName: customerName,
+      await PdfGenerator.generateUnifiedPdf({
+        reportContent: reportContent,
         swissData: swissData,
-        metadata: {
-          generatedAt: new Date().toLocaleString(),
-          reportType: 'astro'
-        }
+        customerName: customerName,
+        reportPdfData: reportPdfData
       });
 
+      // Determine what was included for the toast message
+      const sections = [];
+      if (reportContent) sections.push("AI Report");
+      if (swissData) sections.push("Astro Data");
+      
       toast({
         title: "PDF Generated!",
-        description: "Your astro data PDF has been downloaded.",
+        description: `Your ${sections.join(" + ")} PDF has been downloaded.`,
       });
     } catch (error) {
-      logToAdmin('DesktopReportViewer', 'astro_pdf_error', 'Error generating astro PDF', {
+      logToAdmin('DesktopReportViewer', 'unified_pdf_error', 'Error generating unified PDF', {
         error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : null
+        stack: error instanceof Error ? error.stack : null,
+        hasReportContent: !!reportContent,
+        hasSwissData: !!swissData
       });
       toast({
         title: "PDF generation failed",
@@ -195,7 +199,7 @@ const DesktopReportViewer = ({
         onBack={onBack}
         onCopyToClipboard={handleCopyToClipboard}
         onDownloadPdf={handleDownloadPdf}
-        onDownloadAstroPdf={handleDownloadAstroPdf}
+        onDownloadAstroPdf={handleDownloadUnifiedPdf}
         onChatGPTClick={handleChatGPTClick}
         reportPdfData={reportPdfData}
         isCopyCompleted={isCopyCompleted}

@@ -1,6 +1,7 @@
 
 import { ReportTemplate } from './templates/ReportTemplate';
 import { AstroTemplate, AstroPdfData } from './templates/AstroTemplate';
+import { UnifiedTemplate, UnifiedPdfData } from './templates/UnifiedTemplate';
 import { ReportPdfData, PdfGenerationOptions } from './types';
 
 export class PdfGenerator {
@@ -11,6 +12,11 @@ export class PdfGenerator {
 
   static async generateAstroPdf(data: AstroPdfData, options?: PdfGenerationOptions): Promise<void> {
     const template = new AstroTemplate(options);
+    await template.generate(data, options);
+  }
+
+  static async generateUnifiedPdf(data: UnifiedPdfData, options?: PdfGenerationOptions): Promise<void> {
+    const template = new UnifiedTemplate(options);
     await template.generate(data, options);
   }
 
