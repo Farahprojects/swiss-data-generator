@@ -319,10 +319,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     </p>
                   )}
                 </div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm mb-4">
+                  <p className="text-red-800 font-medium mb-2">
+                    We are having technical issues, your case has been logged as: {caseNumber || 'Processing...'}
+                  </p>
+                  <p className="text-red-700">
+                    We will send you an email within 24 hours.
+                  </p>
+                </div>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button onClick={handleTryAgain} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
-                    Try Again
-                  </Button>
                   <Button variant="outline" onClick={handleContactSupport} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
                     Contact Support
                   </Button>

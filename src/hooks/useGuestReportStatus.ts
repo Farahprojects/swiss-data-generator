@@ -105,6 +105,14 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         if (data.has_swiss_error === true) {
           const errorMessage = getSwissErrorMessage(data.report_type);
           setError(errorMessage);
+          
+          // Log the Swiss error and get case number
+          const case_number = await logUserError(
+            reportId,
+            'swiss_data_generation_failed',
+            `Swiss data generation failed for report type: ${data.report_type || 'unknown'}`
+          );
+          if (case_number) setCaseNumber(case_number);
         } else {
           setError(null);
         }
