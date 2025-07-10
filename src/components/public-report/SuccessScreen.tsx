@@ -100,23 +100,35 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (!onViewReport) return;
 
     try {
+      console.log('🔍 SuccessScreen - Starting fetchBothReportData for:', guestReportId);
+      
       // Use fetchBothReportData instead of fetchCompleteReport for better data handling
       const reportData = await fetchBothReportData(guestReportId);
+      
+      console.log('🔍 SuccessScreen - Raw fetchBothReportData result:', {
+        reportContent: reportData.reportContent ? 'HAS_AI_CONTENT' : 'NO_AI_CONTENT',
+        swissData: reportData.swissData ? 'HAS_SWISS_DATA' : 'NO_SWISS_DATA',
+        swissDataKeys: reportData.swissData ? Object.keys(reportData.swissData) : 'N/A',
+        swissDataNatal: reportData.swissData?.natal ? 'HAS_NATAL' : 'NO_NATAL'
+      });
 
       // Extract content - prioritize AI report content if available
       let reportContent = '';
       if (reportData.reportContent) {
         // Use the AI-generated report content
         reportContent = reportData.reportContent;
+        console.log('✅ Using AI report content');
       } else if (reportData.swissData?.report?.content) {
         // Fallback to swiss report content
         reportContent = reportData.swissData.report.content;
+        console.log('✅ Using Swiss report content');
       } else if (typeof reportData.swissData?.report === 'string') {
         // Fallback to raw report string
         reportContent = reportData.swissData.report;
+        console.log('✅ Using raw Swiss report string');
       }
 
-      console.log('SuccessScreen - Passing data:', {
+      console.log('🔍 SuccessScreen - Final data being passed to onViewReport:', {
         reportContent: reportContent ? 'HAS_CONTENT' : 'NO_CONTENT',
         swissData: reportData.swissData ? 'HAS_SWISS_DATA' : 'NO_SWISS_DATA',
         isAiReport: !!reportData.reportContent,
