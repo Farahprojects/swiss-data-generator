@@ -107,6 +107,8 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
                 type="date"
                 {...register('birthDate')}
                 className="h-12"
+                min="1900-01-01"
+                max="2024-12-31"
                 onFocus={() => handleFieldInteraction('birthDate')}
                 onBlur={() => handleFieldInteraction('birthDate')}
               />
