@@ -121,11 +121,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
     if (!subStepComplete || hasScrolledToStepTwo.current) return;
 
     window.requestAnimationFrame(() => {
-      if (stepTwoRef.current) {
-        const elementTop = stepTwoRef.current.getBoundingClientRect().top + window.pageYOffset;
-        const offsetPosition = elementTop - 200; // Start position 100px higher
-        window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-      }
+      stepTwoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       hasScrolledToStepTwo.current = true;
     });
   }, [subStepComplete]);
