@@ -246,9 +246,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const StatusIcon = status.icon;
 
-  const handleTryAgain = () => navigate('/');
+  const handleTryAgain = () => navigate('/report');
   
-  const handleBackToForm = () => clearAllSessionData();
+  const handleBackToForm = () => {
+    clearAllSessionData();
+    navigate('/report');
+  };
   
   const handleContactSupport = () => {
     const errorMessage = `Hi, I'm experiencing an issue with my report generation.\n\nReport Details:\n- Name: ${name}\n- Email: ${email}\n- Report ID: ${currentGuestReportId || 'N/A'}\n- Case Number: ${caseNumber || 'N/A'}\n- Time: ${new Date().toLocaleString()}\n`;
